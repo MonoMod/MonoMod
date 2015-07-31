@@ -10,7 +10,7 @@
  * 
  * 0x0ade
  */
-//#define GENERIC_METHOD_REFERENCE
+#define GENERIC_METHOD_REFERENCE
 
 /* Enable handling of generic types when finding them in FindType
  * 
@@ -25,7 +25,7 @@
  */
 #define GENERIC_TYPE_IMPORT
 
-/* Enable handling of generic types when referencing them in methods.
+/* Enable handling of generic types (f.e. type parameters) when referencing them in methods.
  * 
  * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
  * 
@@ -36,7 +36,16 @@
  */
 #define GENERIC_TYPE_REFERENCE
 
-
+/* Enable handling of generic typed variables when referencing them in methods.
+ * 
+ * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * It is enabled by default, as it currently helps debugging issues with generic references.
+ * 
+ * 0x0ade
+ */
+#define GENERIC_TYPE_VARIABLE
 
 using System;
 using Mono.Cecil;
@@ -410,8 +419,17 @@ namespace MonoMod {
                         }
 
                         #if GENERIC_METHOD_REFERENCE
+                        if (findMethod == null) {
+                            try {
+                                findMethod = Module.Import(methodCalled);
+                            } catch (Exception e) {
+                                Console.WriteLine("WARNING: Generic method instance could not be directly imported!");
+                                Console.WriteLine(e);
+                            }
+                        }
+
                         if (findMethod == null && methodCalled.IsGenericInstance) {
-                            Console.WriteLine("WARNING: Generic method instances currently not supported!");
+                            Console.WriteLine("WARNING: GENERIC_METHOD_REFERENCE currently being tested extensively in the devbuilds - use with care!");
                             Console.WriteLine(Environment.StackTrace);
 
                             GenericInstanceMethod genericMethodCalled = ((GenericInstanceMethod) methodCalled);
@@ -495,7 +513,7 @@ namespace MonoMod {
                 if (operand is TypeReference) {
                     #if GENERIC_TYPE_REFERENCE
                     if (((TypeReference) operand).IsGenericParameter) {
-                        Console.WriteLine("WARNING: Methods using generic parameters currently not supported!");
+                        Console.WriteLine("WARNING: GENERIC_TYPE_REFERENCE currently being tested extensively in the devbuilds - use with care!");
                         Console.WriteLine(Environment.StackTrace);
 
                         Console.WriteLine("Generic param wanted: " + ((TypeReference) operand).FullName);
@@ -516,8 +534,9 @@ namespace MonoMod {
             }
 
             for (int i = 0; i < body.Variables.Count; i++) {
+                #if GENERIC_TYPE_VARIABLE
                 if (body.Variables[i].VariableType.IsGenericParameter) {
-                    Console.WriteLine("WARNING: Variables using generic parameters as types currently not supported!");
+                    Console.WriteLine("WARNING: GENERIC_TYPE_VARIABLE currently being tested extensively in the devbuilds - use with care!");
                     Console.WriteLine(Environment.StackTrace);
 
                     TypeReference variableType = body.Variables[i].VariableType;
@@ -533,13 +552,13 @@ namespace MonoMod {
                             break;
                         }
                     }
-                } else {
-                    body.Variables[i].VariableType = FindType(body.Variables[i].VariableType);
-                }
+                } else
+                #endif
+                body.Variables[i].VariableType = FindType(body.Variables[i].VariableType);
             }
 
             if (method.ReturnType.IsGenericParameter) {
-                Console.WriteLine("WARNING: Returns using generic parameters as types currently not supported!");
+                Console.WriteLine("WARNING: Returns using generic parameters as types currently being tested extensively in the devbuilds - use with care!");
                 Console.WriteLine(Environment.StackTrace);
 
                 TypeReference returnType = method.ReturnType;
@@ -580,7 +599,7 @@ namespace MonoMod {
             }
             #if GENERIC_TYPE_IMPORT
             if (type.IsGenericParameter) {
-                Console.WriteLine("WARNING: Importing types as generic parameters currently not supported!");
+                Console.WriteLine("WARNING: GENERIC_TYPE_IMPORT currently being tested extensively in the devbuilds - use with care!");
                 Console.WriteLine(Environment.StackTrace);
                 return foundType ?? (fallbackToImport ? type : null);
             }
