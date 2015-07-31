@@ -47,6 +47,17 @@
  */
 #define GENERIC_TYPE_VARIABLE
 
+/* Enable handling of generic typed returns in methods.
+ * 
+ * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * It is enabled by default, as it currently helps debugging issues with generic references.
+ * 
+ * 0x0ade
+ */
+#define GENERIC_TYPE_RETURN
+
 using System;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -557,8 +568,9 @@ namespace MonoMod {
                 body.Variables[i].VariableType = FindType(body.Variables[i].VariableType);
             }
 
+            #if GENERIC_TYPE_RETURN
             if (method.ReturnType.IsGenericParameter) {
-                Console.WriteLine("WARNING: Returns using generic parameters as types currently being tested extensively in the devbuilds - use with care!");
+                Console.WriteLine("WARNING: GENERIC_TYPE_RETURN currently being tested extensively in the devbuilds - use with care!");
                 Console.WriteLine(Environment.StackTrace);
 
                 TypeReference returnType = method.ReturnType;
@@ -575,6 +587,7 @@ namespace MonoMod {
                     }
                 }
             }
+            #endif
         }
 
         public TypeReference FindType(TypeReference type) {
