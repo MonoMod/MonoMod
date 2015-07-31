@@ -440,13 +440,11 @@ namespace MonoMod {
                             Console.WriteLine("Calling method: " + genericMethodCalled.FullName);
                             Console.WriteLine("Element method: " + genericMethodCalled.ElementMethod.FullName);
                             GenericInstanceMethod genericMethod = new GenericInstanceMethod(FindMethod(genericMethodCalled.ElementMethod, true));
-                            Console.WriteLine("Found   method: " + genericMethod.ElementMethod.FullName);
-                            Console.WriteLine("Found   module: " + genericMethod.ElementMethod.Module.Name);
 
                             for (int gi = 0; gi < genericMethodCalled.GenericArguments.Count; gi++) {
                                 Console.WriteLine("Generic argument: " + genericMethodCalled.GenericArguments[gi]);
-                                genericMethod.GenericArguments.Add(genericMethodCalled.GenericArguments[gi]);
-                                /*for (int gii = 0; gii < method.GenericParameters.Count; gii++) {
+                                //genericMethod.GenericArguments.Add(genericMethodCalled.GenericArguments[gi]);
+                                for (int gii = 0; gii < method.GenericParameters.Count; gii++) {
                                     GenericParameter genericParam = method.GenericParameters[gii];
                                     Console.WriteLine("Checking against: " + genericParam.FullName);
                                     if (genericParam.FullName == genericMethodCalled.GenericArguments[gi].FullName) {
@@ -454,7 +452,7 @@ namespace MonoMod {
                                         genericMethod.GenericArguments.Add(genericParam);
                                         break;
                                     }
-                                }*/
+                                }
                             }
 
                             findMethod = genericMethod;
