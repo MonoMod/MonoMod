@@ -6,7 +6,7 @@
  * across assemblies. MonoMod will additionally print out a warning.
  * 
  * This is still early WIP and thus not really supported in release environments.
- * It is disabled by default, as it is broken (completely destroys FEZMod where it previously worked).
+ * It is enabled by default, as it has been partially "fixed" (doesn't break working references anymore; effect on broken references unknown).
  * 
  * 0x0ade
  */
@@ -57,6 +57,17 @@
  * 0x0ade
  */
 #define GENERIC_TYPE_RETURN
+
+/* Enable handling of generic parameters as operands in methods.
+ * 
+ * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * It is disabled by default, as it would activate reference code that - when ran - will never reach execution.
+ * 
+ * 0x0ade
+ */
+//#define GENERIC_PARAM
 
 using System;
 using Mono.Cecil;
@@ -299,7 +310,7 @@ namespace MonoMod {
                 }
 
                 for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
-                    copy.GenericParameters.Add(origMethod.GenericParameters[i]);
+                    copy.GenericParameters.Add(new GenericParameter(origMethod.GenericParameters[i].Name, copy));
                 }
 
                 origType.Methods.Add(copy);
@@ -404,29 +415,11 @@ namespace MonoMod {
                     if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                         instruction.Operand = method;
                     } else {
-                        MethodReference findMethod = null;
+                        MethodReference findMethod = FindMethod(methodCalled, false);
 
                         if (origMethodOrig != null && methodCalled.FullName == origMethodOrig.FullName) {
                             Console.WriteLine("Found call to the original method; linking...");
                             findMethod = origMethodOrig;
-                        }
-
-                        TypeReference findTypeRef = FindType(methodCalled.DeclaringType, false);
-                        TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
-
-                        if (findMethod == null && findType != null) {
-                            for (int ii = 0; ii < findType.Methods.Count; ii++) {
-                                if (findType.Methods[ii].FullName == RemovePrefixes(methodCalled.FullName, methodCalled.DeclaringType.Name)) {
-                                    findMethod = findType.Methods[ii];
-                                    if (findMethod.Module != Module) {
-                                        findMethod = Module.Import(findMethod);
-                                        //Console.WriteLine("M: ref->dep: "+findMethod.FullName);
-                                    } else {
-                                        //Console.WriteLine("M: ref->in: "+findMethod.FullName);
-                                    }
-                                    break;
-                                }
-                            }
                         }
 
                         #if GENERIC_METHOD_REFERENCE
@@ -446,25 +439,22 @@ namespace MonoMod {
                             GenericInstanceMethod genericMethodCalled = ((GenericInstanceMethod) methodCalled);
                             Console.WriteLine("Calling method: " + genericMethodCalled.FullName);
                             Console.WriteLine("Element method: " + genericMethodCalled.ElementMethod.FullName);
-                            GenericInstanceMethod genericMethod;
-                            if (genericMethodCalled.ElementMethod.Module != Module) {
-                                genericMethod = new GenericInstanceMethod(Module.Import(genericMethodCalled.ElementMethod));
-                            } else {
-                                genericMethod = new GenericInstanceMethod(genericMethodCalled.ElementMethod);
-                            }
+                            GenericInstanceMethod genericMethod = new GenericInstanceMethod(FindMethod(genericMethodCalled.ElementMethod, true));
+                            Console.WriteLine("Found   method: " + genericMethod.ElementMethod.FullName);
+                            Console.WriteLine("Found   module: " + genericMethod.ElementMethod.Module.Name);
 
                             for (int gi = 0; gi < genericMethodCalled.GenericArguments.Count; gi++) {
                                 Console.WriteLine("Generic argument: " + genericMethodCalled.GenericArguments[gi]);
-                                //genericMethod.GenericArguments.Add(genericMethodCalled.GenericArguments[gi]);
-                                for (int gii = 0; gii < method.GenericParameters.Count; gii++) {
+                                genericMethod.GenericArguments.Add(genericMethodCalled.GenericArguments[gi]);
+                                /*for (int gii = 0; gii < method.GenericParameters.Count; gii++) {
                                     GenericParameter genericParam = method.GenericParameters[gii];
                                     Console.WriteLine("Checking against: " + genericParam.FullName);
                                     if (genericParam.FullName == genericMethodCalled.GenericArguments[gi].FullName) {
                                         Console.WriteLine("Success!");
-                                        genericMethod.GenericArguments.Add(Module.Import(genericParam));
+                                        genericMethod.GenericArguments.Add(genericParam);
                                         break;
                                     }
-                                }
+                                }*/
                             }
 
                             findMethod = genericMethod;
@@ -542,6 +532,15 @@ namespace MonoMod {
                     #endif
                     instruction.Operand = FindType((TypeReference) operand);
                 }
+
+                #if GENERIC_PARAM
+                if (instruction.Operand is GenericParameter) {
+                    Console.WriteLine("WARNING: GENERIC_PARAM currently being tested extensively in the devbuilds - use with care!");
+                    Console.WriteLine(Environment.StackTrace);
+
+                    instruction.Operand = new GenericParameter(((GenericParameter) instruction.Operand).Name, method);
+                }
+                #endif
             }
 
             for (int i = 0; i < body.Variables.Count; i++) {
@@ -590,11 +589,7 @@ namespace MonoMod {
             #endif
         }
 
-        public TypeReference FindType(TypeReference type) {
-            return FindType(type, true);
-        }
-
-        public TypeReference FindType(TypeReference type, bool fallbackToImport) {
+        public TypeReference FindType(TypeReference type, bool fallbackToImport = true) {
             if (type == null) {
                 Console.WriteLine("ERROR: Can't find null type!");
                 Console.WriteLine(Environment.StackTrace);
@@ -618,6 +613,25 @@ namespace MonoMod {
             }
             #endif
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
+        }
+
+        public MethodReference FindMethod(MethodReference method, bool fallbackToImport) {
+            TypeReference findTypeRef = FindType(method.DeclaringType, false);
+            TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
+
+            if (method == null && findType != null) {
+                for (int ii = 0; ii < findType.Methods.Count; ii++) {
+                    if (findType.Methods[ii].FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
+                        MethodReference foundMethod = findType.Methods[ii];
+                        if (foundMethod.Module != Module) {
+                            foundMethod = Module.Import(foundMethod);
+                        }
+                        return foundMethod;
+                    }
+                }
+            }
+
+            return fallbackToImport ? Module.Import(method) : null;
         }
 
         public void LoadDependency(string dependency) {
@@ -668,20 +682,14 @@ namespace MonoMod {
             return entry;
         }
 
-        public static string RemovePrefixes(string strPrefixed) {
-            return RemovePrefixes(strPrefixed, strPrefixed);
-        }
-
-        public static string RemovePrefixes(string str, string strPrefixed) {
+        public static string RemovePrefixes(string str, string strPrefixed = null) {
+            strPrefixed = strPrefixed ?? str;
             str = RemovePrefix(str, "patch_", strPrefixed);
             return str;
         }
 
-        public static string RemovePrefix(string strPrefixed, string prefix) {
-            return RemovePrefix(strPrefixed, prefix, strPrefixed);
-        }
-
-        public static string RemovePrefix(string str, string prefix, string strPrefixed) {
+        public static string RemovePrefix(string str, string prefix, string strPrefixed = null) {
+            strPrefixed = strPrefixed ?? str;
             if (strPrefixed.StartsWith(prefix)) {
                 return str.Replace(strPrefixed, strPrefixed.Substring(prefix.Length));
             }
