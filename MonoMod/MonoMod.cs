@@ -408,10 +408,9 @@ namespace MonoMod {
 
             for (int i = 0; i < body.Instructions.Count; i++) {
                 Instruction instruction = body.Instructions[i];
-                Object operand = instruction.Operand;
 
-                if (operand is MethodReference) {
-                    MethodReference methodCalled = (MethodReference) operand;
+                if (instruction.Operand is MethodReference) {
+                    MethodReference methodCalled = (MethodReference) instruction.Operand;
                     if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                         instruction.Operand = method;
                     } else {
@@ -463,8 +462,8 @@ namespace MonoMod {
                     }
                 }
 
-                if (operand is FieldReference) {
-                    FieldReference field = (FieldReference) operand;
+                if (instruction.Operand is FieldReference) {
+                    FieldReference field = (FieldReference) instruction.Operand;
 
                     TypeReference findTypeRef = FindType(field.DeclaringType, false);
                     TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
@@ -483,7 +482,7 @@ namespace MonoMod {
                         }
                     }
 
-                    if (field == operand && findType != null) {
+                    if (field == instruction.Operand && findType != null) {
                         //Console.WriteLine("F: new: " + field.FullName);
                         FieldDefinition oldField = null;
                         TypeDefinition oldType = (TypeDefinition) field.DeclaringType;
@@ -502,25 +501,25 @@ namespace MonoMod {
                         }
                     }
 
-                    if (field == operand) {
+                    if (field == instruction.Operand) {
                         field = new FieldReference(field.Name, FindType(field.FieldType), FindType(field.DeclaringType));
                     }
 
                     instruction.Operand = field;
                 }
 
-                if (operand is TypeReference) {
+                if (instruction.Operand is TypeReference) {
                     #if GENERIC_TYPE_REFERENCE
-                    if (((TypeReference) operand).IsGenericParameter) {
+                    if (((TypeReference) instruction.Operand).IsGenericParameter) {
                         Console.WriteLine("WARNING: GENERIC_TYPE_REFERENCE currently being tested extensively in the devbuilds - use with care!");
                         Console.WriteLine(Environment.StackTrace);
 
-                        Console.WriteLine("Generic param wanted: " + ((TypeReference) operand).FullName);
+                        Console.WriteLine("Generic param wanted: " + ((TypeReference) instruction.Operand).FullName);
                         Console.WriteLine("Method: " + method.FullName);
                         for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
                             GenericParameter genericParam = method.GenericParameters[gi];
                             Console.WriteLine("Checking against: " + genericParam.FullName);
-                            if (genericParam.FullName == ((TypeReference) operand).FullName) {
+                            if (genericParam.FullName == ((TypeReference) instruction.Operand).FullName) {
                                 Console.WriteLine("Success!");
                                 instruction.Operand = Module.Import(genericParam);
                                 break;
@@ -528,7 +527,7 @@ namespace MonoMod {
                         }
                     } else
                     #endif
-                    instruction.Operand = FindType((TypeReference) operand);
+                    instruction.Operand = FindType((TypeReference) instruction.Operand);
                 }
 
                 #if GENERIC_PARAM
@@ -539,6 +538,8 @@ namespace MonoMod {
                     instruction.Operand = new GenericParameter(((GenericParameter) instruction.Operand).Name, method);
                 }
                 #endif
+
+                body.Instructions[i] = instruction;
             }
 
             for (int i = 0; i < body.Variables.Count; i++) {
