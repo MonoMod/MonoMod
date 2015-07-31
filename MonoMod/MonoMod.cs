@@ -1,11 +1,52 @@
-﻿using System;
+﻿/* Enable compilation of generic method reference resolution
+ * 
+ * When fixing / patching the references in methods, patch the references to other
+ * generic methods more deeply by importing (TODO: finding) the element method
+ * instead of simply importing the generic method. Should fix references to generic methods
+ * across assemblies. MonoMod will additionally print out a warning.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * It is disabled by default, as it is broken (completely destroys FEZMod where it previously worked).
+ * 
+ * 0x0ade
+ */
+//#define GENERIC_METHOD_REFERENCE
+
+/* Enable handling of generic types when finding them in FindType
+ * 
+ * When finding a type, it is possible that the type that is being searched is a generic type.
+ * In case this is true, MonoMod will print out a warning and instead of importing the type when
+ * the type has not been found, FindType will return null.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * It is enabled by default, as it currently helps debugging issues with generic references.
+ * 
+ * 0x0ade
+ */
+#define GENERIC_TYPE_IMPORT
+
+/* Enable handling of generic types when referencing them in methods.
+ * 
+ * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * It is enabled by default, as it currently helps debugging issues with generic references.
+ * 
+ * 0x0ade
+ */
+#define GENERIC_TYPE_REFERENCE
+
+
+
+using System;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.IO;
+using Mono.Collections.Generic;
 
 namespace MonoMod {
-    class MonoMod {
+    public class MonoMod {
 
         public FileInfo In;
         public DirectoryInfo Dir;
@@ -268,6 +309,9 @@ namespace MonoMod {
                 for (int i = 0; i < method.Parameters.Count; i++) {
                     clone.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType)));
                 }
+                for (int i = 0; i < method.GenericParameters.Count; i++) {
+                    clone.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, clone));
+                }
                 clone.Body = method.Body;
                 origType.Methods.Add(clone);
                 method = clone;
@@ -304,6 +348,11 @@ namespace MonoMod {
         }
 
         public void PatchRefsInMethod(MethodDefinition method) {
+            if (method.Name.StartsWith("orig_")) {
+                Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
+                return;
+            }
+
             MethodBody body = method.Body;
 
             Console.WriteLine("Patching references in "+method.Name+" ...");
@@ -360,6 +409,39 @@ namespace MonoMod {
                             }
                         }
 
+                        #if GENERIC_METHOD_REFERENCE
+                        if (findMethod == null && methodCalled.IsGenericInstance) {
+                            Console.WriteLine("WARNING: Generic method instances currently not supported!");
+                            Console.WriteLine(Environment.StackTrace);
+
+                            GenericInstanceMethod genericMethodCalled = ((GenericInstanceMethod) methodCalled);
+                            Console.WriteLine("Calling method: " + genericMethodCalled.FullName);
+                            Console.WriteLine("Element method: " + genericMethodCalled.ElementMethod.FullName);
+                            GenericInstanceMethod genericMethod;
+                            if (genericMethodCalled.ElementMethod.Module != Module) {
+                                genericMethod = new GenericInstanceMethod(Module.Import(genericMethodCalled.ElementMethod));
+                            } else {
+                                genericMethod = new GenericInstanceMethod(genericMethodCalled.ElementMethod);
+                            }
+
+                            for (int gi = 0; gi < genericMethodCalled.GenericArguments.Count; gi++) {
+                                Console.WriteLine("Generic argument: " + genericMethodCalled.GenericArguments[gi]);
+                                //genericMethod.GenericArguments.Add(genericMethodCalled.GenericArguments[gi]);
+                                for (int gii = 0; gii < method.GenericParameters.Count; gii++) {
+                                    GenericParameter genericParam = method.GenericParameters[gii];
+                                    Console.WriteLine("Checking against: " + genericParam.FullName);
+                                    if (genericParam.FullName == genericMethodCalled.GenericArguments[gi].FullName) {
+                                        Console.WriteLine("Success!");
+                                        genericMethod.GenericArguments.Add(Module.Import(genericParam));
+                                        break;
+                                    }
+                                }
+                            }
+
+                            findMethod = genericMethod;
+                        }
+                        #endif
+
                         instruction.Operand = findMethod ?? Module.Import(methodCalled);
                     }
                 }
@@ -411,12 +493,68 @@ namespace MonoMod {
                 }
 
                 if (operand is TypeReference) {
+                    #if GENERIC_TYPE_REFERENCE
+                    if (((TypeReference) operand).IsGenericParameter) {
+                        Console.WriteLine("WARNING: Methods using generic parameters currently not supported!");
+                        Console.WriteLine(Environment.StackTrace);
+
+                        Console.WriteLine("Generic param wanted: " + ((TypeReference) operand).FullName);
+                        Console.WriteLine("Method: " + method.FullName);
+                        for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
+                            GenericParameter genericParam = method.GenericParameters[gi];
+                            Console.WriteLine("Checking against: " + genericParam.FullName);
+                            if (genericParam.FullName == ((TypeReference) operand).FullName) {
+                                Console.WriteLine("Success!");
+                                instruction.Operand = Module.Import(genericParam);
+                                break;
+                            }
+                        }
+                    } else
+                    #endif
                     instruction.Operand = FindType((TypeReference) operand);
                 }
             }
 
             for (int i = 0; i < body.Variables.Count; i++) {
-                body.Variables[i].VariableType = FindType(body.Variables[i].VariableType);
+                if (body.Variables[i].VariableType.IsGenericParameter) {
+                    Console.WriteLine("WARNING: Variables using generic parameters as types currently not supported!");
+                    Console.WriteLine(Environment.StackTrace);
+
+                    TypeReference variableType = body.Variables[i].VariableType;
+
+                    Console.WriteLine("Generic param wanted: " + variableType.FullName);
+                    Console.WriteLine("Method: " + method.FullName);
+                    for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
+                        GenericParameter genericParam = method.GenericParameters[gi];
+                        Console.WriteLine("Checking against: " + genericParam.FullName);
+                        if (genericParam.FullName == variableType.FullName) {
+                            Console.WriteLine("Success!");
+                            body.Variables[i].VariableType = Module.Import(genericParam);
+                            break;
+                        }
+                    }
+                } else {
+                    body.Variables[i].VariableType = FindType(body.Variables[i].VariableType);
+                }
+            }
+
+            if (method.ReturnType.IsGenericParameter) {
+                Console.WriteLine("WARNING: Returns using generic parameters as types currently not supported!");
+                Console.WriteLine(Environment.StackTrace);
+
+                TypeReference returnType = method.ReturnType;
+
+                Console.WriteLine("Generic param wanted: " + returnType.FullName);
+                Console.WriteLine("Method: " + method.FullName);
+                for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
+                    GenericParameter genericParam = method.GenericParameters[gi];
+                    Console.WriteLine("Checking against: " + genericParam.FullName);
+                    if (genericParam.FullName == returnType.FullName) {
+                        Console.WriteLine("Success!");
+                        method.ReturnType = Module.Import(genericParam);
+                        break;
+                    }
+                }
             }
         }
 
@@ -425,6 +563,11 @@ namespace MonoMod {
         }
 
         public TypeReference FindType(TypeReference type, bool fallbackToImport) {
+            if (type == null) {
+                Console.WriteLine("ERROR: Can't find null type!");
+                Console.WriteLine(Environment.StackTrace);
+                return null;
+            }
             string typeName = RemovePrefixes(type.FullName, type.Name);
             TypeReference foundType = Module.GetType(typeName);
             if (foundType == null) {
@@ -435,6 +578,13 @@ namespace MonoMod {
                     }
                 }
             }
+            #if GENERIC_TYPE_IMPORT
+            if (type.IsGenericParameter) {
+                Console.WriteLine("WARNING: Importing types as generic parameters currently not supported!");
+                Console.WriteLine(Environment.StackTrace);
+                return foundType ?? (fallbackToImport ? type : null);
+            }
+            #endif
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
         }
 
