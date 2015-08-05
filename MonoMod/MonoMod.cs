@@ -69,20 +69,6 @@
  */
 #define OPTIMIZE_METHOD_FLAG
 
-/* Post-modular-patching reference patching. (PMPRP; not to be confused with PWUT)
- * 
- * Enables the newer reference patching codepath which patches the references after
- * patching all modules, instead of the current module, reducing the amount of
- * issues with cross-module references.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * No warning will appear as it will stay default. Efforts are being achieved to
- * drop the legacy code path.
- * 
- * 0x0ade
- */
-#define PMPRP
-
 using System;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -162,28 +148,20 @@ namespace MonoMod {
 
             string fileName = In.Name.Substring(0, In.Name.IndexOf("."));
             Console.WriteLine("Scanning for files matching "+fileName+".*.mm.dll ...");
-            #if PMPRP
             List<TypeDefinition> types = new List<TypeDefinition>();
-            #endif
             foreach (FileInfo f in Dir.GetFiles()) {
                 if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                     Console.WriteLine("Found "+f.Name+" , reading...");
                     ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
-                    #if PMPRP
                     PatchModule(mod, types);
-                    #else
-                    PatchModule(mod);
-                    #endif
                 }
             }
-            #if PMPRP
             Console.WriteLine("Patching / fixing references...");
             foreach (FileInfo f in Dir.GetFiles()) {
                 if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                     PatchRefs(types);
                 }
             }
-            #endif
             #if OPTIMIZE_METHOD_FLAG
             Console.WriteLine("WARNING: OPTIMIZE_METHOD_FLAG currently being tested extensively in the devbuilds - use with care!");
             Console.WriteLine(Environment.StackTrace);
@@ -204,16 +182,9 @@ namespace MonoMod {
             Console.WriteLine("Done.");
         }
 
-        #if PMPRP
         public void PatchModule(ModuleDefinition mod, List<TypeDefinition> types) {
-        #else
-        public void PatchModule(ModuleDefinition mod) {
-        #endif
             Module.AssemblyReferences.Add(mod.Assembly.Name);
 
-            #if !PMPRP
-            TypeDefinition[] types = new TypeDefinition[mod.Types.Count];
-            #endif
             for (int i = 0; i < mod.Types.Count; i++) {
                 TypeDefinition type = mod.Types[i];
                 string typeName = type.FullName;
@@ -284,16 +255,8 @@ namespace MonoMod {
                     origTypeResolved.Fields.Add(newField);
                 }
 
-                #if PMPRP
                 types.Add(type);
-                #else
-                types[i] = type;
-                #endif
             }
-
-            #if !PMPRP
-            PatchRefs(types);
-            #endif
         }
 
         public void PatchMethod(MethodDefinition method) {
@@ -402,14 +365,8 @@ namespace MonoMod {
             }
         }
 
-        #if PMPRP
         public void PatchRefs(List<TypeDefinition> types) {
             foreach (TypeDefinition type in types) {
-        #else
-        public void PatchRefs(TypeDefinition[] types) {
-            for (int i = 0; i < types.Length; i++) {
-               TypeDefinition type = types[i];
-        #endif
                 if (type == null) {
                     continue;
                 }
@@ -711,7 +668,7 @@ namespace MonoMod {
             TypeReference findTypeRef = FindType(method.DeclaringType, false);
             TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
 
-            if (method == null && findType != null) {
+            if (method != null && findType != null) {
                 for (int ii = 0; ii < findType.Methods.Count; ii++) {
                     if (findType.Methods[ii].FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                         MethodReference foundMethod = findType.Methods[ii];
