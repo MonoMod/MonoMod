@@ -58,16 +58,30 @@
  */
 #define GENERIC_TYPE_RETURN
 
-/* Enable handling of generic parameters as operands in methods.
+/* Enable optimization of all methods in all types in the output assembly.
  * 
- * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
+ * Currently it is not known to me what it does exactly.
  * 
  * This is still early WIP and thus not really supported in release environments.
- * It is disabled by default, as it would activate reference code that - when ran - will never reach execution.
+ * It is enabled by default, as it can enhance performance minimally.
  * 
  * 0x0ade
  */
-//#define GENERIC_PARAM
+#define OPTIMIZE_METHOD_FLAG
+
+/* Post-modular-patching reference patching. (PMPRP; not to be confused with PWUT)
+ * 
+ * Enables the newer reference patching codepath which patches the references after
+ * patching all modules, instead of the current module, reducing the amount of
+ * issues with cross-module references.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * No warning will appear as it will stay default. Efforts are being achieved to
+ * drop the legacy code path.
+ * 
+ * 0x0ade
+ */
+#define PMPRP
 
 using System;
 using Mono.Cecil;
@@ -124,13 +138,13 @@ namespace MonoMod {
             Module = ModuleDefinition.ReadModule(In.FullName);
 
             Console.WriteLine("Reading module dependencies...");
-            for (int i = 0; i < Module.ModuleReferences.Count; i++) {
-                LoadDependency(Module.ModuleReferences[i].Name);
+            for (int mi = 0; mi < Module.ModuleReferences.Count; mi++) {
+                LoadDependency(Module.ModuleReferences[mi].Name);
             }
 
             Console.WriteLine("Reading assembly dependencies...");
-            for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
-                LoadDependency(Module.AssemblyReferences[i].Name);
+            for (int mi = 0; mi < Module.AssemblyReferences.Count; mi++) {
+                LoadDependency(Module.AssemblyReferences[mi].Name);
             }
 
             Dependencies.Remove(Module);
@@ -148,13 +162,41 @@ namespace MonoMod {
 
             string fileName = In.Name.Substring(0, In.Name.IndexOf("."));
             Console.WriteLine("Scanning for files matching "+fileName+".*.mm.dll ...");
+            #if PMPRP
+            List<TypeDefinition> types = new List<TypeDefinition>();
+            #endif
             foreach (FileInfo f in Dir.GetFiles()) {
                 if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                     Console.WriteLine("Found "+f.Name+" , reading...");
                     ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
+                    #if PMPRP
+                    PatchModule(mod, types);
+                    #else
                     PatchModule(mod);
+                    #endif
                 }
             }
+            #if PMPRP
+            Console.WriteLine("Patching / fixing references...");
+            foreach (FileInfo f in Dir.GetFiles()) {
+                if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
+                    PatchRefs(types);
+                }
+            }
+            #endif
+            #if OPTIMIZE_METHOD_FLAG
+            Console.WriteLine("WARNING: OPTIMIZE_METHOD_FLAG currently being tested extensively in the devbuilds - use with care!");
+            Console.WriteLine(Environment.StackTrace);
+
+            Console.WriteLine("Disabling \"NoOptimization\" flag for all methods...");
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                TypeDefinition type = Module.Types[ti];
+                for (int mi = 0; mi < type.Methods.Count; mi++) {
+                    MethodDefinition method = type.Methods[mi];
+                    method.NoOptimization = false;
+                }
+            }
+            #endif
 
             Console.WriteLine("Writing to output file...");
             Module.Write(Out.FullName);
@@ -162,10 +204,16 @@ namespace MonoMod {
             Console.WriteLine("Done.");
         }
 
+        #if PMPRP
+        public void PatchModule(ModuleDefinition mod, List<TypeDefinition> types) {
+        #else
         public void PatchModule(ModuleDefinition mod) {
+        #endif
             Module.AssemblyReferences.Add(mod.Assembly.Name);
 
+            #if !PMPRP
             TypeDefinition[] types = new TypeDefinition[mod.Types.Count];
+            #endif
             for (int i = 0; i < mod.Types.Count; i++) {
                 TypeDefinition type = mod.Types[i];
                 string typeName = type.FullName;
@@ -236,43 +284,19 @@ namespace MonoMod {
                     origTypeResolved.Fields.Add(newField);
                 }
 
+                #if PMPRP
+                types.Add(type);
+                #else
                 types[i] = type;
+                #endif
             }
 
-            for (int i = 0; i < types.Length; i++) {
-                TypeDefinition type = types[i];
-                if (type == null) {
-                    continue;
-                }
-                string typeName = type.FullName;
-                Console.WriteLine("TR: "+typeName);
-
-                typeName = RemovePrefixes(typeName, type.Name);
-
-                TypeDefinition origType = Module.GetType(typeName);
-                for (int ii = 0; ii < type.Methods.Count; ii++) {
-                    MethodDefinition method = type.Methods[ii];
-
-                    if (method.Attributes.HasFlag(MethodAttributes.SpecialName) || HasIgnoreAttribute(method)) {
-                        continue;
-                    }
-
-                    for (int iii = 0; iii < origType.Methods.Count; iii++) {
-                        MethodDefinition origMethod = origType.Methods[iii];
-                        if (origMethod.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
-                            method = origMethod;
-                            Console.WriteLine("MR: "+method.FullName);
-                            PatchRefsInMethod(method);
-                            break;
-                        }
-                    }
-                }
-            }
+            #if !PMPRP
+            PatchRefs(types);
+            #endif
         }
 
         public void PatchMethod(MethodDefinition method) {
-            MethodBody body = method.Body;
-
             if (method.Name.StartsWith("orig_")) {
                 Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
                 return;
@@ -320,14 +344,14 @@ namespace MonoMod {
                 Console.WriteLine("Prefixed method existing; ignoring...");
             }
 
-            for (int i = 0; i < body.Variables.Count; i++) {
-                body.Variables[i].VariableType = FindType(body.Variables[i].VariableType);
+            for (int i = 0; i < method.Body.Variables.Count; i++) {
+                method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType);
             }
 
             Console.WriteLine("Storing method to main module...");
 
             if (origMethod != null) {
-                origMethod.Body = body;
+                origMethod.Body = method.Body;
                 method = origMethod;
             } else {
                 MethodAttributes attribs;
@@ -378,13 +402,48 @@ namespace MonoMod {
             }
         }
 
+        #if PMPRP
+        public void PatchRefs(List<TypeDefinition> types) {
+            foreach (TypeDefinition type in types) {
+        #else
+        public void PatchRefs(TypeDefinition[] types) {
+            for (int i = 0; i < types.Length; i++) {
+               TypeDefinition type = types[i];
+        #endif
+                if (type == null) {
+                    continue;
+                }
+                string typeName = type.FullName;
+                Console.WriteLine("TR: "+typeName);
+
+                typeName = RemovePrefixes(typeName, type.Name);
+
+                TypeDefinition origType = Module.GetType(typeName);
+                for (int ii = 0; ii < type.Methods.Count; ii++) {
+                    MethodDefinition method = type.Methods[ii];
+
+                    if (method.Attributes.HasFlag(MethodAttributes.SpecialName) || HasIgnoreAttribute(method)) {
+                        continue;
+                    }
+
+                    for (int iii = 0; iii < origType.Methods.Count; iii++) {
+                        MethodDefinition origMethod = origType.Methods[iii];
+                        if (origMethod.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
+                            method = origMethod;
+                            Console.WriteLine("MR: "+method.FullName);
+                            PatchRefsInMethod(method);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         public void PatchRefsInMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
                 Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
                 return;
             }
-
-            MethodBody body = method.Body;
 
             Console.WriteLine("Patching references in "+method.Name+" ...");
 
@@ -406,13 +465,18 @@ namespace MonoMod {
 
             Console.WriteLine("Modifying method body...");
 
-            for (int i = 0; i < body.Instructions.Count; i++) {
-                Instruction instruction = body.Instructions[i];
+            ILProcessor ilProcessor = method.Body.GetILProcessor();
+            Instruction[] origInstructions = new Instruction[method.Body.Instructions.Count];
+            method.Body.Instructions.CopyTo(origInstructions, 0);
 
-                if (instruction.Operand is MethodReference) {
-                    MethodReference methodCalled = (MethodReference) instruction.Operand;
+            for (int i = 0; i < origInstructions.Length; i++) {
+                Instruction orig_instruction = origInstructions[i];
+                object operand = orig_instruction.Operand;
+
+                if (operand is MethodReference) {
+                    MethodReference methodCalled = (MethodReference) operand;
                     if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
-                        instruction.Operand = method;
+                        operand = method;
                     } else {
                         MethodReference findMethod = FindMethod(methodCalled, false);
 
@@ -458,12 +522,12 @@ namespace MonoMod {
                         }
                         #endif
 
-                        instruction.Operand = findMethod ?? Module.Import(methodCalled);
+                        operand = findMethod ?? Module.Import(methodCalled);
                     }
                 }
 
-                if (instruction.Operand is FieldReference) {
-                    FieldReference field = (FieldReference) instruction.Operand;
+                if (operand is FieldReference) {
+                    FieldReference field = (FieldReference) operand;
 
                     TypeReference findTypeRef = FindType(field.DeclaringType, false);
                     TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
@@ -482,7 +546,7 @@ namespace MonoMod {
                         }
                     }
 
-                    if (field == instruction.Operand && findType != null) {
+                    if (field == operand && findType != null) {
                         //Console.WriteLine("F: new: " + field.FullName);
                         FieldDefinition oldField = null;
                         TypeDefinition oldType = (TypeDefinition) field.DeclaringType;
@@ -501,54 +565,83 @@ namespace MonoMod {
                         }
                     }
 
-                    if (field == instruction.Operand) {
+                    if (field == operand) {
                         field = new FieldReference(field.Name, FindType(field.FieldType), FindType(field.DeclaringType));
                     }
 
-                    instruction.Operand = field;
+                    operand = field;
                 }
 
-                if (instruction.Operand is TypeReference) {
+                if (operand is TypeReference) {
                     #if GENERIC_TYPE_REFERENCE
-                    if (((TypeReference) instruction.Operand).IsGenericParameter) {
+                    if (((TypeReference) operand).IsGenericParameter) {
                         Console.WriteLine("WARNING: GENERIC_TYPE_REFERENCE currently being tested extensively in the devbuilds - use with care!");
                         Console.WriteLine(Environment.StackTrace);
 
-                        Console.WriteLine("Generic param wanted: " + ((TypeReference) instruction.Operand).FullName);
+                        Console.WriteLine("Generic param wanted: " + ((TypeReference) operand).FullName);
                         Console.WriteLine("Method: " + method.FullName);
                         for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
                             GenericParameter genericParam = method.GenericParameters[gi];
                             Console.WriteLine("Checking against: " + genericParam.FullName);
-                            if (genericParam.FullName == ((TypeReference) instruction.Operand).FullName) {
+                            if (genericParam.FullName == ((TypeReference) operand).FullName) {
                                 Console.WriteLine("Success!");
-                                instruction.Operand = Module.Import(genericParam);
+                                operand = Module.Import(genericParam);
                                 break;
                             }
                         }
                     } else
                     #endif
-                    instruction.Operand = FindType((TypeReference) instruction.Operand);
+                    operand = FindType((TypeReference) operand);
                 }
 
-                #if GENERIC_PARAM
-                if (instruction.Operand is GenericParameter) {
-                    Console.WriteLine("WARNING: GENERIC_PARAM currently being tested extensively in the devbuilds - use with care!");
-                    Console.WriteLine(Environment.StackTrace);
+                Instruction instruction;
 
-                    instruction.Operand = new GenericParameter(((GenericParameter) instruction.Operand).Name, method);
-                }
-                #endif
+                OpCode opcode = orig_instruction.OpCode;
 
-                body.Instructions[i] = instruction;
+                //uh.
+                if (operand is long)
+                    instruction = ilProcessor.Create(opcode, (long) operand);
+                else if (operand is float)
+                    instruction = ilProcessor.Create(opcode, (float) operand);
+                else if (operand is double)
+                    instruction = ilProcessor.Create(opcode, (double) operand);
+                else if (operand is Instruction)
+                    instruction = ilProcessor.Create(opcode, (Instruction) operand);
+                else if (operand is Instruction[])
+                    instruction = ilProcessor.Create(opcode, (Instruction[]) operand);
+                else if (operand is VariableDefinition)
+                    instruction = ilProcessor.Create(opcode, (VariableDefinition) operand);
+                else if (operand is int)
+                    instruction = ilProcessor.Create(opcode, (int) operand);
+                else if (operand is TypeReference)
+                    instruction = ilProcessor.Create(opcode, (TypeReference) operand);
+                else if (operand is CallSite)
+                    instruction = ilProcessor.Create(opcode, (CallSite) operand);
+                else if (operand is MethodReference)
+                    instruction = ilProcessor.Create(opcode, (MethodReference) operand);
+                else if (operand is FieldReference)
+                    instruction = ilProcessor.Create(opcode, (FieldReference) operand);
+                else if (operand is string)
+                    instruction = ilProcessor.Create(opcode, (string) operand);
+                else if (operand is sbyte)
+                    instruction = ilProcessor.Create(opcode, (sbyte) operand);
+                else if (operand is byte)
+                    instruction = ilProcessor.Create(opcode, (byte) operand);
+                else if (operand is ParameterDefinition)
+                    instruction = ilProcessor.Create(opcode, (ParameterDefinition) operand);
+                else
+                    instruction = ilProcessor.Create(opcode);
+
+                ilProcessor.Replace(orig_instruction, instruction);
             }
 
-            for (int i = 0; i < body.Variables.Count; i++) {
+            for (int i = 0; i < method.Body.Variables.Count; i++) {
                 #if GENERIC_TYPE_VARIABLE
-                if (body.Variables[i].VariableType.IsGenericParameter) {
+                if (method.Body.Variables[i].VariableType.IsGenericParameter) {
                     Console.WriteLine("WARNING: GENERIC_TYPE_VARIABLE currently being tested extensively in the devbuilds - use with care!");
                     Console.WriteLine(Environment.StackTrace);
 
-                    TypeReference variableType = body.Variables[i].VariableType;
+                    TypeReference variableType = method.Body.Variables[i].VariableType;
 
                     Console.WriteLine("Generic param wanted: " + variableType.FullName);
                     Console.WriteLine("Method: " + method.FullName);
@@ -557,13 +650,13 @@ namespace MonoMod {
                         Console.WriteLine("Checking against: " + genericParam.FullName);
                         if (genericParam.FullName == variableType.FullName) {
                             Console.WriteLine("Success!");
-                            body.Variables[i].VariableType = Module.Import(genericParam);
+                            method.Body.Variables[i].VariableType = Module.Import(genericParam);
                             break;
                         }
                     }
                 } else
                 #endif
-                body.Variables[i].VariableType = FindType(body.Variables[i].VariableType);
+                method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType);
             }
 
             #if GENERIC_TYPE_RETURN
