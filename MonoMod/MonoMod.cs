@@ -58,7 +58,7 @@
  */
 #define GENERIC_TYPE_RETURN
 
-/* Enable optimization of all methods in all types in the output assembly.
+/* Disable NoOptimization of all methods in all types in the output assembly.
  * 
  * Currently it is not known to me what it does exactly.
  * 
@@ -68,6 +68,17 @@
  * 0x0ade
  */
 #define OPTIMIZE_METHOD_FLAG
+
+/* Remove nops in all methods in all types in the output assembly.
+ * 
+ * Currently it is not known to me what it does exactly.
+ * 
+ * This is still early WIP and thus not really supported in release environments.
+ * It is enabled by default, as it can enhance performance minimally.
+ * 
+ * 0x0ade
+ */
+#define OPTIMIZE_REMOVE_NOP
 
 using System;
 using Mono.Cecil;
@@ -162,16 +173,43 @@ namespace MonoMod {
                     PatchRefs(types);
                 }
             }
-            #if OPTIMIZE_METHOD_FLAG
-            Console.WriteLine("WARNING: OPTIMIZE_METHOD_FLAG currently being tested extensively in the devbuilds - use with care!");
-            Console.WriteLine(Environment.StackTrace);
 
+            #if OPTIMIZE_METHOD_FLAG
+            Console.WriteLine("WARNING: OPTIMIZE_ENABLED currently being tested extensively in the devbuilds - use with care!");
+            Console.WriteLine(Environment.StackTrace);
             Console.WriteLine("Disabling \"NoOptimization\" flag for all methods...");
+            #endif
+            #if OPTIMIZE_REMOVE_NOP
+            Console.WriteLine("WARNING: OPTIMIZE_ENABLED currently being tested extensively in the devbuilds - use with care!");
+            Console.WriteLine(Environment.StackTrace);
+            Console.WriteLine("Removing nop instruction from all methods...");
+            #endif
+            #if OPTIMIZE_METHOD_FLAG || OPTIMIZE_REMOVE_NOP
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 TypeDefinition type = Module.Types[ti];
                 for (int mi = 0; mi < type.Methods.Count; mi++) {
                     MethodDefinition method = type.Methods[mi];
+                    #if OPTIMIZE_METHOD_FLAG
                     method.NoOptimization = false;
+                    #endif
+                    #if OPTIMIZE_REMOVE_NOP
+                    if (method.HasBody) {
+                        List<int> nops = new List<int>();
+                        for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                            Instruction instruction = method.Body.Instructions[i];
+                            if (instruction.OpCode == OpCodes.Nop) {
+                                method.Body.Instructions.RemoveAt(i);
+                                nops.Add(i);
+                                i = i-1 < 0 ? 0 : i-1;
+
+                                for (int ii = method.Body.Instructions.Count - 1; i <= ii; ii--) {
+                                    Instruction next = method.Body.Instructions[ii];
+                                    next.Offset--;
+                                }
+                            }
+                        }
+                    }
+                    #endif
                 }
             }
             #endif
@@ -421,14 +459,9 @@ namespace MonoMod {
             }
 
             Console.WriteLine("Modifying method body...");
-
-            ILProcessor ilProcessor = method.Body.GetILProcessor();
-            Instruction[] origInstructions = new Instruction[method.Body.Instructions.Count];
-            method.Body.Instructions.CopyTo(origInstructions, 0);
-
-            for (int i = 0; i < origInstructions.Length; i++) {
-                Instruction orig_instruction = origInstructions[i];
-                object operand = orig_instruction.Operand;
+            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                Instruction instruction = method.Body.Instructions[i];
+                object operand = instruction.Operand;
 
                 if (operand is MethodReference) {
                     MethodReference methodCalled = (MethodReference) operand;
@@ -551,45 +584,7 @@ namespace MonoMod {
                     operand = FindType((TypeReference) operand);
                 }
 
-                Instruction instruction;
-
-                OpCode opcode = orig_instruction.OpCode;
-
-                //uh.
-                if (operand is long)
-                    instruction = ilProcessor.Create(opcode, (long) operand);
-                else if (operand is float)
-                    instruction = ilProcessor.Create(opcode, (float) operand);
-                else if (operand is double)
-                    instruction = ilProcessor.Create(opcode, (double) operand);
-                else if (operand is Instruction)
-                    instruction = ilProcessor.Create(opcode, (Instruction) operand);
-                else if (operand is Instruction[])
-                    instruction = ilProcessor.Create(opcode, (Instruction[]) operand);
-                else if (operand is VariableDefinition)
-                    instruction = ilProcessor.Create(opcode, (VariableDefinition) operand);
-                else if (operand is int)
-                    instruction = ilProcessor.Create(opcode, (int) operand);
-                else if (operand is TypeReference)
-                    instruction = ilProcessor.Create(opcode, (TypeReference) operand);
-                else if (operand is CallSite)
-                    instruction = ilProcessor.Create(opcode, (CallSite) operand);
-                else if (operand is MethodReference)
-                    instruction = ilProcessor.Create(opcode, (MethodReference) operand);
-                else if (operand is FieldReference)
-                    instruction = ilProcessor.Create(opcode, (FieldReference) operand);
-                else if (operand is string)
-                    instruction = ilProcessor.Create(opcode, (string) operand);
-                else if (operand is sbyte)
-                    instruction = ilProcessor.Create(opcode, (sbyte) operand);
-                else if (operand is byte)
-                    instruction = ilProcessor.Create(opcode, (byte) operand);
-                else if (operand is ParameterDefinition)
-                    instruction = ilProcessor.Create(opcode, (ParameterDefinition) operand);
-                else
-                    instruction = ilProcessor.Create(opcode);
-
-                ilProcessor.Replace(orig_instruction, instruction);
+                instruction.Operand = operand;
             }
 
             for (int i = 0; i < method.Body.Variables.Count; i++) {
