@@ -98,6 +98,8 @@ namespace MonoMod {
         public List<ModuleDefinition> Dependencies = new List<ModuleDefinition>();
         public MethodDefinition Entry;
 
+        public Document SharedSequencePointDocument = new Document("MonoMod-IL");
+
         public MonoMod() {
         }
 
@@ -261,7 +263,7 @@ namespace MonoMod {
                     MethodDefinition method = type.Methods[ii];
                     Console.WriteLine("M: "+method.FullName);
 
-                    if (method.Attributes.HasFlag(MethodAttributes.SpecialName) || HasIgnoreAttribute(method)) {
+                    if (!AllowedSpecialName(method) || HasIgnoreAttribute(method)) {
                         continue;
                     }
 
@@ -287,8 +289,7 @@ namespace MonoMod {
                     }
                     Console.WriteLine("F: "+field.FullName);
 
-                    FieldAttributes attribs = field.Attributes;
-                    FieldDefinition newField = new FieldDefinition(field.Name, attribs, FindType(field.FieldType));
+                    FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType));
                     newField.InitialValue = field.InitialValue;
                     origTypeResolved.Fields.Add(newField);
                 }
@@ -343,6 +344,13 @@ namespace MonoMod {
                 Console.WriteLine("Added copy of original method to "+copy.FullName);
             } else if (origMethod != null) {
                 Console.WriteLine("Prefixed method existing; ignoring...");
+            }
+
+            //fix for .cctor not linking to orig_.cctor
+            if (origMethod != null && origMethod.IsConstructor && origMethod.IsStatic) {
+                Collection<Instruction> instructions = method.Body.Instructions;
+                ILProcessor ilProcessor = method.Body.GetILProcessor();
+                ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethodOrig));
             }
 
             for (int i = 0; i < method.Body.Variables.Count; i++) {
@@ -417,7 +425,7 @@ namespace MonoMod {
                 for (int ii = 0; ii < type.Methods.Count; ii++) {
                     MethodDefinition method = type.Methods[ii];
 
-                    if (method.Attributes.HasFlag(MethodAttributes.SpecialName) || HasIgnoreAttribute(method)) {
+                    if (!AllowedSpecialName(method) || HasIgnoreAttribute(method)) {
                         continue;
                     }
 
@@ -547,9 +555,7 @@ namespace MonoMod {
                             }
                         }
                         if (oldField != null) {
-                            FieldAttributes attribs = oldField.Attributes;
-                            TypeReference type = FindType(oldField.FieldType);
-                            FieldDefinition newField = new FieldDefinition(field.Name, attribs, type);
+                            FieldDefinition newField = new FieldDefinition(field.Name, oldField.Attributes, FindType(oldField.FieldType));
                             newField.InitialValue = oldField.InitialValue;
                             findType.Fields.Add(newField);
                         }
@@ -738,6 +744,22 @@ namespace MonoMod {
                 return str.Replace(strPrefixed, strPrefixed.Substring(prefix.Length));
             }
             return str;
+        }
+
+        public static bool AllowedSpecialName(MethodDefinition method) {
+            if (method.IsConstructor && (method.HasCustomAttributes || method.IsStatic)) {
+                if (method.IsStatic) {
+                    return true;
+                }
+                //Overriding the constructor manually is generally a horrible idea, but who knows where it may be used.
+                foreach (CustomAttribute attrib in method.CustomAttributes) {
+                    if (attrib.AttributeType.FullName == "MonoMod.MonoModConstructor") {
+                        return true;
+                    }
+                }
+            }
+
+            return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
         }
 
         public static bool HasIgnoreAttribute(MethodDefinition method) {
