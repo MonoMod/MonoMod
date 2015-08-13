@@ -1,86 +1,4 @@
-﻿/* Enable compilation of generic method reference resolution
- * 
- * When fixing / patching the references in methods, patch the references to other
- * generic methods more deeply by importing (TODO: finding) the element method
- * instead of simply importing the generic method. Should fix references to generic methods
- * across assemblies. MonoMod will additionally print out a warning.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * It is enabled by default, as it has been partially "fixed" (doesn't break working references anymore; effect on broken references unknown).
- * 
- * 0x0ade
- */
-#define GENERIC_METHOD_REFERENCE
-
-/* Enable handling of generic types when finding them in FindType
- * 
- * When finding a type, it is possible that the type that is being searched is a generic type.
- * In case this is true, MonoMod will print out a warning and instead of importing the type when
- * the type has not been found, FindType will return null.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * It is enabled by default, as it currently helps debugging issues with generic references.
- * 
- * 0x0ade
- */
-#define GENERIC_TYPE_IMPORT
-
-/* Enable handling of generic types (f.e. type parameters) when referencing them in methods.
- * 
- * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * It is enabled by default, as it currently helps debugging issues with generic references.
- * 
- * 0x0ade
- */
-#define GENERIC_TYPE_REFERENCE
-
-/* Enable handling of generic typed variables when referencing them in methods.
- * 
- * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * It is enabled by default, as it currently helps debugging issues with generic references.
- * 
- * 0x0ade
- */
-#define GENERIC_TYPE_VARIABLE
-
-/* Enable handling of generic typed returns in methods.
- * 
- * Similar to GENERIC_METHOD_REFERENCE, but doesn't seem to break as much and with types, not methods.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * It is enabled by default, as it currently helps debugging issues with generic references.
- * 
- * 0x0ade
- */
-#define GENERIC_TYPE_RETURN
-
-/* Disable NoOptimization of all methods in all types in the output assembly.
- * 
- * Currently it is not known to me what it does exactly.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * It is enabled by default, as it can enhance performance minimally.
- * 
- * 0x0ade
- */
-#define OPTIMIZE_METHOD_FLAG
-
-/* Remove nops in all methods in all types in the output assembly.
- * 
- * Currently it is not known to me what it does exactly.
- * 
- * This is still early WIP and thus not really supported in release environments.
- * It is enabled by default, as it can enhance performance minimally.
- * 
- * 0x0ade
- */
-#define OPTIMIZE_REMOVE_NOP
-
-using System;
+﻿using System;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
@@ -176,25 +94,13 @@ namespace MonoMod {
                 }
             }
 
-            #if OPTIMIZE_METHOD_FLAG
-            Console.WriteLine("WARNING: OPTIMIZE_METHOD_FLAG currently being tested extensively in the devbuilds - use with care!");
-            Console.WriteLine(Environment.StackTrace);
-            Console.WriteLine("Disabling \"NoOptimization\" flag for all methods...");
-            #endif
-            #if OPTIMIZE_REMOVE_NOP
-            Console.WriteLine("WARNING: OPTIMIZE_REMOVE_NOP currently being tested extensively in the devbuilds - use with care!");
-            Console.WriteLine(Environment.StackTrace);
-            Console.WriteLine("Removing nop instruction from all methods...");
-            #endif
-            #if OPTIMIZE_METHOD_FLAG || OPTIMIZE_REMOVE_NOP
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 TypeDefinition type = Module.Types[ti];
                 for (int mi = 0; mi < type.Methods.Count; mi++) {
                     MethodDefinition method = type.Methods[mi];
-                    #if OPTIMIZE_METHOD_FLAG
+
                     method.NoOptimization = false;
-                    #endif
-                    #if OPTIMIZE_REMOVE_NOP
+
                     if (method.HasBody) {
                         List<int> nops = new List<int>();
                         for (int i = 0; i < method.Body.Instructions.Count; i++) {
@@ -211,10 +117,8 @@ namespace MonoMod {
                             }
                         }
                     }
-                    #endif
                 }
             }
-            #endif
 
             Console.WriteLine("Writing to output file...");
             Module.Write(Out.FullName);
@@ -490,20 +394,15 @@ namespace MonoMod {
                             findMethod = origMethodOrig;
                         }
 
-                        #if GENERIC_METHOD_REFERENCE
                         if (findMethod == null) {
                             try {
                                 findMethod = Module.Import(methodCalled);
-                            } catch (Exception e) {
-                                Console.WriteLine("WARNING: Generic method instance could not be directly imported!");
-                                Console.WriteLine(e);
+                            } catch {
+                                //uh. generic type failed importing?
                             }
                         }
 
                         if (findMethod == null && methodCalled.IsGenericInstance) {
-                            Console.WriteLine("WARNING: GENERIC_METHOD_REFERENCE currently being tested extensively in the devbuilds - use with care!");
-                            Console.WriteLine(Environment.StackTrace);
-
                             GenericInstanceMethod genericMethodCalled = ((GenericInstanceMethod) methodCalled);
                             Console.WriteLine("Calling method: " + genericMethodCalled.FullName);
                             Console.WriteLine("Element method: " + genericMethodCalled.ElementMethod.FullName);
@@ -525,7 +424,6 @@ namespace MonoMod {
 
                             findMethod = genericMethod;
                         }
-                        #endif
 
                         operand = findMethod ?? Module.Import(methodCalled);
                     }
@@ -576,11 +474,7 @@ namespace MonoMod {
                 }
 
                 if (operand is TypeReference) {
-                    #if GENERIC_TYPE_REFERENCE
                     if (((TypeReference) operand).IsGenericParameter) {
-                        Console.WriteLine("WARNING: GENERIC_TYPE_REFERENCE currently being tested extensively in the devbuilds - use with care!");
-                        Console.WriteLine(Environment.StackTrace);
-
                         Console.WriteLine("Generic param wanted: " + ((TypeReference) operand).FullName);
                         Console.WriteLine("Method: " + method.FullName);
                         for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
@@ -592,20 +486,21 @@ namespace MonoMod {
                                 break;
                             }
                         }
-                    } else
-                    #endif
-                    operand = FindType((TypeReference) operand);
+                    } else {
+                        operand = FindType((TypeReference) operand);
+                    }
                 }
 
                 instruction.Operand = operand;
+
+                if (instruction.ToString().Contains("System.Exception") || instruction.ToString().Contains("catch")) {
+                    Console.WriteLine("lolwut " + instruction);
+                    Console.WriteLine(instruction.Operand.GetType().FullName);
+                }
             }
 
             for (int i = 0; i < method.Body.Variables.Count; i++) {
-                #if GENERIC_TYPE_VARIABLE
                 if (method.Body.Variables[i].VariableType.IsGenericParameter) {
-                    Console.WriteLine("WARNING: GENERIC_TYPE_VARIABLE currently being tested extensively in the devbuilds - use with care!");
-                    Console.WriteLine(Environment.StackTrace);
-
                     TypeReference variableType = method.Body.Variables[i].VariableType;
 
                     Console.WriteLine("Generic param wanted: " + variableType.FullName);
@@ -619,16 +514,12 @@ namespace MonoMod {
                             break;
                         }
                     }
-                } else
-                #endif
-                method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType);
+                } else {
+                    method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType);
+                }
             }
 
-            #if GENERIC_TYPE_RETURN
             if (method.ReturnType.IsGenericParameter) {
-                Console.WriteLine("WARNING: GENERIC_TYPE_RETURN currently being tested extensively in the devbuilds - use with care!");
-                Console.WriteLine(Environment.StackTrace);
-
                 TypeReference returnType = method.ReturnType;
 
                 Console.WriteLine("Generic param wanted: " + returnType.FullName);
@@ -643,7 +534,13 @@ namespace MonoMod {
                     }
                 }
             }
-            #endif
+
+            for (int ei = 0; ei < method.Body.ExceptionHandlers.Count; ei++) {
+                if (method.Body.ExceptionHandlers[ei].CatchType == null) {
+                    continue;
+                }
+                method.Body.ExceptionHandlers[ei].CatchType = FindType(method.Body.ExceptionHandlers[ei].CatchType, true);
+            }
         }
 
         public TypeReference FindType(TypeReference type, bool fallbackToImport = true) {
@@ -662,13 +559,9 @@ namespace MonoMod {
                     }
                 }
             }
-            #if GENERIC_TYPE_IMPORT
             if (type.IsGenericParameter) {
-                Console.WriteLine("WARNING: GENERIC_TYPE_IMPORT currently being tested extensively in the devbuilds - use with care!");
-                Console.WriteLine(Environment.StackTrace);
                 return foundType ?? (fallbackToImport ? type : null);
             }
-            #endif
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
         }
 
