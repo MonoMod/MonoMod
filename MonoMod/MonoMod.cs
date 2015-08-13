@@ -177,12 +177,12 @@ namespace MonoMod {
             }
 
             #if OPTIMIZE_METHOD_FLAG
-            Console.WriteLine("WARNING: OPTIMIZE_ENABLED currently being tested extensively in the devbuilds - use with care!");
+            Console.WriteLine("WARNING: OPTIMIZE_METHOD_FLAG currently being tested extensively in the devbuilds - use with care!");
             Console.WriteLine(Environment.StackTrace);
             Console.WriteLine("Disabling \"NoOptimization\" flag for all methods...");
             #endif
             #if OPTIMIZE_REMOVE_NOP
-            Console.WriteLine("WARNING: OPTIMIZE_ENABLED currently being tested extensively in the devbuilds - use with care!");
+            Console.WriteLine("WARNING: OPTIMIZE_REMOVE_NOP currently being tested extensively in the devbuilds - use with care!");
             Console.WriteLine(Environment.StackTrace);
             Console.WriteLine("Removing nop instruction from all methods...");
             #endif
@@ -226,76 +226,83 @@ namespace MonoMod {
             Module.AssemblyReferences.Add(mod.Assembly.Name);
 
             for (int i = 0; i < mod.Types.Count; i++) {
-                TypeDefinition type = mod.Types[i];
-                string typeName = type.FullName;
-                Console.WriteLine("T: " + typeName);
+                PatchType(mod.Types[i], types);
+            }
+        }
 
-                typeName = RemovePrefixes(typeName, type.Name);
+        public void PatchType(TypeDefinition type, List<TypeDefinition> types) {
+            for (int i = 0; i < type.NestedTypes.Count; i++) {
+                PatchType(type.NestedTypes[i], types);
+            }
 
-                if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
-                    type.Attributes.HasFlag(TypeAttributes.Interface)) {
-                    Console.WriteLine("Type is a private interface; ignore...");
+            string typeName = type.FullName;
+            Console.WriteLine("T: " + typeName);
+
+            typeName = RemovePrefixes(typeName, type.Name);
+
+            if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
+                type.Attributes.HasFlag(TypeAttributes.Interface)) {
+                Console.WriteLine("Type is a private interface; ignore...");
+                return;
+            }
+
+            if (HasIgnoreAttribute(type)) {
+                return;
+            }
+
+            TypeReference origType = Module.GetType(typeName, true);
+            if (origType == null) {
+                if (!type.Name.StartsWith("patch_")) {
+                    Module.Types.Add(Module.Import(type).Resolve());
+                }
+                return;
+            }
+
+            origType = Module.GetType(typeName, false);
+            if (origType == null) {
+                return;
+            }
+
+            TypeDefinition origTypeResolved = origType.Resolve();
+
+            type = Module.Import(type).Resolve();
+
+            for (int ii = 0; ii < type.Methods.Count; ii++) {
+                MethodDefinition method = type.Methods[ii];
+                Console.WriteLine("M: "+method.FullName);
+
+                if (!AllowedSpecialName(method) || HasIgnoreAttribute(method)) {
                     continue;
                 }
 
-                if (HasIgnoreAttribute(type)) {
-                    continue;
-                }
+                method = Module.Import(method).Resolve();
+                PatchMethod(method);
+            }
 
-                TypeReference origType = Module.GetType(typeName, true);
-                if (origType == null) {
-                    if (!type.Name.StartsWith("patch_")) {
-                        Module.Types.Add(Module.Import(type).Resolve());
-                    }
-                    continue;
-                }
-
-                origType = Module.GetType(typeName, false);
-                if (origType == null) {
-                    continue;
-                }
-
-                TypeDefinition origTypeResolved = origType.Resolve();
-
-                type = Module.Import(type).Resolve();
-
-                for (int ii = 0; ii < type.Methods.Count; ii++) {
-                    MethodDefinition method = type.Methods[ii];
-                    Console.WriteLine("M: "+method.FullName);
-
-                    if (!AllowedSpecialName(method) || HasIgnoreAttribute(method)) {
-                        continue;
-                    }
-
-                    method = Module.Import(method).Resolve();
-                    PatchMethod(method);
-                }
-
-                for (int ii = 0; ii < type.Fields.Count; ii++) {
-                    FieldDefinition field = type.Fields[ii];
-                    /*if (field.Attributes.HasFlag(FieldAttributes.SpecialName)) {
+            for (int ii = 0; ii < type.Fields.Count; ii++) {
+                FieldDefinition field = type.Fields[ii];
+                /*if (field.Attributes.HasFlag(FieldAttributes.SpecialName)) {
                         continue;
                     }*/
 
-                    bool hasField = false;
-                    for (int iii = 0; iii < origTypeResolved.Fields.Count; iii++) {
-                        if (origTypeResolved.Fields[iii].Name == field.Name) {
-                            hasField = true;
-                            break;
-                        }
+                bool hasField = false;
+                for (int iii = 0; iii < origTypeResolved.Fields.Count; iii++) {
+                    if (origTypeResolved.Fields[iii].Name == field.Name) {
+                        hasField = true;
+                        break;
                     }
-                    if (hasField) {
-                        continue;
-                    }
-                    Console.WriteLine("F: "+field.FullName);
-
-                    FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType));
-                    newField.InitialValue = field.InitialValue;
-                    origTypeResolved.Fields.Add(newField);
                 }
+                if (hasField) {
+                    continue;
+                }
+                Console.WriteLine("F: "+field.FullName);
 
-                types.Add(type);
+                FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType));
+                newField.InitialValue = field.InitialValue;
+                origTypeResolved.Fields.Add(newField);
             }
+
+            types.Add(type);
         }
 
         public void PatchMethod(MethodDefinition method) {
