@@ -16,8 +16,6 @@ namespace MonoMod {
         public List<ModuleDefinition> Dependencies = new List<ModuleDefinition>();
         public MethodDefinition Entry;
 
-        public Document SharedSequencePointDocument = new Document("MonoMod-IL");
-
         public MonoMod() {
         }
 
@@ -77,7 +75,7 @@ namespace MonoMod {
                 Module.EntryPoint = Entry;
             }
 
-            string fileName = In.Name.Substring(0, In.Name.IndexOf("."));
+            string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
             Console.WriteLine("Scanning for files matching "+fileName+".*.mm.dll ...");
             List<TypeDefinition> types = new List<TypeDefinition>();
             foreach (FileInfo f in Dir.GetFiles()) {
@@ -150,15 +148,16 @@ namespace MonoMod {
                 return;
             }
 
-            if (HasIgnoreAttribute(type)) {
+            if (HasAttribute(type, "MonoModIgnore")) {
                 return;
             }
 
             TypeReference origType = Module.GetType(typeName, true);
             if (origType == null) {
-                if (!type.Name.StartsWith("patch_")) {
+                //TODO still required?
+                /*if (!type.Name.StartsWith("patch_")) {
                     Module.Types.Add(Module.Import(type).Resolve());
-                }
+                }*/
                 return;
             }
 
@@ -169,13 +168,18 @@ namespace MonoMod {
 
             TypeDefinition origTypeResolved = origType.Resolve();
 
+            if (type.Name.StartsWith("remove_") || HasAttribute(type, "MonoModRemove")) {
+                Module.Types.Remove(origTypeResolved);
+                return;
+            }
+
             type = Module.Import(type).Resolve();
 
             for (int ii = 0; ii < type.Methods.Count; ii++) {
                 MethodDefinition method = type.Methods[ii];
                 Console.WriteLine("M: "+method.FullName);
 
-                if (!AllowedSpecialName(method) || HasIgnoreAttribute(method)) {
+                if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore")) {
                     continue;
                 }
 
@@ -215,7 +219,6 @@ namespace MonoMod {
                 return;
             }
 
-
             Console.WriteLine("Patching "+method.Name+" ...");
 
             Console.WriteLine("Checking for already existing methods...");
@@ -225,6 +228,7 @@ namespace MonoMod {
             MethodDefinition origMethod = null; //original method that is going to be changed if existing (f.e. X)
             MethodDefinition origMethodOrig = null; //orig_ method (f.e. orig_X)
 
+            //TODO the orig methods of replace_ methods can't be found
             for (int i = 0; i < origType.Methods.Count; i++) {
                 if (origType.Methods[i].FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                     origMethod = origType.Methods[i];
@@ -235,24 +239,28 @@ namespace MonoMod {
             }
 
             if (origMethod != null && origMethodOrig == null) {
-                Console.WriteLine("Method existing; creating copy...");
+                if (method.Name.StartsWith("replace_") || HasAttribute(method, "MonoModReplace")) {
+                    Console.WriteLine("Method existing; replacing...");
+                } else {
+                    Console.WriteLine("Method existing; creating copy...");
 
-                MethodDefinition copy = new MethodDefinition("orig_"+origMethod.Name, origMethod.Attributes, origMethod.ReturnType);
-                copy.DeclaringType = origMethod.DeclaringType;
-                copy.MetadataToken = origMethod.MetadataToken;
-                copy.Body = origMethod.Body;
+                    MethodDefinition copy = new MethodDefinition("orig_"+origMethod.Name, origMethod.Attributes, origMethod.ReturnType);
+                    copy.DeclaringType = origMethod.DeclaringType;
+                    copy.MetadataToken = origMethod.MetadataToken;
+                    copy.Body = origMethod.Body;
 
-                for (int i = 0; i < origMethod.Parameters.Count; i++) {
-                    copy.Parameters.Add(origMethod.Parameters[i]);
+                    for (int i = 0; i < origMethod.Parameters.Count; i++) {
+                        copy.Parameters.Add(origMethod.Parameters[i]);
+                    }
+
+                    for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
+                        copy.GenericParameters.Add(new GenericParameter(origMethod.GenericParameters[i].Name, copy));
+                    }
+
+                    origType.Methods.Add(copy);
+                    origMethodOrig = copy;
+                    Console.WriteLine("Added copy of original method to "+copy.FullName);
                 }
-
-                for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
-                    copy.GenericParameters.Add(new GenericParameter(origMethod.GenericParameters[i].Name, copy));
-                }
-
-                origType.Methods.Add(copy);
-                origMethodOrig = copy;
-                Console.WriteLine("Added copy of original method to "+copy.FullName);
             } else if (origMethod != null) {
                 Console.WriteLine("Prefixed method existing; ignoring...");
             }
@@ -336,7 +344,7 @@ namespace MonoMod {
                 for (int ii = 0; ii < type.Methods.Count; ii++) {
                     MethodDefinition method = type.Methods[ii];
 
-                    if (!AllowedSpecialName(method) || HasIgnoreAttribute(method)) {
+                    if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore")) {
                         continue;
                     }
 
@@ -635,6 +643,8 @@ namespace MonoMod {
         public static string RemovePrefixes(string str, string strPrefixed = null) {
             strPrefixed = strPrefixed ?? str;
             str = RemovePrefix(str, "patch_", strPrefixed);
+            str = RemovePrefix(str, "remove_", strPrefixed);
+            str = RemovePrefix(str, "replace_", strPrefixed);
             return str;
         }
 
@@ -662,24 +672,24 @@ namespace MonoMod {
             return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
         }
 
-        public static bool HasIgnoreAttribute(MethodDefinition method) {
+        public static bool HasAttribute(MethodDefinition method, string attribute) {
             if (!method.HasCustomAttributes) {
                 return false;
             }
             foreach (CustomAttribute attrib in method.CustomAttributes) {
-                if (attrib.AttributeType.FullName == "MonoMod.MonoModIgnore") {
+                if (attrib.AttributeType.FullName == "MonoMod." + attribute) {
                     return true;
                 }
             }
             return false;
         }
 
-        public static bool HasIgnoreAttribute(TypeDefinition type) {
+        public static bool HasAttribute(TypeDefinition type, string attribute) {
             if (!type.HasCustomAttributes) {
                 return false;
             }
             foreach (CustomAttribute attrib in type.CustomAttributes) {
-                if (attrib.AttributeType.FullName == "MonoMod.MonoModIgnore") {
+                if (attrib.AttributeType.FullName == "MonoMod." + attribute) {
                     return true;
                 }
             }
