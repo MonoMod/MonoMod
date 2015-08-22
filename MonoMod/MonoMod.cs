@@ -24,6 +24,8 @@ namespace MonoMod {
 
         public MonoMod(FileInfo input) {
             In = input;
+            Dir = input.Directory;
+            Out = new FileInfo(input.FullName.Substring(0, input.FullName.Length-4)+".mm.exe");
         }
 
         public static void Main(string[] args) {
@@ -36,62 +38,57 @@ namespace MonoMod {
 
             MonoMod mm = new MonoMod(args[0]);
 
-            mm.Patch();
+            mm.Read();
+            mm.AutoPatch();
+            mm.Write();
         }
 
-        public void Patch() {
-            if (Dir == null) {
-                Dir = In.Directory;
-            }
-            if (Out == null) {
-                Out = new FileInfo(In.FullName.Substring(0, In.FullName.Length-4)+".mm.exe");
-            }
-
-            Console.WriteLine("Patching "+In.Name+" ...");
-
-            Console.WriteLine("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
-            Module = ModuleDefinition.ReadModule(In.FullName);
-
-            Console.WriteLine("Reading module dependencies...");
-            for (int mi = 0; mi < Module.ModuleReferences.Count; mi++) {
-                LoadDependency(Module.ModuleReferences[mi].Name);
+        /// <summary>
+        /// Reads the main assembly to mod.
+        /// </summary>
+        /// <param name="loadDependencies">If set to <c>true</c> load dependencies when not already loaded.</param>
+        public void Read(bool loadDependencies = true) {
+            if (Module == null) {
+                Console.WriteLine("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
+                Module = ModuleDefinition.ReadModule(In.FullName);
             }
 
-            Console.WriteLine("Reading assembly dependencies...");
-            for (int mi = 0; mi < Module.AssemblyReferences.Count; mi++) {
-                LoadDependency(Module.AssemblyReferences[mi].Name);
-            }
-
-            Dependencies.Remove(Module);
-
-            Console.WriteLine("Reading main EntryPoint MethodDefinition...");
-            Entry = Module.EntryPoint;
-
-            Console.WriteLine("Replacing main EntryPoint...");
-            MethodDefinition entryOld = Entry;
-            Entry = PatchEntry(entryOld);
-            if (Entry != null) {
-                entryOld.DeclaringType.Methods.Add(Entry);
-                Module.EntryPoint = Entry;
-            }
-
-            string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
-            Console.WriteLine("Scanning for files matching "+fileName+".*.mm.dll ...");
-            List<TypeDefinition> types = new List<TypeDefinition>();
-            foreach (FileInfo f in Dir.GetFiles()) {
-                if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
-                    Console.WriteLine("Found "+f.Name+" , reading...");
-                    ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
-                    PatchModule(mod, types);
+            if (loadDependencies && Dependencies.Count == 0 && Dir != null) {
+                Console.WriteLine("Reading module dependencies...");
+                for (int mi = 0; mi < Module.ModuleReferences.Count; mi++) {
+                    LoadDependency(Module.ModuleReferences[mi].Name);
                 }
-            }
-            Console.WriteLine("Patching / fixing references...");
-            foreach (FileInfo f in Dir.GetFiles()) {
-                if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
-                    PatchRefs(types);
+
+                Console.WriteLine("Reading assembly dependencies...");
+                for (int mi = 0; mi < Module.AssemblyReferences.Count; mi++) {
+                    LoadDependency(Module.AssemblyReferences[mi].Name);
                 }
+
+                Dependencies.Remove(Module);
             }
 
+            //TODO make this return a status code or something
+        }
+
+        /// <summary>
+        /// Write the modded module to the given file or the default output.
+        /// </summary>
+        /// <param name="output">Output file. If none given, Out will be used.</param>
+        public void Write(FileInfo output = null) {
+            if (output == null) {
+                output = Out;
+            }
+
+            Console.WriteLine("Writing to output file...");
+            Module.Write(output.FullName);
+
+            //TODO make this return a status code or something
+        }
+
+        /// <summary>
+        /// Runs some basic optimization (f.e. disables NoOptimization, removes nops)
+        /// </summary>
+        public void Optimize() {
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 TypeDefinition type = Module.Types[ti];
                 for (int mi = 0; mi < type.Methods.Count; mi++) {
@@ -117,13 +114,54 @@ namespace MonoMod {
                     }
                 }
             }
+        }
 
-            Console.WriteLine("Writing to output file...");
-            Module.Write(Out.FullName);
+        /// <summary>
+        /// Automatically mods the module, loading In, based on the files in Dir and writes it to Out.
+        /// If Dir and Out are not set, it will use the input file to create Dir and Out.
+        /// </summary>
+        public void AutoPatch() {
+            if (Dir == null) {
+                Dir = In.Directory;
+            }
+            if (Out == null) {
+                Out = new FileInfo(In.FullName.Substring(0, In.FullName.Length-4)+".mm.exe");
+            }
+
+            Console.WriteLine("Patching "+In.Name+" ...");
+
+            Read(true);
+
+            Console.WriteLine("Replacing main EntryPoint...");
+            Entry = PatchEntry(Module.EntryPoint);
+
+            string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
+            Console.WriteLine("Scanning for files matching "+fileName+".*.mm.dll ...");
+            List<TypeDefinition> types = new List<TypeDefinition>();
+            foreach (FileInfo f in Dir.GetFiles()) {
+                if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
+                    Console.WriteLine("Found "+f.Name+" , reading...");
+                    ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
+                    PatchModule(mod, types);
+                }
+            }
+            Console.WriteLine("Patching / fixing references...");
+            foreach (FileInfo f in Dir.GetFiles()) {
+                if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
+                    PatchRefs(types);
+                }
+            }
+
+            Optimize();
 
             Console.WriteLine("Done.");
         }
 
+        /// <summary>
+        /// Patches the module and adds the patched types to the given list.
+        /// </summary>
+        /// <param name="mod">Mod to patch into the input module.</param>
+        /// <param name="types">Type list containing all patched types.</param>
         public void PatchModule(ModuleDefinition mod, List<TypeDefinition> types) {
             Module.AssemblyReferences.Add(mod.Assembly.Name);
 
@@ -132,6 +170,11 @@ namespace MonoMod {
             }
         }
 
+        /// <summary>
+        /// Patches the type and adds it to the given list if it's actually patched.
+        /// </summary>
+        /// <param name="type">Type to patch into the input module.</param>
+        /// <param name="types">Type list containing all patched types.</param>
         public void PatchType(TypeDefinition type, List<TypeDefinition> types) {
             for (int i = 0; i < type.NestedTypes.Count; i++) {
                 PatchType(type.NestedTypes[i], types);
@@ -213,6 +256,10 @@ namespace MonoMod {
             types.Add(type);
         }
 
+        /// <summary>
+        /// Patches the given method into the input module.
+        /// </summary>
+        /// <param name="method">Method to patch in.</param>
         public void PatchMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
                 Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
@@ -330,6 +377,10 @@ namespace MonoMod {
             }
         }
 
+        /// <summary>
+        /// Patches the references in all of the given types.
+        /// </summary>
+        /// <param name="types">Types to patch.</param>
         public void PatchRefs(List<TypeDefinition> types) {
             foreach (TypeDefinition type in types) {
                 if (type == null) {
@@ -361,6 +412,10 @@ namespace MonoMod {
             }
         }
 
+        /// <summary>
+        /// Patches the references in method.
+        /// </summary>
+        /// <param name="method">Method to patch.</param>
         public void PatchRefsInMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
                 Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
@@ -551,6 +606,12 @@ namespace MonoMod {
             }
         }
 
+        /// <summary>
+        /// Finds a type in the input module based on a type in any other module.
+        /// </summary>
+        /// <returns>The found type or either null or the imported type.</returns>
+        /// <param name="type">Type to find.</param>
+        /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
         public TypeReference FindType(TypeReference type, bool fallbackToImport = true) {
             if (type == null) {
                 Console.WriteLine("ERROR: Can't find null type!");
@@ -573,6 +634,12 @@ namespace MonoMod {
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
         }
 
+        /// <summary>
+        /// Finds a method in the input module based on a method in any other module.
+        /// </summary>
+        /// <returns>The found method or either null or the imported method.</returns>
+        /// <param name="method">Method to find.</param>
+        /// <param name="fallbackToImport">If set to <c>true</c> this method returns the method to find as imported in the input module.</param>
         public MethodReference FindMethod(MethodReference method, bool fallbackToImport) {
             TypeReference findTypeRef = FindType(method.DeclaringType, false);
             TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
@@ -592,6 +659,10 @@ namespace MonoMod {
             return fallbackToImport ? Module.Import(method) : null;
         }
 
+        /// <summary>
+        /// Loads a dependency and adds it to Dependencies. Requires the field Dir to be set.
+        /// </summary>
+        /// <param name="dependency">Dependency to load.</param>
         public void LoadDependency(string dependency) {
             FileInfo dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency+".dll");
             if (!dependencyFile.Exists) {
@@ -608,6 +679,11 @@ namespace MonoMod {
             Console.WriteLine("Dependency \""+dependency+"\" loaded.");
         }
 
+        /// <summary>
+        /// Patches the (entry) method to output the used MonoMod version in the console.
+        /// </summary>
+        /// <returns>The new entry method.</returns>
+        /// <param name="entryOld">The old entry method.</param>
         public MethodDefinition PatchEntry(MethodDefinition entryOld) {
             if (entryOld == null) {
                 Console.WriteLine("Entry point not found; skipping...");
@@ -618,8 +694,7 @@ namespace MonoMod {
 
             entryOld.Name = "orig_"+entryOld.Name;
 
-            MethodAttributes attribs = MethodAttributes.Public | MethodAttributes.Static;
-            MethodDefinition entry = new MethodDefinition("Main", attribs, Module.Import(typeof(void)));
+            MethodDefinition entry = new MethodDefinition("Main", MethodAttributes.Public | MethodAttributes.Static, Module.Import(typeof(void)));
             entry.Parameters.Add(new ParameterDefinition(Module.Import(typeof(string[]))));
 
             MethodBody body = new MethodBody(entry);
@@ -628,18 +703,25 @@ namespace MonoMod {
             processor.Emit(OpCodes.Ldstr, "MonoMod "+System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
             processor.Emit(OpCodes.Call, Module.Import(typeof(Console).GetMethod("WriteLine", new Type[] {typeof(string)})));
 
-
             processor.Emit(OpCodes.Ldarg_0);
             processor.Emit(OpCodes.Call, entryOld);
 
             processor.Emit(OpCodes.Ret);
 
-
             entry.Body = body;
+
+            entryOld.DeclaringType.Methods.Add(entry);
+            Module.EntryPoint = entry;
 
             return entry;
         }
 
+        /// <summary>
+        /// Removes all MonoMod prefixes from the given string.
+        /// </summary>
+        /// <returns>The prefixes.</returns>
+        /// <param name="str">String to remove the prefixes from.</param>
+        /// <param name="strPrefixed">A prefixed string, f.e. full type name before the full method name.</param>
         public static string RemovePrefixes(string str, string strPrefixed = null) {
             strPrefixed = strPrefixed ?? str;
             str = RemovePrefix(str, "patch_", strPrefixed);
@@ -648,6 +730,13 @@ namespace MonoMod {
             return str;
         }
 
+        /// <summary>
+        /// Removes the prefix from the given string.
+        /// </summary>
+        /// <returns>The prefix.</returns>
+        /// <param name="str">String to remove the prefixes from.</param>
+        /// <param name="prefix">Prefix.</param>
+        /// <param name="strPrefixed">A prefixed string, f.e. full type name before the full method name.</param>
         public static string RemovePrefix(string str, string prefix, string strPrefixed = null) {
             strPrefixed = strPrefixed ?? str;
             if (strPrefixed.StartsWith(prefix)) {
@@ -656,6 +745,11 @@ namespace MonoMod {
             return str;
         }
 
+        /// <summary>
+        /// Checks if the method has a special name that is "allowed" to be patched.
+        /// </summary>
+        /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
+        /// <param name="method">Method to check.</param>
         public static bool AllowedSpecialName(MethodDefinition method) {
             if (method.IsConstructor && (method.HasCustomAttributes || method.IsStatic)) {
                 if (method.IsStatic) {
@@ -672,6 +766,12 @@ namespace MonoMod {
             return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
         }
 
+        /// <summary>
+        /// Determines if the method has got a specific MonoMod attribute.
+        /// </summary>
+        /// <returns><c>true</c> if the method contains the given MonoMod attribute, <c>false</c> otherwise.</returns>
+        /// <param name="method">Method.</param>
+        /// <param name="attribute">Attribute.</param>
         public static bool HasAttribute(MethodDefinition method, string attribute) {
             if (!method.HasCustomAttributes) {
                 return false;
@@ -684,6 +784,12 @@ namespace MonoMod {
             return false;
         }
 
+        /// <summary>
+        /// Determines if the type has got a specific MonoMod attribute.
+        /// </summary>
+        /// <returns><c>true</c> if the type contains the given MonoMod attribute, <c>false</c> otherwise.</returns>
+        /// <param name="type">Type.</param>
+        /// <param name="attribute">Attribute.</param>
         public static bool HasAttribute(TypeDefinition type, string attribute) {
             if (!type.HasCustomAttributes) {
                 return false;
