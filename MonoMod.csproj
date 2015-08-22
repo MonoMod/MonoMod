@@ -38,7 +38,7 @@
     <Compile Include="MonoMod\MonoMod.cs" />
     <Compile Include="MonoMod\MonoModRemove.cs" />
     <Compile Include="MonoMod\MonoModReplace.cs" />
-    <Compile Include="MonoMod\MonoModIConstructor.cs" />
+    <Compile Include="MonoMod\MonoModConstructor.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
