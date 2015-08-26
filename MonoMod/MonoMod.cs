@@ -87,6 +87,8 @@ namespace MonoMod {
                 output = Out;
             }
 
+            PatchWasHere();
+
             Console.WriteLine("Writing to output file...");
             Module.Write(output.FullName);
 
@@ -727,7 +729,6 @@ namespace MonoMod {
                         string item_ = (string) instruction.Operand;
                         int splitIndex = item_.IndexOf(":");
                         BlacklistItem item = new BlacklistItem(item_.Substring(0, splitIndex), item_.Substring(splitIndex + 1));
-                        Console.WriteLine("debug: " + item.AssemblyName + "_:_" + item.FullName);
                         loadedBlacklist.Add(item);
                     }
                 }
@@ -769,6 +770,21 @@ namespace MonoMod {
             Module.EntryPoint = entry;
 
             return entry;
+        }
+
+        /// <summary>
+        /// Patches the type MonoMod.WasHere into the output module if it didn't exist yet.
+        /// </summary>
+        public void PatchWasHere() {
+            Console.WriteLine("Checking if MonoMod already was there...");
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "WasHere") {
+                    Console.WriteLine("MonoMod was there.");
+                    return;
+                }
+            }
+            Console.WriteLine("Adding MonoMod.WasHere");
+            Module.Types.Add(new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class));
         }
 
         /// <summary>
