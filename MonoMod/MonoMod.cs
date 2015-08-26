@@ -58,6 +58,7 @@ namespace MonoMod {
             if (Module == null) {
                 Console.WriteLine("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
                 Module = ModuleDefinition.ReadModule(In.FullName);
+                LoadBlacklist(Module);
             }
 
             if (loadDependencies && Dependencies.Count == 0 && Dir != null) {
@@ -697,8 +698,40 @@ namespace MonoMod {
                 Console.WriteLine("WARNING: Dependency \""+dependency+"\" not found; ignoring...");
                 return;
             }
-            Dependencies.Add(ModuleDefinition.ReadModule(dependencyFile.FullName));
+            ModuleDefinition module = ModuleDefinition.ReadModule(dependencyFile.FullName);
+            Dependencies.Add(module);
+            LoadBlacklist(module);
             Console.WriteLine("Dependency \""+dependency+"\" loaded.");
+        }
+
+        /// <summary>
+        /// Loads the blacklist from the module.
+        /// </summary>
+        /// <param name="module">Module to load the blacklist from.</param>
+        public void LoadBlacklist(ModuleDefinition module) {
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                TypeDefinition type = Module.Types[ti];
+                if (type.Name != "MonoModBlacklist") {
+                    continue;
+                }
+                for (int ii = 0; ii < type.Methods.Count; ii++) {
+                    MethodDefinition method = type.Methods[ii];
+                    if (method.Name != ".cctor") {
+                        continue;
+                    }
+                    for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                        Instruction instruction = method.Body.Instructions[i];
+                        if (instruction.OpCode != OpCodes.Ldstr) {
+                            continue;
+                        }
+                        string item_ = (string) instruction.Operand;
+                        int splitIndex = item_.IndexOf(":");
+                        BlacklistItem item = new BlacklistItem(item_.Substring(0, splitIndex), item_.Substring(splitIndex + 1));
+                        Console.WriteLine("debug: " + item.AssemblyName + "_:_" + item.FullName);
+                        loadedBlacklist.Add(item);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -834,7 +867,6 @@ namespace MonoMod {
             if (assemblyName.EndsWith(".dll")) {
                 assemblyName = assemblyName.Substring(0, assemblyName.Length - 4);
             }
-            Console.WriteLine("debug testing " + assemblyName + ":" + fullName);
             if (hasBlacklistedAttr) {
                 if (throwWhenBlacklisted) {
                     throw new AccessViolationException("Keep yar' dirtay fingars away! " + assemblyName + ":" + fullName);
