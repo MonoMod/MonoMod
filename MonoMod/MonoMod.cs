@@ -8,6 +8,13 @@ using Mono.Collections.Generic;
 namespace MonoMod {
     public class MonoMod {
 
+        public static List<BlacklistItem> GlobalBlacklist = new List<BlacklistItem>() {
+            new BlacklistItem("Assembly-CSharp", "globalGameState.DemoVersion"), //MegaSphere first alpha demo
+            new BlacklistItem("Assembly-CSharp", "globalGameState.isDemo"), //MegaSphere first alpha demo
+        };
+
+        private static List<BlacklistItem> loadedBlacklist = new List<BlacklistItem>();
+
         public FileInfo In;
         public DirectoryInfo Dir;
         public FileInfo Out;
@@ -211,6 +218,8 @@ namespace MonoMod {
 
             TypeDefinition origTypeResolved = origType.Resolve();
 
+            IsBlacklisted(origTypeResolved.Module.Name, origTypeResolved.FullName, HasAttribute(origTypeResolved, "MonoModBlacklisted"));
+
             if (type.Name.StartsWith("remove_") || HasAttribute(type, "MonoModRemove")) {
                 Module.Types.Remove(origTypeResolved);
                 return;
@@ -286,6 +295,7 @@ namespace MonoMod {
             }
 
             if (origMethod != null && origMethodOrig == null) {
+                IsBlacklisted(origMethod.Module.Name, origMethod.DeclaringType.FullName+"."+origMethod.Name, HasAttribute(origMethod, "MonoModBlacklisted"));
                 if (method.Name.StartsWith("replace_") || HasAttribute(method, "MonoModReplace")) {
                     Console.WriteLine("Method existing; replacing...");
                 } else {
@@ -392,6 +402,7 @@ namespace MonoMod {
                 typeName = RemovePrefixes(typeName, type.Name);
 
                 TypeDefinition origType = Module.GetType(typeName);
+                IsBlacklisted(origType.Module.Name, origType.FullName, HasAttribute(origType, "MonoModBlacklisted"));
                 for (int ii = 0; ii < type.Methods.Count; ii++) {
                     MethodDefinition method = type.Methods[ii];
 
@@ -437,6 +448,7 @@ namespace MonoMod {
             }
 
             if (origMethodOrig != null) {
+                IsBlacklisted(origMethodOrig.Module.Name, method.DeclaringType+"."+RemovePrefixes(method.Name), HasAttribute(origMethodOrig, "MonoModBlacklisted"));
                 Console.WriteLine("Prefixed method existing; ignoring...");
             }
 
@@ -487,7 +499,10 @@ namespace MonoMod {
 
                             findMethod = genericMethod;
                         }
-
+                        
+                        if (findMethod != null) {
+                            IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethod.Resolve(), "MonoModBlacklisted"));
+                        }
                         operand = findMethod ?? Module.Import(methodCalled);
                     }
                 }
@@ -533,6 +548,9 @@ namespace MonoMod {
                         field = new FieldReference(field.Name, FindType(field.FieldType), FindType(field.DeclaringType));
                     }
 
+                    if (field != null) {
+                        IsBlacklisted(field.Module.Name, field.DeclaringType.FullName+"."+field.Name);
+                    }
                     operand = field;
                 }
 
@@ -628,6 +646,9 @@ namespace MonoMod {
                     }
                 }
             }
+            if (foundType != null) {
+                IsBlacklisted(foundType.Module.Name, foundType.FullName, HasAttribute(foundType.Resolve(), "MonoModBlacklisted"));
+            }
             if (type.IsGenericParameter) {
                 return foundType ?? (fallbackToImport ? type : null);
             }
@@ -648,6 +669,7 @@ namespace MonoMod {
                 for (int ii = 0; ii < findType.Methods.Count; ii++) {
                     if (findType.Methods[ii].FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                         MethodReference foundMethod = findType.Methods[ii];
+                        IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
                         if (foundMethod.Module != Module) {
                             foundMethod = Module.Import(foundMethod);
                         }
@@ -796,6 +818,42 @@ namespace MonoMod {
             }
             foreach (CustomAttribute attrib in type.CustomAttributes) {
                 if (attrib.AttributeType.FullName == "MonoMod." + attribute) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Determines if the full name is in any of the blacklists.
+        /// </summary>
+        /// <returns><c>true</c> if the full name is in a blacklist, <c>false</c> otherwise.</returns>
+        /// <param name="assemblyName">Assembly name.</param>
+        /// <param name="fullName">Full name.</param>
+        public static bool IsBlacklisted(string assemblyName, string fullName, bool hasBlacklistedAttr = false, bool throwWhenBlacklisted = true) {
+            if (assemblyName.EndsWith(".dll")) {
+                assemblyName = assemblyName.Substring(0, assemblyName.Length - 4);
+            }
+            Console.WriteLine("debug testing " + assemblyName + ":" + fullName);
+            if (hasBlacklistedAttr) {
+                if (throwWhenBlacklisted) {
+                    throw new AccessViolationException("Keep yar' dirtay fingars away! " + assemblyName + ":" + fullName);
+                }
+                return true;
+            }
+            foreach (BlacklistItem item in GlobalBlacklist) {
+                if (item.AssemblyName == assemblyName && item.FullName == fullName) {
+                    if (throwWhenBlacklisted) {
+                        throw new AccessViolationException("Keep yar' dirtay fingars away! " + assemblyName + ":" + fullName);
+                    }
+                    return true;
+                }
+            }
+            foreach (BlacklistItem item in loadedBlacklist) {
+                if (item.AssemblyName == assemblyName && item.FullName == fullName) {
+                    if (throwWhenBlacklisted) {
+                        throw new AccessViolationException("Keep yar' dirtay fingars away! " + assemblyName + ":" + fullName);
+                    }
                     return true;
                 }
             }
