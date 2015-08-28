@@ -784,7 +784,9 @@ namespace MonoMod {
                 }
             }
             Console.WriteLine("Adding MonoMod.WasHere");
-            Module.Types.Add(new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class));
+            Module.Types.Add(new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
+                BaseType = Module.Import(typeof(object))
+            });
         }
 
         /// <summary>
