@@ -304,7 +304,7 @@ namespace MonoMod {
                 } else {
                     Console.WriteLine("Method existing; creating copy...");
 
-                    MethodDefinition copy = new MethodDefinition("orig_"+origMethod.Name, origMethod.Attributes, origMethod.ReturnType);
+					MethodDefinition copy = new MethodDefinition("orig_"+origMethod.Name, origMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, origMethod.ReturnType);
                     copy.DeclaringType = origMethod.DeclaringType;
                     copy.MetadataToken = origMethod.MetadataToken;
                     copy.Body = origMethod.Body;
@@ -326,7 +326,7 @@ namespace MonoMod {
             }
 
             //fix for .cctor not linking to orig_.cctor
-            if (origMethod != null && origMethod.IsConstructor && origMethod.IsStatic) {
+			if (origMethodOrig != null && origMethod.IsConstructor && origMethod.IsStatic) {
                 Collection<Instruction> instructions = method.Body.Instructions;
                 ILProcessor ilProcessor = method.Body.GetILProcessor();
                 ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethodOrig));
