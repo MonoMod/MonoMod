@@ -260,7 +260,7 @@ namespace MonoMod {
                 }
                 Console.WriteLine("F: "+field.FullName);
 
-                FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType));
+                FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType, type));
                 newField.InitialValue = field.InitialValue;
                 origTypeResolved.Fields.Add(newField);
             }
@@ -333,7 +333,8 @@ namespace MonoMod {
             }
 
             for (int i = 0; i < method.Body.Variables.Count; i++) {
-                method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType);
+                //TODO debug! (Import crashes)
+                method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType, method);
             }
 
             Console.WriteLine("Storing method to main module...");
@@ -348,15 +349,17 @@ namespace MonoMod {
                 } else {
                     attribs = method.Attributes;
                 }
-                MethodDefinition clone = new MethodDefinition(method.Name, attribs, FindType(method.ReturnType));
-                for (int i = 0; i < method.Parameters.Count; i++) {
-                    clone.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType)));
-                }
-                for (int i = 0; i < method.GenericParameters.Count; i++) {
-                    clone.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, clone));
-                }
-                clone.Body = method.Body;
+                MethodDefinition clone = new MethodDefinition(method.Name, attribs, Module.Import(typeof(void)));
                 origType.Methods.Add(clone);
+                clone.DeclaringType = origType;
+                for (int i = 0; i < method.GenericParameters.Count; i++) {
+                    clone.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, origType));
+                }
+                for (int i = 0; i < method.Parameters.Count; i++) {
+                    clone.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, clone)));
+                }
+                clone.ReturnType = FindType(method.ReturnType, clone);
+                clone.Body = method.Body;
                 method = clone;
             }
 
@@ -465,7 +468,7 @@ namespace MonoMod {
                     if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                         operand = method;
                     } else {
-                        MethodReference findMethod = FindMethod(methodCalled, false);
+                        MethodReference findMethod = FindMethod(methodCalled, method, false);
 
                         if (origMethodOrig != null && methodCalled.FullName == origMethodOrig.FullName) {
                             Console.WriteLine("Found call to the original method; linking...");
@@ -484,7 +487,7 @@ namespace MonoMod {
                             GenericInstanceMethod genericMethodCalled = ((GenericInstanceMethod) methodCalled);
                             Console.WriteLine("Calling method: " + genericMethodCalled.FullName);
                             Console.WriteLine("Element method: " + genericMethodCalled.ElementMethod.FullName);
-                            GenericInstanceMethod genericMethod = new GenericInstanceMethod(FindMethod(genericMethodCalled.ElementMethod, true));
+                            GenericInstanceMethod genericMethod = new GenericInstanceMethod(FindMethod(genericMethodCalled.ElementMethod, method, true));
 
                             for (int gi = 0; gi < genericMethodCalled.GenericArguments.Count; gi++) {
                                 Console.WriteLine("Generic argument: " + genericMethodCalled.GenericArguments[gi]);
@@ -513,7 +516,7 @@ namespace MonoMod {
                 if (operand is FieldReference) {
                     FieldReference field = (FieldReference) operand;
 
-                    TypeReference findTypeRef = FindType(field.DeclaringType, false);
+                    TypeReference findTypeRef = FindType(field.DeclaringType, method, false);
                     TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
                     if (findType != null) {
                         for (int ii = 0; ii < findType.Fields.Count; ii++) {
@@ -541,14 +544,14 @@ namespace MonoMod {
                             }
                         }
                         if (oldField != null) {
-                            FieldDefinition newField = new FieldDefinition(field.Name, oldField.Attributes, FindType(oldField.FieldType));
+                            FieldDefinition newField = new FieldDefinition(field.Name, oldField.Attributes, FindType(oldField.FieldType, method));
                             newField.InitialValue = oldField.InitialValue;
                             findType.Fields.Add(newField);
                         }
                     }
 
                     if (field == operand) {
-                        field = new FieldReference(field.Name, FindType(field.FieldType), FindType(field.DeclaringType));
+                        field = new FieldReference(field.Name, FindType(field.FieldType, method), FindType(field.DeclaringType, method));
                     }
 
                     if (field != null) {
@@ -558,52 +561,24 @@ namespace MonoMod {
                 }
 
                 if (operand is TypeReference) {
-                    if (((TypeReference) operand).IsGenericParameter) {
-                        Console.WriteLine("Generic param wanted: " + ((TypeReference) operand).FullName);
-                        Console.WriteLine("Method: " + method.FullName);
-                        for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
-                            GenericParameter genericParam = method.GenericParameters[gi];
-                            Console.WriteLine("Checking against: " + genericParam.FullName);
-                            if (genericParam.FullName == ((TypeReference) operand).FullName) {
-                                Console.WriteLine("Success!");
-                                operand = Module.Import(genericParam);
-                                break;
-                            }
-                        }
-                    } else {
-                        operand = FindType((TypeReference) operand);
-                    }
+                    operand = FindType((TypeReference) operand, method);
                 }
 
                 instruction.Operand = operand;
 
                 if (instruction.ToString().Contains("System.Exception") || instruction.ToString().Contains("catch")) {
-                    Console.WriteLine("lolwut " + instruction);
                     Console.WriteLine(instruction.Operand.GetType().FullName);
                 }
             }
 
             for (int i = 0; i < method.Body.Variables.Count; i++) {
-                if (method.Body.Variables[i].VariableType.IsGenericParameter) {
-                    TypeReference variableType = method.Body.Variables[i].VariableType;
-
-                    Console.WriteLine("Generic param wanted: " + variableType.FullName);
-                    Console.WriteLine("Method: " + method.FullName);
-                    for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
-                        GenericParameter genericParam = method.GenericParameters[gi];
-                        Console.WriteLine("Checking against: " + genericParam.FullName);
-                        if (genericParam.FullName == variableType.FullName) {
-                            Console.WriteLine("Success!");
-                            method.Body.Variables[i].VariableType = Module.Import(genericParam);
-                            break;
-                        }
-                    }
-                } else {
-                    method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType);
-                }
+                method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType, method);
             }
 
             if (method.ReturnType.IsGenericParameter) {
+                method.ReturnType = FindTypeGeneric(method.ReturnType, method);
+
+                /*
                 TypeReference returnType = method.ReturnType;
 
                 Console.WriteLine("Generic param wanted: " + returnType.FullName);
@@ -617,13 +592,14 @@ namespace MonoMod {
                         break;
                     }
                 }
+                */
             }
 
             for (int ei = 0; ei < method.Body.ExceptionHandlers.Count; ei++) {
                 if (method.Body.ExceptionHandlers[ei].CatchType == null) {
                     continue;
                 }
-                method.Body.ExceptionHandlers[ei].CatchType = FindType(method.Body.ExceptionHandlers[ei].CatchType, true);
+                method.Body.ExceptionHandlers[ei].CatchType = FindType(method.Body.ExceptionHandlers[ei].CatchType, method);
             }
         }
 
@@ -632,8 +608,9 @@ namespace MonoMod {
         /// </summary>
         /// <returns>The found type or either null or the imported type.</returns>
         /// <param name="type">Type to find.</param>
+        /// <param name="context">Context containing some info.</param>
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
-        public TypeReference FindType(TypeReference type, bool fallbackToImport = true) {
+        public TypeReference FindType(TypeReference type, MemberReference context = null, bool fallbackToImport = true) {
             if (type == null) {
                 Console.WriteLine("ERROR: Can't find null type!");
                 Console.WriteLine(Environment.StackTrace);
@@ -641,6 +618,15 @@ namespace MonoMod {
             }
             string typeName = RemovePrefixes(type.FullName, type.Name);
             TypeReference foundType = Module.GetType(typeName);
+            if (foundType == null && context != null && type.IsGenericParameter) {
+                foundType = FindTypeGeneric(type, context, fallbackToImport);
+            }
+            if (foundType == null && context != null && type.IsGenericInstance) {
+                foundType = new GenericInstanceType(FindType(type.GetElementType(), context, fallbackToImport));
+                foreach (TypeReference genericArgument in ((GenericInstanceType) type).GenericArguments) {
+                    ((GenericInstanceType) foundType).GenericArguments.Add(FindType(genericArgument, context));
+                }
+            }
             if (foundType == null) {
                 foreach (ModuleDefinition dependency in Dependencies) {
                     foundType = dependency.GetType(typeName);
@@ -649,7 +635,7 @@ namespace MonoMod {
                     }
                 }
             }
-            if (foundType != null) {
+            if (foundType != null && foundType.IsDefinition) {
                 IsBlacklisted(foundType.Module.Name, foundType.FullName, HasAttribute(foundType.Resolve(), "MonoModBlacklisted"));
             }
             if (type.IsGenericParameter) {
@@ -659,13 +645,46 @@ namespace MonoMod {
         }
 
         /// <summary>
+        /// Finds a generic type / generic parameter based on a generic parameter type in the context.
+        /// </summary>
+        /// <returns>The found type or either null or the imported type.</returns>
+        /// <param name="type">Type to find.</param>
+        /// <param name="context">Context containing the param.</param>
+        /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
+        public TypeReference FindTypeGeneric(TypeReference type, MemberReference context, bool fallbackToImport = true) {
+            if (context is MethodReference) {
+                for (int gi = 0; gi < ((MethodReference) context).GenericParameters.Count; gi++) {
+                    GenericParameter genericParam = ((MethodReference) context).GenericParameters[gi];
+                    if (genericParam.FullName == type.FullName) {
+                        //TODO variables hate me, import otherwise
+                        return genericParam;
+                    }
+                }
+            }
+            if (context is TypeReference) {
+                for (int gi = 0; gi < ((TypeReference) context).GenericParameters.Count; gi++) {
+                    GenericParameter genericParam = ((TypeReference) context).GenericParameters[gi];
+                    if (genericParam.FullName == type.FullName) {
+                        //TODO variables hate me, import otherwise
+                        return genericParam;
+                    }
+                }
+            }
+            if (context.DeclaringType != null) {
+                return FindTypeGeneric(type, context.DeclaringType, fallbackToImport);
+            }
+            return fallbackToImport ? type : null;
+        }
+
+        /// <summary>
         /// Finds a method in the input module based on a method in any other module.
         /// </summary>
         /// <returns>The found method or either null or the imported method.</returns>
         /// <param name="method">Method to find.</param>
+        /// <param name="context">Context containing some info.</param>
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the method to find as imported in the input module.</param>
-        public MethodReference FindMethod(MethodReference method, bool fallbackToImport) {
-            TypeReference findTypeRef = FindType(method.DeclaringType, false);
+        public MethodReference FindMethod(MethodReference method, MemberReference context, bool fallbackToImport) {
+            TypeReference findTypeRef = FindType(method.DeclaringType.GetElementType(), context, false);
             TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
 
             if (method != null && findType != null) {

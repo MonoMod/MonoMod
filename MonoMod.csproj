@@ -7,8 +7,6 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>MonoMod</RootNamespace>
     <AssemblyName>MonoMod</AssemblyName>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
