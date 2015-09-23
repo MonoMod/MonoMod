@@ -8,12 +8,12 @@ using Mono.Collections.Generic;
 namespace MonoMod {
     public class MonoMod {
 
-        public static List<BlacklistItem> GlobalBlacklist = new List<BlacklistItem>() {
+        public readonly static List<BlacklistItem> GlobalBlacklist = new List<BlacklistItem>() {
             new BlacklistItem("Assembly-CSharp", "globalGameState.DemoVersion"), //MegaSphere first alpha demo
             new BlacklistItem("Assembly-CSharp", "globalGameState.isDemo"), //MegaSphere first alpha demo
         };
 
-        private static List<BlacklistItem> loadedBlacklist = new List<BlacklistItem>();
+        private readonly static List<BlacklistItem> loadedBlacklist = new List<BlacklistItem>();
 
         public FileInfo In;
         public DirectoryInfo Dir;
@@ -26,10 +26,12 @@ namespace MonoMod {
         public MonoMod() {
         }
 
-        public MonoMod(string input) : this(new FileInfo(input)) {
+        public MonoMod(string input)
+            : this(new FileInfo(input)) {
         }
 
-        public MonoMod(FileInfo input) {
+        public MonoMod(FileInfo input)
+            : this() {
             In = input;
             Dir = input.Directory;
             Out = new FileInfo(input.FullName.Substring(0, input.FullName.Length-4)+".mm.exe");
@@ -54,7 +56,7 @@ namespace MonoMod {
         /// Reads the main assembly to mod.
         /// </summary>
         /// <param name="loadDependencies">If set to <c>true</c> load dependencies when not already loaded.</param>
-        public void Read(bool loadDependencies = true) {
+        public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
                 Console.WriteLine("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
                 Module = ModuleDefinition.ReadModule(In.FullName);
@@ -82,7 +84,7 @@ namespace MonoMod {
         /// Write the modded module to the given file or the default output.
         /// </summary>
         /// <param name="output">Output file. If none given, Out will be used.</param>
-        public void Write(FileInfo output = null) {
+        public virtual void Write(FileInfo output = null) {
             if (output == null) {
                 output = Out;
             }
@@ -98,7 +100,7 @@ namespace MonoMod {
         /// <summary>
         /// Runs some basic optimization (f.e. disables NoOptimization, removes nops)
         /// </summary>
-        public void Optimize() {
+        public virtual void Optimize() {
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 TypeDefinition type = Module.Types[ti];
                 for (int mi = 0; mi < type.Methods.Count; mi++) {
@@ -130,9 +132,11 @@ namespace MonoMod {
         /// Automatically mods the module, loading In, based on the files in Dir and writes it to Out.
         /// If Dir and Out are not set, it will use the input file to create Dir and Out.
         /// </summary>
-        public void AutoPatch() {
-            if (Dir == null) {
-                Dir = In.Directory;
+        public virtual void AutoPatch(bool read = true, bool write = true) {
+            if (read) {
+                if (Dir == null) {
+                    Dir = In.Directory;
+                }
             }
             if (Out == null) {
                 Out = new FileInfo(In.FullName.Substring(0, In.FullName.Length-4)+".mm.exe");
@@ -172,7 +176,7 @@ namespace MonoMod {
         /// </summary>
         /// <param name="mod">Mod to patch into the input module.</param>
         /// <param name="types">Type list containing all patched types.</param>
-        public void PatchModule(ModuleDefinition mod, List<TypeDefinition> types) {
+        public virtual void PatchModule(ModuleDefinition mod, List<TypeDefinition> types) {
             Module.AssemblyReferences.Add(mod.Assembly.Name);
 
             for (int i = 0; i < mod.Types.Count; i++) {
@@ -185,7 +189,7 @@ namespace MonoMod {
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
         /// <param name="types">Type list containing all patched types.</param>
-        public void PatchType(TypeDefinition type, List<TypeDefinition> types) {
+        public virtual void PatchType(TypeDefinition type, List<TypeDefinition> types) {
             for (int i = 0; i < type.NestedTypes.Count; i++) {
                 PatchType(type.NestedTypes[i], types);
             }
@@ -272,7 +276,7 @@ namespace MonoMod {
         /// Patches the given method into the input module.
         /// </summary>
         /// <param name="method">Method to patch in.</param>
-        public void PatchMethod(MethodDefinition method) {
+        public virtual void PatchMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
                 Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
                 return;
@@ -397,7 +401,7 @@ namespace MonoMod {
         /// Patches the references in all of the given types.
         /// </summary>
         /// <param name="types">Types to patch.</param>
-        public void PatchRefs(List<TypeDefinition> types) {
+        public virtual void PatchRefs(List<TypeDefinition> types) {
             foreach (TypeDefinition type in types) {
                 if (type == null) {
                     continue;
@@ -433,7 +437,7 @@ namespace MonoMod {
         /// Patches the references in method.
         /// </summary>
         /// <param name="method">Method to patch.</param>
-        public void PatchRefsInMethod(MethodDefinition method) {
+        public virtual void PatchRefsInMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
                 Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
                 return;
@@ -610,7 +614,7 @@ namespace MonoMod {
         /// <param name="type">Type to find.</param>
         /// <param name="context">Context containing some info.</param>
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
-        public TypeReference FindType(TypeReference type, MemberReference context = null, bool fallbackToImport = true) {
+        public virtual TypeReference FindType(TypeReference type, MemberReference context = null, bool fallbackToImport = true) {
             if (type == null) {
                 Console.WriteLine("ERROR: Can't find null type!");
                 Console.WriteLine(Environment.StackTrace);
@@ -651,7 +655,7 @@ namespace MonoMod {
         /// <param name="type">Type to find.</param>
         /// <param name="context">Context containing the param.</param>
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
-        public TypeReference FindTypeGeneric(TypeReference type, MemberReference context, bool fallbackToImport = true) {
+        public virtual TypeReference FindTypeGeneric(TypeReference type, MemberReference context, bool fallbackToImport = true) {
             if (context is MethodReference) {
                 for (int gi = 0; gi < ((MethodReference) context).GenericParameters.Count; gi++) {
                     GenericParameter genericParam = ((MethodReference) context).GenericParameters[gi];
@@ -683,7 +687,7 @@ namespace MonoMod {
         /// <param name="method">Method to find.</param>
         /// <param name="context">Context containing some info.</param>
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the method to find as imported in the input module.</param>
-        public MethodReference FindMethod(MethodReference method, MemberReference context, bool fallbackToImport) {
+        public virtual MethodReference FindMethod(MethodReference method, MemberReference context, bool fallbackToImport) {
             TypeReference findTypeRef = FindType(method.DeclaringType.GetElementType(), context, false);
             TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
 
@@ -707,7 +711,7 @@ namespace MonoMod {
         /// Loads a dependency and adds it to Dependencies. Requires the field Dir to be set.
         /// </summary>
         /// <param name="dependency">Dependency to load.</param>
-        public void LoadDependency(string dependency) {
+        public virtual void LoadDependency(string dependency) {
             FileInfo dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency+".dll");
             if (!dependencyFile.Exists) {
                 dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency+".exe");
@@ -759,7 +763,7 @@ namespace MonoMod {
         /// </summary>
         /// <returns>The new entry method.</returns>
         /// <param name="entryOld">The old entry method.</param>
-        public MethodDefinition PatchEntry(MethodDefinition entryOld) {
+        public virtual MethodDefinition PatchEntry(MethodDefinition entryOld) {
             if (entryOld == null) {
                 Console.WriteLine("Entry point not found; skipping...");
                 return null;
@@ -794,18 +798,20 @@ namespace MonoMod {
         /// <summary>
         /// Patches the type MonoMod.WasHere into the output module if it didn't exist yet.
         /// </summary>
-        public void PatchWasHere() {
+        public virtual TypeDefinition PatchWasHere() {
             Console.WriteLine("Checking if MonoMod already was there...");
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "WasHere") {
                     Console.WriteLine("MonoMod was there.");
-                    return;
+                    return Module.Types[ti].Resolve();
                 }
             }
             Console.WriteLine("Adding MonoMod.WasHere");
-            Module.Types.Add(new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
+            TypeDefinition wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.Import(typeof(object))
-            });
+            };
+            Module.Types.Add(wasHere);
+            return wasHere;
         }
 
         /// <summary>
