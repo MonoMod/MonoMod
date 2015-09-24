@@ -14,7 +14,9 @@ namespace MonoMod.JIT {
 
         private readonly Dictionary<MethodDefinition, Delegate> CacheParsed = new Dictionary<MethodDefinition, Delegate>();
         private readonly Dictionary<Type, TypeDefinition> CacheTypeDefs = new Dictionary<Type, TypeDefinition>();
+        private readonly Dictionary<TypeDefinition, TypeDefinition> CacheTypeDefs_ = new Dictionary<TypeDefinition, TypeDefinition>();
         private readonly Dictionary<MethodInfo, MethodDefinition> CacheMethodDefs = new Dictionary<MethodInfo, MethodDefinition>();
+        private readonly Dictionary<MethodDefinition, MethodDefinition> CacheMethodDefs_ = new Dictionary<MethodDefinition, MethodDefinition>();
 
         private byte[] OriginalChecksum;
 
@@ -66,6 +68,22 @@ namespace MonoMod.JIT {
 
             return wasHere;
         }
+        
+        public override void AutoPatch(bool read = true, bool write = true) {
+            if (Module == OriginalModule) {
+                return;
+            }
+            
+            OriginalModule = ModuleDefinition.ReadModule(In.FullName);
+            
+            base.AutoPatch(true, false);
+            
+            CacheParsed.Clear();
+            CacheTypeDefs.Clear();
+            CacheTypeDefs_.Clear();
+            CacheMethodDefs.Clear();
+            CacheMethodDefs_.Clear();
+        }
 
         public TypeDefinition GetTypeDefinition(Type type) {
             TypeDefinition def;
@@ -102,6 +120,42 @@ namespace MonoMod.JIT {
             CacheTypeDefs[type] = def;
             return def;
         }
+        
+        public TypeDefinition GetTypeDefinition(TypeDefinition type) {
+            TypeDefinition def;
+            if (CacheTypeDefs_.TryGetValue(type, out def)) {
+                return def;
+            }
+
+            TypeDefinition highest = type;
+            int count = 1;
+            while ((highest = highest.DeclaringType) != null) {
+                count++;
+            }
+            TypeDefinition[] path = new TypeDefinition[count];
+            highest = path[0] = type;
+            for (int i = 1; (highest = highest.DeclaringType) != null; i++) {
+                path[i] = highest;
+            }
+
+            for (int i = 0; i < path.Length; i++) {
+                if (def == null) {
+                    def = Module.GetType(path[i].FullName);
+                    continue;
+                }
+
+                for (int ii = 0; ii < def.NestedTypes.Count; ii++) {
+                    if (def.NestedTypes[ii].Name == path[i].Name) {
+                        //Probably check for more than that
+                        def = def.NestedTypes[ii];
+                        break;
+                    }
+                }
+            }
+
+            CacheTypeDefs_[type] = def;
+            return def;
+        }
 
         public MethodDefinition GetMethodDefinition(MethodInfo info) {
             MethodDefinition def;
@@ -121,24 +175,46 @@ namespace MonoMod.JIT {
             CacheMethodDefs[info] = def;
             return def;
         }
+        
+        public MethodDefinition GetMethodDefinition(MethodDefinition info) {
+            MethodDefinition def;
+            if (CacheMethodDefs_.TryGetValue(info, out def)) {
+                return def;
+            }
+
+            TypeDefinition type = GetTypeDefinition(info.DeclaringType);
+            for (int i = 0; i < type.Methods.Count; i++) {
+                if (type.Methods[i].Name == info.Name && type.Methods[i].Parameters.Count == info.Parameters.Count) {
+                    //Probably check for more than that
+                    def = type.Methods[i];
+                    break;
+                }
+            }
+
+            CacheMethodDefs_[info] = def;
+            return def;
+        }
 
         public MethodDefinition GetPatched(MethodInfo method) {
-            return GetPatched(GetMethodDefinition(method));
+            AutoPatch();
+            //also clears the cache if required for the returning GetMethodDefinition to work
+
+            return GetMethodDefinition(method);
         }
 
         public MethodDefinition GetPatched(MethodDefinition method) {
-            //TODO
             if (MonoMod.HasAttribute(method, "JIT.MonoModJITPatched")) {
                 return method;
             }
 
             AutoPatch();
+            //also clears the cache if required for the returning GetMethodDefinition to work
 
-            return null;
+            return GetMethodDefinition(method);
         }
 
         public Delegate Parse(MethodInfo method) {
-            return Parse(GetMethodDefinition(method));
+            return Parse(GetPatched(method));
         }
 
         public Delegate Parse(MethodDefinition method) {
@@ -148,6 +224,8 @@ namespace MonoMod.JIT {
             if (CacheParsed.TryGetValue(method, out dimd)) {
                 return dimd;
             }
+            
+            //TODO
 
             CacheParsed[method] = dimd;
 
