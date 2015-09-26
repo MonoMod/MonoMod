@@ -16,6 +16,7 @@ namespace MonoMod.JIT {
             MonoModAsm = Assembly.GetExecutingAssembly();
         }
 
+        //Main patching helpers
         public static MethodInfo MMGetCallingMethod(bool ignoreMonoMod = true) {
             StackTrace st = new StackTrace();
             for (int i = 1; i < st.FrameCount; i++) {
@@ -58,7 +59,7 @@ namespace MonoMod.JIT {
                 return null;
             }
 
-            Delegate dimd = jit.Parse(method);
+            Delegate dimd = jit.GetParsed(method);
 
             object value = dimd.DynamicInvoke(args);
             if (shouldThrow) {
