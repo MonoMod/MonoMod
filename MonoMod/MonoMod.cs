@@ -511,8 +511,14 @@ namespace MonoMod {
                         }
                         
                         if (findMethod != null) {
-                            IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethod.Resolve(), "MonoModBlacklisted"));
+                            MethodDefinition findMethodDef = findMethod.Resolve();
+                            IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethodDef, "MonoModBlacklisted"));
+                            //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
+                            if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
+                                instruction.OpCode = OpCodes.Callvirt;
+                            }
                         }
+                        
                         operand = findMethod ?? Module.Import(methodCalled);
                     }
                 }
