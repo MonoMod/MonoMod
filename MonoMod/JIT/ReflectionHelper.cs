@@ -30,14 +30,21 @@ namespace MonoMod.JIT {
 
             il.MarkLabel(argsOK);
 
-            il.PushInstance(method.DeclaringType);
+            if (!method.IsStatic && !method.IsConstructor) {
+                il.Emit(OpCodes.Ldarg_0);
+                if (method.DeclaringType.IsValueType) {
+                    il.Emit(OpCodes.Unbox, method.DeclaringType);
+                }
+            }
 
             for (int i = 0; i < args.Length; i++) {
                 il.Emit(OpCodes.Ldarg_1);
                 il.Emit(OpCodes.Ldc_I4, i);
                 il.Emit(OpCodes.Ldelem_Ref);
 
-                il.UnboxIfNeeded(args[i].ParameterType);
+                if (args[i].ParameterType.IsValueType) {
+                    il.Emit(OpCodes.Unbox_Any, args[i].ParameterType);
+                }
             }
 
             if (method.IsConstructor) {
@@ -50,14 +57,16 @@ namespace MonoMod.JIT {
 
             Type returnType = method.IsConstructor ? method.DeclaringType : (method as MethodInfo).ReturnType;
             if (returnType != typeof(void)) {
-                il.BoxIfNeeded(returnType);
+                if (returnType.IsValueType) {
+                    il.Emit(OpCodes.Box, returnType);
+                }
             } else {
                 il.Emit(OpCodes.Ldnull);
             }
 
             il.Emit(OpCodes.Ret);
 
-            return (MethodHandler) dynam.CreateDelegate(typeof(MethodHandler));
+            return (DynamicMethodDelegate) dynam.CreateDelegate(typeof(DynamicMethodDelegate));
         }
 
         public static DynamicMethodDelegate GetDelegate(this MethodInfo method) {
