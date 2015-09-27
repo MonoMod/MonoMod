@@ -575,10 +575,6 @@ namespace MonoMod {
                 }
 
                 instruction.Operand = operand;
-
-                if (instruction.ToString().Contains("System.Exception") || instruction.ToString().Contains("catch")) {
-                    Console.WriteLine(instruction.Operand.GetType().FullName);
-                }
             }
 
             for (int i = 0; i < method.Body.Variables.Count; i++) {
@@ -628,6 +624,9 @@ namespace MonoMod {
             }
             string typeName = RemovePrefixes(type.FullName, type.Name);
             TypeReference foundType = Module.GetType(typeName);
+            if (foundType == null && type.IsArray) {
+                foundType = FindType(type.GetElementType(), context, fallbackToImport);
+            }
             if (foundType == null && context != null && type.IsGenericParameter) {
                 foundType = FindTypeGeneric(type, context, fallbackToImport);
             }
@@ -694,21 +693,79 @@ namespace MonoMod {
         /// <param name="context">Context containing some info.</param>
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the method to find as imported in the input module.</param>
         public virtual MethodReference FindMethod(MethodReference method, MemberReference context, bool fallbackToImport) {
-            TypeReference findTypeRef = FindType(method.DeclaringType.GetElementType(), context, false);
+            TypeReference findTypeRef = FindType(method.DeclaringType, context, true);
             TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
 
-            if (method != null && findType != null) {
+            if (findType != null) {
+                bool typeMismatch = findType.FullName != RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name);
+                if (typeMismatch) {
+                    Console.WriteLine("debug: Type name mismatch finding " + method.FullName);
+                    Console.WriteLine("debug: (found) " + findType.FullName + " vs (orig) " + RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
+                    if (method.DeclaringType.IsGenericInstance) {
+                        Console.WriteLine("debug: Type name mismatch acknowledged for further finding of the fitting method");
+                    }
+                }
+                
+                string methodName = RemovePrefixes(method.FullName, method.DeclaringType.Name);
                 for (int ii = 0; ii < findType.Methods.Count; ii++) {
-                    if (findType.Methods[ii].FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
-                        MethodReference foundMethod = findType.Methods[ii];
+                    MethodReference foundMethod = findType.Methods[ii];
+                    string foundMethodName = foundMethod.FullName;
+                    foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
+                    if (methodName == foundMethodName ||
+                        methodName == ReplaceGenerics(foundMethodName, foundMethod, findType) ||
+                        methodName == ReplaceGenerics(foundMethod.FullName, foundMethod, findType)) {
                         IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
-                        if (foundMethod.Module != Module) {
+                        
+                        if (findType.HasGenericParameters) {
+                            if (methodName == ReplaceGenerics(foundMethodName, foundMethod, findType)) {
+                                Console.WriteLine("debug: rg1: before: " + foundMethodName);
+                                Console.WriteLine("debug: rg1: after: " + ReplaceGenerics(foundMethodName, foundMethod, findType));
+                            }
+                            if (methodName == ReplaceGenerics(foundMethod.FullName, foundMethod, findType)) {
+                                Console.WriteLine("debug: rg2: before: " + foundMethodName);
+                                Console.WriteLine("debug: rg2: after: " + ReplaceGenerics(foundMethod.FullName, foundMethod, findType));
+                            }
+                        }
+                        
+                        ModuleReference foundMethodModule = foundMethod.Module;
+                        
+                        if (typeMismatch && method.DeclaringType.IsGenericInstance) {
+                            Console.WriteLine("debug: Previously " + foundMethod);
+                            Console.WriteLine("debug: " + foundMethod.MetadataToken);
+                            
+                            //TODO test return type context
+                            MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, findTypeRef), findTypeRef);
+                            
+                            genMethod.CallingConvention = method.CallingConvention | MethodCallingConvention.Generic;
+                            for (int i = 0; i < method.GenericParameters.Count; i++) {
+                                genMethod.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, findTypeRef));
+                            }
+                            for (int i = 0; i < method.Parameters.Count; i++) {
+                                genMethod.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, genMethod)));
+                            }
+                            genMethod.HasThis = method.HasThis;
+                            genMethod.ExplicitThis = method.ExplicitThis;
+                            
+                            foundMethod = genMethod;
+                            Console.WriteLine("debug: Now " + foundMethod);
+                            Console.WriteLine("debug: " + foundMethod.MetadataToken);
+                        }
+                        
+                        if (foundMethodModule != Module) {
                             foundMethod = Module.Import(foundMethod);
                         }
+                        
                         return foundMethod;
                     }
                 }
             }
+            
+            //For anyone trying to find out why / when no method gets found: Take this!
+            /*
+            Console.WriteLine("debug a: " + method.FullName);
+            Console.WriteLine("debug b: " + findTypeRef);
+            Console.WriteLine("debug c: " + findType);
+            */
 
             return fallbackToImport ? Module.Import(method) : null;
         }
@@ -824,8 +881,8 @@ namespace MonoMod {
         /// Removes all MonoMod prefixes from the given string.
         /// </summary>
         /// <returns>The prefixes.</returns>
-        /// <param name="str">String to remove the prefixes from.</param>
-        /// <param name="strPrefixed">A prefixed string, f.e. full type name before the full method name.</param>
+        /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
+        /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
         public static string RemovePrefixes(string str, string strPrefixed = null) {
             strPrefixed = strPrefixed ?? str;
             str = RemovePrefix(str, "patch_", strPrefixed);
@@ -838,13 +895,26 @@ namespace MonoMod {
         /// Removes the prefix from the given string.
         /// </summary>
         /// <returns>The prefix.</returns>
-        /// <param name="str">String to remove the prefixes from.</param>
+        /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
         /// <param name="prefix">Prefix.</param>
-        /// <param name="strPrefixed">A prefixed string, f.e. full type name before the full method name.</param>
+        /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
         public static string RemovePrefix(string str, string prefix, string strPrefixed = null) {
             strPrefixed = strPrefixed ?? str;
             if (strPrefixed.StartsWith(prefix)) {
                 return str.Replace(strPrefixed, strPrefixed.Substring(prefix.Length));
+            }
+            return str;
+        }
+        
+        public static string ReplaceGenerics(string str, MethodReference method, TypeReference type) {
+            if (!type.HasGenericParameters) {
+                return str;
+            }
+            for (int i = 0; i < type.GenericParameters.Count; i++) {
+                str = str.Replace(type.GenericParameters[i].Name, "!"+i);
+            }
+            for (int i = 0; i < method.GenericParameters.Count; i++) {
+                str = str.Replace(method.GenericParameters[i].Name, "!!"+i);
             }
             return str;
         }
