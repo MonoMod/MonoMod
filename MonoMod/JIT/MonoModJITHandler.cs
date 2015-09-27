@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Reflection;
-using System.IO;
-using Mono.Cecil;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Diagnostics;
+using System.Reflection;
 
-namespace MonoMod.JIT {
+namespace MonoMod.JIT
+{
     public static class MonoModJITHandler {
 
         private readonly static Dictionary<Assembly, MonoModJIT> CacheMonoModJIT = new Dictionary<Assembly, MonoModJIT>();
@@ -59,9 +57,9 @@ namespace MonoMod.JIT {
                 return null;
             }
 
-            Delegate dimd = jit.GetParsed(method);
+            DynamicMethodDelegate dimd = jit.GetParsed(method);
 
-            object value = dimd.DynamicInvoke(args);
+            object value = dimd(instance, args);
             if (shouldThrow) {
                 throw new MonoModJITPseudoException(value);
             } else {

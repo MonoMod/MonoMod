@@ -15,7 +15,7 @@ namespace MonoMod.JIT
     /// </summary>
     public class MonoModJIT : MonoMod {
 
-        private readonly Dictionary<MethodDefinition, Delegate> CacheParsed = new Dictionary<MethodDefinition, Delegate>();
+        private readonly Dictionary<MethodDefinition, DynamicMethodDelegate> CacheParsed = new Dictionary<MethodDefinition, DynamicMethodDelegate>();
         private readonly Dictionary<Type, TypeDefinition> CacheTypeDefs = new Dictionary<Type, TypeDefinition>();
         private readonly Dictionary<TypeDefinition, TypeDefinition> CacheTypeDefs_ = new Dictionary<TypeDefinition, TypeDefinition>();
         private readonly Dictionary<MethodInfo, MethodDefinition> CacheMethodDefs = new Dictionary<MethodInfo, MethodDefinition>();
@@ -239,25 +239,28 @@ namespace MonoMod.JIT
             return paramTypes;
         }
 
-        public Delegate GetParsed(MethodInfo method) {
+        public DynamicMethodDelegate GetParsed(MethodInfo method) {
             return GetParsed(GetPatched(method));
         }
 
-        public Delegate GetParsed(MethodDefinition method) {
+        public DynamicMethodDelegate GetParsed(MethodDefinition method) {
             method = GetPatched(method);
 
-            Delegate dimd;
-            if (CacheParsed.TryGetValue(method, out dimd)) {
-                return dimd;
+            DynamicMethodDelegate dmd;
+            if (CacheParsed.TryGetValue(method, out dmd)) {
+                return dmd;
             }
             
             AutoParse();
             
-            //TODO
+            Type type = FindTypeJIT(method.DeclaringType);
+            dmd = type.GetMethod(method.Name,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static,
+                null, getTypesFromParams(method.Parameters), null).GetDelegate();
+            
+            CacheParsed[method] = dmd;
 
-            CacheParsed[method] = dimd;
-
-            return dimd;
+            return dmd;
         }
         
         private static Type FindTypeJIT(TypeReference typeRef) {
