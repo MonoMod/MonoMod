@@ -712,18 +712,13 @@ namespace MonoMod {
                     string foundMethodName = foundMethod.FullName;
                     foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
                     if (methodName == foundMethodName ||
-                        methodName == ReplaceGenerics(foundMethodName, foundMethod, findType) ||
-                        methodName == ReplaceGenerics(foundMethod.FullName, foundMethod, findType)) {
+                        methodName == ReplaceGenerics(foundMethodName, foundMethod, findType)) {
                         IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
                         
                         if (findType.HasGenericParameters) {
                             if (methodName == ReplaceGenerics(foundMethodName, foundMethod, findType)) {
-                                Console.WriteLine("debug: rg1: before: " + foundMethodName);
-                                Console.WriteLine("debug: rg1: after: " + ReplaceGenerics(foundMethodName, foundMethod, findType));
-                            }
-                            if (methodName == ReplaceGenerics(foundMethod.FullName, foundMethod, findType)) {
-                                Console.WriteLine("debug: rg2: before: " + foundMethodName);
-                                Console.WriteLine("debug: rg2: after: " + ReplaceGenerics(foundMethod.FullName, foundMethod, findType));
+                                Console.WriteLine("debug: rg: before: " + foundMethodName);
+                                Console.WriteLine("debug: rg: after: " + ReplaceGenerics(foundMethodName, foundMethod, findType));
                             }
                         }
                         
