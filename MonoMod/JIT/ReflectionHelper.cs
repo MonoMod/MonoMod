@@ -82,32 +82,5 @@ namespace MonoMod.JIT {
         }
 
     }
-
-    public struct HandlePair<T, U> : IEquatable<HandlePair<T, U>> {
-        private readonly T t;
-        private readonly U u;
-        private readonly int hash;
-
-        public HandlePair(T t, U u) {
-            this.t = t;
-            this.u = u;
-            hash = 27232 + t.GetHashCode();
-        }
-
-        public override int GetHashCode() {
-            return hash;
-        }
-
-        public override bool Equals(object obj) {
-            if (obj == null || !(obj is HandlePair<T, U>)) {
-                return false;
-            }
-            return Equals((HandlePair<T, U>) obj);
-        }
-
-        public bool Equals(HandlePair<T, U> obj) {
-            return obj.t.Equals(t) && obj.u.Equals(u);
-        }
-    }
 }
 
