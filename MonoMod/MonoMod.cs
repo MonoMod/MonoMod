@@ -722,31 +722,32 @@ namespace MonoMod {
                             }
                         }
                         
-                        ModuleReference foundMethodModule = foundMethod.Module;
-                        
                         if (typeMismatch && method.DeclaringType.IsGenericInstance) {
-                            Console.WriteLine("debug: Previously " + foundMethod);
+                            Console.WriteLine("debug: a: " + foundMethod);
                             Console.WriteLine("debug: " + foundMethod.MetadataToken);
                             
                             //TODO test return type context
                             MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, findTypeRef), findTypeRef);
-                            
-                            genMethod.CallingConvention = method.CallingConvention | MethodCallingConvention.Generic;
+                            genMethod.CallingConvention = method.CallingConvention;
+                            genMethod.HasThis = method.HasThis;
+                            genMethod.ExplicitThis = method.ExplicitThis;
                             for (int i = 0; i < method.GenericParameters.Count; i++) {
                                 genMethod.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, findTypeRef));
                             }
                             for (int i = 0; i < method.Parameters.Count; i++) {
                                 genMethod.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, genMethod)));
                             }
-                            genMethod.HasThis = method.HasThis;
-                            genMethod.ExplicitThis = method.ExplicitThis;
                             
+                            Console.WriteLine("debug: b: " + genMethod);
+                            Console.WriteLine("debug: " + genMethod.MetadataToken);
+                            genMethod = Module.Import(genMethod);
+                            
+                            Console.WriteLine("debug: c: " + genMethod);
+                            Console.WriteLine("debug: " + genMethod.MetadataToken);
                             foundMethod = genMethod;
-                            Console.WriteLine("debug: Now " + foundMethod);
-                            Console.WriteLine("debug: " + foundMethod.MetadataToken);
                         }
                         
-                        if (foundMethodModule != Module) {
+                        if (foundMethod.Module != Module) {
                             foundMethod = Module.Import(foundMethod);
                         }
                         
