@@ -698,13 +698,6 @@ namespace MonoMod {
 
             if (findType != null) {
                 bool typeMismatch = findType.FullName != RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name);
-                if (typeMismatch) {
-                    Console.WriteLine("debug: Type name mismatch finding " + method.FullName);
-                    Console.WriteLine("debug: (found) " + findType.FullName + " vs (orig) " + RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
-                    if (method.DeclaringType.IsGenericInstance) {
-                        Console.WriteLine("debug: Type name mismatch acknowledged for further finding of the fitting method");
-                    }
-                }
                 
                 string methodName = RemovePrefixes(method.FullName, method.DeclaringType.Name);
                 methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
@@ -713,16 +706,13 @@ namespace MonoMod {
                     string foundMethodName = foundMethod.FullName;
                     foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
                     foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
+                    //TODO find a better way to compare methods / fix comparing return types
                     
-                    Console.WriteLine("f: " + foundMethodName);
                     if (methodName == foundMethodName ||
                         methodName == ReplaceGenerics(foundMethodName, foundMethod, findType)) {
                         IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
                         
                         if (typeMismatch && method.DeclaringType.IsGenericInstance) {
-                            Console.WriteLine("debug: a: " + foundMethod);
-                            Console.WriteLine("debug: " + foundMethod.MetadataToken);
-                            
                             //TODO test return type context
                             MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, context), findTypeRef);
                             genMethod.CallingConvention = method.CallingConvention;
@@ -736,9 +726,6 @@ namespace MonoMod {
                             }
                             
                             foundMethod = Module.Import(genMethod);
-                            
-                            Console.WriteLine("debug: b: " + foundMethod);
-                            Console.WriteLine("debug: " + foundMethod.MetadataToken);
                         }
                         
                         if (foundMethod.Module != Module) {
