@@ -707,44 +707,38 @@ namespace MonoMod {
                 }
                 
                 string methodName = RemovePrefixes(method.FullName, method.DeclaringType.Name);
+                methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
                 for (int ii = 0; ii < findType.Methods.Count; ii++) {
                     MethodReference foundMethod = findType.Methods[ii];
                     string foundMethodName = foundMethod.FullName;
                     foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
+                    foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
+                    
+                    Console.WriteLine("f: " + foundMethodName);
                     if (methodName == foundMethodName ||
                         methodName == ReplaceGenerics(foundMethodName, foundMethod, findType)) {
                         IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
-                        
-                        if (findType.HasGenericParameters) {
-                            if (methodName == ReplaceGenerics(foundMethodName, foundMethod, findType)) {
-                                Console.WriteLine("debug: rg: before: " + foundMethodName);
-                                Console.WriteLine("debug: rg: after: " + ReplaceGenerics(foundMethodName, foundMethod, findType));
-                            }
-                        }
                         
                         if (typeMismatch && method.DeclaringType.IsGenericInstance) {
                             Console.WriteLine("debug: a: " + foundMethod);
                             Console.WriteLine("debug: " + foundMethod.MetadataToken);
                             
                             //TODO test return type context
-                            MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, findTypeRef), findTypeRef);
+                            MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, context), findTypeRef);
                             genMethod.CallingConvention = method.CallingConvention;
                             genMethod.HasThis = method.HasThis;
                             genMethod.ExplicitThis = method.ExplicitThis;
                             for (int i = 0; i < method.GenericParameters.Count; i++) {
-                                genMethod.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, findTypeRef));
+                                genMethod.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, genMethod));
                             }
                             for (int i = 0; i < method.Parameters.Count; i++) {
                                 genMethod.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, genMethod)));
                             }
                             
-                            Console.WriteLine("debug: b: " + genMethod);
-                            Console.WriteLine("debug: " + genMethod.MetadataToken);
-                            genMethod = Module.Import(genMethod);
+                            foundMethod = Module.Import(genMethod);
                             
-                            Console.WriteLine("debug: c: " + genMethod);
-                            Console.WriteLine("debug: " + genMethod.MetadataToken);
-                            foundMethod = genMethod;
+                            Console.WriteLine("debug: b: " + foundMethod);
+                            Console.WriteLine("debug: " + foundMethod.MetadataToken);
                         }
                         
                         if (foundMethod.Module != Module) {
