@@ -336,7 +336,7 @@ namespace MonoMod {
                 ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethodOrig));
             }
 
-            for (int i = 0; i < method.Body.Variables.Count; i++) {
+            for (int i = 0; method.HasBody && i < method.Body.Variables.Count; i++) {
                 //TODO debug! (Import crashes)
                 method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType, method);
             }
@@ -463,7 +463,7 @@ namespace MonoMod {
             }
 
             Console.WriteLine("Modifying method body...");
-            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+            for (int i = 0; method.HasBody && i < method.Body.Instructions.Count; i++) {
                 Instruction instruction = method.Body.Instructions[i];
                 object operand = instruction.Operand;
 
@@ -510,8 +510,8 @@ namespace MonoMod {
                             findMethod = genericMethod;
                         }
                         
-                        if (findMethod != null) {
-                            MethodDefinition findMethodDef = findMethod.Resolve();
+                        MethodDefinition findMethodDef = findMethod == null ? null : findMethod.Resolve();
+                        if (findMethodDef != null) {
                             IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethodDef, "MonoModBlacklisted"));
                             //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
                             if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
@@ -577,7 +577,7 @@ namespace MonoMod {
                 instruction.Operand = operand;
             }
 
-            for (int i = 0; i < method.Body.Variables.Count; i++) {
+            for (int i = 0; method.HasBody && i < method.Body.Variables.Count; i++) {
                 method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType, method);
             }
 
@@ -601,7 +601,7 @@ namespace MonoMod {
                 */
             }
 
-            for (int ei = 0; ei < method.Body.ExceptionHandlers.Count; ei++) {
+            for (int ei = 0; method.HasBody && ei < method.Body.ExceptionHandlers.Count; ei++) {
                 if (method.Body.ExceptionHandlers[ei].CatchType == null) {
                     continue;
                 }
@@ -624,7 +624,11 @@ namespace MonoMod {
             }
             string typeName = RemovePrefixes(type.FullName, type.Name);
             TypeReference foundType = Module.GetType(typeName);
+            if (foundType == null && type.IsByReference) {
+                foundType = FindType(type.GetElementType(), context, fallbackToImport);
+            }
             if (foundType == null && type.IsArray) {
+                //TODO return proper array?
                 foundType = FindType(type.GetElementType(), context, fallbackToImport);
             }
             if (foundType == null && context != null && type.IsGenericParameter) {
@@ -924,6 +928,9 @@ namespace MonoMod {
         /// <param name="method">Method.</param>
         /// <param name="attribute">Attribute.</param>
         public static bool HasAttribute(MethodDefinition method, string attribute) {
+            if (method == null) {
+                return false;
+            }
             if (!method.HasCustomAttributes) {
                 return false;
             }
@@ -942,6 +949,9 @@ namespace MonoMod {
         /// <param name="type">Type.</param>
         /// <param name="attribute">Attribute.</param>
         public static bool HasAttribute(TypeDefinition type, string attribute) {
+            if (type == null) {
+                return false;
+            }
             if (!type.HasCustomAttributes) {
                 return false;
             }

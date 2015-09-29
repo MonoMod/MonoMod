@@ -30,8 +30,8 @@ namespace MonoMod.JIT
         public Assembly PatchedAssembly;
 
         public MonoModJIT(Assembly assembly)
-            : base(assembly.CodeBase) {
-            Out = new FileInfo(assembly.CodeBase.Substring(0, assembly.CodeBase.Length-4) + ".mmc");
+            : base(assembly.Location) {
+            Out = new FileInfo(assembly.Location.Substring(0, assembly.Location.Length-4) + ".mmc");
         }
 
         public override void Read(bool loadDependencies = true) {
@@ -75,7 +75,7 @@ namespace MonoMod.JIT
         }
         
         public override void AutoPatch(bool read = true, bool write = true) {
-            if (Module == OriginalModule) {
+            if (Module != null && Module == OriginalModule) {
                 return;
             }
             

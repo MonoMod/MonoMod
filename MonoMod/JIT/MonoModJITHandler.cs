@@ -47,6 +47,9 @@ namespace MonoMod.JIT
         }
 
         public static object MMRun(this Delegate del, object instance, params object[] args) {
+            if (del == null) {
+                return MMRun(MMGetCallingMethod(), instance, true, args);
+            }
             return MMRun(del.Method, instance, false, args);
         }
 
