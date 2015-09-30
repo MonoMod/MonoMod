@@ -60,15 +60,6 @@ namespace MonoMod.JIT
                 return null;
             }
             
-            DynamicMethodDelegate dmd = delegate(object target, object[] args_) {
-                Console.WriteLine("debug: target: " + instance);
-                for (int i = 0; i < args.Length; i++) {
-                    Console.WriteLine("debug: " + i + ": " + args_[i]);
-                }
-                return null;
-            };
-            dmd(instance, args);
-            
             object value = jit.GetParsed(method)(instance, args);
             if (shouldThrow) {
                 throw new MonoModJITPseudoException(value);
