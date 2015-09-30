@@ -43,30 +43,39 @@ namespace MonoMod.JIT
         }
 
         public static object MMRun(object instance, params object[] args) {
-            return MMRun(MMGetCallingMethod(), instance, true, args);
+            return MMRunM(MMGetCallingMethod(), instance, true, args);
         }
 
-        public static object MMRun(this Delegate del, object instance, params object[] args) {
+        public static object MMRunD(this Delegate del, object instance, params object[] args) {
             if (del == null) {
-                return MMRun(MMGetCallingMethod(), instance, true, args);
+                return MMRunM(MMGetCallingMethod(), instance, true, args);
             }
-            return MMRun(del.Method, instance, false, args);
+            return MMRunM(del.Method, instance, false, args);
         }
 
-        public static object MMRun(this MethodInfo method, object instance, bool shouldThrow, params object[] args) {
+        public static object MMRunM(this MethodInfo method, object instance, bool shouldThrow, params object[] args) {
             MonoModJIT jit = MMGetJIT(method.DeclaringType.Assembly);
 
             if (method.DeclaringType.Assembly == jit.PatchedAssembly) {
                 return null;
             }
-
-            object value = jit.GetParsed(method)(instance, (object) args);
+            
+            DynamicMethodDelegate dmd = delegate(object target, object[] args_) {
+                Console.WriteLine("debug: target: " + instance);
+                for (int i = 0; i < args.Length; i++) {
+                    Console.WriteLine("debug: " + i + ": " + args_[i]);
+                }
+                return null;
+            };
+            dmd(instance, args);
+            
+            object value = jit.GetParsed(method)(instance, args);
             if (shouldThrow) {
                 throw new MonoModJITPseudoException(value);
             } else {
                 return value;
             }
         }
-
+        
     }
 }

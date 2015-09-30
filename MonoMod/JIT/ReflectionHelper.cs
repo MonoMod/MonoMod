@@ -9,7 +9,7 @@ namespace MonoMod.JIT {
     /// Stolen from http://theinstructionlimit.com/fast-net-reflection and FEZ. Thanks, Renaud!
     /// </summary>
     public static class ReflectionHelper {
-        private static readonly Type[] manyObjects = new Type[2] {typeof(object), typeof (object[])};
+        private static readonly Type[] manyObjects = new Type[2] {typeof(object), typeof(object[])};
         private static readonly Dictionary<MethodInfo, DynamicMethodDelegate> methodCache = new Dictionary<MethodInfo, DynamicMethodDelegate>();
 
         public static DynamicMethodDelegate CreateDelegate(this MethodBase method) {
