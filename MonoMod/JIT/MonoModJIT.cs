@@ -245,7 +245,7 @@ namespace MonoMod.JIT
 
         public DynamicMethodDelegate GetParsed(MethodDefinition method) {
             method = GetPatched(method);
-
+            
             DynamicMethodDelegate dmd;
             if (CacheParsed.TryGetValue(method, out dmd)) {
                 return dmd;

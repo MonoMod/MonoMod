@@ -60,9 +60,7 @@ namespace MonoMod.JIT
                 return null;
             }
 
-            DynamicMethodDelegate dimd = jit.GetParsed(method);
-
-            object value = dimd(instance, args);
+            object value = jit.GetParsed(method)(instance, (object) args);
             if (shouldThrow) {
                 throw new MonoModJITPseudoException(value);
             } else {
