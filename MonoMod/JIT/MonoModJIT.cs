@@ -46,6 +46,13 @@ namespace MonoMod.JIT
             }
 
             CheckChecksum();
+            
+            if (IsPatched) {
+                OriginalModule = null;
+                Module = null;
+                IsParsed = true;
+                PatchedAssembly = Assembly.LoadFrom(Out.FullName);
+            }
         }
 
         public void CheckChecksum() {
@@ -153,7 +160,7 @@ namespace MonoMod.JIT
         
         public override void AutoPatch(bool read = true, bool write = true) {
             //Reading outside of AutoPatch disables modding. Ironically modding twice can kill MonoModJIT
-            if (!IsPatched) {
+            if (!IsPatched && !IsParsed) {
                 base.AutoPatch(false, write);
                 IsPatched = true;
             }
