@@ -50,9 +50,7 @@ namespace MonoMod {
 
             MonoMod mm = new MonoMod(args[0]);
 
-            mm.Read();
             mm.AutoPatch();
-            mm.Write();
         }
 
         /// <summary>
@@ -146,32 +144,40 @@ namespace MonoMod {
             }
 
             Log("Patching "+In.Name+" ...");
-
-            Read(true);
+            
+            if (read) {
+                Read(true);
+            }
 
             Log("Replacing main EntryPoint...");
             Entry = PatchEntry(Module.EntryPoint);
-
-            string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
-            Log("Scanning for files matching "+fileName+".*.mm.dll ...");
-            List<TypeDefinition> types = new List<TypeDefinition>();
-            foreach (FileInfo f in Dir.GetFiles()) {
-                if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
-                    Log("Found "+f.Name+" , reading...");
-                    ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
-                    PatchModule(mod, types);
+            
+            if (Dir != null) {
+                string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
+                Log("Scanning for files matching "+fileName+".*.mm.dll ...");
+                List<TypeDefinition> types = new List<TypeDefinition>();
+                foreach (FileInfo f in Dir.GetFiles()) {
+                    if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
+                        Log("Found "+f.Name+" , reading...");
+                        ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
+                        PatchModule(mod, types);
+                    }
                 }
-            }
-            Log("Patching / fixing references...");
-            foreach (FileInfo f in Dir.GetFiles()) {
-                if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
-                    PatchRefs(types);
+                Log("Patching / fixing references...");
+                foreach (FileInfo f in Dir.GetFiles()) {
+                    if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
+                        PatchRefs(types);
+                    }
                 }
             }
 
             Optimize();
 
             Log("Done.");
+            
+            if (write) {
+                Write();
+            }
         }
 
         /// <summary>
@@ -759,6 +765,10 @@ namespace MonoMod {
         /// </summary>
         /// <param name="dependency">Dependency to load.</param>
         public virtual void LoadDependency(string dependency) {
+            DirectoryInfo dir = Dir;
+            if (dir == null) {
+                dir = In.Directory;
+            }
             FileInfo dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency+".dll");
             if (!dependencyFile.Exists) {
                 dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency+".exe");

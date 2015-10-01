@@ -81,7 +81,9 @@ namespace MonoMod.JIT
             
             OriginalModule = ModuleDefinition.ReadModule(In.FullName);
             
-            base.AutoPatch(true, false);
+            //Reading outside of AutoPatch disables modding. Ironically modding twice can kill MonoModJIT
+            Read(true);
+            base.AutoPatch(false, true);
             
             CacheParsed.Clear();
             CacheTypeDefs.Clear();
