@@ -263,7 +263,7 @@ namespace MonoMod.JIT
             return dmd;
         }
         
-        private static Type FindTypeJIT(TypeReference typeRef) {
+        private Type FindTypeJIT(TypeReference typeRef) {
             string name = typeRef.FullName;
             Type type_ = null;
             if (CacheTypes.TryGetValue(name, out type_)) {
@@ -292,11 +292,11 @@ namespace MonoMod.JIT
                         CachePrefoundTypes[type.FullName] = CachePrefoundTypes[type.Name] = type;
                     }
                 } catch (ReflectionTypeLoadException e) {
-                    Console.WriteLine("Failed searching a type in MonoModJIT's FindTypeJIT.");
-                    Console.WriteLine("Assembly: " + assembly.GetName().Name);
-                    Console.WriteLine(e.Message);
+                    Log("Failed searching a type in MonoModJIT's FindTypeJIT.");
+                    Log("Assembly: " + assembly.GetName().Name);
+                    Log(e.Message);
                     foreach (Exception le in e.LoaderExceptions) {
-                        Console.WriteLine(le.Message);
+                        Log(le.Message);
                     }
                 }
             }
@@ -311,17 +311,27 @@ namespace MonoMod.JIT
                         }
                     }
                 } catch (ReflectionTypeLoadException e) {
-                    Console.WriteLine("Failed searching a type in MonoModJIT's FindTypeJIT.");
-                    Console.WriteLine("Assembly: " + assembly.GetName().Name);
-                    Console.WriteLine(e.Message);
+                    Log("Failed searching a type in MonoModJIT's FindTypeJIT.");
+                    Log("Assembly: " + assembly.GetName().Name);
+                    Log(e.Message);
                     foreach (Exception le in e.LoaderExceptions) {
-                        Console.WriteLine(le.Message);
+                        Log(le.Message);
                     }
                 }
             }
 
             CacheTypes[name] = null;
             return null;
+        }
+        
+        protected override void Log(string txt) {
+            if (Logger != null) {
+                Logger(txt);
+            }
+            if (DefaultLogger != null) {
+                DefaultLogger(txt);
+            }
+            //default: nop (originally Console.WriteLine)
         }
 
     }

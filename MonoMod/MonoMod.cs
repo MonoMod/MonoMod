@@ -22,6 +22,9 @@ namespace MonoMod {
         public ModuleDefinition Module;
         public List<ModuleDefinition> Dependencies = new List<ModuleDefinition>();
         public MethodDefinition Entry;
+        
+        public static Action<string> DefaultLogger;
+        public Action<string> Logger;
 
         public MonoMod() {
         }
@@ -58,18 +61,18 @@ namespace MonoMod {
         /// <param name="loadDependencies">If set to <c>true</c> load dependencies when not already loaded.</param>
         public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
-                Console.WriteLine("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
+                Log("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
                 Module = ModuleDefinition.ReadModule(In.FullName);
                 LoadBlacklist(Module);
             }
 
             if (loadDependencies && Dependencies.Count == 0 && Dir != null) {
-                Console.WriteLine("Reading module dependencies...");
+                Log("Reading module dependencies...");
                 for (int mi = 0; mi < Module.ModuleReferences.Count; mi++) {
                     LoadDependency(Module.ModuleReferences[mi].Name);
                 }
 
-                Console.WriteLine("Reading assembly dependencies...");
+                Log("Reading assembly dependencies...");
                 for (int mi = 0; mi < Module.AssemblyReferences.Count; mi++) {
                     LoadDependency(Module.AssemblyReferences[mi].Name);
                 }
@@ -91,7 +94,7 @@ namespace MonoMod {
 
             PatchWasHere();
 
-            Console.WriteLine("Writing to output file...");
+            Log("Writing to output file...");
             Module.Write(output.FullName);
 
             //TODO make this return a status code or something
@@ -142,24 +145,24 @@ namespace MonoMod {
                 Out = new FileInfo(In.FullName.Substring(0, In.FullName.Length-4)+".mm.exe");
             }
 
-            Console.WriteLine("Patching "+In.Name+" ...");
+            Log("Patching "+In.Name+" ...");
 
             Read(true);
 
-            Console.WriteLine("Replacing main EntryPoint...");
+            Log("Replacing main EntryPoint...");
             Entry = PatchEntry(Module.EntryPoint);
 
             string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
-            Console.WriteLine("Scanning for files matching "+fileName+".*.mm.dll ...");
+            Log("Scanning for files matching "+fileName+".*.mm.dll ...");
             List<TypeDefinition> types = new List<TypeDefinition>();
             foreach (FileInfo f in Dir.GetFiles()) {
                 if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
-                    Console.WriteLine("Found "+f.Name+" , reading...");
+                    Log("Found "+f.Name+" , reading...");
                     ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
                     PatchModule(mod, types);
                 }
             }
-            Console.WriteLine("Patching / fixing references...");
+            Log("Patching / fixing references...");
             foreach (FileInfo f in Dir.GetFiles()) {
                 if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                     PatchRefs(types);
@@ -168,7 +171,7 @@ namespace MonoMod {
 
             Optimize();
 
-            Console.WriteLine("Done.");
+            Log("Done.");
         }
 
         /// <summary>
@@ -195,13 +198,13 @@ namespace MonoMod {
             }
 
             string typeName = type.FullName;
-            Console.WriteLine("T: " + typeName);
+            Log("T: " + typeName);
 
             typeName = RemovePrefixes(typeName, type.Name);
 
             if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
                 type.Attributes.HasFlag(TypeAttributes.Interface)) {
-                Console.WriteLine("Type is a private interface; ignore...");
+                Log("Type is a private interface; ignore...");
                 return;
             }
 
@@ -236,7 +239,7 @@ namespace MonoMod {
 
             for (int ii = 0; ii < type.Methods.Count; ii++) {
                 MethodDefinition method = type.Methods[ii];
-                Console.WriteLine("M: "+method.FullName);
+                Log("M: "+method.FullName);
 
                 if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore")) {
                     continue;
@@ -262,7 +265,7 @@ namespace MonoMod {
                 if (hasField) {
                     continue;
                 }
-                Console.WriteLine("F: "+field.FullName);
+                Log("F: "+field.FullName);
 
                 FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType, type));
                 newField.InitialValue = field.InitialValue;
@@ -278,13 +281,13 @@ namespace MonoMod {
         /// <param name="method">Method to patch in.</param>
         public virtual void PatchMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
-                Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
+                Log(method.Name + " is an orig_ method; ignoring...");
                 return;
             }
 
-            Console.WriteLine("Patching "+method.Name+" ...");
+            Log("Patching "+method.Name+" ...");
 
-            Console.WriteLine("Checking for already existing methods...");
+            Log("Checking for already existing methods...");
 
             TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
 
@@ -304,9 +307,9 @@ namespace MonoMod {
             if (origMethod != null && origMethodOrig == null) {
                 IsBlacklisted(origMethod.Module.Name, origMethod.DeclaringType.FullName+"."+origMethod.Name, HasAttribute(origMethod, "MonoModBlacklisted"));
                 if (method.Name.StartsWith("replace_") || HasAttribute(method, "MonoModReplace")) {
-                    Console.WriteLine("Method existing; replacing...");
+                    Log("Method existing; replacing...");
                 } else {
-                    Console.WriteLine("Method existing; creating copy...");
+                    Log("Method existing; creating copy...");
 
                     MethodDefinition copy = new MethodDefinition("orig_"+origMethod.Name, origMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, origMethod.ReturnType);
                     copy.DeclaringType = origMethod.DeclaringType;
@@ -323,10 +326,10 @@ namespace MonoMod {
 
                     origType.Methods.Add(copy);
                     origMethodOrig = copy;
-                    Console.WriteLine("Added copy of original method to "+copy.FullName);
+                    Log("Added copy of original method to "+copy.FullName);
                 }
             } else if (origMethod != null) {
-                Console.WriteLine("Prefixed method existing; ignoring...");
+                Log("Prefixed method existing; ignoring...");
             }
 
             //fix for .cctor not linking to orig_.cctor
@@ -341,7 +344,7 @@ namespace MonoMod {
                 method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType, method);
             }
 
-            Console.WriteLine("Storing method to main module...");
+            Log("Storing method to main module...");
 
             if (origMethod != null) {
                 origMethod.Body = method.Body;
@@ -368,7 +371,7 @@ namespace MonoMod {
             }
 
             if (method.Name.StartsWith("get_") || method.Name.StartsWith("set_")) {
-                Console.WriteLine("Finding property...");
+                Log("Finding property...");
 
                 PropertyDefinition property = null;
                 for (int i = 0; i < origType.Properties.Count; i++) {
@@ -382,16 +385,16 @@ namespace MonoMod {
                 }
 
                 if (property == null) {
-                    Console.WriteLine("Property not found; creating new property...");
+                    Log("Property not found; creating new property...");
                     property = new PropertyDefinition(method.Name.Substring(4), PropertyAttributes.None, method.ReturnType);
                     origType.Properties.Add(property);
                 }
 
                 if (method.Name.StartsWith("get_")) {
-                    Console.WriteLine("Replacing getter...");
+                    Log("Replacing getter...");
                     property.GetMethod = method;
                 } else {
-                    Console.WriteLine("Replacing setter...");
+                    Log("Replacing setter...");
                     property.SetMethod = method;
                 }
             }
@@ -407,7 +410,7 @@ namespace MonoMod {
                     continue;
                 }
                 string typeName = type.FullName;
-                Console.WriteLine("TR: "+typeName);
+                Log("TR: "+typeName);
 
                 typeName = RemovePrefixes(typeName, type.Name);
 
@@ -424,7 +427,7 @@ namespace MonoMod {
                         MethodDefinition origMethod = origType.Methods[iii];
                         if (origMethod.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                             method = origMethod;
-                            Console.WriteLine("MR: "+method.FullName);
+                            Log("MR: "+method.FullName);
                             PatchRefsInMethod(method);
                             break;
                         }
@@ -439,13 +442,13 @@ namespace MonoMod {
         /// <param name="method">Method to patch.</param>
         public virtual void PatchRefsInMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
-                Console.WriteLine(method.Name + " is an orig_ method; ignoring...");
+                Log(method.Name + " is an orig_ method; ignoring...");
                 return;
             }
 
-            Console.WriteLine("Patching references in "+method.Name+" ...");
+            Log("Patching references in "+method.Name+" ...");
 
-            Console.WriteLine("Checking for original methods...");
+            Log("Checking for original methods...");
 
             TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
 
@@ -459,10 +462,10 @@ namespace MonoMod {
 
             if (origMethodOrig != null) {
                 IsBlacklisted(origMethodOrig.Module.Name, method.DeclaringType+"."+RemovePrefixes(method.Name), HasAttribute(origMethodOrig, "MonoModBlacklisted"));
-                Console.WriteLine("Prefixed method existing; ignoring...");
+                Log("Prefixed method existing; ignoring...");
             }
 
-            Console.WriteLine("Modifying method body...");
+            Log("Modifying method body...");
             for (int i = 0; method.HasBody && i < method.Body.Instructions.Count; i++) {
                 Instruction instruction = method.Body.Instructions[i];
                 object operand = instruction.Operand;
@@ -475,7 +478,7 @@ namespace MonoMod {
                         MethodReference findMethod = FindMethod(methodCalled, method, false);
 
                         if (origMethodOrig != null && methodCalled.FullName == origMethodOrig.FullName) {
-                            Console.WriteLine("Found call to the original method; linking...");
+                            Log("Found call to the original method; linking...");
                             findMethod = origMethodOrig;
                         }
 
@@ -489,18 +492,18 @@ namespace MonoMod {
 
                         if (findMethod == null && methodCalled.IsGenericInstance) {
                             GenericInstanceMethod genericMethodCalled = ((GenericInstanceMethod) methodCalled);
-                            Console.WriteLine("Calling method: " + genericMethodCalled.FullName);
-                            Console.WriteLine("Element method: " + genericMethodCalled.ElementMethod.FullName);
+                            Log("Calling method: " + genericMethodCalled.FullName);
+                            Log("Element method: " + genericMethodCalled.ElementMethod.FullName);
                             GenericInstanceMethod genericMethod = new GenericInstanceMethod(FindMethod(genericMethodCalled.ElementMethod, method, true));
 
                             for (int gi = 0; gi < genericMethodCalled.GenericArguments.Count; gi++) {
-                                Console.WriteLine("Generic argument: " + genericMethodCalled.GenericArguments[gi]);
+                                Log("Generic argument: " + genericMethodCalled.GenericArguments[gi]);
                                 //genericMethod.GenericArguments.Add(genericMethodCalled.GenericArguments[gi]);
                                 for (int gii = 0; gii < method.GenericParameters.Count; gii++) {
                                     GenericParameter genericParam = method.GenericParameters[gii];
-                                    Console.WriteLine("Checking against: " + genericParam.FullName);
+                                    Log("Checking against: " + genericParam.FullName);
                                     if (genericParam.FullName == genericMethodCalled.GenericArguments[gi].FullName) {
-                                        Console.WriteLine("Success!");
+                                        Log("Success!");
                                         genericMethod.GenericArguments.Add(genericParam);
                                         break;
                                     }
@@ -534,9 +537,9 @@ namespace MonoMod {
                                 field = findType.Fields[ii];
                                 if (field.Module != Module) {
                                     field = Module.Import(field);
-                                    //Console.WriteLine("F: ref->dep: "+field.FullName);
+                                    //Log("F: ref->dep: "+field.FullName);
                                 } else {
-                                    //Console.WriteLine("F: ref->in: "+field.FullName);
+                                    //Log("F: ref->in: "+field.FullName);
                                 }
                                 break;
                             }
@@ -544,7 +547,7 @@ namespace MonoMod {
                     }
 
                     if (field == operand && findType != null) {
-                        //Console.WriteLine("F: new: " + field.FullName);
+                        //Log("F: new: " + field.FullName);
                         FieldDefinition oldField = null;
                         TypeDefinition oldType = (TypeDefinition) field.DeclaringType;
                         for (int ii = 0; ii < oldType.Fields.Count; ii++) {
@@ -587,13 +590,13 @@ namespace MonoMod {
                 /*
                 TypeReference returnType = method.ReturnType;
 
-                Console.WriteLine("Generic param wanted: " + returnType.FullName);
-                Console.WriteLine("Method: " + method.FullName);
+                Log("Generic param wanted: " + returnType.FullName);
+                Log("Method: " + method.FullName);
                 for (int gi = 0; gi < method.GenericParameters.Count; gi++) {
                     GenericParameter genericParam = method.GenericParameters[gi];
-                    Console.WriteLine("Checking against: " + genericParam.FullName);
+                    Log("Checking against: " + genericParam.FullName);
                     if (genericParam.FullName == returnType.FullName) {
-                        Console.WriteLine("Success!");
+                        Log("Success!");
                         method.ReturnType = Module.Import(genericParam);
                         break;
                     }
@@ -618,8 +621,8 @@ namespace MonoMod {
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
         public virtual TypeReference FindType(TypeReference type, MemberReference context = null, bool fallbackToImport = true) {
             if (type == null) {
-                Console.WriteLine("ERROR: Can't find null type!");
-                Console.WriteLine(Environment.StackTrace);
+                Log("ERROR: Can't find null type!");
+                Log(Environment.StackTrace);
                 return null;
             }
             string typeName = RemovePrefixes(type.FullName, type.Name);
@@ -743,9 +746,9 @@ namespace MonoMod {
             
             //For anyone trying to find out why / when no method gets found: Take this!
             /*
-            Console.WriteLine("debug a: " + method.FullName);
-            Console.WriteLine("debug b: " + findTypeRef);
-            Console.WriteLine("debug c: " + findType);
+            Log("debug a: " + method.FullName);
+            Log("debug b: " + findTypeRef);
+            Log("debug c: " + findType);
             */
 
             return fallbackToImport ? Module.Import(method) : null;
@@ -764,13 +767,13 @@ namespace MonoMod {
                 dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency);
             }
             if (!dependencyFile.Exists) {
-                Console.WriteLine("WARNING: Dependency \""+dependency+"\" not found; ignoring...");
+                Log("WARNING: Dependency \""+dependency+"\" not found; ignoring...");
                 return;
             }
             ModuleDefinition module = ModuleDefinition.ReadModule(dependencyFile.FullName);
             Dependencies.Add(module);
             LoadBlacklist(module);
-            Console.WriteLine("Dependency \""+dependency+"\" loaded.");
+            Log("Dependency \""+dependency+"\" loaded.");
         }
 
         /// <summary>
@@ -809,11 +812,11 @@ namespace MonoMod {
         /// <param name="entryOld">The old entry method.</param>
         public virtual MethodDefinition PatchEntry(MethodDefinition entryOld) {
             if (entryOld == null) {
-                Console.WriteLine("Entry point not found; skipping...");
+                Log("Entry point not found; skipping...");
                 return null;
             }
 
-            Console.WriteLine("M:"+entryOld.Name);
+            Log("M:"+entryOld.Name);
 
             entryOld.Name = "orig_"+entryOld.Name;
 
@@ -843,19 +846,40 @@ namespace MonoMod {
         /// Patches the type MonoMod.WasHere into the output module if it didn't exist yet.
         /// </summary>
         public virtual TypeDefinition PatchWasHere() {
-            Console.WriteLine("Checking if MonoMod already was there...");
+            Log("Checking if MonoMod already was there...");
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "WasHere") {
-                    Console.WriteLine("MonoMod was there.");
+                    Log("MonoMod was there.");
                     return Module.Types[ti].Resolve();
                 }
             }
-            Console.WriteLine("Adding MonoMod.WasHere");
+            Log("Adding MonoMod.WasHere");
             TypeDefinition wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.Import(typeof(object))
             };
             Module.Types.Add(wasHere);
             return wasHere;
+        }
+        
+        /// <summary>
+        /// Checks if the method has a special name that is "allowed" to be patched.
+        /// </summary>
+        /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
+        /// <param name="method">Method to check.</param>
+        public virtual bool AllowedSpecialName(MethodDefinition method) {
+            if (method.IsConstructor && (method.HasCustomAttributes || method.IsStatic)) {
+                if (method.IsStatic) {
+                    return true;
+                }
+                //Overriding the constructor manually is generally a horrible idea, but who knows where it may be used.
+                foreach (CustomAttribute attrib in method.CustomAttributes) {
+                    if (attrib.AttributeType.FullName == "MonoMod.MonoModConstructor") {
+                        return true;
+                    }
+                }
+            }
+
+            return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
         }
 
         /// <summary>
@@ -864,7 +888,7 @@ namespace MonoMod {
         /// <returns>The prefixes.</returns>
         /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
         /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
-        public static string RemovePrefixes(string str, string strPrefixed = null) {
+        public virtual string RemovePrefixes(string str, string strPrefixed = null) {
             strPrefixed = strPrefixed ?? str;
             str = RemovePrefix(str, "patch_", strPrefixed);
             str = RemovePrefix(str, "remove_", strPrefixed);
@@ -898,27 +922,6 @@ namespace MonoMod {
                 str = str.Replace(method.GenericParameters[i].Name, "!!"+i);
             }
             return str;
-        }
-
-        /// <summary>
-        /// Checks if the method has a special name that is "allowed" to be patched.
-        /// </summary>
-        /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
-        /// <param name="method">Method to check.</param>
-        public static bool AllowedSpecialName(MethodDefinition method) {
-            if (method.IsConstructor && (method.HasCustomAttributes || method.IsStatic)) {
-                if (method.IsStatic) {
-                    return true;
-                }
-                //Overriding the constructor manually is generally a horrible idea, but who knows where it may be used.
-                foreach (CustomAttribute attrib in method.CustomAttributes) {
-                    if (attrib.AttributeType.FullName == "MonoMod.MonoModConstructor") {
-                        return true;
-                    }
-                }
-            }
-
-            return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
         }
 
         /// <summary>
@@ -996,6 +999,22 @@ namespace MonoMod {
                 }
             }
             return false;
+        }
+        
+        protected virtual void Log(object obj) {
+            Log(obj.ToString());
+        }
+        
+        protected virtual void Log(string txt) {
+            if (Logger != null) {
+                Logger(txt);
+                return;
+            }
+            if (DefaultLogger != null) {
+                DefaultLogger(txt);
+                return;
+            }
+            Console.WriteLine(txt);
         }
 
     }
