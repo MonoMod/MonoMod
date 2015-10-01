@@ -24,14 +24,16 @@ namespace MonoMod.JIT
         private readonly static Dictionary<string, Type> CachePrefoundTypes = new Dictionary<string, Type>(1024);
 
         private byte[] OriginalChecksum;
-
-        public ModuleDefinition OriginalModule;
+        private ModuleDefinition OriginalModule;
+        private bool IsPatched;
+        private bool IsParsed;
 
         public Assembly PatchedAssembly;
 
         public MonoModJIT(Assembly assembly)
             : base(assembly.Location) {
             Out = new FileInfo(assembly.Location.Substring(0, assembly.Location.Length-4) + ".mmc");
+            Read(true);
         }
 
         public override void Read(bool loadDependencies = true) {
@@ -39,13 +41,9 @@ namespace MonoMod.JIT
 
             OriginalModule = Module;
 
-            CheckChecksum();
-
-            if (!Out.Exists) {
-                return;
+            if (Out.Exists) {
+                Module = ModuleDefinition.ReadModule(Out.FullName);
             }
-
-            Module = ModuleDefinition.ReadModule(Out.FullName);
 
             CheckChecksum();
         }
@@ -58,40 +56,118 @@ namespace MonoMod.JIT
                     }
                 }
             }
-
-            if (Module == OriginalModule) {
+            
+            if (Module == OriginalModule || IsPatched) {
                 return;
             }
-
-            //TODO check checksum from wasHere
+            
+            byte[] checksum = GetData("Checksum");
+            if (checksum == null) {
+                return;
+            }
+            
+            bool match = true;
+            for (int i = 0; i < checksum.Length && match; i++) {
+                match = checksum[i] == OriginalChecksum[i];
+            }
+            
+            if (!match) {
+                //Revert to the previously loaded module
+                Module = OriginalModule;
+            }
+            IsPatched = match;
+        }
+        
+        public void WriteChecksum() {
+            SetData("Checksum", OriginalChecksum);
+        }
+        
+        public MethodDefinition GetDataMethod() {
+            TypeDefinition wasHere = Module.GetType("MonoMod.WasHere");
+            MethodDefinition jitData = null;
+            for (int i = 0; i < wasHere.Methods.Count; i++) {
+                if (wasHere.Methods[i].Name == "MonoModJIT_Data") {
+                    jitData = wasHere.Methods[i];
+                    break;
+                }
+            }
+            return jitData;
+        }
+        
+        public byte[] GetData(string name) {
+            MethodDefinition jitData = GetDataMethod();
+            if (jitData == null) {
+                return null;
+            }
+            
+            for (int i = 0; i < jitData.Body.Instructions.Count; i++) {
+                Instruction instr = jitData.Body.Instructions[i];
+                if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Ldstr) {
+                    string operand = (string) instr.Operand;
+                    if (operand.StartsWith(name + ":")) {
+                        char[] chars = ((string) instr.Operand).Substring(name.Length + 1).ToCharArray();
+                        byte[] data = new byte[chars.Length];
+                        Buffer.BlockCopy(chars, 0, data, 0, data.Length);
+                        return data;
+                    }
+                }
+            }
+            return null;
+        }
+        
+        public void SetData(string name, byte[] data) {
+            MethodDefinition jitData = GetDataMethod();
+            if (jitData == null) {
+                jitData = new MethodDefinition("MonoModJIT_Data", Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static, Module.Import(typeof(void)));
+                jitData.Body = new Mono.Cecil.Cil.MethodBody(jitData);
+                jitData.Body.GetILProcessor().Emit(Mono.Cecil.Cil.OpCodes.Ret);
+                
+                Module.GetType("MonoMod.WasHere").Methods.Add(jitData);
+            }
+            
+            char[] chars = new char[data.Length];
+            Buffer.BlockCopy(data, 0, chars, 0, chars.Length);
+            string newstr = name + ":" + new string(chars);
+            
+            for (int i = 0; i < jitData.Body.Instructions.Count; i++) {
+                Instruction instr = jitData.Body.Instructions[i];
+                if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Ldstr) {
+                    if (((string) instr.Operand).StartsWith(name + ":")) {
+                        instr.Operand = newstr;
+                        return;
+                    }
+                }
+            }
+            
+            ILProcessor il = jitData.Body.GetILProcessor();
+            il.InsertBefore(jitData.Body.Instructions[jitData.Body.Instructions.Count - 1], il.Create(Mono.Cecil.Cil.OpCodes.Ldstr, newstr));
         }
 
         public override TypeDefinition PatchWasHere() {
             TypeDefinition wasHere = base.PatchWasHere();
 
-            //TODO add checksum to wasHere
+            WriteChecksum();
 
             return wasHere;
         }
         
         public override void AutoPatch(bool read = true, bool write = true) {
-            if (Module != null && Module == OriginalModule) {
-                return;
+            //Reading outside of AutoPatch disables modding. Ironically modding twice can kill MonoModJIT
+            if (!IsPatched) {
+                base.AutoPatch(false, write);
+                IsPatched = true;
             }
             
-            OriginalModule = ModuleDefinition.ReadModule(In.FullName);
-            
-            //Reading outside of AutoPatch disables modding. Ironically modding twice can kill MonoModJIT
-            Read(true);
-            base.AutoPatch(false, true);
-            
-            CacheParsed.Clear();
-            CacheTypeDefs.Clear();
-            CacheTypeDefs_.Clear();
-            CacheMethodDefs.Clear();
-            CacheMethodDefs_.Clear();
-            
-            AutoParse();
+            if (!IsParsed) {
+                CacheParsed.Clear();
+                CacheTypeDefs.Clear();
+                CacheTypeDefs_.Clear();
+                CacheMethodDefs.Clear();
+                CacheMethodDefs_.Clear();
+                
+                AutoParse();
+                IsParsed = true;
+            }
         }
 
         public TypeDefinition GetTypeDefinition(Type type) {
