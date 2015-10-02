@@ -487,15 +487,7 @@ namespace MonoMod {
                             Log("Found call to the original method; linking...");
                             findMethod = origMethodOrig;
                         }
-
-                        if (findMethod == null) {
-                            try {
-                                findMethod = Module.Import(methodCalled);
-                            } catch {
-                                //uh. generic type failed importing?
-                            }
-                        }
-
+                        
                         if (findMethod == null && methodCalled.IsGenericInstance) {
                             GenericInstanceMethod genericMethodCalled = ((GenericInstanceMethod) methodCalled);
                             Log("Calling method: " + genericMethodCalled.FullName);
@@ -524,11 +516,22 @@ namespace MonoMod {
                                         found = true;
                                     }
                                 }
+                                if (!found) {
+                                    genericMethod.GenericArguments.Add(FindType(genericMethodCalled.GenericArguments[gi], method, true));
+                                }
                             }
 
                             findMethod = genericMethod;
                         }
-                        
+
+                        if (findMethod == null) {
+                            try {
+                                findMethod = Module.Import(methodCalled);
+                            } catch {
+                                //uh. generic type failed importing?
+                            }
+                        }
+
                         MethodDefinition findMethodDef = findMethod == null ? null : findMethod.Resolve();
                         if (findMethodDef != null) {
                             IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethodDef, "MonoModBlacklisted"));
