@@ -505,13 +505,23 @@ namespace MonoMod {
                             for (int gi = 0; gi < genericMethodCalled.GenericArguments.Count; gi++) {
                                 Log("Generic argument: " + genericMethodCalled.GenericArguments[gi]);
                                 //genericMethod.GenericArguments.Add(genericMethodCalled.GenericArguments[gi]);
-                                for (int gii = 0; gii < method.GenericParameters.Count; gii++) {
+                                bool found = false;
+                                for (int gii = 0; gii < method.GenericParameters.Count && !found; gii++) {
                                     GenericParameter genericParam = method.GenericParameters[gii];
                                     Log("Checking against: " + genericParam.FullName);
                                     if (genericParam.FullName == genericMethodCalled.GenericArguments[gi].FullName) {
                                         Log("Success!");
                                         genericMethod.GenericArguments.Add(genericParam);
-                                        break;
+                                        found = true;
+                                    }
+                                }
+                                for (int gii = 0; gii < method.DeclaringType.GenericParameters.Count && !found; gii++) {
+                                    GenericParameter genericParam = method.DeclaringType.GenericParameters[gii];
+                                    Log("Checking against: " + genericParam.FullName);
+                                    if (genericParam.FullName == genericMethodCalled.GenericArguments[gi].FullName) {
+                                        Log("Success!");
+                                        genericMethod.GenericArguments.Add(genericParam);
+                                        found = true;
                                     }
                                 }
                             }
@@ -732,7 +742,7 @@ namespace MonoMod {
                             genMethod.HasThis = method.HasThis;
                             genMethod.ExplicitThis = method.ExplicitThis;
                             for (int i = 0; i < method.GenericParameters.Count; i++) {
-                                genMethod.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, genMethod));
+                                genMethod.GenericParameters.Add((GenericParameter) (FindType(method.GenericParameters[i], genMethod, false) ?? FindType(method.GenericParameters[i], findTypeRef)));
                             }
                             for (int i = 0; i < method.Parameters.Count; i++) {
                                 genMethod.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, genMethod)));
