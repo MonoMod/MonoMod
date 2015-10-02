@@ -528,7 +528,6 @@ namespace MonoMod {
                             }
                         }
                         
-                        //FIXME debug (fails on import): System.Void FezEngine.Effects.IShaderInstantiatableEffect`1<InstanceType>::SetInstanceData(!0[],System.Int32)
                         operand = findMethod ?? Module.Import(methodCalled);
                     }
                 }
@@ -638,8 +637,7 @@ namespace MonoMod {
                 foundType = FindType(type.GetElementType(), context, fallbackToImport);
             }
             if (foundType == null && type.IsArray) {
-                //TODO return proper array?
-                foundType = FindType(type.GetElementType(), context, fallbackToImport);
+                foundType = new ArrayType(FindType(type.GetElementType(), context, fallbackToImport));
             }
             if (foundType == null && context != null && type.IsGenericParameter) {
                 foundType = FindTypeGeneric(type, context, fallbackToImport);
