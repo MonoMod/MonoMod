@@ -528,6 +528,7 @@ namespace MonoMod {
                             }
                         }
                         
+                        //FIXME debug (fails on import): System.Void FezEngine.Effects.IShaderInstantiatableEffect`1<InstanceType>::SetInstanceData(!0[],System.Int32)
                         operand = findMethod ?? Module.Import(methodCalled);
                     }
                 }
@@ -714,20 +715,21 @@ namespace MonoMod {
                 
                 string methodName = RemovePrefixes(method.FullName, method.DeclaringType.Name);
                 methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
+                methodName = ReplaceGenerics(methodName, method, findType);
                 for (int ii = 0; ii < findType.Methods.Count; ii++) {
                     MethodReference foundMethod = findType.Methods[ii];
                     string foundMethodName = foundMethod.FullName;
                     foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
                     foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
                     //TODO find a better way to compare methods / fix comparing return types
+                    foundMethodName = ReplaceGenerics(foundMethodName, foundMethod, findType);
                     
-                    if (methodName == foundMethodName ||
-                        methodName == ReplaceGenerics(foundMethodName, foundMethod, findType)) {
+                    if (methodName == foundMethodName) {
                         IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
                         
                         if (typeMismatch && method.DeclaringType.IsGenericInstance) {
                             //TODO test return type context
-                            MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, context), findTypeRef);
+                            MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, findTypeRef), findTypeRef);
                             genMethod.CallingConvention = method.CallingConvention;
                             genMethod.HasThis = method.HasThis;
                             genMethod.ExplicitThis = method.ExplicitThis;
