@@ -260,6 +260,10 @@ namespace MonoMod {
                 /*if (field.Attributes.HasFlag(FieldAttributes.SpecialName)) {
                         continue;
                     }*/
+                
+                if (HasAttribute(field, "MonoModIgnore")) {
+                    continue;
+                }
 
                 bool hasField = false;
                 for (int iii = 0; iii < origTypeResolved.Fields.Count; iii++) {
@@ -550,21 +554,28 @@ namespace MonoMod {
 
                     TypeReference findTypeRef = FindType(field.DeclaringType, method, false);
                     TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
+                    
                     if (findType != null) {
                         for (int ii = 0; ii < findType.Fields.Count; ii++) {
                             if (findType.Fields[ii].Name == field.Name) {
-                                field = findType.Fields[ii];
-                                if (field.Module != Module) {
-                                    field = Module.Import(field);
-                                    //Log("F: ref->dep: "+field.FullName);
-                                } else {
-                                    //Log("F: ref->in: "+field.FullName);
+                                FieldReference foundField = findType.Fields[ii];
+                                
+                                if (field.DeclaringType.IsGenericInstance) {
+                                    foundField = Module.Import(new FieldReference(field.Name, FindType(field.FieldType, findTypeRef), findTypeRef));
                                 }
+                                
+                                if (foundField.Module != Module) {
+                                    foundField = Module.Import(field);
+                                }
+                                
+                                field = foundField;
                                 break;
                             }
                         }
                     }
-
+                    
+                    //TODO is this still required?
+                    /*
                     if (field == operand && findType != null) {
                         //Log("F: new: " + field.FullName);
                         FieldDefinition oldField = null;
@@ -581,6 +592,7 @@ namespace MonoMod {
                             findType.Fields.Add(newField);
                         }
                     }
+                    */
 
                     if (field == operand) {
                         field = new FieldReference(field.Name, FindType(field.FieldType, method), FindType(field.DeclaringType, method));
@@ -947,6 +959,27 @@ namespace MonoMod {
             return str;
         }
 
+        /// <summary>
+        /// Determines if the field has got a specific MonoMod attribute.
+        /// </summary>
+        /// <returns><c>true</c> if the field contains the given MonoMod attribute, <c>false</c> otherwise.</returns>
+        /// <param name="field">Field.</param>
+        /// <param name="attribute">Attribute.</param>
+        public static bool HasAttribute(FieldDefinition field, string attribute) {
+            if (field == null) {
+                return false;
+            }
+            if (!field.HasCustomAttributes) {
+                return false;
+            }
+            foreach (CustomAttribute attrib in field.CustomAttributes) {
+                if (attrib.AttributeType.FullName == "MonoMod." + attribute) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
         /// <summary>
         /// Determines if the method has got a specific MonoMod attribute.
         /// </summary>
