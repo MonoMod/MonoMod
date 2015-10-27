@@ -242,7 +242,7 @@ namespace MonoMod {
             }
 
             type = Module.Import(type).Resolve();
-
+            
             for (int ii = 0; ii < type.Methods.Count; ii++) {
                 MethodDefinition method = type.Methods[ii];
                 Log("M: "+method.FullName);
@@ -253,6 +253,23 @@ namespace MonoMod {
 
                 method = Module.Import(method).Resolve();
                 PatchMethod(method);
+            }
+            
+            for (int ii = 0; ii < type.Properties.Count; ii++) {
+                PropertyDefinition @property = type.Properties[ii];
+                Log("P: "+@property.FullName);
+
+                MethodDefinition getter = @property.GetMethod;
+                if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
+                    getter = Module.Import(getter).Resolve();
+                    PatchMethod(getter);
+                }
+                
+                MethodDefinition setter = @property.SetMethod;
+                if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
+                    setter = Module.Import(setter).Resolve();
+                    PatchMethod(setter);
+                }
             }
 
             for (int ii = 0; ii < type.Fields.Count; ii++) {
@@ -439,6 +456,29 @@ namespace MonoMod {
                             method = origMethod;
                             Log("MR: "+method.FullName);
                             PatchRefsInMethod(method);
+                            break;
+                        }
+                    }
+                }
+                for (int ii = 0; ii < type.Properties.Count; ii++) {
+                    PropertyDefinition @property = type.Properties[ii];
+                    
+                    for (int iii = 0; iii < origType.Properties.Count; iii++) {
+                        PropertyDefinition origProperty = origType.Properties[iii];
+                        if (origProperty.FullName == RemovePrefixes(@property.FullName, @property.DeclaringType.Name)) {
+                            @property = origProperty;
+                            Log("PR: "+@property.FullName);
+                            MethodDefinition getter = @property.GetMethod;
+                            if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
+                                getter = Module.Import(getter).Resolve();
+                                PatchRefsInMethod(getter);
+                            }
+                            
+                            MethodDefinition setter = @property.SetMethod;
+                            if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
+                                setter = Module.Import(setter).Resolve();
+                                PatchRefsInMethod(setter);
+                            }
                             break;
                         }
                     }
@@ -912,6 +952,10 @@ namespace MonoMod {
                         return true;
                     }
                 }
+            }
+            
+            if (method.IsGetter || method.IsSetter) {
+                return true;
             }
 
             return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
