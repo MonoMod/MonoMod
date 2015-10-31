@@ -41,6 +41,7 @@
     <Compile Include="MonoMod\MonoModRemove.cs" />
     <Compile Include="MonoMod\MonoModReplace.cs" />
     <Compile Include="MonoMod\MonoModConstructor.cs" />
+    <Compile Include="MonoMod\MonoModLinkTo.cs" />
     <Compile Include="MonoMod\BlacklistItem.cs" />
     <Compile Include="MonoMod\MonoModBlacklist.cs" />
     <Compile Include="MonoMod\MonoModBlacklisted.cs" />

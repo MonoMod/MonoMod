@@ -519,9 +519,9 @@ namespace MonoMod {
             for (int i = 0; method.HasBody && i < method.Body.Instructions.Count; i++) {
                 Instruction instruction = method.Body.Instructions[i];
                 object operand = instruction.Operand;
-
+                
                 if (operand is MethodReference) {
-                    MethodReference methodCalled = (MethodReference) operand;
+                    MethodReference methodCalled = FindLinked((MethodReference) operand);
                     if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
                         operand = method;
                     } else {
@@ -583,6 +583,12 @@ namespace MonoMod {
                             if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
                                 instruction.OpCode = OpCodes.Callvirt;
                             }
+                            //Fixes linkto base methods being called as callvirt
+                            //FIXME find out other cases where this should be set due to linkto
+                            //FIXME test something better than name...
+                            if (findMethodDef.DeclaringType.Name == method.DeclaringType.BaseType.Name) {
+                                instruction.OpCode = OpCodes.Call;
+                            }
                         }
                         
                         operand = findMethod ?? Module.Import(methodCalled);
@@ -590,7 +596,7 @@ namespace MonoMod {
                 }
 
                 if (operand is FieldReference) {
-                    FieldReference field = (FieldReference) operand;
+                    FieldReference field = FindLinked((FieldReference) operand);
 
                     TypeReference findTypeRef = FindType(field.DeclaringType, method, false);
                     TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
@@ -959,6 +965,93 @@ namespace MonoMod {
             }
 
             return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
+        }
+        
+        public virtual MethodReference FindLinked(MethodReference method) {
+            MethodDefinition def = method.Resolve();
+            if (def == null || !def.HasCustomAttributes) {
+                return method;
+            }
+            CustomAttribute attrib = null;
+            foreach (CustomAttribute attrib_ in def.CustomAttributes) {
+                if (attrib_.AttributeType.FullName == "MonoMod.MonoModLinkTo") {
+                    attrib = attrib_;
+                    break;
+                }
+            }
+            if (attrib == null) {
+                return method;
+            }
+            
+            if (attrib.ConstructorArguments.Count == 1) {
+                //TODO get from delegate
+                return method;
+            }
+            
+            TypeDefinition type = null;
+            
+            if (attrib.ConstructorArguments[0].Type.FullName == "System.String") {
+                //TODO get type from name
+            } else {
+                //TODO get type from type
+                type = FindType((TypeReference) attrib.ConstructorArguments[0].Value).Resolve();
+            }
+            
+            //TODO get method from name
+            for (int i = 0; i < type.Methods.Count; i++) {
+                if (type.Methods[i].Name == ((string) attrib.ConstructorArguments[1].Value) && type.Methods[i].Parameters.Count == method.Parameters.Count) {
+                    //Probably check for more than that
+                    method = type.Methods[i];
+                    break;
+                }
+            }
+            
+            //TODO cache somewhere
+            
+            //orig
+            //IL_003e: call instance void [FNA]Microsoft.Xna.Framework.Game::Update(class [FNA]Microsoft.Xna.Framework.GameTime)
+            //linkmed
+            //IL_0045: callvirt instance void [FNA]Microsoft.Xna.Framework.Game::Update(class [FNA]Microsoft.Xna.Framework.GameTime)
+            
+            return method;
+        }
+        
+        public virtual FieldReference FindLinked(FieldReference field) {
+            FieldDefinition def = field.Resolve();
+            if (def == null || !def.HasCustomAttributes) {
+                return field;
+            }
+            CustomAttribute attrib = null;
+            foreach (CustomAttribute attrib_ in def.CustomAttributes) {
+                if (attrib_.AttributeType.FullName == "MonoMod.MonoModLinkTo") {
+                    attrib = attrib_;
+                    break;
+                }
+            }
+            if (attrib == null) {
+                return field;
+            }
+            
+            TypeDefinition type = null;
+            
+            if (attrib.ConstructorArguments[0].Type.FullName == "System.String") {
+                //TODO get type from name
+            } else {
+                type = FindType((TypeReference) attrib.ConstructorArguments[0].Value).Resolve();
+            }
+            
+            //TODO get method from name
+            for (int i = 0; i < type.Fields.Count; i++) {
+                if (type.Methods[i].Name == ((string) attrib.ConstructorArguments[1].Value)) {
+                    //Probably check for more than that
+                    field = type.Fields[i];
+                    break;
+                }
+            }
+            
+            //TODO cache somewhere
+            
+            return field;
         }
 
         /// <summary>
