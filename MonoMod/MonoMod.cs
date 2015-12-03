@@ -271,12 +271,24 @@ namespace MonoMod {
                     PatchMethod(setter);
                 }
             }
+            
+            if (HasAttribute(type, "MonoModEnumReplace")) {
+                for (int ii = 0; ii < origTypeResolved.Fields.Count;) {
+                    if (origTypeResolved.Fields[ii].Name == "value__") {
+                        ii++;
+                        continue;
+                    }
+                    
+                    Log("debug: " + origTypeResolved.Fields[ii].Constant);
+                    origTypeResolved.Fields.RemoveAt(ii);
+                }
+            }
 
             for (int ii = 0; ii < type.Fields.Count; ii++) {
                 FieldDefinition field = type.Fields[ii];
                 /*if (field.Attributes.HasFlag(FieldAttributes.SpecialName)) {
-                        continue;
-                    }*/
+                    continue;
+                }*/
                 
                 if (HasAttribute(field, "MonoModIgnore")) {
                     continue;
@@ -293,9 +305,11 @@ namespace MonoMod {
                     continue;
                 }
                 Log("F: "+field.FullName);
+                Log("debug: " + field.Constant);
 
                 FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType, type));
                 newField.InitialValue = field.InitialValue;
+                newField.Constant = field.Constant;
                 origTypeResolved.Fields.Add(newField);
             }
 
