@@ -354,13 +354,16 @@ namespace MonoMod {
                     copy.DeclaringType = origMethod.DeclaringType;
                     copy.MetadataToken = origMethod.MetadataToken;
                     copy.Body = origMethod.Body;
+                    
+                    for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
+                        copy.GenericParameters.Add(new GenericParameter(origMethod.GenericParameters[i].Name, copy) {
+                            Attributes = origMethod.GenericParameters[i].Attributes,
+                            MetadataToken = origMethod.GenericParameters[i].MetadataToken
+                        });
+                    }
 
                     for (int i = 0; i < origMethod.Parameters.Count; i++) {
                         copy.Parameters.Add(origMethod.Parameters[i]);
-                    }
-
-                    for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
-                        copy.GenericParameters.Add(new GenericParameter(origMethod.GenericParameters[i].Name, copy));
                     }
 
                     origType.Methods.Add(copy);
@@ -850,6 +853,7 @@ namespace MonoMod {
             
             if (!method.DeclaringType.IsArray) {
                 Console.WriteLine("Method not found     : " + method.FullName);
+                Console.WriteLine("Method type scope    : " + method.DeclaringType.Scope.Name);
                 Console.WriteLine("Found type reference : " + findTypeRef);
                 Console.WriteLine("Found type definition: " + findType);
                 if (findTypeRef != null) {
@@ -1196,6 +1200,10 @@ namespace MonoMod {
                 }
                 
                 return str;
+            }
+            
+            while (method.IsGenericInstance) {
+                method = ((GenericInstanceMethod) method).ElementMethod;
             }
             
             for (int i = 0; i < type.GenericParameters.Count; i++) {
