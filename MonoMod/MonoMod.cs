@@ -279,7 +279,6 @@ namespace MonoMod {
                         continue;
                     }
                     
-                    Log("debug: " + origTypeResolved.Fields[ii].Constant);
                     origTypeResolved.Fields.RemoveAt(ii);
                 }
             }
@@ -305,7 +304,6 @@ namespace MonoMod {
                     continue;
                 }
                 Log("F: "+field.FullName);
-                Log("debug: " + field.Constant);
 
                 FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType, type));
                 newField.InitialValue = field.InitialValue;
@@ -719,7 +717,7 @@ namespace MonoMod {
             string typeName = RemovePrefixes(type.FullName, type.Name);
             TypeReference foundType = Module.GetType(typeName);
             if (foundType == null && type.IsByReference) {
-                foundType = FindType(type.GetElementType(), context, fallbackToImport);
+                foundType = new ByReferenceType(FindType(type.GetElementType(), context, fallbackToImport));
             }
             if (foundType == null && type.IsArray) {
                 foundType = new ArrayType(FindType(type.GetElementType(), context, fallbackToImport));
@@ -798,14 +796,14 @@ namespace MonoMod {
                 
                 string methodName = RemovePrefixes(method.FullName, method.DeclaringType.Name);
                 methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
-                methodName = ReplaceGenerics(methodName, method, findType);
+                methodName = MakeMethodNameFindFriendly(methodName, method, findType);
                 for (int ii = 0; ii < findType.Methods.Count; ii++) {
                     MethodReference foundMethod = findType.Methods[ii];
                     string foundMethodName = foundMethod.FullName;
                     foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
                     foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
                     //TODO find a better way to compare methods / fix comparing return types
-                    foundMethodName = ReplaceGenerics(foundMethodName, foundMethod, findType);
+                    foundMethodName = MakeMethodNameFindFriendly(foundMethodName, foundMethod, findType);
                     
                     if (methodName == foundMethodName) {
                         IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
@@ -830,21 +828,80 @@ namespace MonoMod {
                             foundMethod = Module.Import(foundMethod);
                         }
                         
+                        if (method.IsGenericInstance) {
+                            GenericInstanceMethod genMethod = new GenericInstanceMethod(foundMethod);
+                            GenericInstanceMethod methodg = ((GenericInstanceMethod) method);
+                            
+                            for (int i = 0; i < methodg.GenericArguments.Count; i++) {
+                                genMethod.GenericArguments.Add(FindType(methodg.GenericArguments[i], genMethod));
+                            }
+                            
+                            foundMethod = genMethod;
+                        }
+                        
                         return foundMethod;
                     }
                 }
             }
             
-            //For anyone trying to find out why / when no method gets found: Take this!
-            /*
-            Log("debug a: " + method.FullName);
-            Log("debug b: " + findTypeRef);
-            Log("debug c: " + findType);
-            */
-
-            return fallbackToImport ? Module.Import(method) : null;
+            if (fallbackToImport) {
+                return Module.Import(method);
+            }
+            
+            if (!method.DeclaringType.IsArray) {
+                Console.WriteLine("Method not found     : " + method.FullName);
+                Console.WriteLine("Found type reference : " + findTypeRef);
+                Console.WriteLine("Found type definition: " + findType);
+                if (findTypeRef != null) {
+                    Console.WriteLine("Found type scope     : " + findTypeRef.Scope.Name);
+                }
+                
+                if (findType != null) {
+                    string methodName = method.FullName;
+                    methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
+                    methodName = MakeMethodNameFindFriendly(methodName, method, findType);
+                    Console.WriteLine("debug m -1 / " + (findType.Methods.Count - 1) + ": " + methodName);
+                    for (int ii = 0; ii < findType.Methods.Count; ii++) {
+                        MethodReference foundMethod = findType.Methods[ii];
+                        string foundMethodName = foundMethod.FullName;
+                        foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
+                        foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
+                        //TODO find a better way to compare methods / fix comparing return types
+                        foundMethodName = MakeMethodNameFindFriendly(foundMethodName, foundMethod, findType);
+                        Console.WriteLine("debug m "+ii+" / " + (findType.Methods.Count - 1) + ": " + foundMethodName);
+                    }
+                }
+            }
+            
+            if (findTypeRef == null) {
+                return method;
+            }
+            
+            MethodReference fbgenMethod = new MethodReference(method.Name, FindType(method.ReturnType, findTypeRef), findTypeRef);
+            fbgenMethod.CallingConvention = method.CallingConvention;
+            fbgenMethod.HasThis = method.HasThis;
+            fbgenMethod.ExplicitThis = method.ExplicitThis;
+            for (int i = 0; i < method.GenericParameters.Count; i++) {
+                fbgenMethod.GenericParameters.Add((GenericParameter) FindType(method.GenericParameters[i], fbgenMethod));
+            }
+            for (int i = 0; i < method.Parameters.Count; i++) {
+                fbgenMethod.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, fbgenMethod)));
+            }
+            
+            if (method.IsGenericInstance) {
+                GenericInstanceMethod genMethod = new GenericInstanceMethod(fbgenMethod);
+                GenericInstanceMethod methodg = ((GenericInstanceMethod) method);
+                
+                for (int i = 0; i < methodg.GenericArguments.Count; i++) {
+                    genMethod.GenericArguments.Add(FindType(methodg.GenericArguments[i], genMethod));
+                }
+                
+                fbgenMethod = genMethod;
+            }
+            
+            return fbgenMethod;
         }
-
+        
         /// <summary>
         /// Loads a dependency and adds it to Dependencies. Requires the field Dir to be set.
         /// </summary>
@@ -1097,6 +1154,7 @@ namespace MonoMod {
             return str;
         }
         
+        [Obsolete("Use MakeMethodNameFindFriendly instead.")]
         public static string ReplaceGenerics(string str, MethodReference method, TypeReference type) {
             if (!type.HasGenericParameters) {
                 return str;
@@ -1106,6 +1164,59 @@ namespace MonoMod {
             }
             for (int i = 0; i < method.GenericParameters.Count; i++) {
                 str = str.Replace(method.GenericParameters[i].Name, "!!"+i);
+            }
+            return str;
+        }
+        
+        public static string MakeMethodNameFindFriendly(string str, MethodReference method, TypeReference type, bool inner = false) {
+            if (!inner) {
+                int indexOfMethodDoubleColons = str.IndexOf("::");
+                
+                //screw generic parameters - remove them!
+                int open = str.IndexOf("<", indexOfMethodDoubleColons);
+                if (-1 < open) {
+                    //let's just pretend generics in generics don't exist
+                    int close = str.IndexOf(">", open);
+                    str = str.Substring(0, open) + str.Substring(close + 1);
+                }
+                
+                //screw multidimensional arrays - replace them!
+                open = str.IndexOf("[");
+                if (-1 < open && open < indexOfMethodDoubleColons) {
+                    int close = str.IndexOf("]", open);
+                    str = str.Substring(0, open) + "[n]" + str.Substring(close + 1);
+                }
+                
+                open = str.IndexOf("(", indexOfMethodDoubleColons);
+                if (-1 < open) {
+                    //Methods without () would be weird...
+                    //Well, make the params find-friendly
+                    int close = str.IndexOf(")", open);
+                    str = str.Substring(0, open) + MakeMethodNameFindFriendly(str.Substring(open, close - open + 1), method, type, true) + str.Substring(close + 1);
+                }
+                
+                return str;
+            }
+            
+            for (int i = 0; i < type.GenericParameters.Count; i++) {
+                str = str.Replace("("+type.GenericParameters[i].Name+",", "(!"+i+",");
+                str = str.Replace(","+type.GenericParameters[i].Name+",", ",!"+i+",");
+                str = str.Replace(","+type.GenericParameters[i].Name+")", ",!"+i+")");
+                str = str.Replace("("+type.GenericParameters[i].Name+")", "(!"+i+")");
+                int param = str.IndexOf(type.GenericParameters[i].Name+"[");
+                if (-1 < param) {
+                    str = str.Substring(0, param) + "!"+i + str.Substring(param + type.GenericParameters[i].Name.Length);
+                }
+            }
+            for (int i = 0; i < method.GenericParameters.Count; i++) {
+                str = str.Replace("("+method.GenericParameters[i].Name+",", "(!!"+i+",");
+                str = str.Replace(","+method.GenericParameters[i].Name+",", ",!!"+i+",");
+                str = str.Replace(","+method.GenericParameters[i].Name+")", ",!!"+i+")");
+                str = str.Replace("("+method.GenericParameters[i].Name+")", "(!!"+i+")");
+                int param = str.IndexOf(method.GenericParameters[i].Name+"[");
+                if (-1 < param) {
+                    str = str.Substring(0, param) + "!!"+i + str.Substring(param + method.GenericParameters[i].Name.Length);
+                }
             }
             return str;
         }
