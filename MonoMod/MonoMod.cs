@@ -1211,6 +1211,10 @@ namespace MonoMod {
                 str = str.Replace(","+type.GenericParameters[i].Name+",", ",!"+i+",");
                 str = str.Replace(","+type.GenericParameters[i].Name+")", ",!"+i+")");
                 str = str.Replace("("+type.GenericParameters[i].Name+")", "(!"+i+")");
+                str = str.Replace("("+type.GenericParameters[i].Name+"&,", "(!"+i+"&,");
+                str = str.Replace(","+type.GenericParameters[i].Name+"&,", ",!"+i+"&,");
+                str = str.Replace(","+type.GenericParameters[i].Name+"&)", ",!"+i+"&)");
+                str = str.Replace("("+type.GenericParameters[i].Name+"&)", "(!"+i+"&)");
                 int param = str.IndexOf(type.GenericParameters[i].Name+"[");
                 if (-1 < param) {
                     str = str.Substring(0, param) + "!"+i + str.Substring(param + type.GenericParameters[i].Name.Length);
@@ -1221,6 +1225,10 @@ namespace MonoMod {
                 str = str.Replace(","+method.GenericParameters[i].Name+",", ",!!"+i+",");
                 str = str.Replace(","+method.GenericParameters[i].Name+")", ",!!"+i+")");
                 str = str.Replace("("+method.GenericParameters[i].Name+")", "(!!"+i+")");
+                str = str.Replace("("+method.GenericParameters[i].Name+"&,", "(!!"+i+"&,");
+                str = str.Replace(","+method.GenericParameters[i].Name+"&,", ",!!"+i+"&,");
+                str = str.Replace(","+method.GenericParameters[i].Name+"&)", ",!!"+i+"&)");
+                str = str.Replace("("+method.GenericParameters[i].Name+"&)", "(!!"+i+"&)");
                 int param = str.IndexOf(method.GenericParameters[i].Name+"[");
                 if (-1 < param) {
                     str = str.Substring(0, param) + "!!"+i + str.Substring(param + method.GenericParameters[i].Name.Length);
