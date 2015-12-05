@@ -852,19 +852,19 @@ namespace MonoMod {
             }
             
             if (!method.DeclaringType.IsArray) {
-                Console.WriteLine("Method not found     : " + method.FullName);
-                Console.WriteLine("Method type scope    : " + method.DeclaringType.Scope.Name);
-                Console.WriteLine("Found type reference : " + findTypeRef);
-                Console.WriteLine("Found type definition: " + findType);
+                Log("Method not found     : " + method.FullName);
+                Log("Method type scope    : " + method.DeclaringType.Scope.Name);
+                Log("Found type reference : " + findTypeRef);
+                Log("Found type definition: " + findType);
                 if (findTypeRef != null) {
-                    Console.WriteLine("Found type scope     : " + findTypeRef.Scope.Name);
+                    Log("Found type scope     : " + findTypeRef.Scope.Name);
                 }
                 
                 if (findType != null) {
                     string methodName = method.FullName;
                     methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
                     methodName = MakeMethodNameFindFriendly(methodName, method, findType);
-                    Console.WriteLine("debug m -1 / " + (findType.Methods.Count - 1) + ": " + methodName);
+                    Log("debug m -1 / " + (findType.Methods.Count - 1) + ": " + methodName);
                     for (int ii = 0; ii < findType.Methods.Count; ii++) {
                         MethodReference foundMethod = findType.Methods[ii];
                         string foundMethodName = foundMethod.FullName;
@@ -872,7 +872,7 @@ namespace MonoMod {
                         foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
                         //TODO find a better way to compare methods / fix comparing return types
                         foundMethodName = MakeMethodNameFindFriendly(foundMethodName, foundMethod, findType);
-                        Console.WriteLine("debug m "+ii+" / " + (findType.Methods.Count - 1) + ": " + foundMethodName);
+                        Log("debug m "+ii+" / " + (findType.Methods.Count - 1) + ": " + foundMethodName);
                     }
                 }
             }
@@ -1176,21 +1176,38 @@ namespace MonoMod {
             if (!inner) {
                 int indexOfMethodDoubleColons = str.IndexOf("::");
                 
-                //screw generic parameters - remove them!
-                int open = str.IndexOf("<", indexOfMethodDoubleColons);
-                if (-1 < open) {
-                    //let's just pretend generics in generics don't exist
+                //screw generic parameters - replace them!
+                int open = indexOfMethodDoubleColons;
+                while (-1 < (open = str.IndexOf("<", open + 1))) {
                     int close = str.IndexOf(">", open);
-                    str = str.Substring(0, open) + str.Substring(close + 1);
+                    int n = 1;
+                    int i = open;
+                    while (-1 < (i = str.IndexOf(",", i + 1)) && i < close) {
+                        n++;
+                    }
+                    str = str.Substring(0, open + 1) + n + str.Substring(close);
+                }
+                
+                //add them if missing
+                open = str.IndexOf("<", indexOfMethodDoubleColons);
+                if ((open <= -1 || str.IndexOf("(", indexOfMethodDoubleColons) < open) && method.HasGenericParameters) {
+                    int pos = indexOfMethodDoubleColons + 2 + method.Name.Length;
+                    str = str.Substring(0, pos) + "<" + method.GenericParameters.Count + ">" + str.Substring(pos);
                 }
                 
                 //screw multidimensional arrays - replace them!
                 open = str.IndexOf("[");
                 if (-1 < open && open < indexOfMethodDoubleColons) {
                     int close = str.IndexOf("]", open);
-                    str = str.Substring(0, open) + "[n]" + str.Substring(close + 1);
+                    int n = 1;
+                    int i = open;
+                    while (-1 < (i = str.IndexOf(",", i + 1)) && i < close) {
+                        n++;
+                    }
+                    str = str.Substring(0, open + 1) + n + str.Substring(close);
                 }
                 
+                //screw generic param~ oh, wait, that's what we're trying to fix. Continue on.
                 open = str.IndexOf("(", indexOfMethodDoubleColons);
                 if (-1 < open) {
                     //Methods without () would be weird...
