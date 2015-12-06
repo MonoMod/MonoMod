@@ -110,6 +110,7 @@ namespace MonoMod {
                 for (int mi = 0; mi < type.Methods.Count; mi++) {
                     MethodDefinition method = type.Methods[mi];
 
+                    method.NoInlining = false;
                     method.NoOptimization = false;
 
                     if (method.HasBody) {
@@ -280,7 +281,7 @@ namespace MonoMod {
                     continue;
                 }
 
-                method = Module.Import(method).Resolve();
+                //method = Module.Import(method).Resolve();
                 PatchMethod(method);
             }
             
@@ -380,7 +381,7 @@ namespace MonoMod {
                 }
             }
 
-            if (origMethod != null && origMethodOrig == null) {
+            if (origMethod != null && origMethodOrig == null && !TypesAdded.Contains(origType.FullName)) {
                 IsBlacklisted(origMethod.Module.Name, origMethod.DeclaringType.FullName+"."+origMethod.Name, HasAttribute(origMethod, "MonoModBlacklisted"));
                 if (method.Name.StartsWith("replace_") || HasAttribute(method, "MonoModReplace")) {
                     Log("Method existing; replacing...");
@@ -437,6 +438,12 @@ namespace MonoMod {
                 }
                 MethodDefinition clone = new MethodDefinition(method.Name, attribs, Module.Import(typeof(void)));
                 origType.Methods.Add(clone);
+                clone.MetadataToken = method.MetadataToken;
+                clone.CallingConvention = method.CallingConvention;
+                clone.ExplicitThis = method.ExplicitThis;
+                clone.MethodReturnType = method.MethodReturnType;
+                clone.NoInlining = method.NoInlining;
+                clone.NoOptimization = method.NoOptimization;
                 clone.DeclaringType = origType;
                 for (int i = 0; i < method.GenericParameters.Count; i++) {
                     clone.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, origType));
