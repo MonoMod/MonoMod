@@ -23,6 +23,9 @@ namespace MonoMod {
         public List<ModuleDefinition> Dependencies = new List<ModuleDefinition>();
         public MethodDefinition Entry;
         
+        public List<TypeDefinition> TypesPatched = new List<TypeDefinition>();
+        public List<string> TypesAdded = new List<string>();
+        
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
@@ -60,7 +63,7 @@ namespace MonoMod {
         public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
                 Log("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
-                Module = ModuleDefinition.ReadModule(In.FullName);
+                Module = ModuleDefinition.ReadModule(In.FullName, new ReaderParameters(ReadingMode.Immediate));
                 LoadBlacklist(Module);
             }
 
@@ -155,18 +158,17 @@ namespace MonoMod {
             if (Dir != null) {
                 string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
                 Log("Scanning for files matching "+fileName+".*.mm.dll ...");
-                List<TypeDefinition> types = new List<TypeDefinition>();
                 foreach (FileInfo f in Dir.GetFiles()) {
                     if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                         Log("Found "+f.Name+" , reading...");
-                        ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName);
-                        PatchModule(mod, types);
+                        ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName, new ReaderParameters(ReadingMode.Immediate));
+                        PatchModule(mod);
                     }
                 }
                 Log("Patching / fixing references...");
                 foreach (FileInfo f in Dir.GetFiles()) {
                     if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
-                        PatchRefs(types);
+                        PatchRefs();
                     }
                 }
             }
@@ -185,51 +187,82 @@ namespace MonoMod {
         /// </summary>
         /// <param name="mod">Mod to patch into the input module.</param>
         /// <param name="types">Type list containing all patched types.</param>
-        public virtual void PatchModule(ModuleDefinition mod, List<TypeDefinition> types) {
+        public virtual void PatchModule(ModuleDefinition mod) {
             Module.AssemblyReferences.Add(mod.Assembly.Name);
 
             for (int i = 0; i < mod.Types.Count; i++) {
-                PatchType(mod.Types[i], types);
+                PatchType(mod.Types[i]);
             }
         }
 
         /// <summary>
-        /// Patches the type and adds it to the given list if it's actually patched.
+        /// Patches the type and adds it to TypesPatched if it's actually patched.
         /// </summary>
+        /// <returns>The original type that has been patched.</returns>
         /// <param name="type">Type to patch into the input module.</param>
-        /// <param name="types">Type list containing all patched types.</param>
-        public virtual void PatchType(TypeDefinition type, List<TypeDefinition> types) {
-            for (int i = 0; i < type.NestedTypes.Count; i++) {
-                PatchType(type.NestedTypes[i], types);
-            }
-
+        public virtual TypeReference PatchType(TypeDefinition type) {
             string typeName = type.FullName;
             Log("T: " + typeName);
+            
+            if (TypesPatched.Contains(type)) {
+                PatchNested(type);
+                return null;
+            }
 
             typeName = RemovePrefixes(typeName, type.Name);
 
             if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
                 type.Attributes.HasFlag(TypeAttributes.Interface)) {
                 Log("Type is a private interface; ignore...");
-                return;
+                PatchNested(type);
+                return null;
             }
 
             if (HasAttribute(type, "MonoModIgnore")) {
-                return;
+                PatchNested(type);
+                return null;
             }
 
+            //check if type exists at all
             TypeReference origType = Module.GetType(typeName, true);
             if (origType == null) {
-                //TODO still required?
-                /*if (!type.Name.StartsWith("patch_")) {
-                    Module.Types.Add(Module.Import(type).Resolve());
-                }*/
-                return;
+                if (type.Name.StartsWith("patch_")) {
+                    PatchNested(type);
+                    return null;
+                }
             }
 
+            //check if type exists in module to patch
             origType = Module.GetType(typeName, false);
             if (origType == null) {
-                return;
+                //(un?)fortunately we're forced to add types ever since some workarounds stopped working
+                Log("T+: " + typeName);
+                
+                TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, (FindType(type.BaseType, null, false) ?? PatchType(type.BaseType.Resolve())));
+                newType.ClassSize = type.ClassSize;
+                //TODO yell about custom attribute support in Mono.Cecil
+                //newType.CustomAttributes = type.CustomAttributes;
+                if (type.DeclaringType != null) {
+                    newType.DeclaringType = (FindType(type.DeclaringType, null, false) ?? PatchType(type.DeclaringType)).Resolve();
+                    newType.DeclaringType.NestedTypes.Add(newType);
+                } else {
+                    Module.Types.Add(newType);
+                }
+                TypesAdded.Add(type.FullName);
+                newType.MetadataToken = type.MetadataToken;
+                for (int i = 0; i < type.GenericParameters.Count; i++) {
+                    newType.GenericParameters.Add(new GenericParameter(type.GenericParameters[i].Name, type) {
+                        Attributes = type.GenericParameters[i].Attributes,
+                        MetadataToken = type.GenericParameters[i].MetadataToken
+                    });
+                }
+                for (int i = 0; i < type.Interfaces.Count; i++) {
+                    newType.Interfaces.Add(FindType(type.Interfaces[i], null, false) ?? PatchType(type.Interfaces[i].Resolve()));
+                }
+                newType.PackingSize = type.PackingSize;
+                //Methods and Fields gets filled automatically
+                
+                origType = newType;
             }
 
             TypeDefinition origTypeResolved = origType.Resolve();
@@ -238,7 +271,7 @@ namespace MonoMod {
 
             if (type.Name.StartsWith("remove_") || HasAttribute(type, "MonoModRemove")) {
                 Module.Types.Remove(origTypeResolved);
-                return;
+                return null;
             }
 
             type = Module.Import(type).Resolve();
@@ -246,8 +279,11 @@ namespace MonoMod {
             for (int ii = 0; ii < type.Methods.Count; ii++) {
                 MethodDefinition method = type.Methods[ii];
                 Log("M: "+method.FullName);
-
+                
                 if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore")) {
+                    if (!AllowedSpecialName(method)) {
+                        Log("debug asn " + method.Name + " " + method.DeclaringType.Name + " " + TypesAdded.Contains(method.DeclaringType.FullName));
+                    }
                     continue;
                 }
 
@@ -311,7 +347,15 @@ namespace MonoMod {
                 origTypeResolved.Fields.Add(newField);
             }
 
-            types.Add(type);
+            TypesPatched.Add(type);
+            PatchNested(type);
+            return origType;
+        }
+        
+        protected virtual void PatchNested(TypeDefinition type) {
+            for (int i = 0; i < type.NestedTypes.Count; i++) {
+                PatchType(type.NestedTypes[i]);
+            }
         }
 
         /// <summary>
@@ -375,7 +419,7 @@ namespace MonoMod {
             }
 
             //fix for .cctor not linking to orig_.cctor
-            if (origMethodOrig != null && origMethod.IsConstructor && origMethod.IsStatic) {
+            if (origMethodOrig != null && origMethod.IsConstructor && origMethod.IsStatic && !TypesAdded.Contains(method.DeclaringType.FullName)) {
                 Collection<Instruction> instructions = method.Body.Instructions;
                 ILProcessor ilProcessor = method.Body.GetILProcessor();
                 ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethodOrig));
@@ -405,6 +449,7 @@ namespace MonoMod {
                     clone.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, origType));
                 }
                 for (int i = 0; i < method.Parameters.Count; i++) {
+                    Log("debug pm: p: " + i + ": " + FindType(method.Parameters[i].ParameterType, clone).Name + "(f) v " + method.Parameters[i].ParameterType.Name + "(o)");
                     clone.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, clone)));
                 }
                 clone.ReturnType = FindType(method.ReturnType, clone);
@@ -443,11 +488,10 @@ namespace MonoMod {
         }
 
         /// <summary>
-        /// Patches the references in all of the given types.
+        /// Patches the references in all of the types in TypesPatched.
         /// </summary>
-        /// <param name="types">Types to patch.</param>
-        public virtual void PatchRefs(List<TypeDefinition> types) {
-            foreach (TypeDefinition type in types) {
+        public virtual void PatchRefs() {
+            foreach (TypeDefinition type in TypesPatched) {
                 if (type == null) {
                     continue;
                 }
@@ -720,10 +764,10 @@ namespace MonoMod {
             string typeName = RemovePrefixes(type.FullName, type.Name);
             TypeReference foundType = Module.GetType(typeName);
             if (foundType == null && type.IsByReference) {
-                foundType = new ByReferenceType(FindType(type.GetElementType(), context, fallbackToImport));
+                foundType = new ByReferenceType(FindType(((ByReferenceType) type).ElementType, context, fallbackToImport));
             }
             if (foundType == null && type.IsArray) {
-                foundType = new ArrayType(FindType(type.GetElementType(), context, fallbackToImport));
+                foundType = new ArrayType(FindType(((ArrayType) type).ElementType, context, fallbackToImport), ((ArrayType) type).Dimensions.Count);
             }
             if (foundType == null && context != null && type.IsGenericParameter) {
                 foundType = FindTypeGeneric(type, context, fallbackToImport);
@@ -800,6 +844,7 @@ namespace MonoMod {
                 string methodName = RemovePrefixes(method.FullName, method.DeclaringType.Name);
                 methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
                 methodName = MakeMethodNameFindFriendly(methodName, method, findType);
+                
                 for (int ii = 0; ii < findType.Methods.Count; ii++) {
                     MethodReference foundMethod = findType.Methods[ii];
                     string foundMethodName = foundMethod.FullName;
@@ -926,7 +971,7 @@ namespace MonoMod {
                 Log("WARNING: Dependency \""+dependency+"\" not found; ignoring...");
                 return;
             }
-            ModuleDefinition module = ModuleDefinition.ReadModule(dependencyFile.FullName);
+            ModuleDefinition module = ModuleDefinition.ReadModule(dependencyFile.FullName, new ReaderParameters(ReadingMode.Immediate));
             Dependencies.Add(module);
             LoadBlacklist(module);
             Log("Dependency \""+dependency+"\" loaded.");
@@ -1023,6 +1068,10 @@ namespace MonoMod {
         /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
         /// <param name="method">Method to check.</param>
         public virtual bool AllowedSpecialName(MethodDefinition method) {
+            if (TypesAdded.Contains(method.DeclaringType.FullName)) {
+                return true;
+            }
+            
             if (method.IsConstructor && (method.HasCustomAttributes || method.IsStatic)) {
                 if (method.IsStatic) {
                     return true;
@@ -1172,27 +1221,64 @@ namespace MonoMod {
             return str;
         }
         
-        public static string MakeMethodNameFindFriendly(string str, MethodReference method, TypeReference type, bool inner = false) {
+        public static string MakeMethodNameFindFriendly(string str, MethodReference method, TypeReference type, bool inner = false, string[] genParams = null) {
+            while (method.IsGenericInstance) {
+                method = ((GenericInstanceMethod) method).ElementMethod;
+            }
+            
             if (!inner) {
                 int indexOfMethodDoubleColons = str.IndexOf("::");
+                int openArgs = str.IndexOf("(", indexOfMethodDoubleColons);
+                int numGenParams = 0;
                 
                 //screw generic parameters - replace them!
                 int open = indexOfMethodDoubleColons;
-                while (-1 < (open = str.IndexOf("<", open + 1))) {
-                    int close = str.IndexOf(">", open);
-                    int n = 1;
-                    int i = open;
-                    while (-1 < (i = str.IndexOf(",", i + 1)) && i < close) {
-                        n++;
+                if (-1 < (open = str.IndexOf("<", open + 1)) && open < openArgs) {
+                    int close_ = open;
+                    int close = close_;
+                    while (-1 < (close_ = str.IndexOf(">", close_ + 1)) && close_ < openArgs) {
+                        close = close_;
                     }
-                    str = str.Substring(0, open + 1) + n + str.Substring(close);
+                    
+                    numGenParams = method.GenericParameters.Count;
+                    if (numGenParams == 0) {
+                        numGenParams = 1;
+                        //GenericParams.Count is 0 (WHY?) so we must count ,s
+                        int level = 0;
+                        for (int i = open; i < close; i++) {
+                            if (str[i] == '<') {
+                                level++;
+                            } else if (str[i] == '>') {
+                                level--;
+                            } else if (str[i] == ',' && level == 0) {
+                                numGenParams++;
+                            }
+                        }
+                        genParams = new string[numGenParams];
+                        int j = 0;
+                        //Simply approximate that the generic parameters MUST exist in the parameters in correct order...
+                        for (int i = 0; i < method.Parameters.Count && j < genParams.Length; i++) {
+                            TypeReference paramType = method.Parameters[i].ParameterType;
+                            while (paramType.IsArray || paramType.IsByReference) {
+                                paramType = paramType.GetElementType();
+                            }
+                            if (paramType.IsGenericParameter) {
+                                genParams[j] = paramType.Name;
+                                j++;
+                            }
+                        }
+                    }
+                    
+                    str = str.Substring(0, open + 1) + numGenParams + str.Substring(close);
+                    openArgs = str.IndexOf("(", indexOfMethodDoubleColons);
                 }
                 
                 //add them if missing
                 open = str.IndexOf("<", indexOfMethodDoubleColons);
-                if ((open <= -1 || str.IndexOf("(", indexOfMethodDoubleColons) < open) && method.HasGenericParameters) {
+                if ((open <= -1 || openArgs < open) && method.HasGenericParameters) {
                     int pos = indexOfMethodDoubleColons + 2 + method.Name.Length;
                     str = str.Substring(0, pos) + "<" + method.GenericParameters.Count + ">" + str.Substring(pos);
+                    openArgs = str.IndexOf("(", indexOfMethodDoubleColons);
                 }
                 
                 //screw multidimensional arrays - replace them!
@@ -1205,22 +1291,28 @@ namespace MonoMod {
                         n++;
                     }
                     str = str.Substring(0, open + 1) + n + str.Substring(close);
+                    openArgs = str.IndexOf("(", indexOfMethodDoubleColons);
                 }
                 
-                //screw generic param~ oh, wait, that's what we're trying to fix. Continue on.
-                open = str.IndexOf("(", indexOfMethodDoubleColons);
+                if (method.GenericParameters.Count != 0) {
+                    numGenParams = method.GenericParameters.Count;
+                    genParams = new string[numGenParams];
+                    for (int i = 0; i < method.GenericParameters.Count; i++) {
+                        genParams[i] = method.GenericParameters[i].Name;
+                    }
+                }
+                
+                //screw arg~ oh, wait, that's what we're trying to fix. Continue on.
+                open = openArgs;
                 if (-1 < open) {
                     //Methods without () would be weird...
                     //Well, make the params find-friendly
                     int close = str.IndexOf(")", open);
-                    str = str.Substring(0, open) + MakeMethodNameFindFriendly(str.Substring(open, close - open + 1), method, type, true) + str.Substring(close + 1);
+                    str = str.Substring(0, open) + MakeMethodNameFindFriendly(str.Substring(open, close - open + 1), method, type, true, genParams) + str.Substring(close + 1);
+                    openArgs = str.IndexOf("(", indexOfMethodDoubleColons);
                 }
                 
                 return str;
-            }
-            
-            while (method.IsGenericInstance) {
-                method = ((GenericInstanceMethod) method).ElementMethod;
             }
             
             for (int i = 0; i < type.GenericParameters.Count; i++) {
@@ -1228,28 +1320,44 @@ namespace MonoMod {
                 str = str.Replace(","+type.GenericParameters[i].Name+",", ",!"+i+",");
                 str = str.Replace(","+type.GenericParameters[i].Name+")", ",!"+i+")");
                 str = str.Replace("("+type.GenericParameters[i].Name+")", "(!"+i+")");
-                str = str.Replace("("+type.GenericParameters[i].Name+"&,", "(!"+i+"&,");
-                str = str.Replace(","+type.GenericParameters[i].Name+"&,", ",!"+i+"&,");
-                str = str.Replace(","+type.GenericParameters[i].Name+"&)", ",!"+i+"&)");
-                str = str.Replace("("+type.GenericParameters[i].Name+"&)", "(!"+i+"&)");
-                int param = str.IndexOf(type.GenericParameters[i].Name+"[");
-                if (-1 < param) {
-                    str = str.Substring(0, param) + "!"+i + str.Substring(param + type.GenericParameters[i].Name.Length);
-                }
+                
+                str = str.Replace("("+type.GenericParameters[i].Name+"&", "(!"+i+"&");
+                str = str.Replace(","+type.GenericParameters[i].Name+"&", ",!"+i+"&");
+                str = str.Replace(","+type.GenericParameters[i].Name+"&", ",!"+i+"&");
+                str = str.Replace("("+type.GenericParameters[i].Name+"&", "(!"+i+"&");
+                
+                str = str.Replace("("+type.GenericParameters[i].Name+"[", "(!"+i+"[");
+                str = str.Replace(","+type.GenericParameters[i].Name+"[", ",!"+i+"[");
+                str = str.Replace(","+type.GenericParameters[i].Name+"[", ",!"+i+"[");
+                str = str.Replace("("+type.GenericParameters[i].Name+"[", "(!"+i+"[");
+                
+                str = str.Replace("<"+type.GenericParameters[i].Name+",", "<!"+i+",");
+                str = str.Replace(","+type.GenericParameters[i].Name+">", ",!"+i+">");
+                str = str.Replace("<"+type.GenericParameters[i].Name+">", "<!"+i+">");
             }
-            for (int i = 0; i < method.GenericParameters.Count; i++) {
-                str = str.Replace("("+method.GenericParameters[i].Name+",", "(!!"+i+",");
-                str = str.Replace(","+method.GenericParameters[i].Name+",", ",!!"+i+",");
-                str = str.Replace(","+method.GenericParameters[i].Name+")", ",!!"+i+")");
-                str = str.Replace("("+method.GenericParameters[i].Name+")", "(!!"+i+")");
-                str = str.Replace("("+method.GenericParameters[i].Name+"&,", "(!!"+i+"&,");
-                str = str.Replace(","+method.GenericParameters[i].Name+"&,", ",!!"+i+"&,");
-                str = str.Replace(","+method.GenericParameters[i].Name+"&)", ",!!"+i+"&)");
-                str = str.Replace("("+method.GenericParameters[i].Name+"&)", "(!!"+i+"&)");
-                int param = str.IndexOf(method.GenericParameters[i].Name+"[");
-                if (-1 < param) {
-                    str = str.Substring(0, param) + "!!"+i + str.Substring(param + method.GenericParameters[i].Name.Length);
-                }
+            if (genParams == null) {
+                return str;
+            }
+            
+            for (int i = 0; i < genParams.Length; i++) {
+                str = str.Replace("("+genParams[i]+",", "(!!"+i+",");
+                str = str.Replace(","+genParams[i]+",", ",!!"+i+",");
+                str = str.Replace(","+genParams[i]+")", ",!!"+i+")");
+                str = str.Replace("("+genParams[i]+")", "(!!"+i+")");
+                
+                str = str.Replace("("+genParams[i]+"&", "(!!"+i+"&");
+                str = str.Replace(","+genParams[i]+"&", ",!!"+i+"&");
+                str = str.Replace(","+genParams[i]+"&", ",!!"+i+"&");
+                str = str.Replace("("+genParams[i]+"&", "(!!"+i+"&");
+                
+                str = str.Replace("("+genParams[i]+"[", "(!!"+i+"[");
+                str = str.Replace(","+genParams[i]+"[", ",!!"+i+"[");
+                str = str.Replace(","+genParams[i]+"[", ",!!"+i+"[");
+                str = str.Replace("("+genParams[i]+"[", "(!!"+i+"[");
+                
+                str = str.Replace("<"+genParams[i]+",", "<!!"+i+",");
+                str = str.Replace(","+genParams[i]+">", ",!!"+i+">");
+                str = str.Replace("<"+genParams[i]+">", "<!!"+i+">");
             }
             return str;
         }
