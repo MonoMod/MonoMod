@@ -765,7 +765,7 @@ namespace MonoMod {
                 foundType = FindTypeGeneric(type, context, fallbackToImport);
             }
             if (foundType == null && context != null && type.IsGenericInstance) {
-                foundType = new GenericInstanceType(FindType(type.GetElementType(), context, fallbackToImport));
+                foundType = new GenericInstanceType(FindType(((GenericInstanceType) type).ElementType, context, fallbackToImport));
                 foreach (TypeReference genericArgument in ((GenericInstanceType) type).GenericArguments) {
                     ((GenericInstanceType) foundType).GenericArguments.Add(FindType(genericArgument, context));
                 }
