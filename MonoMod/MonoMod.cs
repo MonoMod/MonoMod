@@ -791,6 +791,9 @@ namespace MonoMod {
             if (type.IsGenericParameter) {
                 return foundType ?? (fallbackToImport ? type : null);
             }
+            if (foundType == null && type.IsDefinition) {
+                foundType = PatchType((TypeDefinition) type);
+            }
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
         }
 
