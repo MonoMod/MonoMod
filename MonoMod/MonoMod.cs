@@ -166,11 +166,7 @@ namespace MonoMod {
                     }
                 }
                 Log("Patching / fixing references...");
-                foreach (FileInfo f in Dir.GetFiles()) {
-                    if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
-                        PatchRefs();
-                    }
-                }
+                PatchRefs();
             }
 
             Optimize();
@@ -248,7 +244,7 @@ namespace MonoMod {
                 } else {
                     Module.Types.Add(newType);
                 }
-                TypesAdded.Add(type.FullName);
+                TypesAdded.Add(typeName);
                 newType.MetadataToken = type.MetadataToken;
                 for (int i = 0; i < type.GenericParameters.Count; i++) {
                     newType.GenericParameters.Add(new GenericParameter(type.GenericParameters[i].Name, type) {
@@ -281,9 +277,6 @@ namespace MonoMod {
                 Log("M: "+method.FullName);
                 
                 if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore")) {
-                    if (!AllowedSpecialName(method)) {
-                        Log("debug asn " + method.Name + " " + method.DeclaringType.Name + " " + TypesAdded.Contains(method.DeclaringType.FullName));
-                    }
                     continue;
                 }
 
@@ -449,7 +442,6 @@ namespace MonoMod {
                     clone.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, origType));
                 }
                 for (int i = 0; i < method.Parameters.Count; i++) {
-                    Log("debug pm: p: " + i + ": " + FindType(method.Parameters[i].ParameterType, clone).Name + "(f) v " + method.Parameters[i].ParameterType.Name + "(o)");
                     clone.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, clone)));
                 }
                 clone.ReturnType = FindType(method.ReturnType, clone);
