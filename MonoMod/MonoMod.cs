@@ -541,6 +541,30 @@ namespace MonoMod {
                         }
                     }
                 }
+                if (TypesAdded.Contains(typeName)) {
+                    for (int ii = 0; ii < type.Fields.Count; ii++) {
+                        FieldDefinition field = type.Fields[ii];
+                        
+                        if (HasAttribute(field, "MonoModIgnore")) {
+                            continue;
+                        }
+        
+                        FieldDefinition origField = null;
+                        for (int iii = 0; iii < origType.Fields.Count; iii++) {
+                            if (origType.Fields[iii].Name == field.Name) {
+                                origField = origType.Fields[iii];
+                                break;
+                            }
+                        }
+                        if (origField == null) {
+                            //The field should've been added...
+                            continue;
+                        }
+                        Log("FR: "+origField.FullName);
+                        
+                        origField.FieldType = FindType(origField.FieldType, type);
+                    }
+                }
             }
         }
 
