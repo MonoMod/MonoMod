@@ -662,42 +662,21 @@ namespace MonoMod {
                     if (findType != null) {
                         for (int ii = 0; ii < findType.Fields.Count; ii++) {
                             if (findType.Fields[ii].Name == field.Name) {
-                                FieldReference foundField = findType.Fields[ii];
+                                field = findType.Fields[ii];
                                 
                                 if (field.DeclaringType.IsGenericInstance) {
-                                    foundField = Module.Import(new FieldReference(field.Name, FindType(field.FieldType, findTypeRef), findTypeRef));
+                                    field = Module.Import(new FieldReference(field.Name, FindType(field.FieldType, findTypeRef), findTypeRef));
                                 }
                                 
-                                if (foundField.Module != Module) {
-                                    foundField = Module.Import(field);
+                                if (field.Module != Module) {
+                                    field = Module.Import(field);
                                 }
                                 
-                                field = foundField;
                                 break;
                             }
                         }
                     }
                     
-                    //TODO is this still required?
-                    /*
-                    if (field == operand && findType != null) {
-                        //Log("F: new: " + field.FullName);
-                        FieldDefinition oldField = null;
-                        TypeDefinition oldType = (TypeDefinition) field.DeclaringType;
-                        for (int ii = 0; ii < oldType.Fields.Count; ii++) {
-                            if (oldType.Fields[ii].Name == field.Name) {
-                                oldField = oldType.Fields[ii];
-                                break;
-                            }
-                        }
-                        if (oldField != null) {
-                            FieldDefinition newField = new FieldDefinition(field.Name, oldField.Attributes, FindType(oldField.FieldType, method));
-                            newField.InitialValue = oldField.InitialValue;
-                            findType.Fields.Add(newField);
-                        }
-                    }
-                    */
-
                     if (field == operand) {
                         field = new FieldReference(field.Name, FindType(field.FieldType, method), FindType(field.DeclaringType, method));
                     }
