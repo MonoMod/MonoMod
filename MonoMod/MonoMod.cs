@@ -208,12 +208,12 @@ namespace MonoMod {
 
             typeName = RemovePrefixes(typeName, type.Name);
 
-            if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
+            /*if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
                 type.Attributes.HasFlag(TypeAttributes.Interface)) {
                 Log("Type is a private interface; ignore...");
                 PatchNested(type);
                 return null;
-            }
+            }*/
 
             if (HasAttribute(type, "MonoModIgnore")) {
                 PatchNested(type);
@@ -235,7 +235,7 @@ namespace MonoMod {
                 //(un?)fortunately we're forced to add types ever since some workarounds stopped working
                 Log("T+: " + typeName);
                 
-                TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, (FindType(type.BaseType, null, false) ?? PatchType(type.BaseType.Resolve())));
+                TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType == null ? null : (FindType(type.BaseType, null, false) ?? PatchType(type.BaseType.Resolve())));
                 newType.ClassSize = type.ClassSize;
                 //TODO yell about custom attribute support in Mono.Cecil
                 //newType.CustomAttributes = type.CustomAttributes;
@@ -261,7 +261,7 @@ namespace MonoMod {
                 
                 origType = newType;
             }
-
+            
             TypeDefinition origTypeResolved = origType.Resolve();
 
             IsBlacklisted(origTypeResolved.Module.Name, origTypeResolved.FullName, HasAttribute(origTypeResolved, "MonoModBlacklisted"));
@@ -271,7 +271,7 @@ namespace MonoMod {
                 return null;
             }
 
-            type = Module.Import(type).Resolve();
+            //type = Module.Import(type).Resolve();
             
             for (int ii = 0; ii < type.Methods.Count; ii++) {
                 MethodDefinition method = type.Methods[ii];
@@ -291,13 +291,13 @@ namespace MonoMod {
 
                 MethodDefinition getter = @property.GetMethod;
                 if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
-                    getter = Module.Import(getter).Resolve();
+                    //getter = Module.Import(getter).Resolve();
                     PatchMethod(getter);
                 }
                 
                 MethodDefinition setter = @property.SetMethod;
                 if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
-                    setter = Module.Import(setter).Resolve();
+                    //setter = Module.Import(setter).Resolve();
                     PatchMethod(setter);
                 }
             }
@@ -528,13 +528,13 @@ namespace MonoMod {
                             Log("PR: "+@property.FullName);
                             MethodDefinition getter = @property.GetMethod;
                             if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
-                                getter = Module.Import(getter).Resolve();
+                                //getter = Module.Import(getter).Resolve();
                                 PatchRefsInMethod(getter);
                             }
                             
                             MethodDefinition setter = @property.SetMethod;
                             if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
-                                setter = Module.Import(setter).Resolve();
+                                //setter = Module.Import(setter).Resolve();
                                 PatchRefsInMethod(setter);
                             }
                             break;
@@ -644,7 +644,7 @@ namespace MonoMod {
                             //Fixes linkto base methods being called as callvirt
                             //FIXME find out other cases where this should be set due to linkto
                             //FIXME test something better than name...
-                            if (findMethodDef.DeclaringType.Name == method.DeclaringType.BaseType.Name) {
+                            if (method.DeclaringType.BaseType != null && findMethodDef.DeclaringType.Name == method.DeclaringType.BaseType.Name) {
                                 instruction.OpCode = OpCodes.Call;
                             }
                         }
