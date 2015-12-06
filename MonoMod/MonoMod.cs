@@ -430,28 +430,28 @@ namespace MonoMod {
                 origMethod.Body = method.Body;
                 method = origMethod;
             } else {
-                MethodAttributes attribs;
-                if (origMethodOrig != null) {
-                    attribs = origMethodOrig.Attributes;
-                } else {
-                    attribs = method.Attributes;
-                }
-                MethodDefinition clone = new MethodDefinition(method.Name, attribs, Module.Import(typeof(void)));
+                MethodDefinition clone = new MethodDefinition(method.Name, (origMethodOrig ?? method).Attributes, Module.Import(typeof(void)));
                 origType.Methods.Add(clone);
-                clone.MetadataToken = method.MetadataToken;
-                clone.CallingConvention = method.CallingConvention;
-                clone.ExplicitThis = method.ExplicitThis;
-                clone.MethodReturnType = method.MethodReturnType;
-                clone.NoInlining = method.NoInlining;
-                clone.NoOptimization = method.NoOptimization;
+                clone.MetadataToken = (origMethodOrig ?? method).MetadataToken;
+                clone.CallingConvention = (origMethodOrig ?? method).CallingConvention;
+                clone.ExplicitThis = (origMethodOrig ?? method).ExplicitThis;
+                clone.MethodReturnType = (origMethodOrig ?? method).MethodReturnType;
+                clone.NoInlining = (origMethodOrig ?? method).NoInlining;
+                clone.NoOptimization = (origMethodOrig ?? method).NoOptimization;
+                clone.Attributes = (origMethodOrig ?? method).Attributes;
+                clone.ImplAttributes = (origMethodOrig ?? method).ImplAttributes;
+                clone.SemanticsAttributes = (origMethodOrig ?? method).SemanticsAttributes;
                 clone.DeclaringType = origType;
-                for (int i = 0; i < method.GenericParameters.Count; i++) {
-                    clone.GenericParameters.Add(new GenericParameter(method.GenericParameters[i].Name, origType));
+                for (int i = 0; i < (origMethodOrig ?? method).GenericParameters.Count; i++) {
+                    clone.GenericParameters.Add(new GenericParameter((origMethodOrig ?? method).GenericParameters[i].Name, origType));
                 }
-                for (int i = 0; i < method.Parameters.Count; i++) {
-                    clone.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, clone)));
+                for (int i = 0; i < (origMethodOrig ?? method).Parameters.Count; i++) {
+                    clone.Parameters.Add(new ParameterDefinition(FindType((origMethodOrig ?? method).Parameters[i].ParameterType, clone)));
                 }
-                clone.ReturnType = FindType(method.ReturnType, clone);
+                for (int i = 0; i < (origMethodOrig ?? method).Overrides.Count; i++) {
+                    clone.Overrides.Add((origMethodOrig ?? method).Overrides[i]);
+                }
+                clone.ReturnType = FindType((origMethodOrig ?? method).ReturnType, clone);
                 clone.Body = method.Body;
                 method = clone;
             }
@@ -747,6 +747,10 @@ namespace MonoMod {
                     continue;
                 }
                 method.Body.ExceptionHandlers[ei].CatchType = FindType(method.Body.ExceptionHandlers[ei].CatchType, method);
+            }
+            
+            for (int i = 0; i < method.Overrides.Count; i++) {
+                method.Overrides.Add(FindMethod(method.Overrides[i], method, true));
             }
         }
 
