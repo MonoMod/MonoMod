@@ -235,12 +235,12 @@ namespace MonoMod {
                 //(un?)fortunately we're forced to add types ever since some workarounds stopped working
                 Log("T+: " + typeName);
                 
-                TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType == null ? null : (FindType(type.BaseType, null, false) ?? PatchType(type.BaseType.Resolve())));
+                TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, null);
                 newType.ClassSize = type.ClassSize;
                 //TODO yell about custom attribute support in Mono.Cecil
                 //newType.CustomAttributes = type.CustomAttributes;
                 if (type.DeclaringType != null) {
-                    newType.DeclaringType = (FindType(type.DeclaringType, null, false) ?? PatchType(type.DeclaringType)).Resolve();
+                    newType.DeclaringType = (FindType(type.DeclaringType, newType, false) ?? PatchType(type.DeclaringType)).Resolve();
                     newType.DeclaringType.NestedTypes.Add(newType);
                 } else {
                     Module.Types.Add(newType);
@@ -254,8 +254,9 @@ namespace MonoMod {
                     });
                 }
                 for (int i = 0; i < type.Interfaces.Count; i++) {
-                    newType.Interfaces.Add(FindType(type.Interfaces[i], null, false) ?? PatchType(type.Interfaces[i].Resolve()));
+                    newType.Interfaces.Add(FindType(type.Interfaces[i], newType, false) ?? PatchType(type.Interfaces[i].Resolve()));
                 }
+                newType.BaseType = type.BaseType == null ? null : (FindType(type.BaseType, newType, false) ?? PatchType(type.BaseType.Resolve()));
                 newType.PackingSize = type.PackingSize;
                 //Methods and Fields gets filled automatically
                 
