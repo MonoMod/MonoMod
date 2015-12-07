@@ -750,7 +750,7 @@ namespace MonoMod {
             }
             
             for (int i = 0; i < method.Overrides.Count; i++) {
-                method.Overrides.Add(FindMethod(method.Overrides[i], method, true));
+                method.Overrides[i] = FindMethod(method.Overrides[i], method, true);
             }
         }
 
