@@ -711,6 +711,11 @@ namespace MonoMod {
 
                     if (field != null) {
                         IsBlacklisted(field.Module.Name, field.DeclaringType.FullName+"."+field.Name);
+                        //Everything the mod touches is our kingdom
+                        if (field.IsDefinition) {
+                            ((FieldDefinition) field).IsPrivate = false;
+                            ((FieldDefinition) field).IsPublic = true;
+                        }
                     }
                     operand = field;
                 }
