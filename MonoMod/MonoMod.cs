@@ -362,12 +362,13 @@ namespace MonoMod {
                 Log(method.Name + " is an orig_ method; ignoring...");
                 return;
             }
-
+            
             Log("Patching "+method.Name+" ...");
 
             Log("Checking for already existing methods...");
 
             TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
+            bool isTypeAdded = TypesAdded.Contains(origType.FullName);
 
             MethodDefinition origMethod = null; //original method that is going to be changed if existing (f.e. X)
             MethodDefinition origMethodOrig = null; //orig_ method (f.e. orig_X)
@@ -382,7 +383,7 @@ namespace MonoMod {
                 }
             }
 
-            if (origMethod != null && origMethodOrig == null && !TypesAdded.Contains(origType.FullName)) {
+            if (origMethod != null && origMethodOrig == null && !isTypeAdded) {
                 IsBlacklisted(origMethod.Module.Name, origMethod.DeclaringType.FullName+"."+origMethod.Name, HasAttribute(origMethod, "MonoModBlacklisted"));
                 if (method.Name.StartsWith("replace_") || HasAttribute(method, "MonoModReplace")) {
                     Log("Method existing; replacing...");
@@ -414,7 +415,7 @@ namespace MonoMod {
             }
 
             //fix for .cctor not linking to orig_.cctor
-            if (origMethodOrig != null && origMethod.IsConstructor && origMethod.IsStatic && !TypesAdded.Contains(method.DeclaringType.FullName)) {
+            if (origMethodOrig != null && origMethod.IsConstructor && origMethod.IsStatic && !isTypeAdded) {
                 Collection<Instruction> instructions = method.Body.Instructions;
                 ILProcessor ilProcessor = method.Body.GetILProcessor();
                 ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethodOrig));
@@ -499,6 +500,7 @@ namespace MonoMod {
                 Log("TR: "+typeName);
 
                 typeName = RemovePrefixes(typeName, type.Name);
+                bool isTypeAdded = TypesAdded.Contains(typeName);
 
                 TypeDefinition origType = Module.GetType(typeName);
                 IsBlacklisted(origType.Module.Name, origType.FullName, HasAttribute(origType, "MonoModBlacklisted"));
@@ -542,7 +544,7 @@ namespace MonoMod {
                         }
                     }
                 }
-                if (TypesAdded.Contains(typeName)) {
+                if (isTypeAdded) {
                     for (int ii = 0; ii < type.Fields.Count; ii++) {
                         FieldDefinition field = type.Fields[ii];
                         
@@ -584,6 +586,7 @@ namespace MonoMod {
             Log("Checking for original methods...");
 
             TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
+            bool isTypeAdded = TypesAdded.Contains(origType.FullName);
 
             MethodDefinition origMethodOrig = null; //orig_ method (f.e. orig_X)
 
@@ -660,7 +663,7 @@ namespace MonoMod {
                         }
 
                         MethodDefinition findMethodDef = findMethod == null ? null : findMethod.Resolve();
-                        if (findMethodDef != null) {
+                        if (findMethodDef != null && !isTypeAdded) {
                             IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethodDef, "MonoModBlacklisted"));
                             //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
                             if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
