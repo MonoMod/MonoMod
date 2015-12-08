@@ -663,17 +663,22 @@ namespace MonoMod {
                         }
 
                         MethodDefinition findMethodDef = findMethod == null ? null : findMethod.Resolve();
-                        if (findMethodDef != null && !isTypeAdded) {
+                        if (findMethodDef != null) {
                             IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethodDef, "MonoModBlacklisted"));
-                            //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
-                            if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
-                                instruction.OpCode = OpCodes.Callvirt;
-                            }
-                            //Fixes linkto base methods being called as callvirt
-                            //FIXME find out other cases where this should be set due to linkto
-                            //FIXME test something better than name...
-                            if (method.DeclaringType.BaseType != null && findMethodDef.DeclaringType.Name == method.DeclaringType.BaseType.Name) {
-                                instruction.OpCode = OpCodes.Call;
+                            //Everything the mod touches is our kingdom
+                            findMethodDef.IsPrivate = false;
+                            findMethodDef.IsPublic = true;
+                            if (!isTypeAdded) {
+                                //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
+                                if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
+                                    instruction.OpCode = OpCodes.Callvirt;
+                                }
+                                //Fixes linkto base methods being called as callvirt
+                                //FIXME find out other cases where this should be set due to linkto
+                                //FIXME test something better than name...
+                                if (method.DeclaringType.BaseType != null && findMethodDef.DeclaringType.Name == method.DeclaringType.BaseType.Name) {
+                                    instruction.OpCode = OpCodes.Call;
+                                }
                             }
                         }
                         
