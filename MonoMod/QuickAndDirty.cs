@@ -11,7 +11,7 @@ namespace MonoMod {
         
         private static void p(TypeDefinition t) {
             //Replace with your own code
-            if (!t.Name.StartsWith("Menu")) {
+            if (!t.Name.StartsWith("Menu") && !t.Name.StartsWith("SelectorPhase")) {
                 return;
             }
             

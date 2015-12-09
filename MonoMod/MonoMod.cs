@@ -241,7 +241,8 @@ namespace MonoMod {
 
             //check if type exists in module to patch
             origType = Module.GetType(typeName, false);
-            if (origType == null) {
+            bool isTypeAdded = origType == null;
+            if (isTypeAdded) {
                 //(un?)fortunately we're forced to add types ever since some workarounds stopped working
                 Log("T+: " + typeName);
                 
@@ -266,6 +267,19 @@ namespace MonoMod {
                 for (int i = 0; i < type.Interfaces.Count; i++) {
                     newType.Interfaces.Add(FindType(type.Interfaces[i], newType, false) ?? PatchType(type.Interfaces[i].Resolve()));
                 }
+                for (int cai = 0; cai < type.CustomAttributes.Count; cai++) {
+                    CustomAttribute oca = type.CustomAttributes[cai];
+                    CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, newType, false), oca.GetBlob());
+                    for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                        //TODO do more with the attributes
+                        CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                        ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, newType, false),
+                            ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, newType, false) :
+                            ocaa.Value
+                        ));
+                    }
+                    newType.CustomAttributes.Add(ca);
+                }
                 newType.BaseType = type.BaseType == null ? null : (FindType(type.BaseType, newType, false) ?? PatchType(type.BaseType.Resolve()));
                 newType.PackingSize = type.PackingSize;
                 //Methods and Fields gets filled automatically
@@ -284,6 +298,44 @@ namespace MonoMod {
 
             //type = Module.Import(type).Resolve();
             
+            for (int ii = 0; ii < type.Properties.Count; ii++) {
+                PropertyDefinition property = type.Properties[ii];
+                Log("P: "+property.FullName);
+                
+                if (isTypeAdded) {
+                    PropertyDefinition newProperty = new PropertyDefinition(property.Name, property.Attributes, FindType(property.PropertyType, origType, false));
+                    
+                    for (int cai = 0; cai < property.CustomAttributes.Count; cai++) {
+                        CustomAttribute oca = property.CustomAttributes[cai];
+                        CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, newProperty, false), oca.GetBlob());
+                        for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                            //TODO do more with the attributes
+                            CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                            ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, newProperty, false),
+                                ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, newProperty, false) :
+                                ocaa.Value
+                            ));
+                        }
+                        newProperty.CustomAttributes.Add(ca);
+                    }
+                    
+                    newProperty.DeclaringType = origTypeResolved;
+                    origTypeResolved.Properties.Add(newProperty);
+                }
+                
+                MethodDefinition getter = property.GetMethod;
+                if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
+                    //getter = Module.Import(getter).Resolve();
+                    PatchMethod(getter);
+                }
+                
+                MethodDefinition setter = property.SetMethod;
+                if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
+                    //setter = Module.Import(setter).Resolve();
+                    PatchMethod(setter);
+                }
+            }
+            
             for (int ii = 0; ii < type.Methods.Count; ii++) {
                 MethodDefinition method = type.Methods[ii];
                 Log("M: "+method.FullName);
@@ -294,23 +346,6 @@ namespace MonoMod {
 
                 //method = Module.Import(method).Resolve();
                 PatchMethod(method);
-            }
-            
-            for (int ii = 0; ii < type.Properties.Count; ii++) {
-                PropertyDefinition @property = type.Properties[ii];
-                Log("P: "+@property.FullName);
-
-                MethodDefinition getter = @property.GetMethod;
-                if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
-                    //getter = Module.Import(getter).Resolve();
-                    PatchMethod(getter);
-                }
-                
-                MethodDefinition setter = @property.SetMethod;
-                if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
-                    //setter = Module.Import(setter).Resolve();
-                    PatchMethod(setter);
-                }
             }
             
             if (HasAttribute(type, "MonoModEnumReplace")) {
@@ -349,6 +384,19 @@ namespace MonoMod {
                 FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, FindType(field.FieldType, type));
                 newField.InitialValue = field.InitialValue;
                 newField.Constant = field.Constant;
+                for (int cai = 0; cai < field.CustomAttributes.Count; cai++) {
+                    CustomAttribute oca = field.CustomAttributes[cai];
+                    CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, newField, false), oca.GetBlob());
+                    for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                        //TODO do more with the attributes
+                        CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                        ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, newField, false),
+                            ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, newField, false) :
+                            ocaa.Value
+                        ));
+                    }
+                    newField.CustomAttributes.Add(ca);
+                }
                 origTypeResolved.Fields.Add(newField);
             }
 
@@ -367,10 +415,10 @@ namespace MonoMod {
         /// Patches the given method into the input module.
         /// </summary>
         /// <param name="method">Method to patch in.</param>
-        public virtual void PatchMethod(MethodDefinition method) {
+        public virtual MethodDefinition PatchMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
                 Log(method.Name + " is an orig_ method; ignoring...");
-                return;
+                return null;
             }
             
             Log("Patching "+method.Name+" ...");
@@ -414,6 +462,20 @@ namespace MonoMod {
 
                     for (int i = 0; i < origMethod.Parameters.Count; i++) {
                         copy.Parameters.Add(origMethod.Parameters[i]);
+                    }
+                    
+                    for (int cai = 0; cai < origMethod.CustomAttributes.Count; cai++) {
+                        CustomAttribute oca = origMethod.CustomAttributes[cai];
+                        CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, copy, false), oca.GetBlob());
+                        for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                            //TODO do more with the attributes
+                            CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                            ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, copy, false),
+                                ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, copy, false) :
+                                ocaa.Value
+                            ));
+                        }
+                        copy.CustomAttributes.Add(ca);
                     }
 
                     origType.Methods.Add(copy);
@@ -463,6 +525,19 @@ namespace MonoMod {
                 for (int i = 0; i < (origMethodOrig ?? method).Overrides.Count; i++) {
                     clone.Overrides.Add((origMethodOrig ?? method).Overrides[i]);
                 }
+                for (int cai = 0; cai < method.CustomAttributes.Count; cai++) {
+                    CustomAttribute oca = method.CustomAttributes[cai];
+                    CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, clone, false), oca.GetBlob());
+                    for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                        //TODO do more with the attributes
+                        CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                        ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, clone, false),
+                            ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, clone, false) :
+                            ocaa.Value
+                        ));
+                    }
+                    clone.CustomAttributes.Add(ca);
+                }
                 clone.ReturnType = FindType((origMethodOrig ?? method).ReturnType, clone);
                 clone.Body = method.Body;
                 method = clone;
@@ -485,6 +560,29 @@ namespace MonoMod {
                 if (property == null) {
                     Log("Property not found; creating new property...");
                     property = new PropertyDefinition(method.Name.Substring(4), PropertyAttributes.None, method.ReturnType);
+                    
+                    PropertyDefinition origProperty = null;
+                    for (int i = 0; i < origType.Properties.Count; i++) {
+                        if (origType.Properties[i].Name == property.Name) {
+                            origProperty = origType.Properties[i];
+                            break;
+                        }
+                    }
+                    
+                    for (int cai = 0; origProperty != null && cai < origProperty.CustomAttributes.Count; cai++) {
+                        CustomAttribute oca = origProperty.CustomAttributes[cai];
+                        CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, property, false), oca.GetBlob());
+                        for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                            //TODO do more with the attributes
+                            CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                            ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, property, false),
+                                ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, property, false) :
+                                ocaa.Value
+                            ));
+                        }
+                        property.CustomAttributes.Add(ca);
+                    }
+                    
                     origType.Properties.Add(property);
                 }
 
@@ -496,6 +594,8 @@ namespace MonoMod {
                     property.SetMethod = method;
                 }
             }
+            
+            return method;
         }
 
         /// <summary>
