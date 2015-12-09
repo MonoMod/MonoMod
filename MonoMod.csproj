@@ -36,6 +36,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="MonoMod\QuickAndDirty.cs" />
     <Compile Include="MonoMod\MonoModIgnore.cs" />
     <Compile Include="MonoMod\MonoMod.cs" />
     <Compile Include="MonoMod\MonoModRemove.cs" />

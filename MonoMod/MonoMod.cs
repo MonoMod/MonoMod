@@ -45,6 +45,16 @@ namespace MonoMod {
 
         public static void Main(string[] args) {
             Console.WriteLine("MonoMod "+System.Reflection.Assembly.GetCallingAssembly().GetName().Version);
+            
+            if (args.Length == 2) {
+                Console.WriteLine("Parsing command: " + args[0]);
+                if (args[0] == "feed") {
+                    Feed.Me(args[1]);
+                } else {
+                    Console.WriteLine("Unknown command: " + args[0]);
+                }
+                return;
+            }
 
             if (args.Length != 1) {
                 Console.WriteLine("No valid arguments (executable path) passed.");
@@ -668,6 +678,8 @@ namespace MonoMod {
                             //Everything the mod touches is our kingdom
                             findMethodDef.IsPrivate = false;
                             findMethodDef.IsPublic = true;
+                            findMethodDef.DeclaringType.IsNotPublic = false;
+                            findMethodDef.DeclaringType.IsPublic = true;
                             if (!isTypeAdded) {
                                 //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
                                 if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
@@ -720,6 +732,8 @@ namespace MonoMod {
                         if (field.IsDefinition) {
                             ((FieldDefinition) field).IsPrivate = false;
                             ((FieldDefinition) field).IsPublic = true;
+                            ((FieldDefinition) field).DeclaringType.IsNotPublic = false;
+                            ((FieldDefinition) field).DeclaringType.IsPublic = true;
                         }
                     }
                     operand = field;
