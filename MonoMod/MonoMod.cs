@@ -259,7 +259,7 @@ namespace MonoMod {
                 TypesAdded.Add(typeName);
                 newType.MetadataToken = type.MetadataToken;
                 for (int i = 0; i < type.GenericParameters.Count; i++) {
-                    newType.GenericParameters.Add(new GenericParameter(type.GenericParameters[i].Name, type) {
+                    newType.GenericParameters.Add(new GenericParameter(type.GenericParameters[i].Name, newType) {
                         Attributes = type.GenericParameters[i].Attributes,
                         MetadataToken = type.GenericParameters[i].MetadataToken
                     });
@@ -517,7 +517,7 @@ namespace MonoMod {
                 clone.SemanticsAttributes = (origMethodOrig ?? method).SemanticsAttributes;
                 clone.DeclaringType = origType;
                 for (int i = 0; i < (origMethodOrig ?? method).GenericParameters.Count; i++) {
-                    clone.GenericParameters.Add(new GenericParameter((origMethodOrig ?? method).GenericParameters[i].Name, origType));
+                    clone.GenericParameters.Add(new GenericParameter((origMethodOrig ?? method).GenericParameters[i].Name, clone));
                 }
                 for (int i = 0; i < (origMethodOrig ?? method).Parameters.Count; i++) {
                     clone.Parameters.Add(new ParameterDefinition(FindType((origMethodOrig ?? method).Parameters[i].ParameterType, clone)));
@@ -632,20 +632,20 @@ namespace MonoMod {
                     }
                 }
                 for (int ii = 0; ii < type.Properties.Count; ii++) {
-                    PropertyDefinition @property = type.Properties[ii];
+                    PropertyDefinition property = type.Properties[ii];
                     
                     for (int iii = 0; iii < origType.Properties.Count; iii++) {
                         PropertyDefinition origProperty = origType.Properties[iii];
-                        if (origProperty.FullName == RemovePrefixes(@property.FullName, @property.DeclaringType.Name)) {
-                            @property = origProperty;
-                            Log("PR: "+@property.FullName);
-                            MethodDefinition getter = @property.GetMethod;
+                        if (origProperty.FullName == RemovePrefixes(property.FullName, property.DeclaringType.Name)) {
+                            property = origProperty;
+                            Log("PR: "+property.FullName);
+                            MethodDefinition getter = property.GetMethod;
                             if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
                                 //getter = Module.Import(getter).Resolve();
                                 PatchRefsInMethod(getter);
                             }
                             
-                            MethodDefinition setter = @property.SetMethod;
+                            MethodDefinition setter = property.SetMethod;
                             if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
                                 //setter = Module.Import(setter).Resolve();
                                 PatchRefsInMethod(setter);
@@ -941,21 +941,29 @@ namespace MonoMod {
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
         public virtual TypeReference FindTypeGeneric(TypeReference type, MemberReference context, bool fallbackToImport = true) {
             if (context is MethodReference) {
-                for (int gi = 0; gi < ((MethodReference) context).GenericParameters.Count; gi++) {
-                    GenericParameter genericParam = ((MethodReference) context).GenericParameters[gi];
+                MethodReference r = ((MethodReference) context).GetElementMethod();
+                for (int gi = 0; gi < r.GenericParameters.Count; gi++) {
+                    GenericParameter genericParam = r.GenericParameters[gi];
                     if (genericParam.FullName == type.FullName) {
                         //TODO variables hate me, import otherwise
                         return genericParam;
                     }
                 }
+                if (type.Name.StartsWith("!!")) {
+                    return r.GenericParameters[int.Parse(type.Name.Substring(2))];
+                }
             }
             if (context is TypeReference) {
-                for (int gi = 0; gi < ((TypeReference) context).GenericParameters.Count; gi++) {
-                    GenericParameter genericParam = ((TypeReference) context).GenericParameters[gi];
+                TypeReference r = ((TypeReference) context).GetElementType();
+                for (int gi = 0; gi < r.GenericParameters.Count; gi++) {
+                    GenericParameter genericParam = r.GenericParameters[gi];
                     if (genericParam.FullName == type.FullName) {
                         //TODO variables hate me, import otherwise
                         return genericParam;
                     }
+                }
+                if (type.Name.StartsWith("!")) {
+                    return r.GenericParameters[int.Parse(type.Name.Substring(1))];
                 }
             }
             if (context.DeclaringType != null) {
