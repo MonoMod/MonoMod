@@ -200,6 +200,15 @@ namespace MonoMod {
             for (int i = 0; i < mod.Types.Count; i++) {
                 PatchType(mod.Types[i]);
             }
+            
+            for (int i = 0; i < mod.Resources.Count; i++) {
+                if (!(mod.Resources[i] is EmbeddedResource)) {
+                    continue;
+                }
+                EmbeddedResource resOrig = ((EmbeddedResource) mod.Resources[i]);
+                EmbeddedResource res = new EmbeddedResource(resOrig.Name, resOrig.Attributes, resOrig.GetResourceData());
+                Module.Resources.Add(res);
+            }
         }
 
         /// <summary>
