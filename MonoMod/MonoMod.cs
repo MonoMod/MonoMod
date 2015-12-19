@@ -225,7 +225,7 @@ namespace MonoMod {
                 return null;
             }
 
-            typeName = RemovePrefixes(typeName, type.Name);
+            typeName = RemovePrefixes(typeName, type);
 
             /*if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
                 type.Attributes.HasFlag(TypeAttributes.Interface)) {
@@ -434,7 +434,8 @@ namespace MonoMod {
 
             Log("Checking for already existing methods...");
 
-            TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
+            TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType));
+            Log("WTF debug: " + RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType));
             bool isTypeAdded = TypesAdded.Contains(origType.FullName);
 
             MethodDefinition origMethod = null; //original method that is going to be changed if existing (f.e. X)
@@ -442,10 +443,10 @@ namespace MonoMod {
 
             //TODO the orig methods of replace_ methods can't be found
             for (int i = 0; i < origType.Methods.Count; i++) {
-                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
+                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName, method.DeclaringType)) {
                     origMethod = origType.Methods[i];
                 }
-                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, "orig_"+method.Name), method.DeclaringType.Name)) {
+                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, "orig_"+method.Name), method.DeclaringType)) {
                     origMethodOrig = origType.Methods[i];
                 }
             }
@@ -618,7 +619,7 @@ namespace MonoMod {
                 string typeName = type.FullName;
                 Log("TR: "+typeName);
 
-                typeName = RemovePrefixes(typeName, type.Name);
+                typeName = RemovePrefixes(typeName, type);
                 bool isTypeAdded = TypesAdded.Contains(typeName);
 
                 TypeDefinition origType = Module.GetType(typeName);
@@ -632,7 +633,7 @@ namespace MonoMod {
 
                     for (int iii = 0; iii < origType.Methods.Count; iii++) {
                         MethodDefinition origMethod = origType.Methods[iii];
-                        if (origMethod.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
+                        if (origMethod.FullName == RemovePrefixes(method.FullName, method.DeclaringType)) {
                             method = origMethod;
                             Log("MR: "+method.FullName);
                             PatchRefsInMethod(method);
@@ -645,7 +646,7 @@ namespace MonoMod {
                     
                     for (int iii = 0; iii < origType.Properties.Count; iii++) {
                         PropertyDefinition origProperty = origType.Properties[iii];
-                        if (origProperty.FullName == RemovePrefixes(property.FullName, property.DeclaringType.Name)) {
+                        if (origProperty.FullName == RemovePrefixes(property.FullName, property.DeclaringType)) {
                             property = origProperty;
                             Log("PR: "+property.FullName);
                             MethodDefinition getter = property.GetMethod;
@@ -704,13 +705,13 @@ namespace MonoMod {
 
             Log("Checking for original methods...");
 
-            TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name));
+            TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType));
             bool isTypeAdded = TypesAdded.Contains(origType.FullName);
 
             MethodDefinition origMethodOrig = null; //orig_ method (f.e. orig_X)
 
             for (int i = 0; i < origType.Methods.Count; i++) {
-                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, "orig_"+method.Name), method.DeclaringType.Name)) {
+                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, "orig_"+method.Name), method.DeclaringType)) {
                     origMethodOrig = origType.Methods[i];
                 }
             }
@@ -727,7 +728,7 @@ namespace MonoMod {
                 
                 if (operand is MethodReference) {
                     MethodReference methodCalled = FindLinked((MethodReference) operand);
-                    if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType.Name)) {
+                    if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType)) {
                         operand = method;
                     } else {
                         MethodReference findMethod = FindMethod(methodCalled, method, false);
@@ -904,7 +905,7 @@ namespace MonoMod {
                 Log(Environment.StackTrace);
                 return null;
             }
-            string typeName = RemovePrefixes(type.FullName, type.Name);
+            string typeName = RemovePrefixes(type.FullName, type);
             TypeReference foundType = Module.GetType(typeName);
             if (foundType == null && type.IsByReference) {
                 foundType = new ByReferenceType(FindType(((ByReferenceType) type).ElementType, context, fallbackToImport));
@@ -993,9 +994,9 @@ namespace MonoMod {
             TypeDefinition findType = findTypeRef == null ? null : findTypeRef.Resolve();
 
             if (findType != null) {
-                bool typeMismatch = findType.FullName != RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType.Name);
+                bool typeMismatch = findType.FullName != RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType);
                 
-                string methodName = RemovePrefixes(method.FullName, method.DeclaringType.Name);
+                string methodName = RemovePrefixes(method.FullName, method.DeclaringType);
                 methodName = methodName.Substring(methodName.IndexOf(" ") + 1);
                 methodName = MakeMethodNameFindFriendly(methodName, method, findType);
                 
@@ -1331,11 +1332,24 @@ namespace MonoMod {
             
             return field;
         }
+        
+        /// <summary>
+        /// Removes all MonoMod prefixes from the given string and its type definition.
+        /// </summary>
+        /// <returns>str without prefixes.</returns>
+        /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
+        /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
+        public virtual string RemovePrefixes(string str, TypeReference type) {
+            for (TypeReference type_ = type; type_ != null; type_ = type_.DeclaringType) {
+                str = RemovePrefixes(str, type_.Name);
+            }
+            return str;
+        }
 
         /// <summary>
         /// Removes all MonoMod prefixes from the given string.
         /// </summary>
-        /// <returns>The prefixes.</returns>
+        /// <returns>str without prefixes.</returns>
         /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
         /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
         public virtual string RemovePrefixes(string str, string strPrefixed = null) {
@@ -1349,7 +1363,7 @@ namespace MonoMod {
         /// <summary>
         /// Removes the prefix from the given string.
         /// </summary>
-        /// <returns>The prefix.</returns>
+        /// <returns>str without prefix.</returns>
         /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
         /// <param name="prefix">Prefix.</param>
         /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
