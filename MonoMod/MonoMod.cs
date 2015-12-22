@@ -78,14 +78,15 @@ namespace MonoMod {
             }
 
             if (loadDependencies && Dependencies.Count == 0 && Dir != null) {
-                Log("Reading module dependencies...");
+                //Seemingly obsolete as all the references are assembly references
+                /*Log("Reading module dependencies...");
                 for (int mi = 0; mi < Module.ModuleReferences.Count; mi++) {
-                    LoadDependency(Module.ModuleReferences[mi].Name);
-                }
+                    LoadDependency(Module.ModuleReferences[mi]);
+                }*/
 
                 Log("Reading assembly dependencies...");
                 for (int mi = 0; mi < Module.AssemblyReferences.Count; mi++) {
-                    LoadDependency(Module.AssemblyReferences[mi].Name);
+                    LoadDependency(Module.AssemblyReferences[mi]);
                 }
 
                 Dependencies.Remove(Module);
@@ -435,7 +436,6 @@ namespace MonoMod {
             Log("Checking for already existing methods...");
 
             TypeDefinition origType = Module.GetType(RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType));
-            Log("WTF debug: " + RemovePrefixes(method.DeclaringType.FullName, method.DeclaringType));
             bool isTypeAdded = TypesAdded.Contains(origType.FullName);
 
             MethodDefinition origMethod = null; //original method that is going to be changed if existing (f.e. X)
@@ -936,7 +936,7 @@ namespace MonoMod {
             if (type.IsGenericParameter) {
                 return foundType ?? (fallbackToImport ? type : null);
             }
-            if (foundType == null && type.IsDefinition) {
+            if (foundType == null && type.IsDefinition && type.Scope.Name.EndsWith(".mm")) {
                 foundType = PatchType((TypeDefinition) type);
             }
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
@@ -1110,23 +1110,30 @@ namespace MonoMod {
         /// Loads a dependency and adds it to Dependencies. Requires the field Dir to be set.
         /// </summary>
         /// <param name="dependency">Dependency to load.</param>
-        public virtual void LoadDependency(string dependency) {
+        public virtual void LoadDependency(AssemblyNameReference dependency) {
             DirectoryInfo dir = Dir;
             if (dir == null) {
                 dir = In.Directory;
             }
-            FileInfo dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency+".dll");
-            if (!dependencyFile.Exists) {
-                dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency+".exe");
+            string path = Path.Combine(Dir.FullName, dependency.Name + ".dll");
+            if (!File.Exists(path)) {
+                path = Path.Combine(Dir.FullName, dependency.Name + ".exe");
             }
-            if (!dependencyFile.Exists) {
-                dependencyFile = new FileInfo(Dir.FullName+Path.DirectorySeparatorChar+dependency);
+            if (!File.Exists(path)) {
+                path = Path.Combine(Dir.FullName, dependency.Name);
             }
-            if (!dependencyFile.Exists) {
-                Log("WARNING: Dependency \""+dependency+"\" not found; ignoring...");
+            if (!File.Exists(path)) {
+                //check if available in GAC
+                System.Reflection.Assembly asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(dependency.ToString()));
+                if (asm != null) {
+                    path = asm.Location;
+                }
+            }
+            if (!File.Exists(path)) {
+                Log("WARNING: Dependency \"" + dependency + "\" not found; ignoring...");
                 return;
             }
-            ModuleDefinition module = ModuleDefinition.ReadModule(dependencyFile.FullName, new ReaderParameters(ReadingMode.Immediate));
+            ModuleDefinition module = ModuleDefinition.ReadModule(path, new ReaderParameters(ReadingMode.Immediate));
             Dependencies.Add(module);
             LoadBlacklist(module);
             Log("Dependency \""+dependency+"\" loaded.");
