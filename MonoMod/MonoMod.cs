@@ -568,7 +568,7 @@ namespace MonoMod {
                 }
 
                 if (property == null) {
-                    Log("Property not found; creating new property...");
+                    Log("Creating new property...");
                     property = new PropertyDefinition(method.Name.Substring(4), PropertyAttributes.None, method.ReturnType);
                     
                     PropertyDefinition origProperty = null;
@@ -899,7 +899,7 @@ namespace MonoMod {
         /// <param name="type">Type to find.</param>
         /// <param name="context">Context containing some info.</param>
         /// <param name="fallbackToImport">If set to <c>true</c> this method returns the type to find as imported in the input module.</param>
-        public virtual TypeReference FindType(TypeReference type, MemberReference context = null, bool fallbackToImport = true) {
+        public virtual TypeReference FindType(TypeReference type, MemberReference context = null, bool fallbackToImport = true, bool loadedDependency = false) {
             if (type == null) {
                 Log("ERROR: Can't find null type!");
                 Log(Environment.StackTrace);
@@ -938,6 +938,15 @@ namespace MonoMod {
             }
             if (foundType == null && type.IsDefinition && type.Scope.Name.EndsWith(".mm")) {
                 foundType = PatchType((TypeDefinition) type);
+            }
+            if (foundType == null) {
+                if (!loadedDependency) {
+                    LoadDependency(type.Scope.Name);
+                    return FindType(type, context, fallbackToImport, true);
+                } else {
+                    Log("Type not found : " + type.FullName);
+                    Log("Type scope     : " + type.Scope.Name);
+                }
             }
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
         }
@@ -1111,32 +1120,41 @@ namespace MonoMod {
         /// </summary>
         /// <param name="dependency">Dependency to load.</param>
         public virtual void LoadDependency(AssemblyNameReference dependency) {
+            LoadDependency(dependency.Name, dependency.ToString());
+        }
+        
+        /// <summary>
+        /// Loads a dependency and adds it to Dependencies. Requires the field Dir to be set.
+        /// </summary>
+        /// <param name="name">Dependency name (f.e. "mscorlib").</param>
+        /// <param name="fullName">Full dependency name (f.e. "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089").</param>
+        public virtual void LoadDependency(string name, string fullName = null) {
             DirectoryInfo dir = Dir;
             if (dir == null) {
                 dir = In.Directory;
             }
-            string path = Path.Combine(Dir.FullName, dependency.Name + ".dll");
+            string path = Path.Combine(Dir.FullName, name + ".dll");
             if (!File.Exists(path)) {
-                path = Path.Combine(Dir.FullName, dependency.Name + ".exe");
+                path = Path.Combine(Dir.FullName, name + ".exe");
             }
             if (!File.Exists(path)) {
-                path = Path.Combine(Dir.FullName, dependency.Name);
+                path = Path.Combine(Dir.FullName, name);
             }
-            if (!File.Exists(path)) {
+            if (!File.Exists(path) && fullName != null) {
                 //check if available in GAC
-                System.Reflection.Assembly asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(dependency.ToString()));
+                System.Reflection.Assembly asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(fullName));
                 if (asm != null) {
                     path = asm.Location;
                 }
             }
             if (!File.Exists(path)) {
-                Log("WARNING: Dependency \"" + dependency + "\" not found; ignoring...");
+                Log("WARNING: Dependency \"" + fullName + "\" not found; ignoring...");
                 return;
             }
             ModuleDefinition module = ModuleDefinition.ReadModule(path, new ReaderParameters(ReadingMode.Immediate));
             Dependencies.Add(module);
             LoadBlacklist(module);
-            Log("Dependency \""+dependency+"\" loaded.");
+            Log("Dependency \""+fullName+"\" loaded.");
         }
 
         /// <summary>
