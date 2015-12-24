@@ -274,23 +274,6 @@ namespace MonoMod {
                         MetadataToken = type.GenericParameters[i].MetadataToken
                     });
                 }
-                for (int i = 0; i < type.Interfaces.Count; i++) {
-                    newType.Interfaces.Add(FindType(type.Interfaces[i], newType, false) ?? PatchType(type.Interfaces[i].Resolve()));
-                }
-                for (int cai = 0; cai < type.CustomAttributes.Count; cai++) {
-                    CustomAttribute oca = type.CustomAttributes[cai];
-                    CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, newType, false), oca.GetBlob());
-                    for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                        //TODO do more with the attributes
-                        CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
-                        ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, newType, false),
-                            ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, newType, false) :
-                            ocaa.Value
-                        ));
-                    }
-                    newType.CustomAttributes.Add(ca);
-                }
-                newType.BaseType = type.BaseType; //resolved later in PatchRefs
                 newType.PackingSize = type.PackingSize;
                 //Methods and Fields gets filled automatically
                 
@@ -625,7 +608,23 @@ namespace MonoMod {
                 TypeDefinition origType = Module.GetType(typeName);
                 IsBlacklisted(origType.Module.Name, origType.FullName, HasAttribute(origType, "MonoModBlacklisted"));
                 if (isTypeAdded) {
-                    origType.BaseType = origType.BaseType == null ? null : FindType(origType.BaseType, origType, true);
+                    for (int i = 0; i < type.Interfaces.Count; i++) {
+                        origType.Interfaces.Add(FindType(type.Interfaces[i], origType, true));
+                    }
+                    for (int cai = 0; cai < type.CustomAttributes.Count; cai++) {
+                        CustomAttribute oca = type.CustomAttributes[cai];
+                        CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, origType, true), oca.GetBlob());
+                        for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                            //TODO do more with the attributes
+                            CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                            ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, origType, true),
+                                ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, origType, true) :
+                                ocaa.Value
+                            ));
+                        }
+                        origType.CustomAttributes.Add(ca);
+                    }
+                    origType.BaseType = type.BaseType == null ? null : FindType(type.BaseType, origType, true);
                 }
                 for (int ii = 0; ii < type.Methods.Count; ii++) {
                     MethodDefinition method = type.Methods[ii];
