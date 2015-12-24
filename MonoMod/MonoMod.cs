@@ -290,7 +290,7 @@ namespace MonoMod {
                     }
                     newType.CustomAttributes.Add(ca);
                 }
-                newType.BaseType = type.BaseType == null ? null : (FindType(type.BaseType, newType, false) ?? PatchType(type.BaseType.Resolve()));
+                newType.BaseType = type.BaseType; //resolved later in PatchRefs
                 newType.PackingSize = type.PackingSize;
                 //Methods and Fields gets filled automatically
                 
@@ -624,6 +624,9 @@ namespace MonoMod {
 
                 TypeDefinition origType = Module.GetType(typeName);
                 IsBlacklisted(origType.Module.Name, origType.FullName, HasAttribute(origType, "MonoModBlacklisted"));
+                if (isTypeAdded) {
+                    origType.BaseType = origType.BaseType == null ? null : FindType(origType.BaseType, origType, true);
+                }
                 for (int ii = 0; ii < type.Methods.Count; ii++) {
                     MethodDefinition method = type.Methods[ii];
 
