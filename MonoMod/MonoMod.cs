@@ -170,12 +170,17 @@ namespace MonoMod {
             if (Dir != null) {
                 string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
                 Log("Scanning for files matching "+fileName+".*.mm.dll ...");
+                List<ModuleDefinition> mods = new List<ModuleDefinition>();
                 foreach (FileInfo f in Dir.GetFiles()) {
                     if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                         Log("Found "+f.Name+" , reading...");
                         ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName, new ReaderParameters(ReadingMode.Immediate));
-                        PatchModule(mod);
+                        PrePatchModule(mod);
+                        mods.Add(mod);
                     }
+                }
+                foreach (ModuleDefinition mod in mods) {
+                    PatchModule(mod);
                 }
                 Log("Patching / fixing references...");
                 PatchRefs();
@@ -189,17 +194,12 @@ namespace MonoMod {
                 Write();
             }
         }
-
-        /// <summary>
-        /// Patches the module and adds the patched types to the given list.
-        /// </summary>
-        /// <param name="mod">Mod to patch into the input module.</param>
-        /// <param name="types">Type list containing all patched types.</param>
-        public virtual void PatchModule(ModuleDefinition mod) {
+        
+        public virtual void PrePatchModule(ModuleDefinition mod) {
             Module.AssemblyReferences.Add(mod.Assembly.Name);
-
+            
             for (int i = 0; i < mod.Types.Count; i++) {
-                PatchType(mod.Types[i]);
+                PrePatchType(mod.Types[i]);
             }
             
             for (int i = 0; i < mod.Resources.Count; i++) {
@@ -209,6 +209,87 @@ namespace MonoMod {
                 EmbeddedResource resOrig = ((EmbeddedResource) mod.Resources[i]);
                 EmbeddedResource res = new EmbeddedResource(resOrig.Name, resOrig.Attributes, resOrig.GetResourceData());
                 Module.Resources.Add(res);
+            }
+        }
+        
+        public virtual TypeReference PrePatchType(TypeDefinition type) {
+            string typeName = RemovePrefixes(type.FullName, type);
+            
+            if (TypesPatched.Contains(type)) {
+                PrePatchNested(type);
+                return null;
+            }
+
+            /*if (type.Attributes.HasFlag(TypeAttributes.NotPublic) &&
+                type.Attributes.HasFlag(TypeAttributes.Interface)) {
+                Log("Type is a private interface; ignore...");
+                PrePatchNested(type);
+                return null;
+            }*/
+
+            if (HasAttribute(type, "MonoModIgnore")) {
+                PrePatchNested(type);
+                return null;
+            }
+
+            //check if type exists at all
+            TypeReference origType = Module.GetType(typeName, true);
+            if (origType == null) {
+                if (type.Name.StartsWith("patch_")) {
+                    PrePatchNested(type);
+                    return null;
+                }
+            }
+
+            //check if type exists in module to patch
+            origType = Module.GetType(typeName, false);
+            bool isTypeAdded = origType == null;
+            if (!isTypeAdded) {
+                return origType;
+            }
+            
+            //(un?)fortunately we're forced to add types ever since some workarounds stopped working
+            Log("T+: " + typeName);
+            
+            TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, null);
+            newType.ClassSize = type.ClassSize;
+            //TODO yell about custom attribute support in Mono.Cecil
+            //newType.CustomAttributes = type.CustomAttributes;
+            if (type.DeclaringType != null) {
+                newType.DeclaringType = (FindType(type.DeclaringType, newType, false) ?? PrePatchType(type.DeclaringType)).Resolve();
+                newType.DeclaringType.NestedTypes.Add(newType);
+            } else {
+                Module.Types.Add(newType);
+            }
+            TypesAdded.Add(typeName);
+            newType.MetadataToken = type.MetadataToken;
+            for (int i = 0; i < type.GenericParameters.Count; i++) {
+                newType.GenericParameters.Add(new GenericParameter(type.GenericParameters[i].Name, newType) {
+                    Attributes = type.GenericParameters[i].Attributes,
+                    MetadataToken = type.GenericParameters[i].MetadataToken
+                });
+            }
+            newType.PackingSize = type.PackingSize;
+            //Methods and Fields gets filled automatically
+            
+            PrePatchNested(type);
+            return newType;
+        }
+        
+        protected virtual void PrePatchNested(TypeDefinition type) {
+            for (int i = 0; i < type.NestedTypes.Count; i++) {
+                PrePatchType(type.NestedTypes[i]);
+            }
+        }
+
+        /// <summary>
+        /// Patches the module and adds the patched types to the given list.
+        /// </summary>
+        /// <param name="mod">Mod to patch into the input module.</param>
+        /// <param name="types">Type list containing all patched types.</param>
+        public virtual void PatchModule(ModuleDefinition mod) {
+            for (int i = 0; i < mod.Types.Count; i++) {
+                PatchType(mod.Types[i]);
             }
         }
 
@@ -251,34 +332,7 @@ namespace MonoMod {
 
             //check if type exists in module to patch
             origType = Module.GetType(typeName, false);
-            bool isTypeAdded = origType == null;
-            if (isTypeAdded) {
-                //(un?)fortunately we're forced to add types ever since some workarounds stopped working
-                Log("T+: " + typeName);
-                
-                TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, null);
-                newType.ClassSize = type.ClassSize;
-                //TODO yell about custom attribute support in Mono.Cecil
-                //newType.CustomAttributes = type.CustomAttributes;
-                if (type.DeclaringType != null) {
-                    newType.DeclaringType = (FindType(type.DeclaringType, newType, false) ?? PatchType(type.DeclaringType)).Resolve();
-                    newType.DeclaringType.NestedTypes.Add(newType);
-                } else {
-                    Module.Types.Add(newType);
-                }
-                TypesAdded.Add(typeName);
-                newType.MetadataToken = type.MetadataToken;
-                for (int i = 0; i < type.GenericParameters.Count; i++) {
-                    newType.GenericParameters.Add(new GenericParameter(type.GenericParameters[i].Name, newType) {
-                        Attributes = type.GenericParameters[i].Attributes,
-                        MetadataToken = type.GenericParameters[i].MetadataToken
-                    });
-                }
-                newType.PackingSize = type.PackingSize;
-                //Methods and Fields gets filled automatically
-                
-                origType = newType;
-            }
+            bool isTypeAdded = TypesAdded.Contains(typeName);
             
             TypeDefinition origTypeResolved = origType.Resolve();
 
