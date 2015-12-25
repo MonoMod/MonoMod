@@ -207,7 +207,11 @@ namespace MonoMod {
                     continue;
                 }
                 EmbeddedResource resOrig = ((EmbeddedResource) mod.Resources[i]);
-                EmbeddedResource res = new EmbeddedResource(resOrig.Name, resOrig.Attributes, resOrig.GetResourceData());
+                string name = resOrig.Name;
+                if (name.StartsWith(mod.Assembly.Name.Name)) {
+                    name = Module.Assembly.Name.Name + name.Substring(mod.Assembly.Name.Name.Length);
+                }
+                EmbeddedResource res = new EmbeddedResource(name, resOrig.Attributes, resOrig.GetResourceData());
                 Module.Resources.Add(res);
             }
         }
