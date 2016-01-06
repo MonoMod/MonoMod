@@ -43,6 +43,7 @@ namespace MonoMod {
             Out = new FileInfo(input.FullName.Substring(0, input.FullName.Length-4)+".mm.exe");
         }
 
+        #if !MONOMOD_NO_ENTRY
         public static void Main(string[] args) {
             Console.WriteLine("MonoMod "+System.Reflection.Assembly.GetCallingAssembly().GetName().Version);
             
@@ -65,6 +66,7 @@ namespace MonoMod {
 
             mm.AutoPatch();
         }
+        #endif
 
         /// <summary>
         /// Reads the main assembly to mod.
