@@ -338,6 +338,10 @@ namespace MonoMod {
 
             //check if type exists in module to patch
             origType = Module.GetType(typeName, false);
+            if (origType == null) {
+                //The type should've been added if it didn't exist..?!
+                return null;
+            }
             bool isTypeAdded = TypesAdded.Contains(typeName);
             
             TypeDefinition origTypeResolved = origType.Resolve();
@@ -848,10 +852,7 @@ namespace MonoMod {
                         if (findMethodDef != null) {
                             IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethodDef, "MonoModBlacklisted"));
                             //Everything the mod touches is our kingdom
-                            findMethodDef.IsPrivate = false;
-                            findMethodDef.IsPublic = true;
-                            findMethodDef.DeclaringType.IsNotPublic = false;
-                            findMethodDef.DeclaringType.IsPublic = true;
+                            findMethodDef.SetPublic(true);
                             if (!isTypeAdded) {
                                 //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
                                 if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
@@ -902,10 +903,7 @@ namespace MonoMod {
                         IsBlacklisted(field.Module.Name, field.DeclaringType.FullName+"."+field.Name);
                         //Everything the mod touches is our kingdom
                         if (field.IsDefinition) {
-                            ((FieldDefinition) field).IsPrivate = false;
-                            ((FieldDefinition) field).IsPublic = true;
-                            ((FieldDefinition) field).DeclaringType.IsNotPublic = false;
-                            ((FieldDefinition) field).DeclaringType.IsPublic = true;
+                            ((FieldDefinition) field).SetPublic(true);
                         }
                     }
                     operand = field;
@@ -1731,5 +1729,38 @@ namespace MonoMod {
             Console.WriteLine(txt);
         }
 
+    }
+    
+    public static class MonoModExt {
+        
+        public static void SetPublic(this FieldDefinition o, bool p) {
+            o.IsPrivate = !p;
+            o.IsPublic = p;
+            if (p) {
+                o.DeclaringType.SetPublic(true);
+            }
+        }
+        
+        public static void SetPublic(this MethodDefinition o, bool p) {
+            o.IsPrivate = !p;
+            o.IsPublic = p;
+            if (p) {
+                o.DeclaringType.SetPublic(true);
+            }
+        }
+        
+        public static void SetPublic(this TypeDefinition o, bool p) {
+            if (o.DeclaringType == null) {
+                o.IsNotPublic = !p;
+                o.IsPublic = p;
+            } else {
+                o.IsNestedPrivate = !p;
+                o.IsNestedPublic = p;
+                if (p) {
+                    o.DeclaringType.SetPublic(true);
+                }
+            }
+        }
+        
     }
 }
