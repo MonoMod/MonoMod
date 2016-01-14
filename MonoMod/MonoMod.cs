@@ -1029,7 +1029,12 @@ namespace MonoMod {
                     }
                 }
                 if (type.Name.StartsWith("!!")) {
-                    return r.GenericParameters[int.Parse(type.Name.Substring(2))];
+                    int i;
+                    if (int.TryParse(type.Name.Substring(2), out i)) {
+                        return r.GenericParameters[i];
+                    } else {
+                        Log("debug: FindTypeGeneric: Failed parsing \"" + type.Name + "\" (method) for " + context.Name);
+                    }
                 }
             }
             if (context is TypeReference) {
@@ -1041,11 +1046,18 @@ namespace MonoMod {
                         return genericParam;
                     }
                 }
-                if (type.Name.StartsWith("!")) {
-                    return r.GenericParameters[int.Parse(type.Name.Substring(1))];
+                if (type.Name.StartsWith("!!")) {
+                    return FindTypeGeneric(type, context.DeclaringType, fallbackToImport);
+                } else if (type.Name.StartsWith("!")) {
+                    int i;
+                    if (int.TryParse(type.Name.Substring(1), out i)) {
+                        return r.GenericParameters[i];
+                    } else {
+                        Log("debug: FindTypeGeneric: Failed parsing \"" + type.Name + "\" (type) for " + context.Name);
+                    }
                 }
             }
-            if (context.DeclaringType != null) {
+            if (context != null && context.DeclaringType != null) {
                 return FindTypeGeneric(type, context.DeclaringType, fallbackToImport);
             }
             return fallbackToImport ? type : null;

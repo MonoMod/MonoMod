@@ -15,8 +15,13 @@ namespace MonoMod {
                 return;
             }
             
-            t.IsNotPublic = false;
-            t.IsPublic = true;
+            if (!t.IsNested) {
+                t.IsNotPublic = false;
+                t.IsPublic = true;
+            } else {
+                t.IsNestedPrivate = false;
+                t.IsNestedPublic = true;
+            }
             
             foreach (FieldDefinition f in t.Fields) {
                 if (f.IsSpecialName || f.IsRuntimeSpecialName) {
