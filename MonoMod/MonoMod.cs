@@ -511,10 +511,14 @@ namespace MonoMod {
                     copy.Body = origMethod.Body;
                     
                     for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
-                        copy.GenericParameters.Add(new GenericParameter(origMethod.GenericParameters[i].Name, copy) {
+                        GenericParameter p = new GenericParameter(origMethod.GenericParameters[i].Name, copy) {
                             Attributes = origMethod.GenericParameters[i].Attributes,
                             MetadataToken = origMethod.GenericParameters[i].MetadataToken
-                        });
+                        };
+                        for (int pci = 0; pci < origMethod.GenericParameters[i].Constraints.Count; pci++) {
+                            p.Constraints.Add(FindType(origMethod.GenericParameters[i].Constraints[pci], copy));
+                        }
+                        copy.GenericParameters.Add(p);
                     }
 
                     for (int i = 0; i < origMethod.Parameters.Count; i++) {
@@ -574,7 +578,14 @@ namespace MonoMod {
                 clone.SemanticsAttributes = (origMethodOrig ?? method).SemanticsAttributes;
                 clone.DeclaringType = origType;
                 for (int i = 0; i < (origMethodOrig ?? method).GenericParameters.Count; i++) {
-                    clone.GenericParameters.Add(new GenericParameter((origMethodOrig ?? method).GenericParameters[i].Name, clone));
+                    GenericParameter p = new GenericParameter((origMethodOrig ?? method).GenericParameters[i].Name, clone) {
+                        Attributes = (origMethodOrig ?? method).GenericParameters[i].Attributes,
+                        MetadataToken = (origMethodOrig ?? method).GenericParameters[i].MetadataToken
+                    };
+                    for (int pci = 0; pci < (origMethodOrig ?? method).GenericParameters[i].Constraints.Count; pci++) {
+                        p.Constraints.Add(FindType((origMethodOrig ?? method).GenericParameters[i].Constraints[pci], clone));
+                    }
+                    clone.GenericParameters.Add(p);
                 }
                 for (int i = 0; i < (origMethodOrig ?? method).Parameters.Count; i++) {
                     clone.Parameters.Add(new ParameterDefinition(FindType((origMethodOrig ?? method).Parameters[i].ParameterType, clone)));
@@ -672,6 +683,11 @@ namespace MonoMod {
                 TypeDefinition origType = Module.GetType(typeName);
                 IsBlacklisted(origType.Module.Name, origType.FullName, HasAttribute(origType, "MonoModBlacklisted"));
                 if (isTypeAdded) {
+                    for (int i = 0; i < type.GenericParameters.Count; i++) {
+                        for (int pci = 0; pci < type.GenericParameters[i].Constraints.Count; pci++) {
+                            origType.GenericParameters[i].Constraints.Add(FindType(type.GenericParameters[i].Constraints[pci], origType));
+                        }
+                    }
                     for (int i = 0; i < type.Interfaces.Count; i++) {
                         origType.Interfaces.Add(FindType(type.Interfaces[i], origType, true));
                     }
