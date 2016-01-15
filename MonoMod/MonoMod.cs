@@ -516,7 +516,7 @@ namespace MonoMod {
                             MetadataToken = origMethod.GenericParameters[i].MetadataToken
                         };
                         for (int pci = 0; pci < origMethod.GenericParameters[i].Constraints.Count; pci++) {
-                            p.Constraints.Add(origMethod.GenericParameters[i].Constraints[pci]);
+                            p.Constraints.Add(FindType(origMethod.GenericParameters[i].Constraints[pci], copy));
                         }
                         copy.GenericParameters.Add(p);
                     }
@@ -583,7 +583,7 @@ namespace MonoMod {
                         MetadataToken = (origMethodOrig ?? method).GenericParameters[i].MetadataToken
                     };
                     for (int pci = 0; pci < (origMethodOrig ?? method).GenericParameters[i].Constraints.Count; pci++) {
-                        p.Constraints.Add((origMethodOrig ?? method).GenericParameters[i].Constraints[pci]);
+                        p.Constraints.Add(FindType((origMethodOrig ?? method).GenericParameters[i].Constraints[pci], clone));
                     }
                     clone.GenericParameters.Add(p);
                 }
@@ -685,7 +685,7 @@ namespace MonoMod {
                 if (isTypeAdded) {
                     for (int i = 0; i < type.GenericParameters.Count; i++) {
                         for (int pci = 0; pci < type.GenericParameters[i].Constraints.Count; pci++) {
-                            origType.GenericParameters[i].Constraints.Add(origType.GenericParameters[i].Constraints[pci]);
+                            origType.GenericParameters[i].Constraints.Add(FindType(type.GenericParameters[i].Constraints[pci], origType));
                         }
                     }
                     for (int i = 0; i < type.Interfaces.Count; i++) {
