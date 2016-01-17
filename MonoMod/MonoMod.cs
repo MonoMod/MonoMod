@@ -477,6 +477,10 @@ namespace MonoMod {
                 Log(method.Name + " is an orig_ method; ignoring...");
                 return null;
             }
+            if (HasAttribute(method, "MonoModLinkTo")) {
+                Log(method.Name + " is a link method; ignoring...");
+                return null;
+            }
             
             Log("Patching "+method.Name+" ...");
 
@@ -780,6 +784,10 @@ namespace MonoMod {
         public virtual void PatchRefsInMethod(MethodDefinition method) {
             if (method.Name.StartsWith("orig_")) {
                 Log(method.Name + " is an orig_ method; ignoring...");
+                return;
+            }
+            if (HasAttribute(method, "MonoModLinkTo")) {
+                Log(method.Name + " is a link method; ignoring...");
                 return;
             }
 
