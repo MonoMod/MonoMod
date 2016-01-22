@@ -812,10 +812,23 @@ namespace MonoMod {
             }
 
             Log("Modifying method body...");
+            bool publicAccess = true;
             for (int i = 0; method.HasBody && i < method.Body.Instructions.Count; i++) {
                 Instruction instruction = method.Body.Instructions[i];
                 object operand = instruction.Operand;
-                
+
+                if (operand is MethodReference && ((MethodReference) operand).DeclaringType.FullName == "MonoMod.MonoModInline") {
+                    MethodReference mr = ((MethodReference) operand);
+
+                    if (mr.Name == "DisablePublicAccess") {
+                        publicAccess = false;
+                    } else if (mr.Name == "EnablePublicAccess") {
+                        publicAccess = true;
+                    }
+
+                    //keep the method reference as modded mods may still require these
+                }
+
                 if (operand is MethodReference) {
                     MethodReference methodCalled = FindLinked((MethodReference) operand);
                     if (methodCalled.FullName == RemovePrefixes(method.FullName, method.DeclaringType)) {
@@ -875,8 +888,10 @@ namespace MonoMod {
                         MethodDefinition findMethodDef = findMethod == null ? null : findMethod.Resolve();
                         if (findMethodDef != null) {
                             IsBlacklisted(findMethod.Module.Name, findMethod.DeclaringType.FullName+"."+findMethod.Name, HasAttribute(findMethodDef, "MonoModBlacklisted"));
-                            //Everything the mod touches is our kingdom
-                            findMethodDef.SetPublic(true);
+                            if (publicAccess) {
+                                //Everything the mod touches is our kingdom
+                                findMethodDef.SetPublic(true);
+                            }
                             if (!isTypeAdded) {
                                 //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
                                 if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
@@ -926,7 +941,7 @@ namespace MonoMod {
                     if (field != null) {
                         IsBlacklisted(field.Module.Name, field.DeclaringType.FullName+"."+field.Name);
                         //Everything the mod touches is our kingdom
-                        if (field.IsDefinition) {
+                        if (field.IsDefinition && publicAccess) {
                             ((FieldDefinition) field).SetPublic(true);
                         }
                     }

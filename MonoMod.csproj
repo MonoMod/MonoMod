@@ -52,6 +52,7 @@
     <Compile Include="MonoMod\JIT\MonoModJITHandler.cs" />
     <Compile Include="MonoMod\JIT\MonoModJITPatched.cs" />
     <Compile Include="MonoMod\JIT\ReflectionHelper.cs" />
+    <Compile Include="MonoMod\MonoModInline.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
