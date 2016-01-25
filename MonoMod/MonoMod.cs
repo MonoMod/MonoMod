@@ -921,7 +921,7 @@ namespace MonoMod {
                             if (findType.Fields[ii].Name == field.Name) {
                                 field = findType.Fields[ii];
                                 
-                                if (field.DeclaringType.IsGenericInstance) {
+                                if (findTypeRef.IsGenericInstance) {
                                     field = Module.Import(new FieldReference(field.Name, FindType(field.FieldType, findTypeRef), findTypeRef));
                                 }
                                 
