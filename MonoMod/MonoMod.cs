@@ -4,6 +4,7 @@ using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.IO;
 using Mono.Collections.Generic;
+using System.Diagnostics;
 
 namespace MonoMod {
     public class MonoMod {
@@ -1045,8 +1046,8 @@ namespace MonoMod {
                     LoadDependency(type.Scope.Name);
                     return FindType(type, context, fallbackToImport, true);
                 } else {
-                    Log("Type not found : " + type.FullName);
-                    Log("Type scope     : " + type.Scope.Name);
+                    Log("debug: Type not found: " + type.FullName);
+                    Log("debug: Type scope    : " + type.Scope.Name);
                 }
             }
             return foundType ?? (fallbackToImport ? Module.Import(type) : null);
@@ -1158,7 +1159,7 @@ namespace MonoMod {
                             GenericInstanceMethod methodg = ((GenericInstanceMethod) method);
 
                             for (int i = 0; i < methodg.GenericArguments.Count; i++) {
-                                genMethod.GenericArguments.Add(FindType(methodg.GenericArguments[i], genMethod));
+                                genMethod.GenericArguments.Add(FindType(methodg.GenericArguments[i], context, false) ?? FindType(methodg.GenericArguments[i], genMethod, true));
                             }
 
                             foundMethod = genMethod;
@@ -1253,15 +1254,74 @@ namespace MonoMod {
             if (!File.Exists(path)) {
                 path = Path.Combine(Dir.FullName, name);
             }
+
+            //check if available in GAC
             if (!File.Exists(path) && fullName != null) {
-                //check if available in GAC
+                //TODO use ReflectionOnlyLoad if possible
                 System.Reflection.Assembly asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(fullName));
                 if (asm != null) {
                     path = asm.Location;
                 }
             }
+
+            //manually check in GAC
+            if (!File.Exists(path) && fullName == null) {
+                string os;
+                int versionStart = 0;
+                System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                if (property_platform != null) {
+                    //for mono, get from
+                    //static extern PlatformID Platform
+                    os = property_platform.GetValue(null).ToString().ToLower();
+                } else {
+                    //for .net, use default value
+                    os = Environment.OSVersion.Platform.ToString().ToLower();
+                    //.net also prefixes the version with a v
+                    versionStart = 1;
+                }
+                if (os.Contains("win")) {
+                    //C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
+                    path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET", "assembly", "GAC_MSIL", name);
+
+                    /*} else if (os.Contains("mac") || os.Contains("osx")) {
+                    //FIXME test GAC path for Mono on Mac
+                    //should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
+
+                } else if (os.Contains("lin") || os.Contains("unix")) {*/
+                    //for now let's just pretend it's the same as with Linux...
+                } else if (os.Contains("mac") || os.Contains("osx") || os.Contains("lin") || os.Contains("unix")) {
+                    //<prefix>/lib/mono/gac
+
+                    Process which = new Process();
+                    which.StartInfo.FileName = "which";
+                    which.StartInfo.Arguments = "mono";
+                    which.Start();
+                    which.WaitForExit();
+                    path = Directory.GetParent(which.StandardOutput.ReadToEnd().Trim()).Parent.FullName;
+                    path = Path.Combine(path, "lib", "mono", "gac", name);
+                }
+
+                if (Directory.Exists(path)) {
+                    string[] versions = Directory.GetDirectories(path);
+                    int highest = 0;
+                    int highestIndex = 0;
+                    for (int i = 0; i < versions.Length; i++) {
+                        string versionString = versions[i].Substring(path.Length + 1);
+                        int version = int.Parse(versionString.Substring(versionStart, versionString.IndexOf('.') - 1));
+                        if (version > highest) {
+                            highest = version;
+                            highestIndex = i;
+                        }
+                        //maybe check minor versions?
+                    }
+                    path = Path.Combine(versions[highestIndex], name + ".dll");
+                } else {
+                    path = "";
+                }
+            }
+
             if (!File.Exists(path)) {
-                Log("WARNING: Dependency \"" + fullName + "\" not found; ignoring...");
+                Log("debug: Dependency \"" + (fullName ?? name) + "\" not found; ignoring...");
                 return;
             }
             ModuleDefinition module = ModuleDefinition.ReadModule(path, new ReaderParameters(ReadingMode.Immediate));
