@@ -1272,7 +1272,7 @@ namespace MonoMod {
                 if (property_platform != null) {
                     //for mono, get from
                     //static extern PlatformID Platform
-                    os = property_platform.GetValue(null).ToString().ToLower();
+                    os = property_platform.GetValue(null, null).ToString().ToLower();
                 } else {
                     //for .net, use default value
                     os = Environment.OSVersion.Platform.ToString().ToLower();
