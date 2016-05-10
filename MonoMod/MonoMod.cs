@@ -1306,6 +1306,7 @@ namespace MonoMod {
                     which.StartInfo.Arguments = "mono";
                     which.StartInfo.CreateNoWindow = true;
                     which.StartInfo.RedirectStandardOutput = true;
+                    which.StartInfo.UseShellExecute = false;
                     which.EnableRaisingEvents = true;
                     
                     StringBuilder whichOutputBuilder = new StringBuilder();
