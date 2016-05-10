@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using Mono.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 
 namespace MonoMod {
     public class MonoMod {
@@ -497,7 +498,7 @@ namespace MonoMod {
 
             //TODO the orig methods of replace_ methods can't be found
             for (int i = 0; i < origType.Methods.Count; i++) {
-                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName, method.DeclaringType)) {
+                if (origType.Methods[i].FullName == RemovePrefixes(RemovePrefixes(method.FullName, method.DeclaringType), method.Name)) {
                     origMethod = origType.Methods[i];
                 }
                 if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, "orig_"+method.Name), method.DeclaringType)) {
@@ -509,6 +510,11 @@ namespace MonoMod {
                 IsBlacklisted(origMethod.Module.Name, origMethod.DeclaringType.FullName+"."+origMethod.Name, HasAttribute(origMethod, "MonoModBlacklisted"));
                 if (method.Name.StartsWith("replace_") || HasAttribute(method, "MonoModReplace")) {
                     Log("Method existing; replacing...");
+                    method.Name = RemovePrefixes(method.Name);
+                    origMethod.CustomAttributes.Clear();
+                    origMethod.Attributes = method.Attributes;
+                    origMethod.IsPInvokeImpl = method.IsPInvokeImpl;
+                    origMethod.ImplAttributes = method.ImplAttributes;
                 } else {
                     Log("Method existing; creating copy...");
 
@@ -1258,7 +1264,10 @@ namespace MonoMod {
             //check if available in GAC
             if (!File.Exists(path) && fullName != null) {
                 //TODO use ReflectionOnlyLoad if possible
-                System.Reflection.Assembly asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(fullName));
+                System.Reflection.Assembly asm = null;
+                try {
+                    asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(fullName));
+                } catch {}
                 if (asm != null) {
                     path = asm.Location;
                 }
@@ -1295,9 +1304,23 @@ namespace MonoMod {
                     Process which = new Process();
                     which.StartInfo.FileName = "which";
                     which.StartInfo.Arguments = "mono";
+                    which.StartInfo.CreateNoWindow = true;
+                    which.StartInfo.RedirectStandardOutput = true;
+                    which.EnableRaisingEvents = true;
+                    
+                    StringBuilder whichOutputBuilder = new StringBuilder();
+                    
+                    which.OutputDataReceived += new DataReceivedEventHandler (
+                        delegate(object sender, DataReceivedEventArgs e) {
+                            whichOutputBuilder.Append(e.Data);
+                        }
+                    );
                     which.Start();
+                    which.BeginOutputReadLine();
                     which.WaitForExit();
-                    path = Directory.GetParent(which.StandardOutput.ReadToEnd().Trim()).Parent.FullName;
+                    which.CancelOutputRead();
+                    
+                    path = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
                     path = Path.Combine(path, "lib", "mono", "gac", name);
                 }
 
