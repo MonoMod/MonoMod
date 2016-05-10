@@ -6,6 +6,7 @@ using System.IO;
 using Mono.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MonoMod {
     public class MonoMod {
@@ -1276,7 +1277,6 @@ namespace MonoMod {
             //manually check in GAC
             if (!File.Exists(path) && fullName == null) {
                 string os;
-                int versionStart = 0;
                 System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                 if (property_platform != null) {
                     //for mono, get from
@@ -1286,7 +1286,6 @@ namespace MonoMod {
                     //for .net, use default value
                     os = Environment.OSVersion.Platform.ToString().ToLower();
                     //.net also prefixes the version with a v
-                    versionStart = 1;
                 }
                 if (os.Contains("win")) {
                     //C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
@@ -1330,8 +1329,11 @@ namespace MonoMod {
                     int highest = 0;
                     int highestIndex = 0;
                     for (int i = 0; i < versions.Length; i++) {
-                        string versionString = versions[i].Substring(path.Length + 1);
-                        int version = int.Parse(versionString.Substring(versionStart, versionString.IndexOf('.') - 1));
+                        Match versionMatch = Regex.Match(versions[i].Substring(path.Length + 1), "\\d+");
+                        if (!versionMatch.Success) {
+                            continue;
+                        }
+                        int version = int.Parse(versionMatch.Value);
                         if (version > highest) {
                             highest = version;
                             highestIndex = i;
