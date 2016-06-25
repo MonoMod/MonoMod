@@ -47,11 +47,17 @@
     <Compile Include="MonoMod\MonoModBlacklist.cs" />
     <Compile Include="MonoMod\MonoModBlacklisted.cs" />
     <Compile Include="MonoMod\MonoModEnumReplace.cs" />
+    <Compile Include="MonoMod\JIT\MonoModJIT.cs" />
+    <Compile Include="MonoMod\JIT\MonoModJITPseudoException.cs" />
+    <Compile Include="MonoMod\JIT\MonoModJITHandler.cs" />
+    <Compile Include="MonoMod\JIT\MonoModJITPatched.cs" />
+    <Compile Include="MonoMod\JIT\ReflectionHelper.cs" />
     <Compile Include="MonoMod\MonoModInline.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="MonoMod\" />
+    <Folder Include="MonoMod\JIT\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
