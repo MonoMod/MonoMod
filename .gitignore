@@ -2,3 +2,4 @@ bin/
 obj/
 *.userprefs
 .vscode/.browse.VC.db*
+.vs/

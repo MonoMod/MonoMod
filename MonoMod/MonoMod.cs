@@ -78,7 +78,11 @@ namespace MonoMod {
         public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
                 Log("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
-                Module = ModuleDefinition.ReadModule(In.FullName, new ReaderParameters(ReadingMode.Immediate));
+                DefaultAssemblyResolver assembly_resolver = new DefaultAssemblyResolver();
+                assembly_resolver.AddSearchDirectory(Dir.FullName);
+                Module = ModuleDefinition.ReadModule(In.FullName, new ReaderParameters(ReadingMode.Immediate) {
+                    assembly_resolver = assembly_resolver
+                });
                 LoadBlacklist(Module);
             }
 
@@ -358,7 +362,7 @@ namespace MonoMod {
                 return null;
             }
 
-            //type = Module.Import(type).Resolve();
+            //type = Module.ImportReference(type).Resolve();
 
             for (int ii = 0; ii < type.Properties.Count; ii++) {
                 PropertyDefinition property = type.Properties[ii];
@@ -387,13 +391,13 @@ namespace MonoMod {
 
                 MethodDefinition getter = property.GetMethod;
                 if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
-                    //getter = Module.Import(getter).Resolve();
+                    //getter = Module.ImportReference(getter).Resolve();
                     PatchMethod(getter);
                 }
 
                 MethodDefinition setter = property.SetMethod;
                 if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
-                    //setter = Module.Import(setter).Resolve();
+                    //setter = Module.ImportReference(setter).Resolve();
                     PatchMethod(setter);
                 }
             }
@@ -406,7 +410,7 @@ namespace MonoMod {
                     continue;
                 }
 
-                //method = Module.Import(method).Resolve();
+                //method = Module.ImportReference(method).Resolve();
                 PatchMethod(method);
             }
 
@@ -478,7 +482,7 @@ namespace MonoMod {
         /// </summary>
         /// <param name="method">Method to patch in.</param>
         public virtual MethodDefinition PatchMethod(MethodDefinition method) {
-            if (method.Name.StartsWith("orig_")) {
+            if (method.Name.StartsWith("orig_") || HasAttribute(method, "MonoModOriginal")) {
                 Log(method.Name + " is an orig_ method; ignoring...");
                 return null;
             }
@@ -496,13 +500,14 @@ namespace MonoMod {
 
             MethodDefinition origMethod = null; //original method that is going to be changed if existing (f.e. X)
             MethodDefinition origMethodOrig = null; //orig_ method (f.e. orig_X)
+            string origMethodOrigName = GetOriginalName(method);
 
             //TODO the orig methods of replace_ methods can't be found
             for (int i = 0; i < origType.Methods.Count; i++) {
                 if (origType.Methods[i].FullName == RemovePrefixes(RemovePrefixes(method.FullName, method.DeclaringType), method.Name)) {
                     origMethod = origType.Methods[i];
                 }
-                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, "orig_"+method.Name), method.DeclaringType)) {
+                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, origMethodOrigName), method.DeclaringType)) {
                     origMethodOrig = origType.Methods[i];
                 }
             }
@@ -519,10 +524,17 @@ namespace MonoMod {
                 } else {
                     Log("Method existing; creating copy...");
 
-                    MethodDefinition copy = new MethodDefinition("orig_"+origMethod.Name, origMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, origMethod.ReturnType);
+                    MethodDefinition copy = new MethodDefinition(origMethodOrigName, origMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, origMethod.ReturnType);
                     copy.DeclaringType = origMethod.DeclaringType;
                     copy.MetadataToken = origMethod.MetadataToken;
                     copy.Body = origMethod.Body;
+                    copy.Attributes = origMethod.Attributes;
+                    copy.ImplAttributes = origMethod.ImplAttributes;
+                    copy.IsManaged = origMethod.IsManaged;
+                    copy.IsIL = origMethod.IsIL;
+                    copy.IsNative = origMethod.IsNative;
+                    copy.PInvokeInfo = origMethod.PInvokeInfo;
+                    copy.IsPInvokeImpl = origMethod.IsPInvokeImpl;
 
                     for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
                         GenericParameter p = new GenericParameter(origMethod.GenericParameters[i].Name, copy) {
@@ -553,6 +565,9 @@ namespace MonoMod {
                         copy.CustomAttributes.Add(ca);
                     }
 
+                    CustomAttribute caOrig = new CustomAttribute(GetMonoModOriginalCtor());
+                    copy.CustomAttributes.Add(caOrig);
+
                     origType.Methods.Add(copy);
                     origMethodOrig = copy;
                     Log("Added copy of original method to "+copy.FullName);
@@ -578,8 +593,14 @@ namespace MonoMod {
             if (origMethod != null) {
                 origMethod.Body = method.Body;
                 method = origMethod;
+                method.IsManaged = true;
+                method.IsIL = true;
+                method.IsNative = false;
+                method.PInvokeInfo = null;
+                method.IsInternalCall = false;
+                method.IsPInvokeImpl = false;
             } else {
-                MethodDefinition clone = new MethodDefinition(method.Name, (origMethodOrig ?? method).Attributes, Module.Import(typeof(void)));
+                MethodDefinition clone = new MethodDefinition(method.Name, (origMethodOrig ?? method).Attributes, Module.ImportReference(typeof(void)));
                 origType.Methods.Add(clone);
                 clone.MetadataToken = (origMethodOrig ?? method).MetadataToken;
                 clone.CallingConvention = (origMethodOrig ?? method).CallingConvention;
@@ -747,13 +768,13 @@ namespace MonoMod {
                             Log("PR: "+property.FullName);
                             MethodDefinition getter = property.GetMethod;
                             if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
-                                //getter = Module.Import(getter).Resolve();
+                                //getter = Module.ImportReference(getter).Resolve();
                                 PatchRefsInMethod(getter);
                             }
 
                             MethodDefinition setter = property.SetMethod;
                             if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
-                                //setter = Module.Import(setter).Resolve();
+                                //setter = Module.ImportReference(setter).Resolve();
                                 PatchRefsInMethod(setter);
                             }
                             break;
@@ -792,7 +813,7 @@ namespace MonoMod {
         /// </summary>
         /// <param name="method">Method to patch.</param>
         public virtual void PatchRefsInMethod(MethodDefinition method) {
-            if (method.Name.StartsWith("orig_")) {
+            if (method.Name.StartsWith("orig_") || HasAttribute(method, "MonoModOriginal")) {
                 Log(method.Name + " is an orig_ method; ignoring...");
                 return;
             }
@@ -809,9 +830,10 @@ namespace MonoMod {
             bool isTypeAdded = TypesAdded.Contains(origType.FullName);
 
             MethodDefinition origMethodOrig = null; //orig_ method (f.e. orig_X)
+            string origMethodOrigName = GetOriginalName(method);
 
             for (int i = 0; i < origType.Methods.Count; i++) {
-                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, "orig_"+method.Name), method.DeclaringType)) {
+                if (origType.Methods[i].FullName == RemovePrefixes(method.FullName.Replace(method.Name, origMethodOrigName), method.DeclaringType)) {
                     origMethodOrig = origType.Methods[i];
                 }
             }
@@ -889,7 +911,7 @@ namespace MonoMod {
 
                         if (findMethod == null) {
                             try {
-                                findMethod = Module.Import(methodCalled);
+                                findMethod = Module.ImportReference(methodCalled);
                             } catch {
                                 //uh. generic type failed importing?
                             }
@@ -916,7 +938,7 @@ namespace MonoMod {
                             }
                         }
 
-                        operand = findMethod ?? Module.Import(methodCalled);
+                        operand = findMethod ?? Module.ImportReference(methodCalled);
                     }
                 }
 
@@ -932,11 +954,11 @@ namespace MonoMod {
                                 field = findType.Fields[ii];
 
                                 if (findTypeRef.IsGenericInstance) {
-                                    field = Module.Import(new FieldReference(field.Name, FindType(field.FieldType, findTypeRef), findTypeRef));
+                                    field = Module.ImportReference(new FieldReference(field.Name, FindType(field.FieldType, findTypeRef), findTypeRef));
                                 }
 
                                 if (field.Module != Module) {
-                                    field = Module.Import(field);
+                                    field = Module.ImportReference(field);
                                 }
 
                                 break;
@@ -982,7 +1004,7 @@ namespace MonoMod {
                     Log("Checking against: " + genericParam.FullName);
                     if (genericParam.FullName == returnType.FullName) {
                         Log("Success!");
-                        method.ReturnType = Module.Import(genericParam);
+                        method.ReturnType = Module.ImportReference(genericParam);
                         break;
                     }
                 }
@@ -1035,7 +1057,7 @@ namespace MonoMod {
                 foreach (ModuleDefinition dependency in Dependencies) {
                     foundType = dependency.GetType(typeName);
                     if (foundType != null) {
-                        return Module.Import(foundType);
+                        return Module.ImportReference(foundType);
                     }
                 }
             }
@@ -1057,7 +1079,7 @@ namespace MonoMod {
                     Log("debug: Type scope    : " + type.Scope.Name);
                 }
             }
-            return foundType ?? (fallbackToImport ? Module.Import(type) : null);
+            return foundType ?? (fallbackToImport ? Module.ImportReference(type) : null);
         }
 
         /// <summary>
@@ -1154,11 +1176,11 @@ namespace MonoMod {
                                 genMethod.Parameters.Add(new ParameterDefinition(FindType(method.Parameters[i].ParameterType, genMethod)));
                             }
 
-                            foundMethod = Module.Import(genMethod);
+                            foundMethod = Module.ImportReference(genMethod);
                         }
 
                         if (foundMethod.Module != Module) {
-                            foundMethod = Module.Import(foundMethod);
+                            foundMethod = Module.ImportReference(foundMethod);
                         }
 
                         if (method.IsGenericInstance) {
@@ -1178,7 +1200,7 @@ namespace MonoMod {
             }
 
             if (fallbackToImport) {
-                return Module.Import(method);
+                return Module.ImportReference(method);
             }
 
             if (!method.DeclaringType.IsArray) {
@@ -1400,14 +1422,14 @@ namespace MonoMod {
 
             entryOld.Name = "orig_"+entryOld.Name;
 
-            MethodDefinition entry = new MethodDefinition("Main", MethodAttributes.Public | MethodAttributes.Static, Module.Import(typeof(void)));
-            entry.Parameters.Add(new ParameterDefinition(Module.Import(typeof(string[]))));
+            MethodDefinition entry = new MethodDefinition("Main", MethodAttributes.Public | MethodAttributes.Static, Module.ImportReference(typeof(void)));
+            entry.Parameters.Add(new ParameterDefinition(Module.ImportReference(typeof(string[]))));
 
             MethodBody body = new MethodBody(entry);
             ILProcessor processor = body.GetILProcessor();
 
             processor.Emit(OpCodes.Ldstr, "MonoMod "+System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
-            processor.Emit(OpCodes.Call, Module.Import(typeof(Console).GetMethod("WriteLine", new Type[] {typeof(string)})));
+            processor.Emit(OpCodes.Call, Module.ImportReference(typeof(Console).GetMethod("WriteLine", new Type[] {typeof(string)})));
 
             processor.Emit(OpCodes.Ldarg_0);
             processor.Emit(OpCodes.Call, entryOld);
@@ -1435,7 +1457,7 @@ namespace MonoMod {
             }
             Log("Adding MonoMod.WasHere");
             TypeDefinition wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
-                BaseType = Module.Import(typeof(object))
+                BaseType = Module.ImportReference(typeof(object))
             };
             Module.Types.Add(wasHere);
             return wasHere;
@@ -1623,6 +1645,61 @@ namespace MonoMod {
             str = RemovePrefix(str, "remove_", strPrefixed);
             str = RemovePrefix(str, "replace_", strPrefixed);
             return str;
+        }
+
+        public virtual string GetOriginalName(MethodDefinition method) {
+            CustomAttribute attrib = null;
+            foreach (CustomAttribute attrib_ in method.CustomAttributes) {
+                if (attrib_.AttributeType.FullName == "MonoMod.MonoModOriginalName") {
+                    attrib = attrib_;
+                    break;
+                }
+            }
+            if (attrib == null) {
+                return "orig_" + method.Name;
+            }
+
+            return (string) attrib.ConstructorArguments[0].Value;
+        }
+
+        protected MethodDefinition _mmoCtor;
+        public virtual MethodReference GetMonoModOriginalCtor() {
+            if (_mmoCtor != null && _mmoCtor.Module != Module) {
+                _mmoCtor = null;
+            }
+            if (_mmoCtor != null) {
+                return _mmoCtor;
+            }
+
+            Log("Checking if MonoMod.MonoModOriginal already defined...");
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModOriginal") {
+                    TypeDefinition type = Module.Types[ti];
+                    for (int mi = 0; mi < type.Methods.Count; mi++) {
+                        if (!type.Methods[mi].IsConstructor || type.Methods[mi].IsStatic) {
+                            continue;
+                        }
+                        Log("MonoModOriginal exists. Reusing it.");
+                        return _mmoCtor = type.Methods[mi];
+                    }
+                }
+            }
+            Log("Adding MonoMod.MonoModOriginal");
+            TypeDefinition mmo = new TypeDefinition("MonoMod", "MonoModOriginal", TypeAttributes.Public | TypeAttributes.Class) {
+                BaseType = Module.ImportReference(typeof(Attribute))
+            };
+            _mmoCtor = new MethodDefinition(".ctor",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                Module.TypeSystem.Void
+            );
+            _mmoCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+            _mmoCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+            )));
+            _mmoCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+            mmo.Methods.Add(_mmoCtor);
+            Module.Types.Add(mmo);
+            return _mmoCtor;
         }
 
         /// <summary>
