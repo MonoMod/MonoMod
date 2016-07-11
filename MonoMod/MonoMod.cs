@@ -32,6 +32,35 @@ namespace MonoMod {
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
+        protected IAssemblyResolver _assemblyResolver;
+        public virtual IAssemblyResolver AssemblyResolver {
+            get {
+                if (_assemblyResolver == null) {
+                    DefaultAssemblyResolver assemblyResolver = new DefaultAssemblyResolver();
+                    assemblyResolver.AddSearchDirectory(Dir.FullName);
+                    _assemblyResolver = assemblyResolver;
+                }
+                return _assemblyResolver;
+            }
+            set {
+                _assemblyResolver = value;
+            }
+        }
+        protected ReaderParameters _readerParameters;
+        public virtual ReaderParameters ReaderParameters {
+            get {
+                if (_readerParameters == null) {
+                    _readerParameters = new ReaderParameters(ReadingMode.Immediate) {
+                        assembly_resolver = AssemblyResolver
+                    };
+                }
+                return _readerParameters;
+            }
+            set {
+                _readerParameters = value;
+            }
+        }
+
         public MonoMod() {
         }
 
@@ -78,11 +107,7 @@ namespace MonoMod {
         public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
                 Log("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
-                DefaultAssemblyResolver assembly_resolver = new DefaultAssemblyResolver();
-                assembly_resolver.AddSearchDirectory(Dir.FullName);
-                Module = ModuleDefinition.ReadModule(In.FullName, new ReaderParameters(ReadingMode.Immediate) {
-                    assembly_resolver = assembly_resolver
-                });
+                Module = ModuleDefinition.ReadModule(In.FullName, ReaderParameters);
                 LoadBlacklist(Module);
             }
 
@@ -183,7 +208,7 @@ namespace MonoMod {
                 foreach (FileInfo f in Dir.GetFiles()) {
                     if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                         Log("Found "+f.Name+" , reading...");
-                        ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName, new ReaderParameters(ReadingMode.Immediate));
+                        ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName, ReaderParameters);
                         PrePatchModule(mod);
                         mods.Add(mod);
                     }
@@ -1372,7 +1397,7 @@ namespace MonoMod {
                 Log("debug: Dependency \"" + (fullName ?? name) + "\" not found; ignoring...");
                 return;
             }
-            ModuleDefinition module = ModuleDefinition.ReadModule(path, new ReaderParameters(ReadingMode.Immediate));
+            ModuleDefinition module = ModuleDefinition.ReadModule(path, ReaderParameters);
             Dependencies.Add(module);
             LoadBlacklist(module);
             Log("Dependency \""+fullName+"\" loaded.");
