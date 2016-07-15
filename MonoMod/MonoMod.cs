@@ -159,12 +159,10 @@ namespace MonoMod {
                     method.NoOptimization = false;
 
                     if (method.HasBody) {
-                        List<int> nops = new List<int>();
                         for (int i = 0; i < method.Body.Instructions.Count; i++) {
                             Instruction instruction = method.Body.Instructions[i];
                             if (instruction.OpCode == OpCodes.Nop) {
                                 method.Body.Instructions.RemoveAt(i);
-                                nops.Add(i);
                                 i = i-1 < 0 ? 0 : i-1;
 
                                 for (int ii = method.Body.Instructions.Count - 1; i <= ii; ii--) {
@@ -265,7 +263,9 @@ namespace MonoMod {
                 return null;
             }*/
 
-            if (HasAttribute(type, "MonoModIgnore")) {
+            if (HasAttribute(type, "MonoModIgnore") ||
+                HasAttribute(type, "MonoModNoNew") ||
+                !MatchingPlatform(type)) {
                 PrePatchNested(type);
                 return null;
             }
@@ -355,7 +355,8 @@ namespace MonoMod {
                 return null;
             }*/
 
-            if (HasAttribute(type, "MonoModIgnore")) {
+            if (HasAttribute(type, "MonoModIgnore") ||
+                !MatchingPlatform(type)) {
                 PatchNested(type);
                 return null;
             }
@@ -415,13 +416,13 @@ namespace MonoMod {
                 }
 
                 MethodDefinition getter = property.GetMethod;
-                if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
+                if (getter != null && !HasAttribute(getter, "MonoModIgnore") && MatchingPlatform(getter)) {
                     //getter = Module.ImportReference(getter).Resolve();
                     PatchMethod(getter);
                 }
 
                 MethodDefinition setter = property.SetMethod;
-                if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
+                if (setter != null && !HasAttribute(setter, "MonoModIgnore") && MatchingPlatform(setter)) {
                     //setter = Module.ImportReference(setter).Resolve();
                     PatchMethod(setter);
                 }
@@ -431,7 +432,7 @@ namespace MonoMod {
                 MethodDefinition method = type.Methods[ii];
                 Log("M: "+method.FullName);
 
-                if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore")) {
+                if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore") || !MatchingPlatform(method)) {
                     continue;
                 }
 
@@ -456,7 +457,9 @@ namespace MonoMod {
                     continue;
                 }*/
 
-                if (HasAttribute(field, "MonoModIgnore")) {
+                if (HasAttribute(field, "MonoModIgnore") ||
+                    HasAttribute(field, "MonoModNoNew") ||
+                    !MatchingPlatform(field)) {
                     continue;
                 }
 
@@ -599,6 +602,9 @@ namespace MonoMod {
                 }
             } else if (origMethod != null) {
                 Log("Prefixed method existing; ignoring...");
+            } else if (origMethod == null && origMethodOrig == null && HasAttribute(method, "MonoModNoNew")) {
+                Log("Method marked as NoNew and no original method found; skipping...");
+                return null;
             }
 
             //fix for .cctor not linking to orig_.cctor
@@ -769,7 +775,7 @@ namespace MonoMod {
                 for (int ii = 0; ii < type.Methods.Count; ii++) {
                     MethodDefinition method = type.Methods[ii];
 
-                    if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore")) {
+                    if (!AllowedSpecialName(method) || HasAttribute(method, "MonoModIgnore") || !MatchingPlatform(method)) {
                         continue;
                     }
 
@@ -792,13 +798,13 @@ namespace MonoMod {
                             property = origProperty;
                             Log("PR: "+property.FullName);
                             MethodDefinition getter = property.GetMethod;
-                            if (getter != null && !HasAttribute(getter, "MonoModIgnore")) {
+                            if (getter != null && !HasAttribute(getter, "MonoModIgnore") && MatchingPlatform(getter)) {
                                 //getter = Module.ImportReference(getter).Resolve();
                                 PatchRefsInMethod(getter);
                             }
 
                             MethodDefinition setter = property.SetMethod;
-                            if (setter != null && !HasAttribute(setter, "MonoModIgnore")) {
+                            if (setter != null && !HasAttribute(setter, "MonoModIgnore") && MatchingPlatform(setter)) {
                                 //setter = Module.ImportReference(setter).Resolve();
                                 PatchRefsInMethod(setter);
                             }
@@ -810,7 +816,8 @@ namespace MonoMod {
                     for (int ii = 0; ii < type.Fields.Count; ii++) {
                         FieldDefinition field = type.Fields[ii];
 
-                        if (HasAttribute(field, "MonoModIgnore")) {
+                        if (HasAttribute(field, "MonoModIgnore") ||
+                            !MatchingPlatform(field)) {
                             continue;
                         }
 
@@ -870,11 +877,25 @@ namespace MonoMod {
 
             Log("Modifying method body...");
             bool publicAccess = true;
+            bool matchingPlatformIL = true;
             for (int i = 0; method.HasBody && i < method.Body.Instructions.Count; i++) {
                 Instruction instruction = method.Body.Instructions[i];
                 object operand = instruction.Operand;
 
-                if (operand is MethodReference && ((MethodReference) operand).DeclaringType.FullName == "MonoMod.MonoModInline") {
+                // Temporarily enable matching platform, otherwise the platform data gets lost.
+                // Check the next one as the array size is before the newarr.
+                if (instruction.Next != null &&
+                    instruction.Next.OpCode == OpCodes.Newarr && (
+                    ((TypeReference) instruction.Next.Operand).FullName == "Platform" ||
+                    ((TypeReference) instruction.Next.Operand).FullName == "int"
+                )) {
+                    matchingPlatformIL = true;
+                }
+
+                if (operand is MethodReference && (
+                    ((MethodReference) operand).DeclaringType.FullName == "MonoMod.MonoModInline" ||
+                    ((MethodReference) operand).DeclaringType.FullName == "MMIL"
+                )) {
                     MethodReference mr = ((MethodReference) operand);
 
                     if (mr.Name == "DisablePublicAccess") {
@@ -883,7 +904,56 @@ namespace MonoMod {
                         publicAccess = true;
                     }
 
+                    if (mr.Name == "OnPlatform") {
+                        // Crawl back until we hit "newarr Platform" or "newarr int"
+                        int posNewarr = i;
+                        for (; 1 <= posNewarr; posNewarr--) {
+                            if (method.Body.Instructions[posNewarr].OpCode == OpCodes.Newarr) {
+                                break;
+                            }
+                        }
+                        int pArrSize = GetInt(method.Body.Instructions[posNewarr - 1]);
+                        matchingPlatformIL = pArrSize == 0;
+                        for (int ii = posNewarr + 1; ii < i; ii += 4) {
+                            //dup
+                            //ldc.i4 INDEX
+                            Platform plat = (Platform) GetInt(method.Body.Instructions[ii + 2]);
+                            //stelem.i4
+
+                            if (PlatformHelper.Current.HasFlag(plat)) {
+                                matchingPlatformIL = true;
+                                break;
+                            }
+                        }
+
+                        // If not matching platform, remove array code.
+                        if (!matchingPlatformIL) {
+                            for (int ii = posNewarr - 1; ii < i; ii++) {
+                                method.Body.Instructions.RemoveAt(ii);
+                                ii = ii - 1 < 0 ? 0 : ii - 1;
+                                i = i - 1 < 0 ? 0 : i - 1;
+
+                                for (int iii = method.Body.Instructions.Count - 1; i <= iii; iii--) {
+                                    Instruction next = method.Body.Instructions[iii];
+                                    next.Offset--;
+                                }
+                                continue;
+                            }
+                        }
+                    }
+
                     //keep the method reference as modded mods may still require these
+                }
+
+                if (!matchingPlatformIL) {
+                    method.Body.Instructions.RemoveAt(i);
+                    i = i - 1 < 0 ? 0 : i - 1;
+
+                    for (int ii = method.Body.Instructions.Count - 1; i <= ii; ii--) {
+                        Instruction next = method.Body.Instructions[ii];
+                        next.Offset--;
+                    }
+                    continue;
                 }
 
                 if (operand is MethodReference) {
@@ -950,15 +1020,16 @@ namespace MonoMod {
                                 SetPublic(findMethodDef, true);
                             }
                             if (!isTypeAdded) {
+                                bool ld = instruction.OpCode == OpCodes.Ldftn || instruction.OpCode == OpCodes.Ldvirtftn;
                                 //Quite untested - fixes invalid IL when calling virtual methods when not virtual in patch
                                 if (findMethodDef.Attributes.HasFlag(MethodAttributes.Virtual)) {
-                                    instruction.OpCode = OpCodes.Callvirt;
+                                    instruction.OpCode = ld ? OpCodes.Ldvirtftn : OpCodes.Callvirt;
                                 }
                                 //Fixes linkto base methods being called as callvirt
                                 //FIXME find out other cases where this should be set due to linkto
                                 //FIXME test something better than name...
                                 if (method.DeclaringType.BaseType != null && findMethodDef.DeclaringType.Name == method.DeclaringType.BaseType.Name) {
-                                    instruction.OpCode = OpCodes.Call;
+                                    instruction.OpCode = ld ? OpCodes.Ldftn : OpCodes.Call;
                                 }
                             }
                         }
@@ -1443,7 +1514,7 @@ namespace MonoMod {
                 return null;
             }
 
-            Log("M:"+entryOld.Name);
+            Log("M: "+entryOld.Name);
 
             entryOld.Name = "orig_"+entryOld.Name;
 
@@ -1960,6 +2031,28 @@ namespace MonoMod {
             return false;
         }
 
+        public static bool MatchingPlatform(ICustomAttributeProvider cap) {
+            if (cap == null) {
+                return true;
+            }
+            if (!cap.HasCustomAttributes) {
+                return true;
+            }
+            Platform plat = PlatformHelper.Current;
+            foreach (CustomAttribute attrib in cap.CustomAttributes) {
+                if (attrib.AttributeType.FullName == "MonoMod.MonoModOnPlatform") {
+                    CustomAttributeArgument[] plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
+                    for (int i = 0; i < plats.Length; i++) {
+                        if (PlatformHelper.Current.HasFlag((Platform) plats[i].Value)) {
+                            return true;
+                        }
+                    }
+                    return plats.Length == 0;
+                }
+            }
+            return true;
+        }
+
         /// <summary>
         /// Determines if the full name is in any of the blacklists.
         /// </summary>
@@ -1993,6 +2086,41 @@ namespace MonoMod {
                 }
             }
             return false;
+        }
+
+        public static int GetInt(Instruction instr) {
+            OpCode op = instr.OpCode;
+            if (op == OpCodes.Ldc_I4_0) {
+                return 0;
+            }
+            if (op == OpCodes.Ldc_I4_1) {
+                return 1;
+            }
+            if (op == OpCodes.Ldc_I4_2) {
+                return 2;
+            }
+            if (op == OpCodes.Ldc_I4_3) {
+                return 3;
+            }
+            if (op == OpCodes.Ldc_I4_4) {
+                return 4;
+            }
+            if (op == OpCodes.Ldc_I4_5) {
+                return 5;
+            }
+            if (op == OpCodes.Ldc_I4_6) {
+                return 6;
+            }
+            if (op == OpCodes.Ldc_I4_7) {
+                return 7;
+            }
+            if (op == OpCodes.Ldc_I4_8) {
+                return 8;
+            }
+            if (op == OpCodes.Ldc_I4_S) {
+                return (sbyte) instr.Operand;
+            }
+            return (int) instr.Operand;
         }
 
         protected virtual void Log(object obj) {

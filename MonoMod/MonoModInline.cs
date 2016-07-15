@@ -1,11 +1,9 @@
 ﻿using System;
 
-namespace MonoMod {
-    public static class MonoModInline {
+public static class MMIL {
 
-        public static void DisablePublicAccess() {}
-        public static void EnablePublicAccess() {}
+    public static void DisablePublicAccess() { }
+    public static void EnablePublicAccess() { }
+    public static void OnPlatform(params Platform[] p) { }
 
-    }
 }
-
