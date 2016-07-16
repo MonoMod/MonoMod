@@ -1,4 +1,7 @@
-﻿using System;
+﻿#define MONOMOD_DEBUGSYMS
+// #define MONOMOD_CECIL_NEW
+
+using System;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
@@ -32,6 +35,10 @@ namespace MonoMod {
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
+#if MONOMOD_DEBUGSYMS
+        public bool ModDebugSymbols = true;
+#endif
+
         protected IAssemblyResolver _assemblyResolver;
         public virtual IAssemblyResolver AssemblyResolver {
             get {
@@ -46,18 +53,36 @@ namespace MonoMod {
                 _assemblyResolver = value;
             }
         }
+
         protected ReaderParameters _readerParameters;
         public virtual ReaderParameters ReaderParameters {
             get {
                 if (_readerParameters == null) {
                     _readerParameters = new ReaderParameters(ReadingMode.Immediate) {
-                        assembly_resolver = AssemblyResolver
+                        AssemblyResolver = AssemblyResolver
                     };
                 }
                 return _readerParameters;
             }
             set {
                 _readerParameters = value;
+            }
+        }
+
+        protected WriterParameters _writerParameters;
+        public virtual WriterParameters WriterParameters {
+            get {
+                if (_writerParameters == null) {
+                    _writerParameters = new WriterParameters() {
+#if MONOMOD_DEBUGSYMS
+                        WriteSymbols = true
+#endif
+                    };
+                }
+                return _writerParameters;
+            }
+            set {
+                _writerParameters = value;
             }
         }
 
@@ -75,7 +100,7 @@ namespace MonoMod {
             Out = new FileInfo(input.FullName.Substring(0, input.FullName.Length-4)+".mm.exe");
         }
 
-        #if !MONOMOD_NO_ENTRY
+#if !MONOMOD_NO_ENTRY
         public static void Main(string[] args) {
             Console.WriteLine("MonoMod "+System.Reflection.Assembly.GetCallingAssembly().GetName().Version);
 
@@ -98,7 +123,7 @@ namespace MonoMod {
 
             mm.AutoPatch();
         }
-        #endif
+#endif
 
         /// <summary>
         /// Reads the main assembly to mod.
@@ -107,7 +132,7 @@ namespace MonoMod {
         public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
                 Log("Reading assembly as Mono.Cecil ModuleDefinition and AssemblyDefinition...");
-                Module = ModuleDefinition.ReadModule(In.FullName, ReaderParameters);
+                Module = ModuleDefinition.ReadModule(In.FullName, GenReaderParameters(In.FullName));
                 LoadBlacklist(Module);
             }
 
@@ -141,7 +166,7 @@ namespace MonoMod {
             PatchWasHere();
 
             Log("Writing to output file...");
-            Module.Write(output.FullName);
+            Module.Write(output.FullName, WriterParameters);
 
             //TODO make this return a status code or something
         }
@@ -206,7 +231,7 @@ namespace MonoMod {
                 foreach (FileInfo f in Dir.GetFiles()) {
                     if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                         Log("Found "+f.Name+" , reading...");
-                        ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName, ReaderParameters);
+                        ModuleDefinition mod = ModuleDefinition.ReadModule(f.FullName, GenReaderParameters(f.FullName));
                         PrePatchModule(mod);
                         mods.Add(mod);
                     }
@@ -1468,7 +1493,7 @@ namespace MonoMod {
                 Log("debug: Dependency \"" + (fullName ?? name) + "\" not found; ignoring...");
                 return;
             }
-            ModuleDefinition module = ModuleDefinition.ReadModule(path, ReaderParameters);
+            ModuleDefinition module = ModuleDefinition.ReadModule(path, GenReaderParameters(path));
             Dependencies.Add(module);
             LoadBlacklist(module);
             Log("Dependency \""+fullName+"\" loaded.");
@@ -1796,6 +1821,43 @@ namespace MonoMod {
             mmo.Methods.Add(_mmoCtor);
             Module.Types.Add(mmo);
             return _mmoCtor;
+        }
+
+        public virtual ReaderParameters GenReaderParameters(string path) {
+            ReaderParameters _rp = ReaderParameters;
+            ReaderParameters rp = new ReaderParameters(_rp.ReadingMode);
+            rp.AssemblyResolver = _rp.AssemblyResolver;
+            rp.MetadataResolver = _rp.MetadataResolver;
+#if MONOMOD_CECIL_NEW
+            rp.MetadataImporterProvider = _rp.MetadataImporterProvider;
+            rp.ReflectionImporterProvider = _rp.ReflectionImporterProvider;
+#endif
+            rp.SymbolStream = _rp.SymbolStream;
+            rp.SymbolReaderProvider = _rp.SymbolReaderProvider;
+            rp.ReadSymbols = _rp.ReadSymbols;
+
+#if MONOMOD_DEBUGSYMS
+            if (File.Exists(Path.ChangeExtension(path, "pdb"))) {
+                rp.SymbolReaderProvider = new Mono.Cecil.Pdb.PdbReaderProvider();
+                rp.ReadSymbols = true;
+                if (path == In.FullName) {
+                    WriterParameters.SymbolWriterProvider = new Mono.Cecil.Pdb.PdbWriterProvider();
+                }
+            } else if (File.Exists(path + ".mdb")) {
+                rp.SymbolReaderProvider = new Mono.Cecil.Mdb.MdbReaderProvider();
+                rp.ReadSymbols = true;
+                if (path == In.FullName) {
+                    WriterParameters.SymbolWriterProvider = new Mono.Cecil.Mdb.MdbWriterProvider();
+                }
+            }
+
+            if (ModDebugSymbols) {
+                rp.SymbolReaderProvider = new MonoModSymbolReaderProvider(rp.SymbolReaderProvider);
+                rp.ReadSymbols = true;
+            }
+#endif
+
+            return rp;
         }
 
         /// <summary>
@@ -2140,5 +2202,101 @@ namespace MonoMod {
         }
 
     }
+
+    public static class MonoModExt {
+
+#if !MONOMOD_CECIL_NEW
+        public static TypeReference ImportReference(this ModuleDefinition m, TypeReference a) { return m.Import(a); }
+        public static FieldReference ImportReference(this ModuleDefinition m, System.Reflection.FieldInfo a) { return m.Import(a); }
+        public static MethodReference ImportReference(this ModuleDefinition m, System.Reflection.MethodBase a) { return m.Import(a); }
+        public static TypeReference ImportReference(this ModuleDefinition m, Type a) { return m.Import(a); }
+        public static MethodReference ImportReference(this ModuleDefinition m, MethodReference a) { return m.Import(a); }
+        public static FieldReference ImportReference(this ModuleDefinition m, FieldReference a) { return m.Import(a); }
+        public static FieldReference ImportReference(this ModuleDefinition m, FieldReference a, IGenericParameterProvider c) { return m.Import(a, c); }
+        public static TypeReference ImportReference(this ModuleDefinition m, TypeReference a, IGenericParameterProvider c) { return m.Import(a, c); }
+        public static MethodReference ImportReference(this ModuleDefinition m, System.Reflection.MethodBase a, IGenericParameterProvider c) { return m.Import(a, c); }
+        public static FieldReference ImportReference(this ModuleDefinition m, System.Reflection.FieldInfo a, IGenericParameterProvider c) { return m.Import(a, c); }
+        public static TypeReference ImportReference(this ModuleDefinition m, Type a, IGenericParameterProvider c) { return m.Import(a, c); }
+        public static MethodReference ImportReference(this ModuleDefinition m, MethodReference a, IGenericParameterProvider c) { return m.Import(a, c); }
+#endif
+
+    }
+
+#if MONOMOD_DEBUGSYMS
+    /// <summary>
+    /// MonoMod debug symbol "reader" provider.
+    /// </summary>
+    public class MonoModSymbolReaderProvider : ISymbolReaderProvider {
+        public ISymbolReaderProvider BaseReaderProvider;
+
+        public MonoModSymbolReaderProvider() { }
+        public MonoModSymbolReaderProvider(ISymbolReaderProvider baseReaderProvider) {
+            BaseReaderProvider = baseReaderProvider;
+        }
+
+        public ISymbolReader GetSymbolReader(ModuleDefinition module, string fileName) {
+            return new MonoModSymbolReader(module, BaseReaderProvider?.GetSymbolReader(module, fileName));
+        }
+
+        public ISymbolReader GetSymbolReader(ModuleDefinition module, Stream symbolStream) {
+            return new MonoModSymbolReader(module, BaseReaderProvider?.GetSymbolReader(module, symbolStream));
+        }
+    }
+
+    /// <summary>
+    /// MonoMod debug symbol "reader".
+    /// </summary>
+    public class MonoModSymbolReader : ISymbolReader {
+
+        public ModuleDefinition Module;
+        public Document Document;
+        public ISymbolReader BaseReader;
+
+        public MonoModSymbolReader(ModuleDefinition module, ISymbolReader baseReader = null) {
+            Module = module;
+            Document = new Document(module.Name + ".il");
+            Document.Language = DocumentLanguage.CSharp;
+            Document.LanguageVendor = DocumentLanguageVendor.Microsoft;
+            Document.Type = DocumentType.Text;
+            Document.HashAlgorithm = DocumentHashAlgorithm.None;
+        }
+
+        public bool ProcessDebugHeader(ImageDebugDirectory directory, byte[] header) {
+            if (BaseReader != null && !BaseReader.ProcessDebugHeader(directory, header)) {
+                BaseReader = null;
+            }
+            return true;
+        }
+
+        public void Read(MethodBody body, InstructionMapper mapper) {
+            BaseReader?.Read(body, mapper);
+            Map(body);
+        }
+
+        public void Read(MethodSymbols symbols) {
+            BaseReader?.Read(symbols);
+            Map(((MethodDefinition) Module.LookupToken(symbols.MethodToken.ToInt32())).Body);
+        }
+
+        public void Map(MethodBody body) {
+            Collection<Instruction> instructions = body.Instructions;
+            for (int i = 0; i < instructions.Count; i++) {
+                Instruction instruction = instructions[i];
+                if (instruction.SequencePoint != null) {
+                    continue;
+                }
+                instruction.SequencePoint = new SequencePoint(Document) {
+                    StartLine = instruction.Offset,
+                    EndLine = instruction.Offset,
+                    StartColumn = instruction.OpCode.Op1,
+                    EndColumn = instruction.OpCode.Op1,
+                };
+            }
+        }
+
+        public void Dispose() {
+        }
+    }
+#endif
 
 }

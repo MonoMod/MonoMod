@@ -1,5 +1,6 @@
 bin/
 obj/
 *.userprefs
+*.user
 .vscode/.browse.VC.db*
 .vs/

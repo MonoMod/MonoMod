@@ -6,7 +6,7 @@ public static class PlatformHelper {
 
     static PlatformHelper() {
         //for mono, get from
-        //static extern PlatformID Platform
+        //static extern Platf<ormID Platform
         PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
         string platID;
         if (property_platform != null) {
