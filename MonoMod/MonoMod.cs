@@ -137,7 +137,7 @@ namespace MonoMod {
             }
 
             if (loadDependencies && Dependencies.Count == 0 && Dir != null) {
-                //Seemingly obsolete as all the references are assembly references
+                // Module references seem to be native binary references...
                 /*Log("Reading module dependencies...");
                 for (int mi = 0; mi < Module.ModuleReferences.Count; mi++) {
                     LoadDependency(Module.ModuleReferences[mi]);
@@ -254,6 +254,12 @@ namespace MonoMod {
 
         public virtual void PrePatchModule(ModuleDefinition mod) {
             Module.AssemblyReferences.Add(mod.Assembly.Name);
+            for (int mi = 0; mi < mod.ModuleReferences.Count; mi++) {
+                if (Module.ModuleReferences.Contains(mod.ModuleReferences[mi])) {
+                    continue;
+                }
+                Module.ModuleReferences.Add(mod.ModuleReferences[mi]);
+            }
 
             for (int i = 0; i < mod.Types.Count; i++) {
                 PrePatchType(mod.Types[i]);
@@ -587,6 +593,8 @@ namespace MonoMod {
                     copy.IsIL = origMethod.IsIL;
                     copy.IsNative = origMethod.IsNative;
                     copy.PInvokeInfo = origMethod.PInvokeInfo;
+                    copy.IsPreserveSig = method.IsPreserveSig;
+                    copy.IsInternalCall = origMethod.IsInternalCall;
                     copy.IsPInvokeImpl = origMethod.IsPInvokeImpl;
 
                     for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
@@ -648,13 +656,14 @@ namespace MonoMod {
 
             if (origMethod != null) {
                 origMethod.Body = method.Body;
+                origMethod.IsManaged = method.IsManaged;
+                origMethod.IsIL = method.IsIL;
+                origMethod.IsNative = method.IsNative;
+                origMethod.PInvokeInfo = method.PInvokeInfo;
+                origMethod.IsPreserveSig = method.IsPreserveSig;
+                origMethod.IsInternalCall = method.IsInternalCall;
+                origMethod.IsPInvokeImpl = method.IsPInvokeImpl;
                 method = origMethod;
-                method.IsManaged = true;
-                method.IsIL = true;
-                method.IsNative = false;
-                method.PInvokeInfo = null;
-                method.IsInternalCall = false;
-                method.IsPInvokeImpl = false;
             } else {
                 MethodDefinition clone = new MethodDefinition(method.Name, (origMethodOrig ?? method).Attributes, Module.ImportReference(typeof(void)));
                 origType.Methods.Add(clone);
@@ -699,6 +708,13 @@ namespace MonoMod {
                 }
                 clone.ReturnType = FindType((origMethodOrig ?? method).ReturnType, clone);
                 clone.Body = method.Body;
+                clone.IsManaged = method.IsManaged;
+                clone.IsIL = method.IsIL;
+                clone.IsNative = method.IsNative;
+                clone.PInvokeInfo = method.PInvokeInfo;
+                clone.IsPreserveSig = method.IsPreserveSig;
+                clone.IsInternalCall = method.IsInternalCall;
+                clone.IsPInvokeImpl = method.IsPInvokeImpl;
                 method = clone;
             }
 
