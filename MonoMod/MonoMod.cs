@@ -35,6 +35,8 @@ namespace MonoMod {
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
+        public int CurrentRID = 0;
+
 #if MONOMOD_DEBUGSYMS
         public bool ModDebugSymbols = true;
 #endif
@@ -332,11 +334,11 @@ namespace MonoMod {
                 Module.Types.Add(newType);
             }
             TypesAdded.Add(typeName);
-            newType.MetadataToken = type.MetadataToken;
+            //newType.MetadataToken = type.MetadataToken;
             for (int i = 0; i < type.GenericParameters.Count; i++) {
                 newType.GenericParameters.Add(new GenericParameter(type.GenericParameters[i].Name, newType) {
                     Attributes = type.GenericParameters[i].Attributes,
-                    MetadataToken = type.GenericParameters[i].MetadataToken
+                    //MetadataToken = type.GenericParameters[i].MetadataToken
                 });
             }
             newType.PackingSize = type.PackingSize;
@@ -585,8 +587,9 @@ namespace MonoMod {
 
                     MethodDefinition copy = new MethodDefinition(origMethodOrigName, origMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, origMethod.ReturnType);
                     copy.DeclaringType = origMethod.DeclaringType;
-                    copy.MetadataToken = origMethod.MetadataToken;
-                    copy.Body = origMethod.Body;
+                    //copy.MetadataToken = origMethod.MetadataToken;
+                    copy.MetadataToken = GetMetadataToken(TokenType.Method);
+                    copy.Body = origMethod.Body.Clone(copy);
                     copy.Attributes = origMethod.Attributes;
                     copy.ImplAttributes = origMethod.ImplAttributes;
                     copy.IsManaged = origMethod.IsManaged;
@@ -600,7 +603,7 @@ namespace MonoMod {
                     for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
                         GenericParameter p = new GenericParameter(origMethod.GenericParameters[i].Name, copy) {
                             Attributes = origMethod.GenericParameters[i].Attributes,
-                            MetadataToken = origMethod.GenericParameters[i].MetadataToken
+                            //MetadataToken = origMethod.GenericParameters[i].MetadataToken
                         };
                         for (int pci = 0; pci < origMethod.GenericParameters[i].Constraints.Count; pci++) {
                             p.Constraints.Add(FindType(origMethod.GenericParameters[i].Constraints[pci], copy));
@@ -655,7 +658,7 @@ namespace MonoMod {
             Log("Storing method to main module...");
 
             if (origMethod != null) {
-                origMethod.Body = method.Body;
+                origMethod.Body = method.Body.Clone(origMethod);
                 origMethod.IsManaged = method.IsManaged;
                 origMethod.IsIL = method.IsIL;
                 origMethod.IsNative = method.IsNative;
@@ -666,8 +669,9 @@ namespace MonoMod {
                 method = origMethod;
             } else {
                 MethodDefinition clone = new MethodDefinition(method.Name, (origMethodOrig ?? method).Attributes, Module.ImportReference(typeof(void)));
+                clone.MetadataToken = GetMetadataToken(TokenType.Method);
                 origType.Methods.Add(clone);
-                clone.MetadataToken = (origMethodOrig ?? method).MetadataToken;
+                //clone.MetadataToken = (origMethodOrig ?? method).MetadataToken;
                 clone.CallingConvention = (origMethodOrig ?? method).CallingConvention;
                 clone.ExplicitThis = (origMethodOrig ?? method).ExplicitThis;
                 clone.MethodReturnType = (origMethodOrig ?? method).MethodReturnType;
@@ -707,7 +711,7 @@ namespace MonoMod {
                     clone.CustomAttributes.Add(ca);
                 }
                 clone.ReturnType = FindType((origMethodOrig ?? method).ReturnType, clone);
-                clone.Body = method.Body;
+                clone.Body = method.Body.Clone(clone);
                 clone.IsManaged = method.IsManaged;
                 clone.IsIL = method.IsIL;
                 clone.IsNative = method.IsNative;
@@ -1560,6 +1564,7 @@ namespace MonoMod {
             entryOld.Name = "orig_"+entryOld.Name;
 
             MethodDefinition entry = new MethodDefinition("Main", MethodAttributes.Public | MethodAttributes.Static, Module.ImportReference(typeof(void)));
+            entry.MetadataToken = GetMetadataToken(TokenType.Method);
             entry.Parameters.Add(new ParameterDefinition(Module.ImportReference(typeof(string[]))));
 
             MethodBody body = new MethodBody(entry);
@@ -1829,6 +1834,7 @@ namespace MonoMod {
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                 Module.TypeSystem.Void
             );
+            _mmoCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmoCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmoCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
                 typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
@@ -1868,12 +1874,19 @@ namespace MonoMod {
             }
 
             if (ModDebugSymbols) {
-                rp.SymbolReaderProvider = new MonoModSymbolReaderProvider(rp.SymbolReaderProvider);
+                rp.SymbolReaderProvider = new MonoModSymbolReaderProvider(this, rp.SymbolReaderProvider);
                 rp.ReadSymbols = true;
             }
 #endif
 
             return rp;
+        }
+
+        public virtual MetadataToken GetMetadataToken(TokenType type) {
+            while (Module.LookupToken(CurrentRID | (int) type) != null) {
+                ++CurrentRID;
+            }
+            return new MetadataToken(type, CurrentRID);
         }
 
         /// <summary>
@@ -2236,6 +2249,31 @@ namespace MonoMod {
         public static MethodReference ImportReference(this ModuleDefinition m, MethodReference a, IGenericParameterProvider c) { return m.Import(a, c); }
 #endif
 
+        public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
+            if (o == null) {
+                return null;
+            }
+
+            MethodBody c = new MethodBody(m);
+            c.MaxStackSize = o.MaxStackSize;
+            c.InitLocals = o.InitLocals;
+            c.LocalVarToken = o.LocalVarToken;
+
+            foreach (Instruction i in o.Instructions) {
+                c.Instructions.Add(i);
+            }
+            foreach (ExceptionHandler i in o.ExceptionHandlers) {
+                c.ExceptionHandlers.Add(i);
+            }
+            foreach (VariableDefinition i in o.Variables) {
+                c.Variables.Add(i);
+            }
+
+            c.Scope = o.Scope;
+
+            return c;
+        }
+
     }
 
 #if MONOMOD_DEBUGSYMS
@@ -2243,19 +2281,23 @@ namespace MonoMod {
     /// MonoMod debug symbol "reader" provider.
     /// </summary>
     public class MonoModSymbolReaderProvider : ISymbolReaderProvider {
+        public MonoMod MM;
         public ISymbolReaderProvider BaseReaderProvider;
 
-        public MonoModSymbolReaderProvider() { }
-        public MonoModSymbolReaderProvider(ISymbolReaderProvider baseReaderProvider) {
+        public MonoModSymbolReaderProvider(MonoMod mm) {
+            MM = mm;
+        }
+        public MonoModSymbolReaderProvider(MonoMod mm, ISymbolReaderProvider baseReaderProvider)
+            : this(mm) {
             BaseReaderProvider = baseReaderProvider;
         }
 
         public ISymbolReader GetSymbolReader(ModuleDefinition module, string fileName) {
-            return new MonoModSymbolReader(module, BaseReaderProvider?.GetSymbolReader(module, fileName));
+            return new MonoModSymbolReader(MM, module, BaseReaderProvider?.GetSymbolReader(module, fileName));
         }
 
         public ISymbolReader GetSymbolReader(ModuleDefinition module, Stream symbolStream) {
-            return new MonoModSymbolReader(module, BaseReaderProvider?.GetSymbolReader(module, symbolStream));
+            return new MonoModSymbolReader(MM, module, BaseReaderProvider?.GetSymbolReader(module, symbolStream));
         }
     }
 
@@ -2263,18 +2305,20 @@ namespace MonoMod {
     /// MonoMod debug symbol "reader".
     /// </summary>
     public class MonoModSymbolReader : ISymbolReader {
-
+        public MonoMod MM;
         public ModuleDefinition Module;
         public Document Document;
         public ISymbolReader BaseReader;
 
-        public MonoModSymbolReader(ModuleDefinition module, ISymbolReader baseReader = null) {
-            Module = module;
-            Document = new Document(module.Name + ".il");
+        public MonoModSymbolReader(MonoMod mm, ModuleDefinition module = null, ISymbolReader baseReader = null) {
+            MM = mm;
+            Module = module ?? mm.Module;
+            Document = new Document(Module.Name + ".il");
             Document.Language = DocumentLanguage.CSharp;
             Document.LanguageVendor = DocumentLanguageVendor.Microsoft;
             Document.Type = DocumentType.Text;
             Document.HashAlgorithm = DocumentHashAlgorithm.None;
+            BaseReader = baseReader;
         }
 
         public bool ProcessDebugHeader(ImageDebugDirectory directory, byte[] header) {
@@ -2311,6 +2355,7 @@ namespace MonoMod {
         }
 
         public void Dispose() {
+            BaseReader?.Dispose();
         }
     }
 #endif
