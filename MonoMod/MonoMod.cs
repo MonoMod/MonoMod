@@ -167,8 +167,6 @@ namespace MonoMod {
 
             PatchWasHere();
 
-            Dispose();
-
             Log("Writing to output file...");
             Module.Write(output.FullName, WriterParameters);
 
@@ -228,10 +226,10 @@ namespace MonoMod {
             Log("Replacing main EntryPoint...");
             Entry = PatchEntry(Module.EntryPoint);
 
+            List<ModuleDefinition> mods = new List<ModuleDefinition>();
             if (Dir != null) {
                 string fileName = In.Name.Substring(0, In.Name.LastIndexOf("."));
                 Log("Scanning for files matching "+fileName+".*.mm.dll ...");
-                List<ModuleDefinition> mods = new List<ModuleDefinition>();
                 foreach (FileInfo f in Dir.GetFiles()) {
                     if (f.Name.StartsWith(fileName) && f.Name.ToLower().EndsWith(".mm.dll")) {
                         Log("Found "+f.Name+" , reading...");
@@ -245,9 +243,6 @@ namespace MonoMod {
                 }
                 Log("Patching / fixing references...");
                 PatchRefs();
-                foreach (ModuleDefinition mod in mods) {
-                    mod.SymbolReader?.Dispose();
-                }
             }
 
             Optimize();
@@ -256,6 +251,9 @@ namespace MonoMod {
 
             if (write) {
                 Write();
+            }
+            foreach (ModuleDefinition mod in mods) {
+                mod.SymbolReader?.Dispose();
             }
         }
 
