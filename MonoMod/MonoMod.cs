@@ -12,7 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MonoMod {
-    public class MonoMod {
+    public class MonoMod : IDisposable {
 
         public readonly static List<BlacklistItem> GlobalBlacklist = new List<BlacklistItem>() {
             new BlacklistItem("Assembly-CSharp", "globalGameState.DemoVersion"), //MegaSphere first alpha demo
@@ -167,6 +167,8 @@ namespace MonoMod {
 
             PatchWasHere();
 
+            Dispose();
+
             Log("Writing to output file...");
             Module.Write(output.FullName, WriterParameters);
 
@@ -243,6 +245,9 @@ namespace MonoMod {
                 }
                 Log("Patching / fixing references...");
                 PatchRefs();
+                foreach (ModuleDefinition mod in mods) {
+                    mod.SymbolReader?.Dispose();
+                }
             }
 
             Optimize();
@@ -2228,6 +2233,13 @@ namespace MonoMod {
                 return;
             }
             Console.WriteLine(txt);
+        }
+
+        public virtual void Dispose() {
+            Module.SymbolReader?.Dispose();
+            foreach (ModuleDefinition dep in Dependencies) {
+                dep.SymbolReader?.Dispose();
+            }
         }
 
     }
