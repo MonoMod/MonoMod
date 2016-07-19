@@ -603,6 +603,8 @@ namespace MonoMod {
                     copy.IsInternalCall = origMethod.IsInternalCall;
                     copy.IsPInvokeImpl = origMethod.IsPInvokeImpl;
 
+                    copy.IsVirtual = false; // Fix SO when calling orig_ method, but orig_ method already defined higher up
+
                     for (int i = 0; i < origMethod.GenericParameters.Count; i++) {
                         GenericParameter p = new GenericParameter(origMethod.GenericParameters[i].Name, copy) {
                             Attributes = origMethod.GenericParameters[i].Attributes,
@@ -2234,10 +2236,13 @@ namespace MonoMod {
         }
 
         public virtual void Dispose() {
-            Module.SymbolReader?.Dispose();
+            Module?.SymbolReader?.Dispose();
             foreach (ModuleDefinition dep in Dependencies) {
                 dep.SymbolReader?.Dispose();
             }
+
+            Module = null;
+            Dependencies.Clear();
         }
 
     }
@@ -2333,6 +2338,7 @@ namespace MonoMod {
 
         public bool ProcessDebugHeader(ImageDebugDirectory directory, byte[] header) {
             if (BaseReader != null && !BaseReader.ProcessDebugHeader(directory, header)) {
+                BaseReader?.Dispose();
                 BaseReader = null;
             }
             return true;
