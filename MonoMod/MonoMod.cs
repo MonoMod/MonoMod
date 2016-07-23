@@ -2396,6 +2396,13 @@ namespace MonoMod {
                         instruction.SequencePoint.EndLine = next.EndLine;
                         instruction.SequencePoint.EndColumn = next.EndColumn;
                     }
+
+                    if (4 < instruction.SequencePoint.EndLine - instruction.SequencePoint.StartLine) {
+                        // Probably an error - use end data.
+                        instruction.SequencePoint.StartLine = instruction.SequencePoint.EndLine;
+                        instruction.SequencePoint.StartColumn = instruction.SequencePoint.EndColumn;
+                    }
+
                     continue;
                 }
                 instruction.SequencePoint = new SequencePoint(Document) {
