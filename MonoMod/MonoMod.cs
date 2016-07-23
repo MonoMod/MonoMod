@@ -37,6 +37,7 @@ namespace MonoMod {
 
         public int CurrentRID = 0;
 
+        public bool SkipOptimization = false;
 #if MONOMOD_DEBUGSYMS
         public bool ModDebugSymbols = true;
 #endif
@@ -177,6 +178,9 @@ namespace MonoMod {
         /// Runs some basic optimization (f.e. disables NoOptimization, removes nops)
         /// </summary>
         public virtual void Optimize() {
+            if (SkipOptimization) {
+                return;
+            }
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 TypeDefinition type = Module.Types[ti];
                 for (int mi = 0; mi < type.Methods.Count; mi++) {
