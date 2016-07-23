@@ -2342,6 +2342,8 @@ namespace MonoMod {
     /// MonoMod debug symbol "reader".
     /// </summary>
     public class MonoModSymbolReader : ISymbolReader {
+        public static bool MDBDEBUG = false;
+
         public MonoMod MM;
         public ModuleDefinition Module;
         public Document Document;
@@ -2397,10 +2399,19 @@ namespace MonoMod {
                         instruction.SequencePoint.EndColumn = next.EndColumn;
                     }
 
-                    if (4 < instruction.SequencePoint.EndLine - instruction.SequencePoint.StartLine) {
-                        // Probably an error - use end data.
+                    if (instruction.SequencePoint.StartLine != instruction.SequencePoint.EndLine) {
+                        // Maybe an error - use end data.
                         instruction.SequencePoint.StartLine = instruction.SequencePoint.EndLine;
                         instruction.SequencePoint.StartColumn = instruction.SequencePoint.EndColumn;
+                    }
+
+                    if (instruction.SequencePoint.Document.Url.EndsWith(".cs") && MDBDEBUG) {
+                        MM.Log(
+                            "MDBDEBUG " + body.Method.FullName + " [0x" + instruction.Offset.ToString("X8") + "]:" +
+                            instruction.SequencePoint.Document.Url + " @ " +
+                            instruction.SequencePoint.StartLine + ", " + instruction.SequencePoint.StartColumn + " - " +
+                            instruction.SequencePoint.EndLine + ", " + instruction.SequencePoint.EndColumn
+                        );
                     }
 
                     continue;
