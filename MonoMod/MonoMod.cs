@@ -2219,11 +2219,11 @@ namespace MonoMod {
             return (int) instr.Operand;
         }
 
-        protected virtual void Log(object obj) {
+        public virtual void Log(object obj) {
             Log(obj.ToString());
         }
 
-        protected virtual void Log(string txt) {
+        public virtual void Log(string txt) {
             if (Logger != null) {
                 Logger(txt);
                 return;
@@ -2287,6 +2287,28 @@ namespace MonoMod {
             c.Scope = o.Scope;
 
             return c;
+        }
+
+        public static bool IsHidden(this SequencePoint sp) {
+            return
+                sp.StartLine == 0xFEEFEE &&
+                sp.EndLine   == 0xFEEFEE &&
+                sp.StartColumn == 0 &&
+                sp.EndColumn   == 0;
+        }
+
+        public static Instruction PreviousUnhidden(this MethodBody body, int i) {
+            return body.NextUnhidden(i, -1);
+        }
+        public static Instruction NextUnhidden(this MethodBody body, int i, int dir = 1) {
+            for (int ii = i; 0 <= ii && ii < body.Instructions.Count; ii += dir) {
+                Instruction instruction = body.Instructions[ii];
+                if (instruction.SequencePoint == null || instruction.SequencePoint.IsHidden()) {
+                    continue;
+                }
+                return instruction;
+            }
+            return null;
         }
 
     }
@@ -2359,6 +2381,21 @@ namespace MonoMod {
             for (int i = 0; i < instructions.Count; i++) {
                 Instruction instruction = instructions[i];
                 if (instruction.SequencePoint != null) {
+                    if (instruction.SequencePoint.IsHidden()) {
+                        SequencePoint prev = body.PreviousUnhidden(i)?.SequencePoint;
+                        SequencePoint next = body.NextUnhidden(i)?.SequencePoint;
+                        prev = prev ?? next;
+                        next = next ?? prev;
+                        if (prev == null || next == null) {
+                            continue;
+                        }
+
+                        // If previous and next exist: Start on previous, end on next.
+                        instruction.SequencePoint.StartLine = prev.StartLine;
+                        instruction.SequencePoint.StartColumn = prev.StartColumn;
+                        instruction.SequencePoint.EndLine = next.EndLine;
+                        instruction.SequencePoint.EndColumn = next.EndColumn;
+                    }
                     continue;
                 }
                 instruction.SequencePoint = new SequencePoint(Document) {

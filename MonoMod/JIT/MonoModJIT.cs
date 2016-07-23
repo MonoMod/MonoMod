@@ -409,12 +409,14 @@ namespace MonoMod.JIT
             return null;
         }
         
-        protected override void Log(string txt) {
+        public override void Log(string txt) {
             if (Logger != null) {
                 Logger(txt);
+                return;
             }
             if (DefaultLogger != null) {
                 DefaultLogger(txt);
+                return;
             }
             //default: nop (originally Console.WriteLine)
         }
