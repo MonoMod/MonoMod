@@ -259,6 +259,9 @@ namespace MonoMod {
             }
             foreach (ModuleDefinition mod in mods) {
                 mod.SymbolReader?.Dispose();
+#if MONOMOD_CECIL_NEW
+                mod.Dispose();
+#endif
             }
         }
 
@@ -2262,8 +2265,14 @@ namespace MonoMod {
 
         public virtual void Dispose() {
             Module?.SymbolReader?.Dispose();
+            #if MONOMOD_CECIL_NEW
+            Module?.Dispose();
+            #endif
             foreach (ModuleDefinition dep in Dependencies) {
                 dep.SymbolReader?.Dispose();
+                #if MONOMOD_CECIL_NEW
+                dep.Dispose();
+                #endif
             }
 
             Module = null;
