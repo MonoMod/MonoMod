@@ -1,5 +1,6 @@
 ﻿// #define MONOMOD_DEBUGSYMS
 // #define MONOMOD_CECIL_NEW
+// #define MONOMOD_CECIL_INTERNAL
 
 using System;
 using Mono.Cecil;
@@ -2398,7 +2399,12 @@ namespace MonoMod {
                 }
             }
             
-            MethodBody body = method.Body;
+            MethodBody body =
+#if MONOMOD_CECIL_INTERNAL
+            method.body;
+#else
+            null;
+#endif
             if (body == null || info != null) {
                 return info;
             }
