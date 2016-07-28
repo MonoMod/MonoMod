@@ -1,4 +1,4 @@
-﻿#define MONOMOD_DEBUGSYMS
+﻿// #define MONOMOD_DEBUGSYMS
 // #define MONOMOD_CECIL_NEW
 
 using System;
@@ -808,9 +808,29 @@ namespace MonoMod {
                             origType.GenericParameters[i].Constraints.Add(FindType(type.GenericParameters[i].Constraints[pci], origType));
                         }
                     }
+#if !MONOMOD_CECIL_NEW
                     for (int i = 0; i < type.Interfaces.Count; i++) {
                         origType.Interfaces.Add(FindType(type.Interfaces[i], origType, true));
                     }
+#else
+                    for (int i = 0; i < type.Interfaces.Count; i++) {
+                        InterfaceImplementation interf = new InterfaceImplementation(FindType(type.Interfaces[i].InterfaceType, origType, true));
+                        for (int cai = 0; cai < type.Interfaces[i].CustomAttributes.Count; cai++) {
+                            CustomAttribute oca = type.Interfaces[i].CustomAttributes[cai];
+                            CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, origType, true), oca.GetBlob());
+                            for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
+                                //TODO do more with the attributes
+                                CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
+                                ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, origType, true),
+                                    ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, origType, true) :
+                                    ocaa.Value
+                                ));
+                            }
+                            interf.CustomAttributes.Add(ca);
+                        }
+                        origType.Interfaces.Add(interf);
+                    }
+#endif
                     for (int cai = 0; cai < type.CustomAttributes.Count; cai++) {
                         CustomAttribute oca = type.CustomAttributes[cai];
                         CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, origType, true), oca.GetBlob());
@@ -2288,7 +2308,9 @@ namespace MonoMod {
                 c.Variables.Add(i);
             }
 
+#if !MONOMOD_CECIL_NEW
             c.Scope = o.Scope;
+#endif
 
             return c;
         }
@@ -2299,20 +2321,6 @@ namespace MonoMod {
                 sp.EndLine   == 0xFEEFEE &&
                 sp.StartColumn == 0 &&
                 sp.EndColumn   == 0;
-        }
-
-        public static Instruction PreviousUnhidden(this MethodBody body, int i) {
-            return body.NextUnhidden(i, -1);
-        }
-        public static Instruction NextUnhidden(this MethodBody body, int i, int dir = 1) {
-            for (int ii = i; 0 <= ii && ii < body.Instructions.Count; ii += dir) {
-                Instruction instruction = body.Instructions[ii];
-                if (instruction.SequencePoint == null || instruction.SequencePoint.IsHidden()) {
-                    continue;
-                }
-                return instruction;
-            }
-            return null;
         }
 
     }
@@ -2372,61 +2380,42 @@ namespace MonoMod {
             return true;
         }
 
-        public void Read(MethodBody body, InstructionMapper mapper) {
-            BaseReader?.Read(body, mapper);
-            Map(body);
-        }
-
-        public void Read(MethodSymbols symbols) {
-            BaseReader?.Read(symbols);
-            Map(((MethodDefinition) Module.LookupToken(symbols.MethodToken.ToInt32())).Body);
-        }
-
-        public void Map(MethodBody body) {
+        public MethodDebugInformation Read(MethodDefinition method) {
+            MethodDebugInformation info = BaseReader?.Read(method);
+            
+            if (info != null && MDBDEBUG) {
+                Collection<SequencePoint> points = info.SequencePoints;
+                for (int i = 0; i < points.Count; i++) {
+                    SequencePoint point = points[i];
+                    if (point.Document.Url.EndsWith(".cs")) {
+                        MM.Log(
+                            "MDBDEBUG " + method.FullName + " [0x" + point.Offset.ToString("X8") + "]:" +
+                            point.Document.Url + " @ " +
+                            point.StartLine + ", " + point.StartColumn + " - " +
+                            point.EndLine + ", " + point.EndColumn
+                        );
+                    }
+                }
+            }
+            
+            MethodBody body = method.Body;
+            if (body == null || info != null) {
+                return info;
+            }
+            
+            info = new MethodDebugInformation(method);
             Collection<Instruction> instructions = body.Instructions;
             for (int i = 0; i < instructions.Count; i++) {
                 Instruction instruction = instructions[i];
-                if (instruction.SequencePoint != null) {
-                    if (instruction.SequencePoint.IsHidden()) {
-                        SequencePoint prev = body.PreviousUnhidden(i)?.SequencePoint;
-                        SequencePoint next = body.NextUnhidden(i)?.SequencePoint;
-                        prev = prev ?? next;
-                        next = next ?? prev;
-                        if (prev == null || next == null) {
-                            continue;
-                        }
-
-                        // If previous and next exist: Start on previous, end on next.
-                        instruction.SequencePoint.StartLine = prev.StartLine;
-                        instruction.SequencePoint.StartColumn = prev.StartColumn;
-                        instruction.SequencePoint.EndLine = next.EndLine;
-                        instruction.SequencePoint.EndColumn = next.EndColumn;
-                    }
-
-                    if (instruction.SequencePoint.StartLine != instruction.SequencePoint.EndLine) {
-                        // Maybe an error - use end data.
-                        instruction.SequencePoint.StartLine = instruction.SequencePoint.EndLine;
-                        instruction.SequencePoint.StartColumn = instruction.SequencePoint.EndColumn;
-                    }
-
-                    if (instruction.SequencePoint.Document.Url.EndsWith(".cs") && MDBDEBUG) {
-                        MM.Log(
-                            "MDBDEBUG " + body.Method.FullName + " [0x" + instruction.Offset.ToString("X8") + "]:" +
-                            instruction.SequencePoint.Document.Url + " @ " +
-                            instruction.SequencePoint.StartLine + ", " + instruction.SequencePoint.StartColumn + " - " +
-                            instruction.SequencePoint.EndLine + ", " + instruction.SequencePoint.EndColumn
-                        );
-                    }
-
-                    continue;
-                }
-                instruction.SequencePoint = new SequencePoint(Document) {
+                info.SequencePoints.Add(new SequencePoint(instruction.Offset, Document) {
                     StartLine = instruction.Offset,
                     EndLine = instruction.Offset,
                     StartColumn = instruction.OpCode.Op1,
                     EndColumn = instruction.OpCode.Op1,
-                };
+                });
             }
+            
+            return info;
         }
 
         public void Dispose() {
