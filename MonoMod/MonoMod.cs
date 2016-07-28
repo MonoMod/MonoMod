@@ -2266,9 +2266,9 @@ namespace MonoMod {
         public virtual void Dispose() {
             Module?.SymbolReader?.Dispose();
             #if MONOMOD_CECIL_NEW
-			AssemblyResolver.Dispose();
-			AssemblyResolver = null;
             Module?.Dispose();
+            AssemblyResolver?.Dispose();
+            AssemblyResolver = null;
             #endif
             foreach (ModuleDefinition dep in Dependencies) {
                 dep.SymbolReader?.Dispose();
