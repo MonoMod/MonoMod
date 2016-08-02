@@ -848,7 +848,16 @@ namespace MonoMod {
                         }
                         origType.CustomAttributes.Add(ca);
                     }
-                    origType.BaseType = type.BaseType == null ? null : FindType(type.BaseType, origType, true);
+                    if (type.BaseType == null) {
+                        origType.BaseType = null;
+                    } else {
+                        TypeDefinition basePrefixless = Module.GetType(RemovePrefixes(type.BaseType.FullName, type.BaseType));
+                        if (basePrefixless != null) {
+                            origType.BaseType = basePrefixless;
+                        } else {
+                            origType.BaseType = FindType(type.BaseType, origType, true);
+                        }
+                    }
                 }
                 for (int ii = 0; ii < type.Methods.Count; ii++) {
                     MethodDefinition method = type.Methods[ii];
