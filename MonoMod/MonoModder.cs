@@ -269,7 +269,7 @@ namespace MonoMod {
         public virtual void PrePatchType(TypeDefinition type) {
             string typeName = RemovePrefixes(type.FullName, type);
 
-            if (type.HasAttribute("MonoModIgnore") ||
+            if (type.HasMMAttribute("Ignore") ||
                 !type.MatchingPlatform()) {
                 PrePatchNested(type);
                 return;
@@ -278,7 +278,7 @@ namespace MonoMod {
             // Check if type exists in target module.
             TypeReference targetType = Module.GetType(typeName, false);
             TypeDefinition targetTypeDef = targetType?.Resolve();
-            if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasAttribute("MonoModRemove"))) {
+            if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove"))) {
                 Module.Types.Remove(targetTypeDef);
                 return;
             }
@@ -289,6 +289,7 @@ namespace MonoMod {
             Log($"[PrePatchType] Adding {typeName} to the target module.");
 
             TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, null);
+            newType.AddAttribute(GetMonoModAddedCtor());
             newType.ClassSize = type.ClassSize;
             if (type.DeclaringType != null) {
                 newType.DeclaringType = Relink(type.DeclaringType).Resolve();
@@ -333,7 +334,7 @@ namespace MonoMod {
             string typeName = RemovePrefixes(type.FullName, type);
             Log($"[PatchType] Patching type {typeName} (prefixed: {type.FullName})");
 
-            if (type.HasAttribute("MonoModIgnore") ||
+            if (type.HasMMAttribute("Ignore") ||
                 !type.MatchingPlatform()) {
                 PatchNested(type);
                 return;
@@ -345,13 +346,14 @@ namespace MonoMod {
 
             // Add "new" custom attributes
             foreach (CustomAttribute attrib in type.CustomAttributes)
-                if (!targetTypeDef.HasAttribute(attrib.AttributeType.FullName))
+                if (!targetTypeDef.HasCustomAttribute(attrib.AttributeType.FullName))
                     targetTypeDef.CustomAttributes.Add(Relink(attrib));
 
             foreach (PropertyDefinition prop in type.Properties) {
                 if (!targetTypeDef.HasProperty(prop)) {
                     // Add missing property
                     PropertyDefinition newProp = new PropertyDefinition(prop.Name, prop.Attributes, Relink(prop.PropertyType));
+                    newProp.AddAttribute(GetMonoModAddedCtor());
 
                     foreach (CustomAttribute attrib in prop.CustomAttributes)
                         newProp.CustomAttributes.Add(Relink(attrib));
@@ -363,21 +365,21 @@ namespace MonoMod {
                 }
 
                 MethodDefinition getter = prop.GetMethod;
-                if (getter != null && !getter.HasAttribute("MonoModIgnore") && getter.MatchingPlatform())
+                if (getter != null && !getter.HasMMAttribute("Ignore") && getter.MatchingPlatform())
                     PatchMethod(getter);
 
                 MethodDefinition setter = prop.SetMethod;
-                if (setter != null && !setter.HasAttribute("MonoModIgnore") && setter.MatchingPlatform())
+                if (setter != null && !setter.HasMMAttribute("Ignore") && setter.MatchingPlatform())
                     PatchMethod(setter);
             }
 
             foreach (MethodDefinition method in type.Methods) {
-                if (!AllowedSpecialName(method) || method.HasAttribute("MonoModIgnore") || !method.MatchingPlatform())
+                if (!AllowedSpecialName(method) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
                     continue;
                 PatchMethod(method);
             }
 
-            if (type.HasAttribute("MonoModEnumReplace")) {
+            if (type.HasMMAttribute("EnumReplace")) {
                 for (int ii = 0; ii < targetTypeDef.Fields.Count;) {
                     if (targetTypeDef.Fields[ii].Name == "value__") {
                         ii++;
@@ -389,12 +391,13 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (field.HasAttribute("MonoModIgnore") || field.HasAttribute("MonoModNoNew") || !field.MatchingPlatform())
+                if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || !field.MatchingPlatform())
                     continue;
 
                 if (type.HasField(field)) continue;
 
                 FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, Relink(field.FieldType));
+                newField.AddAttribute(GetMonoModAddedCtor());
                 newField.InitialValue = field.InitialValue;
                 newField.Constant = field.Constant;
                 foreach (CustomAttribute attrib in field.CustomAttributes)
@@ -412,8 +415,124 @@ namespace MonoMod {
         }
         #endregion
 
+        #region MonoMod injected types
+        protected MethodDefinition _mmOriginalCtor;
+        public virtual MethodReference GetMonoModOriginalCtor() {
+            if (_mmOriginalCtor != null && _mmOriginalCtor.Module != Module) {
+                _mmOriginalCtor = null;
+            }
+            if (_mmOriginalCtor != null) {
+                return _mmOriginalCtor;
+            }
+
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModOriginal") {
+                    TypeDefinition type = Module.Types[ti];
+                    for (int mi = 0; mi < type.Methods.Count; mi++) {
+                        if (!type.Methods[mi].IsConstructor || type.Methods[mi].IsStatic) {
+                            continue;
+                        }
+                        return _mmOriginalCtor = type.Methods[mi];
+                    }
+                }
+            }
+            TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModOriginal", TypeAttributes.Public | TypeAttributes.Class) {
+                BaseType = Module.ImportReference(typeof(Attribute))
+            };
+            _mmOriginalCtor = new MethodDefinition(".ctor",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                Module.TypeSystem.Void
+            );
+            _mmOriginalCtor.MetadataToken = GetMetadataToken(TokenType.Method);
+            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+            )));
+            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+            attrType.Methods.Add(_mmOriginalCtor);
+            Module.Types.Add(attrType);
+            return _mmOriginalCtor;
+        }
+
+        protected MethodDefinition _mmAddedCtor;
+        public virtual MethodReference GetMonoModAddedCtor() {
+            if (_mmAddedCtor != null && _mmAddedCtor.Module != Module) {
+                _mmAddedCtor = null;
+            }
+            if (_mmAddedCtor != null) {
+                return _mmAddedCtor;
+            }
+
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModAdded") {
+                    TypeDefinition type = Module.Types[ti];
+                    for (int mi = 0; mi < type.Methods.Count; mi++) {
+                        if (!type.Methods[mi].IsConstructor || type.Methods[mi].IsStatic) {
+                            continue;
+                        }
+                        return _mmAddedCtor = type.Methods[mi];
+                    }
+                }
+            }
+            Log("Adding MonoMod.MonoModOriginal");
+            TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModAdded", TypeAttributes.Public | TypeAttributes.Class) {
+                BaseType = Module.ImportReference(typeof(Attribute))
+            };
+            _mmAddedCtor = new MethodDefinition(".ctor",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                Module.TypeSystem.Void
+            );
+            _mmAddedCtor.MetadataToken = GetMetadataToken(TokenType.Method);
+            _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+            _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+            )));
+            _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+            attrType.Methods.Add(_mmAddedCtor);
+            Module.Types.Add(attrType);
+            return _mmAddedCtor;
+        }
+        #endregion
+
 
         #region Helper methods
+        /// <summary>
+        /// Creates a new non-conflicting MetadataToken.
+        /// </summary>
+        /// <param name="type">The type of the new token.</param>
+        /// <returns>A MetadataToken with an unique RID for the target module.</returns>
+        public virtual MetadataToken GetMetadataToken(TokenType type) {
+            while (Module.LookupToken(CurrentRID | (int) type) != null) {
+                ++CurrentRID;
+            }
+            return new MetadataToken(type, CurrentRID);
+        }
+
+        /// <summary>
+        /// Checks if the method has a special name that is "allowed" to be patched.
+        /// </summary>
+        /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
+        /// <param name="method">Method to check.</param>
+        public virtual bool AllowedSpecialName(MethodDefinition method) {
+            if (method.DeclaringType.HasMMAttribute("Added")) {
+                return true;
+            }
+
+            if (method.IsConstructor && (method.HasCustomAttributes || method.IsStatic)) {
+                if (method.IsStatic) {
+                    return true;
+                }
+                // Overriding the constructor manually is generally a horrible idea, but who knows where it may be used.
+                if (method.HasMMAttribute("Constructor")) return true;
+            }
+
+            if (method.IsGetter || method.IsSetter) {
+                return true;
+            }
+
+            return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
+        }
+
         /// <summary>
         /// Removes all MonoMod prefixes from the given string and its type definition.
         /// </summary>

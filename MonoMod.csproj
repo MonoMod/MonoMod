@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="MonoMod\Attributes\MonoModNoNew.cs" />
     <Compile Include="MonoMod\Attributes\MonoModOnPlatform.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModAdded.cs" />
     <Compile Include="MonoMod\Attributes\MonoModOriginal.cs" />
     <Compile Include="MonoMod\Attributes\MonoModOriginalName.cs" />
     <Compile Include="MonoMod\MonoModder.cs" />

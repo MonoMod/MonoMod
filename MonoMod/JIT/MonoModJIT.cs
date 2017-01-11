@@ -125,7 +125,7 @@ namespace MonoMod.JIT
         public void SetData(string name, byte[] data) {
             MethodDefinition jitData = GetDataMethod();
             if (jitData == null) {
-                jitData = new MethodDefinition("MonoModJIT_Data", Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static, Module.Import(typeof(void)));
+                jitData = new MethodDefinition("MonoModJIT_Data", Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static, Module.ImportReference(typeof(void)));
                 jitData.Body = new Mono.Cecil.Cil.MethodBody(jitData);
                 jitData.Body.GetILProcessor().Emit(Mono.Cecil.Cil.OpCodes.Ret);
                 

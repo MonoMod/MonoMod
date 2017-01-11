@@ -43,21 +43,32 @@ namespace MonoMod {
                 sp.EndColumn == 0;
         }
 
+        public static void AddAttribute(this ICustomAttributeProvider cap, MethodReference constructor)
+            => cap.AddAttribute(new CustomAttribute(constructor));
+        public static void AddAttribute(this ICustomAttributeProvider cap, CustomAttribute attr)
+            => cap.CustomAttributes.Add(attr);
+
         /// <summary>
         /// Determines if the attribute provider has got a specific MonoMod attribute.
         /// </summary>
-        /// <returns><c>true</c> if the type contains the given MonoMod attribute, <c>false</c> otherwise.</returns>
-        /// <param name="type">Type.</param>
+        /// <returns><c>true</c> if the attribute provider contains the given MonoMod attribute, <c>false</c> otherwise.</returns>
+        /// <param name="cap">Attribute provider to check.</param>
         /// <param name="attribute">Attribute.</param>
-        public static bool HasAttribute(this ICustomAttributeProvider cap, string attribute) {
-            if (cap == null) return false;
-            if (!cap.HasCustomAttributes) return false;
-            foreach (CustomAttribute attrib in cap.CustomAttributes) {
-                if (attrib.AttributeType.Name == attribute ||
-                    attrib.AttributeType.FullName == attribute) {
+        public static bool HasMMAttribute(this ICustomAttributeProvider cap, string attribute) {
+            return cap.HasCustomAttribute("MonoMod.MonoMod" + attribute);
+        }
+
+        /// <summary>
+        /// Determines if the attribute provider has got a specific custom attribute.
+        /// </summary>
+        /// <returns><c>true</c> if the attribute provider contains the given custom attribute, <c>false</c> otherwise.</returns>
+        /// <param name="cap">Attribute provider to check.</param>
+        /// <param name="attribute">Attribute.</param>
+        public static bool HasCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
+            if (cap == null || !cap.HasCustomAttributes) return false;
+            foreach (CustomAttribute attrib in cap.CustomAttributes)
+                if (attrib.AttributeType.FullName == attribute)
                     return true;
-                }
-            }
             return false;
         }
 

@@ -103,31 +103,6 @@ namespace MonoMod {
             Out = new FileInfo(input.FullName.Substring(0, input.FullName.Length-4)+".mm.exe");
         }
 
-#if !MONOMOD_NO_ENTRY
-        public static void Main(string[] args) {
-            Console.WriteLine("MonoMod "+System.Reflection.Assembly.GetCallingAssembly().GetName().Version);
-
-            if (args.Length == 2) {
-                Console.WriteLine("Parsing command: " + args[0]);
-                if (args[0] == "feed") {
-                    Feed.Me(args[1]);
-                } else {
-                    Console.WriteLine("Unknown command: " + args[0]);
-                }
-                return;
-            }
-
-            if (args.Length != 1) {
-                Console.WriteLine("No valid arguments (executable path) passed.");
-                return;
-            }
-
-            MonoMod_old mm = new MonoMod_old(args[0]);
-
-            mm.AutoPatch();
-        }
-#endif
-
         /// <summary>
         /// Reads the main assembly to mod.
         /// </summary>
