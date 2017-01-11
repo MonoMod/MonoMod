@@ -29,48 +29,55 @@
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Mono.Cecil, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <HintPath>packages\Mono.Cecil.0.9.6.1\lib\net40\Mono.Cecil.dll</HintPath>
+    <Reference Include="Mono.Cecil, Version=0.10.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>packages\Mono.Cecil.0.10.0-beta1-v2\lib\net40\Mono.Cecil.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Mono.Cecil.Mdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <HintPath>packages\Mono.Cecil.0.9.6.1\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
+    <Reference Include="Mono.Cecil.Mdb, Version=0.10.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>packages\Mono.Cecil.0.10.0-beta1-v2\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Mono.Cecil.Pdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <HintPath>packages\Mono.Cecil.0.9.6.1\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
+    <Reference Include="Mono.Cecil.Pdb, Version=0.10.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>packages\Mono.Cecil.0.10.0-beta1-v2\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks, Version=0.10.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>packages\Mono.Cecil.0.10.0-beta1-v2\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MonoMod\MonoModNoNew.cs" />
-    <Compile Include="MonoMod\MonoModOnPlatform.cs" />
-    <Compile Include="MonoMod\MonoModOriginal.cs" />
-    <Compile Include="MonoMod\MonoModOriginalName.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModNoNew.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModOnPlatform.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModOriginal.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModOriginalName.cs" />
+    <Compile Include="MonoMod\MonoModder.cs" />
+    <Compile Include="MonoMod\MonoModExt.cs" />
     <Compile Include="MonoMod\Platform.cs" />
     <Compile Include="MonoMod\PlatformHelper.cs" />
+    <Compile Include="MonoMod\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MonoMod\QuickAndDirty.cs" />
-    <Compile Include="MonoMod\MonoModIgnore.cs" />
-    <Compile Include="MonoMod\MonoMod.cs" />
-    <Compile Include="MonoMod\MonoModRemove.cs" />
-    <Compile Include="MonoMod\MonoModReplace.cs" />
-    <Compile Include="MonoMod\MonoModConstructor.cs" />
-    <Compile Include="MonoMod\MonoModLinkTo.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModIgnore.cs" />
+    <Compile Include="MonoMod\MonoMod_old.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModRemove.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModReplace.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModConstructor.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModLinkTo.cs" />
     <Compile Include="MonoMod\BlacklistItem.cs" />
     <Compile Include="MonoMod\MonoModBlacklist.cs" />
-    <Compile Include="MonoMod\MonoModBlacklisted.cs" />
-    <Compile Include="MonoMod\MonoModEnumReplace.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModBlacklisted.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModEnumReplace.cs" />
     <Compile Include="MonoMod\JIT\MonoModJIT.cs" />
     <Compile Include="MonoMod\JIT\MonoModJITPseudoException.cs" />
     <Compile Include="MonoMod\JIT\MonoModJITHandler.cs" />
     <Compile Include="MonoMod\JIT\MonoModJITPatched.cs" />
     <Compile Include="MonoMod\JIT\ReflectionHelper.cs" />
-    <Compile Include="MonoMod\MonoModInline.cs" />
+    <Compile Include="MonoMod\Attributes\MonoModInline.cs" />
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

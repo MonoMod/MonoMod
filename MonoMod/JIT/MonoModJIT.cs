@@ -13,7 +13,7 @@ namespace MonoMod.JIT
     /// <summary>
     /// Class that does black magic at runtime.
     /// </summary>
-    public class MonoModJIT : MonoMod {
+    public class MonoModJIT : MonoMod_old {
 
         private readonly Dictionary<MethodDefinition, DynamicMethodDelegate> CacheParsed = new Dictionary<MethodDefinition, DynamicMethodDelegate>();
         private readonly Dictionary<Type, TypeDefinition> CacheTypeDefs = new Dictionary<Type, TypeDefinition>();
@@ -295,7 +295,7 @@ namespace MonoMod.JIT
         }
 
         public MethodDefinition GetPatched(MethodDefinition method) {
-            if (MonoMod.HasAttribute(method, "JIT.MonoModJITPatched")) {
+            if (HasAttribute(method, "JIT.MonoModJITPatched")) {
                 return method;
             }
 

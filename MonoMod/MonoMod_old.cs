@@ -1,5 +1,4 @@
 ﻿// #define MONOMOD_DEBUGSYMS
-// #define MONOMOD_CECIL_NEW
 // #define MONOMOD_CECIL_INTERNAL
 
 using System;
@@ -13,7 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MonoMod {
-    public class MonoMod : IDisposable {
+    public class MonoMod_old : IDisposable {
 
         public readonly static List<BlacklistItem> GlobalBlacklist = new List<BlacklistItem>() {
             new BlacklistItem("Assembly-CSharp", "globalGameState.DemoVersion"), //MegaSphere first alpha demo
@@ -90,14 +89,14 @@ namespace MonoMod {
             }
         }
 
-        public MonoMod() {
+        public MonoMod_old() {
         }
 
-        public MonoMod(string input)
+        public MonoMod_old(string input)
             : this(new FileInfo(input)) {
         }
 
-        public MonoMod(FileInfo input)
+        public MonoMod_old(FileInfo input)
             : this() {
             In = input;
             Dir = input.Directory;
@@ -123,7 +122,7 @@ namespace MonoMod {
                 return;
             }
 
-            MonoMod mm = new MonoMod(args[0]);
+            MonoMod_old mm = new MonoMod_old(args[0]);
 
             mm.AutoPatch();
         }
@@ -259,9 +258,7 @@ namespace MonoMod {
             }
             foreach (ModuleDefinition mod in mods) {
                 mod.SymbolReader?.Dispose();
-#if MONOMOD_CECIL_NEW
                 mod.Dispose();
-#endif
             }
         }
 
@@ -812,11 +809,6 @@ namespace MonoMod {
                             origType.GenericParameters[i].Constraints.Add(FindType(type.GenericParameters[i].Constraints[pci], origType));
                         }
                     }
-#if !MONOMOD_CECIL_NEW
-                    for (int i = 0; i < type.Interfaces.Count; i++) {
-                        origType.Interfaces.Add(FindType(type.Interfaces[i], origType, true));
-                    }
-#else
                     for (int i = 0; i < type.Interfaces.Count; i++) {
                         InterfaceImplementation interf = new InterfaceImplementation(FindType(type.Interfaces[i].InterfaceType, origType, true));
                         for (int cai = 0; cai < type.Interfaces[i].CustomAttributes.Count; cai++) {
@@ -834,7 +826,6 @@ namespace MonoMod {
                         }
                         origType.Interfaces.Add(interf);
                     }
-#endif
                     for (int cai = 0; cai < type.CustomAttributes.Count; cai++) {
                         CustomAttribute oca = type.CustomAttributes[cai];
                         CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, origType, true), oca.GetBlob());
@@ -1892,10 +1883,8 @@ namespace MonoMod {
             ReaderParameters rp = new ReaderParameters(_rp.ReadingMode);
             rp.AssemblyResolver = _rp.AssemblyResolver;
             rp.MetadataResolver = _rp.MetadataResolver;
-#if MONOMOD_CECIL_NEW
             rp.MetadataImporterProvider = _rp.MetadataImporterProvider;
             rp.ReflectionImporterProvider = _rp.ReflectionImporterProvider;
-#endif
             rp.SymbolStream = _rp.SymbolStream;
             rp.SymbolReaderProvider = _rp.SymbolReaderProvider;
             rp.ReadSymbols = _rp.ReadSymbols;
@@ -2274,74 +2263,16 @@ namespace MonoMod {
 
         public virtual void Dispose() {
             Module?.SymbolReader?.Dispose();
-            #if MONOMOD_CECIL_NEW
             Module?.Dispose();
             AssemblyResolver?.Dispose();
             AssemblyResolver = null;
-            #endif
             foreach (ModuleDefinition dep in Dependencies) {
                 dep.SymbolReader?.Dispose();
-                #if MONOMOD_CECIL_NEW
                 dep.Dispose();
-                #endif
             }
 
             Module = null;
             Dependencies.Clear();
-        }
-
-    }
-
-    public static class MonoModExt {
-
-#if !MONOMOD_CECIL_NEW
-        public static TypeReference ImportReference(this ModuleDefinition m, TypeReference a) { return m.Import(a); }
-        public static FieldReference ImportReference(this ModuleDefinition m, System.Reflection.FieldInfo a) { return m.Import(a); }
-        public static MethodReference ImportReference(this ModuleDefinition m, System.Reflection.MethodBase a) { return m.Import(a); }
-        public static TypeReference ImportReference(this ModuleDefinition m, Type a) { return m.Import(a); }
-        public static MethodReference ImportReference(this ModuleDefinition m, MethodReference a) { return m.Import(a); }
-        public static FieldReference ImportReference(this ModuleDefinition m, FieldReference a) { return m.Import(a); }
-        public static FieldReference ImportReference(this ModuleDefinition m, FieldReference a, IGenericParameterProvider c) { return m.Import(a, c); }
-        public static TypeReference ImportReference(this ModuleDefinition m, TypeReference a, IGenericParameterProvider c) { return m.Import(a, c); }
-        public static MethodReference ImportReference(this ModuleDefinition m, System.Reflection.MethodBase a, IGenericParameterProvider c) { return m.Import(a, c); }
-        public static FieldReference ImportReference(this ModuleDefinition m, System.Reflection.FieldInfo a, IGenericParameterProvider c) { return m.Import(a, c); }
-        public static TypeReference ImportReference(this ModuleDefinition m, Type a, IGenericParameterProvider c) { return m.Import(a, c); }
-        public static MethodReference ImportReference(this ModuleDefinition m, MethodReference a, IGenericParameterProvider c) { return m.Import(a, c); }
-#endif
-
-        public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
-            if (o == null) {
-                return null;
-            }
-
-            MethodBody c = new MethodBody(m);
-            c.MaxStackSize = o.MaxStackSize;
-            c.InitLocals = o.InitLocals;
-            c.LocalVarToken = o.LocalVarToken;
-
-            foreach (Instruction i in o.Instructions) {
-                c.Instructions.Add(i);
-            }
-            foreach (ExceptionHandler i in o.ExceptionHandlers) {
-                c.ExceptionHandlers.Add(i);
-            }
-            foreach (VariableDefinition i in o.Variables) {
-                c.Variables.Add(i);
-            }
-
-#if !MONOMOD_CECIL_NEW
-            c.Scope = o.Scope;
-#endif
-
-            return c;
-        }
-
-        public static bool IsHidden(this SequencePoint sp) {
-            return
-                sp.StartLine == 0xFEEFEE &&
-                sp.EndLine   == 0xFEEFEE &&
-                sp.StartColumn == 0 &&
-                sp.EndColumn   == 0;
         }
 
     }
