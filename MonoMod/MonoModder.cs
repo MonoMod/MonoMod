@@ -1,5 +1,6 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -124,7 +125,7 @@ namespace MonoMod {
         public virtual void Write(Stream output = null) {
             output = output ?? Output;
 
-            PatchWasHere();
+            // PatchWasHere(); // FIXME
 
             Log("Writing modded module into output stream.");
             Module.Write(output, WriterParameters);
@@ -141,7 +142,7 @@ namespace MonoMod {
             rp.SymbolReaderProvider = _rp.SymbolReaderProvider;
             rp.ReadSymbols = _rp.ReadSymbols;
 
-            // TODO debug symbols
+            // TODO debug symbol support
 
             return rp;
         }
@@ -170,10 +171,13 @@ namespace MonoMod {
 
             if (read) Read();
 
-            /* FIXME: SPLIT TYPE ADDITION INTO PRE-PATCH
-             * Custom attributes and stuff
-             * 1. could access yet undefined types
-             * 2. need to be copied over anyway, regardless if new type or not
+            /* WHY PRE-PATCH?
+             * Custom attributes and other stuff refering to possibly new types
+             * 1. could access yet undefined types that need to be copied over
+             * 2. need to be copied over themselves anyway, regardless if new type or not
+             * To define the order of origMethoding (first types, then references), PrePatch does
+             * the "type addition" job by creating stub types, which then get filled in
+             * the Patch pass.
              */
 
             Log("[AutoPatch] PrePatch");
@@ -184,8 +188,12 @@ namespace MonoMod {
             foreach (ModuleDefinition mod in Mods)
                 PatchModule(mod);
 
+            /* The PatchRefs pass fixes all references referring to stuff
+             * possibly added in the PrePatch or Patch passes.
+             */
+
             Log("[AutoPatch] PatchRefs");
-            PatchRefs();
+            // PatchRefs(); // FIXME
 
             Log("[AutoPatch] Optimize");
             Optimize();
@@ -251,13 +259,26 @@ namespace MonoMod {
             return attrib.Relink(Relinker);
         }
 
-
         #region Pre-Patch (add types) Pass
         /// <summary>
-        /// Pre-Patches the module (adds new types).
+        /// Pre-Patches the module (adds new types, module references, resources, ...).
         /// </summary>
         /// <param name="mod">Mod to patch into the input module.</param>
         public virtual void PrePatchModule(ModuleDefinition mod) {
+            foreach (ModuleReference @ref in mod.ModuleReferences)
+                if (!Module.ModuleReferences.Contains(@ref))
+                    Module.ModuleReferences.Add(@ref);
+
+            foreach (Resource res in mod.Resources)
+                if (res is EmbeddedResource) 
+                    Module.Resources.Add(new EmbeddedResource(
+                        res.Name.StartsWith(mod.Assembly.Name.Name) ?
+                            Module.Assembly.Name.Name + res.Name.Substring(mod.Assembly.Name.Name.Length) :
+                            res.Name,
+                        res.Attributes,
+                        ((EmbeddedResource) res).GetResourceData()
+                    ));
+
             foreach (TypeDefinition type in mod.Types)
                 PrePatchType(type);
         }
@@ -298,9 +319,7 @@ namespace MonoMod {
                 Module.Types.Add(newType);
             }
             foreach (GenericParameter genParam in type.GenericParameters)
-                newType.GenericParameters.Add(new GenericParameter(genParam.Name, genParam.Owner) {
-                    Attributes = genParam.Attributes
-                });
+                newType.GenericParameters.Add(genParam.Clone());
             newType.PackingSize = type.PackingSize;
             newType.SecurityDeclarations.AddRange(type.SecurityDeclarations);
 
@@ -316,7 +335,7 @@ namespace MonoMod {
         }
         #endregion
 
-        #region Patch (add type members) Pass
+        #region Patch (add type members) Pass - Type
         /// <summary>
         /// Patches the module (adds new type members).
         /// </summary>
@@ -347,18 +366,16 @@ namespace MonoMod {
             // Add "new" custom attributes
             foreach (CustomAttribute attrib in type.CustomAttributes)
                 if (!targetTypeDef.HasCustomAttribute(attrib.AttributeType.FullName))
-                    targetTypeDef.CustomAttributes.Add(Relink(attrib));
+                    targetTypeDef.CustomAttributes.Add(attrib.Clone());
 
             foreach (PropertyDefinition prop in type.Properties) {
                 if (!targetTypeDef.HasProperty(prop)) {
                     // Add missing property
-                    PropertyDefinition newProp = new PropertyDefinition(prop.Name, prop.Attributes, Relink(prop.PropertyType));
+                    PropertyDefinition newProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
                     newProp.AddAttribute(GetMonoModAddedCtor());
 
                     foreach (CustomAttribute attrib in prop.CustomAttributes)
-                        newProp.CustomAttributes.Add(Relink(attrib));
-
-                    // TODO: indexers!
+                        newProp.CustomAttributes.Add(attrib.Clone());
 
                     newProp.DeclaringType = targetTypeDef;
                     targetTypeDef.Properties.Add(newProp);
@@ -366,17 +383,21 @@ namespace MonoMod {
 
                 MethodDefinition getter = prop.GetMethod;
                 if (getter != null && !getter.HasMMAttribute("Ignore") && getter.MatchingPlatform())
-                    PatchMethod(getter);
+                    PatchMethod(targetTypeDef, getter);
 
                 MethodDefinition setter = prop.SetMethod;
                 if (setter != null && !setter.HasMMAttribute("Ignore") && setter.MatchingPlatform())
-                    PatchMethod(setter);
+                    PatchMethod(targetTypeDef, setter);
+
+                foreach (MethodDefinition method in prop.OtherMethods)
+                    if (!method.HasMMAttribute("Ignore") && method.MatchingPlatform())
+                        PatchMethod(targetTypeDef, method);
             }
 
             foreach (MethodDefinition method in type.Methods) {
                 if (!AllowedSpecialName(method) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
                     continue;
-                PatchMethod(method);
+                PatchMethod(targetTypeDef, method);
             }
 
             if (type.HasMMAttribute("EnumReplace")) {
@@ -396,12 +417,12 @@ namespace MonoMod {
 
                 if (type.HasField(field)) continue;
 
-                FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, Relink(field.FieldType));
+                FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
                 newField.AddAttribute(GetMonoModAddedCtor());
                 newField.InitialValue = field.InitialValue;
                 newField.Constant = field.Constant;
                 foreach (CustomAttribute attrib in field.CustomAttributes)
-                    newField.CustomAttributes.Add(Relink(attrib));
+                    newField.CustomAttributes.Add(attrib);
                 targetTypeDef.Fields.Add(newField);
             }
 
@@ -412,6 +433,130 @@ namespace MonoMod {
             for (int i = 0; i < type.NestedTypes.Count; i++) {
                 PatchType(type.NestedTypes[i]);
             }
+        }
+        #endregion
+
+        #region Patch (add type members) Pass - Method
+        public virtual void PatchMethod(TypeDefinition type, MethodDefinition method) {
+            if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
+                // Ignore original methods
+                return;
+
+            MethodDefinition existingMethod = type.FindMethod(method.FullName);
+            MethodDefinition origMethod = type.FindMethod(RemovePrefixes(method.FullName.Replace(method.Name, method.GetOriginalName()), method.DeclaringType));
+
+            if (existingMethod == null && method.HasMMAttribute("NoNew"))
+                return;
+
+            if (method.Name.StartsWith("replace_") || method.HasMMAttribute("Replace")) {
+                method.Name = RemovePrefixes(method.Name);
+                existingMethod.CustomAttributes.Clear();
+                existingMethod.Attributes = method.Attributes;
+                existingMethod.IsPInvokeImpl = method.IsPInvokeImpl;
+                existingMethod.ImplAttributes = method.ImplAttributes;
+
+            } else if (existingMethod != null && origMethod == null) {
+                origMethod = new MethodDefinition(method.GetOriginalName(), existingMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, existingMethod.ReturnType);
+                origMethod.DeclaringType = existingMethod.DeclaringType;
+                origMethod.MetadataToken = GetMetadataToken(TokenType.Method);
+                origMethod.Body = existingMethod.Body.Clone(origMethod);
+                origMethod.Attributes = existingMethod.Attributes;
+                origMethod.ImplAttributes = existingMethod.ImplAttributes;
+                origMethod.IsManaged = existingMethod.IsManaged;
+                origMethod.IsIL = existingMethod.IsIL;
+                origMethod.IsNative = existingMethod.IsNative;
+                origMethod.PInvokeInfo = existingMethod.PInvokeInfo;
+                origMethod.IsPreserveSig = existingMethod.IsPreserveSig;
+                origMethod.IsInternalCall = existingMethod.IsInternalCall;
+                origMethod.IsPInvokeImpl = existingMethod.IsPInvokeImpl;
+
+                origMethod.IsVirtual = false; // Fix overflow when calling orig_ method, but orig_ method already defined higher up
+
+                foreach (GenericParameter genParam in existingMethod.GenericParameters)
+                    origMethod.GenericParameters.Add(genParam.Clone());
+
+                foreach (ParameterDefinition param in existingMethod.Parameters)
+                    origMethod.Parameters.Add(param);
+
+                foreach (CustomAttribute attrib in existingMethod.CustomAttributes)
+                    origMethod.CustomAttributes.Add(attrib.Clone());
+
+                origMethod.AddAttribute(GetMonoModOriginalCtor());
+
+                type.Methods.Add(origMethod);
+            }
+
+            // Fix for .cctor not linking to orig_.cctor
+            if (origMethod != null && origMethod.IsConstructor && origMethod.IsStatic) {
+                Collection<Instruction> instructions = method.Body.Instructions;
+                ILProcessor ilProcessor = method.Body.GetILProcessor();
+                ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethod));
+            }
+
+            foreach (VariableDefinition var in method.Body?.Variables)
+                var.VariableType = Relink(var.VariableType);
+
+            if (existingMethod != null) {
+                existingMethod.Body = method.Body.Clone(existingMethod);
+                existingMethod.IsManaged = method.IsManaged;
+                existingMethod.IsIL = method.IsIL;
+                existingMethod.IsNative = method.IsNative;
+                existingMethod.PInvokeInfo = method.PInvokeInfo;
+                existingMethod.IsPreserveSig = method.IsPreserveSig;
+                existingMethod.IsInternalCall = method.IsInternalCall;
+                existingMethod.IsPInvokeImpl = method.IsPInvokeImpl;
+
+                method = existingMethod;
+
+            } else {
+                MethodDefinition clone = new MethodDefinition(method.Name, method.Attributes, Module.TypeSystem.Void);
+                clone.MetadataToken = GetMetadataToken(TokenType.Method);
+                type.Methods.Add(clone);
+                clone.CallingConvention = method.CallingConvention;
+                clone.ExplicitThis = method.ExplicitThis;
+                clone.MethodReturnType = method.MethodReturnType;
+                clone.NoInlining = method.NoInlining;
+                clone.NoOptimization = method.NoOptimization;
+                clone.Attributes = method.Attributes;
+                clone.ImplAttributes = method.ImplAttributes;
+                clone.SemanticsAttributes = method.SemanticsAttributes;
+                clone.DeclaringType = type;
+                clone.ReturnType = method.ReturnType;
+                clone.Body = method.Body.Clone(clone);
+                clone.IsManaged = method.IsManaged;
+                clone.IsIL = method.IsIL;
+                clone.IsNative = method.IsNative;
+                clone.PInvokeInfo = method.PInvokeInfo;
+                clone.IsPreserveSig = method.IsPreserveSig;
+                clone.IsInternalCall = method.IsInternalCall;
+                clone.IsPInvokeImpl = method.IsPInvokeImpl;
+
+                foreach (GenericParameter genParam in method.GenericParameters)
+                    clone.GenericParameters.Add(genParam.Clone());
+
+                foreach (ParameterDefinition param in method.Parameters)
+                    clone.Parameters.Add(param);
+
+                foreach (CustomAttribute attrib in method.CustomAttributes)
+                    clone.CustomAttributes.Add(attrib.Clone());
+
+                foreach (MethodReference @override in method.Overrides)
+                    clone.Overrides.Add(@override);
+
+                method = clone;
+            }
+
+            if (method.Name.StartsWith("get_") || method.Name.StartsWith("set_"))
+                foreach (PropertyDefinition property in type.Properties)
+                    if (method.Name.Substring(4) == property.Name) {
+                        if (method.Name[0] == 'g') {
+                            property.PropertyType = method.ReturnType;
+                            property.GetMethod = method;
+                        } else {
+                            property.SetMethod = method;
+                        }
+                        break;
+                    }
         }
         #endregion
 

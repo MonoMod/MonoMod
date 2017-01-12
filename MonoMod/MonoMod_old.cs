@@ -129,7 +129,7 @@ namespace MonoMod {
                 Dependencies.Remove(Module);
             }
 
-            //TODO make this return a status code or something
+            //OLDTODO make this return a status code or something
         }
 
         /// <summary>
@@ -146,7 +146,7 @@ namespace MonoMod {
             Log("Writing to output file...");
             Module.Write(output.FullName, WriterParameters);
 
-            //TODO make this return a status code or something
+            //OLDTODO make this return a status code or something
         }
 
         /// <summary>
@@ -308,7 +308,7 @@ namespace MonoMod {
 
             TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, null);
             newType.ClassSize = type.ClassSize;
-            //TODO yell about custom attribute support in Mono.Cecil
+            //OLDTODO yell about custom attribute support in Mono.Cecil
             //newType.CustomAttributes = type.CustomAttributes;
             if (type.DeclaringType != null) {
                 newType.DeclaringType = (FindType(type.DeclaringType, newType, false) ?? PrePatchType(type.DeclaringType)).Resolve();
@@ -417,7 +417,7 @@ namespace MonoMod {
                         CustomAttribute oca = property.CustomAttributes[cai];
                         CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, newProperty, false), oca.GetBlob());
                         for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                            //TODO do more with the attributes
+                            //OLDTODO do more with the attributes
                             CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
                             ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, newProperty, false),
                                 ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, newProperty, false) :
@@ -498,7 +498,7 @@ namespace MonoMod {
                     CustomAttribute oca = field.CustomAttributes[cai];
                     CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, newField, false), oca.GetBlob());
                     for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                        //TODO do more with the attributes
+                        //OLDTODO do more with the attributes
                         CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
                         ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, newField, false),
                             ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, newField, false) :
@@ -546,7 +546,7 @@ namespace MonoMod {
             MethodDefinition origMethodOrig = null; //orig_ method (f.e. orig_X)
             string origMethodOrigName = GetOriginalName(method);
 
-            //TODO the orig methods of replace_ methods can't be found
+            //OLDTODO the orig methods of replace_ methods can't be found
             for (int i = 0; i < origType.Methods.Count; i++) {
                 if (origType.Methods[i].FullName == RemovePrefixes(RemovePrefixes(method.FullName, method.DeclaringType), method.Name)) {
                     origMethod = origType.Methods[i];
@@ -604,7 +604,7 @@ namespace MonoMod {
                         CustomAttribute oca = origMethod.CustomAttributes[cai];
                         CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, copy, false), oca.GetBlob());
                         for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                            //TODO do more with the attributes
+                            //OLDTODO do more with the attributes
                             CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
                             ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, copy, false),
                                 ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, copy, false) :
@@ -636,7 +636,7 @@ namespace MonoMod {
             }
 
             for (int i = 0; method.HasBody && i < method.Body.Variables.Count; i++) {
-                //TODO debug! (Import crashes)
+                //OLDTODO debug! (Import crashes)
                 method.Body.Variables[i].VariableType = FindType(method.Body.Variables[i].VariableType, method);
             }
 
@@ -686,7 +686,7 @@ namespace MonoMod {
                     CustomAttribute oca = method.CustomAttributes[cai];
                     CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, clone, false), oca.GetBlob());
                     for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                        //TODO do more with the attributes
+                        //OLDTODO do more with the attributes
                         CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
                         ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, clone, false),
                             ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, clone, false) :
@@ -737,7 +737,7 @@ namespace MonoMod {
                         CustomAttribute oca = origProperty.CustomAttributes[cai];
                         CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, property, false), oca.GetBlob());
                         for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                            //TODO do more with the attributes
+                            //OLDTODO do more with the attributes
                             CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
                             ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, property, false),
                                 ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, property, false) :
@@ -790,7 +790,7 @@ namespace MonoMod {
                             CustomAttribute oca = type.Interfaces[i].CustomAttributes[cai];
                             CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, origType, true), oca.GetBlob());
                             for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                                //TODO do more with the attributes
+                                //OLDTODO do more with the attributes
                                 CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
                                 ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, origType, true),
                                     ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, origType, true) :
@@ -805,7 +805,7 @@ namespace MonoMod {
                         CustomAttribute oca = type.CustomAttributes[cai];
                         CustomAttribute ca = new CustomAttribute(FindMethod(oca.Constructor, origType, true), oca.GetBlob());
                         for (int caii = 0; caii < oca.ConstructorArguments.Count; caii++) {
-                            //TODO do more with the attributes
+                            //OLDTODO do more with the attributes
                             CustomAttributeArgument ocaa = oca.ConstructorArguments[caii];
                             ca.ConstructorArguments.Add(new CustomAttributeArgument(FindType(ocaa.Type, origType, true),
                                 ocaa.Value is TypeReference ? FindType((TypeReference) ocaa.Type, origType, true) :
@@ -1079,8 +1079,8 @@ namespace MonoMod {
                                     instruction.OpCode = ld ? OpCodes.Ldvirtftn : OpCodes.Callvirt;
                                 }
                                 //Fixes linkto base methods being called as callvirt
-                                //FIXME find out other cases where this should be set due to linkto
-                                //FIXME test something better than name...
+                                //OLDFIXME find out other cases where this should be set due to linkto
+                                //OLDFIXME test something better than name...
                                 if (method.DeclaringType.BaseType != null && findMethodDef.DeclaringType.Name == method.DeclaringType.BaseType.Name) {
                                     instruction.OpCode = ld ? OpCodes.Ldftn : OpCodes.Call;
                                 }
@@ -1244,7 +1244,7 @@ namespace MonoMod {
                 for (int gi = 0; gi < r.GenericParameters.Count; gi++) {
                     GenericParameter genericParam = r.GenericParameters[gi];
                     if (genericParam.FullName == type.FullName) {
-                        //TODO variables hate me, import otherwise
+                        //OLDTODO variables hate me, import otherwise
                         return genericParam;
                     }
                 }
@@ -1262,7 +1262,7 @@ namespace MonoMod {
                 for (int gi = 0; gi < r.GenericParameters.Count; gi++) {
                     GenericParameter genericParam = r.GenericParameters[gi];
                     if (genericParam.FullName == type.FullName) {
-                        //TODO variables hate me, import otherwise
+                        //OLDTODO variables hate me, import otherwise
                         return genericParam;
                     }
                 }
@@ -1306,14 +1306,14 @@ namespace MonoMod {
                     string foundMethodName = foundMethod.FullName;
                     foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
                     foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
-                    //TODO find a better way to compare methods / fix comparing return types
+                    //OLDTODO find a better way to compare methods / fix comparing return types
                     foundMethodName = MakeMethodNameFindFriendly(foundMethodName, foundMethod, findType);
 
                     if (methodName == foundMethodName) {
                         IsBlacklisted(foundMethod.Module.Name, foundMethod.DeclaringType.FullName+"."+foundMethod.Name, HasAttribute(foundMethod.Resolve(), "MonoModBlacklisted"));
 
                         if (typeMismatch && method.DeclaringType.IsGenericInstance) {
-                            //TODO test return type context
+                            //OLDTODO test return type context
                             MethodReference genMethod = new MethodReference(method.Name, FindType(method.ReturnType, findTypeRef), findTypeRef);
                             genMethod.CallingConvention = method.CallingConvention;
                             genMethod.HasThis = method.HasThis;
@@ -1371,7 +1371,7 @@ namespace MonoMod {
                         string foundMethodName = foundMethod.FullName;
                         foundMethodName = foundMethodName.Replace(findType.FullName, findTypeRef.FullName);
                         foundMethodName = foundMethodName.Substring(foundMethodName.IndexOf(" ") + 1);
-                        //TODO find a better way to compare methods / fix comparing return types
+                        //OLDTODO find a better way to compare methods / fix comparing return types
                         foundMethodName = MakeMethodNameFindFriendly(foundMethodName, foundMethod, findType);
                         Log("debug m "+ii+" / " + (findType.Methods.Count - 1) + ": " + foundMethodName);
                     }
@@ -1435,7 +1435,7 @@ namespace MonoMod {
 
             //check if available in GAC
             if (!File.Exists(path) && fullName != null) {
-                //TODO use ReflectionOnlyLoad if possible
+                //OLDTODO use ReflectionOnlyLoad if possible
                 System.Reflection.Assembly asm = null;
                 try {
                     asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(fullName));
@@ -1463,7 +1463,7 @@ namespace MonoMod {
                     path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET", "assembly", "GAC_MSIL", name);
 
                     /*} else if (os.Contains("mac") || os.Contains("osx")) {
-                    //FIXME test GAC path for Mono on Mac
+                    //OLDFIXME test GAC path for Mono on Mac
                     //should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
 
                 } else if (os.Contains("lin") || os.Contains("unix")) {*/
@@ -1659,20 +1659,20 @@ namespace MonoMod {
             }
 
             if (attrib.ConstructorArguments.Count == 1) {
-                //TODO get from delegate
+                //OLDTODO get from delegate
                 return method;
             }
 
             TypeDefinition type = null;
 
             if (attrib.ConstructorArguments[0].Type.FullName == "System.String") {
-                //TODO get type from name
+                //OLDTODO get type from name
             } else {
-                //TODO get type from type
+                //OLDTODO get type from type
                 type = FindType((TypeReference) attrib.ConstructorArguments[0].Value).Resolve();
             }
 
-            //TODO get method from name
+            //OLDTODO get method from name
             for (int i = 0; i < type.Methods.Count; i++) {
                 if (type.Methods[i].Name == ((string) attrib.ConstructorArguments[1].Value) && type.Methods[i].Parameters.Count == method.Parameters.Count) {
                     //Probably check for more than that
@@ -1681,7 +1681,7 @@ namespace MonoMod {
                 }
             }
 
-            //TODO cache somewhere
+            //OLDTODO cache somewhere
 
             //orig
             //IL_003e: call instance void [FNA]Microsoft.Xna.Framework.Game::Update(class [FNA]Microsoft.Xna.Framework.GameTime)
@@ -1710,12 +1710,12 @@ namespace MonoMod {
             TypeDefinition type = null;
 
             if (attrib.ConstructorArguments[0].Type.FullName == "System.String") {
-                //TODO get type from name
+                //OLDTODO get type from name
             } else {
                 type = FindType((TypeReference) attrib.ConstructorArguments[0].Value).Resolve();
             }
 
-            //TODO get method from name
+            //OLDTODO get method from name
             for (int i = 0; i < type.Fields.Count; i++) {
                 if (type.Methods[i].Name == ((string) attrib.ConstructorArguments[1].Value)) {
                     //Probably check for more than that
@@ -1724,7 +1724,7 @@ namespace MonoMod {
                 }
             }
 
-            //TODO cache somewhere
+            //OLDTODO cache somewhere
 
             return field;
         }

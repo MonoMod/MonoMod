@@ -9,10 +9,12 @@ namespace MonoMod.MonoMod {
 
 #if !MONOMOD_NO_ENTRY
         public static void Main(string[] args) {
-            Console.WriteLine("MonoMod " + System.Reflection.Assembly.GetCallingAssembly().GetName().Version);
+            Console.WriteLine("MonoMod " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");
+                if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
+                    Console.ReadKey();
                 return;
             }
 

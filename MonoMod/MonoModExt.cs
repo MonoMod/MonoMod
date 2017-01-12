@@ -72,6 +72,14 @@ namespace MonoMod {
             return false;
         }
 
+        public static string GetOriginalName(this MethodDefinition method) {
+            foreach (CustomAttribute attrib in method.CustomAttributes)
+                if (attrib.AttributeType.FullName == "MonoMod.MonoModOriginalName")
+                    return (string) attrib.ConstructorArguments[0].Value;
+
+            return "orig_" + method.Name;
+        }
+
         public static bool MatchingPlatform(this ICustomAttributeProvider cap) {
             if (cap == null) return true;
             if (!cap.HasCustomAttributes) return true;
@@ -140,11 +148,27 @@ namespace MonoMod {
         }
 
         public static MethodReference Relink(this MethodReference method, Relinker relinker) {
+            // TODO
             throw new NotImplementedException();
         }
 
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker) {
             CustomAttribute newAttrib = new CustomAttribute(attrib.Constructor.Relink(relinker), attrib.GetBlob());
+            foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
+                newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type.Relink(relinker), attribArg.Value));
+            foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
+                newAttrib.Fields.Add(new CustomAttributeNamedArgument(attribArg.Name,
+                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker), attribArg.Argument.Value))
+                );
+            foreach (CustomAttributeNamedArgument attribArg in attrib.Properties)
+                newAttrib.Properties.Add(new CustomAttributeNamedArgument(attribArg.Name,
+                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker), attribArg.Argument.Value))
+                );
+            return newAttrib;
+        }
+
+        public static CustomAttribute Clone(this CustomAttribute attrib) {
+            CustomAttribute newAttrib = new CustomAttribute(attrib.Constructor, attrib.GetBlob());
             foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
                 newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type, attribArg.Value));
             foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
@@ -156,6 +180,24 @@ namespace MonoMod {
                     new CustomAttributeArgument(attribArg.Argument.Type, attribArg.Argument.Value))
                 );
             return newAttrib;
+        }
+
+        public static GenericParameter Relink(this GenericParameter param, Relinker relinker) {
+            GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
+                Attributes = param.Attributes
+            };
+            foreach (TypeReference constraint in param.Constraints)
+                newParam.Constraints.Add(constraint.Relink(relinker));
+            return newParam;
+        }
+
+        public static GenericParameter Clone(this GenericParameter param) {
+            GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
+                Attributes = param.Attributes
+            };
+            foreach (TypeReference constraint in param.Constraints)
+                newParam.Constraints.Add(constraint);
+            return newParam;
         }
 
         public static bool EqualMember(this MemberReference member, MemberReference other)
@@ -175,6 +217,12 @@ namespace MonoMod {
             foreach (FieldDefinition fieldInType in type.Fields)
                 if (field.EqualMember(fieldInType)) return true;
             return false;
+        }
+
+        public static MethodDefinition FindMethod(this TypeDefinition type, string fullName) {
+            foreach (MethodDefinition method in type.Methods)
+                if (method.FullName == fullName) return method;
+            return null;
         }
 
     }
