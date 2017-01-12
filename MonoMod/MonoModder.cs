@@ -193,7 +193,7 @@ namespace MonoMod {
              */
 
             Log("[AutoPatch] PatchRefs");
-            // PatchRefs(); // FIXME
+            PatchRefs(); // FIXME
 
             Log("[AutoPatch] Optimize");
             Optimize();
@@ -241,6 +241,9 @@ namespace MonoMod {
 
                 if (!Mods.Contains(type.Module)) return type; // Type isn't coming from a mod module - just return the original.
 
+                // TODO Handle LinkTo
+                // TODO What if it's in a dependency?
+
                 TypeReference newType = new TypeReference(type.Namespace, type.Name, Module, null, type.IsValueType);
 
                 return Module.ImportReference(newType);
@@ -259,7 +262,7 @@ namespace MonoMod {
             return attrib.Relink(Relinker);
         }
 
-        #region Pre-Patch (add types) Pass
+        #region Pre-Patch Pass
         /// <summary>
         /// Pre-Patches the module (adds new types, module references, resources, ...).
         /// </summary>
@@ -290,11 +293,8 @@ namespace MonoMod {
         public virtual void PrePatchType(TypeDefinition type) {
             string typeName = RemovePrefixes(type.FullName, type);
 
-            if (type.HasMMAttribute("Ignore") ||
-                !type.MatchingPlatform()) {
-                PrePatchNested(type);
+            if (type.HasMMAttribute("Ignore") || !type.MatchingPlatform())
                 return;
-            }
 
             // Check if type exists in target module.
             TypeReference targetType = Module.GetType(typeName, false);
@@ -309,10 +309,11 @@ namespace MonoMod {
             // Add the type.
             Log($"[PrePatchType] Adding {typeName} to the target module.");
 
-            TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, null);
+            TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType);
             newType.AddAttribute(GetMonoModAddedCtor());
             newType.ClassSize = type.ClassSize;
             if (type.DeclaringType != null) {
+                // The declaring type is existing as this is being called nestedly.
                 newType.DeclaringType = Relink(type.DeclaringType).Resolve();
                 newType.DeclaringType.NestedTypes.Add(newType);
             } else {
@@ -335,7 +336,7 @@ namespace MonoMod {
         }
         #endregion
 
-        #region Patch (add type members) Pass - Type
+        #region Patch Pass
         /// <summary>
         /// Patches the module (adds new type members).
         /// </summary>
@@ -434,9 +435,7 @@ namespace MonoMod {
                 PatchType(type.NestedTypes[i]);
             }
         }
-        #endregion
 
-        #region Patch (add type members) Pass - Method
         public virtual void PatchMethod(TypeDefinition type, MethodDefinition method) {
             if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
                 // Ignore original methods
@@ -558,6 +557,62 @@ namespace MonoMod {
                         break;
                     }
         }
+        #endregion
+
+        #region PatchRefs Pass
+        public virtual void PatchRefs() {
+            foreach (TypeDefinition type in Module.Types)
+                PatchRefsInType(type);
+        }
+
+        public virtual void PatchRefsInType(TypeDefinition type) {
+
+            type.BaseType = Relink(type.BaseType);
+
+            foreach (CustomAttribute attrib in type.CustomAttributes)
+                Relink(attrib);
+
+            foreach (PropertyDefinition prop in type.Properties) {
+                prop.PropertyType = Relink(prop.PropertyType);
+
+                foreach (CustomAttribute attrib in prop.CustomAttributes)
+                    Relink(attrib);
+
+                MethodDefinition getter = prop.GetMethod;
+                if (getter != null) PatchRefsInMethod(getter);
+
+                MethodDefinition setter = prop.SetMethod;
+                if (setter != null) PatchRefsInMethod(setter);
+
+                foreach (MethodDefinition method in prop.OtherMethods)
+                    PatchRefsInMethod(method);
+            }
+
+            foreach (MethodDefinition method in type.Methods)
+                if (AllowedSpecialName(method))
+                    PatchRefsInMethod(method);
+
+            foreach (FieldDefinition field in type.Fields) {
+                field.FieldType = Relink(field.FieldType);
+                foreach (CustomAttribute attrib in field.CustomAttributes)
+                    Relink(attrib);
+            }
+
+            PatchRefsInTypeNested(type);
+        }
+
+        protected virtual void PatchRefsInTypeNested(TypeDefinition type) {
+            for (int i = 0; i < type.NestedTypes.Count; i++) {
+                PatchRefsInType(type.NestedTypes[i]);
+            }
+        }
+
+        public virtual void PatchRefsInMethod(MethodDefinition method) {
+            // FIXME
+
+
+        }
+
         #endregion
 
         #region MonoMod injected types

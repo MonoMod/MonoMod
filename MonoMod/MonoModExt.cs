@@ -153,18 +153,24 @@ namespace MonoMod {
         }
 
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker) {
-            CustomAttribute newAttrib = new CustomAttribute(attrib.Constructor.Relink(relinker), attrib.GetBlob());
-            foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
-                newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type.Relink(relinker), attribArg.Value));
-            foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
-                newAttrib.Fields.Add(new CustomAttributeNamedArgument(attribArg.Name,
+            attrib.Constructor = attrib.Constructor.Relink(relinker);
+            foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments) {
+                attrib.ConstructorArguments.Remove(attribArg);
+                attrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type.Relink(relinker), attribArg.Value));
+            }
+            foreach (CustomAttributeNamedArgument attribArg in attrib.Fields) {
+                attrib.Fields.Remove(attribArg);
+                attrib.Fields.Add(new CustomAttributeNamedArgument(attribArg.Name,
                     new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker), attribArg.Argument.Value))
                 );
-            foreach (CustomAttributeNamedArgument attribArg in attrib.Properties)
-                newAttrib.Properties.Add(new CustomAttributeNamedArgument(attribArg.Name,
+            }
+            foreach (CustomAttributeNamedArgument attribArg in attrib.Properties) {
+                attrib.Properties.Remove(attribArg);
+                attrib.Properties.Add(new CustomAttributeNamedArgument(attribArg.Name,
                     new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker), attribArg.Argument.Value))
                 );
-            return newAttrib;
+            }
+            return attrib;
         }
 
         public static CustomAttribute Clone(this CustomAttribute attrib) {
