@@ -193,7 +193,7 @@ namespace MonoMod {
              */
 
             Log("[AutoPatch] PatchRefs");
-            PatchRefs(); // FIXME
+            PatchRefs();
 
             Log("[AutoPatch] Optimize");
             Optimize();
@@ -217,16 +217,12 @@ namespace MonoMod {
                     method.NoOptimization = false;
 
                     if (method.HasBody) {
-                        for (int i = 0; i < method.Body.Instructions.Count; i++) {
-                            Instruction instruction = method.Body.Instructions[i];
+                        for (int instri = 0; instri < method.Body.Instructions.Count; instri++) {
+                            Instruction instruction = method.Body.Instructions[instri];
                             if (instruction.OpCode == OpCodes.Nop) {
-                                method.Body.Instructions.RemoveAt(i);
-                                i = i - 1 < 0 ? 0 : i - 1;
-
-                                for (int ii = method.Body.Instructions.Count - 1; i <= ii; ii--) {
-                                    Instruction next = method.Body.Instructions[ii];
-                                    next.Offset--;
-                                }
+                                method.Body.Instructions.RemoveAt(instri);
+                                instri = Math.Max(0, instri - 1);
+                                method.Body.UpdateOffsets(instri, -1);
                             }
                         }
                     }
@@ -244,14 +240,17 @@ namespace MonoMod {
                 // TODO Handle LinkTo
                 // TODO What if it's in a dependency?
 
-                TypeReference newType = new TypeReference(type.Namespace, type.Name, Module, null, type.IsValueType);
-
+                TypeReference newType = new TypeReference(type.Namespace, type.Name, Module, Module, type.IsValueType);
+                newType.DeclaringType = Relink(type.DeclaringType);
                 return Module.ImportReference(newType);
             }
 
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
         }
 
+        public virtual IMetadataTokenProvider Relink(IMetadataTokenProvider mtp) {
+            return mtp.Relink(Relinker);
+        }
         public virtual TypeReference Relink(TypeReference type) {
             return type.Relink(Relinker);
         }
@@ -374,6 +373,9 @@ namespace MonoMod {
                     // Add missing property
                     PropertyDefinition newProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
                     newProp.AddAttribute(GetMonoModAddedCtor());
+
+                    foreach (ParameterDefinition param in prop.Parameters)
+                        newProp.Parameters.Add(param.Clone());
 
                     foreach (CustomAttribute attrib in prop.CustomAttributes)
                         newProp.CustomAttributes.Add(attrib.Clone());
@@ -566,24 +568,27 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInType(TypeDefinition type) {
-
             type.BaseType = Relink(type.BaseType);
+
+            foreach (InterfaceImplementation interf in type.Interfaces) {
+                type.Interfaces.Remove(interf);
+                InterfaceImplementation newInterf = new InterfaceImplementation(Relink(interf.InterfaceType));
+                foreach (CustomAttribute attrib in interf.CustomAttributes)
+                    newInterf.CustomAttributes.Add(Relink(attrib));
+                type.Interfaces.Add(newInterf);
+            }
 
             foreach (CustomAttribute attrib in type.CustomAttributes)
                 Relink(attrib);
 
             foreach (PropertyDefinition prop in type.Properties) {
                 prop.PropertyType = Relink(prop.PropertyType);
-
                 foreach (CustomAttribute attrib in prop.CustomAttributes)
                     Relink(attrib);
-
                 MethodDefinition getter = prop.GetMethod;
                 if (getter != null) PatchRefsInMethod(getter);
-
                 MethodDefinition setter = prop.SetMethod;
                 if (setter != null) PatchRefsInMethod(setter);
-
                 foreach (MethodDefinition method in prop.OtherMethods)
                     PatchRefsInMethod(method);
             }
@@ -608,9 +613,90 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
-            // FIXME
+            bool publicAccess = true;
+            bool matchingPlatformIL = true;
 
+            for (int instri = 0; method.HasBody && instri < method.Body.Instructions.Count; instri++) {
+                Instruction instr = method.Body.Instructions[instri];
+                object operand = instr.Operand;
 
+                // MonoMod-specific in-code flag setting / ...
+
+                // Temporarily enable matching platform, otherwise the platform data gets lost.
+                // Check the next one as the array size is before the newarr.
+                if (instr.Next?.OpCode == OpCodes.Newarr && (
+                    (instr.Next?.Operand as TypeReference)?.FullName == "Platform" ||
+                    (instr.Next?.Operand as TypeReference)?.FullName == "int"
+                )) {
+                    matchingPlatformIL = true;
+                }
+
+                if (operand is MethodReference && (
+                    ((MethodReference) operand).DeclaringType.FullName == "MonoMod.MonoModInline" ||
+                    ((MethodReference) operand).DeclaringType.FullName == "MMIL"
+                )) {
+                    MethodReference mr = ((MethodReference) operand);
+
+                    if (mr.Name == "DisablePublicAccess") {
+                        publicAccess = false;
+                    } else if (mr.Name == "EnablePublicAccess") {
+                        publicAccess = true;
+                    }
+
+                    if (mr.Name == "OnPlatform") {
+                        // Crawl back until we hit "newarr Platform" or "newarr int"
+                        int posNewarr = instri;
+                        for (; 1 <= posNewarr && method.Body.Instructions[posNewarr].OpCode != OpCodes.Newarr; posNewarr--) ;
+                        int pArrSize = method.Body.Instructions[posNewarr - 1].GetInt();
+                        matchingPlatformIL = pArrSize == 0;
+                        for (int ii = posNewarr + 1; ii < instri; ii += 4) {
+                            // dup
+                            // ldc.i4 INDEX
+                            Platform plat = (Platform) method.Body.Instructions[ii + 2].GetInt();
+                            // stelem.i4
+
+                            if (PlatformHelper.Current.HasFlag(plat)) {
+                                matchingPlatformIL = true;
+                                break;
+                            }
+                        }
+
+                        // If not matching platform, remove array code.
+                        if (!matchingPlatformIL) {
+                            for (int offsi = posNewarr - 1; offsi < instri; offsi++) {
+                                method.Body.Instructions.RemoveAt(offsi);
+                                instri = Math.Max(0, instri - 1);
+                                method.Body.UpdateOffsets(instri, -1);
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Keep the method reference as modded mods may still require these.
+                }
+
+                if (!matchingPlatformIL) {
+                    method.Body.Instructions.RemoveAt(instri);
+                    instri = Math.Max(0, instri - 1);
+                    method.Body.UpdateOffsets(instri, -1);
+                    continue;
+                }
+
+                // General relinking
+
+                if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand);
+                if (operand is TypeReference) operand = Module.ImportReference((TypeReference) operand);
+                if (operand is FieldReference) operand = Module.ImportReference((FieldReference) operand);
+                if (operand is MethodReference) operand = Module.ImportReference((MethodReference) operand);
+
+                if (publicAccess) {
+                    if (operand is TypeReference) ((TypeReference) operand).Resolve()?.SetPublic(true);
+                    if (operand is FieldReference) ((FieldReference) operand).Resolve()?.SetPublic(true);
+                    if (operand is MethodReference) ((MethodReference) operand).Resolve()?.SetPublic(true);
+                }
+
+                instr.Operand = operand;
+            }
         }
 
         #endregion
