@@ -77,6 +77,10 @@ namespace MonoMod {
             }
         }
 
+        public MonoModder() {
+            Relinker = DefaultRelinker;
+        }
+
         public void SetupLegacy() {
             ReadingMode = ReadingMode.Immediate;
         }
@@ -365,7 +369,7 @@ namespace MonoMod {
         }
 
 
-        public virtual IMetadataTokenProvider Relinker_(IMetadataTokenProvider mtp) {
+        public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp) {
             if (mtp is TypeReference) {
                 TypeReference type = (TypeReference) mtp;
 
@@ -374,8 +378,10 @@ namespace MonoMod {
                 // TODO Handle LinkTo
                 // TODO What if it's in a dependency?
 
+                // FindType works in emergency cases - try to make the non-FindType path "accurate" first!
+                // return Module.ImportReference(FindType(type.FullName));
                 TypeReference newType = new TypeReference(type.Namespace, type.Name, Module, Module, type.IsValueType);
-                newType.DeclaringType = Relink(type.DeclaringType);
+                if (type.DeclaringType != null) newType.DeclaringType = Relink(type.DeclaringType);
                 return Module.ImportReference(newType);
             }
 
@@ -395,11 +401,11 @@ namespace MonoMod {
             return attrib.Relink(Relinker);
         }
 
-        public virtual TypeDefinition FindType(string name)
-            => FindType(Module, name);
-        protected virtual TypeDefinition FindType(ModuleDefinition main, string fullName) {
-            TypeDefinition type;
-            if ((type = main.GetType(fullName, false)?.Resolve()) != null)
+        public virtual TypeReference FindType(string name)
+            => FindType(Module, name) ?? Module.GetType(name, true);
+        protected virtual TypeReference FindType(ModuleDefinition main, string fullName) {
+            TypeReference type;
+            if ((type = main.GetType(fullName, false)) != null)
                 return type;
             foreach (ModuleDefinition dep in DependencyMap[main])
                 if ((type = FindType(dep, fullName)) != null)
