@@ -723,14 +723,15 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInType(TypeDefinition type) {
-            type.BaseType = Relink(type.BaseType);
+            if (type.BaseType != null) type.BaseType = Relink(type.BaseType);
 
-            foreach (InterfaceImplementation interf in type.Interfaces) {
-                type.Interfaces.Remove(interf);
+            // Don't foreach when modifying the collection
+            for (int i = 0; i < type.Interfaces.Count; i++) {
+                InterfaceImplementation interf = type.Interfaces[i];
                 InterfaceImplementation newInterf = new InterfaceImplementation(Relink(interf.InterfaceType));
                 foreach (CustomAttribute attrib in interf.CustomAttributes)
                     newInterf.CustomAttributes.Add(Relink(attrib));
-                type.Interfaces.Add(newInterf);
+                type.Interfaces[i] = newInterf;
             }
 
             foreach (CustomAttribute attrib in type.CustomAttributes)
