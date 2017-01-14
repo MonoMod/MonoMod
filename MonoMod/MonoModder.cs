@@ -3,9 +3,11 @@ using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MonoMod {
     public class MonoModder : IDisposable {
@@ -18,6 +20,8 @@ namespace MonoMod {
         public Stream Input;
         public Stream Output;
         public ModuleDefinition Module;
+        public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
+        public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
         public List<string> DependencyDirs = new List<string>();
 
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
@@ -111,11 +115,141 @@ namespace MonoMod {
         /// <summary>
         /// Reads the main module from the Input stream to Module.
         /// </summary>
-        public virtual void Read() {
+        public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
                 Log("Reading input stream into module.");
                 Module = ModuleDefinition.ReadModule(Input, GenReaderParameters(true));
             }
+
+            if (loadDependencies) MapDependencies(Module);
+        }
+
+        public virtual void MapDependencies(ModuleDefinition main) {
+            if (DependencyMap.ContainsKey(main)) return;
+            DependencyMap[main] = new List<ModuleDefinition>();
+
+            foreach (AssemblyNameReference dep in main.AssemblyReferences)
+                MapDependency(main, dep);
+        }
+        public virtual void MapDependency(ModuleDefinition main, AssemblyNameReference dep) {
+            MapDependency(main, dep.Name, dep.FullName);
+        }
+        public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null) {
+            // "Fix" looping dependencies in the only place they actually are allowed to occur.
+            if (name == "System" || name.StartsWith("System.") || name == "mscorlib")
+                return;
+
+            ModuleDefinition dep;
+            if ((fullName != null && DependencyCache.TryGetValue(fullName, out dep)) ||
+                                     DependencyCache.TryGetValue(name    , out dep)) {
+                Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
+                DependencyMap[main].Add(dep);
+                return;
+            }
+
+            string path = null;
+            foreach (string depDir in DependencyDirs) {
+                path = Path.Combine(depDir, name + ".dll");
+                if (!File.Exists(path))
+                    path = Path.Combine(depDir, name + ".exe");
+                if (!File.Exists(path))
+                    path = Path.Combine(depDir, name);
+                if (File.Exists(path)) break;
+                else path = null;
+            }
+
+            // Check if available in GAC
+            if (path == null && fullName != null) {
+                // TODO use ReflectionOnlyLoad if possible
+                System.Reflection.Assembly asm = null;
+                try {
+                    asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(fullName));
+                } catch { }
+                path = asm?.Location;
+            }
+
+            // Manually check in GAC
+            if (path == null && fullName == null) {
+                string os;
+                System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                if (property_platform != null) {
+                    // For mono, get from
+                    // static extern PlatformID Platform
+                    os = property_platform.GetValue(null, null).ToString().ToLower();
+                } else {
+                    // For .NET, use default value
+                    os = Environment.OSVersion.Platform.ToString().ToLower();
+                    // .NET also prefixes the version with a v
+                }
+                if (os.Contains("win")) {
+                    // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
+                    path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET", "assembly", "GAC_MSIL", name);
+
+                    /*} else if (os.Contains("mac") || os.Contains("osx")) {
+                    // TODO test GAC path for Mono on Mac
+                    // should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
+                } else if (os.Contains("lin") || os.Contains("unix")) {*/
+                    // For now let's just pretend it's the same as with Linux...
+                } else if (os.Contains("mac") || os.Contains("osx") || os.Contains("lin") || os.Contains("unix")) {
+                    // <prefix>/lib/mono/gac
+
+                    Process which = new Process();
+                    which.StartInfo.FileName = "which";
+                    which.StartInfo.Arguments = "mono";
+                    which.StartInfo.CreateNoWindow = true;
+                    which.StartInfo.RedirectStandardOutput = true;
+                    which.StartInfo.UseShellExecute = false;
+                    which.EnableRaisingEvents = true;
+
+                    StringBuilder whichOutputBuilder = new StringBuilder();
+
+                    which.OutputDataReceived += new DataReceivedEventHandler(
+                        delegate (object sender, DataReceivedEventArgs e) {
+                            whichOutputBuilder.Append(e.Data);
+                        }
+                    );
+                    which.Start();
+                    which.BeginOutputReadLine();
+                    which.WaitForExit();
+                    which.CancelOutputRead();
+
+                    path = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
+                    path = Path.Combine(path, "lib", "mono", "gac", name);
+                }
+
+                if (Directory.Exists(path)) {
+                    string[] versions = Directory.GetDirectories(path);
+                    int highest = 0;
+                    int highestIndex = 0;
+                    for (int i = 0; i < versions.Length; i++) {
+                        Match versionMatch = Regex.Match(versions[i].Substring(path.Length + 1), "\\d+");
+                        if (!versionMatch.Success) {
+                            continue;
+                        }
+                        int version = int.Parse(versionMatch.Value);
+                        if (version > highest) {
+                            highest = version;
+                            highestIndex = i;
+                        }
+                        // Maybe check minor versions?
+                    }
+                    path = Path.Combine(versions[highestIndex], name + ".dll");
+                } else {
+                    path = null;
+                }
+            }
+
+            if (path == null || !File.Exists(path)) {
+                Log($"[MapDependency] {main.Name} -> (({fullName}), ({name})) not found; ignoring...");
+                return;
+            }
+
+            dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
+            Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
+            DependencyMap[main].Add(dep);
+            DependencyCache[fullName] = dep;
+            DependencyCache[name] = dep;
+            MapDependencies(dep);
         }
 
         /// <summary>
@@ -150,9 +284,9 @@ namespace MonoMod {
 
         public virtual void ReadMod(string path) {
             if (Directory.Exists(path)) {
-                foreach (string mod in Directory.GetFiles(path)) {
-                    if (mod.EndsWith(".mm.dll")) ReadMod(path);
-                }
+                foreach (string mod in Directory.GetFiles(path))
+                    if (mod.ToLower().EndsWith(".mm.dll"))
+                        ReadMod(mod);
                 return;
             }
 
@@ -180,11 +314,11 @@ namespace MonoMod {
              * the Patch pass.
              */
 
-            Log("[AutoPatch] PrePatch");
+            Log("[AutoPatch] PrePatch pass");
             foreach (ModuleDefinition mod in Mods)
                 PrePatchModule(mod);
 
-            Log("[AutoPatch] Patch");
+            Log("[AutoPatch] Patch pass");
             foreach (ModuleDefinition mod in Mods)
                 PatchModule(mod);
 
@@ -192,10 +326,10 @@ namespace MonoMod {
              * possibly added in the PrePatch or Patch passes.
              */
 
-            Log("[AutoPatch] PatchRefs");
+            Log("[AutoPatch] PatchRefs pass");
             PatchRefs();
 
-            Log("[AutoPatch] Optimize");
+            Log("[AutoPatch] Optimization pass");
             Optimize();
 
             Log("[AutoPatch] Done.");
@@ -261,12 +395,27 @@ namespace MonoMod {
             return attrib.Relink(Relinker);
         }
 
+        public virtual TypeDefinition FindType(string name)
+            => FindType(Module, name);
+        protected virtual TypeDefinition FindType(ModuleDefinition main, string fullName) {
+            TypeDefinition type;
+            if ((type = main.GetType(fullName, false)?.Resolve()) != null)
+                return type;
+            foreach (ModuleDefinition dep in DependencyMap[main])
+                if ((type = FindType(dep, fullName)) != null)
+                    return type;
+            return null;
+        }
+
         #region Pre-Patch Pass
         /// <summary>
         /// Pre-Patches the module (adds new types, module references, resources, ...).
         /// </summary>
         /// <param name="mod">Mod to patch into the input module.</param>
         public virtual void PrePatchModule(ModuleDefinition mod) {
+            foreach (TypeDefinition type in mod.Types)
+                PrePatchType(type);
+
             foreach (ModuleReference @ref in mod.ModuleReferences)
                 if (!Module.ModuleReferences.Contains(@ref))
                     Module.ModuleReferences.Add(@ref);
@@ -280,9 +429,6 @@ namespace MonoMod {
                         res.Attributes,
                         ((EmbeddedResource) res).GetResourceData()
                     ));
-
-            foreach (TypeDefinition type in mod.Types)
-                PrePatchType(type);
         }
 
         /// <summary>
@@ -295,15 +441,14 @@ namespace MonoMod {
             if (type.HasMMAttribute("Ignore") || !type.MatchingPlatform())
                 return;
 
-            // Check if type exists in target module.
-            TypeReference targetType = Module.GetType(typeName, false);
+            // Check if type exists in target module or dependencies.
+            TypeReference targetType = FindType(typeName);
             TypeDefinition targetTypeDef = targetType?.Resolve();
-            if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove"))) {
-                Module.Types.Remove(targetTypeDef);
+            if (targetType != null) {
+                if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")))
+                    Module.Types.Remove(targetTypeDef);
                 return;
             }
-            if (targetType != null)
-                return;
 
             // Add the type.
             Log($"[PrePatchType] Adding {typeName} to the target module.");
@@ -351,7 +496,6 @@ namespace MonoMod {
         /// <param name="type">Type to patch into the input module.</param>
         public virtual void PatchType(TypeDefinition type) {
             string typeName = RemovePrefixes(type.FullName, type);
-            Log($"[PatchType] Patching type {typeName} (prefixed: {type.FullName})");
 
             if (type.HasMMAttribute("Ignore") ||
                 !type.MatchingPlatform()) {
@@ -362,6 +506,11 @@ namespace MonoMod {
             TypeReference targetType = Module.GetType(typeName, false);
             if (targetType == null) return; // Type should've been added or removed accordingly.
             TypeDefinition targetTypeDef = targetType?.Resolve();
+
+            if (typeName == type.FullName)
+                Log($"[PatchType] Patching type {typeName}");
+            else
+                Log($"[PatchType] Patching type {typeName} (prefixed: {type.FullName})");
 
             // Add "new" custom attributes
             foreach (CustomAttribute attrib in type.CustomAttributes)
@@ -722,6 +871,7 @@ namespace MonoMod {
                     }
                 }
             }
+            Log("[MonoModOriginal] Adding MonoMod.MonoModOriginal");
             TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModOriginal", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
@@ -760,7 +910,7 @@ namespace MonoMod {
                     }
                 }
             }
-            Log("Adding MonoMod.MonoModOriginal");
+            Log("[MonoModAdded] Adding MonoMod.MonoModAdded");
             TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModAdded", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };

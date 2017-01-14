@@ -28,13 +28,15 @@ namespace MonoMod.MonoMod {
                 Output = File.OpenWrite(pathOut)
             }) {
                 if (args.Length <= 2) {
+                    mm.Log("[Main] Scanning for mods in directory.");
                     mm.ReadMod(Directory.GetParent(pathIn).FullName);
                 } else {
-                    for (int i = 1; i < args.Length - 1; i++) {
+                    mm.Log("[Main] Reading mods list from arguments.");
+                    for (int i = 1; i < args.Length - 1; i++)
                         mm.ReadMod(args[i]);
-                    }
                 }
 
+                mm.Log("[Main] mm.AutoPatch();");
                 mm.AutoPatch();
             }
         }
