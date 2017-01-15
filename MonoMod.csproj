@@ -70,7 +70,7 @@
     <Compile Include="MonoMod\JIT\MonoModJITPseudoException.cs" />
     <Compile Include="MonoMod\JIT\MonoModJITHandler.cs" />
     <Compile Include="MonoMod\JIT\MonoModJITPatched.cs" />
-    <Compile Include="MonoMod\ReflectionHelper.cs" />
+    <Compile Include="MonoMod\JIT\ReflectionHelper.cs" />
     <Compile Include="MonoMod\Attributes\MonoModInline.cs" />
   </ItemGroup>
   <ItemGroup>

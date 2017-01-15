@@ -643,6 +643,9 @@ namespace MonoMod {
                 foreach (CustomAttribute attrib in existingMethod.CustomAttributes)
                     origMethod.CustomAttributes.Add(attrib.Clone());
 
+                foreach (MethodReference @override in method.Overrides)
+                    origMethod.Overrides.Add(@override);
+
                 origMethod.AddAttribute(GetMonoModOriginalCtor());
 
                 type.Methods.Add(origMethod);
@@ -694,7 +697,7 @@ namespace MonoMod {
                     clone.GenericParameters.Add(genParam.Clone());
 
                 foreach (ParameterDefinition param in method.Parameters)
-                    clone.Parameters.Add(param);
+                    clone.Parameters.Add(param.Clone());
 
                 foreach (CustomAttribute attrib in method.CustomAttributes)
                     clone.CustomAttributes.Add(attrib.Clone());
@@ -772,10 +775,29 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
+            // Don't foreach when modifying the collection
+            for (int i = 0; i < method.GenericParameters.Count; i++)
+                method.GenericParameters[i] = (GenericParameter) Relink(method.GenericParameters[i], method);
+
+            for (int i = 0; i < method.Parameters.Count; i++)
+                method.Parameters[i] = (ParameterDefinition) Relink(method.Parameters[i], method);
+
+            for (int i = 0; i < method.CustomAttributes.Count; i++)
+                method.CustomAttributes[i] = Relink(method.CustomAttributes[i], method);
+
+            for (int i = 0; i < method.Overrides.Count; i++)
+                method.Overrides[i] = Relink(method.Overrides[i], method);
+
+            method.ReturnType = Relink(method.ReturnType, method);
+
             if (method.Body == null) return;
 
             foreach (VariableDefinition var in method.Body.Variables)
                 var.VariableType = Relink(var.VariableType, method);
+
+            foreach (ExceptionHandler handler in method.Body.ExceptionHandlers)
+                if (handler.CatchType != null)
+                    handler.CatchType = Relink(handler.CatchType, method);
 
             bool publicAccess = true;
             bool matchingPlatformIL = true;
