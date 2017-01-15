@@ -77,6 +77,65 @@ namespace MonoMod {
             }
         }
 
+        protected string _GACPath;
+        public string GACPath {
+            get {
+                if (_GACPath == null) {
+                    string os;
+                    System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                    if (property_platform != null) {
+                        // For mono, get from
+                        // static extern PlatformID Platform
+                        os = property_platform.GetValue(null, null).ToString().ToLower();
+                    } else {
+                        // For .NET, use default value
+                        os = Environment.OSVersion.Platform.ToString().ToLower();
+                        // .NET also prefixes the version with a v
+                    }
+                    if (os.Contains("win")) {
+                        // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
+                        _GACPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET", "assembly", "GAC_MSIL");
+
+                        /*} else if (os.Contains("mac") || os.Contains("osx")) {
+                        // TODO test GAC path for Mono on Mac
+                        // should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
+                    } else if (os.Contains("lin") || os.Contains("unix")) {*/
+                        // For now let's just pretend it's the same as with Linux...
+                    } else if (os.Contains("mac") || os.Contains("osx") || os.Contains("lin") || os.Contains("unix")) {
+                        // <prefix>/lib/mono/gac
+
+                        Process which = new Process();
+                        which.StartInfo.FileName = "which";
+                        which.StartInfo.Arguments = "mono";
+                        which.StartInfo.CreateNoWindow = true;
+                        which.StartInfo.RedirectStandardOutput = true;
+                        which.StartInfo.UseShellExecute = false;
+                        which.EnableRaisingEvents = true;
+
+                        StringBuilder whichOutputBuilder = new StringBuilder();
+
+                        which.OutputDataReceived += new DataReceivedEventHandler(
+                            delegate (object sender, DataReceivedEventArgs e) {
+                                whichOutputBuilder.Append(e.Data);
+                            }
+                        );
+                        which.Start();
+                        which.BeginOutputReadLine();
+                        which.WaitForExit();
+                        which.CancelOutputRead();
+
+                        _GACPath = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
+                        _GACPath = Path.Combine(_GACPath, "lib", "mono", "gac");
+                    }
+                }
+
+                return _GACPath;
+            }
+            set {
+                _GACPath = value;
+            }
+        }
+
         public MonoModder() {
             Relinker = DefaultRelinker;
         }
@@ -164,62 +223,16 @@ namespace MonoMod {
 
             // Check if available in GAC
             if (path == null && fullName != null) {
-                // TODO use ReflectionOnlyLoad if possible
                 System.Reflection.Assembly asm = null;
                 try {
-                    asm = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(fullName));
+                    asm = System.Reflection.Assembly.ReflectionOnlyLoad(fullName);
                 } catch { }
                 path = asm?.Location;
             }
 
             // Manually check in GAC
             if (path == null && fullName == null) {
-                string os;
-                System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                if (property_platform != null) {
-                    // For mono, get from
-                    // static extern PlatformID Platform
-                    os = property_platform.GetValue(null, null).ToString().ToLower();
-                } else {
-                    // For .NET, use default value
-                    os = Environment.OSVersion.Platform.ToString().ToLower();
-                    // .NET also prefixes the version with a v
-                }
-                if (os.Contains("win")) {
-                    // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
-                    path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET", "assembly", "GAC_MSIL", name);
-
-                    /*} else if (os.Contains("mac") || os.Contains("osx")) {
-                    // TODO test GAC path for Mono on Mac
-                    // should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
-                } else if (os.Contains("lin") || os.Contains("unix")) {*/
-                    // For now let's just pretend it's the same as with Linux...
-                } else if (os.Contains("mac") || os.Contains("osx") || os.Contains("lin") || os.Contains("unix")) {
-                    // <prefix>/lib/mono/gac
-
-                    Process which = new Process();
-                    which.StartInfo.FileName = "which";
-                    which.StartInfo.Arguments = "mono";
-                    which.StartInfo.CreateNoWindow = true;
-                    which.StartInfo.RedirectStandardOutput = true;
-                    which.StartInfo.UseShellExecute = false;
-                    which.EnableRaisingEvents = true;
-
-                    StringBuilder whichOutputBuilder = new StringBuilder();
-
-                    which.OutputDataReceived += new DataReceivedEventHandler(
-                        delegate (object sender, DataReceivedEventArgs e) {
-                            whichOutputBuilder.Append(e.Data);
-                        }
-                    );
-                    which.Start();
-                    which.BeginOutputReadLine();
-                    which.WaitForExit();
-                    which.CancelOutputRead();
-
-                    path = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
-                    path = Path.Combine(path, "lib", "mono", "gac", name);
-                }
+                path = Path.Combine(GACPath, name);
 
                 if (Directory.Exists(path)) {
                     string[] versions = Directory.GetDirectories(path);
