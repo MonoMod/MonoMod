@@ -71,12 +71,12 @@ namespace MonoMod.JIT {
 
         public static DynamicMethodDelegate GetDelegate(this MethodInfo method) {
             DynamicMethodDelegate dmd;
-            if (ReflectionHelper.methodCache.TryGetValue(method, out dmd)) {
+            if (methodCache.TryGetValue(method, out dmd)) {
                 return dmd;
             }
 
-            dmd = ReflectionHelper.CreateDelegate(method);
-            ReflectionHelper.methodCache.Add(method, dmd);
+            dmd = CreateDelegate(method);
+            methodCache.Add(method, dmd);
 
             return dmd;
         }

@@ -5,12 +5,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MonoMod {
 
-    public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp);
+    public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
 
     public static class MonoModExt {
+
+        public static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");
+        public static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
 
         public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
             if (o == null) {
@@ -41,6 +45,16 @@ namespace MonoMod {
                 sp.EndLine == 0xFEEFEE &&
                 sp.StartColumn == 0 &&
                 sp.EndColumn == 0;
+        }
+
+        public readonly static System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public readonly static System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public static GenericParameter Update(this GenericParameter param, GenericParameter other)
+            => param.Update(other.Position, other.Type);
+        public static GenericParameter Update(this GenericParameter param, int position, GenericParameterType type) {
+            f_GenericParameter_position.SetValue(param, position);
+            f_GenericParameter_type.SetValue(param, type);
+            return param;
         }
 
         public static void AddAttribute(this ICustomAttributeProvider cap, MethodReference constructor)
@@ -123,18 +137,41 @@ namespace MonoMod {
                 list.Add(other[i]);
         }
 
+        public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, string name) {
+            foreach (GenericParameter param in provider.GenericParameters)
+                if (param.Name == name)
+                    return param;
 
-        public static IMetadataTokenProvider Relink(this IMetadataTokenProvider mtp, Relinker relinker) {
-            if (mtp is TypeReference) return ((TypeReference) mtp).Relink(relinker);
-            if (mtp is MethodReference) return ((MethodReference) mtp).Relink(relinker);
-            if (mtp is FieldReference) return ((FieldReference) mtp).Relink(relinker);
+            int index;
+            if (provider is MethodReference && MethodGenericParamRegex.IsMatch(name))
+                if ((index = int.Parse(name.Substring(2))) < provider.GenericParameters.Count)
+                    return provider.GenericParameters[index];
+                else
+                    return new GenericParameter(name, provider).Update(index, GenericParameterType.Method);
+
+            if (provider is TypeReference && TypeGenericParamRegex.IsMatch(name))
+                if ((index = int.Parse(name.Substring(1))) < provider.GenericParameters.Count)
+                    return provider.GenericParameters[index];
+                else
+                    return new GenericParameter(name, provider).Update(index, GenericParameterType.Type);
+
+            return
+                (provider as TypeSpecification)?.ElementType.GetGenericParameter(name) ??
+                (provider as MemberReference)?.DeclaringType?.GetGenericParameter(name);
+        }
+
+        public static IMetadataTokenProvider Relink(this IMetadataTokenProvider mtp, Relinker relinker, IGenericParameterProvider context) {
+            if (mtp is TypeReference) return ((TypeReference) mtp).Relink(relinker, context);
+            if (mtp is MethodReference) return ((MethodReference) mtp).Relink(relinker, context);
+            if (mtp is FieldReference) return ((FieldReference) mtp).Relink(relinker, context);
+            if (mtp is ParameterDefinition) return ((ParameterDefinition) mtp).Relink(relinker, context);
             throw new InvalidOperationException($"MonoMod can't handle metadata token providers of the type {mtp.GetType()}");
         }
 
-        public static TypeReference Relink(this TypeReference type, Relinker relinker) {
+        public static TypeReference Relink(this TypeReference type, Relinker relinker, IGenericParameterProvider context) {
             if (type is TypeSpecification) {
                 TypeSpecification ts = (TypeSpecification) type;
-                TypeReference relinkedElem = ts.ElementType.Relink(relinker);
+                TypeReference relinkedElem = ts.ElementType.Relink(relinker, context);
 
                 if (type.IsByReference)
                     return new ByReferenceType(relinkedElem);
@@ -148,85 +185,97 @@ namespace MonoMod {
                 if (type.IsGenericInstance) {
                     GenericInstanceType git = new GenericInstanceType(relinkedElem);
                     foreach (TypeReference genArg in ((GenericInstanceType) type).GenericArguments)
-                        git.GenericArguments.Add(genArg.Relink(relinker));
+                        git.GenericArguments.Add(genArg?.Relink(relinker, context));
                     return git;
                 }
-
-                if (type.IsGenericParameter)
-                    return ((GenericParameter) type).Name != null ?
-                        new GenericParameter(
-                            ((GenericParameter) type).Name,
-                            (IGenericParameterProvider) ((GenericParameter) type).Owner.Relink(relinker)
-                        ) :
-                        new GenericParameter(
-                            (IGenericParameterProvider) ((GenericParameter) type).Owner.Relink(relinker)
-                        );
 
                 throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
             }
 
-            return (TypeReference) relinker(type);
+            if (type.IsGenericParameter)
+                return context.GetGenericParameter(((GenericParameter) type).Name);
+
+            return (TypeReference) relinker(type, context);
         }
 
-        public static MethodReference Relink(this MethodReference method, Relinker relinker) {
+        public static MethodReference Relink(this MethodReference method, Relinker relinker, IGenericParameterProvider context) {
             if (method.IsGenericInstance) {
                 GenericInstanceMethod methodg = ((GenericInstanceMethod) method);
-                GenericInstanceMethod gim = new GenericInstanceMethod(methodg.ElementMethod.Relink(relinker));
+                GenericInstanceMethod gim = new GenericInstanceMethod(methodg.ElementMethod.Relink(relinker, context));
                 foreach (TypeReference arg in methodg.GenericArguments)
-                    gim.GenericArguments.Add(arg.Relink(relinker));
+                    // Generic arguments for the generic instance are often given by the next higher provider
+                    gim.GenericArguments.Add(arg.Relink(relinker, context));
 
                 return gim;
             }
 
-            MethodReference relink = new MethodReference(method.Name, method.ReturnType, method.DeclaringType.Relink(relinker));
-            relink.ReturnType = method.ReturnType?.Relink(relinker);
+            MethodReference relink = new MethodReference(method.Name, method.ReturnType, method.DeclaringType.Relink(relinker, context));
 
             relink.CallingConvention = method.CallingConvention;
             relink.ExplicitThis = method.ExplicitThis;
             relink.HasThis = method.HasThis;
 
-            foreach (ParameterDefinition param in method.Parameters) {
-                param.ParameterType = param.ParameterType.Relink(relinker);
-                relink.Parameters.Add(param);
-            }
-
             foreach (GenericParameter param in method.GenericParameters) {
                 GenericParameter paramN = new GenericParameter(param.Name, param.Owner) {
                     Attributes = param.Attributes,
                     // MetadataToken = param.MetadataToken
-                };
+                }.Update(param);
 
                 foreach (TypeReference constraint in param.Constraints) {
-                    paramN.Constraints.Add(constraint.Relink(relinker));
+                    paramN.Constraints.Add(constraint.Relink(relinker, context));
                 }
 
                 relink.GenericParameters.Add(paramN);
             }
 
+            relink.ReturnType = method.ReturnType?.Relink(relinker, method);
+
+            foreach (ParameterDefinition param in method.Parameters) {
+                param.ParameterType = param.ParameterType.Relink(relinker, method);
+                relink.Parameters.Add(param);
+            }
+
             return relink;
         }
 
-        public static FieldReference Relink(this FieldReference field, Relinker relinker) {
-            return new FieldReference(field.Name, field.FieldType.Relink(relinker), field.DeclaringType.Relink(relinker));
+        public static FieldReference Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
+            TypeReference declaringType = field.DeclaringType.Relink(relinker, context);
+            return new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType);
         }
 
-        public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker) {
-            attrib.Constructor = attrib.Constructor.Relink(relinker);
+        public static ParameterDefinition Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
+            param = ((MethodReference) param.Method).Relink(relinker, context).Parameters[param.Index];
+            param.ParameterType = param.ParameterType.Relink(relinker, context);
+            return param;
+        }
+
+        public static ParameterDefinition Clone(this ParameterDefinition param)
+            => new ParameterDefinition(param.Name, param.Attributes, param.ParameterType) {
+                Constant = param.Constant,
+                IsIn = param.IsIn,
+                IsLcid = param.IsLcid,
+                IsOptional = param.IsOptional,
+                IsOut = param.IsOut,
+                IsReturnValue = param.IsReturnValue
+            };
+
+        public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker, IGenericParameterProvider context) {
+            attrib.Constructor = attrib.Constructor.Relink(relinker, context);
             // Don't foreach when modifying the collection
             for (int i = 0; i < attrib.ConstructorArguments.Count; i++) {
                 CustomAttributeArgument attribArg = attrib.ConstructorArguments[i];
-                attrib.ConstructorArguments[i] = new CustomAttributeArgument(attribArg.Type.Relink(relinker), attribArg.Value);
+                attrib.ConstructorArguments[i] = new CustomAttributeArgument(attribArg.Type.Relink(relinker, context), attribArg.Value);
             }
             for (int i = 0; i < attrib.Fields.Count; i++) {
                 CustomAttributeNamedArgument attribArg = attrib.Fields[i];
                 attrib.Fields[i] = new CustomAttributeNamedArgument(attribArg.Name,
-                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker), attribArg.Argument.Value)
+                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value)
                 );
             }
             for (int i = 0; i < attrib.Properties.Count; i++) {
                 CustomAttributeNamedArgument attribArg = attrib.Properties[i];
                 attrib.Properties[i] = new CustomAttributeNamedArgument(attribArg.Name,
-                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker), attribArg.Argument.Value)
+                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value)
                 );
             }
             return attrib;
@@ -247,38 +296,23 @@ namespace MonoMod {
             return newAttrib;
         }
 
-        public static GenericParameter Relink(this GenericParameter param, Relinker relinker) {
+        public static GenericParameter Relink(this GenericParameter param, Relinker relinker, IGenericParameterProvider context) {
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
-            };
+            }.Update(param);
             foreach (TypeReference constraint in param.Constraints)
-                newParam.Constraints.Add(constraint.Relink(relinker));
+                newParam.Constraints.Add(constraint.Relink(relinker, context));
             return newParam;
         }
 
         public static GenericParameter Clone(this GenericParameter param) {
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
-            };
+            }.Update(param);
             foreach (TypeReference constraint in param.Constraints)
                 newParam.Constraints.Add(constraint);
             return newParam;
         }
-
-        public static ParameterDefinition Relink(this ParameterDefinition param, Relinker relinker) {
-            param.ParameterType = param.ParameterType.Relink(relinker);
-            return param;
-        }
-
-        public static ParameterDefinition Clone(this ParameterDefinition param)
-            => new ParameterDefinition(param.Name, param.Attributes, param.ParameterType) {
-                Constant = param.Constant,
-                IsIn = param.IsIn,
-                IsLcid = param.IsLcid,
-                IsOptional = param.IsOptional,
-                IsOut = param.IsOut,
-                IsReturnValue = param.IsReturnValue
-            };
 
         public static bool EqualMember(this MemberReference member, MemberReference other)
             => member.FullName == other.FullName;

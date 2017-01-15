@@ -369,7 +369,7 @@ namespace MonoMod {
         }
 
 
-        public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp) {
+        public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             if (mtp is TypeReference) {
                 TypeReference type = (TypeReference) mtp;
 
@@ -379,26 +379,30 @@ namespace MonoMod {
                 // TODO What if it's in a dependency?
 
                 // FindType works in emergency cases - try to make the non-FindType path "accurate" first!
-                // return Module.ImportReference(FindType(type.FullName));
-                TypeReference newType = new TypeReference(type.Namespace, type.Name, Module, Module, type.IsValueType);
-                if (type.DeclaringType != null) newType.DeclaringType = Relink(type.DeclaringType);
+                return Module.ImportReference(FindType(RemovePrefixes(type.FullName, type)));
+                /*
+                TypeReference newType = new TypeReference(type.Namespace, RemovePrefixes(type.Name), Module, Module, type.IsValueType);
+                if (type.DeclaringType != null) newType.DeclaringType = Relink(type.DeclaringType, context);
+                foreach (GenericParameter genParam in type.GenericParameters)
+                    newType.GenericParameters.Add((GenericParameter) Relink(genParam, newType));
                 return Module.ImportReference(newType);
+                */
             }
 
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
         }
 
-        public virtual IMetadataTokenProvider Relink(IMetadataTokenProvider mtp) {
-            return mtp.Relink(Relinker);
+        public virtual IMetadataTokenProvider Relink(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+            return mtp.Relink(Relinker, context);
         }
-        public virtual TypeReference Relink(TypeReference type) {
-            return type.Relink(Relinker);
+        public virtual TypeReference Relink(TypeReference type, IGenericParameterProvider context) {
+            return type.Relink(Relinker, context);
         }
-        public virtual MethodReference Relink(MethodReference method) {
-            return method.Relink(Relinker);
+        public virtual MethodReference Relink(MethodReference method, IGenericParameterProvider context) {
+            return method.Relink(Relinker, context);
         }
-        public virtual CustomAttribute Relink(CustomAttribute attrib) {
-            return attrib.Relink(Relinker);
+        public virtual CustomAttribute Relink(CustomAttribute attrib, IGenericParameterProvider context) {
+            return attrib.Relink(Relinker, context);
         }
 
         public virtual TypeReference FindType(string name)
@@ -461,16 +465,18 @@ namespace MonoMod {
 
             TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType);
             newType.AddAttribute(GetMonoModAddedCtor());
+
+            foreach (GenericParameter genParam in type.GenericParameters)
+                newType.GenericParameters.Add(genParam.Clone());
+
             newType.ClassSize = type.ClassSize;
             if (type.DeclaringType != null) {
                 // The declaring type is existing as this is being called nestedly.
-                newType.DeclaringType = Relink(type.DeclaringType).Resolve();
+                newType.DeclaringType = Relink(type.DeclaringType, newType).Resolve();
                 newType.DeclaringType.NestedTypes.Add(newType);
             } else {
                 Module.Types.Add(newType);
             }
-            foreach (GenericParameter genParam in type.GenericParameters)
-                newType.GenericParameters.Add(genParam.Clone());
             newType.PackingSize = type.PackingSize;
             newType.SecurityDeclarations.AddRange(type.SecurityDeclarations);
 
@@ -649,9 +655,6 @@ namespace MonoMod {
                 ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethod));
             }
 
-            foreach (VariableDefinition var in method.Body?.Variables)
-                var.VariableType = Relink(var.VariableType);
-
             if (existingMethod != null) {
                 existingMethod.Body = method.Body.Clone(existingMethod);
                 existingMethod.IsManaged = method.IsManaged;
@@ -723,24 +726,24 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInType(TypeDefinition type) {
-            if (type.BaseType != null) type.BaseType = Relink(type.BaseType);
+            if (type.BaseType != null) type.BaseType = Relink(type.BaseType, type);
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < type.Interfaces.Count; i++) {
                 InterfaceImplementation interf = type.Interfaces[i];
-                InterfaceImplementation newInterf = new InterfaceImplementation(Relink(interf.InterfaceType));
+                InterfaceImplementation newInterf = new InterfaceImplementation(Relink(interf.InterfaceType, type));
                 foreach (CustomAttribute attrib in interf.CustomAttributes)
-                    newInterf.CustomAttributes.Add(Relink(attrib));
+                    newInterf.CustomAttributes.Add(Relink(attrib, type));
                 type.Interfaces[i] = newInterf;
             }
 
             foreach (CustomAttribute attrib in type.CustomAttributes)
-                Relink(attrib);
+                Relink(attrib, type);
 
             foreach (PropertyDefinition prop in type.Properties) {
-                prop.PropertyType = Relink(prop.PropertyType);
+                prop.PropertyType = Relink(prop.PropertyType, type);
                 foreach (CustomAttribute attrib in prop.CustomAttributes)
-                    Relink(attrib);
+                    Relink(attrib, type);
                 MethodDefinition getter = prop.GetMethod;
                 if (getter != null) PatchRefsInMethod(getter);
                 MethodDefinition setter = prop.SetMethod;
@@ -754,9 +757,9 @@ namespace MonoMod {
                     PatchRefsInMethod(method);
 
             foreach (FieldDefinition field in type.Fields) {
-                field.FieldType = Relink(field.FieldType);
+                field.FieldType = Relink(field.FieldType, type);
                 foreach (CustomAttribute attrib in field.CustomAttributes)
-                    Relink(attrib);
+                    Relink(attrib, type);
             }
 
             PatchRefsInTypeNested(type);
@@ -769,6 +772,11 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
+            if (method.Body == null) return;
+
+            foreach (VariableDefinition var in method.Body.Variables)
+                var.VariableType = Relink(var.VariableType, method);
+
             bool publicAccess = true;
             bool matchingPlatformIL = true;
 
@@ -840,7 +848,7 @@ namespace MonoMod {
 
                 // General relinking
 
-                if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand);
+                if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand, method);
                 if (operand is TypeReference) operand = Module.ImportReference((TypeReference) operand);
                 if (operand is FieldReference) operand = Module.ImportReference((FieldReference) operand);
                 if (operand is MethodReference) operand = Module.ImportReference((MethodReference) operand);
