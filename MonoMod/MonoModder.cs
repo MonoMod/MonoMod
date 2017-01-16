@@ -623,7 +623,7 @@ namespace MonoMod {
                 // Ignore original methods
                 return null;
 
-            if (!AllowedSpecialName(method) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+            if (!AllowedSpecialName(method, targetType) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
                 // Ignore ignored methods
                 return null;
 
@@ -1024,8 +1024,9 @@ namespace MonoMod {
         /// </summary>
         /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
         /// <param name="method">Method to check.</param>
-        public virtual bool AllowedSpecialName(MethodDefinition method) {
-            if (method.HasMMAttribute("Added")) {
+        public virtual bool AllowedSpecialName(MethodDefinition method, TypeDefinition targetType = null) {
+            if (method.HasMMAttribute("Added") || method.DeclaringType.HasMMAttribute("Added") ||
+                (targetType?.HasMMAttribute("Added") ?? false)) {
                 return true;
             }
 
