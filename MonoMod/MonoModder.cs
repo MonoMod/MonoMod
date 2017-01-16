@@ -198,10 +198,6 @@ namespace MonoMod {
             MapDependency(main, dep.Name, dep.FullName);
         }
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null) {
-            // "Fix" looping dependencies in the only place they actually are allowed to occur.
-            if (name == "System" || name.StartsWith("System.") || name == "mscorlib")
-                return;
-
             ModuleDefinition dep;
             if ((fullName != null && DependencyCache.TryGetValue(fullName, out dep)) ||
                                      DependencyCache.TryGetValue(name    , out dep)) {
@@ -278,7 +274,7 @@ namespace MonoMod {
 
             PatchWasHere();
 
-            Log("Writing modded module into output stream.");
+            Log("[Write] Writing modded module into output stream.");
             Module.Write(output, WriterParameters);
         }
 
@@ -415,15 +411,17 @@ namespace MonoMod {
         }
 
         public virtual TypeReference FindType(string name)
-            => FindType(Module, name) ?? Module.GetType(name, true);
+            => FindType(Module, name, new Stack<ModuleDefinition>()) ?? Module.GetType(name, true);
         public virtual TypeReference FindType(string name, bool runtimeName)
-            => FindType(Module, name) ?? Module.GetType(name, runtimeName);
-        protected virtual TypeReference FindType(ModuleDefinition main, string fullName) {
+            => FindType(Module, name, new Stack<ModuleDefinition>()) ?? Module.GetType(name, runtimeName);
+        protected virtual TypeReference FindType(ModuleDefinition main, string fullName, Stack<ModuleDefinition> crawled) {
             TypeReference type;
             if ((type = main.GetType(fullName, false)) != null)
                 return type;
+            if (crawled.Contains(main)) return null;
+            crawled.Push(main);
             foreach (ModuleDefinition dep in DependencyMap[main])
-                if ((type = FindType(dep, fullName)) != null)
+                if ((type = FindType(dep, fullName, crawled)) != null)
                     return type;
             return null;
         }
@@ -600,14 +598,14 @@ namespace MonoMod {
                 if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || !field.MatchingPlatform())
                     continue;
 
-                if (type.HasField(field)) continue;
+                if (targetTypeDef.HasField(field)) continue;
 
                 FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
                 newField.AddAttribute(GetMonoModAddedCtor());
                 newField.InitialValue = field.InitialValue;
                 newField.Constant = field.Constant;
                 foreach (CustomAttribute attrib in field.CustomAttributes)
-                    newField.CustomAttributes.Add(attrib);
+                    newField.CustomAttributes.Add(attrib.Clone());
                 targetTypeDef.Fields.Add(newField);
             }
 

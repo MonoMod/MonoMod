@@ -354,35 +354,28 @@ namespace MonoMod {
             return newParam;
         }
 
-        public static bool EqualMember(this MemberReference member, MemberReference other)
-            => member.FullName == other.FullName;
-
-        public static bool HasMethod(this TypeDefinition type, MethodDefinition method) {
-            foreach (MethodDefinition methodInType in type.Methods)
-                if (method.EqualMember(methodInType)) return true;
-            return false;
-        }
-        public static bool HasProperty(this TypeDefinition type, PropertyDefinition prop) {
-            foreach (PropertyDefinition propInType in type.Properties)
-                if (prop.EqualMember(propInType)) return true;
-            return false;
-        }
-        public static bool HasField(this TypeDefinition type, FieldDefinition field) {
-            foreach (FieldDefinition fieldInType in type.Fields)
-                if (field.EqualMember(fieldInType)) return true;
-            return false;
-        }
-
-        public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
-            foreach (PropertyDefinition prop in type.Properties)
-                if (prop.Name == name) return prop;
-            return null;
-        }
         public static MethodDefinition FindMethod(this TypeDefinition type, string findableID) {
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID() == findableID) return method;
             return null;
         }
+        public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
+            foreach (PropertyDefinition prop in type.Properties)
+                if (prop.Name == name) return prop;
+            return null;
+        }
+        public static FieldDefinition FindField(this TypeDefinition type, string name) {
+            foreach (FieldDefinition field in type.Fields)
+                if (field.Name == name) return field;
+            return null;
+        }
+
+        public static bool HasMethod(this TypeDefinition type, MethodDefinition method)
+            => type.FindMethod(method.GetFindableID()) != null;
+        public static bool HasProperty(this TypeDefinition type, PropertyDefinition prop)
+            => type.FindProperty(prop.Name) != null;
+        public static bool HasField(this TypeDefinition type, FieldDefinition field)
+            => type.FindField(field.Name) != null;
 
         public static void SetPublic(this FieldDefinition o, bool p) {
             if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")

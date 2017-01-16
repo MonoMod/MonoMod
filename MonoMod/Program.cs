@@ -44,6 +44,8 @@ namespace MonoMod.MonoMod {
                 mm.AutoPatch();
 
                 mm.Write();
+
+                mm.Log("[Main] Done.");
             }
 
             if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
