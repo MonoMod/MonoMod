@@ -1,7 +1,6 @@
 using System;
 
 namespace MonoMod {
-    [MonoModIgnore]
     /// <summary>
     /// MonoMod linkto attribute.
     /// Apply it onto a method / field and calls to it by mods will be relinked to another target.

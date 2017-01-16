@@ -457,7 +457,8 @@ namespace MonoMod {
         public virtual void PrePatchType(TypeDefinition type) {
             string typeName = RemovePrefixes(type.FullName, type);
 
-            if (type.HasMMAttribute("Ignore") || !type.MatchingPlatform())
+            // Fix legacy issue: Copy / inline any used modifiers.
+            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || !type.MatchingPlatform())
                 return;
 
             // Check if type exists in target module or dependencies.
