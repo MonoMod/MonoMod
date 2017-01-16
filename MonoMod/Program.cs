@@ -27,6 +27,8 @@ namespace MonoMod.MonoMod {
                 Input = File.OpenRead(args[0]),
                 Output = File.OpenWrite(pathOut)
             }) {
+                mm.Read(false);
+
                 if (args.Length <= 2) {
                     mm.Log("[Main] Scanning for mods in directory.");
                     mm.ReadMod(Directory.GetParent(pathIn).FullName);
@@ -36,9 +38,16 @@ namespace MonoMod.MonoMod {
                         mm.ReadMod(args[i]);
                 }
 
+                mm.Read(true);
+
                 mm.Log("[Main] mm.AutoPatch();");
                 mm.AutoPatch();
+
+                mm.Write();
             }
+
+            if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
+                Console.ReadKey();
         }
 #endif
 

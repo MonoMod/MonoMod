@@ -301,13 +301,16 @@ namespace MonoMod {
 
         public virtual void ReadMod(string path) {
             if (Directory.Exists(path)) {
+                Log($"[ReadMod] Loading mod dir: {path}");
+                string mainName = Module.Name.Substring(0, Module.Name.Length - 3);
                 DependencyDirs.Add(path);
                 foreach (string mod in Directory.GetFiles(path))
-                    if (mod.ToLower().EndsWith(".mm.dll"))
+                    if (Path.GetFileName(mod).StartsWith(mainName) && mod.ToLower().EndsWith(".mm.dll"))
                         ReadMod(mod);
                 return;
             }
 
+            Log($"[ReadMod] Loading mod: {path}");
             Mods.Add(ModuleDefinition.ReadModule(path, GenReaderParameters(false)));
         }
         public virtual void ReadMod(Stream stream) {
@@ -318,11 +321,7 @@ namespace MonoMod {
         /// <summary>
         /// Automatically mods the module, loading Input, writing the modded module to Output.
         /// </summary>
-        public virtual void AutoPatch(bool read = true, bool write = true) {
-            Log($"AutoPatch({read}, {write});");
-
-            if (read) Read();
-
+        public virtual void AutoPatch() {
             /* WHY PRE-PATCH?
              * Custom attributes and other stuff refering to possibly new types
              * 1. could access yet undefined types that need to be copied over
@@ -349,10 +348,6 @@ namespace MonoMod {
 
             Log("[AutoPatch] Optimization pass");
             Optimize();
-
-            Log("[AutoPatch] Done.");
-
-            if (write) Write();
         }
 
         /// <summary>
@@ -643,10 +638,12 @@ namespace MonoMod {
 
             if (method.Name.StartsWith("replace_") || method.HasMMAttribute("Replace")) {
                 method.Name = RemovePrefixes(method.Name);
-                existingMethod.CustomAttributes.Clear();
-                existingMethod.Attributes = method.Attributes;
-                existingMethod.IsPInvokeImpl = method.IsPInvokeImpl;
-                existingMethod.ImplAttributes = method.ImplAttributes;
+                if (existingMethod != null) {
+                    existingMethod.CustomAttributes.Clear();
+                    existingMethod.Attributes = method.Attributes;
+                    existingMethod.IsPInvokeImpl = method.IsPInvokeImpl;
+                    existingMethod.ImplAttributes = method.ImplAttributes;
+                }
 
             } else if (existingMethod != null && origMethod == null) {
                 origMethod = new MethodDefinition(method.GetOriginalName(), existingMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, existingMethod.ReturnType);
