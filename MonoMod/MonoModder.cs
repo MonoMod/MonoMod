@@ -418,7 +418,10 @@ namespace MonoMod {
             TypeReference type;
             if ((type = main.GetType(fullName, false)) != null)
                 return type;
-            if (crawled.Contains(main)) return null;
+            if (fullName.StartsWith("<PrivateImplementationDetails>/"))
+                return null;
+            if (crawled.Contains(main))
+                return null;
             crawled.Push(main);
             foreach (ModuleDefinition dep in DependencyMap[main])
                 if ((type = FindType(dep, fullName, crawled)) != null)
@@ -466,7 +469,12 @@ namespace MonoMod {
             TypeDefinition targetTypeDef = targetType?.Resolve();
             if (targetType != null) {
                 if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")))
-                    Module.Types.Remove(targetTypeDef);
+                    if (targetTypeDef.DeclaringType == null)
+                        Module.Types.Remove(targetTypeDef);
+                    else
+                        targetTypeDef.DeclaringType.Resolve().NestedTypes.Remove(targetTypeDef);
+                else
+                    PrePatchNested(type);
                 return;
             }
 
