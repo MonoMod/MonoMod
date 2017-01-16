@@ -17,24 +17,20 @@ namespace MonoMod {
         public static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
 
         public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
-            if (o == null) {
+            if (o == null)
                 return null;
-            }
 
             MethodBody c = new MethodBody(m);
             c.MaxStackSize = o.MaxStackSize;
             c.InitLocals = o.InitLocals;
             c.LocalVarToken = o.LocalVarToken;
 
-            foreach (Instruction i in o.Instructions) {
+            foreach (Instruction i in o.Instructions)
                 c.Instructions.Add(i);
-            }
-            foreach (ExceptionHandler i in o.ExceptionHandlers) {
+            foreach (ExceptionHandler i in o.ExceptionHandlers)
                 c.ExceptionHandlers.Add(i);
-            }
-            foreach (VariableDefinition i in o.Variables) {
+            foreach (VariableDefinition i in o.Variables)
                 c.Variables.Add(i);
-            }
 
             return c;
         }
@@ -112,6 +108,40 @@ namespace MonoMod {
             return true;
         }
 
+        public static string GetFindableID(this MethodReference method, string name = null, string type = null) {
+            while (method.IsGenericInstance)
+                method = ((GenericInstanceMethod) method).ElementMethod;
+
+            StringBuilder builder = new StringBuilder();
+            builder
+                .Append(method.ReturnType.FullName)
+                .Append(" ")
+                .Append(type ?? method.DeclaringType.FullName)
+                .Append("::")
+                .Append(name ?? method.Name);
+
+
+            builder.Append("(");
+
+            if (method.HasParameters) {
+                Collection<ParameterDefinition> parameters = method.Parameters;
+                for (int i = 0; i < parameters.Count; i++) {
+                    ParameterDefinition parameter = parameters[i];
+                    if (i > 0)
+                        builder.Append(",");
+
+                    if (parameter.ParameterType.IsSentinel)
+                        builder.Append("...,");
+
+                    builder.Append(parameter.ParameterType.FullName);
+                }
+            }
+
+            builder.Append(")");
+
+            return builder.ToString();
+        }
+
         public static void UpdateOffsets(this MethodBody body, int instri, int delta) {
             for (int offsi = body.Instructions.Count - 1; instri <= offsi; offsi--)
                 body.Instructions[offsi].Offset--;
@@ -182,6 +212,9 @@ namespace MonoMod {
                 if (type.IsArray)
                     return new ArrayType(relinkedElem, ((ArrayType) type).Dimensions.Count);
 
+                if (type.IsRequiredModifier)
+                    return new RequiredModifierType(((RequiredModifierType) type).ModifierType.Relink(relinker, context), relinkedElem);
+
                 if (type.IsGenericInstance) {
                     GenericInstanceType git = new GenericInstanceType(relinkedElem);
                     foreach (TypeReference genArg in ((GenericInstanceType) type).GenericArguments)
@@ -246,11 +279,14 @@ namespace MonoMod {
         public static ParameterDefinition Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
             param = ((MethodReference) param.Method).Relink(relinker, context).Parameters[param.Index];
             param.ParameterType = param.ParameterType.Relink(relinker, context);
+            // Don't foreach when modifying the collection
+            for (int i = 0; i < param.CustomAttributes.Count; i++)
+                param.CustomAttributes[i] = param.CustomAttributes[i].Relink(relinker, context);
             return param;
         }
 
-        public static ParameterDefinition Clone(this ParameterDefinition param)
-            => new ParameterDefinition(param.Name, param.Attributes, param.ParameterType) {
+        public static ParameterDefinition Clone(this ParameterDefinition param) {
+            ParameterDefinition newParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType) {
                 Constant = param.Constant,
                 IsIn = param.IsIn,
                 IsLcid = param.IsLcid,
@@ -258,6 +294,10 @@ namespace MonoMod {
                 IsOut = param.IsOut,
                 IsReturnValue = param.IsReturnValue
             };
+            foreach (CustomAttribute attrib in param.CustomAttributes)
+                newParam.CustomAttributes.Add(attrib.Clone());
+            return newParam;
+        }
 
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker, IGenericParameterProvider context) {
             attrib.Constructor = attrib.Constructor.Relink(relinker, context);
@@ -333,9 +373,14 @@ namespace MonoMod {
             return false;
         }
 
-        public static MethodDefinition FindMethod(this TypeDefinition type, string fullName) {
+        public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
+            foreach (PropertyDefinition prop in type.Properties)
+                if (prop.Name == name) return prop;
+            return null;
+        }
+        public static MethodDefinition FindMethod(this TypeDefinition type, string findableID) {
             foreach (MethodDefinition method in type.Methods)
-                if (method.FullName == fullName) return method;
+                if (method.GetFindableID() == findableID) return method;
             return null;
         }
 

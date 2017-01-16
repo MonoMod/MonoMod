@@ -276,7 +276,7 @@ namespace MonoMod {
         public virtual void Write(Stream output = null) {
             output = output ?? Output;
 
-            // PatchWasHere(); // FIXME
+            PatchWasHere();
 
             Log("Writing modded module into output stream.");
             Module.Write(output, WriterParameters);
@@ -301,6 +301,7 @@ namespace MonoMod {
 
         public virtual void ReadMod(string path) {
             if (Directory.Exists(path)) {
+                DependencyDirs.Add(path);
                 foreach (string mod in Directory.GetFiles(path))
                     if (mod.ToLower().EndsWith(".mm.dll"))
                         ReadMod(mod);
@@ -420,6 +421,8 @@ namespace MonoMod {
 
         public virtual TypeReference FindType(string name)
             => FindType(Module, name) ?? Module.GetType(name, true);
+        public virtual TypeReference FindType(string name, bool runtimeName)
+            => FindType(Module, name) ?? Module.GetType(name, runtimeName);
         protected virtual TypeReference FindType(ModuleDefinition main, string fullName) {
             TypeReference type;
             if ((type = main.GetType(fullName, false)) != null)
@@ -465,7 +468,7 @@ namespace MonoMod {
                 return;
 
             // Check if type exists in target module or dependencies.
-            TypeReference targetType = FindType(typeName);
+            TypeReference targetType = FindType(typeName, false);
             TypeDefinition targetTypeDef = targetType?.Resolve();
             if (targetType != null) {
                 if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")))
@@ -520,6 +523,8 @@ namespace MonoMod {
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
         public virtual void PatchType(TypeDefinition type) {
+            MethodDefinition addMethod;
+
             string typeName = RemovePrefixes(type.FullName, type);
 
             if (type.HasMMAttribute("Ignore") ||
@@ -542,10 +547,12 @@ namespace MonoMod {
                 if (!targetTypeDef.HasCustomAttribute(attrib.AttributeType.FullName))
                     targetTypeDef.CustomAttributes.Add(attrib.Clone());
 
+            Stack<MethodDefinition> propMethods = new Stack<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
             foreach (PropertyDefinition prop in type.Properties) {
-                if (!targetTypeDef.HasProperty(prop)) {
+                PropertyDefinition targetProp = targetTypeDef.FindProperty(prop.Name);
+                if (targetProp == null) {
                     // Add missing property
-                    PropertyDefinition newProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
+                    PropertyDefinition newProp = targetProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
                     newProp.AddAttribute(GetMonoModAddedCtor());
 
                     foreach (ParameterDefinition param in prop.Parameters)
@@ -559,23 +566,29 @@ namespace MonoMod {
                 }
 
                 MethodDefinition getter = prop.GetMethod;
-                if (getter != null && !getter.HasMMAttribute("Ignore") && getter.MatchingPlatform())
-                    PatchMethod(targetTypeDef, getter);
+                if (getter != null &&
+                    (addMethod = PatchMethod(targetTypeDef, getter)) != null) {
+                    targetProp.GetMethod = addMethod;
+                    propMethods.Push(getter);
+                }
 
                 MethodDefinition setter = prop.SetMethod;
-                if (setter != null && !setter.HasMMAttribute("Ignore") && setter.MatchingPlatform())
-                    PatchMethod(targetTypeDef, setter);
+                if (setter != null &&
+                    (addMethod = PatchMethod(targetTypeDef, setter)) != null) {
+                    targetProp.SetMethod = addMethod;
+                    propMethods.Push(setter);
+                }
 
                 foreach (MethodDefinition method in prop.OtherMethods)
-                    if (!method.HasMMAttribute("Ignore") && method.MatchingPlatform())
-                        PatchMethod(targetTypeDef, method);
+                    if ((addMethod = PatchMethod(targetTypeDef, method)) != null) {
+                        targetProp.OtherMethods.Add(addMethod);
+                        propMethods.Push(method);
+                    }
             }
 
-            foreach (MethodDefinition method in type.Methods) {
-                if (!AllowedSpecialName(method) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
-                    continue;
-                PatchMethod(targetTypeDef, method);
-            }
+            foreach (MethodDefinition method in type.Methods)
+                if (!propMethods.Contains(method))
+                    PatchMethod(targetTypeDef, method);
 
             if (type.HasMMAttribute("EnumReplace")) {
                 for (int ii = 0; ii < targetTypeDef.Fields.Count;) {
@@ -612,16 +625,21 @@ namespace MonoMod {
             }
         }
 
-        public virtual void PatchMethod(TypeDefinition type, MethodDefinition method) {
+        public virtual MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {
             if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
                 // Ignore original methods
-                return;
+                return null;
 
-            MethodDefinition existingMethod = type.FindMethod(method.FullName);
-            MethodDefinition origMethod = type.FindMethod(RemovePrefixes(method.FullName.Replace(method.Name, method.GetOriginalName()), method.DeclaringType));
+            if (!AllowedSpecialName(method) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+                // Ignore ignored methods
+                return null;
+
+            string typeName = RemovePrefixes(targetType.FullName, targetType);
+            MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
+            MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
 
             if (existingMethod == null && method.HasMMAttribute("NoNew"))
-                return;
+                return null;
 
             if (method.Name.StartsWith("replace_") || method.HasMMAttribute("Replace")) {
                 method.Name = RemovePrefixes(method.Name);
@@ -661,7 +679,7 @@ namespace MonoMod {
 
                 origMethod.AddAttribute(GetMonoModOriginalCtor());
 
-                type.Methods.Add(origMethod);
+                targetType.Methods.Add(origMethod);
             }
 
             // Fix for .cctor not linking to orig_.cctor
@@ -686,7 +704,6 @@ namespace MonoMod {
             } else {
                 MethodDefinition clone = new MethodDefinition(method.Name, method.Attributes, Module.TypeSystem.Void);
                 clone.MetadataToken = GetMetadataToken(TokenType.Method);
-                type.Methods.Add(clone);
                 clone.CallingConvention = method.CallingConvention;
                 clone.ExplicitThis = method.ExplicitThis;
                 clone.MethodReturnType = method.MethodReturnType;
@@ -695,7 +712,7 @@ namespace MonoMod {
                 clone.Attributes = method.Attributes;
                 clone.ImplAttributes = method.ImplAttributes;
                 clone.SemanticsAttributes = method.SemanticsAttributes;
-                clone.DeclaringType = type;
+                clone.DeclaringType = targetType;
                 clone.ReturnType = method.ReturnType;
                 clone.Body = method.Body.Clone(clone);
                 clone.IsManaged = method.IsManaged;
@@ -718,20 +735,14 @@ namespace MonoMod {
                 foreach (MethodReference @override in method.Overrides)
                     clone.Overrides.Add(@override);
 
+                clone.AddAttribute(GetMonoModAddedCtor());
+
+                targetType.Methods.Add(clone);
+
                 method = clone;
             }
 
-            if (method.Name.StartsWith("get_") || method.Name.StartsWith("set_"))
-                foreach (PropertyDefinition property in type.Properties)
-                    if (method.Name.Substring(4) == property.Name) {
-                        if (method.Name[0] == 'g') {
-                            property.PropertyType = method.ReturnType;
-                            property.GetMethod = method;
-                        } else {
-                            property.SetMethod = method;
-                        }
-                        break;
-                    }
+            return method;
         }
         #endregion
 
@@ -758,19 +769,19 @@ namespace MonoMod {
 
             foreach (PropertyDefinition prop in type.Properties) {
                 prop.PropertyType = Relink(prop.PropertyType, type);
-                foreach (CustomAttribute attrib in prop.CustomAttributes)
-                    Relink(attrib, type);
-                MethodDefinition getter = prop.GetMethod;
+                // Don't foreach when modifying the collection
+                for (int i = 0; i < prop.CustomAttributes.Count; i++)
+                    prop.CustomAttributes[i] = Relink(prop.CustomAttributes[i], type);
+                /*MethodDefinition getter = prop.GetMethod;
                 if (getter != null) PatchRefsInMethod(getter);
                 MethodDefinition setter = prop.SetMethod;
                 if (setter != null) PatchRefsInMethod(setter);
                 foreach (MethodDefinition method in prop.OtherMethods)
-                    PatchRefsInMethod(method);
+                    PatchRefsInMethod(method);*/
             }
 
             foreach (MethodDefinition method in type.Methods)
-                if (AllowedSpecialName(method))
-                    PatchRefsInMethod(method);
+                PatchRefsInMethod(method);
 
             foreach (FieldDefinition field in type.Fields) {
                 field.FieldType = Relink(field.FieldType, type);
@@ -788,6 +799,10 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
+            if (!AllowedSpecialName(method) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+                // Ignore ignored methods
+                return;
+
             // Don't foreach when modifying the collection
             for (int i = 0; i < method.GenericParameters.Count; i++)
                 method.GenericParameters[i] = (GenericParameter) Relink(method.GenericParameters[i], method);
@@ -901,6 +916,21 @@ namespace MonoMod {
         #endregion
 
         #region MonoMod injected types
+        public virtual TypeDefinition PatchWasHere() {
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "WasHere") {
+                    Log("[PatchWasHere] Type MonoMod.WasHere already existing");
+                    return Module.Types[ti];
+                }
+            }
+            Log("[PatchWasHere] Adding type MonoMod.WasHere");
+            TypeDefinition wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
+                BaseType = Module.ImportReference(typeof(object))
+            };
+            Module.Types.Add(wasHere);
+            return wasHere;
+        }
+
         protected MethodDefinition _mmOriginalCtor;
         public virtual MethodReference GetMonoModOriginalCtor() {
             if (_mmOriginalCtor != null && _mmOriginalCtor.Module != Module) {
@@ -1000,7 +1030,7 @@ namespace MonoMod {
         /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
         /// <param name="method">Method to check.</param>
         public virtual bool AllowedSpecialName(MethodDefinition method) {
-            if (method.DeclaringType.HasMMAttribute("Added")) {
+            if (method.HasMMAttribute("Added")) {
                 return true;
             }
 
