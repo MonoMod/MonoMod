@@ -215,7 +215,10 @@ namespace MonoMod {
                 if (type.IsPointer)
                     return new PointerType(relinkedElem);
 
-                if (type.IsArray)
+				if (type.IsPinned)
+					return new PinnedType(relinkedElem);
+
+				if (type.IsArray)
                     return new ArrayType(relinkedElem, ((ArrayType) type).Dimensions.Count);
 
                 if (type.IsRequiredModifier)
@@ -228,7 +231,7 @@ namespace MonoMod {
                     return git;
                 }
 
-                throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
+				throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
             }
 
             if (type.IsGenericParameter)
