@@ -64,23 +64,26 @@ namespace MonoMod {
         /// <returns><c>true</c> if the attribute provider contains the given MonoMod attribute, <c>false</c> otherwise.</returns>
         /// <param name="cap">Attribute provider to check.</param>
         /// <param name="attribute">Attribute.</param>
-        public static bool HasMMAttribute(this ICustomAttributeProvider cap, string attribute) {
-            return cap.HasCustomAttribute("MonoMod.MonoMod" + attribute);
-        }
+        public static bool HasMMAttribute(this ICustomAttributeProvider cap, string attribute)
+            => cap.HasCustomAttribute("MonoMod.MonoMod" + attribute);
+        public static CustomAttribute GetMMAttribute(this ICustomAttributeProvider cap, string attribute)
+            => cap.GetCustomAttribute("MonoMod.MonoMod" + attribute);
 
+        public static CustomAttribute GetCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
+            if (cap == null || !cap.HasCustomAttributes) return null;
+            foreach (CustomAttribute attrib in cap.CustomAttributes)
+                if (attrib.AttributeType.FullName == attribute)
+                    return attrib;
+            return null;
+        }
         /// <summary>
         /// Determines if the attribute provider has got a specific custom attribute.
         /// </summary>
         /// <returns><c>true</c> if the attribute provider contains the given custom attribute, <c>false</c> otherwise.</returns>
         /// <param name="cap">Attribute provider to check.</param>
         /// <param name="attribute">Attribute.</param>
-        public static bool HasCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
-            if (cap == null || !cap.HasCustomAttributes) return false;
-            foreach (CustomAttribute attrib in cap.CustomAttributes)
-                if (attrib.AttributeType.FullName == attribute)
-                    return true;
-            return false;
-        }
+        public static bool HasCustomAttribute(this ICustomAttributeProvider cap, string attribute)
+            => cap.GetCustomAttribute(attribute) != null;
 
         public static string GetOriginalName(this MethodDefinition method) {
             foreach (CustomAttribute attrib in method.CustomAttributes)
@@ -108,16 +111,19 @@ namespace MonoMod {
             return true;
         }
 
-        public static string GetFindableID(this MethodReference method, string name = null, string type = null) {
+        public static string GetFindableID(this MethodReference method, string name = null, string type = null, bool withType = true) {
             while (method.IsGenericInstance)
                 method = ((GenericInstanceMethod) method).ElementMethod;
 
             StringBuilder builder = new StringBuilder();
             builder
                 .Append(method.ReturnType.FullName)
-                .Append(" ")
-                .Append(type ?? method.DeclaringType.FullName)
-                .Append("::")
+                .Append(" ");
+
+            if (withType)
+                builder.Append(type ?? method.DeclaringType.FullName).Append("::");
+
+            builder
                 .Append(name ?? method.Name);
 
 
@@ -239,7 +245,7 @@ namespace MonoMod {
                     // Generic arguments for the generic instance are often given by the next higher provider
                     gim.GenericArguments.Add(arg.Relink(relinker, context));
 
-                return gim;
+                return (MethodReference) relinker(gim, context);
             }
 
             MethodReference relink = new MethodReference(method.Name, method.ReturnType, method.DeclaringType.Relink(relinker, context));
@@ -268,12 +274,12 @@ namespace MonoMod {
                 relink.Parameters.Add(param);
             }
 
-            return relink;
+            return (MethodReference) relinker(relink, context);
         }
 
         public static FieldReference Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
             TypeReference declaringType = field.DeclaringType.Relink(relinker, context);
-            return new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType);
+            return (FieldReference) relinker(new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType), context);
         }
 
         public static ParameterDefinition Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
@@ -355,8 +361,12 @@ namespace MonoMod {
         }
 
         public static MethodDefinition FindMethod(this TypeDefinition type, string findableID) {
+            // First pass: With type name (f.e. global searches)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID() == findableID) return method;
+            // Second pass: Without type name (f.e. LinkTo)
+            foreach (MethodDefinition method in type.Methods)
+                if (method.GetFindableID(withType: false) == findableID) return method;
             return null;
         }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {

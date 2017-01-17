@@ -374,14 +374,51 @@ namespace MonoMod {
         }
 
 
+        public virtual MemberReference GetLinkToRef(ICustomAttributeProvider orig, IGenericParameterProvider context) {
+            CustomAttribute linkto = orig?.GetMMAttribute("LinkTo");
+            if (linkto == null) return null;
+
+            TypeDefinition type = null;
+            MemberReference member = null;
+            for (int i = 0; i < linkto.ConstructorArguments.Count; i++) {
+                CustomAttributeArgument arg = linkto.ConstructorArguments[i];
+                object value = arg.Value;
+
+                if (i == 0) { // Type
+                    if (value is string)
+                        type = FindType((string) value).Resolve();
+                    else if (value is TypeReference)
+                        type = Relink((TypeReference) value, context).Resolve();
+
+                } else if (i == 1) { // Member
+                    if (orig is MethodReference)
+                        member = type.FindMethod((string) value);
+                    else if (orig is FieldReference)
+                        member = type.FindField((string) value);
+                }
+
+            }
+
+            if (orig is TypeReference)
+                return Module.ImportReference(type);
+            if (orig is MethodReference)
+                return Module.ImportReference((MethodReference) member);
+            if (orig is FieldReference)
+                return Module.ImportReference((FieldReference) member);
+
+            throw new InvalidOperationException($"Cannot link from {orig} - unknown type {orig.GetType()}");
+        }
+
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+            ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
+            CustomAttribute linkto = cap?.GetMMAttribute("LinkTo");
+            if (linkto != null)
+                return GetLinkToRef(cap, context);
+
             if (mtp is TypeReference) {
                 TypeReference type = (TypeReference) mtp;
 
                 if (!Mods.Contains(type.Module)) return type; // Type isn't coming from a mod module - just return the original.
-
-                // TODO Handle LinkTo
-                // TODO What if it's in a dependency?
 
                 // FindType works in emergency cases - try to make the non-FindType path "accurate" first!
                 return Module.ImportReference(FindType(RemovePrefixes(type.FullName, type)));
@@ -393,6 +430,11 @@ namespace MonoMod {
                 return Module.ImportReference(newType);
                 */
             }
+
+            if (mtp is FieldReference || mtp is MethodReference)
+                // Don't relink those. It'd be useful to f.e. link to member B instead of member A.
+                // MonoModExt already handles the defualt "deep" relinking.
+                return mtp;
 
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
         }
@@ -776,12 +818,6 @@ namespace MonoMod {
                 // Don't foreach when modifying the collection
                 for (int i = 0; i < prop.CustomAttributes.Count; i++)
                     prop.CustomAttributes[i] = Relink(prop.CustomAttributes[i], type);
-                /*MethodDefinition getter = prop.GetMethod;
-                if (getter != null) PatchRefsInMethod(getter);
-                MethodDefinition setter = prop.SetMethod;
-                if (setter != null) PatchRefsInMethod(setter);
-                foreach (MethodDefinition method in prop.OtherMethods)
-                    PatchRefsInMethod(method);*/
             }
 
             foreach (MethodDefinition method in type.Methods)
