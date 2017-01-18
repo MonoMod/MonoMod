@@ -867,7 +867,7 @@ namespace MonoMod {
                 if (handler.CatchType != null)
                     handler.CatchType = Relink(handler.CatchType, method);
 
-            bool publicAccess = true;
+            bool publicAccess = false;
             bool matchingPlatformIL = true;
 
             for (int instri = 0; method.HasBody && instri < method.Body.Instructions.Count; instri++) {
