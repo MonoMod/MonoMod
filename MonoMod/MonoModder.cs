@@ -649,7 +649,15 @@ namespace MonoMod {
                 if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || !field.MatchingPlatform())
                     continue;
 
-                if (targetTypeDef.HasField(field)) continue;
+                if (field.HasMMAttribute("Remove")) {
+                    FieldDefinition targetField = targetTypeDef.FindField(field.Name);
+                    if (targetField != null)
+                        targetTypeDef.Fields.Remove(targetField);
+                    continue;
+                }
+
+                if (targetTypeDef.HasField(field))
+                    continue;
 
                 FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
                 newField.AddAttribute(GetMonoModAddedCtor());
