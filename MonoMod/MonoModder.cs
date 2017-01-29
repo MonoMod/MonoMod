@@ -154,6 +154,11 @@ namespace MonoMod {
             foreach (ModuleDefinition mod in Mods)
                 mod?.Dispose();
 
+            foreach (List<ModuleDefinition> dependencies in DependencyMap.Values)
+                foreach (ModuleDefinition dep in dependencies)
+                    dep?.Dispose();
+            DependencyMap.Clear();
+
             Input?.Dispose();
             Output?.Dispose();
         }
@@ -198,6 +203,9 @@ namespace MonoMod {
             MapDependency(main, dep.Name, dep.FullName);
         }
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null) {
+            if ((fullName != null && fullName == Module.Assembly.Name.FullName) || name == Module.Assembly.Name.Name || Module.Assembly.Name.Name.EndsWith(".mm"))
+                return; // Don't load / map the main module or other mods!
+
             ModuleDefinition dep;
             if ((fullName != null && DependencyCache.TryGetValue(fullName, out dep)) ||
                                      DependencyCache.TryGetValue(name    , out dep)) {
