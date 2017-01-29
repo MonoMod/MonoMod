@@ -174,6 +174,10 @@ namespace MonoMod {
         }
 
         public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, string name) {
+            // Don't ask me, that's possible for T[,].Get in "Enter the Gungeon"...?!
+            if (provider is GenericParameter && ((GenericParameter) provider).Name == name)
+                return (GenericParameter) provider;
+
             foreach (GenericParameter param in provider.GenericParameters)
                 if (param.Name == name)
                     return param;

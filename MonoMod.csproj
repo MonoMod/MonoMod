@@ -55,7 +55,6 @@
     <Compile Include="MonoMod\PlatformHelper.cs" />
     <Compile Include="MonoMod\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="MonoMod\QuickAndDirty.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModIgnore.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModRemove.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModReplace.cs" />
