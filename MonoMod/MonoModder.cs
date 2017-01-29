@@ -300,14 +300,16 @@ namespace MonoMod {
                 Log($"[ReadMod] Loading mod dir: {path}");
                 string mainName = Module.Name.Substring(0, Module.Name.Length - 3);
                 DependencyDirs.Add(path);
-                foreach (string mod in Directory.GetFiles(path))
-                    if (Path.GetFileName(mod).StartsWith(mainName) && mod.ToLower().EndsWith(".mm.dll"))
-                        ReadMod(mod);
+                foreach (string modFile in Directory.GetFiles(path))
+                    if (Path.GetFileName(modFile).StartsWith(mainName) && modFile.ToLower().EndsWith(".mm.dll"))
+                        ReadMod(modFile);
                 return;
             }
 
             Log($"[ReadMod] Loading mod: {path}");
-            Mods.Add(ModuleDefinition.ReadModule(path, GenReaderParameters(false)));
+            ModuleDefinition mod = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
+            MapDependencies(mod);
+            Mods.Add(mod);
         }
         public virtual void ReadMod(Stream stream) {
             Mods.Add(ModuleDefinition.ReadModule(stream, GenReaderParameters(false)));
@@ -418,17 +420,31 @@ namespace MonoMod {
             if (mtp is TypeReference) {
                 TypeReference type = (TypeReference) mtp;
 
-                if (!Mods.Contains(type.Module)) return type; // Type isn't coming from a mod module - just return the original.
+                // Type isn't coming from a mod module - just return the original.
+                if (!Mods.Contains(type.Module))
+                    return type;
 
-                // FindType works in emergency cases - try to make the non-FindType path "accurate" first!
-                return Module.ImportReference(FindType(RemovePrefixes(type.FullName, type)));
-                /*
-                TypeReference newType = new TypeReference(type.Namespace, RemovePrefixes(type.Name), Module, Module, type.IsValueType);
-                if (type.DeclaringType != null) newType.DeclaringType = Relink(type.DeclaringType, context);
-                foreach (GenericParameter genParam in type.GenericParameters)
-                    newType.GenericParameters.Add((GenericParameter) Relink(genParam, newType));
-                return Module.ImportReference(newType);
-                */
+                type = FindType(RemovePrefixes(type.FullName, type), false);
+                if (type == null) {
+                    type = (TypeReference) mtp; // Reset temporarily to not typecast mtp every time
+
+                    // Type may come from a dependency. If the assembly reference is missing, add.
+                    AssemblyNameReference dllRef = type.Scope as AssemblyNameReference;
+                    if (dllRef != null && !Module.AssemblyReferences.Any(n => n.Name == dllRef.Name))
+                        Module.AssemblyReferences.Add(dllRef);
+
+                    // Check in the dependencies of the mod modules.
+                    string fullName = RemovePrefixes(type.FullName, type);
+                    Stack<ModuleDefinition> crawled = new Stack<ModuleDefinition>();
+                    // Set type to null so that an actual break condition exists
+                    type = null;
+                    foreach (ModuleDefinition mod in Mods)
+                        foreach (ModuleDefinition dep in DependencyMap[mod])
+                            if ((type = FindType(dep, fullName, crawled)) != null)
+                                return Module.ImportReference(type);
+                }
+
+                return Module.ImportReference(type);
             }
 
             if (mtp is FieldReference || mtp is MethodReference)
