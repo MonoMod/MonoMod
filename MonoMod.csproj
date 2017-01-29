@@ -61,8 +61,6 @@
     <Compile Include="MonoMod\Modifiers\MonoModReplace.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModConstructor.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModLinkTo.cs" />
-    <Compile Include="MonoMod\BlacklistItem.cs" />
-    <Compile Include="MonoMod\MonoModBlacklist.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModBlacklisted.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModEnumReplace.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModInline.cs" />

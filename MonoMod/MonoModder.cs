@@ -686,6 +686,13 @@ namespace MonoMod {
                 // Ignore ignored methods
                 return null;
 
+            // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
+            if (method.HasMMAttribute("Constructor")) {
+                method.Name = method.IsStatic ? ".cctor" : ".ctor";
+                method.IsSpecialName = true;
+                method.IsRuntimeSpecialName = true;
+            }
+
             string typeName = RemovePrefixes(targetType.FullName, targetType);
             MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
@@ -847,7 +854,7 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
-            if (!AllowedSpecialName(method) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+            if ((!AllowedSpecialName(method) && !method.IsConstructor) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
                 // Ignore ignored methods
                 return;
 
