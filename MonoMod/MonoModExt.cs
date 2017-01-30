@@ -238,8 +238,15 @@ namespace MonoMod {
 				throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
             }
 
-            if (type.IsGenericParameter)
-                return context.GetGenericParameter(((GenericParameter) type).Name);
+            if (type.IsGenericParameter) {
+                if (context is MethodDefinition && ((MethodDefinition) context).Name == "AddHook")
+                    System.Diagnostics.Debugger.Break();
+                GenericParameter genParam = context.GetGenericParameter(((GenericParameter) type).Name);
+                for (int i = 0; i < genParam.Constraints.Count; i++)
+                    if (!genParam.Constraints[i].IsGenericInstance) // That is somehow possible and causes a stack overflow.
+                        genParam.Constraints[i] = genParam.Constraints[i].Relink(relinker, context);
+                return genParam;
+            }
 
             return (TypeReference) relinker(type, context);
         }
@@ -249,7 +256,7 @@ namespace MonoMod {
                 GenericInstanceMethod methodg = ((GenericInstanceMethod) method);
                 GenericInstanceMethod gim = new GenericInstanceMethod(methodg.ElementMethod.Relink(relinker, context));
                 foreach (TypeReference arg in methodg.GenericArguments)
-                    // Generic arguments for the generic instance are often given by the next higher provider
+                    // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(arg.Relink(relinker, context));
 
                 return (MethodReference) relinker(gim, context);
