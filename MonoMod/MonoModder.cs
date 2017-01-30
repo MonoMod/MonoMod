@@ -396,7 +396,7 @@ namespace MonoMod {
 
                 if (i == 0) { // Type
                     if (value is string)
-                        type = FindType((string) value).Resolve();
+                        type = FindTypeDeep((string) value).Resolve();
                     else if (value is TypeReference)
                         type = Relink((TypeReference) value, context).Resolve();
 
@@ -432,27 +432,7 @@ namespace MonoMod {
                 if (!Mods.Contains(type.Module))
                     return type;
 
-                type = FindType(RemovePrefixes(type.FullName, type), false);
-                if (type == null) {
-                    type = (TypeReference) mtp; // Reset temporarily to not typecast mtp every time
-
-                    // Type may come from a dependency. If the assembly reference is missing, add.
-                    AssemblyNameReference dllRef = type.Scope as AssemblyNameReference;
-                    if (dllRef != null && !Module.AssemblyReferences.Any(n => n.Name == dllRef.Name))
-                        Module.AssemblyReferences.Add(dllRef);
-
-                    // Check in the dependencies of the mod modules.
-                    string fullName = RemovePrefixes(type.FullName, type);
-                    Stack<ModuleDefinition> crawled = new Stack<ModuleDefinition>();
-                    // Set type to null so that an actual break condition exists
-                    type = null;
-                    foreach (ModuleDefinition mod in Mods)
-                        foreach (ModuleDefinition dep in DependencyMap[mod])
-                            if ((type = FindType(dep, fullName, crawled)) != null)
-                                return Module.ImportReference(type);
-                }
-
-                return Module.ImportReference(type);
+                return Module.ImportReference(FindTypeDeep(RemovePrefixes(type.FullName, type)));
             }
 
             if (mtp is FieldReference || mtp is MethodReference)
@@ -494,6 +474,27 @@ namespace MonoMod {
                     return type;
             return null;
         }
+        public virtual TypeReference FindTypeDeep(string name) {
+            TypeReference type = FindType(name, false);
+            if (type != null)
+                return type;
+
+            // Check in the dependencies of the mod modules.
+            Stack<ModuleDefinition> crawled = new Stack<ModuleDefinition>();
+            // Set type to null so that an actual break condition exists
+            type = null;
+            foreach (ModuleDefinition mod in Mods)
+                foreach (ModuleDefinition dep in DependencyMap[mod])
+                    if ((type = FindType(dep, name, crawled)) != null) {
+                        // Type may come from a dependency. If the assembly reference is missing, add.
+                        AssemblyNameReference dllRef = type.Scope as AssemblyNameReference;
+                        if (dllRef != null && !Module.AssemblyReferences.Any(n => n.Name == dllRef.Name))
+                            Module.AssemblyReferences.Add(dllRef);
+                        return Module.ImportReference(type);
+                    }
+
+            return null;
+        }
 
         #region Pre-Patch Pass
         /// <summary>
@@ -531,7 +532,7 @@ namespace MonoMod {
                 return;
 
             // Check if type exists in target module or dependencies.
-            TypeReference targetType = FindType(typeName, false);
+            TypeReference targetType = FindTypeDeep(typeName);
             TypeDefinition targetTypeDef = targetType?.Resolve();
             if (targetType != null) {
                 if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")))
