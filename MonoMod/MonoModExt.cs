@@ -239,8 +239,6 @@ namespace MonoMod {
             }
 
             if (type.IsGenericParameter) {
-                if (context is MethodDefinition && ((MethodDefinition) context).Name == "AddHook")
-                    System.Diagnostics.Debugger.Break();
                 GenericParameter genParam = context.GetGenericParameter(((GenericParameter) type).Name);
                 for (int i = 0; i < genParam.Constraints.Count; i++)
                     if (!genParam.Constraints[i].IsGenericInstance) // That is somehow possible and causes a stack overflow.
