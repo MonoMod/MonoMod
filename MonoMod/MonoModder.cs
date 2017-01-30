@@ -553,6 +553,9 @@ namespace MonoMod {
             foreach (GenericParameter genParam in type.GenericParameters)
                 newType.GenericParameters.Add(genParam.Clone());
 
+            foreach (InterfaceImplementation interf in type.Interfaces)
+                newType.Interfaces.Add(interf);
+
             newType.ClassSize = type.ClassSize;
             if (type.DeclaringType != null) {
                 // The declaring type is existing as this is being called nestedly.
