@@ -707,7 +707,7 @@ namespace MonoMod {
 
         public virtual MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {
             if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
-                // Ignore original methods
+                // Ignore original method stubs
                 return null;
 
             if (!AllowedSpecialName(method, targetType) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
@@ -772,7 +772,7 @@ namespace MonoMod {
             }
 
             // Fix for .cctor not linking to orig_.cctor
-            if (origMethod != null && origMethod.IsConstructor && origMethod.IsStatic) {
+            if (origMethod != null && method.IsConstructor && method.IsStatic && method.HasBody && !method.HasMMAttribute("Constructor")) {
                 Collection<Instruction> instructions = method.Body.Instructions;
                 ILProcessor ilProcessor = method.Body.GetILProcessor();
                 ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethod));
@@ -829,6 +829,12 @@ namespace MonoMod {
                 targetType.Methods.Add(clone);
 
                 method = clone;
+            }
+
+            if (origMethod != null) {
+                CustomAttribute origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
+                origNameAttrib.ConstructorArguments.Add(new CustomAttributeArgument(Module.TypeSystem.String, origMethod.Name));
+                method.AddAttribute(origNameAttrib);
             }
 
             return method;
@@ -980,8 +986,19 @@ namespace MonoMod {
                 }
 
                 // General relinking
-
                 if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand, method);
+
+                // patch_ constructor fix: If referring to itself, refer to the original constructor.
+                if (operand is MethodReference &&
+                    (((MethodReference) operand).Name == ".ctor" ||
+                     ((MethodReference) operand).Name == ".cctor") &&
+                    ((MethodReference) operand).FullName == method.FullName) {
+                    // ((MethodReference) operand).Name = method.GetOriginalName();
+                    // Above could be enough, but what about the metadata token?
+                    operand = method.DeclaringType.FindMethod(method.GetFindableID(name: method.GetOriginalName()));
+                }
+
+                // Reference importing
                 if (operand is TypeReference) operand = Module.ImportReference((TypeReference) operand);
                 if (operand is FieldReference) operand = Module.ImportReference((FieldReference) operand);
                 if (operand is MethodReference) operand = Module.ImportReference((MethodReference) operand);
@@ -1042,6 +1059,46 @@ namespace MonoMod {
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                 Module.TypeSystem.Void
             );
+            _mmOriginalCtor.MetadataToken = GetMetadataToken(TokenType.Method);
+            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+            )));
+            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+            attrType.Methods.Add(_mmOriginalCtor);
+            Module.Types.Add(attrType);
+            return _mmOriginalCtor;
+        }
+
+        protected MethodDefinition _mmOriginalNameCtor;
+        public virtual MethodReference GetMonoModOriginalNameCtor() {
+            if (_mmOriginalNameCtor != null && _mmOriginalNameCtor.Module != Module) {
+                _mmOriginalNameCtor = null;
+            }
+            if (_mmOriginalNameCtor != null) {
+                return _mmOriginalNameCtor;
+            }
+
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModOriginalName") {
+                    TypeDefinition type = Module.Types[ti];
+                    for (int mi = 0; mi < type.Methods.Count; mi++) {
+                        if (!type.Methods[mi].IsConstructor || type.Methods[mi].IsStatic) {
+                            continue;
+                        }
+                        return _mmOriginalCtor = type.Methods[mi];
+                    }
+                }
+            }
+            Log("[MonoModOriginalName] Adding MonoMod.MonoModOriginalName");
+            TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModOriginalName", TypeAttributes.Public | TypeAttributes.Class) {
+                BaseType = Module.ImportReference(typeof(Attribute))
+            };
+            _mmOriginalCtor = new MethodDefinition(".ctor",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                Module.TypeSystem.Void
+            );
+            _mmOriginalCtor.Parameters.Add(new ParameterDefinition("n", ParameterAttributes.None, Module.TypeSystem.String));
             _mmOriginalCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
@@ -1118,17 +1175,22 @@ namespace MonoMod {
                 return true;
             }
 
+            // HOW NOT TO SOLVE ISSUES:
+            // if (method.IsConstructor)
+            //     return true; // We don't give a f**k anymore.
+
+            // The legacy behaviour is required to not break anything. It's very, very finnicky.
+            // In retrospect, taking the above "fix" into consideration, it was bound to fail as soon
+            // as other ignored members were accessed from the new constructors.
             if (method.IsConstructor && (method.HasCustomAttributes || method.IsStatic)) {
-                if (method.IsStatic) {
+                if (method.IsStatic)
                     return true;
-                }
                 // Overriding the constructor manually is generally a horrible idea, but who knows where it may be used.
                 if (method.HasMMAttribute("Constructor")) return true;
             }
 
-            if (method.IsGetter || method.IsSetter) {
+            if (method.IsGetter || method.IsSetter)
                 return true;
-            }
 
             return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
         }
