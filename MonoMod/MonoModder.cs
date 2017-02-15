@@ -989,7 +989,7 @@ namespace MonoMod {
                 if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand, method);
 
                 // patch_ constructor fix: If referring to itself, refer to the original constructor.
-                if (operand is MethodReference &&
+                if (instr.OpCode == OpCodes.Call && operand is MethodReference &&
                     (((MethodReference) operand).Name == ".ctor" ||
                      ((MethodReference) operand).Name == ".cctor") &&
                     ((MethodReference) operand).FullName == method.FullName) {

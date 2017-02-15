@@ -228,6 +228,9 @@ namespace MonoMod {
                 if (type.IsRequiredModifier)
                     return new RequiredModifierType(((RequiredModifierType) type).ModifierType.Relink(relinker, context), relinkedElem);
 
+                if (type.IsOptionalModifier)
+                    return new OptionalModifierType(((OptionalModifierType) type).ModifierType.Relink(relinker, context), relinkedElem);
+
                 if (type.IsGenericInstance) {
                     GenericInstanceType git = new GenericInstanceType(relinkedElem);
                     foreach (TypeReference genArg in ((GenericInstanceType) type).GenericArguments)
