@@ -587,7 +587,18 @@ namespace MonoMod {
         /// <param name="mod">Mod to patch into the input module.</param>
         public virtual void PatchModule(ModuleDefinition mod) {
             foreach (TypeDefinition type in mod.Types)
-                PatchType(type);
+                if (
+                    (type.Namespace == "MonoMod" || type.Namespace.StartsWith("MonoMod.")) &&
+                    type.BaseType.FullName == "System.Attribute"
+                   )
+                    PatchType(type);
+
+            foreach (TypeDefinition type in mod.Types)
+                if (!(
+                    (type.Namespace == "MonoMod" || type.Namespace.StartsWith("MonoMod.")) &&
+                    type.BaseType.FullName == "System.Attribute"
+                   ))
+                    PatchType(type);
         }
 
         /// <summary>
@@ -1040,19 +1051,20 @@ namespace MonoMod {
                 return _mmOriginalCtor;
             }
 
+            TypeDefinition attrType = null;
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModOriginal") {
-                    TypeDefinition type = Module.Types[ti];
-                    for (int mi = 0; mi < type.Methods.Count; mi++) {
-                        if (!type.Methods[mi].IsConstructor || type.Methods[mi].IsStatic) {
+                    attrType = Module.Types[ti];
+                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                        if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
-                        return _mmOriginalCtor = type.Methods[mi];
+                        return _mmOriginalCtor = attrType.Methods[mi];
                     }
                 }
             }
             Log("[MonoModOriginal] Adding MonoMod.MonoModOriginal");
-            TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModOriginal", TypeAttributes.Public | TypeAttributes.Class) {
+            attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModOriginal", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
             _mmOriginalCtor = new MethodDefinition(".ctor",
@@ -1079,19 +1091,20 @@ namespace MonoMod {
                 return _mmOriginalNameCtor;
             }
 
+            TypeDefinition attrType = null;
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModOriginalName") {
-                    TypeDefinition type = Module.Types[ti];
-                    for (int mi = 0; mi < type.Methods.Count; mi++) {
-                        if (!type.Methods[mi].IsConstructor || type.Methods[mi].IsStatic) {
+                    attrType = Module.Types[ti];
+                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                        if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
-                        return _mmOriginalCtor = type.Methods[mi];
+                        return _mmOriginalCtor = attrType.Methods[mi];
                     }
                 }
             }
             Log("[MonoModOriginalName] Adding MonoMod.MonoModOriginalName");
-            TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModOriginalName", TypeAttributes.Public | TypeAttributes.Class) {
+            attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModOriginalName", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
             _mmOriginalCtor = new MethodDefinition(".ctor",
@@ -1119,19 +1132,20 @@ namespace MonoMod {
                 return _mmAddedCtor;
             }
 
+            TypeDefinition attrType = null;
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModAdded") {
-                    TypeDefinition type = Module.Types[ti];
-                    for (int mi = 0; mi < type.Methods.Count; mi++) {
-                        if (!type.Methods[mi].IsConstructor || type.Methods[mi].IsStatic) {
+                    attrType = Module.Types[ti];
+                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                        if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
-                        return _mmAddedCtor = type.Methods[mi];
+                        return _mmAddedCtor = attrType.Methods[mi];
                     }
                 }
             }
             Log("[MonoModAdded] Adding MonoMod.MonoModAdded");
-            TypeDefinition attrType = new TypeDefinition("MonoMod", "MonoModAdded", TypeAttributes.Public | TypeAttributes.Class) {
+            attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModAdded", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
             _mmAddedCtor = new MethodDefinition(".ctor",
