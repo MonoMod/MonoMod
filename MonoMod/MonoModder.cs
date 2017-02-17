@@ -16,7 +16,6 @@ namespace MonoMod {
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
-        public static Dictionary<string, object> GlobalData = new Dictionary<string, object>();
         public Dictionary<string, object> Data = new Dictionary<string, object>();
 
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
