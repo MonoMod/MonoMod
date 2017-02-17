@@ -336,6 +336,10 @@ namespace MonoMod {
 
 
         public virtual void ParseRules(ModuleDefinition mod) {
+            // Rule parsing pre-pass: Check for MonoModHook and similar attributes
+            foreach (TypeDefinition type in mod.Types)
+                ParseRulesInType(type);
+
             TypeDefinition rulesType = mod.GetType("MonoMod.MonoModRules");
             if (rulesType == null) return;
 
@@ -421,6 +425,59 @@ namespace MonoMod {
             mod.Types.Remove(rulesType);
         }
 
+        public virtual void ParseRulesInType(TypeDefinition type) {
+            string typeName = RemovePrefixes(type.FullName, type);
+
+            if (type.HasMMAttribute("Ignore") || !type.MatchingPlatform())
+                return;
+
+            CustomAttribute hook;
+
+            hook = type.GetMMAttribute("Hook");
+            if (hook != null)
+                ParseHook(type, hook);
+
+            foreach (MethodDefinition method in type.Methods) {
+                if (method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+                    continue;
+
+                hook = method.GetMMAttribute("Hook");
+                if (hook != null)
+                    ParseHook(method, hook);
+            }
+
+            foreach (FieldDefinition field in type.Fields) {
+                if (field.HasMMAttribute("Ignore") || !field.MatchingPlatform())
+                    continue;
+
+                hook = field.GetMMAttribute("Hook");
+                if (hook != null)
+                    ParseHook(field, hook);
+            }
+
+        }
+
+        public virtual void ParseHook(IMetadataTokenProvider target, CustomAttribute hook) {
+            string from = (string) hook.ConstructorArguments[0].Value;
+
+            object to;
+            if (target is TypeReference)
+                to = ((TypeReference) target).FullName;
+            else if (target is MethodReference)
+                to = Tuple.Create<object, string>(
+                    ((MethodReference) target).DeclaringType.FullName,
+                    ((MethodReference) target).GetFindableID(withType: false)
+                );
+            else if (target is FieldReference)
+                to = Tuple.Create<object, string>(
+                    ((FieldReference) target).DeclaringType.FullName,
+                    ((FieldReference) target).Name
+                );
+            else
+                return;
+
+            RelinkMap[from] = to;
+        }
 
         /// <summary>
         /// Automatically mods the module, loading Input, writing the modded module to Output.
@@ -581,6 +638,8 @@ namespace MonoMod {
                     Tuple<object, string> tuple = (Tuple<object, string>) val;
                     string typeName = tuple.Item1 as string;
                     TypeDefinition type = tuple.Item1 as TypeDefinition ?? (tuple.Item1 as TypeReference)?.Resolve();
+                    if (type != null)
+                        type = Relink(type, (IGenericParameterProvider) mtp)?.Resolve();
                     if (type == null)
                         type = FindTypeDeep(typeName)?.Resolve();
                     if (type == null)
