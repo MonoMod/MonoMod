@@ -575,17 +575,18 @@ namespace MonoMod {
         }
 
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            return PostRelinker(
-                MainRelinker(mtp, context),
-                context);
-        }
-        public virtual IMetadataTokenProvider DefaultMainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+            // LinkTo bypasses all relinking maps.
             ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
             CustomAttribute linkto = cap?.GetMMAttribute("LinkTo");
             if (linkto != null)
                 return GetLinkToRef(cap, context);
 
-            if (mtp is TypeReference) {
+            return PostRelinker(
+                MainRelinker(mtp, context),
+                context);
+        }
+        public virtual IMetadataTokenProvider DefaultMainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+             if (mtp is TypeReference) {
                 TypeReference type = (TypeReference) mtp;
 
                 // Type isn't coming from a mod module - just return the original.
