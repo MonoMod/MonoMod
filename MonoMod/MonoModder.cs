@@ -918,7 +918,7 @@ namespace MonoMod {
                 origMethod.DeclaringType = existingMethod.DeclaringType;
                 origMethod.MetadataToken = GetMetadataToken(TokenType.Method);
                 origMethod.Body = existingMethod.Body.Clone(origMethod);
-                origMethod.Attributes = existingMethod.Attributes;
+                origMethod.Attributes = existingMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName;
                 origMethod.ImplAttributes = existingMethod.ImplAttributes;
                 origMethod.IsManaged = existingMethod.IsManaged;
                 origMethod.IsIL = existingMethod.IsIL;
