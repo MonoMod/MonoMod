@@ -148,6 +148,13 @@ namespace MonoMod {
             Relinker = DefaultRelinker;
             MainRelinker = DefaultMainRelinker;
             PostRelinker = DefaultPostRelinker;
+
+            Data["Platform"] = (PlatformHelper.Current & ~Platform.X64).ToString();
+            Data["PlatformPrefix"] = (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_";
+            Data["Arch"] = (PlatformHelper.Current & Platform.X64).ToString();
+            Data["Architecture"] = (PlatformHelper.Current & Platform.X64).ToString();
+            Data["ArchPrefix"] = (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_";
+            Data["ArchitecturePrefix"] = (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_";
         }
 
         public void SetupLegacy() {
