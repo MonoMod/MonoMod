@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
+using StringInject;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -393,11 +394,18 @@ namespace MonoMod {
 
                             // Relinks get resolved later (types not added yet); For now, just add the relink info
                             if (mr.Name == "RelinkType") {
+                                cctor.Body.Instructions[instri - 2].Operand = ((string) cctor.Body.Instructions[instri - 2].Operand).Inject(Data);
+                                if (cctor.Body.Instructions[instri - 1].Operand is string)
+                                    cctor.Body.Instructions[instri - 1].Operand = ((string) cctor.Body.Instructions[instri - 1].Operand).Inject(Data);
                                 Log($"[MonoModRules] RelinkType: {cctor.Body.Instructions[instri - 2].Operand} -> {cctor.Body.Instructions[instri - 1].Operand}");
                                 RelinkMap[(string) cctor.Body.Instructions[instri - 2].Operand] = // from
                                     cctor.Body.Instructions[instri - 1].Operand; // to type (string or type ref)
                             }
                             if (mr.Name == "RelinkMember") {
+                                cctor.Body.Instructions[instri - 3].Operand = ((string) cctor.Body.Instructions[instri - 3].Operand).Inject(Data);
+                                if (cctor.Body.Instructions[instri - 2].Operand is string)
+                                    cctor.Body.Instructions[instri - 2].Operand = ((string) cctor.Body.Instructions[instri - 2].Operand).Inject(Data);
+                                cctor.Body.Instructions[instri - 1].Operand = ((string) cctor.Body.Instructions[instri - 1].Operand).Inject(Data);
                                 Log($"[MonoModRules] RelinkMember: {cctor.Body.Instructions[instri - 3].Operand} -> {cctor.Body.Instructions[instri - 2].Operand}::{cctor.Body.Instructions[instri - 1].Operand}");
                                 // TODO MonoModRules, RelinkMember: If it's a type ref, there's a method call in between the ldtoken and the following ldstring
                                 RelinkMap[(string) cctor.Body.Instructions[instri - 3].Operand] = // from
