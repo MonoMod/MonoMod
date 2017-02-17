@@ -15,7 +15,15 @@ namespace MonoMod {
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
+        public static Dictionary<string, object> GlobalData = new Dictionary<string, object>();
+        public Dictionary<string, object> Data = new Dictionary<string, object>();
+
+        public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
+        public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
+
         public Relinker Relinker;
+        public Relinker MainRelinker;
+        public Relinker PostRelinker;
 
         public Stream Input;
         public Stream Output;
@@ -138,6 +146,8 @@ namespace MonoMod {
 
         public MonoModder() {
             Relinker = DefaultRelinker;
+            MainRelinker = DefaultMainRelinker;
+            PostRelinker = DefaultPostRelinker;
         }
 
         public void SetupLegacy() {
@@ -317,10 +327,98 @@ namespace MonoMod {
             Log($"[ReadMod] Loading mod: {path}");
             ModuleDefinition mod = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
             MapDependencies(mod);
+            ParseRules(mod);
             Mods.Add(mod);
         }
         public virtual void ReadMod(Stream stream) {
             Mods.Add(ModuleDefinition.ReadModule(stream, GenReaderParameters(false)));
+        }
+
+
+        public virtual void ParseRules(ModuleDefinition mod) {
+            TypeDefinition rulesType = mod.GetType("MonoMod.MonoModRules");
+            if (rulesType == null) return;
+
+            // Check the constructor for all main rules
+            MethodDefinition cctor = rulesType.FindMethod("System.Void .cctor()");
+            if (cctor != null && cctor.HasBody) {
+                bool matchingPlatformIL = true;
+                for (int instri = 0; instri < cctor.Body.Instructions.Count; instri++) {
+                    Instruction instr = cctor.Body.Instructions[instri];
+
+                    // Temporarily enable matching platform, otherwise the platform data gets lost.
+                    // Check the next one as the array size is before the newarr.
+                    if (instr.Next?.OpCode == OpCodes.Newarr && (
+                        (instr.Next?.Operand as TypeReference)?.FullName == "Platform" ||
+                        (instr.Next?.Operand as TypeReference)?.FullName == "int"
+                    )) {
+                        matchingPlatformIL = true;
+                    }
+
+                    if (instr.Operand is MethodReference) {
+                        MethodReference mr = (MethodReference) instr.Operand;
+
+                        if (mr.DeclaringType.FullName == "MMIL") {
+                            if (mr.Name == "OnPlatform")
+                                matchingPlatformIL = cctor.ParseOnPlatform(ref instri);
+                            // Right now nothing else to parse.
+                        }
+
+                        if (mr.DeclaringType.FullName == "MMIL/Rule") {
+                            if (mr.Name == "RelinkModule") {
+                                string from = (string) cctor.Body.Instructions[instri - 2].Operand;
+                                string toName = (string) cctor.Body.Instructions[instri - 1].Operand;
+
+                                bool retrying = false;
+                                ModuleDefinition to = null;
+                                RETRY:
+                                if (toName + ".dll" == Module.Name)
+                                    to = Module;
+                                else if (DependencyCache.TryGetValue(toName, out to)) { }
+                                else if (!retrying) {
+                                    MapDependency(Module, toName);
+                                    retrying = true;
+                                    goto RETRY;
+                                }
+
+                                if (to != null) {
+                                    Log($"[MonoModRules] RelinkModule: {from} -> {toName}");
+                                    RelinkModuleMap[from] = to;
+                                }
+                            }
+
+                            // Relinks get resolved later (types not added yet); For now, just add the relink info
+                            if (mr.Name == "RelinkType") {
+                                Log($"[MonoModRules] RelinkType: {cctor.Body.Instructions[instri - 2].Operand} -> {cctor.Body.Instructions[instri - 1].Operand}");
+                                RelinkMap[(string) cctor.Body.Instructions[instri - 2].Operand] = // from
+                                    cctor.Body.Instructions[instri - 1].Operand; // to type (string or type ref)
+                            }
+                            if (mr.Name == "RelinkMember") {
+                                Log($"[MonoModRules] RelinkMember: {cctor.Body.Instructions[instri - 3].Operand} -> {cctor.Body.Instructions[instri - 2].Operand}::{cctor.Body.Instructions[instri - 1].Operand}");
+                                // TODO MonoModRules, RelinkMember: If it's a type ref, there's a method call in between the ldtoken and the following ldstring
+                                RelinkMap[(string) cctor.Body.Instructions[instri - 3].Operand] = // from
+                                    Tuple.Create(
+                                        cctor.Body.Instructions[instri - 2].Operand, // to type (string or type ref)
+                                        (string) cctor.Body.Instructions[instri - 1].Operand // to member
+                                    );
+                            }
+
+                        }
+
+                    }
+
+                    if (!matchingPlatformIL) {
+                        cctor.Body.Instructions.RemoveAt(instri);
+                        instri = Math.Max(0, instri - 1);
+                        cctor.Body.UpdateOffsets(instri, -1);
+                        continue;
+                    }
+
+                }
+            }
+
+            // Finally, remove the type, otherwise it'll easily conflict with other mods' rules.
+            mod.Types.Remove(rulesType);
         }
 
 
@@ -420,6 +518,11 @@ namespace MonoMod {
         }
 
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+            return PostRelinker(
+                MainRelinker(mtp, context),
+                context);
+        }
+        public virtual IMetadataTokenProvider DefaultMainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
             CustomAttribute linkto = cap?.GetMMAttribute("LinkTo");
             if (linkto != null)
@@ -437,10 +540,15 @@ namespace MonoMod {
 
             if (mtp is FieldReference || mtp is MethodReference)
                 // Don't relink those. It'd be useful to f.e. link to member B instead of member A.
-                // MonoModExt already handles the defualt "deep" relinking.
+                // MonoModExt already handles the default "deep" relinking.
                 return mtp;
 
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
+        }
+        public virtual IMetadataTokenProvider DefaultPostRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+            
+            // The post relinker doesn't care if it can't handle a specific metadata token provider type; Just run ResolveRelinkTarget
+            return ResolveRelinkTarget(mtp) ?? mtp;
         }
 
         public virtual IMetadataTokenProvider Relink(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
@@ -454,6 +562,63 @@ namespace MonoMod {
         }
         public virtual CustomAttribute Relink(CustomAttribute attrib, IGenericParameterProvider context) {
             return attrib.Relink(Relinker, context);
+        }
+
+        public virtual IMetadataTokenProvider ResolveRelinkTarget(IMetadataTokenProvider mtp, bool relink = true, bool relinkModule = true) {
+            string name;
+            if (mtp is TypeReference)
+                name = ((TypeReference) mtp).FullName;
+            else if (mtp is MethodReference)
+                name = ((MethodReference) mtp).GetFindableID(withType: true);
+            else if (mtp is FieldReference)
+                name = ((FieldReference) mtp).FullName;
+            else
+                return null;
+
+            object val;
+            if (relink && RelinkMap.TryGetValue(name, out val)) {
+                if (val is Tuple<object, string>) {
+                    Tuple<object, string> tuple = (Tuple<object, string>) val;
+                    string typeName = tuple.Item1 as string;
+                    TypeDefinition type = tuple.Item1 as TypeDefinition ?? (tuple.Item1 as TypeReference)?.Resolve();
+                    if (type == null)
+                        type = FindTypeDeep(typeName)?.Resolve();
+                    if (type == null)
+                        return ResolveRelinkTarget(mtp, false, relinkModule);
+
+                    if (mtp is MethodReference)
+                        val = type.FindMethod(tuple.Item2);
+                    else if (mtp is FieldReference)
+                        val = type.FindField(tuple.Item2);
+                    else
+                        throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<object, string>");
+                    // Store the result
+                    return (IMetadataTokenProvider) (RelinkMap[name] = val = Module.ImportReference((IMetadataTokenProvider) val));
+                }
+
+                if (val is string && mtp is TypeReference)
+                    // Store the result
+                    RelinkMap[name] = val = Module.ImportReference(
+                        ResolveRelinkTarget(FindTypeDeep((string) val), false, relinkModule)
+                    );
+
+                if (val is IMetadataTokenProvider)
+                    return (IMetadataTokenProvider) val;
+
+                throw new InvalidOperationException($"MonoMod doesn't support RelinkMap value of type {val.GetType()}");
+            }
+
+
+            if (relinkModule && mtp is TypeReference) {
+                TypeReference type = (TypeReference) mtp;
+                ModuleDefinition scope;
+                if (!RelinkModuleMap.TryGetValue(type.Scope.Name, out scope))
+                    return type;
+                type.Scope = scope;
+                return Module.ImportReference(type);
+            }
+
+            return null;
         }
 
         public virtual TypeReference FindType(string name)
@@ -951,40 +1116,15 @@ namespace MonoMod {
                 )) {
                     MethodReference mr = ((MethodReference) operand);
 
+                    // General MMIL
                     if (mr.Name == "DisablePublicAccess") {
                         publicAccess = false;
                     } else if (mr.Name == "EnablePublicAccess") {
                         publicAccess = true;
                     }
 
-                    if (mr.Name == "OnPlatform") {
-                        // Crawl back until we hit "newarr Platform" or "newarr int"
-                        int posNewarr = instri;
-                        for (; 1 <= posNewarr && method.Body.Instructions[posNewarr].OpCode != OpCodes.Newarr; posNewarr--) ;
-                        int pArrSize = method.Body.Instructions[posNewarr - 1].GetInt();
-                        matchingPlatformIL = pArrSize == 0;
-                        for (int ii = posNewarr + 1; ii < instri; ii += 4) {
-                            // dup
-                            // ldc.i4 INDEX
-                            Platform plat = (Platform) method.Body.Instructions[ii + 2].GetInt();
-                            // stelem.i4
-
-                            if (PlatformHelper.Current.HasFlag(plat)) {
-                                matchingPlatformIL = true;
-                                break;
-                            }
-                        }
-
-                        // If not matching platform, remove array code.
-                        if (!matchingPlatformIL) {
-                            for (int offsi = posNewarr - 1; offsi < instri; offsi++) {
-                                method.Body.Instructions.RemoveAt(offsi);
-                                instri = Math.Max(0, instri - 1);
-                                method.Body.UpdateOffsets(instri, -1);
-                                continue;
-                            }
-                        }
-                    }
+                    if (mr.Name == "OnPlatform")
+                        method.ParseOnPlatform(ref instri);
 
                     // Keep the method reference as modded mods may still require these.
                 }
@@ -1010,14 +1150,10 @@ namespace MonoMod {
                 }
 
                 // Reference importing
-                if (operand is TypeReference) operand = Module.ImportReference((TypeReference) operand);
-                if (operand is FieldReference) operand = Module.ImportReference((FieldReference) operand);
-                if (operand is MethodReference) operand = Module.ImportReference((MethodReference) operand);
-
-                if (publicAccess) {
-                    if (operand is TypeReference) ((TypeReference) operand).Resolve()?.SetPublic(true);
-                    if (operand is FieldReference) ((FieldReference) operand).Resolve()?.SetPublic(true);
-                    if (operand is MethodReference) ((MethodReference) operand).Resolve()?.SetPublic(true);
+                if (operand is IMetadataTokenProvider) {
+                    operand = Module.ImportReference((IMetadataTokenProvider) operand);
+                    if (publicAccess)
+                        ((IMetadataTokenProvider) operand).SetPublic(true);
                 }
 
                 instr.Operand = operand;

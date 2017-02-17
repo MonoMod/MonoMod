@@ -126,6 +126,16 @@ namespace MonoMod {
             builder
                 .Append(name ?? method.Name);
 
+            if (method.GenericParameters.Count != 0) {
+                builder.Append("<");
+                Collection<GenericParameter> arguments = method.GenericParameters;
+                for (int i = 0; i < arguments.Count; i++) {
+                    if (i > 0)
+                        builder.Append(",");
+                    builder.Append(arguments[i].Name);
+                }
+                builder.Append(">");
+            }
 
             builder.Append("(");
 
@@ -166,6 +176,36 @@ namespace MonoMod {
             if (op == OpCodes.Ldc_I4_8) return 8;
             if (op == OpCodes.Ldc_I4_S) return (sbyte) instr.Operand;
             return (int) instr.Operand;
+        }
+
+        public static bool ParseOnPlatform(this MethodDefinition method, ref int instri) {
+            // Crawl back until we hit "newarr Platform" or "newarr int"
+            int posNewarr = instri;
+            for (; 1 <= posNewarr && method.Body.Instructions[posNewarr].OpCode != OpCodes.Newarr; posNewarr--) ;
+            int pArrSize = method.Body.Instructions[posNewarr - 1].GetInt();
+            bool matchingPlatformIL = pArrSize == 0;
+            for (int ii = posNewarr + 1; ii < instri; ii += 4) {
+                // dup
+                // ldc.i4 INDEX
+                Platform plat = (Platform) method.Body.Instructions[ii + 2].GetInt();
+                // stelem.i4
+
+                if (PlatformHelper.Current.HasFlag(plat)) {
+                    matchingPlatformIL = true;
+                    break;
+                }
+            }
+
+            // If not matching platform, remove array code.
+            if (!matchingPlatformIL) {
+                for (int offsi = posNewarr - 1; offsi < instri; offsi++) {
+                    method.Body.Instructions.RemoveAt(offsi);
+                    instri = Math.Max(0, instri - 1);
+                    method.Body.UpdateOffsets(instri, -1);
+                    continue;
+                }
+            }
+            return matchingPlatformIL;
         }
 
         public static void AddRange<T>(this Collection<T> list, Collection<T> other) {
@@ -402,6 +442,14 @@ namespace MonoMod {
         public static bool HasField(this TypeDefinition type, FieldDefinition field)
             => type.FindField(field.Name) != null;
 
+        public static void SetPublic(this IMetadataTokenProvider mtp, bool p) {
+            if (mtp is TypeReference) ((TypeReference) mtp).Resolve()?.SetPublic(p);
+            if (mtp is FieldReference) ((FieldReference) mtp).Resolve()?.SetPublic(p);
+            if (mtp is MethodReference) ((MethodReference) mtp).Resolve()?.SetPublic(p);
+            else if (mtp is TypeDefinition) ((TypeDefinition) mtp).SetPublic(p);
+            else if (mtp is FieldDefinition) ((FieldDefinition) mtp).SetPublic(p);
+            else if (mtp is MethodDefinition) ((MethodDefinition) mtp).SetPublic(p);
+        }
         public static void SetPublic(this FieldDefinition o, bool p) {
             if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
                 return;
@@ -431,6 +479,13 @@ namespace MonoMod {
                 o.IsNestedPublic = p;
                 if (p) SetPublic(o.DeclaringType, true);
             }
+        }
+
+        public static IMetadataTokenProvider ImportReference(this ModuleDefinition mod, IMetadataTokenProvider mtp) {
+            if (mtp is TypeReference) return mod.ImportReference((TypeReference) mtp);
+            if (mtp is FieldReference) return mod.ImportReference((FieldReference) mtp);
+            if (mtp is MethodReference) return mod.ImportReference((MethodReference) mtp);
+            return mtp;
         }
 
     }
