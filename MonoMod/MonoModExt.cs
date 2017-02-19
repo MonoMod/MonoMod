@@ -315,11 +315,11 @@ namespace MonoMod {
                     // MetadataToken = param.MetadataToken
                 }.Update(param);
 
-                foreach (TypeReference constraint in param.Constraints) {
-                    paramN.Constraints.Add(constraint.Relink(relinker, context));
-                }
-
                 relink.GenericParameters.Add(paramN);
+
+                foreach (TypeReference constraint in param.Constraints) {
+                    paramN.Constraints.Add(constraint.Relink(relinker, relink));
+                }
             }
 
             relink.ReturnType = method.ReturnType?.Relink(relinker, method);
