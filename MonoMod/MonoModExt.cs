@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 namespace MonoMod {
 
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
+    public delegate ModuleDefinition MissingDependencyResolver(ModuleDefinition main, string name, string fullName);
 
     public static class MonoModExt {
 

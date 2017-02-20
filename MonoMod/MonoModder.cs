@@ -32,6 +32,8 @@ namespace MonoMod {
         public Relinker MainRelinker;
         public Relinker PostRelinker;
 
+        public MissingDependencyResolver OnMissingDependency;
+
         public Stream Input;
         public Stream Output;
         public ModuleDefinition Module;
@@ -42,6 +44,7 @@ namespace MonoMod {
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
         public int CurrentRID = 0;
+
         public bool SkipOptimization = false;
 
         public ReadingMode ReadingMode = ReadingMode.Deferred;
@@ -155,6 +158,8 @@ namespace MonoMod {
             Relinker = DefaultRelinker;
             MainRelinker = DefaultMainRelinker;
             PostRelinker = DefaultPostRelinker;
+
+            OnMissingDependency = DefaultMissingDependencyResolver;
         }
 
         public void SetupLegacy() {
@@ -277,17 +282,18 @@ namespace MonoMod {
                 }
             }
 
-            if (path == null || !File.Exists(path)) {
-                Log($"[MapDependency] {main.Name} -> (({fullName}), ({name})) not found; ignoring...");
-                return;
-            }
-
-            dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
+            if (path != null && File.Exists(path)) {
+                dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
+            } else if ((dep = OnMissingDependency?.Invoke(main, name, fullName)) == null) return;
+            
             Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
             DependencyMap[main].Add(dep);
             DependencyCache[fullName] = dep;
             DependencyCache[name] = dep;
             MapDependencies(dep);
+        }
+        public virtual ModuleDefinition DefaultMissingDependencyResolver(ModuleDefinition main, string name, string fullName) {
+            throw new InvalidOperationException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found");
         }
 
         /// <summary>
