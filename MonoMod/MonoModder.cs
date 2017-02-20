@@ -927,11 +927,12 @@ namespace MonoMod {
                 if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || !field.MatchingPlatform())
                     continue;
 
-                if (field.HasMMAttribute("Remove")) {
+                if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
                     FieldDefinition targetField = targetTypeDef.FindField(field.Name);
                     if (targetField != null)
                         targetTypeDef.Fields.Remove(targetField);
-                    continue;
+                    if (field.HasMMAttribute("Remove"))
+                        continue;
                 }
 
                 if (targetTypeDef.HasField(field))
