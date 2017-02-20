@@ -17,12 +17,12 @@ namespace MonoMod {
         public Action<string> Logger;
 
         public static Dictionary<string, object> Data = new Dictionary<string, object>() {
-            { "Platform", (PlatformHelper.Current & ~Platform.X64).ToString() },
-            { "PlatformPrefix", (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
-            { "Arch", (PlatformHelper.Current & Platform.X64).ToString() },
-            { "Architecture", Data["Arch"] },
-            { "ArchPrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" },
-            { "ArchitecturePrefix", Data["ArchPrefix"] }
+            { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
+            { "PlatformPrefix",     (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
+            { "Arch",               (PlatformHelper.Current & Platform.X64).ToString() },
+            { "Architecture",       (PlatformHelper.Current & Platform.X64).ToString() },
+            { "ArchPrefix",         (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" },
+            { "ArchitecturePrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" }
         };
 
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
