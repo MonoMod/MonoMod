@@ -571,7 +571,9 @@ namespace MonoMod {
 
                 } else if (i == 1) { // Member
                     if (orig is MethodReference)
-                        member = type.FindMethod((string) value);
+                        member =
+                            type.FindMethod((string) value) ??
+                            type.FindMethod(((MethodReference) orig).GetFindableID(name: (string) value));
                     else if (orig is FieldReference)
                         member = type.FindField((string) value);
                 }
