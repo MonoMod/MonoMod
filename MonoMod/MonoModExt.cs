@@ -93,22 +93,39 @@ namespace MonoMod {
             return "orig_" + method.Name;
         }
 
-        public static bool MatchingPlatform(this ICustomAttributeProvider cap) {
+        public static bool MatchingConditionals(this ICustomAttributeProvider cap) {
             if (cap == null) return true;
             if (!cap.HasCustomAttributes) return true;
             Platform plat = PlatformHelper.Current;
+            bool status = true;
             foreach (CustomAttribute attrib in cap.CustomAttributes) {
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModOnPlatform") {
                     CustomAttributeArgument[] plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
                     for (int i = 0; i < plats.Length; i++) {
                         if (PlatformHelper.Current.HasFlag((Platform) plats[i].Value)) {
-                            return true;
+                            // status &= true;
+                            continue;
                         }
                     }
-                    return plats.Length == 0;
+                    status &= plats.Length == 0;
+                    continue;
+                }
+
+                if (attrib.AttributeType.FullName == "MonoMod.MonoModIfFlag") {
+                    string flag = (string) attrib.ConstructorArguments[0].Value;
+                    object valueObj;
+                    bool value;
+                    if (!MonoModder.Data.TryGetValue(flag, out valueObj) || !(valueObj is bool))
+                        if (attrib.ConstructorArguments.Count == 2)
+                            value = (bool) attrib.ConstructorArguments[1].Value;
+                        else
+                            value = true;
+                    else
+                        value = (bool) valueObj;
+                    status &= value;
                 }
             }
-            return true;
+            return status;
         }
 
         public static string GetFindableID(this MethodReference method, string name = null, string type = null, bool withType = true) {

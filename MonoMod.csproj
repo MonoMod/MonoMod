@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MonoMod\Modifiers\MonoModHook.cs" />
+    <Compile Include="MonoMod\Modifiers\MonoModIfFlag.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModNoNew.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModOnPlatform.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModAdded.cs" />

@@ -16,7 +16,14 @@ namespace MonoMod {
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
-        public Dictionary<string, object> Data = new Dictionary<string, object>();
+        public static Dictionary<string, object> Data = new Dictionary<string, object>() {
+            { "Platform", (PlatformHelper.Current & ~Platform.X64).ToString() },
+            { "PlatformPrefix", (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
+            { "Arch", (PlatformHelper.Current & Platform.X64).ToString() },
+            { "Architecture", Data["Arch"] },
+            { "ArchPrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" },
+            { "ArchitecturePrefix", Data["ArchPrefix"] }
+        };
 
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
         public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
@@ -148,13 +155,6 @@ namespace MonoMod {
             Relinker = DefaultRelinker;
             MainRelinker = DefaultMainRelinker;
             PostRelinker = DefaultPostRelinker;
-
-            Data["Platform"] = (PlatformHelper.Current & ~Platform.X64).ToString();
-            Data["PlatformPrefix"] = (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_";
-            Data["Arch"] = (PlatformHelper.Current & Platform.X64).ToString();
-            Data["Architecture"] = (PlatformHelper.Current & Platform.X64).ToString();
-            Data["ArchPrefix"] = (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_";
-            Data["ArchitecturePrefix"] = (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_";
         }
 
         public void SetupLegacy() {
@@ -442,7 +442,7 @@ namespace MonoMod {
         public virtual void ParseRulesInType(TypeDefinition type) {
             string typeName = RemovePrefixes(type.FullName, type);
 
-            if (type.HasMMAttribute("Ignore") || !type.MatchingPlatform())
+            if (type.HasMMAttribute("Ignore") || !type.MatchingConditionals())
                 return;
 
             CustomAttribute hook;
@@ -452,7 +452,7 @@ namespace MonoMod {
                 ParseHook(type, hook);
 
             foreach (MethodDefinition method in type.Methods) {
-                if (method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+                if (method.HasMMAttribute("Ignore") || !method.MatchingConditionals())
                     continue;
 
                 hook = method.GetMMAttribute("Hook");
@@ -461,7 +461,7 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("Ignore") || !field.MatchingPlatform())
+                if (field.HasMMAttribute("Ignore") || !field.MatchingConditionals())
                     continue;
 
                 hook = field.GetMMAttribute("Hook");
@@ -767,7 +767,7 @@ namespace MonoMod {
             string typeName = RemovePrefixes(type.FullName, type);
 
             // Fix legacy issue: Copy / inline any used modifiers.
-            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || !type.MatchingPlatform())
+            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || !type.MatchingConditionals())
                 return;
 
             // Check if type exists in target module or dependencies.
@@ -850,7 +850,7 @@ namespace MonoMod {
             string typeName = RemovePrefixes(type.FullName, type);
 
             if (type.HasMMAttribute("Ignore") ||
-                !type.MatchingPlatform()) {
+                !type.MatchingConditionals()) {
                 PatchNested(type);
                 return;
             }
@@ -924,7 +924,7 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || !field.MatchingPlatform())
+                if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || !field.MatchingConditionals())
                     continue;
 
                 if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
@@ -961,7 +961,7 @@ namespace MonoMod {
                 // Ignore original method stubs
                 return null;
 
-            if (!AllowedSpecialName(method, targetType) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+            if (!AllowedSpecialName(method, targetType) || method.HasMMAttribute("Ignore") || !method.MatchingConditionals())
                 // Ignore ignored methods
                 return null;
 
@@ -1139,7 +1139,7 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
-            if ((!AllowedSpecialName(method) && !method.IsConstructor) || method.HasMMAttribute("Ignore") || !method.MatchingPlatform())
+            if ((!AllowedSpecialName(method) && !method.IsConstructor) || method.HasMMAttribute("Ignore") || !method.MatchingConditionals())
                 // Ignore ignored methods
                 return;
 
