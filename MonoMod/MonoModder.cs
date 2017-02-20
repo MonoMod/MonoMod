@@ -573,15 +573,22 @@ namespace MonoMod {
                     if (orig is MethodReference)
                         member =
                             type.FindMethod((string) value) ??
-                            type.FindMethod(((MethodReference) orig).GetFindableID(name: (string) value));
+                            type.FindMethod(((MethodReference) orig).GetFindableID(name: (string) value, type: type.FullName));
+                    // Microoptimization with the type: type.FullName above:
+                    // Instead of waiting until the 4th pass, just use the type name once and return in the 3rd pass.
                     else if (orig is FieldReference)
                         member = type.FindField((string) value);
                 }
 
             }
 
+            if (type == null)
+                throw new InvalidOperationException($"Could not resolve MonoModLinkTo on {orig}: Type not found.");
             if (orig is TypeReference)
                 return Module.ImportReference(type);
+
+            if (member == null)
+                throw new InvalidOperationException($"Could not resolve MonoModLinkTo on {orig}: Member not found.");
             if (orig is MethodReference)
                 return Module.ImportReference((MethodReference) member);
             if (orig is FieldReference)
