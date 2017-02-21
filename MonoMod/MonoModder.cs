@@ -45,6 +45,8 @@ namespace MonoMod {
 
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
+        public Dictionary<string, MMILProxyDelegate> MMILProxyMap = new Dictionary<string, MMILProxyDelegate>();
+
         public int CurrentRID = 0;
 
         public bool SkipOptimization = false;
@@ -162,6 +164,8 @@ namespace MonoMod {
             PostRelinker = DefaultPostRelinker;
 
             OnMissingDependency = DefaultMissingDependencyResolver;
+
+            MMILProxy.FillMap(this, MMILProxyMap);
         }
 
         public void SetupLegacy() {
@@ -407,6 +411,11 @@ namespace MonoMod {
                                     (string) cctor.Body.Instructions[instri - 2].Operand,
                                     (string) cctor.Body.Instructions[instri - 1].Operand
                                 );
+                                /*MMILProxyMap["System.Void MMIL/Rule::RelinkMember(System.String,System.String,System.String)"](
+                                    (string) cctor.Body.Instructions[instri - 3].Operand,
+                                    (string) cctor.Body.Instructions[instri - 2].Operand,
+                                    (string) cctor.Body.Instructions[instri - 1].Operand
+                                );*/
                             }
 
 

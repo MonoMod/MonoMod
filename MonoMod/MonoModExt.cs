@@ -17,6 +17,8 @@ namespace MonoMod {
         public static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");
         public static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
 
+        public static Type t_ParamArrayAttribute = typeof(ParamArrayAttribute);
+
         public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
             if (o == null)
                 return null;
@@ -176,6 +178,51 @@ namespace MonoMod {
             return builder.ToString();
         }
 
+        public static string GetFindableID(this System.Reflection.MethodInfo method, string name = null, string type = null, bool withType = true, bool proxyMethod = false) {
+            while (method.IsGenericMethod)
+                method = method.GetGenericMethodDefinition();
+
+            StringBuilder builder = new StringBuilder();
+            builder
+                .Append(method.ReturnType.FullName)
+                .Append(" ");
+
+            if (withType)
+                builder.Append(type ?? method.DeclaringType.FullName.Replace("+", "/")).Append("::");
+
+            builder
+                .Append(name ?? method.Name);
+
+            if (method.ContainsGenericParameters) {
+                builder.Append("<");
+                Type[] arguments = method.GetGenericArguments();
+                for (int i = 0; i < arguments.Length; i++) {
+                    if (i > 0)
+                        builder.Append(",");
+                    builder.Append(arguments[i].Name);
+                }
+                builder.Append(">");
+            }
+
+            builder.Append("(");
+
+            System.Reflection.ParameterInfo[] parameters = method.GetParameters();
+            for (int i = proxyMethod ? 1 : 0; i < parameters.Length; i++) {
+                System.Reflection.ParameterInfo parameter = parameters[i];
+                if (i > (proxyMethod ? 1 : 0))
+                    builder.Append(",");
+
+                if (Attribute.IsDefined(parameter, t_ParamArrayAttribute))
+                    builder.Append("...,");
+
+                builder.Append(parameter.ParameterType.FullName);
+            }
+
+            builder.Append(")");
+
+            return builder.ToString();
+        }
+
         public static void UpdateOffsets(this MethodBody body, int instri, int delta) {
             for (int offsi = body.Instructions.Count - 1; instri <= offsi; offsi--)
                 body.Instructions[offsi].Offset--;
@@ -183,6 +230,7 @@ namespace MonoMod {
 
         public static int GetInt(this Instruction instr) {
             OpCode op = instr.OpCode;
+            if (op == OpCodes.Ldc_I4_M1) return -1;
             if (op == OpCodes.Ldc_I4_0) return 0;
             if (op == OpCodes.Ldc_I4_1) return 1;
             if (op == OpCodes.Ldc_I4_2) return 2;

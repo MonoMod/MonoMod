@@ -45,6 +45,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
+    <Compile Include="MonoMod\InlineRT\MMILProxy.cs" />
+    <Compile Include="MonoMod\InlineRT\ReflectionHelper.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModHook.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModIfFlag.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModNoNew.cs" />
