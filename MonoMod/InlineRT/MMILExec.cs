@@ -29,6 +29,7 @@ namespace MonoMod.InlineRT {
 
                 DependencyCache = self.DependencyCache,
                 DependencyDirs = self.DependencyDirs,
+                DependencyMap = self.DependencyMap,
                 OnMissingDependency = self.OnMissingDependency,
 
                 Relinker = (mtp, context) =>
