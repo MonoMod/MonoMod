@@ -45,8 +45,6 @@ namespace MonoMod {
 
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
-        public Dictionary<string, MMILProxyDelegate> MMILProxyMap = new Dictionary<string, MMILProxyDelegate>();
-
         public int CurrentRID = 0;
 
         public bool SkipOptimization = false;
@@ -165,7 +163,7 @@ namespace MonoMod {
 
             OnMissingDependency = DefaultMissingDependencyResolver;
 
-            MMILProxy.FillMap(this, MMILProxyMap);
+            MMILProxyManager.Register(this);
         }
 
         public void SetupLegacy() {
@@ -360,6 +358,10 @@ namespace MonoMod {
                 ParseRulesInType(type);
 
             TypeDefinition rulesType = mod.GetType("MonoMod.MonoModRules");
+            if (rulesType != null) {
+                MMILExec.ExecuteRules(this, rulesType);
+                return;
+            }
             if (rulesType == null) return;
 
             // Check the constructor for all main rules
@@ -781,7 +783,7 @@ namespace MonoMod {
         /// Patches the type (adds new types).
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
-        public virtual void PrePatchType(TypeDefinition type) {
+        public virtual void PrePatchType(TypeDefinition type, bool forceAdd = false) {
             string typeName = RemovePrefixes(type.FullName, type);
 
             // Fix legacy issue: Copy / inline any used modifiers.
@@ -789,7 +791,7 @@ namespace MonoMod {
                 return;
 
             // Check if type exists in target module or dependencies.
-            TypeReference targetType = FindTypeDeep(typeName);
+            TypeReference targetType = forceAdd ? null : FindTypeDeep(typeName);
             TypeDefinition targetTypeDef = targetType?.Resolve();
             if (targetType != null) {
                 if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")))
@@ -1408,6 +1410,8 @@ namespace MonoMod {
         /// <param name="type">The type of the new token.</param>
         /// <returns>A MetadataToken with an unique RID for the target module.</returns>
         public virtual MetadataToken GetMetadataToken(TokenType type) {
+            if (Module.Name.Contains(" -MMILRT"))
+                return new MetadataToken(type, CurrentRID++);
             while (Module.LookupToken(CurrentRID | (int) type) != null) {
                 ++CurrentRID;
             }

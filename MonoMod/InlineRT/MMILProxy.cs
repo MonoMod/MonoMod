@@ -1,41 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
+﻿using Mono.Cecil;
+using StringInject;
+using System;
+using System.Diagnostics;
 
 namespace MonoMod.InlineRT {
-    public delegate object MMILProxyDelegate(params object[] args);
+    // TODO automatically create this proxy class
+    public static partial class MMILProxy {
 
-    public static class MMILProxy {
+        public static class Rule {
 
-        private static readonly Type[] _ManyObjects = new Type[2] { typeof(object), typeof(object[]) };
+            public static void RelinkModule(string from, string toName)
+                => MMILRT.Rule.RelinkModule(MMILProxyManager.Self, from, toName);
 
-        public static List<Tuple<string, DynamicMethodDelegate>> Cache = new List<Tuple<string, DynamicMethodDelegate>>();
+            public static void RelinkType(string from, string to)
+                => MMILRT.Rule.RelinkType(MMILProxyManager.Self, from, to);
 
-        static MMILProxy() {
-            FillCache(typeof(MMILRT));
+            public static void RelinkMember(string from, string toType, string toMember)
+                => MMILRT.Rule.RelinkMember(MMILProxyManager.Self, from, toType, toMember);
+
+
+            public static void Patch(string id, bool patch)
+                => MMILRT.Rule.Patch(MMILProxyManager.Self, id, patch);
+
         }
 
-        public static void FillCache(Type type) {
-            foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
-                Cache.Add(Tuple.Create(
-                    method.GetFindableID(type: "MMIL" + type.FullName.Substring("MonoMod.InlineRT.MMILRT".Length).Replace("+", "/"), proxyMethod: true),
-                    method.GetDelegate()
-                ));
+        public static class Flag {
 
-            foreach (Type nested in type.GetNestedTypes())
-                FillCache(nested);
+            public static bool Get(string k)
+                => MMILRT.Flag.Get(MMILProxyManager.Self, k);
+            public static void Set(string k, bool v)
+                => MMILRT.Flag.Set(MMILProxyManager.Self, k, v);
+
         }
 
-        public static void FillMap(MonoModder self, Dictionary<string, MMILProxyDelegate> map) {
-            foreach (Tuple<string, DynamicMethodDelegate> tuple in Cache)
-                map[tuple.Item1] = (object[] args) => {
-                    // MMILRT expects self as first argument
-                    object[] fullArgs = new object[args.Length + 1];
-                    Array.Copy(args, 0, fullArgs, 1, args.Length);
-                    fullArgs[0] = self;
-                    return tuple.Item2(null, fullArgs);
-                };
+        public static class Data {
+
+            public static object Get(string k)
+                => MMILRT.Data.Get(MMILProxyManager.Self, k);
+            public static void Set(string k, object v)
+                => MMILRT.Data.Set(MMILProxyManager.Self, k, v);
+
         }
 
     }

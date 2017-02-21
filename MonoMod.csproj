@@ -44,8 +44,10 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
+    <Compile Include="MonoMod\InlineRT\MMILExec.cs" />
     <Compile Include="MonoMod\InlineRT\MMILProxy.cs" />
+    <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
+    <Compile Include="MonoMod\InlineRT\MMILProxyManager.cs" />
     <Compile Include="MonoMod\InlineRT\ReflectionHelper.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModHook.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModIfFlag.cs" />

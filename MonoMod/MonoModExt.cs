@@ -2,6 +2,7 @@
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -277,6 +278,11 @@ namespace MonoMod {
         public static void AddRange<T>(this Collection<T> list, Collection<T> other) {
             for (int i = 0; i < other.Count; i++)
                 list.Add(other[i]);
+        }
+
+        public static void AddRange(this IDictionary dict, IDictionary other) {
+            foreach (DictionaryEntry entry in other)
+                dict.Add(entry.Key, entry.Value);
         }
 
         public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, string name) {
