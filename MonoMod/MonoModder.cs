@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
+using MonoMod.InlineRT;
 using StringInject;
 using System;
 using System.Collections.Generic;
@@ -384,58 +385,37 @@ namespace MonoMod {
 
                         if (mr.DeclaringType.FullName == "MMIL/Rule") {
                             if (mr.Name == "RelinkModule") {
-                                string from = (string) cctor.Body.Instructions[instri - 2].Operand;
-                                string toName = (string) cctor.Body.Instructions[instri - 1].Operand;
-
-                                bool retrying = false;
-                                ModuleDefinition to = null;
-                                RETRY:
-                                if (toName + ".dll" == Module.Name)
-                                    to = Module;
-                                else if (DependencyCache.TryGetValue(toName, out to)) { }
-                                else if (!retrying) {
-                                    MapDependency(Module, toName);
-                                    retrying = true;
-                                    goto RETRY;
-                                }
-
-                                if (to != null) {
-                                    Log($"[MonoModRules] RelinkModule: {from} -> {toName}");
-                                    RelinkModuleMap[from] = to;
-                                }
+                                MMILRT.Rule.RelinkModule(
+                                    this,
+                                    (string) cctor.Body.Instructions[instri - 2].Operand,
+                                    (string) cctor.Body.Instructions[instri - 1].Operand
+                                );
                             }
+
+                            if (mr.Name == "RelinkType") {
+                                MMILRT.Rule.RelinkType(
+                                    this,
+                                    (string) cctor.Body.Instructions[instri - 2].Operand,
+                                    (string) cctor.Body.Instructions[instri - 1].Operand
+                                );
+                            }
+
+                            if (mr.Name == "RelinkMember") {
+                                MMILRT.Rule.RelinkMember(
+                                    this,
+                                    (string) cctor.Body.Instructions[instri - 3].Operand,
+                                    (string) cctor.Body.Instructions[instri - 2].Operand,
+                                    (string) cctor.Body.Instructions[instri - 1].Operand
+                                );
+                            }
+
 
                             if (mr.Name == "Patch") {
-                                string id = ((string) cctor.Body.Instructions[instri - 2].Operand).Inject(Data);
-                                bool patch = cctor.Body.Instructions[instri - 1].GetInt() == 1; // bool constants are the same as int constants
-                                Log($"[MonoModRules] Patch: {id}: {patch}");
-                                if (patch && SkipList.Contains(id))
-                                    SkipList.Remove(id);
-                                else if (!patch && !SkipList.Contains(id))
-                                    SkipList.Add(id);
-                            }
-
-                            // Relinks get resolved later (types not added yet); For now, just add the relink info
-                            if (mr.Name == "RelinkType") {
-                                cctor.Body.Instructions[instri - 2].Operand = ((string) cctor.Body.Instructions[instri - 2].Operand).Inject(Data);
-                                if (cctor.Body.Instructions[instri - 1].Operand is string)
-                                    cctor.Body.Instructions[instri - 1].Operand = ((string) cctor.Body.Instructions[instri - 1].Operand).Inject(Data);
-                                Log($"[MonoModRules] RelinkType: {cctor.Body.Instructions[instri - 2].Operand} -> {cctor.Body.Instructions[instri - 1].Operand}");
-                                RelinkMap[(string) cctor.Body.Instructions[instri - 2].Operand] = // from
-                                    cctor.Body.Instructions[instri - 1].Operand; // to type (string or type ref)
-                            }
-                            if (mr.Name == "RelinkMember") {
-                                cctor.Body.Instructions[instri - 3].Operand = ((string) cctor.Body.Instructions[instri - 3].Operand).Inject(Data);
-                                if (cctor.Body.Instructions[instri - 2].Operand is string)
-                                    cctor.Body.Instructions[instri - 2].Operand = ((string) cctor.Body.Instructions[instri - 2].Operand).Inject(Data);
-                                cctor.Body.Instructions[instri - 1].Operand = ((string) cctor.Body.Instructions[instri - 1].Operand).Inject(Data);
-                                Log($"[MonoModRules] RelinkMember: {cctor.Body.Instructions[instri - 3].Operand} -> {cctor.Body.Instructions[instri - 2].Operand}::{cctor.Body.Instructions[instri - 1].Operand}");
-                                // TODO MonoModRules, RelinkMember: If it's a type ref, there's a method call in between the ldtoken and the following ldstring
-                                RelinkMap[(string) cctor.Body.Instructions[instri - 3].Operand] = // from
-                                    Tuple.Create(
-                                        cctor.Body.Instructions[instri - 2].Operand, // to type (string or type ref)
-                                        (string) cctor.Body.Instructions[instri - 1].Operand // to member
-                                    );
+                                MMILRT.Rule.Patch(
+                                    this,
+                                    (string) cctor.Body.Instructions[instri - 2].Operand,
+                                    cctor.Body.Instructions[instri - 1].GetInt() == 1
+                                );
                             }
 
                         }
@@ -495,12 +475,12 @@ namespace MonoMod {
             if (target is TypeReference)
                 to = ((TypeReference) target).FullName;
             else if (target is MethodReference)
-                to = Tuple.Create<object, string>(
+                to = Tuple.Create(
                     ((MethodReference) target).DeclaringType.FullName,
                     ((MethodReference) target).GetFindableID(withType: false)
                 );
             else if (target is FieldReference)
-                to = Tuple.Create<object, string>(
+                to = Tuple.Create(
                     ((FieldReference) target).DeclaringType.FullName,
                     ((FieldReference) target).Name
                 );
@@ -682,14 +662,10 @@ namespace MonoMod {
 
             object val;
             if (relink && RelinkMap.TryGetValue(name, out val)) {
-                if (val is Tuple<object, string>) {
-                    Tuple<object, string> tuple = (Tuple<object, string>) val;
+                if (val is Tuple<string, string>) {
+                    Tuple<string, string> tuple = (Tuple<string, string>) val;
                     string typeName = tuple.Item1 as string;
-                    TypeDefinition type = tuple.Item1 as TypeDefinition ?? (tuple.Item1 as TypeReference)?.Resolve();
-                    if (type != null)
-                        type = Relink(type, (IGenericParameterProvider) mtp)?.Resolve();
-                    if (type == null)
-                        type = FindTypeDeep(typeName)?.Resolve();
+                    TypeDefinition type = FindTypeDeep(typeName)?.Resolve();
                     if (type == null)
                         return ResolveRelinkTarget(mtp, false, relinkModule);
 
@@ -698,7 +674,7 @@ namespace MonoMod {
                     else if (mtp is FieldReference)
                         val = type.FindField(tuple.Item2);
                     else
-                        throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<object, string>");
+                        throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<string, string>");
                     // Store the result
                     return (IMetadataTokenProvider) (RelinkMap[name] = val = Module.ImportReference((IMetadataTokenProvider) val));
                 }
