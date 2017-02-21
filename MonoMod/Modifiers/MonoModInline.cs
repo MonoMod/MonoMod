@@ -14,6 +14,8 @@ public static partial class MMIL {
         public static void RelinkMember(string i, string t, string n) { }
         public static void RelinkMember(string i, Type t, string n) { }
 
+        public static void Patch(string i, bool b) { }
+
     }
 
     public class Flag {

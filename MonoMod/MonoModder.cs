@@ -27,6 +27,7 @@ namespace MonoMod {
 
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
         public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
+        public HashSet<string> SkipList = new HashSet<string>();
 
         public Relinker Relinker;
         public Relinker MainRelinker;
@@ -402,6 +403,16 @@ namespace MonoMod {
                                     Log($"[MonoModRules] RelinkModule: {from} -> {toName}");
                                     RelinkModuleMap[from] = to;
                                 }
+                            }
+
+                            if (mr.Name == "Patch") {
+                                string id = ((string) cctor.Body.Instructions[instri - 2].Operand).Inject(Data);
+                                bool patch = cctor.Body.Instructions[instri - 1].GetInt() == 1; // bool constants are the same as int constants
+                                Log($"[MonoModRules] Patch: {id}: {patch}");
+                                if (patch && SkipList.Contains(id))
+                                    SkipList.Remove(id);
+                                else if (!patch && !SkipList.Contains(id))
+                                    SkipList.Add(id);
                             }
 
                             // Relinks get resolved later (types not added yet); For now, just add the relink info
@@ -789,7 +800,7 @@ namespace MonoMod {
             string typeName = RemovePrefixes(type.FullName, type);
 
             // Fix legacy issue: Copy / inline any used modifiers.
-            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || !type.MatchingConditionals())
+            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || SkipList.Contains(typeName) || !type.MatchingConditionals())
                 return;
 
             // Check if type exists in target module or dependencies.
@@ -872,6 +883,7 @@ namespace MonoMod {
             string typeName = RemovePrefixes(type.FullName, type);
 
             if (type.HasMMAttribute("Ignore") ||
+                SkipList.Contains(typeName) ||
                 !type.MatchingConditionals()) {
                 PatchNested(type);
                 return;
@@ -946,7 +958,7 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || !field.MatchingConditionals())
+                if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals())
                     continue;
 
                 if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
@@ -987,19 +999,22 @@ namespace MonoMod {
                 // Ignore ignored methods
                 return null;
 
+            string typeName = RemovePrefixes(targetType.FullName, targetType);
+            if (SkipList.Contains(method.GetFindableID(type: typeName)))
+                return null;
+
+            MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
+            MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
+
+            if (existingMethod == null && method.HasMMAttribute("NoNew"))
+                return null;
+
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
             if (method.HasMMAttribute("Constructor")) {
                 method.Name = method.IsStatic ? ".cctor" : ".ctor";
                 method.IsSpecialName = true;
                 method.IsRuntimeSpecialName = true;
             }
-
-            string typeName = RemovePrefixes(targetType.FullName, targetType);
-            MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
-            MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
-
-            if (existingMethod == null && method.HasMMAttribute("NoNew"))
-                return null;
 
             if (method.Name.StartsWith("replace_") || method.HasMMAttribute("Replace")) {
                 method.Name = RemovePrefixes(method.Name);
@@ -1161,7 +1176,10 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
-            if ((!AllowedSpecialName(method) && !method.IsConstructor) || method.HasMMAttribute("Ignore") || !method.MatchingConditionals())
+            if ((!AllowedSpecialName(method) && !method.IsConstructor) ||
+                method.HasMMAttribute("Ignore") ||
+                SkipList.Contains(method.GetFindableID()) ||
+                !method.MatchingConditionals())
                 // Ignore ignored methods
                 return;
 
