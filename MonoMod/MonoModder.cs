@@ -34,6 +34,9 @@ namespace MonoMod {
         public Relinker MainRelinker;
         public Relinker PostRelinker;
 
+        public Action<ModuleDefinition> OnReadMod;
+        public Action PostProcessors;
+
         public MissingDependencyResolver OnMissingDependency;
 
         public Stream Input;
@@ -346,6 +349,7 @@ namespace MonoMod {
             MapDependencies(mod);
             ParseRules(mod);
             Mods.Add(mod);
+            OnReadMod?.Invoke(mod);
         }
         public virtual void ReadMod(Stream stream) {
             Mods.Add(ModuleDefinition.ReadModule(stream, GenReaderParameters(false)));
@@ -447,6 +451,14 @@ namespace MonoMod {
 
             Log("[AutoPatch] PatchRefs pass");
             PatchRefs();
+
+            if (PostProcessors != null) {
+                Delegate[] pps = PostProcessors.GetInvocationList();
+                for (int i = 0; i < pps.Length; i++) {
+                    Log($"[PostProcessor] PostProcessor pass #{i + 1}");
+                    ((Action) pps[i])?.Invoke();
+                }
+            }
 
             Log("[AutoPatch] Optimization pass");
             Optimize();
