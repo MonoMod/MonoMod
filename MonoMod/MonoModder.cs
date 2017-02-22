@@ -360,91 +360,10 @@ namespace MonoMod {
             TypeDefinition rulesType = mod.GetType("MonoMod.MonoModRules");
             if (rulesType != null) {
                 MMILExec.ExecuteRules(this, rulesType);
-                return;
-            }
-            if (rulesType == null) return;
-
-            // Check the constructor for all main rules
-            MethodDefinition cctor = rulesType.FindMethod("System.Void .cctor()");
-            if (cctor != null && cctor.HasBody) {
-                bool matchingPlatformIL = true;
-                for (int instri = 0; instri < cctor.Body.Instructions.Count; instri++) {
-                    Instruction instr = cctor.Body.Instructions[instri];
-
-                    // Temporarily enable matching platform, otherwise the platform data gets lost.
-                    // Check the next one as the array size is before the newarr.
-                    if (instr.Next?.OpCode == OpCodes.Newarr && (
-                        (instr.Next?.Operand as TypeReference)?.FullName == "Platform" ||
-                        (instr.Next?.Operand as TypeReference)?.FullName == "int"
-                    )) {
-                        matchingPlatformIL = true;
-                    }
-
-                    if (instr.Operand is MethodReference) {
-                        MethodReference mr = (MethodReference) instr.Operand;
-
-                        if (mr.DeclaringType.FullName == "MMIL") {
-                            if (mr.Name == "OnPlatform")
-                                matchingPlatformIL = cctor.ParseOnPlatform(ref instri);
-                            // Right now nothing else to parse.
-                        }
-
-                        if (mr.DeclaringType.FullName == "MMIL/Rule") {
-                            if (mr.Name == "RelinkModule") {
-                                MMILRT.Rule.RelinkModule(
-                                    this,
-                                    (string) cctor.Body.Instructions[instri - 2].Operand,
-                                    (string) cctor.Body.Instructions[instri - 1].Operand
-                                );
-                            }
-
-                            if (mr.Name == "RelinkType") {
-                                MMILRT.Rule.RelinkType(
-                                    this,
-                                    (string) cctor.Body.Instructions[instri - 2].Operand,
-                                    (string) cctor.Body.Instructions[instri - 1].Operand
-                                );
-                            }
-
-                            if (mr.Name == "RelinkMember") {
-                                MMILRT.Rule.RelinkMember(
-                                    this,
-                                    (string) cctor.Body.Instructions[instri - 3].Operand,
-                                    (string) cctor.Body.Instructions[instri - 2].Operand,
-                                    (string) cctor.Body.Instructions[instri - 1].Operand
-                                );
-                                /*MMILProxyMap["System.Void MMIL/Rule::RelinkMember(System.String,System.String,System.String)"](
-                                    (string) cctor.Body.Instructions[instri - 3].Operand,
-                                    (string) cctor.Body.Instructions[instri - 2].Operand,
-                                    (string) cctor.Body.Instructions[instri - 1].Operand
-                                );*/
-                            }
-
-
-                            if (mr.Name == "Patch") {
-                                MMILRT.Rule.Patch(
-                                    this,
-                                    (string) cctor.Body.Instructions[instri - 2].Operand,
-                                    cctor.Body.Instructions[instri - 1].GetInt() == 1
-                                );
-                            }
-
-                        }
-
-                    }
-
-                    if (!matchingPlatformIL) {
-                        cctor.Body.Instructions.RemoveAt(instri);
-                        instri = Math.Max(0, instri - 1);
-                        cctor.Body.UpdateOffsets(instri, -1);
-                        continue;
-                    }
-
-                }
+                // Finally, remove the type, otherwise it'll easily conflict with other mods' rules.
+                mod.Types.Remove(rulesType);
             }
 
-            // Finally, remove the type, otherwise it'll easily conflict with other mods' rules.
-            mod.Types.Remove(rulesType);
         }
 
         public virtual void ParseRulesInType(TypeDefinition type) {
