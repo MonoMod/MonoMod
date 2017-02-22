@@ -796,7 +796,7 @@ namespace MonoMod {
 
             string typeName = RemovePrefixes(type.FullName, type);
 
-            if (type.HasMMAttribute("Ignore") ||
+            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || // Fix legacy issue: Copy / inline any used modifiers.
                 SkipList.Contains(typeName) ||
                 !type.MatchingConditionals()) {
                 PatchNested(type);
