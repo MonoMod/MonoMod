@@ -528,12 +528,17 @@ namespace MonoMod {
             // LinkTo bypasses all relinking maps.
             ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
             if (cap == null) // TODO This increases the PatchRefs pass time and could be optimized.
-                if (mtp is TypeReference)
-                    cap = ((TypeReference) mtp).Resolve() as ICustomAttributeProvider;
-                else if (mtp is MethodReference)
-                    cap = ((MethodReference) mtp).Resolve() as ICustomAttributeProvider;
-                else if (mtp is FieldReference)
-                    cap = ((FieldReference) mtp).Resolve() as ICustomAttributeProvider;
+                try {
+                    if (mtp is TypeReference)
+                        cap = ((TypeReference) mtp).Resolve() as ICustomAttributeProvider;
+                    else if (mtp is MethodReference)
+                        cap = ((MethodReference) mtp).Resolve() as ICustomAttributeProvider;
+                    else if (mtp is FieldReference)
+                        cap = ((FieldReference) mtp).Resolve() as ICustomAttributeProvider;
+                } catch {
+                    // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
+                    cap = null;
+                }
 
             if (cap?.GetMMAttribute("LinkTo") != null)
                 return GetLinkToRef(cap, context);
