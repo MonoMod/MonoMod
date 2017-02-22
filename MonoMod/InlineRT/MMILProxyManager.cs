@@ -59,13 +59,11 @@ namespace MonoMod.InlineRT {
         }
 
 
-        public static MethodReference Relink(MonoModder self, MethodReference orig) {
-            orig.DeclaringType = self.Module.ImportReference(MonoModAsm.GetType(
-                $"{t_MMILProxy.FullName}{orig.DeclaringType.FullName.Substring(4)}"
+        public static TypeReference RelinkToProxy(MonoModder self, TypeReference orig)
+            => self.Module.ImportReference(MonoModAsm.GetType(
+                $"{t_MMILProxy.FullName}{orig.FullName.Substring(4)}"
                     .Replace('/', '+')
             ));
-            return orig;
-        }
 
     }
 }

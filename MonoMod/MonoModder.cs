@@ -629,7 +629,7 @@ namespace MonoMod {
 
                 // Type isn't coming from a mod module - just return the original.
                 if (!Mods.Contains(type.Module))
-                    return type;
+                    return Module.ImportReference(type);
 
                 return Module.ImportReference(FindTypeDeep(RemovePrefixes(type.FullName, type)));
             }
@@ -788,6 +788,9 @@ namespace MonoMod {
 
             // Fix legacy issue: Copy / inline any used modifiers.
             if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || SkipList.Contains(typeName) || !type.MatchingConditionals())
+                return;
+            // ... Except MonoModRules
+            if (type.FullName == "MonoMod.MonoModRules" && !forceAdd)
                 return;
 
             // Check if type exists in target module or dependencies.
