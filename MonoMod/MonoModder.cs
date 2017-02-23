@@ -904,17 +904,19 @@ namespace MonoMod {
                     foreach (ParameterDefinition param in prop.Parameters)
                         newProp.Parameters.Add(param.Clone());
 
-                    foreach (CustomAttribute attrib in prop.CustomAttributes)
-                        newProp.CustomAttributes.Add(attrib.Clone());
-
                     newProp.DeclaringType = targetTypeDef;
                     targetTypeDef.Properties.Add(newProp);
                 }
+
+                foreach (CustomAttribute attrib in prop.CustomAttributes)
+                    targetProp.CustomAttributes.Add(attrib.Clone());
 
                 MethodDefinition getter = prop.GetMethod;
                 if (getter != null &&
                     (addMethod = PatchMethod(targetTypeDef, getter)) != null) {
                     targetProp.GetMethod = addMethod;
+                    foreach (CustomAttribute attrib in prop.CustomAttributes)
+                        addMethod.CustomAttributes.Add(attrib.Clone());
                     propMethods.Push(getter);
                 }
 
@@ -922,6 +924,8 @@ namespace MonoMod {
                 if (setter != null &&
                     (addMethod = PatchMethod(targetTypeDef, setter)) != null) {
                     targetProp.SetMethod = addMethod;
+                    foreach (CustomAttribute attrib in prop.CustomAttributes)
+                        addMethod.CustomAttributes.Add(attrib.Clone());
                     propMethods.Push(setter);
                 }
 
