@@ -30,6 +30,9 @@ namespace MonoMod {
         public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
         public HashSet<string> SkipList = new HashSet<string>();
 
+        public Dictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
+        public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
+
         public Relinker Relinker;
         public Relinker MainRelinker;
         public Relinker PostRelinker;
@@ -173,7 +176,20 @@ namespace MonoMod {
             ReadingMode = ReadingMode.Immediate;
         }
 
+        public virtual void ClearCaches(bool all = false, bool shareable = false, bool moduleSpecific = false) {
+            if (all || shareable) {
+                DependencyCache.Clear();
+            }
+
+            if (all || moduleSpecific) {
+                RelinkMapCache.Clear();
+                RelinkModuleMapCache.Clear();
+            }
+        }
+
         public virtual void Dispose() {
+            ClearCaches();
+
             Module?.Dispose();
             Module = null;
 
@@ -607,6 +623,10 @@ namespace MonoMod {
             else
                 return null;
 
+            IMetadataTokenProvider cached;
+            if (RelinkMapCache.TryGetValue(name, out cached))
+                return cached;
+
             object val;
             if (relink && RelinkMap.TryGetValue(name, out val)) {
                 if (val is Tuple<string, string>) {
@@ -614,7 +634,7 @@ namespace MonoMod {
                     string typeName = tuple.Item1 as string;
                     TypeDefinition type = FindTypeDeep(typeName)?.Resolve();
                     if (type == null)
-                        return ResolveRelinkTarget(mtp, false, relinkModule);
+                        return RelinkMapCache[name] = ResolveRelinkTarget(mtp, false, relinkModule);
 
                     if (mtp is MethodReference)
                         val = type.FindMethod(tuple.Item2);
@@ -623,7 +643,7 @@ namespace MonoMod {
                     else
                         throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<string, string>");
                     // Store the result
-                    return (IMetadataTokenProvider) (RelinkMap[name] = val = Module.ImportReference((IMetadataTokenProvider) val));
+                    return RelinkMapCache[name] = (IMetadataTokenProvider) (RelinkMap[name] = val = Module.ImportReference((IMetadataTokenProvider) val));
                 }
 
                 if (val is string && mtp is TypeReference)
@@ -633,19 +653,23 @@ namespace MonoMod {
                     );
 
                 if (val is IMetadataTokenProvider)
-                    return (IMetadataTokenProvider) val;
+                    return RelinkMapCache[name] = (IMetadataTokenProvider) val;
 
                 throw new InvalidOperationException($"MonoMod doesn't support RelinkMap value of type {val.GetType()}");
             }
 
 
             if (relinkModule && mtp is TypeReference) {
-                TypeReference type = (TypeReference) mtp;
-                ModuleDefinition scope;
-                if (!RelinkModuleMap.TryGetValue(type.Scope.Name, out scope))
+                TypeReference type;
+                if (RelinkModuleMapCache.TryGetValue(name, out type))
                     return type;
-                type.Scope = scope;
-                return Module.ImportReference(type);
+                type = (TypeReference) mtp;
+
+                ModuleDefinition scope;
+                if (RelinkModuleMap.TryGetValue(type.Scope.Name, out scope))
+                    return RelinkModuleMapCache[name] = Module.ImportReference(scope.GetType(type.FullName));
+
+                return RelinkModuleMapCache[name] = type;
             }
 
             return null;
