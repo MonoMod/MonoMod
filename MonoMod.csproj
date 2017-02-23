@@ -49,6 +49,7 @@
     <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
     <Compile Include="MonoMod\InlineRT\MMILProxyManager.cs" />
     <Compile Include="MonoMod\InlineRT\ReflectionHelper.cs" />
+    <Compile Include="MonoMod\Modifiers\MonoModCustomAttribute.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModHook.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModIfFlag.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModNoNew.cs" />

@@ -378,24 +378,35 @@ namespace MonoMod {
 
 
         public virtual void ParseRules(ModuleDefinition mod) {
-            // Rule parsing pre-pass: Check for MonoModHook and similar attributes
-            foreach (TypeDefinition type in mod.Types)
-                ParseRulesInType(type);
-
             TypeDefinition rulesType = mod.GetType("MonoMod.MonoModRules");
+            Type rulesTypeMMILRT = null;
             if (rulesType != null) {
-                MMILExec.ExecuteRules(this, rulesType);
+                rulesTypeMMILRT = MMILExec.ExecuteRules(this, rulesType);
                 // Finally, remove the type, otherwise it'll easily conflict with other mods' rules.
                 mod.Types.Remove(rulesType);
             }
 
+            // Rule parsing pass: Check for MonoModHook and similar attributes
+            foreach (TypeDefinition type in mod.Types)
+                ParseRulesInType(type, rulesTypeMMILRT);
+
         }
 
-        public virtual void ParseRulesInType(TypeDefinition type) {
+        public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
             string typeName = RemovePrefixes(type.FullName, type);
 
             if (type.HasMMAttribute("Ignore") || !type.MatchingConditionals())
                 return;
+
+            CustomAttribute caHandler;
+
+            caHandler = type.GetMMAttribute("CustomAttributeAttribute");
+            if (caHandler != null)
+                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetDelegate();
+
+            caHandler = type.GetMMAttribute("CustomMethodAttributeAttribute");
+            if (caHandler != null)
+                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetDelegate();
 
             CustomAttribute hook;
 
@@ -421,6 +432,8 @@ namespace MonoMod {
                     ParseHook(field, hook);
             }
 
+            foreach (TypeDefinition nested in type.NestedTypes)
+                ParseRulesInType(nested, rulesTypeMMILRT);
         }
 
         public virtual void ParseHook(IMetadataTokenProvider target, CustomAttribute hook) {

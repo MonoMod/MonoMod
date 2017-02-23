@@ -12,7 +12,7 @@ using System.Text;
 namespace MonoMod.InlineRT {
     public static class MMILExec {
 
-        public static void ExecuteRules(this MonoModder self, TypeDefinition orig) {
+        public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
             ModuleDefinition wrapper = ModuleDefinition.CreateModule(
                 $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules -ID:{MMILProxyManager.GetId(self)} -MMILRT",
                 new ModuleParameters() {
@@ -59,12 +59,16 @@ namespace MonoMod.InlineRT {
                 asm = Assembly.Load(asmStream.GetBuffer());
             }
 
+            /**//*
             using (FileStream debugStream = File.OpenWrite(Path.Combine(
                 self.DependencyDirs[0], $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules-MMILRT.dll")))
                 wrapperMod.Write(debugStream);
+            /**/
 
             Type rules = asm.GetType(orig.FullName);
             RuntimeHelpers.RunClassConstructor(rules.TypeHandle);
+
+            return rules;
         }
 
     }
