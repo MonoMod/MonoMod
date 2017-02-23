@@ -22,6 +22,12 @@ namespace MonoMod.InlineRT {
             public static void Patch(string id, bool patch)
                 => MMILRT.Rule.Patch(MMILProxyManager.Self, id, patch);
 
+            public static void RegisterCustomAttribute(string attribName, string handlerName)
+                => MMILRT.Rule.RegisterCustomAttribute(MMILProxyManager.Self, attribName, handlerName);
+
+            public static void RegisterCustomMethodAttribute(string attribName, string handlerName)
+                => MMILRT.Rule.RegisterCustomMethodAttribute(MMILProxyManager.Self, attribName, handlerName);
+
         }
 
         public static class Flag {

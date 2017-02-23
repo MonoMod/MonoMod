@@ -14,6 +14,9 @@ public static partial class MMIL {
 
         public static void Patch(string i, bool b) { }
 
+        public static void RegisterCustomAttribute(string i, string h) { }
+        public static void RegisterCustomMethodAttribute(string i, string h) { }
+
     }
 
     public static class Flag {

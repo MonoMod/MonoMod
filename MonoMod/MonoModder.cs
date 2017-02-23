@@ -40,6 +40,9 @@ namespace MonoMod {
         public Action<ModuleDefinition> OnReadMod;
         public Action PostProcessors;
 
+        public Dictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+        public Dictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+
         public MissingDependencyResolver OnMissingDependency;
 
         public Stream Input;
@@ -168,6 +171,8 @@ namespace MonoMod {
             PostRelinker = DefaultPostRelinker;
 
             OnMissingDependency = DefaultMissingDependencyResolver;
+
+            PostProcessors += DefaultPostProcessor;
 
             MMILProxyManager.Register(this);
         }
@@ -439,6 +444,20 @@ namespace MonoMod {
 
             RelinkMap[from] = to;
         }
+
+        public virtual void RunCustomAttributeHandlers(ICustomAttributeProvider cap) {
+            if (!cap.HasCustomAttributes)
+                return;
+
+            foreach (CustomAttribute attrib in cap.CustomAttributes) {
+                DynamicMethodDelegate handler;
+                if (CustomAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))
+                    handler?.Invoke(null, cap, attrib);
+                if (cap is MethodReference && CustomMethodAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))
+                    handler?.Invoke(null, (MethodDefinition) cap, attrib);
+            }
+        }
+
 
         /// <summary>
         /// Automatically mods the module, loading Input, writing the modded module to Output.
@@ -832,16 +851,24 @@ namespace MonoMod {
 
             string typeName = RemovePrefixes(type.FullName, type);
 
-            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || // Fix legacy issue: Copy / inline any used modifiers.
-                SkipList.Contains(typeName) ||
-                !type.MatchingConditionals()) {
-                PatchNested(type);
-                return;
-            }
-
             TypeReference targetType = Module.GetType(typeName, false);
             if (targetType == null) return; // Type should've been added or removed accordingly.
             TypeDefinition targetTypeDef = targetType?.Resolve();
+
+            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || // Fix legacy issue: Copy / inline any used modifiers.
+                SkipList.Contains(typeName) ||
+                !type.MatchingConditionals()) {
+
+                if (type.HasMMAttribute("Ignore") && targetTypeDef != null) {
+                    // MonoModIgnore is a special case, as registered custom attributes should still be applied.
+                    foreach (CustomAttribute attrib in type.CustomAttributes)
+                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                            targetTypeDef.CustomAttributes.Add(attrib.Clone());
+                }
+
+                PatchNested(type);
+                return;
+            }
 
             if (typeName == type.FullName)
                 Log($"[PatchType] Patching type {typeName}");
@@ -908,7 +935,7 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("Ignore") || field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals())
+                if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals())
                     continue;
 
                 if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
@@ -917,6 +944,16 @@ namespace MonoMod {
                         targetTypeDef.Fields.Remove(targetField);
                     if (field.HasMMAttribute("Remove"))
                         continue;
+                }
+
+                FieldDefinition existingField = type.FindField(field.Name);
+
+                if (type.HasMMAttribute("Ignore") && existingField != null) {
+                    // MonoModIgnore is a special case, as registered custom attributes should still be applied.
+                    foreach (CustomAttribute attrib in field.CustomAttributes)
+                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                            existingField.CustomAttributes.Add(attrib.Clone());
+                    continue;
                 }
 
                 if (targetTypeDef.HasField(field))
@@ -945,16 +982,27 @@ namespace MonoMod {
                 // Ignore original method stubs
                 return null;
 
-            if (!AllowedSpecialName(method, targetType) || method.HasMMAttribute("Ignore") || !method.MatchingConditionals())
+            if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals())
                 // Ignore ignored methods
                 return null;
 
             string typeName = RemovePrefixes(targetType.FullName, targetType);
-            if (SkipList.Contains(method.GetFindableID(type: typeName)))
-                return null;
 
             MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
+
+            if (method.HasMMAttribute("Ignore")) {
+                // MonoModIgnore is a special case, as registered custom attributes should still be applied.
+                if (existingMethod != null)
+                    foreach (CustomAttribute attrib in method.CustomAttributes)
+                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName) ||
+                            CustomMethodAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                            existingMethod.CustomAttributes.Add(attrib.Clone());
+                return null;
+            }
+
+            if (SkipList.Contains(method.GetFindableID(type: typeName)))
+                return null;
 
             if (existingMethod == null && method.HasMMAttribute("NoNew"))
                 return null;
@@ -1025,6 +1073,9 @@ namespace MonoMod {
                 existingMethod.IsPreserveSig = method.IsPreserveSig;
                 existingMethod.IsInternalCall = method.IsInternalCall;
                 existingMethod.IsPInvokeImpl = method.IsPInvokeImpl;
+
+                foreach (CustomAttribute attrib in method.CustomAttributes)
+                    existingMethod.CustomAttributes.Add(attrib.Clone());
 
                 method = existingMethod;
 
@@ -1227,6 +1278,31 @@ namespace MonoMod {
 
         #endregion
 
+        #region Default PostProcessor Pass
+        public virtual void DefaultPostProcessor() {
+            foreach (TypeDefinition type in Module.Types)
+                DefaultPostProcessType(type);
+        }
+
+        public virtual void DefaultPostProcessType(TypeDefinition type) {
+            RunCustomAttributeHandlers(type);
+
+
+            foreach (PropertyDefinition prop in type.Properties)
+                RunCustomAttributeHandlers(prop);
+
+            foreach (MethodDefinition method in type.Methods)
+                RunCustomAttributeHandlers(method);
+
+            foreach (FieldDefinition field in type.Fields)
+                RunCustomAttributeHandlers(field);
+
+
+            foreach (TypeDefinition nested in type.NestedTypes)
+                DefaultPostProcessType(nested);
+        }
+        #endregion
+
         #region MonoMod injected types
         public virtual TypeDefinition PatchWasHere() {
             for (int ti = 0; ti < Module.Types.Count; ti++) {
@@ -1366,7 +1442,7 @@ namespace MonoMod {
         #endregion
 
 
-        #region Helper methods
+        #region Static helper methods
         /// <summary>
         /// Creates a new non-conflicting MetadataToken.
         /// </summary>

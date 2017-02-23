@@ -33,6 +33,19 @@ namespace MonoMod.InlineRT {
             }
         }
 
+        public static Type RuleType {
+            get {
+                StackTrace st = new StackTrace();
+                for (int i = 1; i < st.FrameCount; i++) {
+                    StackFrame frame = st.GetFrame(i);
+                    MethodBase method = frame.GetMethod();
+                    if (method.DeclaringType.Assembly != MonoModAsm)
+                        return method.DeclaringType;
+                }
+                return null;
+            }
+        }
+
         public static void Register(MonoModder self) {
             bool firstTime;
             ModderMap[ModderIdGen.GetId(self, out firstTime)] = new WeakReference(self);

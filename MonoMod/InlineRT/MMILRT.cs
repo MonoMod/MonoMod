@@ -56,6 +56,15 @@ namespace MonoMod.InlineRT {
                     self.SkipList.Add(id);
             }
 
+
+            public static void RegisterCustomAttribute(MonoModder self, string attribName, string handlerName) {
+                self.CustomAttributeHandlers[attribName] = MMILProxyManager.RuleType.GetMethod(handlerName).GetDelegate();
+            }
+
+            public static void RegisterCustomMethodAttribute(MonoModder self, string attribName, string handlerName) {
+                self.CustomMethodAttributeHandlers[attribName] = MMILProxyManager.RuleType.GetMethod(handlerName).GetDelegate();
+            }
+
         }
 
         public static class Flag {
