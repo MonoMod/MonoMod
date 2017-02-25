@@ -394,7 +394,7 @@ namespace MonoMod {
                 }
             }
 
-            relink.ReturnType = method.ReturnType?.Relink(relinker, method);
+            relink.ReturnType = method.ReturnType?.Relink(relinker, relink);
 
             foreach (ParameterDefinition param in method.Parameters) {
                 param.ParameterType = param.ParameterType.Relink(relinker, method);

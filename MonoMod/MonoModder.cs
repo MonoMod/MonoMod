@@ -675,13 +675,11 @@ namespace MonoMod {
                         val = type.FindField(tuple.Item2);
                     else
                         throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<string, string>");
-                    // Store the result
-                    return RelinkMapCache[name] = (IMetadataTokenProvider) (RelinkMap[name] = val = Module.ImportReference((IMetadataTokenProvider) val));
+                    return RelinkMapCache[name] = Module.ImportReference((IMetadataTokenProvider) val);
                 }
 
                 if (val is string && mtp is TypeReference)
-                    // Store the result
-                    RelinkMap[name] = val = Module.ImportReference(
+                    val = Module.ImportReference(
                         ResolveRelinkTarget(FindTypeDeep((string) val), false, relinkModule)
                     );
 
@@ -702,7 +700,7 @@ namespace MonoMod {
                 if (RelinkModuleMap.TryGetValue(type.Scope.Name, out scope))
                     return RelinkModuleMapCache[name] = Module.ImportReference(scope.GetType(type.FullName));
 
-                return RelinkModuleMapCache[name] = type;
+                return RelinkModuleMapCache[name] = Module.ImportReference(type);
             }
 
             return null;
