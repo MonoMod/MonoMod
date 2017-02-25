@@ -43,7 +43,7 @@ namespace MonoMod {
         public Dictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
         public Dictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
 
-        public MissingDependencyResolver OnMissingDependency;
+        public MissingDependencyResolver MissingDependencyResolver;
 
         public Stream Input;
         public Stream Output;
@@ -170,7 +170,7 @@ namespace MonoMod {
             MainRelinker = DefaultMainRelinker;
             PostRelinker = DefaultPostRelinker;
 
-            OnMissingDependency = DefaultMissingDependencyResolver;
+            MissingDependencyResolver = DefaultMissingDependencyResolver;
 
             PostProcessors += DefaultPostProcessor;
 
@@ -261,6 +261,7 @@ namespace MonoMod {
                                      DependencyCache.TryGetValue(name    , out dep)) {
                 Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
                 DependencyMap[main].Add(dep);
+                MapDependencies(dep);
                 return;
             }
 
@@ -312,7 +313,7 @@ namespace MonoMod {
 
             if (path != null && File.Exists(path)) {
                 dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
-            } else if ((dep = OnMissingDependency?.Invoke(main, name, fullName)) == null) return;
+            } else if ((dep = MissingDependencyResolver?.Invoke(main, name, fullName)) == null) return;
             
             Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
             DependencyMap[main].Add(dep);

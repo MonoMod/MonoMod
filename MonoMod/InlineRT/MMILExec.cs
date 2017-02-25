@@ -29,7 +29,7 @@ namespace MonoMod.InlineRT {
                 Logger = msg => self.Log("[MonoModRule] " + msg),
 
                 DependencyDirs = self.DependencyDirs,
-                OnMissingDependency = self.OnMissingDependency
+                MissingDependencyResolver = self.MissingDependencyResolver
             };
 
             // Only add a copy of the map - adding the MMILRT asm itself to the map only causes issues.
