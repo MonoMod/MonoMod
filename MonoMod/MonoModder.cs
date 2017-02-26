@@ -322,7 +322,9 @@ namespace MonoMod {
             MapDependencies(dep);
         }
         public virtual ModuleDefinition DefaultMissingDependencyResolver(ModuleDefinition main, string name, string fullName) {
-            throw new InvalidOperationException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found");
+            if (Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0")
+                throw new InvalidOperationException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found");
+            return null;
         }
 
         /// <summary>
