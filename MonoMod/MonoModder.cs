@@ -1503,6 +1503,9 @@ namespace MonoMod {
             if (method.IsGetter || method.IsSetter)
                 return true;
 
+            if (method.Name.StartsWith("op_"))
+                return true;
+
             return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
         }
 
