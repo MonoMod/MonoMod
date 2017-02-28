@@ -132,11 +132,19 @@ namespace MonoMod {
             return status;
         }
 
-        public static string GetFindableID(this MethodReference method, string name = null, string type = null, bool withType = true) {
+        public static string GetFindableID(this MethodReference method, string name = null, string type = null, bool withType = true, bool simple = false) {
             while (method.IsGenericInstance)
                 method = ((GenericInstanceMethod) method).ElementMethod;
 
             StringBuilder builder = new StringBuilder();
+
+            if (simple) {
+                if (withType)
+                    builder.Append(type ?? method.DeclaringType.FullName).Append("::");
+                builder.Append(name ?? method.Name);
+                return builder.ToString();
+            }
+
             builder
                 .Append(method.ReturnType.FullName)
                 .Append(" ");
@@ -179,11 +187,19 @@ namespace MonoMod {
             return builder.ToString();
         }
 
-        public static string GetFindableID(this System.Reflection.MethodInfo method, string name = null, string type = null, bool withType = true, bool proxyMethod = false) {
+        public static string GetFindableID(this System.Reflection.MethodInfo method, string name = null, string type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {
             while (method.IsGenericMethod)
                 method = method.GetGenericMethodDefinition();
 
             StringBuilder builder = new StringBuilder();
+
+            if (simple) {
+                if (withType)
+                    builder.Append(type ?? method.DeclaringType.FullName).Append("::");
+                builder.Append(name ?? method.Name);
+                return builder.ToString();
+            }
+
             builder
                 .Append(method.ReturnType.FullName)
                 .Append(" ");
@@ -494,6 +510,13 @@ namespace MonoMod {
             // Second pass: Without type name (f.e. LinkTo)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID(withType: false) == findableID) return method;
+            // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
+            // First simple pass: With type name (just "Namespace.Type::MethodName")
+            foreach (MethodDefinition method in type.Methods)
+                if (method.GetFindableID(simple: true) == findableID) return method;
+            // Second simple pass: Without type name (basically name only)
+            foreach (MethodDefinition method in type.Methods)
+                if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
             return null;
         }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
@@ -508,7 +531,7 @@ namespace MonoMod {
         }
 
         public static bool HasMethod(this TypeDefinition type, MethodDefinition method)
-            => type.FindMethod(method.GetFindableID()) != null;
+            => type.FindMethod(method.GetFindableID(withType: false)) != null;
         public static bool HasProperty(this TypeDefinition type, PropertyDefinition prop)
             => type.FindProperty(prop.Name) != null;
         public static bool HasField(this TypeDefinition type, FieldDefinition field)
