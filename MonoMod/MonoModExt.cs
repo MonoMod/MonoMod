@@ -226,7 +226,7 @@ namespace MonoMod {
 
         public static void UpdateOffsets(this MethodBody body, int instri, int delta) {
             for (int offsi = body.Instructions.Count - 1; instri <= offsi; offsi--)
-                body.Instructions[offsi].Offset--;
+                body.Instructions[offsi].Offset += delta;
         }
 
         public static int GetInt(this Instruction instr) {
