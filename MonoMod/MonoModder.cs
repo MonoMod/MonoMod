@@ -649,13 +649,15 @@ namespace MonoMod {
 
         public virtual IMetadataTokenProvider ResolveRelinkTarget(IMetadataTokenProvider mtp, bool relink = true, bool relinkModule = true) {
             string name;
-            if (mtp is TypeReference)
+            string nameAlt = null;
+            if (mtp is TypeReference) {
                 name = ((TypeReference) mtp).FullName;
-            else if (mtp is MethodReference)
+            } else if (mtp is MethodReference) {
                 name = ((MethodReference) mtp).GetFindableID(withType: true);
-            else if (mtp is FieldReference)
+                nameAlt = ((MethodReference) mtp).GetFindableID(simple: true);
+            } else if (mtp is FieldReference) {
                 name = ((FieldReference) mtp).FullName;
-            else
+            } else
                 return null;
 
             IMetadataTokenProvider cached;
@@ -663,7 +665,10 @@ namespace MonoMod {
                 return cached;
 
             object val;
-            if (relink && RelinkMap.TryGetValue(name, out val)) {
+            if (relink && (
+                RelinkMap.TryGetValue(name, out val) ||
+                (nameAlt != null && RelinkMap.TryGetValue(nameAlt, out val))
+            )) {
                 if (val is Tuple<string, string>) {
                     Tuple<string, string> tuple = (Tuple<string, string>) val;
                     string typeName = tuple.Item1 as string;
