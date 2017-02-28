@@ -183,6 +183,8 @@ namespace MonoMod {
 
         public virtual void ClearCaches(bool all = false, bool shareable = false, bool moduleSpecific = false) {
             if (all || shareable) {
+                foreach (KeyValuePair<string, ModuleDefinition> dep in DependencyCache)
+                    dep.Value.Dispose();
                 DependencyCache.Clear();
             }
 
@@ -193,7 +195,7 @@ namespace MonoMod {
         }
 
         public virtual void Dispose() {
-            ClearCaches();
+            ClearCaches(all: true);
 
             Module?.Dispose();
             Module = null;
