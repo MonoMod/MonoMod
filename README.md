@@ -2,6 +2,10 @@
 Random C# / Mono / .NET assembly patcher using Mono.Cecil.
 
 
+## Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
+* [Renaud Bédard](https://twitter.com/renaudbedard)
+* [Artus Elias Meyer-Toms](https://twitter.com/artuselias)
+
 ## What does it do?
 It patches any C# assembly (PE32 executable (console) Intel 80386 Mono/.Net assembly) with any given assembly patches.
 
