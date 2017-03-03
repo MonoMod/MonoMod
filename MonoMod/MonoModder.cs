@@ -1,5 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Mdb;
+using Mono.Cecil.Pdb;
 using Mono.Collections.Generic;
 using MonoMod.InlineRT;
 using StringInject;
@@ -64,7 +66,6 @@ namespace MonoMod {
         public int CurrentRID = 0;
 
         public bool GenerateSymbols = true;
-        // TODO: Use DebugSymbolOutputFormat
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
         public bool SkipOptimization = false;
@@ -107,8 +108,19 @@ namespace MonoMod {
         public virtual WriterParameters WriterParameters {
             get {
                 if (_writerParameters == null) {
+                    bool pdb = DebugSymbolOutputFormat == DebugSymbolFormat.PDB;
+                    bool mdb = DebugSymbolOutputFormat == DebugSymbolFormat.MDB;
+                    if (DebugSymbolOutputFormat == DebugSymbolFormat.Auto) {
+                        if (((int) PlatformHelper.Current & (int) Platform.Windows) == (int) Platform.Windows)
+                            pdb = true;
+                        else mdb = true;
+                    }
                     _writerParameters = new WriterParameters() {
-                        WriteSymbols = true
+                        WriteSymbols = true,
+                        SymbolWriterProvider = 
+                            pdb ? new NativePdbWriterProvider() :
+                            mdb ? new MdbWriterProvider() :
+                            (ISymbolWriterProvider) null
                     };
                 }
                 return _writerParameters;
