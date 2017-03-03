@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace MonoMod.MonoMod {
+namespace MonoMod {
     class Program {
 
 #if !MONOMOD_NO_ENTRY
@@ -24,8 +24,8 @@ namespace MonoMod.MonoMod {
             if (File.Exists(pathOut)) File.Delete(pathOut);
 
             using (MonoModder mm = new MonoModder() {
-                Input = File.OpenRead(args[0]),
-                Output = File.OpenWrite(pathOut)
+                InputPath = args[0],
+                OutputPath = pathOut
             }) {
                 mm.Read(false);
 

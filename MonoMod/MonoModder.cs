@@ -14,6 +14,8 @@ using System.Text.RegularExpressions;
 namespace MonoMod {
     public class MonoModder : IDisposable {
 
+        public readonly static Version Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+
         public static Action<string> DefaultLogger;
         public Action<string> Logger;
 
@@ -37,6 +39,9 @@ namespace MonoMod {
         public Relinker MainRelinker;
         public Relinker PostRelinker;
 
+        public MethodRewriter MethodRewriter;
+        public MethodBodyRewriter MethodBodyRewriter;
+
         public Action<ModuleDefinition> OnReadMod;
         public Action PostProcessors;
 
@@ -46,7 +51,9 @@ namespace MonoMod {
         public MissingDependencyResolver MissingDependencyResolver;
 
         public Stream Input;
+        public string InputPath;
         public Stream Output;
+        public string OutputPath;
         public ModuleDefinition Module;
         public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
         public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
@@ -55,6 +62,10 @@ namespace MonoMod {
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
         public int CurrentRID = 0;
+
+        public bool GenerateSymbols = true;
+        // TODO: Use DebugSymbolOutputFormat
+        public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
         public bool SkipOptimization = false;
 
@@ -81,7 +92,8 @@ namespace MonoMod {
             get {
                 if (_readerParameters == null) {
                     _readerParameters = new ReaderParameters(ReadingMode) {
-                        AssemblyResolver = AssemblyResolver
+                        AssemblyResolver = AssemblyResolver,
+                        ReadSymbols = true
                     };
                 }
                 return _readerParameters;
@@ -96,7 +108,7 @@ namespace MonoMod {
             get {
                 if (_writerParameters == null) {
                     _writerParameters = new WriterParameters() {
-                        // WriteSymbols = true
+                        WriteSymbols = true
                     };
                 }
                 return _writerParameters;
@@ -126,7 +138,7 @@ namespace MonoMod {
                         _GACPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET", "assembly", "GAC_MSIL");
 
                         /*} else if (os.Contains("mac") || os.Contains("osx")) {
-                        // TODO test GAC path for Mono on Mac
+                        // TODO: Test GAC path for Mono on Mac
                         // should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
                     } else if (os.Contains("lin") || os.Contains("unix")) {*/
                         // For now let's just pretend it's the same as with Linux...
@@ -233,12 +245,18 @@ namespace MonoMod {
         }
 
         /// <summary>
-        /// Reads the main module from the Input stream to Module.
+        /// Reads the main module from the Input stream / InputPath file to Module.
         /// </summary>
         public virtual void Read(bool loadDependencies = true) {
             if (Module == null) {
-                Log("Reading input stream into module.");
-                Module = ModuleDefinition.ReadModule(Input, GenReaderParameters(true));
+                if (Input != null) {
+                    Log("Reading input stream into module.");
+                    Module = ModuleDefinition.ReadModule(Input, GenReaderParameters(true));
+                } else if (InputPath != null) {
+                    Log("Reading input file into module.");
+                    Module = ModuleDefinition.ReadModule(InputPath, GenReaderParameters(true, InputPath));
+                    DependencyDirs.Add(Path.GetDirectoryName(InputPath));
+                }
             }
 
             if (loadDependencies) MapDependencies(Module);
@@ -314,7 +332,7 @@ namespace MonoMod {
             }
 
             if (path != null && File.Exists(path)) {
-                dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
+                dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
             } else if ((dep = MissingDependencyResolver?.Invoke(main, name, fullName)) == null) return;
             
             Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
@@ -333,16 +351,22 @@ namespace MonoMod {
         /// Write the modded module to the given stream or the default output.
         /// </summary>
         /// <param name="output">Output stream. If none given, default Output will be used.</param>
-        public virtual void Write(Stream output = null) {
+        public virtual void Write(Stream output = null, string outputPath = null) {
             output = output ?? Output;
+            outputPath = outputPath ?? OutputPath;
 
             PatchWasHere();
 
-            Log("[Write] Writing modded module into output stream.");
-            Module.Write(output, WriterParameters);
+            if (output != null) {
+                Log("[Write] Writing modded module into output stream.");
+                Module.Write(output, WriterParameters);
+            } else {
+                Log("[Write] Writing modded module into output file.");
+                Module.Write(outputPath, WriterParameters);
+            }
         }
 
-        public virtual ReaderParameters GenReaderParameters(bool mainModule) {
+        public virtual ReaderParameters GenReaderParameters(bool mainModule, string path = null) {
             ReaderParameters _rp = ReaderParameters;
             ReaderParameters rp = new ReaderParameters(_rp.ReadingMode);
             rp.AssemblyResolver = _rp.AssemblyResolver;
@@ -353,7 +377,8 @@ namespace MonoMod {
             rp.SymbolReaderProvider = _rp.SymbolReaderProvider;
             rp.ReadSymbols = _rp.ReadSymbols;
 
-            // TODO debug symbol support
+            if (path != null && !File.Exists(path + ".mdb") && !File.Exists(Path.ChangeExtension(path, "pdb")))
+                rp.ReadSymbols = false;
 
             return rp;
         }
@@ -374,7 +399,7 @@ namespace MonoMod {
             }
 
             Log($"[ReadMod] Loading mod: {path}");
-            ModuleDefinition mod = ModuleDefinition.ReadModule(path, GenReaderParameters(false));
+            ModuleDefinition mod = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
             MapDependencies(mod);
             ParseRules(mod);
             Mods.Add(mod);
@@ -595,7 +620,7 @@ namespace MonoMod {
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             // LinkTo bypasses all relinking maps.
             ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
-            if (cap == null) // TODO This increases the PatchRefs pass time and could be optimized.
+            if (cap == null) // TODO: This increases the PatchRefs pass time and could be optimized.
                 try {
                     if (mtp is TypeReference)
                         cap = ((TypeReference) mtp).Resolve() as ICustomAttributeProvider;
@@ -1239,6 +1264,16 @@ namespace MonoMod {
             bool publicAccess = false;
             bool matchingPlatformIL = true;
 
+            MethodRewriter?.Invoke(method);
+
+            IDictionary<Instruction, SequencePoint> symbols = method.DebugInformation.GetSequencePointMapping();
+            Document symbolDoc = new Document($"/MonoMod/{Version}/{method.DeclaringType.FullName}.cil") {
+                LanguageVendor = DocumentLanguageVendor.Microsoft,
+                Language = DocumentLanguage.Cil,
+                HashAlgorithm = DocumentHashAlgorithm.None,
+                Type = DocumentType.Text
+            };
+
             for (int instri = 0; method.HasBody && instri < method.Body.Instructions.Count; instri++) {
                 Instruction instr = method.Body.Instructions[instri];
                 object operand = instr.Operand;
@@ -1293,6 +1328,16 @@ namespace MonoMod {
                     operand = method.DeclaringType.FindMethod(method.GetFindableID(name: method.GetOriginalName()));
                 }
 
+                // field <-> method reference fix: ldfld / stfld <-> call
+                if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
+                    // callvirt also works on static methods.
+                    instr.OpCode = OpCodes.Callvirt;
+                } else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is FieldReference) {
+                    // Setters don't return anything.
+                    TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
+                    instr.OpCode = returnType == null || returnType.FullName == "System.Void" ? OpCodes.Stfld : OpCodes.Ldfld;
+                }
+
                 // Reference importing
                 if (operand is IMetadataTokenProvider) {
                     operand = Module.ImportReference((IMetadataTokenProvider) operand);
@@ -1301,6 +1346,18 @@ namespace MonoMod {
                 }
 
                 instr.Operand = operand;
+
+                MethodBodyRewriter?.Invoke(method.Body, instr, instri);
+
+                SequencePoint symbol;
+                if (GenerateSymbols && !symbols.TryGetValue(instr, out symbol)) {
+                    symbol = new SequencePoint(instr, symbolDoc) {
+                        StartLine = instri,
+                        StartColumn = 0,
+                        EndLine = instri,
+                        EndColumn = 0
+                    };
+                }
             }
         }
 

@@ -1,6 +1,9 @@
-﻿/// <summary>
+﻿using System;
+
+/// <summary>
 /// Generic platform enum.
 /// </summary>
+[Flags]
 public enum Platform : int {
     None = 0,
 

@@ -4,7 +4,6 @@ using System;
 using System.Diagnostics;
 
 namespace MonoMod.InlineRT {
-    // TODO automatically create this proxy class
     public static partial class MMILProxy {
 
         public static class Rule {

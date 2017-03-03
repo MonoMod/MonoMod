@@ -17,7 +17,7 @@ namespace MonoMod.InlineRT {
         private static Assembly MonoModAsm = Assembly.GetExecutingAssembly();
 
         static MMILProxyManager() {
-            // TODO automatically create MMILProxy
+            // TODO: Automatically create MMILProxy
         }
 
         public static MonoModder Self {

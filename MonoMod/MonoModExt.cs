@@ -11,6 +11,8 @@ using System.Text.RegularExpressions;
 namespace MonoMod {
 
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
+    public delegate void MethodRewriter(MethodDefinition method);
+    public delegate void MethodBodyRewriter(MethodBody body, Instruction instr, int instri);
     public delegate ModuleDefinition MissingDependencyResolver(ModuleDefinition main, string name, string fullName);
 
     public static class MonoModExt {
@@ -29,23 +31,21 @@ namespace MonoMod {
             c.InitLocals = o.InitLocals;
             c.LocalVarToken = o.LocalVarToken;
 
-            foreach (Instruction i in o.Instructions)
-                c.Instructions.Add(i);
-            foreach (ExceptionHandler i in o.ExceptionHandlers)
-                c.ExceptionHandlers.Add(i);
-            foreach (VariableDefinition i in o.Variables)
-                c.Variables.Add(i);
+            c.Instructions.AddRange(o.Instructions);
+            c.ExceptionHandlers.AddRange(o.ExceptionHandlers);
+            c.Variables.AddRange(o.Variables);
+
+            m.CustomDebugInformations.AddRange(o.Method.CustomDebugInformations);
+            m.DebugInformation.SequencePoints.AddRange(o.Method.DebugInformation.SequencePoints);
 
             return c;
         }
 
-        public static bool IsHidden(this SequencePoint sp) {
-            return
-                sp.StartLine == 0xFEEFEE &&
+        public static bool IsHidden(this SequencePoint sp)
+            =>  sp.StartLine == 0xFEEFEE &&
                 sp.EndLine == 0xFEEFEE &&
                 sp.StartColumn == 0 &&
                 sp.EndColumn == 0;
-        }
 
         public readonly static System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         public readonly static System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
