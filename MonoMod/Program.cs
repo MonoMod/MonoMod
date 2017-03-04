@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.DebugIL;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,13 +19,45 @@ namespace MonoMod {
                 return;
             }
 
-            string pathIn = args[0];
-            string pathOut = args.Length != 1 ? args[args.Length - 1] : ("MONOMODDED_" + pathIn);
+            string pathIn;
+            string pathOut;
+
+            if (args.Length > 1 &&
+                args[0] == "--generate-debug-il" ||
+                args[0] == "--gen-dbg-il") {
+                Console.WriteLine("[DbgILGen] Generating debug hierarchy and debug data (pdb / mdb).");
+
+                pathIn = args[1];
+                pathOut = args.Length != 2 ? args[args.Length - 1] : Path.Combine(Path.GetDirectoryName(pathIn), "MMDBGIL_" + Path.GetFileName(pathIn));
+
+                if (Directory.Exists(pathOut)) Directory.Delete(pathOut, true);
+
+                using (MonoModder mm = new MonoModder() {
+                    InputPath = pathIn,
+                    OutputPath = pathOut
+                }) {
+                    mm.Read(false);
+
+                    mm.Log("[DbgILGen] DebugILGenerator.Generate(mm);");
+                    DebugILGenerator.Generate(mm);
+
+                    mm.Write();
+
+                    mm.Log("[DbgILGen] Done.");
+                }
+
+                if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
+                    Console.ReadKey();
+                return;
+            }
+
+            pathIn = args[0];
+            pathOut = args.Length != 1 ? args[args.Length - 1] : Path.Combine(Path.GetDirectoryName(pathIn), "MONOMODDED_" + Path.GetFileName(pathIn));
 
             if (File.Exists(pathOut)) File.Delete(pathOut);
 
             using (MonoModder mm = new MonoModder() {
-                InputPath = args[0],
+                InputPath = pathIn,
                 OutputPath = pathOut
             }) {
                 mm.Read(false);

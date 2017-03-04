@@ -328,6 +328,24 @@ namespace MonoMod {
                 dict.Add(entry.Key, entry.Value);
         }
 
+        public static void PushRange<T>(this Stack<T> stack, T[] other) {
+            foreach (T entry in other)
+                stack.Push(entry);
+        }
+        public static void PopRange<T>(this Stack<T> stack, int n) {
+            for (int i = 0; i < n; i++)
+                stack.Pop();
+        }
+
+        public static void EnqueueRange<T>(this Queue<T> queue, T[] other) {
+            foreach (T entry in other)
+                queue.Enqueue(entry);
+        }
+        public static void DequeueRange<T>(this Queue<T> queue, int n) {
+            for (int i = 0; i < n; i++)
+                queue.Dequeue();
+        }
+
         public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, string name) {
             // Don't ask me, that's possible for T[,].Get in "Enter the Gungeon"...?!
             if (provider is GenericParameter && ((GenericParameter) provider).Name == name)
