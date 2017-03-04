@@ -1282,7 +1282,14 @@ namespace MonoMod {
 
             MethodRewriter?.Invoke(method);
 
-            IDictionary<Instruction, SequencePoint> symbols = method.DebugInformation.GetSequencePointMapping();
+            IDictionary<Instruction, SequencePoint> symbols;
+            try {
+                symbols = method.DebugInformation.GetSequencePointMapping();
+            } catch (ArgumentException) {
+                // One Instruction, multiple CodePoints
+                method.DebugInformation.SequencePoints.Clear();
+                symbols = method.DebugInformation.GetSequencePointMapping();
+            }
             Document symbolDoc = new Document($"/MonoMod/{Version}/{method.DeclaringType.FullName}.cil") {
                 LanguageVendor = DocumentLanguageVendor.Microsoft,
                 Language = DocumentLanguage.Cil,
