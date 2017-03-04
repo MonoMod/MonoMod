@@ -178,13 +178,14 @@ namespace MonoMod.DebugIL {
                     method.DebugInformation.SequencePoints.Clear();
                     Document symbolDoc = new Document(FullPath) {
                         LanguageVendor = DocumentLanguageVendor.Microsoft,
-                        Language = DocumentLanguage.Cil,
+                        Language = DocumentLanguage.CSharp, // Even Visual Studio can't deal with Cil!
                         HashAlgorithm = DocumentHashAlgorithm.None,
                         Type = DocumentType.Text
                     };
                     foreach (Instruction instr in method.Body.Instructions) {
                         string instrStr = instr.ToString();
                         writer.WriteLine(instrStr);
+                        // TODO: [DbgILGen] Visual Studio only seems to use the first ever StartLine
                         method.DebugInformation.SequencePoints.Add(
                             new SequencePoint(instr, symbolDoc) {
                                 StartLine = line,
