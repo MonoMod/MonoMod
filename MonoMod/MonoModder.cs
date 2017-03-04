@@ -263,10 +263,10 @@ namespace MonoMod {
             if (Module == null) {
                 if (Input != null) {
                     Log("Reading input stream into module.");
-                    Module = ModuleDefinition.ReadModule(Input, GenReaderParameters(true));
+                    Module = MonoModExt.ReadModule(Input, GenReaderParameters(true));
                 } else if (InputPath != null) {
                     Log("Reading input file into module.");
-                    Module = ModuleDefinition.ReadModule(InputPath, GenReaderParameters(true, InputPath));
+                    Module = MonoModExt.ReadModule(InputPath, GenReaderParameters(true, InputPath));
                     DependencyDirs.Add(Path.GetDirectoryName(InputPath));
                 }
             }
@@ -297,12 +297,16 @@ namespace MonoMod {
                 return;
             }
 
+            // Used to fix Mono.Cecil.pdb being load instead of Mono.Cecil.Pdb.dll
+            string ext = Path.GetExtension(name).ToLowerInvariant();
+            bool nameRisky = ext == "pdb" || ext == "mdb";
+
             string path = null;
             foreach (string depDir in DependencyDirs) {
                 path = Path.Combine(depDir, name + ".dll");
                 if (!File.Exists(path))
                     path = Path.Combine(depDir, name + ".exe");
-                if (!File.Exists(path))
+                if (!File.Exists(path) && !nameRisky)
                     path = Path.Combine(depDir, name);
                 if (File.Exists(path)) break;
                 else path = null;
@@ -344,7 +348,7 @@ namespace MonoMod {
             }
 
             if (path != null && File.Exists(path)) {
-                dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
+                dep = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
             } else if ((dep = MissingDependencyResolver?.Invoke(main, name, fullName)) == null) return;
             
             Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
@@ -411,14 +415,14 @@ namespace MonoMod {
             }
 
             Log($"[ReadMod] Loading mod: {path}");
-            ModuleDefinition mod = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
+            ModuleDefinition mod = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
             MapDependencies(mod);
             ParseRules(mod);
             Mods.Add(mod);
             OnReadMod?.Invoke(mod);
         }
         public virtual void ReadMod(Stream stream) {
-            Mods.Add(ModuleDefinition.ReadModule(stream, GenReaderParameters(false)));
+            Mods.Add(MonoModExt.ReadModule(stream, GenReaderParameters(false)));
         }
 
 
@@ -1361,14 +1365,15 @@ namespace MonoMod {
 
                 MethodBodyRewriter?.Invoke(method.Body, instr, instri);
 
-                SequencePoint symbol;
-                if (GenerateSymbols && !symbols.TryGetValue(instr, out symbol)) {
-                    symbol = new SequencePoint(instr, symbolDoc) {
-                        StartLine = instri,
-                        StartColumn = 0,
-                        EndLine = instri,
-                        EndColumn = 0
-                    };
+                if (GenerateSymbols && !symbols.ContainsKey(instr)) {
+                    method.DebugInformation.SequencePoints.Add(
+                        new SequencePoint(instr, symbolDoc) {
+                            StartLine = instr.Offset,
+                            StartColumn = 0,
+                            EndLine = instr.Offset,
+                            EndColumn = 0
+                        }
+                    );
                 }
             }
         }

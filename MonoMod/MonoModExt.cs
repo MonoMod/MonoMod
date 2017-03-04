@@ -4,6 +4,7 @@ using Mono.Collections.Generic;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -21,6 +22,32 @@ namespace MonoMod {
         public static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
 
         public static Type t_ParamArrayAttribute = typeof(ParamArrayAttribute);
+
+        public static ModuleDefinition ReadModule(string path, ReaderParameters rp) {
+            Retry:
+            try {
+                return ModuleDefinition.ReadModule(path, rp);
+            } catch {
+                if (rp.ReadSymbols) {
+                    rp.ReadSymbols = false;
+                    goto Retry;
+                }
+                throw;
+            }
+        }
+
+        public static ModuleDefinition ReadModule(Stream input, ReaderParameters rp) {
+            Retry:
+            try {
+                return ModuleDefinition.ReadModule(input, rp);
+            } catch {
+                if (rp.ReadSymbols) {
+                    rp.ReadSymbols = false;
+                    goto Retry;
+                }
+                throw;
+            }
+        }
 
         public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
             if (o == null)
