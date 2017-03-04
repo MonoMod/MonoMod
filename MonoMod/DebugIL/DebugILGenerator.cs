@@ -34,14 +34,46 @@ namespace MonoMod.DebugIL {
         public DebugILGenerator(MonoModder modder) {
             Modder = modder;
 
-            OutputPath = modder.OutputPath;
+            OutputPath = Path.GetFullPath(modder.OutputPath);
             modder.OutputPath = Path.Combine(OutputPath, Path.GetFileName(modder.InputPath));
+        }
+
+        public static void DeleteRecursive(string path) {
+            foreach (string dir in Directory.GetDirectories(path))
+                DeleteRecursive(dir);
+
+            foreach (string file in Directory.GetFiles(path))
+                File.Delete(file);
+
+            Directory.Delete(path);
         }
 
         public static void Generate(MonoModder modder)
             => new DebugILGenerator(modder).Generate();
 
+        public void Log(object obj) {
+            Log(obj.ToString());
+        }
+
+        public void Log(string txt) {
+            if (Modder.Logger != null) {
+                Modder.Logger(txt);
+                return;
+            }
+            if (MonoModder.DefaultLogger != null) {
+                MonoModder.DefaultLogger(txt);
+                return;
+            }
+            Console.Write("[DbgILGen] ");
+            Console.WriteLine(txt);
+        }
+
         public void Generate() {
+            if (Directory.Exists(FullPath)) {
+                Log($"Clearing {FullPath}");
+                DeleteRecursive(FullPath);
+            }
+
             Directory.CreateDirectory(FullPath);
 
             GenerateMetadata();
@@ -84,6 +116,8 @@ namespace MonoMod.DebugIL {
             }
             CurrentPath.Push(PathVerifyRegex.Replace(type.Name, ""));
             Directory.CreateDirectory(FullPath);
+
+            Log($"Generating for type {type.FullName}");
 
             CurrentPath.Push("TypeInfo.il");
             using (StreamWriter writer = new StreamWriter(FullPath)) {

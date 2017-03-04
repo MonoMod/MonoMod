@@ -30,8 +30,6 @@ namespace MonoMod {
                 pathIn = args[1];
                 pathOut = args.Length != 2 ? args[args.Length - 1] : Path.Combine(Path.GetDirectoryName(pathIn), "MMDBGIL_" + Path.GetFileName(pathIn));
 
-                if (Directory.Exists(pathOut)) Directory.Delete(pathOut, true);
-
                 using (MonoModder mm = new MonoModder() {
                     InputPath = pathIn,
                     OutputPath = pathOut
