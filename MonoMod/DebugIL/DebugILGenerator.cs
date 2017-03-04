@@ -183,13 +183,14 @@ namespace MonoMod.DebugIL {
                         Type = DocumentType.Text
                     };
                     foreach (Instruction instr in method.Body.Instructions) {
-                        writer.Write(instr.ToString());
+                        string instrStr = instr.ToString();
+                        writer.WriteLine(instrStr);
                         method.DebugInformation.SequencePoints.Add(
                             new SequencePoint(instr, symbolDoc) {
                                 StartLine = line,
-                                StartColumn = 0,
+                                StartColumn = 1,
                                 EndLine = line,
-                                EndColumn = 0
+                                EndColumn = instrStr.Length + 1
                             }
                         );
                         line++;
