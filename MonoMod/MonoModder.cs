@@ -948,6 +948,9 @@ namespace MonoMod {
             Stack<MethodDefinition> propMethods = new Stack<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
             foreach (PropertyDefinition prop in type.Properties) {
                 PropertyDefinition targetProp = targetTypeDef.FindProperty(prop.Name);
+                string backingName = $"<{prop.Name}>__BackingField";
+                FieldDefinition backing = type.FindField(backingName);
+                FieldDefinition targetBacking = targetTypeDef.FindField(backingName);
                 if (targetProp == null) {
                     // Add missing property
                     PropertyDefinition newProp = targetProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
@@ -958,10 +961,20 @@ namespace MonoMod {
 
                     newProp.DeclaringType = targetTypeDef;
                     targetTypeDef.Properties.Add(newProp);
+
+                    FieldDefinition newBacking = targetBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
+                    targetTypeDef.Fields.Add(newBacking);
                 }
 
-                foreach (CustomAttribute attrib in prop.CustomAttributes)
-                    targetProp.CustomAttributes.Add(attrib.Clone());
+                if (targetBacking == null) {
+                    foreach (CustomAttribute attrib in prop.CustomAttributes)
+                        targetProp.CustomAttributes.Add(attrib.Clone());
+                } else {
+                    foreach (CustomAttribute attrib in prop.CustomAttributes) {
+                        targetProp.CustomAttributes.Add(attrib.Clone());
+                        targetBacking.CustomAttributes.Add(attrib.Clone());
+                    }
+                }
 
                 MethodDefinition getter = prop.GetMethod;
                 if (getter != null &&
