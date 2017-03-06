@@ -31,6 +31,7 @@ namespace MonoMod.InlineRT {
                 DependencyDirs = self.DependencyDirs,
                 MissingDependencyResolver = self.MissingDependencyResolver
             };
+            wrapperMod.WriterParameters.WriteSymbols = false;
 
             // Only add a copy of the map - adding the MMILRT asm itself to the map only causes issues.
             wrapperMod.DependencyCache.AddRange(self.DependencyCache);
