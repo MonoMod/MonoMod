@@ -258,8 +258,6 @@ namespace MonoMod.DebugIL {
                                 EndColumn = instrStr.Length + 1
                             }
                         );
-                        instri++;
-                        method.Body.UpdateOffsets(instri, 1);
 
                         writer.WriteLine(instrStr); Line++;
                     }

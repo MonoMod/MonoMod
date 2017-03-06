@@ -977,8 +977,10 @@ namespace MonoMod {
                     newProp.DeclaringType = targetTypeDef;
                     targetTypeDef.Properties.Add(newProp);
 
-                    FieldDefinition newBacking = targetBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
-                    targetTypeDef.Fields.Add(newBacking);
+                    if (backing != null) {
+                        FieldDefinition newBacking = targetBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
+                        targetTypeDef.Fields.Add(newBacking);
+                    }
                 }
 
                 foreach (CustomAttribute attrib in prop.CustomAttributes)
