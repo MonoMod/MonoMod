@@ -951,6 +951,21 @@ namespace MonoMod {
                 string backingName = $"<{prop.Name}>__BackingField";
                 FieldDefinition backing = type.FindField(backingName);
                 FieldDefinition targetBacking = targetTypeDef.FindField(backingName);
+
+                // Cheap fix: Apply the mod property attributes on the mod backing field.
+                // Causes the field to be ignored / replaced / ... in its own patch pass further below.
+                if (backing != null)
+                    foreach (CustomAttribute attrib in prop.CustomAttributes)
+                        backing.CustomAttributes.Add(attrib.Clone());
+
+                if (prop.HasMMAttribute("Ignore")) {
+                    if (targetProp.GetMethod != null)
+                        propMethods.Push(targetProp.GetMethod);
+                    if (targetProp.SetMethod != null)
+                        propMethods.Push(targetProp.SetMethod);
+                    continue;
+                }
+
                 if (targetProp == null) {
                     // Add missing property
                     PropertyDefinition newProp = targetProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
@@ -966,15 +981,8 @@ namespace MonoMod {
                     targetTypeDef.Fields.Add(newBacking);
                 }
 
-                if (targetBacking == null) {
-                    foreach (CustomAttribute attrib in prop.CustomAttributes)
-                        targetProp.CustomAttributes.Add(attrib.Clone());
-                } else {
-                    foreach (CustomAttribute attrib in prop.CustomAttributes) {
-                        targetProp.CustomAttributes.Add(attrib.Clone());
-                        targetBacking.CustomAttributes.Add(attrib.Clone());
-                    }
-                }
+                foreach (CustomAttribute attrib in prop.CustomAttributes)
+                    targetProp.CustomAttributes.Add(attrib.Clone());
 
                 MethodDefinition getter = prop.GetMethod;
                 if (getter != null &&
