@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace MonoMod.DebugIL {
     public class DebugILGenerator {
@@ -53,6 +54,7 @@ namespace MonoMod.DebugIL {
                 File.Delete(file);
 
             Directory.Delete(path);
+            Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
         }
 
         public static void Generate(MonoModder modder)
@@ -82,6 +84,7 @@ namespace MonoMod.DebugIL {
             }
 
             Directory.CreateDirectory(FullPath);
+            Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
 
             Modder.SkipOptimization = true;
             CustomAttribute debuggable = Modder.Module.Assembly.GetCustomAttribute("System.Diagnostics.DebuggableAttribute");
@@ -212,13 +215,14 @@ namespace MonoMod.DebugIL {
                     writer.Write(".maxstack ");
                     writer.WriteLine(method.Body.MaxStackSize); Line++;
 
+                    // Always assure a debug scope exists!
+                    method.DebugInformation.GetOrAddScope().Variables.Clear();
                     if (method.Body.HasVariables) {
                         if (method.Body.InitLocals)
                             writer.WriteLine(".locals init (");
                         else
                             writer.WriteLine(".locals (");
                         Line++;
-                        method.DebugInformation.GetOrAddScope().Variables.Clear();
                         for (int i = 0; i < method.Body.Variables.Count; i++) {
                             VariableDefinition @var = method.Body.Variables[i];
                             writer.Write("    [");
@@ -232,7 +236,7 @@ namespace MonoMod.DebugIL {
                             writer.Write(" ");
                             writer.Write(name);
                             if (i < method.Body.Variables.Count - 1)
-                                writer.WriteLine(", ");
+                                writer.WriteLine(",");
                             else
                                 writer.WriteLine();
                             Line++;
