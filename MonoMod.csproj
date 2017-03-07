@@ -44,6 +44,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
     <Compile Include="MonoMod\InlineRT\MMILExec.cs" />
     <Compile Include="MonoMod\InlineRT\MMILProxy.cs" />

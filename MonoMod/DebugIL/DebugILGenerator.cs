@@ -213,7 +213,12 @@ namespace MonoMod.DebugIL {
                     writer.WriteLine(method.Body.MaxStackSize); Line++;
 
                     if (method.Body.HasVariables) {
-                        writer.WriteLine(".locals init ("); Line++;
+                        if (method.Body.InitLocals)
+                            writer.WriteLine(".locals init (");
+                        else
+                            writer.WriteLine(".locals (");
+                        Line++;
+                        method.DebugInformation.GetOrAddScope().Variables.Clear();
                         for (int i = 0; i < method.Body.Variables.Count; i++) {
                             VariableDefinition @var = method.Body.Variables[i];
                             writer.Write("    [");
@@ -222,11 +227,10 @@ namespace MonoMod.DebugIL {
                             if (!@var.VariableType.IsPrimitive && !@var.VariableType.IsValueType)
                                 writer.Write("class ");
                             writer.Write(@var.VariableType.FullName);
-                            string name;
-                            if (method.DebugInformation.TryGetName(@var, out name)) {
-                                writer.Write(" ");
-                                writer.Write(name);
-                            }
+                            string name = @var.GenerateVariableName(method, i);
+                            method.DebugInformation.GetOrAddScope().Variables.Add(new VariableDebugInformation(@var, name));
+                            writer.Write(" ");
+                            writer.Write(name);
                             if (i < method.Body.Variables.Count - 1)
                                 writer.WriteLine(", ");
                             else
