@@ -24,6 +24,9 @@ namespace MonoMod.DebugIL {
 
         public static string GenerateVariableName(this VariableDefinition @var, MethodDefinition method = null, int i = -1) {
             TypeReference type = @var.VariableType;
+            while (type is TypeSpecification)
+                type = ((TypeSpecification) type).ElementType;
+
             string name = type.Name;
 
             if (type.MetadataType == MetadataType.Boolean)
