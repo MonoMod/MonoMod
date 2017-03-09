@@ -839,15 +839,15 @@ namespace MonoMod {
             // Check if type exists in target module or dependencies.
             TypeReference targetType = forceAdd ? null : FindTypeDeep(typeName);
             TypeDefinition targetTypeDef = targetType?.Resolve();
-            if (targetType != null) {
-                if (targetTypeDef != null && (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")))
+            if (type.HasMMAttribute("Replace") || type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")) {
+                if (targetTypeDef != null) {
                     if (targetTypeDef.DeclaringType == null)
                         Module.Types.Remove(targetTypeDef);
                     else
-                        targetTypeDef.DeclaringType.Resolve().NestedTypes.Remove(targetTypeDef);
-                else
-                    PrePatchNested(type);
-                return;
+                        targetTypeDef.DeclaringType.NestedTypes.Remove(targetTypeDef);
+                }
+                if (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove"))
+                    return;
             }
 
             // Add the type.
@@ -963,6 +963,22 @@ namespace MonoMod {
                     if (targetProp.SetMethod != null)
                         propMethods.Push(targetProp.SetMethod);
                     continue;
+                }
+
+                if (prop.HasMMAttribute("Remove") || prop.HasMMAttribute("Replace")) {
+                    if (targetProp != null) {
+                        targetTypeDef.Properties.Remove(targetProp);
+                        if (targetBacking != null)
+                            targetTypeDef.Fields.Remove(targetBacking);
+                        if (targetProp.GetMethod != null)
+                            targetTypeDef.Methods.Remove(targetProp.GetMethod);
+                        if (targetProp.SetMethod != null)
+                            targetTypeDef.Methods.Remove(targetProp.SetMethod);
+                        foreach (MethodDefinition method in targetProp.OtherMethods)
+                            targetTypeDef.Methods.Remove(method);
+                    }
+                    if (prop.HasMMAttribute("Remove"))
+                        continue;
                 }
 
                 if (targetProp == null) {
