@@ -69,11 +69,7 @@ namespace MonoMod.DebugIL {
                 Modder.Logger(txt);
                 return;
             }
-            if (MonoModder.DefaultLogger != null) {
-                MonoModder.DefaultLogger(txt);
-                return;
-            }
-            Console.Write("[DbgILGen] ");
+            Console.Write("[MonoMod] [DbgILGen] ");
             Console.WriteLine(txt);
         }
 

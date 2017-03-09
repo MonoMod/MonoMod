@@ -65,7 +65,6 @@ namespace MonoMod {
 
         public int CurrentRID = 0;
 
-        public bool GenerateSymbols = true;
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
         public bool SkipOptimization = false;
@@ -1394,17 +1393,6 @@ namespace MonoMod {
                 instr.Operand = operand;
 
                 MethodBodyRewriter?.Invoke(method.Body, instr, instri);
-
-                if (GenerateSymbols && !symbols.ContainsKey(instr)) {
-                    method.DebugInformation.SequencePoints.Add(
-                        new SequencePoint(instr, symbolDoc) {
-                            StartLine = instr.Offset,
-                            StartColumn = 0,
-                            EndLine = instr.Offset,
-                            EndColumn = 0
-                        }
-                    );
-                }
             }
         }
 
