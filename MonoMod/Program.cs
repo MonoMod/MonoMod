@@ -50,8 +50,29 @@ namespace MonoMod {
                 return;
             }
 
-            pathIn = args[0];
-            pathOut = args.Length != 1 ? args[args.Length - 1] : Path.Combine(Path.GetDirectoryName(pathIn), "MONOMODDED_" + Path.GetFileName(pathIn));
+            int pathInI = 0;
+
+            for (int i = 0; i < args.Length; i++)
+                if (args[i] == "--dependency-missing-throw=0" || args[i] == "--lean-dependencies") {
+                    Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "0");
+                    pathInI = i + 1;
+                } else if (args[i] == "--cleanup=0" || args[i] == "--skip-cleanup") {
+                    Environment.SetEnvironmentVariable("MONOMOD_CLEANUP", "0");
+                    pathInI = i + 1;
+                } else if (args[i] == "--cleanup-all=1" || args[i] == "--cleanup-all") {
+                    Environment.SetEnvironmentVariable("MONOMOD_CLEANUP_ALL", "1");
+                    pathInI = i + 1;
+                }
+
+            if (pathInI >= args.Length) {
+                Console.WriteLine("No assembly path passed.");
+                if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
+                    Console.ReadKey();
+                return;
+            }
+
+            pathIn = args[pathInI];
+            pathOut = args.Length != 1 && pathInI != args.Length - 1 ? args[args.Length - 1] : Path.Combine(Path.GetDirectoryName(pathIn), "MONOMODDED_" + Path.GetFileName(pathIn));
 
             if (File.Exists(pathOut)) File.Delete(pathOut);
 
@@ -66,7 +87,7 @@ namespace MonoMod {
                     mm.ReadMod(Directory.GetParent(pathIn).FullName);
                 } else {
                     mm.Log("[Main] Reading mods list from arguments.");
-                    for (int i = 1; i < args.Length - 1; i++)
+                    for (int i = pathInI + 1; i < args.Length - 2; i++)
                         mm.ReadMod(args[i]);
                 }
 
