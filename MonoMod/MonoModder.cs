@@ -1453,8 +1453,13 @@ namespace MonoMod {
             foreach (TypeDefinition type in Module.Types)
                 DefaultPostProcessType(type);
 
-            if (Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0")
+            if (Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0") {
                 Cleanup(all: Environment.GetEnvironmentVariable("MONOMOD_CLEANUP_ALL") == "1");
+                Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
+                for (int i = deps.Count - 1; i > -1; --i)
+                    if (deps[i].Name.StartsWith("MonoMod"))
+                        deps.RemoveAt(i);
+            }
         }
 
         public virtual void DefaultPostProcessType(TypeDefinition type) {
