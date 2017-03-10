@@ -62,6 +62,9 @@ namespace MonoMod {
                 } else if (args[i] == "--cleanup-all=1" || args[i] == "--cleanup-all") {
                     Environment.SetEnvironmentVariable("MONOMOD_CLEANUP_ALL", "1");
                     pathInI = i + 1;
+                } else if (args[i] == "--verbose=1" || args[i] == "--verbose" || args[i] == "-v") {
+                    Environment.SetEnvironmentVariable("MONOMOD_VERBOSE", "1");
+                    pathInI = i + 1;
                 }
 
             if (pathInI >= args.Length) {
@@ -76,29 +79,34 @@ namespace MonoMod {
 
             if (File.Exists(pathOut)) File.Delete(pathOut);
 
-            using (MonoModder mm = new MonoModder() {
-                InputPath = pathIn,
-                OutputPath = pathOut
-            }) {
-                mm.Read(false);
+            try {
+                using (MonoModder mm = new MonoModder() {
+                    InputPath = pathIn,
+                    OutputPath = pathOut,
+                    Verbose = Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1"
+                }) {
+                    mm.Read(false);
 
-                if (args.Length <= 2) {
-                    mm.Log("[Main] Scanning for mods in directory.");
-                    mm.ReadMod(Directory.GetParent(pathIn).FullName);
-                } else {
-                    mm.Log("[Main] Reading mods list from arguments.");
-                    for (int i = pathInI + 1; i < args.Length - 2; i++)
-                        mm.ReadMod(args[i]);
+                    if (args.Length <= 2) {
+                        mm.Log("[Main] Scanning for mods in directory.");
+                        mm.ReadMod(Directory.GetParent(pathIn).FullName);
+                    } else {
+                        mm.Log("[Main] Reading mods list from arguments.");
+                        for (int i = pathInI + 1; i < args.Length - 2; i++)
+                            mm.ReadMod(args[i]);
+                    }
+
+                    mm.Read(true);
+
+                    mm.Log("[Main] mm.AutoPatch();");
+                    mm.AutoPatch();
+
+                    mm.Write();
+
+                    mm.Log("[Main] Done.");
                 }
-
-                mm.Read(true);
-
-                mm.Log("[Main] mm.AutoPatch();");
-                mm.AutoPatch();
-
-                mm.Write();
-
-                mm.Log("[Main] Done.");
+            } catch (Exception e) {
+                Console.WriteLine(e);
             }
 
             if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE

@@ -65,6 +65,8 @@ namespace MonoMod {
 
         public int CurrentRID = 0;
 
+        public bool Verbose = false;
+
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
         // NO-OP: Keep for compatibility with that random old installer:tm:.
@@ -622,12 +624,16 @@ namespace MonoMod {
                     cap = null;
                 }
 
-            if (cap?.GetMMAttribute("LinkTo") != null)
-                return GetLinkToRef(cap, context);
+            try {
+                if (cap?.GetMMAttribute("LinkTo") != null)
+                    return GetLinkToRef(cap, context);
 
-            return PostRelinker(
-                MainRelinker(mtp, context),
-                context);
+                return PostRelinker(
+                    MainRelinker(mtp, context),
+                    context);
+            } catch (Exception e) {
+                throw new InvalidOperationException($"MonoMod failed relinking {mtp} (context: {context})", e);
+            }
         }
         public virtual IMetadataTokenProvider DefaultMainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
              if (mtp is TypeReference) {
@@ -1240,6 +1246,9 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInType(TypeDefinition type) {
+            if (Verbose)
+                Log($"[VERBOSE] [PatchRefsInType] Patching refs in {type}");
+
             if (type.BaseType != null) type.BaseType = Relink(type.BaseType, type);
 
             // Don't foreach when modifying the collection
@@ -1286,6 +1295,9 @@ namespace MonoMod {
                 !method.MatchingConditionals())
                 // Ignore ignored methods
                 return;
+
+            if (Verbose)
+                Log($"[VERBOSE] [PatchRefsInMethod] Patching refs in {method}");
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < method.GenericParameters.Count; i++)
