@@ -957,11 +957,24 @@ namespace MonoMod {
                     foreach (CustomAttribute attrib in prop.CustomAttributes)
                         backing.CustomAttributes.Add(attrib.Clone());
 
+                if (prop.HasMMAttribute("Public")) {
+                    (targetProp ?? prop)?.SetPublic(true);
+                    (targetBacking ?? backing)?.SetPublic(true);
+                    (targetProp.GetMethod ?? prop.GetMethod)?.SetPublic(true);
+                    (targetProp.SetMethod ?? prop.SetMethod)?.SetPublic(true);
+                    foreach (MethodDefinition method in targetProp?.OtherMethods ?? prop?.OtherMethods)
+                        method.SetPublic(true);
+                }
+
                 if (prop.HasMMAttribute("Ignore")) {
-                    if (targetProp.GetMethod != null)
-                        propMethods.Push(targetProp.GetMethod);
-                    if (targetProp.SetMethod != null)
-                        propMethods.Push(targetProp.SetMethod);
+                    if (backing != null)
+                        backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
+                    if (prop.GetMethod != null)
+                        propMethods.Push(prop.GetMethod);
+                    if (prop.SetMethod != null)
+                        propMethods.Push(prop.SetMethod);
+                    foreach (MethodDefinition method in prop.OtherMethods)
+                        propMethods.Push(method);
                     continue;
                 }
 
@@ -1041,6 +1054,9 @@ namespace MonoMod {
                 }
             }
 
+            if (type.HasMMAttribute("Public"))
+                type.SetPublic(true);
+
             foreach (FieldDefinition field in type.Fields) {
                 if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals())
                     continue;
@@ -1054,6 +1070,9 @@ namespace MonoMod {
                 }
 
                 FieldDefinition existingField = type.FindField(field.Name);
+
+                if (field.HasMMAttribute("Public"))
+                    (existingField ?? field)?.SetPublic(true);
 
                 if (type.HasMMAttribute("Ignore") && existingField != null) {
                     // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1097,6 +1116,9 @@ namespace MonoMod {
 
             MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
+
+            if (method.HasMMAttribute("Public"))
+                method.SetPublic(true);
 
             if (method.HasMMAttribute("Ignore")) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
