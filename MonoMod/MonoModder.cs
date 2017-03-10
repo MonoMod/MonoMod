@@ -443,7 +443,7 @@ namespace MonoMod {
         public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
             string typeName = RemovePrefixes(type.FullName, type);
 
-            if (type.HasMMAttribute("Ignore") || !type.MatchingConditionals())
+            if (!type.MatchingConditionals())
                 return;
 
             CustomAttribute caHandler;
@@ -462,8 +462,11 @@ namespace MonoMod {
             if (hook != null)
                 ParseHook(type, hook);
 
+            if (type.HasMMAttribute("Ignore"))
+                return;
+
             foreach (MethodDefinition method in type.Methods) {
-                if (method.HasMMAttribute("Ignore") || !method.MatchingConditionals())
+                if (!method.MatchingConditionals())
                     continue;
 
                 hook = method.GetMMAttribute("Hook");
@@ -472,7 +475,7 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("Ignore") || !field.MatchingConditionals())
+                if (!field.MatchingConditionals())
                     continue;
 
                 hook = field.GetMMAttribute("Hook");
