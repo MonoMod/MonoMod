@@ -82,7 +82,6 @@ namespace MonoMod.DebugIL {
             Directory.CreateDirectory(FullPath);
             Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
 
-            Modder.SkipOptimization = true;
             CustomAttribute debuggable = Modder.Module.Assembly.GetCustomAttribute("System.Diagnostics.DebuggableAttribute");
             if (debuggable != null)
                 Modder.Module.Assembly.CustomAttributes.Remove(debuggable);

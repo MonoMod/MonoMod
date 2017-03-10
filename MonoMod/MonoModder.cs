@@ -67,6 +67,8 @@ namespace MonoMod {
 
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
+        // NO-OP: Keep for compatibility with that random old installer:tm:.
+        [Obsolete("The optimization pass has been removed from MonoMod.")]
         public bool SkipOptimization = false;
 
         public ReadingMode ReadingMode = ReadingMode.Deferred;
@@ -558,38 +560,7 @@ namespace MonoMod {
                     ((Action) pps[i])?.Invoke();
                 }
             }
-
-            Log("[AutoPatch] Optimization pass");
-            Optimize();
         }
-
-        /// <summary>
-        /// Runs some basic optimization (f.e. disables NoOptimization, removes nops)
-        /// </summary>
-        public virtual void Optimize() {
-            if (SkipOptimization) return;
-            for (int ti = 0; ti < Module.Types.Count; ti++) {
-                TypeDefinition type = Module.Types[ti];
-                for (int mi = 0; mi < type.Methods.Count; mi++) {
-                    MethodDefinition method = type.Methods[mi];
-
-                    method.NoInlining = false;
-                    method.NoOptimization = false;
-
-                    if (method.HasBody) {
-                        for (int instri = 0; instri < method.Body.Instructions.Count; instri++) {
-                            Instruction instruction = method.Body.Instructions[instri];
-                            if (instruction.OpCode == OpCodes.Nop) {
-                                method.Body.Instructions.RemoveAt(instri);
-                                instri = Math.Max(0, instri - 1);
-                                method.Body.UpdateOffsets(instri, -1);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
 
         public virtual MemberReference GetLinkToRef(ICustomAttributeProvider orig, IGenericParameterProvider context) {
             CustomAttribute linkto = orig?.GetMMAttribute("LinkTo");
@@ -1439,10 +1410,51 @@ namespace MonoMod {
 
         #endregion
 
+        #region Cleanup Pass
+        public virtual void Cleanup(bool all = false) {
+            foreach (TypeDefinition type in Module.Types)
+                CleanupType(type, all: all);
+        }
+
+        public virtual void CleanupType(TypeDefinition type, bool all = false) {
+            Cleanup(type, all: all);
+
+
+            foreach (PropertyDefinition prop in type.Properties)
+                Cleanup(prop, all: all);
+
+            foreach (MethodDefinition method in type.Methods)
+                Cleanup(method, all: all);
+
+            foreach (FieldDefinition field in type.Fields)
+                Cleanup(field, all: all);
+
+
+            foreach (TypeDefinition nested in type.NestedTypes)
+                CleanupType(nested, all: all);
+        }
+
+        public virtual void Cleanup(ICustomAttributeProvider cap, bool all = false) {
+            Collection<CustomAttribute> attribs = cap.CustomAttributes;
+            for (int i = attribs.Count - 1; i > -1; --i) {
+                TypeReference attribType = attribs[i].AttributeType;
+                if (attribType.Scope.Name.StartsWith("MonoMod") ||
+                    (all && (attribType.Namespace.StartsWith("MonoMod") || attribType.Name.StartsWith("MonoMod")))
+                ) {
+                    attribs.RemoveAt(i);
+                }
+            }
+        }
+
+        #endregion
+
         #region Default PostProcessor Pass
         public virtual void DefaultPostProcessor() {
             foreach (TypeDefinition type in Module.Types)
                 DefaultPostProcessType(type);
+
+            if (Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0")
+                Cleanup(all: Environment.GetEnvironmentVariable("MONOMOD_CLEANUP_ALL") == "1");
         }
 
         public virtual void DefaultPostProcessType(TypeDefinition type) {
