@@ -651,8 +651,6 @@ namespace MonoMod {
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
         }
         public virtual IMetadataTokenProvider DefaultPostRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            if (Module.Name == "Magicka.Mod.mm.dll" && mtp.ToString() == "System.Windows.Forms.Application")
-                Debugger.Break();
 
             // The post relinker doesn't care if it can't handle a specific metadata token provider type; Just run ResolveRelinkTarget
             return ResolveRelinkTarget(mtp) ?? mtp;
