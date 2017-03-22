@@ -288,9 +288,6 @@ namespace MonoMod {
             MapDependency(main, dep.Name, dep.FullName);
         }
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null) {
-            if ((fullName != null && fullName == Module.Assembly.Name.FullName) || name == Module.Assembly.Name.Name || Module.Assembly.Name.Name.EndsWith(".mm"))
-                return; // Don't load / map the main module or other mods!
-
             ModuleDefinition dep;
             if ((fullName != null && DependencyCache.TryGetValue(fullName, out dep)) ||
                                      DependencyCache.TryGetValue(name    , out dep)) {
@@ -654,7 +651,9 @@ namespace MonoMod {
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
         }
         public virtual IMetadataTokenProvider DefaultPostRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            
+            if (Module.Name == "Magicka.Mod.mm.dll" && mtp.ToString() == "System.Windows.Forms.Application")
+                Debugger.Break();
+
             // The post relinker doesn't care if it can't handle a specific metadata token provider type; Just run ResolveRelinkTarget
             return ResolveRelinkTarget(mtp) ?? mtp;
         }
