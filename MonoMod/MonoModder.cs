@@ -1397,14 +1397,20 @@ namespace MonoMod {
                     operand = method.DeclaringType.FindMethod(method.GetFindableID(name: method.GetOriginalName()));
                 }
 
+                // .ctor -> static method reference fix: newobj -> call
+                if ((instr.OpCode == OpCodes.Newobj || instr.OpCode == OpCodes.Newarr) && operand is MethodReference &&
+                    ((MethodReference) operand).Name != ".ctor") {
+                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
+                }
+
                 // field <-> method reference fix: ldfld / stfld <-> call
                 if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
                     // callvirt also works on static methods.
-                    instr.OpCode = OpCodes.Callvirt;
+                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
                 } else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is FieldReference) {
                     // Setters don't return anything.
                     TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
-                    instr.OpCode = returnType == null || returnType.FullName == "System.Void" ? OpCodes.Stfld : OpCodes.Ldfld;
+                    instr.OpCode = returnType == null || returnType.MetadataType == MetadataType.Void ? OpCodes.Stfld : OpCodes.Ldfld;
                 }
 
                 // Reference importing
