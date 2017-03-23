@@ -269,8 +269,8 @@ namespace MonoMod {
                     Module = MonoModExt.ReadModule(Input, GenReaderParameters(true));
                 } else if (InputPath != null) {
                     Log("Reading input file into module.");
-                    Module = MonoModExt.ReadModule(InputPath, GenReaderParameters(true, InputPath));
                     DependencyDirs.Add(Path.GetDirectoryName(InputPath));
+                    Module = MonoModExt.ReadModule(InputPath, GenReaderParameters(true, InputPath));
                 }
             }
 
@@ -814,7 +814,7 @@ namespace MonoMod {
                 return;
 
             // Check if type exists in target module or dependencies.
-            TypeReference targetType = forceAdd ? null : FindTypeDeep(typeName);
+            TypeReference targetType = forceAdd ? null : Module.GetType(typeName, false); // For PrePatch, we need to check in the target assembly only
             TypeDefinition targetTypeDef = targetType?.Resolve();
             if (type.HasMMAttribute("Replace") || type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")) {
                 if (targetTypeDef != null) {
@@ -826,12 +826,13 @@ namespace MonoMod {
                 if (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove"))
                     return;
             }
+            if (targetType != null)
+                return;
 
             // Add the type.
             Log($"[PrePatchType] Adding {typeName} to the target module.");
 
             TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType);
-            newType.AddAttribute(GetMonoModAddedCtor());
 
             foreach (GenericParameter genParam in type.GenericParameters)
                 newType.GenericParameters.Add(genParam.Clone());
@@ -849,6 +850,9 @@ namespace MonoMod {
             }
             newType.PackingSize = type.PackingSize;
             newType.SecurityDeclarations.AddRange(type.SecurityDeclarations);
+
+            // When adding MonoModAdded, try to reuse the just added MonoModAdded.
+            newType.AddAttribute(GetMonoModAddedCtor());
 
             targetType = newType;
             
