@@ -382,6 +382,9 @@ namespace MonoMod {
         }
 
         public static TypeReference Relink(this TypeReference type, Relinker relinker, IGenericParameterProvider context) {
+            if (type == null)
+                return null;
+
             if (type is TypeSpecification) {
                 TypeSpecification ts = (TypeSpecification) type;
                 TypeReference relinkedElem = ts.ElementType.Relink(relinker, context);
@@ -392,7 +395,7 @@ namespace MonoMod {
                 if (type.IsPointer)
                     return new PointerType(relinkedElem);
 
-				if (type.IsPinned)
+                if (type.IsPinned)
 					return new PinnedType(relinkedElem);
 
 				if (type.IsArray)
@@ -409,6 +412,14 @@ namespace MonoMod {
                     foreach (TypeReference genArg in ((GenericInstanceType) type).GenericArguments)
                         git.GenericArguments.Add(genArg?.Relink(relinker, context));
                     return git;
+                }
+
+                if (type.IsFunctionPointer) {
+                    FunctionPointerType fp = (FunctionPointerType) type;
+                    fp.ReturnType = fp.ReturnType.Relink(relinker, context);
+                    for (int i = 0; i < fp.Parameters.Count; i++)
+                        fp.Parameters[i] = fp.Parameters[i].Relink(relinker, context);
+                    return fp;
                 }
 
 				throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
