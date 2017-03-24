@@ -418,7 +418,7 @@ namespace MonoMod {
                     FunctionPointerType fp = (FunctionPointerType) type;
                     fp.ReturnType = fp.ReturnType.Relink(relinker, context);
                     for (int i = 0; i < fp.Parameters.Count; i++)
-                        fp.Parameters[i] = fp.Parameters[i].Relink(relinker, context);
+                        fp.Parameters[i].ParameterType = fp.Parameters[i].ParameterType.Relink(relinker, context);
                     return fp;
                 }
 
