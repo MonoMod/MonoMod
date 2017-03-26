@@ -825,9 +825,10 @@ namespace MonoMod {
                 }
                 if (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove"))
                     return;
-            }
-            if (targetType != null)
+            } else if (targetType != null) {
+                PrePatchNested(type);
                 return;
+            }
 
             // Add the type.
             Log($"[PrePatchType] Adding {typeName} to the target module.");
