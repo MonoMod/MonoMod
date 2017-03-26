@@ -10,14 +10,14 @@ namespace MonoMod {
     class Program {
 
 #if !MONOMOD_NO_ENTRY
-        public static void Main(string[] args) {
+        public static int Main(string[] args) {
             Console.WriteLine("MonoMod " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");
                 if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                     Console.ReadKey();
-                return;
+                return 0;
             }
 
             string pathIn;
@@ -47,7 +47,7 @@ namespace MonoMod {
 
                 if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                     Console.ReadKey();
-                return;
+                return 0;
             }
 
             int pathInI = 0;
@@ -71,7 +71,7 @@ namespace MonoMod {
                 Console.WriteLine("No assembly path passed.");
                 if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                     Console.ReadKey();
-                return;
+                return 0;
             }
 
             pathIn = args[pathInI];
@@ -92,7 +92,7 @@ namespace MonoMod {
                         mm.ReadMod(Directory.GetParent(pathIn).FullName);
                     } else {
                         mm.Log("[Main] Reading mods list from arguments.");
-                        for (int i = pathInI + 1; i < args.Length - 2; i++)
+                        for (int i = pathInI + 1; i < args.Length - 1; i++)
                             mm.ReadMod(args[i]);
                     }
 
@@ -107,10 +107,14 @@ namespace MonoMod {
                 }
             } catch (Exception e) {
                 Console.WriteLine(e);
+                if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
+                    Console.ReadKey();
+                return -1;
             }
 
             if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                 Console.ReadKey();
+            return 0;
         }
 #endif
 

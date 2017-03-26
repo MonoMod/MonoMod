@@ -1431,8 +1431,19 @@ namespace MonoMod {
 
         #region Cleanup Pass
         public virtual void Cleanup(bool all = false) {
-            foreach (TypeDefinition type in Module.Types)
-                CleanupType(type, all: all);
+            List<TypeDefinition> toRemove = new List<TypeDefinition>();
+            foreach (TypeDefinition type in Module.Types) {
+                if (all && (type.Namespace.StartsWith("MonoMod") || type.Name.StartsWith("MonoMod"))) {
+                    toRemove.Add(type);
+                } else {
+                    CleanupType(type, all: all);
+                }
+            }
+            foreach(TypeDefinition type in toRemove)
+            {
+                Log($"[Cleanup] removed type {type.Name}");
+                Module.Types.Remove(type);
+            }
         }
 
         public virtual void CleanupType(TypeDefinition type, bool all = false) {
