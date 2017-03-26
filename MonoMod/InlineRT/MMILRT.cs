@@ -6,6 +6,13 @@ using MonoMod.NET40Shim;
 namespace MonoMod.InlineRT {
     public static partial class MMILRT {
 
+        // MMILRT.Modder is easier to understand than MMILProxyManager.Self.
+        public static MonoModder Modder {
+            get {
+                return MMILProxyManager.Self;
+            }
+        }
+
         public static class Rule {
 
             public static void RelinkModule(MonoModder self, string from, string toName) {

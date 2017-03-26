@@ -64,6 +64,7 @@
     <Compile Include="MonoMod\Modifiers\MonoModOriginal.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModOriginalName.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModPublic.cs" />
+    <Compile Include="MonoMod\Modifiers\MonoModPatch.cs" />
     <Compile Include="MonoMod\MonoModder.cs" />
     <Compile Include="MonoMod\MonoModExt.cs" />
     <Compile Include="MonoMod\Platform.cs" />

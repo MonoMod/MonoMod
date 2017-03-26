@@ -447,7 +447,7 @@ namespace MonoMod {
         }
 
         public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
-            string typeName = RemovePrefixes(type.FullName, type);
+            string typeName = GetName(type.FullName, type);
 
             if (!type.MatchingConditionals())
                 return;
@@ -645,7 +645,7 @@ namespace MonoMod {
                 if (!Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
-                return Module.ImportReference(FindTypeDeep(RemovePrefixes(type.FullName, type)));
+                return Module.ImportReference(FindTypeDeep(GetName(type.FullName, type)));
             }
 
             if (mtp is FieldReference || mtp is MethodReference)
@@ -809,7 +809,7 @@ namespace MonoMod {
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
         public virtual void PrePatchType(TypeDefinition type, bool forceAdd = false) {
-            string typeName = RemovePrefixes(type.FullName, type);
+            string typeName = GetName(type.FullName, type);
 
             // Fix legacy issue: Copy / inline any used modifiers.
             if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || SkipList.Contains(typeName) || !type.MatchingConditionals())
@@ -900,7 +900,7 @@ namespace MonoMod {
         public virtual void PatchType(TypeDefinition type) {
             MethodDefinition addMethod;
 
-            string typeName = RemovePrefixes(type.FullName, type);
+            string typeName = GetName(type.FullName, type);
 
             TypeReference targetType = Module.GetType(typeName, false);
             if (targetType == null) return; // Type should've been added or removed accordingly.
@@ -1099,7 +1099,7 @@ namespace MonoMod {
                 // Ignore ignored methods
                 return null;
 
-            string typeName = RemovePrefixes(targetType.FullName, targetType);
+            string typeName = GetName(targetType.FullName, targetType);
 
             MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
@@ -1704,11 +1704,12 @@ namespace MonoMod {
 
         /// <summary>
         /// Removes all MonoMod prefixes from the given string and its type definition.
+        /// Alternatively tries to apply the new name if MonoModPatch is used.
         /// </summary>
         /// <returns>str without prefixes.</returns>
         /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
         /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
-        public virtual string RemovePrefixes(string str, TypeReference type) {
+        public virtual string GetName(string str, TypeReference type) {
             for (TypeReference type_ = type; type_ != null; type_ = type_.DeclaringType) {
                 str = RemovePrefixes(str, type_.Name);
             }
