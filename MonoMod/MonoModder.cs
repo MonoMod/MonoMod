@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using MonoMod.NET40Shim;
 
 namespace MonoMod {
     public class MonoModder : IDisposable {
@@ -150,7 +151,9 @@ namespace MonoMod {
                     }
                     if (os.Contains("win")) {
                         // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
-                        _GACPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET", "assembly", "GAC_MSIL");
+                        _GACPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
+                        _GACPath = Path.Combine(_GACPath, "assembly");
+                        _GACPath = Path.Combine(_GACPath, "GAC_MSIL");
 
                         /*} else if (os.Contains("mac") || os.Contains("osx")) {
                         // TODO: Test GAC path for Mono on Mac
@@ -181,7 +184,9 @@ namespace MonoMod {
                         which.CancelOutputRead();
 
                         _GACPath = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
-                        _GACPath = Path.Combine(_GACPath, "lib", "mono", "gac");
+                        _GACPath = Path.Combine(_GACPath, "lib");
+                        _GACPath = Path.Combine(_GACPath, "mono");
+                        _GACPath = Path.Combine(_GACPath, "gac");
                     }
                 }
 
