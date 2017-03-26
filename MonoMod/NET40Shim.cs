@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 
 namespace MonoMod.NET40Shim {
-#if !MONOMOD_NET40
+#if MONOMOD_NET40_SHIM
     // http://stackoverflow.com/a/7122209
     public static class Tuple {
         public static Tuple<T1, T2> Create<T1, T2>(T1 item1, T2 item2) {
