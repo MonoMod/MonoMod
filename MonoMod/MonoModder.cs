@@ -844,14 +844,14 @@ namespace MonoMod {
             // Check if type exists in target module or dependencies.
             TypeReference targetType = forceAdd ? null : Module.GetType(typeName, false); // For PrePatch, we need to check in the target assembly only
             TypeDefinition targetTypeDef = targetType?.Resolve();
-            if (type.HasMMAttribute("Replace") || type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove")) {
+            if (type.HasMMAttribute("Replace") || type.HasMMAttribute("Remove")) {
                 if (targetTypeDef != null) {
                     if (targetTypeDef.DeclaringType == null)
                         Module.Types.Remove(targetTypeDef);
                     else
                         targetTypeDef.DeclaringType.NestedTypes.Remove(targetTypeDef);
                 }
-                if (type.Name.StartsWith("remove_") || type.HasMMAttribute("Remove"))
+                if (type.HasMMAttribute("Remove"))
                     return;
             } else if (targetType != null) {
                 PrePatchNested(type);
@@ -1153,7 +1153,7 @@ namespace MonoMod {
                 method.IsRuntimeSpecialName = true;
             }
 
-            if (method.Name.StartsWith("replace_") || method.HasMMAttribute("Replace")) {
+            if (method.HasMMAttribute("Replace")) {
                 method.Name = method.GetPatchName();
                 if (existingMethod != null) {
                     existingMethod.CustomAttributes.Clear();
