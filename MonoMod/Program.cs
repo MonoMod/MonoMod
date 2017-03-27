@@ -82,8 +82,7 @@ namespace MonoMod {
             try {
                 using (MonoModder mm = new MonoModder() {
                     InputPath = pathIn,
-                    OutputPath = pathOut,
-                    Verbose = Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1"
+                    OutputPath = pathOut
                 }) {
                     mm.Read(false);
 

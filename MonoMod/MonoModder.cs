@@ -206,6 +206,8 @@ namespace MonoMod {
 
             PostProcessors += DefaultPostProcessor;
 
+            Verbose = Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1";
+
             MMILProxyManager.Register(this);
         }
 
@@ -1410,14 +1412,22 @@ namespace MonoMod {
                     instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
                 }
 
-                // field <-> method reference fix: ldfld / stfld <-> call
+                // field <-> method reference fix: ld(s)fld / st(s)fld <-> call
                 if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
-                    // callvirt also works on static methods.
-                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
-                } else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is FieldReference) {
+                    instr.OpCode = OpCodes.Callvirt;
+
+                } else if ((instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Stsfld) && operand is MethodReference) {
+                    instr.OpCode = OpCodes.Call;
+
+                } else if (instr.OpCode == OpCodes.Callvirt && operand is FieldReference) {
                     // Setters don't return anything.
                     TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
                     instr.OpCode = returnType == null || returnType.MetadataType == MetadataType.Void ? OpCodes.Stfld : OpCodes.Ldfld;
+
+                } else if (instr.OpCode == OpCodes.Call && operand is FieldReference) {
+                    // Setters don't return anything.
+                    TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
+                    instr.OpCode = returnType == null || returnType.MetadataType == MetadataType.Void ? OpCodes.Stsfld : OpCodes.Ldsfld;
                 }
 
                 // Reference importing
