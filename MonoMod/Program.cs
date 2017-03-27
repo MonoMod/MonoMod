@@ -63,7 +63,7 @@ namespace MonoMod {
                     Environment.SetEnvironmentVariable("MONOMOD_CLEANUP_ALL", "1");
                     pathInI = i + 1;
                 } else if (args[i] == "--verbose=1" || args[i] == "--verbose" || args[i] == "-v") {
-                    Environment.SetEnvironmentVariable("MONOMOD_VERBOSE", "1");
+                    Environment.SetEnvironmentVariable("MONOMOD_LOG_VERBOSE", "1");
                     pathInI = i + 1;
                 }
 

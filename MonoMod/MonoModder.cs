@@ -20,7 +20,9 @@ namespace MonoMod {
         public readonly static Version Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 
         public static Action<string> DefaultLogger;
+        public static Action<string> DefaultVerboseLogger;
         public Action<string> Logger;
+        public Action<string> VerboseLogger;
 
         public static Dictionary<string, object> Data = new Dictionary<string, object>() {
             { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
@@ -65,8 +67,6 @@ namespace MonoMod {
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
         public int CurrentRID = 0;
-
-        public bool Verbose = false;
 
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
@@ -206,7 +206,12 @@ namespace MonoMod {
 
             PostProcessors += DefaultPostProcessor;
 
-            Verbose = Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1";
+            if (
+                Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1" ||
+                Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1" // Backwards-compatible
+            ) {
+                VerboseLogger = Log;
+            }
 
             MMILProxyManager.Register(this);
         }
@@ -252,7 +257,6 @@ namespace MonoMod {
         public virtual void Log(object obj) {
             Log(obj.ToString());
         }
-
         public virtual void Log(string txt) {
             if (Logger != null) {
                 Logger(txt);
@@ -264,6 +268,20 @@ namespace MonoMod {
             }
             Console.Write("[MonoMod] ");
             Console.WriteLine(txt);
+        }
+
+        public virtual void LogVerbose(object obj) {
+            LogVerbose(obj.ToString());
+        }
+        public virtual void LogVerbose(string txt) {
+            if (VerboseLogger != null) {
+                VerboseLogger(txt);
+                return;
+            }
+            if (DefaultVerboseLogger != null) {
+                DefaultVerboseLogger(txt);
+                return;
+            }
         }
 
         /// <summary>
@@ -1255,8 +1273,7 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInType(TypeDefinition type) {
-            if (Verbose)
-                Log($"[VERBOSE] [PatchRefsInType] Patching refs in {type}");
+            LogVerbose($"[VERBOSE] [PatchRefsInType] Patching refs in {type}");
 
             if (type.BaseType != null) type.BaseType = Relink(type.BaseType, type);
 
@@ -1305,8 +1322,7 @@ namespace MonoMod {
                 // Ignore ignored methods
                 return;
 
-            if (Verbose)
-                Log($"[VERBOSE] [PatchRefsInMethod] Patching refs in {method}");
+            LogVerbose($"[VERBOSE] [PatchRefsInMethod] Patching refs in {method}");
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < method.GenericParameters.Count; i++)
