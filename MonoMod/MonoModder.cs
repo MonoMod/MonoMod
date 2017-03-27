@@ -430,7 +430,7 @@ namespace MonoMod {
                 Log($"[ReadMod] Loading mod dir: {path}");
                 string mainName = Module.Name.Substring(0, Module.Name.Length - 3);
 				string mainNameSpaceless = mainName.Replace(" ", "");
-				DependencyDirs.Add(path);
+                DependencyDirs.Add(path);
                 foreach (string modFile in Directory.GetFiles(path))
                     if ((Path.GetFileName(modFile).StartsWith(mainName) ||
 						Path.GetFileName(modFile).StartsWith(mainNameSpaceless)) &&
@@ -441,6 +441,9 @@ namespace MonoMod {
 
             Log($"[ReadMod] Loading mod: {path}");
             ModuleDefinition mod = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
+            string dir = Path.GetDirectoryName(path);
+            if (!DependencyDirs.Contains(dir))
+                DependencyDirs.Add(path);
             MapDependencies(mod);
             ParseRules(mod);
             Mods.Add(mod);
