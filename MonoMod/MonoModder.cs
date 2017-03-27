@@ -322,7 +322,7 @@ namespace MonoMod {
                 return;
             }
 
-            // Used to fix Mono.Cecil.pdb being load instead of Mono.Cecil.Pdb.dll
+            // Used to fix Mono.Cecil.pdb being loaded instead of Mono.Cecil.Pdb.dll
             string ext = Path.GetExtension(name).ToLowerInvariant();
             bool nameRisky = ext == "pdb" || ext == "mdb";
 
@@ -470,7 +470,7 @@ namespace MonoMod {
         }
 
         public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
-            string typeName = GetName(type.FullName, type);
+            string typeName = type.GetPatchFullName();
 
             if (!type.MatchingConditionals())
                 return;
@@ -668,7 +668,7 @@ namespace MonoMod {
                 if (!Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
-                return Module.ImportReference(FindTypeDeep(GetName(type.FullName, type)));
+                return Module.ImportReference(FindTypeDeep(type.GetPatchFullName()));
             }
 
             if (mtp is FieldReference || mtp is MethodReference)
@@ -832,7 +832,7 @@ namespace MonoMod {
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
         public virtual void PrePatchType(TypeDefinition type, bool forceAdd = false) {
-            string typeName = GetName(type.FullName, type);
+            string typeName = type.GetPatchFullName();
 
             // Fix legacy issue: Copy / inline any used modifiers.
             if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || SkipList.Contains(typeName) || !type.MatchingConditionals())
@@ -923,7 +923,7 @@ namespace MonoMod {
         public virtual void PatchType(TypeDefinition type) {
             MethodDefinition addMethod;
 
-            string typeName = GetName(type.FullName, type);
+            string typeName = type.GetPatchFullName();
 
             TypeReference targetType = Module.GetType(typeName, false);
             if (targetType == null) return; // Type should've been added or removed accordingly.
@@ -1122,7 +1122,7 @@ namespace MonoMod {
                 // Ignore ignored methods
                 return null;
 
-            string typeName = GetName(targetType.FullName, targetType);
+            string typeName = targetType.GetPatchFullName();
 
             MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
@@ -1154,7 +1154,7 @@ namespace MonoMod {
             }
 
             if (method.Name.StartsWith("replace_") || method.HasMMAttribute("Replace")) {
-                method.Name = RemovePrefixes(method.Name);
+                method.Name = method.GetPatchName();
                 if (existingMethod != null) {
                     existingMethod.CustomAttributes.Clear();
                     existingMethod.Attributes = method.Attributes;
@@ -1376,6 +1376,8 @@ namespace MonoMod {
                 object operand = instr.Operand;
 
                 // MonoMod-specific in-code flag setting / ...
+
+                // TODO: Split out the MonoMod inline parsing.
 
                 // Temporarily enable matching platform, otherwise the platform data gets lost.
                 // Check the next one as the array size is before the newarr.
@@ -1729,47 +1731,6 @@ namespace MonoMod {
                 return true;
 
             return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
-        }
-
-        /// <summary>
-        /// Removes all MonoMod prefixes from the given string and its type definition.
-        /// Alternatively tries to apply the new name if MonoModPatch is used.
-        /// </summary>
-        /// <returns>str without prefixes.</returns>
-        /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
-        /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
-        public virtual string GetName(string str, TypeReference type) {
-            for (TypeReference type_ = type; type_ != null; type_ = type_.DeclaringType) {
-                str = RemovePrefixes(str, type_.Name);
-            }
-            return str;
-        }
-        /// <summary>
-        /// Removes all MonoMod prefixes from the given string.
-        /// </summary>
-        /// <returns>str without prefixes.</returns>
-        /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
-        /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
-        public virtual string RemovePrefixes(string str, string strPrefixed = null) {
-            strPrefixed = strPrefixed ?? str;
-            str = RemovePrefix(str, "patch_", strPrefixed);
-            str = RemovePrefix(str, "remove_", strPrefixed);
-            str = RemovePrefix(str, "replace_", strPrefixed);
-            return str;
-        }
-        /// <summary>
-        /// Removes the prefix from the given string.
-        /// </summary>
-        /// <returns>str without prefix.</returns>
-        /// <param name="str">String to remove the prefixes from or the string containing strPrefixed.</param>
-        /// <param name="prefix">Prefix.</param>
-        /// <param name="strPrefixed">String to remove the prefixes from when part of str.</param>
-        public static string RemovePrefix(string str, string prefix, string strPrefixed = null) {
-            strPrefixed = strPrefixed ?? str;
-            if (strPrefixed.StartsWith(prefix)) {
-                return str.Replace(strPrefixed, strPrefixed.Substring(prefix.Length));
-            }
-            return str;
         }
         #endregion
 

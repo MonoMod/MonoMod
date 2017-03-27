@@ -168,17 +168,17 @@ namespace MonoMod {
 
             if (simple) {
                 if (withType)
-                    builder.Append(type ?? method.DeclaringType.FullName).Append("::");
+                    builder.Append(type ?? method.DeclaringType.GetPatchFullName()).Append("::");
                 builder.Append(name ?? method.Name);
                 return builder.ToString();
             }
 
             builder
-                .Append(method.ReturnType.FullName)
+                .Append(method.ReturnType.GetPatchFullName())
                 .Append(" ");
 
             if (withType)
-                builder.Append(type ?? method.DeclaringType.FullName).Append("::");
+                builder.Append(type ?? method.DeclaringType.GetPatchFullName()).Append("::");
 
             builder
                 .Append(name ?? method.Name);
@@ -206,7 +206,7 @@ namespace MonoMod {
                     if (parameter.ParameterType.IsSentinel)
                         builder.Append("...,");
 
-                    builder.Append(parameter.ParameterType.FullName);
+                    builder.Append(parameter.ParameterType.GetPatchFullName());
                 }
             }
 
@@ -638,6 +638,64 @@ namespace MonoMod {
             if (mtp is FieldReference) return mod.ImportReference((FieldReference) mtp);
             if (mtp is MethodReference) return mod.ImportReference((MethodReference) mtp);
             return mtp;
+        }
+
+        public static string GetPatchName(this MemberReference mr) {
+            ICustomAttributeProvider cap = mr as ICustomAttributeProvider;
+            if (cap != null)
+                return cap.GetPatchName();
+            // TODO: This increases the PatchRefs pass time and should be optimized.
+            try {
+                return (mr.Resolve() as ICustomAttributeProvider).GetPatchName();
+            } catch {
+                // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
+                return mr.Name;
+            }
+        }
+        public static string GetPatchFullName(this MemberReference mr) {
+            ICustomAttributeProvider cap = mr as ICustomAttributeProvider;
+            if (cap != null)
+                return cap.GetPatchFullName();
+            // TODO: This increases the PatchRefs pass time and could be optimized.
+            try {
+                return (mr.Resolve() as ICustomAttributeProvider).GetPatchFullName();
+            } catch {
+                // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
+                return mr.FullName;
+            }
+        }
+
+        private static string GetPatchName(this ICustomAttributeProvider cap) {
+            CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
+            if (patchAttrib != null)
+                return (string) patchAttrib.ConstructorArguments[0].Value;
+
+            // Backwards-compatibility: Check for patch_
+            string name = ((MemberReference) cap).Name;
+            return name.StartsWith("patch_") ? name.Substring(6) : name;
+        }
+        private static string GetPatchFullName(this ICustomAttributeProvider cap) {
+            if (cap is TypeReference) {
+                TypeReference type = (TypeReference) cap;
+                string name = type.GetPatchName();
+                if (name.Contains(".") || name.Contains("/"))
+                    return name; // Patch name is already a full name.
+                if (!string.IsNullOrEmpty(type.Namespace))
+                    return $"{type.Namespace}.{name}";
+                else if (type.IsNested)
+                    return $"{type.DeclaringType.GetPatchFullName()}/{name}";
+                return name;
+            }
+
+            if (cap is FieldReference) {
+                FieldReference field = (FieldReference) cap;
+                return $"{field.FieldType.GetPatchFullName()} {field.DeclaringType.GetPatchFullName()}::{field.GetPatchName()}";
+            }
+
+            if (cap is MethodReference)
+                throw new InvalidOperationException("GetPatchFullName not supported on MethodReferences - use GetFindableID instead");
+
+            throw new InvalidOperationException($"GetPatchFullName not supported on type {cap.GetType()}");
         }
 
     }
