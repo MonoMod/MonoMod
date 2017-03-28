@@ -65,6 +65,9 @@ namespace MonoMod {
                 } else if (args[i] == "--verbose=1" || args[i] == "--verbose" || args[i] == "-v") {
                     Environment.SetEnvironmentVariable("MONOMOD_LOG_VERBOSE", "1");
                     pathInI = i + 1;
+                } else if (args[i] == "--cache=0" || args[i] == "--uncached") {
+                    Environment.SetEnvironmentVariable("MONOMOD_RELINKER_CACHED", "0");
+                    pathInI = i + 1;
                 }
 
             if (pathInI >= args.Length) {
@@ -79,7 +82,9 @@ namespace MonoMod {
 
             if (File.Exists(pathOut)) File.Delete(pathOut);
 
+#if !DEBUG
             try {
+#endif
                 using (MonoModder mm = new MonoModder() {
                     InputPath = pathIn,
                     OutputPath = pathOut
@@ -104,12 +109,14 @@ namespace MonoMod {
 
                     mm.Log("[Main] Done.");
                 }
+#if !DEBUG
             } catch (Exception e) {
                 Console.WriteLine(e);
                 if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                     Console.ReadKey();
                 return -1;
             }
+#endif
 
             if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                 Console.ReadKey();
@@ -117,5 +124,5 @@ namespace MonoMod {
         }
 #endif
 
-    }
+        }
 }

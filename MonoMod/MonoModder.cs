@@ -642,7 +642,7 @@ namespace MonoMod {
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             Tuple<IMetadataTokenProvider, IGenericParameterProvider> key = Tuple.Create(mtp, context);
             IMetadataTokenProvider cached;
-            if (!RelinkerCache.TryGetValue(key, out cached))
+            if (RelinkerCache.TryGetValue(key, out cached))
                 return cached;
             return RelinkerCache[key] = DefaultUncachedRelinker(mtp, context);
         }
