@@ -472,7 +472,7 @@ namespace MonoMod {
         public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
             string typeName = type.GetPatchFullName();
 
-            if (!type.MatchingConditionals())
+            if (!type.MatchingConditionals(Module))
                 return;
 
             CustomAttribute caHandler;
@@ -495,7 +495,7 @@ namespace MonoMod {
                 return;
 
             foreach (MethodDefinition method in type.Methods) {
-                if (!method.MatchingConditionals())
+                if (!method.MatchingConditionals(Module))
                     continue;
 
                 hook = method.GetMMAttribute("Hook");
@@ -504,7 +504,7 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (!field.MatchingConditionals())
+                if (!field.MatchingConditionals(Module))
                     continue;
 
                 hook = field.GetMMAttribute("Hook");
@@ -835,7 +835,7 @@ namespace MonoMod {
             string typeName = type.GetPatchFullName();
 
             // Fix legacy issue: Copy / inline any used modifiers.
-            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || SkipList.Contains(typeName) || !type.MatchingConditionals())
+            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || SkipList.Contains(typeName) || !type.MatchingConditionals(Module))
                 return;
             // ... Except MonoModRules
             if (type.FullName == "MonoMod.MonoModRules" && !forceAdd)
@@ -931,7 +931,7 @@ namespace MonoMod {
 
             if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || // Fix legacy issue: Copy / inline any used modifiers.
                 SkipList.Contains(typeName) ||
-                !type.MatchingConditionals()) {
+                !type.MatchingConditionals(Module)) {
 
                 if (type.HasMMAttribute("Ignore") && targetTypeDef != null) {
                     // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1068,7 +1068,7 @@ namespace MonoMod {
                 type.SetPublic(true);
 
             foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals())
+                if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals(Module))
                     continue;
 
                 if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
@@ -1118,7 +1118,7 @@ namespace MonoMod {
                 // Ignore original method stubs
                 return null;
 
-            if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals())
+            if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals(Module))
                 // Ignore ignored methods
                 return null;
 
@@ -1321,7 +1321,7 @@ namespace MonoMod {
             if ((!AllowedSpecialName(method) && !method.IsConstructor) ||
                 method.HasMMAttribute("Ignore") ||
                 SkipList.Contains(method.GetFindableID()) ||
-                !method.MatchingConditionals())
+                !method.MatchingConditionals(Module))
                 // Ignore ignored methods
                 return;
 

@@ -126,7 +126,9 @@ namespace MonoMod {
             return "orig_" + method.Name;
         }
 
-        public static bool MatchingConditionals(this ICustomAttributeProvider cap) {
+        public static bool MatchingConditionals(this ICustomAttributeProvider cap, ModuleDefinition module)
+            => cap.MatchingConditionals(module.Assembly.Name);
+        public static bool MatchingConditionals(this ICustomAttributeProvider cap, AssemblyNameReference asmName = null) {
             if (cap == null) return true;
             if (!cap.HasCustomAttributes) return true;
             Platform plat = PlatformHelper.Current;
@@ -156,6 +158,13 @@ namespace MonoMod {
                     else
                         value = (bool) valueObj;
                     status &= value;
+                    continue;
+                }
+
+                if (attrib.AttributeType.FullName == "MonoMod.MonoModTargetModule") {
+                    string name = ((string) attrib.ConstructorArguments[0].Value).Inject(MonoModder.Data);
+                    status &= asmName.Name == name || asmName.FullName == name;
+                    continue;
                 }
             }
             return status;
