@@ -4,8 +4,9 @@ namespace MonoMod {
     /// <summary>
     /// MonoMod target mpdule attribute.
     /// Apply it onto a type and it will only be patched in the target module.
-    /// This allows for one MonoMod mod to be used on multiple assemblies with differing specifics.
-    /// It doesn't affect any other module than the input module, though.
+    /// Important: This attribute acts as a filter. It doesn't affect any other module than the input module.
+    /// For example, one can define the target assembly version using MonoModTargetModule,
+    /// or use the same MonoMod mod on multiple differing input assemblies.
     /// </summary>
     public class MonoModTargetModule : Attribute {
         public MonoModTargetModule(string name) { }
