@@ -5,8 +5,6 @@
 /// </summary>
 [Flags]
 public enum Platform : int {
-    None = 0,
-
     // Underlying platform categories
     OS = 1,
 

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.NET40Shim;
+using StringInject;
 
 namespace MonoMod {
 
@@ -668,7 +669,7 @@ namespace MonoMod {
         private static string GetPatchName(this ICustomAttributeProvider cap) {
             CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
             if (patchAttrib != null)
-                return (string) patchAttrib.ConstructorArguments[0].Value;
+                return ((string) patchAttrib.ConstructorArguments[0].Value).Inject(MonoModder.Data);
 
             // Backwards-compatibility: Check for patch_
             string name = ((MemberReference) cap).Name;
@@ -678,6 +679,8 @@ namespace MonoMod {
             if (cap is TypeReference) {
                 TypeReference type = (TypeReference) cap;
                 string name = type.GetPatchName();
+                if (name.StartsWith("global::"))
+                    return name.Substring(8); // Patch name is refering to a global type.
                 if (name.Contains(".") || name.Contains("/"))
                     return name; // Patch name is already a full name.
                 if (!string.IsNullOrEmpty(type.Namespace))
