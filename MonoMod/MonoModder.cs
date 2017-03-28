@@ -40,6 +40,8 @@ namespace MonoMod {
         public Dictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
         public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
 
+        public Dictionary<Tuple<IMetadataTokenProvider, IGenericParameterProvider>, IMetadataTokenProvider> RelinkerCache = new Dictionary<Tuple<IMetadataTokenProvider, IGenericParameterProvider>, IMetadataTokenProvider>();
+
         public Relinker Relinker;
         public Relinker MainRelinker;
         public Relinker PostRelinker;
@@ -211,6 +213,10 @@ namespace MonoMod {
                 Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1" // Backwards-compatible
             ) {
                 VerboseLogger = Log;
+            }
+
+            if (Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "0") {
+                Relinker = DefaultUncachedRelinker;
             }
 
             MMILProxyManager.Register(this);
@@ -634,6 +640,14 @@ namespace MonoMod {
         }
 
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+            Tuple<IMetadataTokenProvider, IGenericParameterProvider> key = Tuple.Create(mtp, context);
+            IMetadataTokenProvider cached;
+            if (!RelinkerCache.TryGetValue(key, out cached))
+                return cached;
+            return RelinkerCache[key] = DefaultUncachedRelinker(mtp, context);
+        }
+
+        public virtual IMetadataTokenProvider DefaultUncachedRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             // LinkTo bypasses all relinking maps.
             ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
             if (cap == null) // TODO: This increases the PatchRefs pass time and could be optimized.
