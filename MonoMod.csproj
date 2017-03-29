@@ -50,6 +50,9 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
+    <Compile Include="MonoMod\Helpers\IntDictionary.cs" />
+    <Compile Include="MonoMod\Helpers\FastDictionary.cs" />
     <Compile Include="MonoMod\InlineRT\MMILExec.cs" />
     <Compile Include="MonoMod\InlineRT\MMILProxy.cs" />
     <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
@@ -72,7 +75,7 @@
     <Compile Include="MonoMod\PlatformHelper.cs" />
     <Compile Include="MonoMod\DebugSymbolFormat.cs" />
     <Compile Include="MonoMod\Program.cs" />
-    <Compile Include="MonoMod\StringInjectExtension.cs" />
+    <Compile Include="MonoMod\Helpers\StringInjectExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModIgnore.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModRemove.cs" />
@@ -82,7 +85,7 @@
     <Compile Include="MonoMod\Modifiers\MonoModBlacklisted.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModEnumReplace.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModInline.cs" />
-    <Compile Include="MonoMod\NET40Shim.cs" />
+    <Compile Include="MonoMod\Helpers\NET40Shim.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

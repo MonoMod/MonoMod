@@ -1,4 +1,5 @@
 ﻿using Mono.Cecil;
+using MonoMod.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +12,7 @@ namespace MonoMod.InlineRT {
 
         public static Type t_MMILProxy = typeof(MMILProxy);
 
-        public static Dictionary<long, WeakReference> ModderMap = new Dictionary<long, WeakReference>();
+        public static IDictionary<long, WeakReference> ModderMap = new FastDictionary<long, WeakReference>();
         public static ObjectIDGenerator ModderIdGen = new ObjectIDGenerator();
 
         private static Assembly MonoModAsm = Assembly.GetExecutingAssembly();

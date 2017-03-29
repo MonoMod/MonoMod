@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.NET40Shim;
+using MonoMod.Helpers;
 
 namespace MonoMod {
     public class MonoModder : IDisposable {
@@ -24,7 +25,7 @@ namespace MonoMod {
         public Action<string> Logger;
         public Action<string> VerboseLogger;
 
-        public static Dictionary<string, object> Data = new Dictionary<string, object>() {
+        public static IDictionary<string, object> Data = new FastDictionary<string, object>() {
             { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
             { "PlatformPrefix",     (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
             { "Arch",               (PlatformHelper.Current & Platform.X64).ToString() },
@@ -33,14 +34,14 @@ namespace MonoMod {
             { "ArchitecturePrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" }
         };
 
-        public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
-        public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
-        public HashSet<string> SkipList = new HashSet<string>();
+        public IDictionary<string, object> RelinkMap = new FastDictionary<string, object>();
+        public IDictionary<string, ModuleDefinition> RelinkModuleMap = new FastDictionary<string, ModuleDefinition>();
+        public HashSet<string> SkipList = new HashSet<string>(EqualityComparer<string>.Default);
 
-        public Dictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
-        public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
+        public IDictionary<string, IMetadataTokenProvider> RelinkMapCache = new FastDictionary<string, IMetadataTokenProvider>();
+        public IDictionary<string, TypeReference> RelinkModuleMapCache = new FastDictionary<string, TypeReference>();
 
-        public Dictionary<Tuple<IMetadataTokenProvider, IGenericParameterProvider>, IMetadataTokenProvider> RelinkerCache = new Dictionary<Tuple<IMetadataTokenProvider, IGenericParameterProvider>, IMetadataTokenProvider>();
+        public FastDictionary<IMetadataTokenProvider, IGenericParameterProvider, IMetadataTokenProvider> RelinkerCache = new FastDictionary<IMetadataTokenProvider, IGenericParameterProvider, IMetadataTokenProvider>();
 
         public Relinker Relinker;
         public Relinker MainRelinker;
@@ -52,8 +53,8 @@ namespace MonoMod {
         public Action<ModuleDefinition> OnReadMod;
         public Action PostProcessors;
 
-        public Dictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
-        public Dictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+        public IDictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new FastDictionary<string, DynamicMethodDelegate>();
+        public IDictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new FastDictionary<string, DynamicMethodDelegate>();
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -62,8 +63,8 @@ namespace MonoMod {
         public Stream Output;
         public string OutputPath;
         public ModuleDefinition Module;
-        public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
-        public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
+        public IDictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new FastDictionary<ModuleDefinition, List<ModuleDefinition>>();
+        public IDictionary<string, ModuleDefinition> DependencyCache = new FastDictionary<string, ModuleDefinition>();
         public List<string> DependencyDirs = new List<string>();
 
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
@@ -640,11 +641,10 @@ namespace MonoMod {
         }
 
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            Tuple<IMetadataTokenProvider, IGenericParameterProvider> key = Tuple.Create(mtp, context);
             IMetadataTokenProvider cached;
-            if (RelinkerCache.TryGetValue(key, out cached))
+            if (RelinkerCache.TryGetValue(mtp, context, out cached))
                 return cached;
-            return RelinkerCache[key] = DefaultUncachedRelinker(mtp, context);
+            return RelinkerCache[mtp, context] = DefaultUncachedRelinker(mtp, context);
         }
 
         public virtual IMetadataTokenProvider DefaultUncachedRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {

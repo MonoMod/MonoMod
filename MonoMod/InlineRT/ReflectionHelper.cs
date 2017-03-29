@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -10,7 +11,7 @@ namespace MonoMod.InlineRT {
     /// </summary>
     public static class ReflectionHelper {
         private static readonly Type[] manyObjects = new Type[2] { typeof(object), typeof(object[]) };
-        private static readonly Dictionary<MethodInfo, DynamicMethodDelegate> methodCache = new Dictionary<MethodInfo, DynamicMethodDelegate>();
+        private static readonly IDictionary<MethodInfo, DynamicMethodDelegate> methodCache = new FastDictionary<MethodInfo, DynamicMethodDelegate>();
 
         public static DynamicMethodDelegate CreateDelegate(this MethodBase method) {
             DynamicMethod dynam = new DynamicMethod(string.Empty, typeof(object), manyObjects, typeof(ReflectionHelper).Module, true);

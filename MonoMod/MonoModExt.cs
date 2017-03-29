@@ -333,9 +333,12 @@ namespace MonoMod {
             for (int i = 0; i < other.Count; i++)
                 list.Add(other[i]);
         }
-
         public static void AddRange(this IDictionary dict, IDictionary other) {
             foreach (DictionaryEntry entry in other)
+                dict.Add(entry.Key, entry.Value);
+        }
+        public static void AddRange<K, V>(this IDictionary<K, V> dict, IDictionary<K, V> other) {
+            foreach (KeyValuePair<K, V> entry in other)
                 dict.Add(entry.Key, entry.Value);
         }
 
@@ -355,6 +358,12 @@ namespace MonoMod {
         public static void DequeueRange<T>(this Queue<T> queue, int n) {
             for (int i = 0; i < n; i++)
                 queue.Dequeue();
+        }
+
+        public static T[] Clone<T>(this T[] array, int length) {
+            T[] clone = new T[length];
+            Array.Copy(array, clone, length);
+            return clone;
         }
 
         public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, string name) {
