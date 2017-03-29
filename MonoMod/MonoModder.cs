@@ -237,6 +237,7 @@ namespace MonoMod {
             if (all || moduleSpecific) {
                 RelinkMapCache.Clear();
                 RelinkModuleMapCache.Clear();
+                RelinkerCache.Clear();
             }
         }
 
