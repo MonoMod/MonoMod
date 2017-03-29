@@ -333,7 +333,7 @@ namespace MonoMod {
             ModuleDefinition dep;
             if ((fullName != null && DependencyCache.TryGetValue(fullName, out dep)) ||
                                      DependencyCache.TryGetValue(name    , out dep)) {
-                Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
+                LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
                 DependencyMap[main].Add(dep);
                 MapDependencies(dep);
                 return;
@@ -392,8 +392,8 @@ namespace MonoMod {
             if (path != null && File.Exists(path)) {
                 dep = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
             } else if ((dep = MissingDependencyResolver?.Invoke(main, name, fullName)) == null) return;
-            
-            Log($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
+
+            LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
             DependencyMap[main].Add(dep);
             DependencyCache[fullName] = dep;
             DependencyCache[name] = dep;
