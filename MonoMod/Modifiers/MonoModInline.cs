@@ -2,8 +2,11 @@
 
 public static partial class MMIL {
 
+    [Obsolete("Use MMIL.Access instead.")]
     public static void DisablePublicAccess() { }
+    [Obsolete("Use MMIL.Access instead.")]
     public static void EnablePublicAccess() { }
+    [Obsolete("Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.")]
     public static void OnPlatform(params Platform[] p) { }
 
     public static class Rule {

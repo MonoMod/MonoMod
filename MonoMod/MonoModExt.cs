@@ -14,6 +14,7 @@ using StringInject;
 namespace MonoMod {
 
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
+    public delegate bool MethodParser(MethodBody body, Instruction instr, ref int instri);
     public delegate void MethodRewriter(MethodDefinition method);
     public delegate void MethodBodyRewriter(MethodBody body, Instruction instr, int instri);
     public delegate ModuleDefinition MissingDependencyResolver(ModuleDefinition main, string name, string fullName);
@@ -293,6 +294,7 @@ namespace MonoMod {
             return (int) instr.Operand;
         }
 
+        [Obsolete("Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.")]
         public static bool ParseOnPlatform(this MethodDefinition method, ref int instri) {
             // Crawl back until we hit "newarr Platform" or "newarr int"
             int posNewarr = instri;
