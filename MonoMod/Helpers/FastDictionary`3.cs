@@ -62,20 +62,23 @@ namespace MonoMod.Helpers {
             K2[] keys2 = new K2[size];
             V[] values = new V[size];
             int[] next = new int[size];
-            uint[] hashes = new uint[size];
 
-            for (uint i = size - 1; i > 0; --i)
+            for (uint i = size - 1; i > 0; --i) {
                 hashMap[i] = -1;
+                next[i] = -1;
+            }
             hashMap[0] = -1;
+            next[0] = -1;
 
             if (copy) {
                 Array.Copy(_Keys1, keys1, _Count);
                 Array.Copy(_Keys2, keys2, _Count);
                 Array.Copy(_Values, values, _Count);
-                Array.Copy(_Next, next, _Count);
 
                 for (int i = _Count - 1; i > -1; --i) {
-                    uint pos = hashes[i] % size;
+                    int hash1 = keys1[i].GetHashCode();
+                    int hash2 = keys2[i].GetHashCode();
+                    uint pos = ((uint) (hash1 + hash2 % hash1 + hash2)) % size;
                     int posPrev = hashMap[pos];
                     hashMap[pos] = i;
                     if (posPrev != -1)
@@ -113,21 +116,23 @@ namespace MonoMod.Helpers {
             int hash1 = key1.GetHashCode();
             int hash2 = key2.GetHashCode();
             uint hash = (uint) (hash1 + hash2 % hash1 + hash2);
-            uint hashPos = hash % (uint) _HashMap.Length;
-            int entryPos = _HashMap[hashPos];
+            uint posHash = hash % (uint) _HashMap.Length;
+            int pos = _HashMap[posHash];
 
-            while (entryPos != -1) {
-                if (key1.Equals(_Keys1[entryPos]) && key2.Equals(_Keys2[entryPos]))
-                    return;
-                entryPos = _Next[entryPos];
-            }
+            int posNext = pos;
+            if (pos != -1)
+                do {
+                    if (key1.Equals(_Keys1[posNext]) && key2.Equals(_Keys2[posNext]))
+                        return;
+                    posNext = _Next[posNext];
+                } while (posNext != -1);
+            posNext = _Count;
 
-            int newPos = _Count;
-            _HashMap[hashPos] = newPos;
-            _Keys1[newPos] = key1;
-            _Keys2[newPos] = key2;
-            _Values[newPos] = value;
-            _Next[newPos] = entryPos;
+            _HashMap[posHash] = posNext;
+            _Keys1[posNext] = key1;
+            _Keys2[posNext] = key2;
+            _Values[posNext] = value;
+            _Next[posNext] = pos;
             ++_Count;
         }
 

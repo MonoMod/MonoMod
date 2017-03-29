@@ -15,6 +15,8 @@ namespace StringInject {
         /// <param name="injectionObject">The object whose properties should be injected in the string</param>
         /// <returns>A version of the formatString string with keys replaced by (formatted) key values.</returns>
         public static string Inject(this string formatString, object injectionObject) {
+            if (injectionObject is IDictionary)
+                return formatString.Inject(new Hashtable((IDictionary) injectionObject));
             return formatString.Inject(GetPropertyHash(injectionObject));
         }
 

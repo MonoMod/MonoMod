@@ -93,14 +93,16 @@ namespace MonoMod.Helpers {
             V[] values = new V[size];
             int[] next = new int[size];
 
-            for (uint i = size - 1; i > 0; --i)
+            for (uint i = size - 1; i > 0; --i) {
                 hashMap[i] = -1;
+                next[i] = -1;
+            }
             hashMap[0] = -1;
+            next[0] = -1;
 
             if (copy) {
                 Array.Copy(_Keys, keys, _Count);
                 Array.Copy(_Values, values, _Count);
-                Array.Copy(_Next, next, _Count);
 
                 for (int i = _Count - 1; i > -1; --i) {
                     uint pos = ((uint) keys[i]) % size;
@@ -124,7 +126,7 @@ namespace MonoMod.Helpers {
                 return -1;
             int posNext = pos;
             do {
-                if (key.Equals(_Keys[posNext]))
+                if (key == _Keys[posNext])
                     return posNext;
                 posNext = _Next[posNext];
             } while (posNext != -1);
@@ -139,17 +141,19 @@ namespace MonoMod.Helpers {
             uint hashPos = hash % (uint) _HashMap.Length;
             int entryPos = _HashMap[hashPos];
 
-            while (entryPos != -1) {
-                if (key.Equals(_Keys[entryPos]))
-                    return;
-                entryPos = _Next[entryPos];
-            }
+            int nextPos = entryPos;
+            if (entryPos != -1)
+                do {
+                    if (key == _Keys[nextPos])
+                        return;
+                    nextPos = _Next[nextPos];
+                } while (nextPos != -1);
+            nextPos = _Count;
 
-            int newPos = _Count;
-            _HashMap[hashPos] = newPos;
-            _Keys[newPos] = key;
-            _Values[newPos] = value;
-            _Next[newPos] = entryPos;
+            _HashMap[hashPos] = nextPos;
+            _Keys[nextPos] = key;
+            _Values[nextPos] = value;
+            _Next[nextPos] = entryPos;
             ++_Count;
         }
 
@@ -186,8 +190,6 @@ namespace MonoMod.Helpers {
             => Resize(_PrimeSizes[0], false);
 
         public bool Contains(KeyValuePair<int, V> item) {
-            if (item.Key == null)
-                return false;
             V value;
             if (!TryGetValue(item.Key, out value))
                 return false;
@@ -205,11 +207,11 @@ namespace MonoMod.Helpers {
                 yield return new KeyValuePair<int, V>(_Keys[i], _Values[i]);
         }
 
-        IEnumerator IEnumerable.GetEnumerator() {
-            for (int i = 0; i < _Count; i++)
-                yield return new KeyValuePair<int, V>(_Keys[i], _Values[i]);
-        }
+        IEnumerator IEnumerable.GetEnumerator()
+            => GetEnumerator();
 
+        IDictionaryEnumerator IDictionary.GetEnumerator()
+            => new DictionaryEnumerator(GetEnumerator());
 
         // Implement those as needed.
 
@@ -225,10 +227,6 @@ namespace MonoMod.Helpers {
             throw new NotImplementedException();
         }
 
-        IDictionaryEnumerator IDictionary.GetEnumerator() {
-            throw new NotImplementedException();
-        }
-
         public void CopyTo(KeyValuePair<int, V>[] array, int arrayIndex) {
             throw new NotImplementedException();
         }
@@ -239,6 +237,47 @@ namespace MonoMod.Helpers {
 
         public object SyncRoot {
             get { throw new NotImplementedException(); }
+        }
+
+
+
+        struct DictionaryEnumerator : IDictionaryEnumerator {
+            private IEnumerator<KeyValuePair<int, V>> Enumerator;
+
+            public object Current {
+                get {
+                    return Entry;
+                }
+            }
+
+            public DictionaryEntry Entry {
+                get {
+                    KeyValuePair<int, V> entry = Enumerator.Current;
+                    return new DictionaryEntry(entry.Key, entry.Value);
+                }
+            }
+
+            public object Key {
+                get {
+                    return Enumerator.Current.Key;
+                }
+            }
+
+            public object Value {
+                get {
+                    return Enumerator.Current.Value;
+                }
+            }
+
+            public DictionaryEnumerator(IEnumerator<KeyValuePair<int, V>> enumerator) {
+                Enumerator = enumerator;
+            }
+
+            public bool MoveNext()
+                => Enumerator.MoveNext();
+
+            public void Reset()
+                => Enumerator.Reset();
         }
 
     }
