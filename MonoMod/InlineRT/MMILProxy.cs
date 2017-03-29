@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 
 namespace MonoMod.InlineRT {
-    public static partial class MMILProxy {
+    public static partial class _MMILProxy {
 
         public static class Rule {
 

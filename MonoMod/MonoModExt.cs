@@ -70,12 +70,6 @@ namespace MonoMod {
             return c;
         }
 
-        public static bool IsHidden(this SequencePoint sp)
-            =>  sp.StartLine == 0xFEEFEE &&
-                sp.EndLine == 0xFEEFEE &&
-                sp.StartColumn == 0 &&
-                sp.EndColumn == 0;
-
         public readonly static System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         public readonly static System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         public static GenericParameter Update(this GenericParameter param, GenericParameter other)

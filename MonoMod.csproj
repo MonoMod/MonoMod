@@ -75,8 +75,8 @@
     <Compile Include="MonoMod\Modifiers\MonoModPatch.cs" />
     <Compile Include="MonoMod\MonoModder.cs" />
     <Compile Include="MonoMod\MonoModExt.cs" />
-    <Compile Include="MonoMod\Platform.cs" />
-    <Compile Include="MonoMod\PlatformHelper.cs" />
+    <Compile Include="MonoMod\Modifiers\Platform.cs" />
+    <Compile Include="MonoMod\Modifiers\PlatformHelper.cs" />
     <Compile Include="MonoMod\DebugSymbolFormat.cs" />
     <Compile Include="MonoMod\Program.cs" />
     <Compile Include="MonoMod\Helpers\StringInjectExtension.cs" />
