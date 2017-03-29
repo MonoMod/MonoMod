@@ -294,7 +294,7 @@ namespace MonoMod {
         /// <summary>
         /// Reads the main module from the Input stream / InputPath file to Module.
         /// </summary>
-        public virtual void Read(bool loadDependencies = true) {
+        public virtual void Read() {
             if (Module == null) {
                 if (Input != null) {
                     Log("Reading input stream into module.");
@@ -305,10 +305,20 @@ namespace MonoMod {
                     Module = MonoModExt.ReadModule(InputPath, GenReaderParameters(true, InputPath));
                 }
             }
-
-            if (loadDependencies) MapDependencies(Module);
         }
 
+        [Obsolete("Use Read() and MapDependencies() instead.")]
+        public virtual void Read(bool loadDependencies = true) {
+            Read();
+            if (loadDependencies)
+                MapDependencies();
+        }
+
+        public virtual void MapDependencies() {
+            foreach (ModuleDefinition mod in Mods)
+                MapDependencies(mod);
+            MapDependencies(Module);
+        }
         public virtual void MapDependencies(ModuleDefinition main) {
             if (DependencyMap.ContainsKey(main)) return;
             DependencyMap[main] = new List<ModuleDefinition>();
@@ -451,7 +461,6 @@ namespace MonoMod {
             string dir = Path.GetDirectoryName(path);
             if (!DependencyDirs.Contains(dir))
                 DependencyDirs.Add(path);
-            MapDependencies(mod);
             ParseRules(mod);
             Mods.Add(mod);
             OnReadMod?.Invoke(mod);

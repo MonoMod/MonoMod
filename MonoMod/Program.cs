@@ -35,7 +35,7 @@ namespace MonoMod {
                     InputPath = pathIn,
                     OutputPath = pathOut
                 }) {
-                    mm.Read(false);
+                    mm.Read();
 
                     mm.Log("[DbgILGen] DebugILGenerator.Generate(mm);");
                     DebugILGenerator.Generate(mm);
@@ -89,7 +89,7 @@ namespace MonoMod {
                     InputPath = pathIn,
                     OutputPath = pathOut
                 }) {
-                    mm.Read(false);
+                    mm.Read();
 
                     if (args.Length <= 2) {
                         mm.Log("[Main] Scanning for mods in directory.");
@@ -100,7 +100,7 @@ namespace MonoMod {
                             mm.ReadMod(args[i]);
                     }
 
-                    mm.Read(true);
+                    mm.MapDependencies();
 
                     mm.Log("[Main] mm.AutoPatch();");
                     mm.AutoPatch();
