@@ -7,7 +7,7 @@ using System.Reflection.Emit;
 namespace MonoMod.InlineRT {
     public delegate object DynamicMethodDelegate(object target, params object[] args);
     /// <summary>
-    /// Stolen from http://theinstructionlimit.com/fast-net-reflection and FEZ. Thanks, Renaud!
+    /// Based on ReflectionHelper from http://theinstructionlimit.com/fast-net-reflection and FEZ. Thanks, Renaud!
     /// </summary>
     public static class ReflectionHelper {
         private static readonly Type[] manyObjects = new Type[2] { typeof(object), typeof(object[]) };
@@ -41,10 +41,20 @@ namespace MonoMod.InlineRT {
             for (int i = 0; i < args.Length; i++) {
                 il.Emit(OpCodes.Ldarg_1);
                 il.Emit(OpCodes.Ldc_I4, i);
-                il.Emit(OpCodes.Ldelem_Ref);
 
-                if (args[i].ParameterType.IsValueType) {
-                    il.Emit(OpCodes.Unbox_Any, args[i].ParameterType);
+                Type argType = args[i].ParameterType;
+                bool argIsByRef = argType.IsByRef;
+                if (argIsByRef)
+                    argType = argType.GetElementType();
+                bool argIsValueType = argType.IsValueType;
+
+                if (argIsByRef && !argIsValueType) {
+                    il.Emit(OpCodes.Ldelema, typeof(object));
+                } else {
+                    il.Emit(OpCodes.Ldelem_Ref);
+                    if (argIsValueType) {
+                        il.Emit(argIsByRef ? OpCodes.Unbox : OpCodes.Unbox_Any, argType);
+                    }
                 }
             }
 

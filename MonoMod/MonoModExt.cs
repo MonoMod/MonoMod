@@ -412,9 +412,9 @@ namespace MonoMod {
                     return new PointerType(relinkedElem);
 
                 if (type.IsPinned)
-					return new PinnedType(relinkedElem);
+                    return new PinnedType(relinkedElem);
 
-				if (type.IsArray)
+                if (type.IsArray)
                     return new ArrayType(relinkedElem, ((ArrayType) type).Dimensions.Count);
 
                 if (type.IsRequiredModifier)
@@ -575,13 +575,17 @@ namespace MonoMod {
             return newParam;
         }
 
-        public static MethodDefinition FindMethod(this TypeDefinition type, string findableID) {
+        public static MethodDefinition FindMethod(this TypeDefinition type, string findableID, bool simple = true) {
             // First pass: With type name (f.e. global searches)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID() == findableID) return method;
             // Second pass: Without type name (f.e. LinkTo)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID(withType: false) == findableID) return method;
+
+            if (!simple)
+                return null;
+
             // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
             // First simple pass: With type name (just "Namespace.Type::MethodName")
             foreach (MethodDefinition method in type.Methods)
@@ -589,6 +593,7 @@ namespace MonoMod {
             // Second simple pass: Without type name (basically name only)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
+
             return null;
         }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {

@@ -20,6 +20,18 @@ namespace MonoMod {
                 return 0;
             }
 
+            if (args[0] == "--test") {
+                Console.WriteLine("[QuickDebugTest] Running...");
+                int result = QuickDebugTest.Run(args);
+                if (result == 0)
+                    Console.WriteLine("[QuickDebugTest] Passed!");
+                else
+                    Console.WriteLine($"[QuickDebugTest] Failed: {result}");
+                if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
+                    Console.ReadKey();
+                return result;
+            }
+
             string pathIn;
             string pathOut;
 
@@ -124,5 +136,5 @@ namespace MonoMod {
         }
 #endif
 
-        }
+            }
 }

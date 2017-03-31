@@ -2,7 +2,7 @@
 
 namespace MonoMod {
     /// <summary>
-    /// MonoMod target mpdule attribute.
+    /// MonoMod target module attribute.
     /// Apply it onto a type and it will only be patched in the target module.
     /// Important: This attribute acts as a filter. It doesn't affect any other module than the input module.
     /// For example, one can define the target assembly version using MonoModTargetModule,

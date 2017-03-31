@@ -629,7 +629,7 @@ namespace MonoMod {
                 } else if (i == 1) { // Member
                     if (orig is MethodReference)
                         member =
-                            type.FindMethod((string) value) ??
+                            type.FindMethod((string) value, simple: false) ??
                             type.FindMethod(((MethodReference) orig).GetFindableID(name: (string) value, type: type.FullName));
                     // Microoptimization with the type: type.FullName above:
                     // Instead of waiting until the 4th pass, just use the type name once and return in the 3rd pass.
@@ -802,19 +802,68 @@ namespace MonoMod {
         }
 
         public virtual bool ParseMMILCall(MethodBody body, MethodReference call, ref int instri) {
-            string callName = $"{call.DeclaringType.FullName}.{call.Name}";
+            call = (MethodReference) GetLinkToRef(call.Resolve(), body.Method);
+
+            string callName;
+            callName = call.DeclaringType.FullName.Substring(4);
+            if (callName.Length != 0 && callName[0] == '/')
+                callName = $"{callName.Substring(1)}::{call.Name}";
+            else
+                callName = call.Name;
 
             // Obsoleted methods - keep them "alive" for some time.
-            if (callName == "MMIL.DisablePublicAccess" || callName == "MMIL.EnablePublicAccess") {
-                Log($"[Inline] [WARNING] MMIL.{call.Name} is obsolete and not implemented anymore. Use MMIL.Access instead.");
+            if (callName == "DisablePublicAccess" || callName == "EnablePublicAccess") {
+                Log($"[Inline] [WARNING] MMIL.{callName} is obsolete and not implemented anymore. Use MMIL.Access instead.");
                 return true;
             }
-            if (callName == "MMIL.OnPlatform") {
+            if (callName == "OnPlatform") {
                 Log("[Inline] [WARNING] MMIL.OnPlatform is obsolete and not implemented anymore. Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.");
                 return true;
             }
 
+            // Format of an array:
+            /*
+            newarr ArrayType // f.e.: newarr [mscorlib]System.Object
 
+            // start
+		    dup // arr
+		    ldc.i4.0 // index
+            // value
+		    call string Example::StaticA()
+            // store
+		    stelem.ref
+
+		    // start
+		    dup // arr
+		    ldc.i4.1 // index
+            // value
+		    ldc.i4.2
+		    ldc.i4.4
+		    call int32 Example::StaticB(int32, int32)
+            // optional: box
+		    box [mscorlib]System.Int32
+            // store
+		    stelem.ref
+
+            // that's it
+            */
+
+            if (callName == "Access::Call") {
+                // Format of a Call call:
+                /*
+                ld self
+                ld name
+                ld arrsize
+                newarr
+                arr element #0
+                arr element #1
+                arr element #n
+                call Call
+                */
+                int offs = 0;
+                for (int i = instri - 1; i >= 0; --i) {
+                }
+            }
 
             return true;
         }
@@ -1407,8 +1456,6 @@ namespace MonoMod {
             foreach (ExceptionHandler handler in method.Body.ExceptionHandlers)
                 if (handler.CatchType != null)
                     handler.CatchType = Relink(handler.CatchType, method);
-
-            bool matchingPlatformIL = true;
 
             MethodRewriter?.Invoke(method);
 
