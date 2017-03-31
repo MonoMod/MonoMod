@@ -793,7 +793,7 @@ namespace MonoMod {
 
 
         public virtual bool DefaultParser(MethodBody body, Instruction instr, ref int instri) {
-            if (instr.OpCode == OpCodes.Call && instr.Operand is MethodReference && (
+            if (instr.Operand is MethodReference && (
                 ((MethodReference) instr.Operand).DeclaringType.FullName.StartsWith("MMIL")
             ))
                 return ParseMMILCall(body, (MethodReference) instr.Operand, ref instri);
@@ -802,14 +802,20 @@ namespace MonoMod {
         }
 
         public virtual bool ParseMMILCall(MethodBody body, MethodReference call, ref int instri) {
-            call = (MethodReference) GetLinkToRef(call.Resolve(), body.Method);
+            MethodReference callOrig = call;
+            call = call.Resolve();
+            call = (MethodReference) GetLinkToRef((MethodDefinition) call, body.Method) ?? call;
 
             string callName;
             callName = call.DeclaringType.FullName.Substring(4);
-            if (callName.Length != 0 && callName[0] == '/')
+            if (callName.StartsWith("Ext."))
+                callName = $"{callName.Substring(4)}::{call.Name}";
+            else if (callName.Length != 0 && callName[0] == '/')
                 callName = $"{callName.Substring(1)}::{call.Name}";
-            else
+            else if (callName.Length == 0)
                 callName = call.Name;
+            else
+                callName = $"{call.DeclaringType.FullName}::{call.Name}";
 
             // Obsoleted methods - keep them "alive" for some time.
             if (callName == "DisablePublicAccess" || callName == "EnablePublicAccess") {
@@ -823,7 +829,7 @@ namespace MonoMod {
 
             // Format of an array:
             /*
-            newarr ArrayType // f.e.: newarr [mscorlib]System.Object
+            newarr [mscorlib]System.Object
 
             // start
 		    dup // arr
@@ -848,24 +854,57 @@ namespace MonoMod {
             // that's it
             */
 
-            if (callName == "Access::Call") {
-                // Format of a Call call:
-                /*
-                ld self
-                ld name
-                ld arrsize
-                newarr
-                arr element #0
-                arr element #1
-                arr element #n
-                call Call
-                */
-                int offs = 0;
-                for (int i = instri - 1; i >= 0; --i) {
-                }
-            }
+            // Format of an Access call:
+            /*
+            ld self (if any)
+            ld type name (if any)
+            ld member name
+            newobj Access <!!!!
+            ld arrsize
+            newarr
+            arr element #0
+            arr element #1
+            arr element #n
+            call New / Call / Get / Set
+            */
+
+            if (callName == "Access::.ctor"     || callName == "StaticAccess::.ctor" ||
+                callName == "Access`1::.ctor"   || callName == "StaticAccess`1::.ctor")
+                return ParseMMILAccessCtorCall(body, callOrig, ref instri);
 
             return true;
+        }
+
+        public virtual bool ParseMMILAccessCtorCall(MethodBody body, MethodReference call, ref int instri) {
+            bool staticAccess = call.DeclaringType.Name == "StaticAccess" || call.DeclaringType.Name == "StaticAccess`1";
+            TypeReference type = null;
+            IMetadataTokenProvider member = null;
+
+            if (call.DeclaringType.IsGenericInstance) {
+                type = Relink(((GenericInstanceType) call.DeclaringType).GenericArguments[0], body.Method);
+            }
+
+            if (staticAccess && call.Parameters.Count == 2 && call.Parameters[0].Name == "type") {
+                type = FindTypeDeep((string) body.Instructions[instri - 2].Operand);
+                body.Instructions.RemoveAt(instri - 2);
+                instri--;
+            }
+
+            TypeDefinition typeDef = type.Resolve();
+
+            string memberName = (string) body.Instructions[instri - 1].Operand;
+            body.Instructions.RemoveAt(instri - 1);
+            instri--;
+            if (memberName.StartsWith("field:"))
+                member = typeDef.FindField(memberName.Substring(6).Trim());
+            else if (memberName.StartsWith("method:"))
+                member = typeDef.FindMethod(memberName.Substring(7).Trim());
+            else
+                member = typeDef.FindField(memberName) ?? (IMetadataTokenProvider) typeDef.FindMethod(memberName);
+
+            return false; // Don't let the PatchRefs pass handle this!
+        }
+        public virtual void ParseMMILAccessCall(MethodBody body, MethodReference call, ref int instri, TypeDefinition type, IMetadataTokenProvider member) {
         }
 
 

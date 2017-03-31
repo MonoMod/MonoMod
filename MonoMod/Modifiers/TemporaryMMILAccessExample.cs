@@ -1,75 +1,57 @@
 ﻿using MMILExt;
+using MonoMod;
 
 internal sealed class Example {
-    private int Some;
+    private int SomeInt;
     private Example Thing { get; set; }
 
     public Example() { }
-    public Example(string foo, int bar) { Some = bar; }
+    public Example(string foo, int bar) { SomeInt = bar; }
 
-    private void Wow(string test) { }
+    private void DoSomething(string test) { }
+    public void Add(ref int a) { a += SomeInt; }
 
     public static string StaticA() { return "something"; }
     public static int StaticB(int a, int b) { return a + b; }
+    public static int StaticC(params string[] a) { return a.Length; }
 }
 
 internal static class ExampleTest {
 
     public static void TestA() {
-        Example e = (Example) MMIL.Access.Call<Example>(null, "System.Void .ctor()");
+        Example e = new StaticAccess<Example>("System.Void .ctor()").New();
 
-        int some = (int) e.MMILGet("Some");
+        // int someInt = e.SomeInt;
+        int someInt = new Access<Example>(e, "SomeInt").Get<int>();
 
-        e = (Example) MMIL.Access.Call<Example>(
-            null, "System.Void .ctor(System.String,System.Int32)",
-            Example.StaticA(), (int) MMIL.Access.Call<Example>(
-                null, "System.Void StaticB(System.Int32,System.Int32)",
-                Example.StaticB(2, 4), Example.StaticB(8, 16)
+        // e = new Example(Example.StaticA(), Example.StaticB(Example.StaticB(2, 4), Example.StaticB(8, Example.StaticC("a", "b")));
+        e = new StaticAccess<Example>("System.Void .ctor(System.String,System.Int32)")
+            .New(
+                Example.StaticA(),
+                new StaticAccess<Example>("System.Void StaticB(System.Int32,System.Int32)")
+                    .Call<int>(Example.StaticB(2, 4), Example.StaticB(8, Example.StaticC("a", "b"))
             )
         );
 
-        some = (int) e.MMILGet("Some");
+        // someInt = e.SomeInt;
+        someInt = new Access<Example>(e, "SomeInt").Get<int>();
 
-        // gets replaced with newobj
-        e = (Example) MMIL.Access.CallT(
-            null, "Example", "System.Void .ctor(System.String,System.Int32)",
-            "something!", 42
-        );
+        // e = new Example("something!", 42);
+        e = (Example) new StaticAccess("Example", "System.Void .ctor(System.String,System.Int32)").New("something!", 42);
 
-        e.MMILSet("Some", some);
+        // e.SomeInt = someInt;
+        new Access<Example>(e, "SomeInt").Set(someInt);
 
-        Example thing = (Example) e.MMILGet("Thing");
+        // Example thing = e.Thing;
+        Example thing = new Access(e, "Example", "Thing").Get<Example>();
 
-        e.MMILCall("Wow", "hooray!");
+        // e.DoSomething("hooray!");
+        new Access<Example>(e, "DoSomething").Call("hooray!");
 
-    }
-
-    public static void TestB() {
-        Example e = (Example) MMIL.Access.Call<Example>(null, "System.Void .ctor()");
-
-        int some = (int) e.MMILGet("Some");
-
-        e = (Example) MMIL.Access.Call<Example>(
-            null, "System.Void .ctor(System.String,System.Int32)",
-            Example.StaticA(), (int) MMIL.Access.Call<Example>(
-                null, "System.Void StaticB(System.Int32,System.Int32)",
-                Example.StaticB(2, 4), Example.StaticB(8, 16)
-            )
-        );
-
-        some = (int) e.MMILGet("Some");
-
-        // gets replaced with newobj
-        e = (Example) MMIL.Access.CallT(
-            null, "Example", "System.Void .ctor(System.String,System.Int32)",
-            "something!", 42
-        );
-
-        e.MMILSet("Some", some);
-
-        Example thing = (Example) e.MMILGet("Thing");
-
-        e.MMILCall("Wow", "hooray!");
+        // e.Add(ref someInt);
+        object[] args = new object[] { someInt };
+        new Access<Example>(e, "Add").Call("Add", args);
+        someInt = (int) args[0];
 
     }
 
