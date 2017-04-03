@@ -66,6 +66,7 @@ namespace MonoMod {
         public IDictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new FastDictionary<ModuleDefinition, List<ModuleDefinition>>();
         public IDictionary<string, ModuleDefinition> DependencyCache = new FastDictionary<string, ModuleDefinition>();
         public List<string> DependencyDirs = new List<string>();
+        public bool CleanupEnabled;
 
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
@@ -219,6 +220,8 @@ namespace MonoMod {
             if (Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "0") {
                 Relinker = DefaultUncachedRelinker;
             }
+
+            CleanupEnabled = Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0";
 
             MMILProxyManager.Register(this);
         }
@@ -1541,7 +1544,7 @@ namespace MonoMod {
             foreach (TypeDefinition type in Module.Types)
                 DefaultPostProcessType(type);
 
-            if (Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0") {
+            if (CleanupEnabled) {
                 Cleanup(all: Environment.GetEnvironmentVariable("MONOMOD_CLEANUP_ALL") == "1");
                 Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
                 for (int i = deps.Count - 1; i > -1; --i)
