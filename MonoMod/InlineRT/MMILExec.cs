@@ -28,6 +28,8 @@ namespace MonoMod.InlineRT {
 
                 Logger = msg => self.Log("[MonoModRule] " + msg),
 
+                CleanupEnabled = false,
+
                 DependencyDirs = self.DependencyDirs,
                 MissingDependencyResolver = self.MissingDependencyResolver
             };
