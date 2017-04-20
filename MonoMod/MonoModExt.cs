@@ -674,10 +674,10 @@ namespace MonoMod {
         public static string GetPatchFullName(this MemberReference mr) {
             ICustomAttributeProvider cap = mr as ICustomAttributeProvider;
             if (cap != null)
-                return cap.GetPatchFullName();
+                return cap.GetPatchFullName(mr);
             // TODO: This increases the PatchRefs pass time and could be optimized.
             try {
-                return (mr.Resolve() as ICustomAttributeProvider).GetPatchFullName();
+                return (mr.Resolve() as ICustomAttributeProvider).GetPatchFullName(mr);
             } catch {
                 // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
                 return mr.FullName;
@@ -693,24 +693,92 @@ namespace MonoMod {
             string name = ((MemberReference) cap).Name;
             return name.StartsWith("patch_") ? name.Substring(6) : name;
         }
-        private static string GetPatchFullName(this ICustomAttributeProvider cap) {
+        private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
             if (cap is TypeReference) {
                 TypeReference type = (TypeReference) cap;
-                string name = type.GetPatchName();
+                string name = cap.GetPatchName();
+
                 if (name.StartsWith("global::"))
-                    return name.Substring(8); // Patch name is refering to a global type.
-                if (name.Contains(".") || name.Contains("/"))
-                    return name; // Patch name is already a full name.
-                if (!string.IsNullOrEmpty(type.Namespace))
-                    return $"{type.Namespace}.{name}";
+                    name = name.Substring(8); // Patch name is refering to a global type.
+                else if (name.Contains(".") || name.Contains("/"))
+                    { } // Patch name is already a full name.
+                else if (!string.IsNullOrEmpty(type.Namespace))
+                    name = $"{type.Namespace}.{name}";
                 else if (type.IsNested)
-                    return $"{type.DeclaringType.GetPatchFullName()}/{name}";
+                    name = $"{type.DeclaringType.GetPatchFullName()}/{name}";
+
+                if (mr is TypeSpecification) {
+                    Stack<string> formats = new Stack<string>();
+                    TypeSpecification ts = (TypeSpecification) mr;
+                    do {
+                        if (ts.IsByReference)
+                            formats.Push("{0}&");
+                        else if (ts.IsPointer)
+                            formats.Push("{0}*");
+                        else if (ts.IsPinned) { } // FullName not overriden.
+                        else if (ts.IsArray) {
+                            ArrayType array = (ArrayType) ts;
+                            if (array.IsVector)
+                                formats.Push("{0}[]");
+                            else {
+                                StringBuilder format = new StringBuilder();
+                                format.Append("{0}[");
+                                for (int i = 0; i < array.Dimensions.Count; i++) {
+                                    if (i > 0)
+                                        format.Append(",");
+                                    format.Append(array.Dimensions[i].ToString());
+                                }
+                                format.Append("]");
+                                formats.Push(format.ToString());
+                            }
+                        } else if (ts.IsRequiredModifier)
+                            formats.Push($"{{0}} modreq({((RequiredModifierType) ts).ModifierType}");
+                        else if (ts.IsOptionalModifier)
+                            formats.Push($"{{0}} modopt({((OptionalModifierType) ts).ModifierType}");
+                        else if (ts.IsGenericInstance) {
+                            GenericInstanceType gen = (GenericInstanceType) ts;
+                            StringBuilder format = new StringBuilder();
+                            format.Append("{0}<");
+                            for (int i = 0; i < gen.GenericArguments.Count; i++) {
+                                if (i > 0)
+                                    format.Append(",");
+                                format.Append(gen.GenericArguments[i].GetPatchFullName());
+                            }
+                            format.Append(">");
+                            formats.Push(format.ToString());
+                        } else if (ts.IsFunctionPointer) {
+                            FunctionPointerType fpt = (FunctionPointerType) ts;
+                            StringBuilder format = new StringBuilder();
+                            format.Append("{0} ");
+                            format.Append(fpt.ReturnType.GetPatchFullName());
+                            format.Append(" *(");
+                            if (fpt.HasParameters)
+                                for (int i = 0; i < fpt.Parameters.Count; i++) {
+                                    var parameter = fpt.Parameters[i];
+                                    if (i > 0)
+                                        format.Append(",");
+
+                                    if (parameter.ParameterType.IsSentinel)
+                                        format.Append("...,");
+
+                                    format.Append(parameter.ParameterType.FullName);
+                                }
+                            format.Append(")");
+                            formats.Push(format.ToString());
+                        } else
+                            throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
+                    } while ((ts = (ts.ElementType as TypeSpecification)) != null);
+
+                    foreach (string format in formats)
+                        name = string.Format(format, name);
+                }
+
                 return name;
             }
 
             if (cap is FieldReference) {
                 FieldReference field = (FieldReference) cap;
-                return $"{field.FieldType.GetPatchFullName()} {field.DeclaringType.GetPatchFullName()}::{field.GetPatchName()}";
+                return $"{field.FieldType.GetPatchFullName()} {field.DeclaringType.GetPatchFullName()}::{cap.GetPatchName()}";
             }
 
             if (cap is MethodReference)
