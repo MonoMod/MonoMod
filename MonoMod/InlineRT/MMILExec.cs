@@ -28,6 +28,8 @@ namespace MonoMod.InlineRT {
 
                 Logger = msg => self.Log("[MonoModRule] " + msg),
 
+                CleanupEnabled = false,
+
                 DependencyDirs = self.DependencyDirs,
                 MissingDependencyResolver = self.MissingDependencyResolver
             };
@@ -44,7 +46,7 @@ namespace MonoMod.InlineRT {
             wrapperMod.Mods.Add(self.Module);
 
             wrapperMod.Relinker = (mtp, context) =>
-                mtp is TypeReference && ((TypeReference) mtp).Name == "MMIL" ?
+                mtp is TypeReference && ((TypeReference) mtp).IsMMILType() ?
                     MMILProxyManager.RelinkToProxy(wrapperMod, (TypeReference) mtp) :
                 mtp is TypeReference && ((TypeReference) mtp).FullName == orig.FullName ?
                     wrapper.GetType(orig.FullName) :
