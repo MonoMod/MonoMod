@@ -79,5 +79,11 @@ namespace MonoMod.InlineRT {
                     .Replace('/', '+')
             ));
 
+        public static bool IsMMILType(this TypeReference type) {
+            while (type.DeclaringType != null)
+                type = type.DeclaringType;
+            return type.FullName == "MMIL";
+        }
+
     }
 }

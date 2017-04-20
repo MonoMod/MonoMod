@@ -44,7 +44,7 @@ namespace MonoMod.InlineRT {
             wrapperMod.Mods.Add(self.Module);
 
             wrapperMod.Relinker = (mtp, context) =>
-                mtp is TypeReference && ((TypeReference) mtp).FullName.Contains("MMIL") ?
+                mtp is TypeReference && ((TypeReference) mtp).IsMMILType() ?
                     MMILProxyManager.RelinkToProxy(wrapperMod, (TypeReference) mtp) :
                 mtp is TypeReference && ((TypeReference) mtp).FullName == orig.FullName ?
                     wrapper.GetType(orig.FullName) :
