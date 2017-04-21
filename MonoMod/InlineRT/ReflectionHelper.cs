@@ -39,7 +39,7 @@ namespace MonoMod.InlineRT {
             if (!method.IsStatic && !method.IsConstructor) {
                 il.Emit(OpCodes.Ldarg_0);
                 if (method.DeclaringType.IsValueType) {
-                    il.Emit(OpCodes.Unbox, method.DeclaringType);
+                    il.Emit(OpCodes.Unbox_Any, method.DeclaringType);
                 }
             }
 
@@ -151,11 +151,10 @@ namespace MonoMod.InlineRT {
                 case 8:
                     il.Emit(OpCodes.Ldc_I4_8); return;
             }
-            if (value > -129 && value < 128) {
+            if (value > -129 && value < 128)
                 il.Emit(OpCodes.Ldc_I4_S, (byte) value);
-                return;
-            }
-            il.Emit(OpCodes.Ldc_I4, value);
+            else
+                il.Emit(OpCodes.Ldc_I4, value);
         }
 
     }
