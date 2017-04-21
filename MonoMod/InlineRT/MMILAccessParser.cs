@@ -76,6 +76,10 @@ namespace MonoMod.InlineRT {
             else
                 member = typeDef.FindField(memberName) ?? (IMetadataTokenProvider) typeDef.FindMethod(memberName);
 
+            // Remove the newobj constructor call
+            body.Instructions.RemoveAt(instri);
+            instri--;
+
             // Currently in front of us:
             /*
             ld arrsize
@@ -89,22 +93,23 @@ namespace MonoMod.InlineRT {
             instri++;
             int count = body.Instructions[instri].GetInt();
             body.Instructions.RemoveAt(instri);
+            instri--;
 
             // Remove the newarr
             instri++;
             body.Instructions.RemoveAt(instri);
             instri--;
 
-            // Parse from now on if it's something parseable
+            // Parse array content
             instri++;
-            self.DefaultParser(body, body.Instructions[instri], ref instri);
-            
             int depth = 0;
             Instruction instr = null;
             // Skip anything including nested arrays
             for (int i = 0; i < count; i++) {
-                // At Stelem_Ref right now
-                instri++;
+                body.Instructions.RemoveAt(instri); // arr
+                body.Instructions.RemoveAt(instri); // index
+                // Nested parsing
+                self.DefaultParser(body, body.Instructions[instri], ref instri);
                 while (depth > 0 || (instr = body.Instructions[instri]).OpCode != OpCodes.Stelem_Ref) {
                     if (instr.OpCode == OpCodes.Newarr)
                         depth++;
@@ -112,10 +117,15 @@ namespace MonoMod.InlineRT {
                         depth--;
                     instri++;
                 }
+                // At Stelem_Ref right now
+                if (body.Instructions[instri - 1].OpCode == OpCodes.Box) {
+                    body.Instructions.RemoveAt(instri - 1);
+                    instri--;
+                }
+                body.Instructions.RemoveAt(instri); // stelem.ref
             }
 
             // FINALLY replace the call as required
-            instri++;
             Instruction callInstr = body.Instructions[instri];
             MethodReference call = (MethodReference) callInstr.Operand;
 
