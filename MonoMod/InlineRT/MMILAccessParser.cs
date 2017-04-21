@@ -108,13 +108,15 @@ namespace MonoMod.InlineRT {
             for (int i = 0; i < count; i++) {
                 body.Instructions.RemoveAt(instri); // arr
                 body.Instructions.RemoveAt(instri); // index
-                // Nested parsing
-                self.DefaultParser(body, body.Instructions[instri], ref instri);
-                while (depth > 0 || (instr = body.Instructions[instri]).OpCode != OpCodes.Stelem_Ref) {
+                while ((instr = body.Instructions[instri]).OpCode != OpCodes.Stelem_Ref || depth > 0) {
+                    // Nested parsing
+                    self.DefaultParser(body, body.Instructions[instri], ref instri);
+
                     if (instr.OpCode == OpCodes.Newarr)
                         depth++;
                     else if (depth > 0 && instr.OpCode == OpCodes.Stelem_Ref)
                         depth--;
+
                     instri++;
                 }
                 // At Stelem_Ref right now
@@ -175,9 +177,10 @@ namespace MonoMod.InlineRT {
                         break;
                 }
 
+            // Remove the MMILAccess call (which got pushed one forward)
             body.Instructions.RemoveAt(instri + 1);
 
-            return false; // Don't let the PatchRefs pass handle this!
+            return false; // Don't let the PatchRefs pass handle the newly emitted call!
         }
 
     }
