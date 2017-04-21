@@ -130,6 +130,8 @@ namespace MonoMod.InlineRT {
 
         public static void EmitFast_Ldc_I4(this ILGenerator il, int value) {
             switch (value) {
+                case -1:
+                    il.Emit(OpCodes.Ldc_I4_M1); return;
                 case 0:
                     il.Emit(OpCodes.Ldc_I4_0); return;
                 case 1:
