@@ -263,7 +263,7 @@ namespace MonoMod.InlineRT {
                     instrs.RemoveAt(instri); // index
 
                     // ldstr
-                    current.Add((string) instrs[i].Operand);
+                    current.Add((string) instrs[instri].Operand);
                     instrs.RemoveAt(instri);
                     
                     instrs.RemoveAt(instri); // stelem.ref
