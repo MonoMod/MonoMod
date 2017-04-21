@@ -809,6 +809,10 @@ namespace MonoMod {
             call = call.Resolve();
             call = (MethodReference) GetLinkToRef((MethodDefinition) call, body.Method) ?? call;
 
+            if (call.DeclaringType.Namespace == "MMILAccess" &&
+                !this.ParseMMILAccessCall(body, call, callOrig, ref instri))
+                return false;
+
             string callName;
             callName = call.DeclaringType.FullName.Substring(4);
             if (callName.StartsWith("Ext."))
@@ -829,51 +833,6 @@ namespace MonoMod {
                 Log("[Inline] [WARNING] MMIL.OnPlatform is obsolete and not implemented anymore. Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.");
                 return true;
             }
-
-            // Format of an array:
-            /*
-            newarr [mscorlib]System.Object
-
-            // start
-		    dup // arr
-		    ldc.i4.0 // index
-            // value
-		    call string Example::StaticA()
-            // store
-		    stelem.ref
-
-		    // start
-		    dup // arr
-		    ldc.i4.1 // index
-            // value
-		    ldc.i4.2
-		    ldc.i4.4
-		    call int32 Example::StaticB(int32, int32)
-            // optional: box
-		    box [mscorlib]System.Int32
-            // store
-		    stelem.ref
-
-            // that's it
-            */
-
-            // Format of an Access call:
-            /*
-            ld self (if any)
-            ld type name (if any)
-            ld member name
-            newobj Access <!!!!
-            ld arrsize
-            newarr
-            arr element #0
-            arr element #1
-            arr element #n
-            call New / Call / Get / Set
-            */
-
-            if (callName == "Access::.ctor"     || callName == "StaticAccess::.ctor" ||
-                callName == "Access`1::.ctor"   || callName == "StaticAccess`1::.ctor")
-                return this.ParseMMILAccessCtorCall(body, callOrig, ref instri);
 
             return true;
         }

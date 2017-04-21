@@ -152,7 +152,7 @@ namespace MonoMod.InlineRT {
                     il.Emit(OpCodes.Ldc_I4_8); return;
             }
             if (value > -129 && value < 128)
-                il.Emit(OpCodes.Ldc_I4_S, (byte) value);
+                il.Emit(OpCodes.Ldc_I4_S, (sbyte) value);
             else
                 il.Emit(OpCodes.Ldc_I4, value);
         }

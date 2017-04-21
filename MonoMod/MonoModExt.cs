@@ -293,6 +293,22 @@ namespace MonoMod {
             if (op == OpCodes.Ldc_I4_S) return (sbyte) instr.Operand;
             return (int) instr.Operand;
         }
+        public static int? GetIntOrNull(this Instruction instr) {
+            OpCode op = instr.OpCode;
+            if (op == OpCodes.Ldc_I4_M1) return -1;
+            if (op == OpCodes.Ldc_I4_0) return 0;
+            if (op == OpCodes.Ldc_I4_1) return 1;
+            if (op == OpCodes.Ldc_I4_2) return 2;
+            if (op == OpCodes.Ldc_I4_3) return 3;
+            if (op == OpCodes.Ldc_I4_4) return 4;
+            if (op == OpCodes.Ldc_I4_5) return 5;
+            if (op == OpCodes.Ldc_I4_6) return 6;
+            if (op == OpCodes.Ldc_I4_7) return 7;
+            if (op == OpCodes.Ldc_I4_8) return 8;
+            if (op == OpCodes.Ldc_I4_S) return (sbyte) instr.Operand;
+            if (op == OpCodes.Ldc_I4) return (int) instr.Operand;
+            return null;
+        }
 
         [Obsolete("Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.")]
         public static bool ParseOnPlatform(this MethodDefinition method, ref int instri) {
