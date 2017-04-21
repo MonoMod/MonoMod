@@ -76,6 +76,8 @@ namespace MonoMod.InlineRT {
             else
                 member = typeDef.FindField(memberName) ?? (IMetadataTokenProvider) typeDef.FindMethod(memberName);
 
+            member.SetPublic(true);
+
             // Remove the newobj constructor call
             body.Instructions.RemoveAt(instri);
             instri--;
