@@ -56,7 +56,7 @@ namespace MMILAccess {
 
         public T With(params string[] list) { return null; }
         public T Without(params string[] list) { return null; }
-        public void CopyTo(object source, object target) { }
+        public void CopyTo(object target) { }
     }
 
     public sealed class BatchAccess : BatchAccessBase<BatchAccess> {
@@ -64,6 +64,7 @@ namespace MMILAccess {
             throw new InvalidOperationException("One shouldn't access MMILBatchAccess at runtime!");
         }
         public BatchAccess(string type) { }
+        public BatchAccess(object self, string type) { }
     }
     public sealed class BatchAccess<TSelf> : BatchAccessBase<BatchAccess<TSelf>> {
         static BatchAccess() {
@@ -71,6 +72,8 @@ namespace MMILAccess {
         }
         public BatchAccess() { }
         public BatchAccess(string type) { }
+        public BatchAccess(object self) { }
+        public BatchAccess(object self, string type) { }
     }
 
 }

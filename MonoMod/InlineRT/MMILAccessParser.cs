@@ -160,7 +160,7 @@ namespace MonoMod.InlineRT {
 
             // FINALLY replace the call as required
             Instruction callInstr = instrs[instri];
-            MethodReference call = (MethodReference) callInstr.Operand;
+            MethodDefinition call = ((MethodReference) callInstr.Operand).Resolve();
 
             // Remove the MMILAccess call
             instrs.RemoveAt(instri);
@@ -292,13 +292,14 @@ namespace MonoMod.InlineRT {
 
             // FINALLY replace the call as required
             Instruction callInstr = instrs[instri];
-            MethodReference call = (MethodReference) callInstr.Operand;
+            MethodDefinition call = ((MethodReference) callInstr.Operand).Resolve();
 
-            if (call.Parameters.Count != 0 && call.Parameters[0].Name == "target") {
+            VariableDefinition varTarget = null;
+            if (call.Parameters.Count != 0 && call.Parameters[call.Parameters.Count - 1].Name == "target") {
                 // Replace MMILBatchAccess call with local store for the target
-                VariableDefinition var = new VariableDefinition(type);
-                body.Variables.Add(var);
-                instrs[instri] = il.Create(OpCodes.Ldloc, var.Index);
+                varTarget = new VariableDefinition(type);
+                body.Variables.Add(varTarget);
+                instrs[instri] = il.Create(OpCodes.Stloc, varTarget.Index);
                 instri++;
 
             } else {
@@ -309,19 +310,55 @@ namespace MonoMod.InlineRT {
 
             switch (call.Name) {
                 case "get_AllMethods":
-                    il.InsertMetadataTokenArray(ref instri, typeDef.Methods);
+                    il.InsertMetadataTokenArray(ref instri, typeDef.Methods.Filtered(with, without));
                     break;
 
                 case "get_AllFields":
-                    il.InsertMetadataTokenArray(ref instri, typeDef.Fields);
+                    il.InsertMetadataTokenArray(ref instri, typeDef.Fields.Filtered(with, without));
                     break;
 
                 case "get_AllProperties":
-                    il.InsertMetadataTokenArray(ref instri, typeDef.Properties);
+                    il.InsertMetadataTokenArray(ref instri, typeDef.Properties.Filtered(with, without));
                     break;
 
                 case "CopyTo":
-
+                    Collection<IMetadataTokenProvider> tokens = new Collection<IMetadataTokenProvider>();
+                    for (int i = 0; i < typeDef.Fields.Count; i++) {
+                        FieldDefinition mtp = typeDef.Fields[i];
+                        if (mtp.IsStatic)
+                            continue;
+                        string name = mtp.Name;
+                        string nameExplicit = "field:" + name;
+                        if (without.Count != 0 && (without.Contains(name) || without.Contains(nameExplicit)))
+                            continue;
+                        if (with.Count == 0 && !mtp.IsPublic)
+                            continue;
+                        if (with.Count == 0 || with.Contains(name) || with.Contains(nameExplicit)) {
+                            tokens.Add(mtp);
+                        }
+                    }
+                    for (int i = 0; i < typeDef.Properties.Count; i++) {
+                        PropertyDefinition mtp = typeDef.Properties[i];
+                        if (!mtp.HasThis)
+                            continue;
+                        if (mtp.GetMethod == null || mtp.SetMethod == null)
+                            continue;
+                        string name = mtp.Name;
+                        string nameExplicit = "property:" + name;
+                        if (without.Count != 0 && (without.Contains(name) || without.Contains(nameExplicit)))
+                            continue;
+                        if (with.Count == 0 && (!mtp.GetMethod.IsPublic || !mtp.SetMethod.IsPublic))
+                            continue;
+                        if (with.Count == 0 || with.Contains(name) || with.Contains(nameExplicit)) {
+                            tokens.Add(mtp);
+                        }
+                    }
+                    // Store source in local
+                    VariableDefinition varSource = new VariableDefinition(type);
+                    body.Variables.Add(varSource);
+                    instrs[instri] = il.Create(OpCodes.Stloc, varSource.Index);
+                    instri++;
+                    il.InsertCopyTo(ref instri, tokens, varSource, varTarget);
                     break;
             }
 
@@ -340,6 +377,7 @@ namespace MonoMod.InlineRT {
             il.Body.Instructions.Insert(instri, il.Create(OpCodes.Ldnull));
             instri++;
         }
+
 
         private readonly static System.Reflection.MethodInfo _TypeHandleConverter = typeof(Type).GetMethod("GetTypeFromHandle", new Type[] { typeof(RuntimeTypeHandle) });
         private readonly static System.Reflection.MethodInfo _MethodHandleConverter = typeof(System.Reflection.MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
@@ -367,25 +405,54 @@ namespace MonoMod.InlineRT {
             instri++;
 
             for (int i = 0; i < tokens.Count; i++) {
-                IMetadataTokenProvider token = tokens[i];
+                IMetadataTokenProvider mtp = tokens[i];
 
                 instrs.Insert(instri, il.Create(OpCodes.Dup));
                 instri++;
                 instrs.Insert(instri, il.Create(OpCodes.Ldc_I4, i));
                 instri++;
 
-                if (token is TypeReference)
-                    instrs.Insert(instri, il.Create(OpCodes.Ldtoken, (TypeReference) token));
-                else if (token is MethodReference)
-                    instrs.Insert(instri, il.Create(OpCodes.Ldtoken, (MethodReference) token));
-                else if (token is FieldReference)
-                    instrs.Insert(instri, il.Create(OpCodes.Ldtoken, (FieldReference) token));
+                if (mtp is TypeReference)
+                    instrs.Insert(instri, il.Create(OpCodes.Ldtoken, (TypeReference) mtp));
+                else if (mtp is MethodReference)
+                    instrs.Insert(instri, il.Create(OpCodes.Ldtoken, (MethodReference) mtp));
+                else if (mtp is FieldReference)
+                    instrs.Insert(instri, il.Create(OpCodes.Ldtoken, (FieldReference) mtp));
                 instri++;
                 instrs.Insert(instri, il.Create(OpCodes.Call, converterRef));
                 instri++;
 
                 instrs.Insert(instri, il.Create(OpCodes.Stelem_Ref));
                 instri++;
+            }
+        }
+
+
+        public static void InsertCopyTo(this ILProcessor il, ref int instri, Collection<IMetadataTokenProvider> tokens, VariableReference from, VariableReference to) {
+            MethodBody body = il.Body;
+            Collection<Instruction> instrs = body.Instructions;
+            MethodDefinition method = body.Method;
+
+            for (int i = 0; i < tokens.Count; i++) {
+                IMetadataTokenProvider mtp = tokens[i];
+
+                instrs.Insert(instri, il.Create(OpCodes.Ldloc, to.Index));
+                instri++;
+
+                instrs.Insert(instri, il.Create(OpCodes.Ldloc, from.Index));
+                instri++;
+
+                if (mtp is PropertyDefinition) {
+                    instrs.Insert(instri, il.Create(OpCodes.Call, ((PropertyDefinition) mtp).GetMethod));
+                    instri++;
+                    instrs.Insert(instri, il.Create(OpCodes.Call, ((PropertyDefinition) mtp).SetMethod));
+                    instri++;
+                } else if (mtp is FieldDefinition) {
+                    instrs.Insert(instri, il.Create(OpCodes.Ldfld, (FieldDefinition) mtp));
+                    instri++;
+                    instrs.Insert(instri, il.Create(OpCodes.Stfld, (FieldDefinition) mtp));
+                    instri++;
+                }
             }
         }
 

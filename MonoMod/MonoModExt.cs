@@ -669,6 +669,35 @@ namespace MonoMod {
             }
         }
 
+        public static Collection<T> Filtered<T>(this Collection<T> mtps, List<string> with, List<string> without) where T : IMetadataTokenProvider {
+            if (with.Count == 0 && without.Count == 0)
+                return mtps;
+            Collection<T> mtpsFiltered = new Collection<T>();
+
+            for (int i = 0; i < mtps.Count; i++) {
+                IMetadataTokenProvider mtp = mtps[i];
+
+                string name = null;
+                string nameAlt = null;
+                if (mtp is TypeReference) {
+                    name = ((TypeReference) mtp).FullName;
+                } else if (mtp is MethodReference) {
+                    name = ((MethodReference) mtp).GetFindableID(withType: true);
+                    nameAlt = ((MethodReference) mtp).GetFindableID(simple: true);
+                } else if (mtp is FieldReference) {
+                    name = ((FieldReference) mtp).Name;
+                }
+
+                if (without.Count != 0 && (without.Contains(name) || without.Contains(nameAlt)))
+                    continue;
+                if (with.Count == 0 || with.Contains(name) || with.Contains(nameAlt)) {
+                    mtpsFiltered.Add((T) mtp);
+                }
+            }
+
+            return mtpsFiltered;
+        }
+
         public static IMetadataTokenProvider ImportReference(this ModuleDefinition mod, IMetadataTokenProvider mtp) {
             if (mtp is TypeReference) return mod.ImportReference((TypeReference) mtp);
             if (mtp is FieldReference) return mod.ImportReference((FieldReference) mtp);
