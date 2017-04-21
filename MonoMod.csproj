@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\InlineRT\MMILAccessParser.cs" />
     <Compile Include="MonoMod\QuickDebugTest.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
     <Compile Include="MonoMod\Helpers\IntDictionary.cs" />

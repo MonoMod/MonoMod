@@ -873,43 +873,9 @@ namespace MonoMod {
 
             if (callName == "Access::.ctor"     || callName == "StaticAccess::.ctor" ||
                 callName == "Access`1::.ctor"   || callName == "StaticAccess`1::.ctor")
-                return ParseMMILAccessCtorCall(body, callOrig, ref instri);
+                return this.ParseMMILAccessCtorCall(body, callOrig, ref instri);
 
             return true;
-        }
-
-        public virtual bool ParseMMILAccessCtorCall(MethodBody body, MethodReference call, ref int instri) {
-            bool staticAccess = call.DeclaringType.Name == "StaticAccess" || call.DeclaringType.Name == "StaticAccess`1";
-            TypeReference type = null;
-            IMetadataTokenProvider member = null;
-
-            if (call.DeclaringType.IsGenericInstance) {
-                type = Relink(((GenericInstanceType) call.DeclaringType).GenericArguments[0], body.Method);
-            }
-
-            if (staticAccess && call.Parameters.Count == 2 && call.Parameters[0].Name == "type") {
-                type = FindTypeDeep((string) body.Instructions[instri - 2].Operand);
-                body.Instructions.RemoveAt(instri - 2);
-                instri--;
-            }
-
-            TypeDefinition typeDef = type.Resolve();
-
-            string memberName = (string) body.Instructions[instri - 1].Operand;
-            body.Instructions.RemoveAt(instri - 1);
-            instri--;
-            if (memberName.StartsWith("field:"))
-                member = typeDef.FindField(memberName.Substring(6).Trim());
-            else if (memberName.StartsWith("method:"))
-                member = typeDef.FindMethod(memberName.Substring(7).Trim());
-            else
-                member = typeDef.FindField(memberName) ?? (IMetadataTokenProvider) typeDef.FindMethod(memberName);
-
-
-
-            return false; // Don't let the PatchRefs pass handle this!
-        }
-        public virtual void ParseMMILAccessCall(MethodBody body, MethodReference call, ref int instri, TypeDefinition type, IMetadataTokenProvider member) {
         }
 
 
