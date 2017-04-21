@@ -45,26 +45,25 @@
       <HintPath>packages\Mono.Cecil.0.10.0-beta5\lib\net35\Mono.Cecil.Pdb.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Mono.Cecil.Rocks, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
-      <HintPath>packages\Mono.Cecil.0.10.0-beta5\lib\net35\Mono.Cecil.Rocks.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\InlineRT\MMILAccessParser.cs" />
+    <Compile Include="MonoMod\QuickDebugTest.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
     <Compile Include="MonoMod\Helpers\IntDictionary.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary.cs" />
     <Compile Include="MonoMod\InlineRT\MMILExec.cs" />
-    <Compile Include="MonoMod\InlineRT\MMILProxy.cs" />
     <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
     <Compile Include="MonoMod\InlineRT\MMILProxyManager.cs" />
     <Compile Include="MonoMod\InlineRT\ReflectionHelper.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModCustomAttribute.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModHook.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModIfFlag.cs" />
+    <Compile Include="MonoMod\Modifiers\TemporaryMMILAccessExample.cs" />
+    <Compile Include="MonoMod\Modifiers\MonoModInline.Access.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModNoNew.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModOnPlatform.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModAdded.cs" />
@@ -75,8 +74,8 @@
     <Compile Include="MonoMod\Modifiers\MonoModPatch.cs" />
     <Compile Include="MonoMod\MonoModder.cs" />
     <Compile Include="MonoMod\MonoModExt.cs" />
-    <Compile Include="MonoMod\Platform.cs" />
-    <Compile Include="MonoMod\PlatformHelper.cs" />
+    <Compile Include="MonoMod\Modifiers\Platform.cs" />
+    <Compile Include="MonoMod\Modifiers\PlatformHelper.cs" />
     <Compile Include="MonoMod\DebugSymbolFormat.cs" />
     <Compile Include="MonoMod\Program.cs" />
     <Compile Include="MonoMod\Helpers\StringInjectExtension.cs" />

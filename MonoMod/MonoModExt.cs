@@ -14,6 +14,7 @@ using StringInject;
 namespace MonoMod {
 
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
+    public delegate bool MethodParser(MethodBody body, Instruction instr, ref int instri);
     public delegate void MethodRewriter(MethodDefinition method);
     public delegate void MethodBodyRewriter(MethodBody body, Instruction instr, int instri);
     public delegate ModuleDefinition MissingDependencyResolver(ModuleDefinition main, string name, string fullName);
@@ -69,12 +70,6 @@ namespace MonoMod {
 
             return c;
         }
-
-        public static bool IsHidden(this SequencePoint sp)
-            =>  sp.StartLine == 0xFEEFEE &&
-                sp.EndLine == 0xFEEFEE &&
-                sp.StartColumn == 0 &&
-                sp.EndColumn == 0;
 
         public readonly static System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         public readonly static System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -298,7 +293,24 @@ namespace MonoMod {
             if (op == OpCodes.Ldc_I4_S) return (sbyte) instr.Operand;
             return (int) instr.Operand;
         }
+        public static int? GetIntOrNull(this Instruction instr) {
+            OpCode op = instr.OpCode;
+            if (op == OpCodes.Ldc_I4_M1) return -1;
+            if (op == OpCodes.Ldc_I4_0) return 0;
+            if (op == OpCodes.Ldc_I4_1) return 1;
+            if (op == OpCodes.Ldc_I4_2) return 2;
+            if (op == OpCodes.Ldc_I4_3) return 3;
+            if (op == OpCodes.Ldc_I4_4) return 4;
+            if (op == OpCodes.Ldc_I4_5) return 5;
+            if (op == OpCodes.Ldc_I4_6) return 6;
+            if (op == OpCodes.Ldc_I4_7) return 7;
+            if (op == OpCodes.Ldc_I4_8) return 8;
+            if (op == OpCodes.Ldc_I4_S) return (sbyte) instr.Operand;
+            if (op == OpCodes.Ldc_I4) return (int) instr.Operand;
+            return null;
+        }
 
+        [Obsolete("Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.")]
         public static bool ParseOnPlatform(this MethodDefinition method, ref int instri) {
             // Crawl back until we hit "newarr Platform" or "newarr int"
             int posNewarr = instri;
@@ -416,9 +428,9 @@ namespace MonoMod {
                     return new PointerType(relinkedElem);
 
                 if (type.IsPinned)
-					return new PinnedType(relinkedElem);
+                    return new PinnedType(relinkedElem);
 
-				if (type.IsArray)
+                if (type.IsArray)
                     return new ArrayType(relinkedElem, ((ArrayType) type).Dimensions.Count);
 
                 if (type.IsRequiredModifier)
@@ -579,13 +591,17 @@ namespace MonoMod {
             return newParam;
         }
 
-        public static MethodDefinition FindMethod(this TypeDefinition type, string findableID) {
+        public static MethodDefinition FindMethod(this TypeDefinition type, string findableID, bool simple = true) {
             // First pass: With type name (f.e. global searches)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID() == findableID) return method;
             // Second pass: Without type name (f.e. LinkTo)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID(withType: false) == findableID) return method;
+
+            if (!simple)
+                return null;
+
             // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
             // First simple pass: With type name (just "Namespace.Type::MethodName")
             foreach (MethodDefinition method in type.Methods)
@@ -593,6 +609,7 @@ namespace MonoMod {
             // Second simple pass: Without type name (basically name only)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
+
             return null;
         }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
@@ -650,6 +667,35 @@ namespace MonoMod {
                 o.IsNestedPublic = p;
                 if (p) SetPublic(o.DeclaringType, true);
             }
+        }
+
+        public static Collection<T> Filtered<T>(this Collection<T> mtps, List<string> with, List<string> without) where T : IMetadataTokenProvider {
+            if (with.Count == 0 && without.Count == 0)
+                return mtps;
+            Collection<T> mtpsFiltered = new Collection<T>();
+
+            for (int i = 0; i < mtps.Count; i++) {
+                IMetadataTokenProvider mtp = mtps[i];
+
+                string name = null;
+                string nameAlt = null;
+                if (mtp is TypeReference) {
+                    name = ((TypeReference) mtp).FullName;
+                } else if (mtp is MethodReference) {
+                    name = ((MethodReference) mtp).GetFindableID(withType: true);
+                    nameAlt = ((MethodReference) mtp).GetFindableID(simple: true);
+                } else if (mtp is FieldReference) {
+                    name = ((FieldReference) mtp).Name;
+                }
+
+                if (without.Count != 0 && (without.Contains(name) || without.Contains(nameAlt)))
+                    continue;
+                if (with.Count == 0 || with.Contains(name) || with.Contains(nameAlt)) {
+                    mtpsFiltered.Add((T) mtp);
+                }
+            }
+
+            return mtpsFiltered;
         }
 
         public static IMetadataTokenProvider ImportReference(this ModuleDefinition mod, IMetadataTokenProvider mtp) {

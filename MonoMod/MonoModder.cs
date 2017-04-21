@@ -47,6 +47,8 @@ namespace MonoMod {
         public Relinker MainRelinker;
         public Relinker PostRelinker;
 
+        public MethodParser MethodParser;
+
         public MethodRewriter MethodRewriter;
         public MethodBodyRewriter MethodBodyRewriter;
 
@@ -205,6 +207,8 @@ namespace MonoMod {
             Relinker = DefaultRelinker;
             MainRelinker = DefaultMainRelinker;
             PostRelinker = DefaultPostRelinker;
+
+            MethodParser = DefaultParser;
 
             MissingDependencyResolver = DefaultMissingDependencyResolver;
 
@@ -628,7 +632,7 @@ namespace MonoMod {
                 } else if (i == 1) { // Member
                     if (orig is MethodReference)
                         member =
-                            type.FindMethod((string) value) ??
+                            type.FindMethod((string) value, simple: false) ??
                             type.FindMethod(((MethodReference) orig).GetFindableID(name: (string) value, type: type.FullName));
                     // Microoptimization with the type: type.FullName above:
                     // Instead of waiting until the 4th pass, just use the type name once and return in the 3rd pass.
@@ -789,6 +793,50 @@ namespace MonoMod {
 
             return null;
         }
+
+
+        public virtual bool DefaultParser(MethodBody body, Instruction instr, ref int instri) {
+            if (instr.Operand is MethodReference && (
+                ((MethodReference) instr.Operand).DeclaringType.FullName.StartsWith("MMIL")
+            ))
+                return ParseMMILCall(body, (MethodReference) instr.Operand, ref instri);
+
+            return true;
+        }
+
+        public virtual bool ParseMMILCall(MethodBody body, MethodReference call, ref int instri) {
+            MethodReference callOrig = call;
+            call = call.Resolve();
+            call = (MethodReference) GetLinkToRef((MethodDefinition) call, body.Method) ?? call;
+
+            if (call.DeclaringType.Namespace == "MMILAccess" &&
+                !this.ParseMMILAccessCall(body, call, callOrig, ref instri))
+                return false;
+
+            string callName;
+            callName = call.DeclaringType.FullName.Substring(4);
+            if (callName.StartsWith("Ext."))
+                callName = $"{callName.Substring(4)}::{call.Name}";
+            else if (callName.Length != 0 && callName[0] == '/')
+                callName = $"{callName.Substring(1)}::{call.Name}";
+            else if (callName.Length == 0)
+                callName = call.Name;
+            else
+                callName = $"{call.DeclaringType.FullName}::{call.Name}";
+
+            // Obsoleted methods - keep them "alive" for some time.
+            if (callName == "DisablePublicAccess" || callName == "EnablePublicAccess") {
+                Log($"[Inline] [WARNING] MMIL.{callName} is obsolete and not implemented anymore. Use MMIL.Access instead.");
+                return true;
+            }
+            if (callName == "OnPlatform") {
+                Log("[Inline] [WARNING] MMIL.OnPlatform is obsolete and not implemented anymore. Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.");
+                return true;
+            }
+
+            return true;
+        }
+
 
         public virtual TypeReference FindType(string name)
             => FindType(Module, name, new Stack<ModuleDefinition>()) ?? Module.GetType(name, true);
@@ -1378,9 +1426,6 @@ namespace MonoMod {
                 if (handler.CatchType != null)
                     handler.CatchType = Relink(handler.CatchType, method);
 
-            bool publicAccess = false;
-            bool matchingPlatformIL = true;
-
             MethodRewriter?.Invoke(method);
 
             IDictionary<Instruction, SequencePoint> symbols;
@@ -1398,48 +1443,17 @@ namespace MonoMod {
                 Type = DocumentType.Text
             };
 
-            for (int instri = 0; method.HasBody && instri < method.Body.Instructions.Count; instri++) {
-                Instruction instr = method.Body.Instructions[instri];
+            MethodBody body = method.Body;
+            for (int instri = 0; method.HasBody && instri < body.Instructions.Count; instri++) {
+                Instruction instr = body.Instructions[instri];
                 object operand = instr.Operand;
 
                 // MonoMod-specific in-code flag setting / ...
 
                 // TODO: Split out the MonoMod inline parsing.
 
-                // Temporarily enable matching platform, otherwise the platform data gets lost.
-                // Check the next one as the array size is before the newarr.
-                if (instr.Next?.OpCode == OpCodes.Newarr && (
-                    (instr.Next?.Operand as TypeReference)?.FullName == "Platform" ||
-                    (instr.Next?.Operand as TypeReference)?.FullName == "int"
-                )) {
-                    matchingPlatformIL = true;
-                }
-
-                if (operand is MethodReference && (
-                    ((MethodReference) operand).DeclaringType.FullName == "MonoMod.MonoModInline" ||
-                    ((MethodReference) operand).DeclaringType.FullName == "MMIL"
-                )) {
-                    MethodReference mr = ((MethodReference) operand);
-
-                    // General MMIL
-                    if (mr.Name == "DisablePublicAccess") {
-                        publicAccess = false;
-                    } else if (mr.Name == "EnablePublicAccess") {
-                        publicAccess = true;
-                    }
-
-                    if (mr.Name == "OnPlatform")
-                        method.ParseOnPlatform(ref instri);
-
-                    // Keep the method reference as modded mods may still require these.
-                }
-
-                if (!matchingPlatformIL) {
-                    method.Body.Instructions.RemoveAt(instri);
-                    instri = Math.Max(0, instri - 1);
-                    method.Body.UpdateOffsets(instri, -1);
+                if (!MethodParser(body, instr, ref instri))
                     continue;
-                }
 
                 // General relinking
                 if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand, method);
@@ -1479,15 +1493,12 @@ namespace MonoMod {
                 }
 
                 // Reference importing
-                if (operand is IMetadataTokenProvider) {
+                if (operand is IMetadataTokenProvider)
                     operand = Module.ImportReference((IMetadataTokenProvider) operand);
-                    if (publicAccess)
-                        ((IMetadataTokenProvider) operand).SetPublic(true);
-                }
 
                 instr.Operand = operand;
 
-                MethodBodyRewriter?.Invoke(method.Body, instr, instri);
+                MethodBodyRewriter?.Invoke(body, instr, instri);
             }
         }
 
