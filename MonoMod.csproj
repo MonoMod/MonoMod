@@ -50,6 +50,9 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\HarmonyCompat\HarmonyHelper.cs" />
+    <Compile Include="MonoMod\HarmonyCompat\MMHarmonyTranspiler.cs" />
+    <Compile Include="MonoMod\HarmonyCompat\MMHarmonyInstance.cs" />
     <Compile Include="MonoMod\InlineRT\MMILAccessParser.cs" />
     <Compile Include="MonoMod\QuickDebugTest.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />

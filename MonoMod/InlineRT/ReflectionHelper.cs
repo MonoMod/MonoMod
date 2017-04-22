@@ -11,7 +11,7 @@ namespace MonoMod.InlineRT {
     /// </summary>
     public static class ReflectionHelper {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
-        private static readonly IDictionary<MethodInfo, DynamicMethodDelegate> _MethodCache = new FastDictionary<MethodInfo, DynamicMethodDelegate>();
+        private static readonly IDictionary<MethodBase, DynamicMethodDelegate> _MethodCache = new FastDictionary<MethodBase, DynamicMethodDelegate>();
 
         private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(object) });
         private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
@@ -118,7 +118,7 @@ namespace MonoMod.InlineRT {
         }
 
 
-        public static DynamicMethodDelegate GetDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
+        public static DynamicMethodDelegate GetDelegate(this MethodBase method, bool directBoxValueAccess = true) {
             DynamicMethodDelegate dmd;
             if (_MethodCache.TryGetValue(method, out dmd))
                 return dmd;
