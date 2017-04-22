@@ -76,9 +76,10 @@ namespace MonoMod.Helpers {
                 Array.Copy(_Values, values, _Count);
 
                 for (int i = _Count - 1; i > -1; --i) {
-                    int hash1 = keys1[i].GetHashCode();
-                    int hash2 = keys2[i].GetHashCode();
-                    uint pos = ((uint) (hash1 + hash2 % hash1 + hash2)) % size;
+                    uint hash1 = (uint) keys1[i].GetHashCode();
+                    uint hash2 = (uint) keys2[i].GetHashCode();
+                    uint hash = hash1 + hash2 * hash1 + hash2;
+                    uint pos = hash % size;
                     int posPrev = hashMap[pos];
                     hashMap[pos] = i;
                     if (posPrev != -1)
@@ -94,9 +95,9 @@ namespace MonoMod.Helpers {
         }
 
         private int GetPosition(K1 key1, K2 key2) {
-            int hash1 = key1.GetHashCode();
-            int hash2 = key2.GetHashCode();
-            uint hash = (uint) (hash1 + hash2 % hash1 + hash2);
+            uint hash1 = (uint) key1.GetHashCode();
+            uint hash2 = (uint) key2.GetHashCode();
+            uint hash = hash1 + hash2 * hash1 + hash2;
             int pos = _HashMap[hash % (uint) _HashMap.Length];
             if (pos == -1)
                 return -1;
@@ -113,9 +114,9 @@ namespace MonoMod.Helpers {
             if (_Count >= _HashMap.Length)
                 Resize();
 
-            int hash1 = key1.GetHashCode();
-            int hash2 = key2.GetHashCode();
-            uint hash = (uint) (hash1 + hash2 % hash1 + hash2);
+            uint hash1 = (uint) key1.GetHashCode();
+            uint hash2 = (uint) key2.GetHashCode();
+            uint hash = hash1 + hash2 * hash1 + hash2;
             uint posHash = hash % (uint) _HashMap.Length;
             int pos = _HashMap[posHash];
 

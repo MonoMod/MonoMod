@@ -46,7 +46,7 @@ namespace MonoMod.HarmonyCompat {
             Type targetType = Target.GetType(typeName.Replace('/', '+'));
             if (targetType == null) {
                 // What to do, what to do...
-                Modder.Log($"[PatchType] Type {typeName} not found in target assembly {Target.FullName}");
+                Log($"[PatchType] Type {typeName} not found in target assembly {Target.FullName}");
                 return;
             }
 
@@ -70,14 +70,14 @@ namespace MonoMod.HarmonyCompat {
             );
             if (targetMethod == null) {
                 // What to do, what to do...
-                Modder.Log($"[PatchMethod] Method {methodName} not found in target type {targetType.FullName} in {Target.FullName}");
+                Log($"[PatchMethod] Method {methodName} not found in target type {targetType.FullName} in {Target.FullName}");
                 return;
             }
 
             // TODO: [Harmony] Parse original code and check if patch needed.
             // byte[] codeOrig = targetMethod.GetMethodBody().GetILAsByteArray();
 
-            Modder.Log($"[PatchMethod] Creating transpiler for {method.FullName} in target assembly {Target.FullName}");
+            Log($"[PatchMethod] Creating transpiler for {method.FullName} in target assembly {Target.FullName}");
             MMHarmonyTranspiler transpiler = new MMHarmonyTranspiler();
             object transpilerProxy = HarmonyHelper.NewTranspilerProxy(transpiler);
             MethodInfo transpilerGetter = HarmonyHelper.NewTranspilerGetter(transpilerProxy);
