@@ -27,12 +27,53 @@ namespace MonoMod.HarmonyCompat {
     }
     public class MMHarmonyTranspiler : IEnumerator<MMHarmonyInstruction> {
 
+        private readonly static IntDictionary<System.Reflection.Emit.OpCode> _ReflOpCodes = new IntDictionary<System.Reflection.Emit.OpCode>();
+        private readonly static IntDictionary<Mono.Cecil.Cil.OpCode> _CecilOpCodes = new IntDictionary<Mono.Cecil.Cil.OpCode>();
+
+        static MMHarmonyTranspiler() {
+            FieldInfo[] reflOpCodes = typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static);
+            FieldInfo[] cecilOpCodes = typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static);
+
+            foreach (FieldInfo field in reflOpCodes) {
+                System.Reflection.Emit.OpCode reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null);
+                _ReflOpCodes[reflOpCode.Value] = reflOpCode;
+            }
+
+            foreach (FieldInfo field in cecilOpCodes) {
+                Mono.Cecil.Cil.OpCode cecilOpCode = (Mono.Cecil.Cil.OpCode) field.GetValue(null);
+                _CecilOpCodes[cecilOpCode.Value] = cecilOpCode;
+            }
+        }
+
+        public MethodDefinition Method;
+        public MethodBase MethodTarget;
+
         public MMHarmonyInstruction Current { get; private set; }
 
-        private int _Index;
+        private int _Index = 0;
+
+        public MMHarmonyTranspiler(MethodDefinition method, MethodBase methodTarget) {
+            Method = method;
+            MethodTarget = methodTarget;
+        }
 
         public bool MoveNext() {
-            return false;
+            MMHarmonyInstruction hinstr = new MMHarmonyInstruction();
+            Instruction instr = Method.Body.Instructions[_Index];
+
+            hinstr.opcode = _ReflOpCodes[instr.OpCode.Value];
+
+            if (instr.Operand is Instruction)
+                hinstr.operand = ((Instruction) instr.Operand).Offset;
+            else if (instr.Operand is MemberReference)
+                hinstr.operand =
+                    Assembly.Load(((MemberReference) instr.Operand).Module.Assembly.Name.FullName)
+                    .GetModule(((MemberReference) instr.Operand).Module.Name)
+                    .ResolveMember(((MemberReference) instr.Operand).MetadataToken.ToInt32());
+            else
+                hinstr.operand = instr.Operand;
+
+            return ++_Index < Method.Body.Instructions.Count;
         }
 
         object IEnumerator.Current {
