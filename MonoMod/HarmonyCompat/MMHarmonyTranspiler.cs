@@ -63,6 +63,8 @@ namespace MonoMod.HarmonyCompat {
             MMHarmonyInstruction hinstr = new MMHarmonyInstruction();
             Instruction instr = Method.Body.Instructions[_Index];
 
+            Console.WriteLine($"Current instruction: {_Index}: {instr}");
+
             hinstr.opcode = _ReflOpCodes[instr.OpCode.Value];
 
             if (instr.Operand is Instruction)
@@ -75,6 +77,7 @@ namespace MonoMod.HarmonyCompat {
             else
                 hinstr.operand = instr.Operand;
 
+            Current = hinstr;
             return ++_Index < Method.Body.Instructions.Count;
         }
 
@@ -84,12 +87,10 @@ namespace MonoMod.HarmonyCompat {
             }
         }
 
-        public void Dispose() {
-            throw new InvalidOperationException();
+        public void Reset() {
         }
 
-        public void Reset() {
-            throw new InvalidOperationException();
+        public void Dispose() {
         }
 
     }

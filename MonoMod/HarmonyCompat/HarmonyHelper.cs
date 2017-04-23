@@ -24,6 +24,7 @@ using PropertyAttributes = Mono.Cecil.PropertyAttributes;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 using System.Reflection.Emit;
+using System.Collections;
 
 namespace MonoMod.HarmonyCompat {
     public static class HarmonyHelper {
@@ -198,11 +199,19 @@ namespace MonoMod.HarmonyCompat {
             TypeReference tr_MMHarmonyTranspiler = proxyMod.ImportReference(typeof(MMHarmonyTranspiler));
             TypeReference tr_MMHarmonyInstruction = proxyMod.ImportReference(typeof(MMHarmonyInstruction));
 
+            TypeReference tr_IEnumerable = proxyMod.ImportReference(typeof(IEnumerable));
+
+            TypeReference tr_IEnumerator_CodeInstruction = proxyMod.ImportReference(typeof(IEnumerator<>).MakeGenericType(t_CodeInstruction));
+            TypeReference tr_IEnumerator = proxyMod.ImportReference(typeof(IEnumerator));
+
             TypeDefinition type = new TypeDefinition("MonoMod.HarmonyCompat", "MMHarmonyTranspilerProxy", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed) {
                 BaseType = proxyMod.TypeSystem.Object,
                 Interfaces = {
                     new InterfaceImplementation(proxyMod.ImportReference(typeof(IEnumerable<>).MakeGenericType(t_CodeInstruction))),
-                    new InterfaceImplementation(proxyMod.ImportReference(typeof(IEnumerator<>).MakeGenericType(t_CodeInstruction)))
+                    new InterfaceImplementation(tr_IEnumerable),
+                    new InterfaceImplementation(tr_IEnumerator_CodeInstruction),
+                    new InterfaceImplementation(tr_IEnumerator),
+                    new InterfaceImplementation(proxyMod.ImportReference(typeof(IDisposable)))
                 }
             };
             proxyMod.Types.Add(type);
@@ -215,7 +224,7 @@ namespace MonoMod.HarmonyCompat {
             type.Fields.Add(f_Transpiler);
 
 
-            MethodDefinition m_ctor = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, proxyMod.TypeSystem.Void);
+            MethodDefinition m_ctor = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, proxyMod.TypeSystem.Void);
             m_ctor.Parameters.Add(new ParameterDefinition("transpiler", ParameterAttributes.None, tr_MMHarmonyTranspiler));
             type.Methods.Add(m_ctor);
             body = m_ctor.Body;
@@ -228,7 +237,7 @@ namespace MonoMod.HarmonyCompat {
             il.Emit(OpCodes.Ret);
 
 
-            MethodDefinition m_Current_gen = new MethodDefinition("get_Current", MethodAttributes.Public, tr_CodeInstruction);
+            MethodDefinition m_Current_gen = new MethodDefinition("get_Current", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, tr_CodeInstruction);
             type.Methods.Add(m_Current_gen);
             body = m_Current_gen.Body;
             il = body.GetILProcessor();
@@ -261,7 +270,8 @@ namespace MonoMod.HarmonyCompat {
             type.Properties.Add(p_Current_gen);
 
 
-            MethodDefinition m_Current = new MethodDefinition("System.Collections.IEnumerator.get_Current", MethodAttributes.Private, proxyMod.TypeSystem.Object);
+            MethodDefinition m_Current = new MethodDefinition("System.Collections.IEnumerator.get_Current", MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, proxyMod.TypeSystem.Object);
+            m_Current.Overrides.Add(proxyMod.ImportReference(typeof(IEnumerator).GetMethod("get_Current", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)));
             type.Methods.Add(m_Current);
             body = m_Current.Body;
             il = body.GetILProcessor();
@@ -275,7 +285,7 @@ namespace MonoMod.HarmonyCompat {
             type.Properties.Add(p_Current);
 
 
-            MethodDefinition m_MoveNext = new MethodDefinition("MoveNext", MethodAttributes.Public, proxyMod.TypeSystem.Boolean);
+            MethodDefinition m_MoveNext = new MethodDefinition("MoveNext", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, proxyMod.TypeSystem.Boolean);
             type.Methods.Add(m_MoveNext);
             body = m_MoveNext.Body;
             il = body.GetILProcessor();
@@ -285,7 +295,46 @@ namespace MonoMod.HarmonyCompat {
             il.Emit(OpCodes.Callvirt, proxyMod.ImportReference(typeof(MMHarmonyTranspiler).GetMethod("MoveNext")));
             il.Emit(OpCodes.Ret);
 
-            // Dispose / Reset shouldn't be called anyway.
+
+            MethodDefinition m_Reset = new MethodDefinition("Reset", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, proxyMod.TypeSystem.Void);
+            type.Methods.Add(m_Reset);
+            body = m_Reset.Body;
+            il = body.GetILProcessor();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, f_Transpiler);
+            il.Emit(OpCodes.Callvirt, proxyMod.ImportReference(typeof(MMHarmonyTranspiler).GetMethod("Reset")));
+            il.Emit(OpCodes.Ret);
+
+
+            MethodDefinition m_Dispose = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, proxyMod.TypeSystem.Void);
+            type.Methods.Add(m_Dispose);
+            body = m_Dispose.Body;
+            il = body.GetILProcessor();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, f_Transpiler);
+            il.Emit(OpCodes.Callvirt, proxyMod.ImportReference(typeof(MMHarmonyTranspiler).GetMethod("Dispose")));
+            il.Emit(OpCodes.Ret);
+
+
+            MethodDefinition m_GetEnumerator_gen = new MethodDefinition("GetEnumerator", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, tr_IEnumerator_CodeInstruction);
+            type.Methods.Add(m_GetEnumerator_gen);
+            body = m_GetEnumerator_gen.Body;
+            il = body.GetILProcessor();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ret);
+
+
+            MethodDefinition m_GetEnumerator = new MethodDefinition("System.Collections.IEnumerable.GetEnumerator", MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, tr_IEnumerator);
+            m_GetEnumerator.Overrides.Add(proxyMod.ImportReference(typeof(IEnumerable).GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)));
+            type.Methods.Add(m_GetEnumerator);
+            body = m_GetEnumerator.Body;
+            il = body.GetILProcessor();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ret);
         }
 
 
