@@ -37,6 +37,7 @@ namespace MonoMod.HarmonyCompat {
 
         public static Assembly HarmonyProxy;
         public static Type t_MMHarmonyTranspilerProxy;
+        public static MethodInfo m_t_MMHarmonyTranspilerProxy_Init;
 
         public static ModuleBuilder HarmonyRuntime;
 
@@ -77,41 +78,25 @@ namespace MonoMod.HarmonyCompat {
                 "GetTranspiler",
                 System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                 t_MMHarmonyTranspilerProxy,
-                new Type[] { typeof(MethodBase), typeof(IEnumerable<>).MakeGenericType(t_CodeInstruction) }
+                new Type[] { typeof(ILGenerator), typeof(MethodBase), typeof(IEnumerable<>).MakeGenericType(t_CodeInstruction) }
             );
-            mb_GetTranspiler.DefineParameter(0, System.Reflection.ParameterAttributes.None, "original");
-            mb_GetTranspiler.DefineParameter(1, System.Reflection.ParameterAttributes.None, "instructions");
+            mb_GetTranspiler.DefineParameter(0, System.Reflection.ParameterAttributes.None, "il");
+            mb_GetTranspiler.DefineParameter(1, System.Reflection.ParameterAttributes.None, "orig");
+            mb_GetTranspiler.DefineParameter(2, System.Reflection.ParameterAttributes.None, "instrs");
             ILGenerator il = mb_GetTranspiler.GetILGenerator();
+
+            il.Emit(System.Reflection.Emit.OpCodes.Ldsfld, fb_Instance);
+            il.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+            il.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
+            il.Emit(System.Reflection.Emit.OpCodes.Ldarg_2);
+            il.Emit(System.Reflection.Emit.OpCodes.Callvirt, m_t_MMHarmonyTranspilerProxy_Init);
 
             il.Emit(System.Reflection.Emit.OpCodes.Ldsfld, fb_Instance);
             il.Emit(System.Reflection.Emit.OpCodes.Ret);
 
             t_getter = tb_getter.CreateType();
-
             t_getter.GetField(fb_Instance.Name).SetValue(null, transpiler);
-
-            // VerifyTranspilerGetter(t_getter.GetMethod(mb_GetTranspiler.Name));
             return t_getter.GetMethod(mb_GetTranspiler.Name);
-        }
-
-        public static void VerifyTranspilerGetter(MethodInfo transpiler) {
-            var type = transpiler.GetParameters()
-                  .Select(p => p.ParameterType)
-                  .FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition().Name.StartsWith("IEnumerable"));
-            Console.WriteLine("type " + type);
-            var enumerableAssembly = type.GetGenericTypeDefinition().Assembly;
-            Console.WriteLine("enumerableAssembly " + enumerableAssembly);
-            var genericListType = enumerableAssembly.GetType(typeof(List<>).FullName);
-            Console.WriteLine("genericListType " + genericListType);
-            var elementType = type.GetGenericArguments()[0];
-            Console.WriteLine("elementType " + elementType);
-            var listType = enumerableAssembly.GetType(genericListType.MakeGenericType(new Type[] { elementType }).FullName);
-            Console.WriteLine("listType " + listType);
-            var list = Activator.CreateInstance(listType);
-            Console.WriteLine("list " + list);
-            var listAdd = list.GetType().GetMethod("Add");
-            Console.WriteLine("listAdd " + listAdd);
-            Console.WriteLine("parameter count " + transpiler.GetParameters().Count());
         }
 
         private static bool _Initialized = false;
@@ -129,6 +114,7 @@ namespace MonoMod.HarmonyCompat {
 
             HarmonyProxy = _GenerateMMHarmonyProxy();
             t_MMHarmonyTranspilerProxy = HarmonyProxy.GetType("MonoMod.HarmonyCompat.MMHarmonyTranspilerProxy", true);
+            m_t_MMHarmonyTranspilerProxy_Init = t_MMHarmonyTranspilerProxy.GetMethod("Init");
 
             HarmonyRuntime = _GenerateMMHarmonyRuntime();
 
@@ -199,6 +185,7 @@ namespace MonoMod.HarmonyCompat {
             TypeReference tr_MMHarmonyTranspiler = proxyMod.ImportReference(typeof(MMHarmonyTranspiler));
             TypeReference tr_MMHarmonyInstruction = proxyMod.ImportReference(typeof(MMHarmonyInstruction));
 
+            TypeReference tr_IEnumerable_CodeInstruction = proxyMod.ImportReference(typeof(IEnumerable<>).MakeGenericType(t_CodeInstruction));
             TypeReference tr_IEnumerable = proxyMod.ImportReference(typeof(IEnumerable));
 
             TypeReference tr_IEnumerator_CodeInstruction = proxyMod.ImportReference(typeof(IEnumerator<>).MakeGenericType(t_CodeInstruction));
@@ -207,7 +194,7 @@ namespace MonoMod.HarmonyCompat {
             TypeDefinition type = new TypeDefinition("MonoMod.HarmonyCompat", "MMHarmonyTranspilerProxy", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed) {
                 BaseType = proxyMod.TypeSystem.Object,
                 Interfaces = {
-                    new InterfaceImplementation(proxyMod.ImportReference(typeof(IEnumerable<>).MakeGenericType(t_CodeInstruction))),
+                    new InterfaceImplementation(tr_IEnumerable_CodeInstruction),
                     new InterfaceImplementation(tr_IEnumerable),
                     new InterfaceImplementation(tr_IEnumerator_CodeInstruction),
                     new InterfaceImplementation(tr_IEnumerator),
@@ -334,6 +321,23 @@ namespace MonoMod.HarmonyCompat {
             il = body.GetILProcessor();
 
             il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ret);
+
+
+            MethodDefinition m_Init = new MethodDefinition("Init", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Final | MethodAttributes.Virtual, proxyMod.TypeSystem.Void);
+            m_Init.Parameters.Add(new ParameterDefinition("il", ParameterAttributes.None, proxyMod.ImportReference(typeof(ILGenerator))));
+            m_Init.Parameters.Add(new ParameterDefinition("orig", ParameterAttributes.None, proxyMod.ImportReference(typeof(MethodBase))));
+            m_Init.Parameters.Add(new ParameterDefinition("instrs", ParameterAttributes.None, tr_IEnumerable_CodeInstruction));
+            type.Methods.Add(m_Init);
+            body = m_Init.Body;
+            il = body.GetILProcessor();
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, f_Transpiler);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldarg_2);
+            il.Emit(OpCodes.Ldarg_3);
+            il.Emit(OpCodes.Callvirt, proxyMod.ImportReference(typeof(MMHarmonyTranspiler).GetMethod("Init")));
             il.Emit(OpCodes.Ret);
         }
 
