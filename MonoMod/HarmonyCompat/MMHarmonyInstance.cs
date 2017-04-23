@@ -132,7 +132,7 @@ namespace MonoMod.HarmonyCompat {
             }
 
             Log($"[PatchMethod] Creating transpiler for {method.FullName} in target assembly {Target.FullName}");
-            MMHarmonyTranspiler transpiler = new MMHarmonyTranspiler(method, targetMethod);
+            MMHarmonyTranspiler transpiler = new MMHarmonyTranspiler(this, method, targetMethod);
             object transpilerProxy = HarmonyHelper.NewTranspilerProxy(transpiler);
             MethodInfo transpilerGetter = HarmonyHelper.NewTranspilerGetter(transpilerProxy);
             object transpilerHarmonyMethod = HarmonyHelper.NewHarmonyMethod(transpilerGetter);

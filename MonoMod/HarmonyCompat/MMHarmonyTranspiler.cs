@@ -45,6 +45,7 @@ namespace MonoMod.HarmonyCompat {
             }
         }
 
+        public MMHarmonyInstance MMHarmony;
         public MethodDefinition Method;
         public MethodBase MethodTarget;
 
@@ -52,7 +53,8 @@ namespace MonoMod.HarmonyCompat {
 
         private int _Index = 0;
 
-        public MMHarmonyTranspiler(MethodDefinition method, MethodBase methodTarget) {
+        public MMHarmonyTranspiler(MMHarmonyInstance mmHarmony, MethodDefinition method, MethodBase methodTarget) {
+            MMHarmony = mmHarmony;
             Method = method;
             MethodTarget = methodTarget;
         }
