@@ -75,21 +75,26 @@ namespace MonoMod.HarmonyCompat {
             _ApplyLabels(_Index);
             Instruction instr = Method.Body.Instructions[_Index];
 
-            Console.WriteLine($"{_Index}: Input: {instr.OpCode} {instr.Operand}");
+            // MMHarmony.Log($"[Transpiler] {Method}: {_Index}: Input: {instr.OpCode} {instr.Operand}");
 
             hinstr.opcode = _ReflOpCodes[instr.OpCode.Value];
+            hinstr.operand = instr.Operand;
 
             if (instr.Operand is Instruction)
                 hinstr.operand = _GetLabel(Method.Body.Instructions.IndexOf((Instruction) instr.Operand));
             else if (instr.Operand is VariableDefinition)
                 hinstr.operand = ((VariableDefinition) instr.Operand).Index;
-            else if (instr.Operand is MemberReference)
+            else if (instr.Operand is MemberReference) {
+                MemberReference mref = (MemberReference) instr.Operand;
+                MemberReference mdef = (MemberReference) mref.Resolve();
+                // FIXME: What about TypeSpecifications?
                 hinstr.operand =
-                    Assembly.Load(((MemberReference) ((MemberReference) instr.Operand).Resolve()).Module.Assembly.Name.FullName)
-                    .GetModule(((MemberReference) instr.Operand).Module.Name)
-                    .ResolveMember(((MemberReference) instr.Operand).MetadataToken.ToInt32());
-            else
-                hinstr.operand = instr.Operand;
+                    Assembly.Load(mdef.Module.Assembly.Name.FullName)
+                    .GetModule(mdef.Module.Name)
+                    .ResolveMember(mdef.MetadataToken.ToInt32());
+                
+            }
+                
 
             if (Code.Ldloc_0 <= instr.OpCode.Code && instr.OpCode.Code <= Code.Ldloc_3) {
                 int index = instr.OpCode.Code - Code.Ldloc_0;
@@ -115,7 +120,7 @@ namespace MonoMod.HarmonyCompat {
                 }
             }
 
-            Console.WriteLine($"{_Index}: Output: {hinstr.opcode} {hinstr.operand}");
+            // MMHarmony.Log($"[Transpiler] {Method}: {_Index}: Output: {hinstr.opcode} {hinstr.opcode}");
             Current = hinstr;
             return ++_Index < Method.Body.Instructions.Count;
         }
