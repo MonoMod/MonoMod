@@ -69,13 +69,13 @@ namespace MonoMod.HarmonyCompat {
 
             FieldBuilder fb_Instance = tb_getter.DefineField(
                 "Instance",
-                typeof(MMHarmonyTranspiler), System.Reflection.FieldAttributes.Public | System.Reflection.FieldAttributes.Static
+                t_MMHarmonyTranspilerProxy, System.Reflection.FieldAttributes.Public | System.Reflection.FieldAttributes.Static
             );
 
             MethodBuilder mb_GetTranspiler = tb_getter.DefineMethod(
                 "GetTranspiler",
                 System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
-                typeof(MMHarmonyTranspiler),
+                t_MMHarmonyTranspilerProxy,
                 new Type[] { typeof(MethodBase), typeof(IEnumerable<>).MakeGenericType(t_CodeInstruction) }
             );
             mb_GetTranspiler.DefineParameter(0, System.Reflection.ParameterAttributes.None, "original");
@@ -87,7 +87,30 @@ namespace MonoMod.HarmonyCompat {
 
             t_getter = tb_getter.CreateType();
 
+            t_getter.GetField(fb_Instance.Name).SetValue(null, transpiler);
+
+            // VerifyTranspilerGetter(t_getter.GetMethod(mb_GetTranspiler.Name));
             return t_getter.GetMethod(mb_GetTranspiler.Name);
+        }
+
+        public static void VerifyTranspilerGetter(MethodInfo transpiler) {
+            var type = transpiler.GetParameters()
+                  .Select(p => p.ParameterType)
+                  .FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition().Name.StartsWith("IEnumerable"));
+            Console.WriteLine("type " + type);
+            var enumerableAssembly = type.GetGenericTypeDefinition().Assembly;
+            Console.WriteLine("enumerableAssembly " + enumerableAssembly);
+            var genericListType = enumerableAssembly.GetType(typeof(List<>).FullName);
+            Console.WriteLine("genericListType " + genericListType);
+            var elementType = type.GetGenericArguments()[0];
+            Console.WriteLine("elementType " + elementType);
+            var listType = enumerableAssembly.GetType(genericListType.MakeGenericType(new Type[] { elementType }).FullName);
+            Console.WriteLine("listType " + listType);
+            var list = Activator.CreateInstance(listType);
+            Console.WriteLine("list " + list);
+            var listAdd = list.GetType().GetMethod("Add");
+            Console.WriteLine("listAdd " + listAdd);
+            Console.WriteLine("parameter count " + transpiler.GetParameters().Count());
         }
 
         private static bool _Initialized = false;
