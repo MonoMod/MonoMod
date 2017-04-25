@@ -36,7 +36,7 @@ namespace MonoMod.InlineRT {
 
             il.MarkLabel(argsOK);
 
-            if (!method.IsStatic && !method.IsConstructor) {
+            if (!method.IsStatic) {
                 il.Emit(OpCodes.Ldarg_0);
                 if (method.DeclaringType.IsValueType) {
                     il.Emit(OpCodes.Unbox_Any, method.DeclaringType);
@@ -115,6 +115,24 @@ namespace MonoMod.InlineRT {
             il.Emit(OpCodes.Ret);
 
             return (DynamicMethodDelegate) dynam.CreateDelegate(typeof(DynamicMethodDelegate));
+        }
+
+
+        public static T CreateJmpDelegate<T>(this MethodBase method) {
+            Type t = typeof(T);
+            MethodInfo invoke = t.GetMethod("Invoke");
+
+            ParameterInfo[] args = invoke.GetParameters();
+            Type[] argTypes = new Type[args.Length];
+            for (int i = 0; i < args.Length; i++)
+                argTypes[i] = args[i].ParameterType;
+
+            DynamicMethod dynam = new DynamicMethod(string.Empty, invoke.ReturnType, argTypes, typeof(ReflectionHelper).Module, true);
+            ILGenerator il = dynam.GetILGenerator();
+
+            il.Emit(OpCodes.Jmp, (MethodInfo) method);
+
+            return (T) (object) dynam.CreateDelegate(t);
         }
 
 

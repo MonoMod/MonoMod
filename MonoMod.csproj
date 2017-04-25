@@ -2,14 +2,14 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>MonoMod</RootNamespace>
     <AssemblyName>MonoMod</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -18,17 +18,17 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Externalconsole>true</Externalconsole>
-    <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Externalconsole>true</Externalconsole>
-    <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DefineConstants>MONOMOD_NET40_SHIM;</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -50,7 +50,11 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\Detour\RuntimeDetourHelper.cs" />
+    <Compile Include="MonoMod\Detour\DetourManager.cs" />
+    <Compile Include="MonoMod\Helpers\LongDictionary.cs" />
     <Compile Include="MonoMod\InlineRT\MMILAccessParser.cs" />
+    <Compile Include="MonoMod\Modifiers\MonoModDetour.cs" />
     <Compile Include="MonoMod\QuickDebugTest.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
     <Compile Include="MonoMod\Helpers\IntDictionary.cs" />
@@ -85,7 +89,6 @@
     <Compile Include="MonoMod\Modifiers\MonoModReplace.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModConstructor.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModLinkTo.cs" />
-    <Compile Include="MonoMod\Modifiers\MonoModBlacklisted.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModEnumReplace.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModInline.cs" />
     <Compile Include="MonoMod\Helpers\NET40Shim.cs" />
@@ -93,5 +96,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

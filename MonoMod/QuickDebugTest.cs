@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Reflection.Emit;
 
 namespace MonoMod {
+    internal delegate void d_TestA(int a, ref int b, out int c, out QuickDebugTestObject d, ref QuickDebugTestStruct e);
     internal class QuickDebugTestObject {
         public int Value;
         public override string ToString()
@@ -25,7 +26,8 @@ namespace MonoMod {
 
             return (
                 TestReflectionHelperRef() &&
-                true // TestReflectionHelperTime()
+                TestReflectionHelperRefJmp() &&
+                TestReflectionHelperTime()
                 ) ? 0 : -1;
         }
 
@@ -45,13 +47,33 @@ namespace MonoMod {
                 ;
         }
 
+        public static bool TestReflectionHelperRefJmp() {
+            int a = 1;
+            int b = 0;
+            int c = 0;
+            QuickDebugTestObject d = null;
+            QuickDebugTestStruct e = new QuickDebugTestStruct();
+            Console.WriteLine($"args: {a} {b} {c} {(d == null ? "null" : d.ToString())} {e}");
+
+            typeof(QuickDebugTest).GetMethod("TestA").CreateJmpDelegate<d_TestA>()(a, ref b, out c, out d, ref e);
+            Console.WriteLine($"args after Test via ReflectionHelper using jmp: {a} {b} {c} {(d == null ? "null" : d.ToString())} {e}");
+
+            return
+                a == 1 &&
+                b == 1 &&
+                c == 2 &&
+                d?.Value == 1 &&
+                e.Value == 1
+                ;
+        }
+
         public static bool TestReflectionHelperTime() {
             object[] args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
             Console.WriteLine($"Initial args: {args[0]} {args[1]} {args[2]} {(args[3] == null ? "null" : args[3])} {args[4]}");
 
             MethodInfo method = typeof(QuickDebugTest).GetMethod("TestA");
 
-            const long runs = 100000000;
+            const long runs = 1000000000;
 
             Console.WriteLine("Test-running Stopwatch");
             Stopwatch sw = new Stopwatch();
@@ -60,10 +82,11 @@ namespace MonoMod {
             TimeSpan timeNewBox = sw.Elapsed;
             TimeSpan timeLocals = sw.Elapsed;
             TimeSpan timeMutable = sw.Elapsed;
+            TimeSpan timeJmp = sw.Elapsed;
             sw.Reset();
 
             Console.WriteLine("Generating local-less delegate");
-            DynamicMethodDelegate dmdNewBox = method.CreateDelegate(directBoxValueAccess: true);
+            DynamicMethodDelegate dmdNewBox = method.CreateDelegate(directBoxValueAccess: false);
             Console.WriteLine("Test-running dmdNewBox");
             args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
             dmdNewBox(null, args);
@@ -89,7 +112,7 @@ namespace MonoMod {
 
 
             Console.WriteLine("Generating mutability-ignoring delegate");
-            DynamicMethodDelegate dmdMutable = method.CreateDelegate(directBoxValueAccess: false);
+            DynamicMethodDelegate dmdMutable = method.CreateDelegate(directBoxValueAccess: true);
             Console.WriteLine("Test-running dmdMutable");
             args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
             dmdMutable(null, args);
@@ -102,7 +125,7 @@ namespace MonoMod {
                 )) return false;
             args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
 
-            Console.WriteLine("Timing dmdMutable {runs} runs");
+            Console.WriteLine($"Timing dmdMutable {runs} runs");
             sw.Start();
             for (long i = runs; i > -1; --i) {
                 dmdMutable(null, args);
@@ -113,7 +136,7 @@ namespace MonoMod {
             sw.Reset();
             Console.WriteLine($"time: {timeMutable}");
 
-
+            /*
             Console.WriteLine("Generating localed delegate");
             DynamicMethodDelegate dmdLocals = method.CreateDelegateUsingLocals();
             Console.WriteLine("Test-running dmdLocals");
@@ -128,7 +151,7 @@ namespace MonoMod {
                 )) return false;
             args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
 
-            Console.WriteLine("Timing dmdLocals {runs} runs");
+            Console.WriteLine($"Timing dmdLocals {runs} runs");
             sw.Start();
             for (long i = runs; i > -1; --i) {
                 dmdLocals(null, args);
@@ -138,15 +161,44 @@ namespace MonoMod {
             timeLocals = sw.Elapsed;
             sw.Reset();
             Console.WriteLine($"time: {timeLocals}");
+            */
 
-            Console.WriteLine($"newbox / locals: {(double) timeNewBox.Ticks / (double) timeLocals.Ticks}");
-            Console.WriteLine($"locals / newbox: {(double) timeLocals.Ticks / (double) timeNewBox.Ticks}");
+            Console.WriteLine("Generating jmp delegate");
+            d_TestA dmdJmp = method.CreateJmpDelegate<d_TestA>();
+            Console.WriteLine("Test-running dmdJmp");
+            int a = 1;
+            int b = 0;
+            int c = 0;
+            QuickDebugTestObject d = null;
+            QuickDebugTestStruct e = new QuickDebugTestStruct();
+            dmdJmp(a, ref b, out c, out d, ref e);
+            if (!(
+                a == 1 &&
+                b == 1 &&
+                c == 2 &&
+                d?.Value == 1 &&
+                e.Value == 1
+                )) return false;
+
+            Console.WriteLine($"Timing dmdJmp {runs} runs");
+            sw.Start();
+            for (long i = runs; i > -1; --i) {
+                dmdJmp(a, ref b, out c, out d, ref e);
+            }
+            sw.Stop();
+            timeJmp = sw.Elapsed;
+            sw.Reset();
+            Console.WriteLine($"time: {timeJmp}");
+
+
+            Console.WriteLine($"newbox / jmp: {(double) timeNewBox.Ticks / (double) timeJmp.Ticks}");
+            Console.WriteLine($"jmp / newbox: {(double) timeJmp.Ticks / (double) timeNewBox.Ticks}");
 
             Console.WriteLine($"newbox / mutable: {(double) timeNewBox.Ticks / (double) timeMutable.Ticks}");
             Console.WriteLine($"mutable / newbox: {(double) timeMutable.Ticks / (double) timeNewBox.Ticks}");
 
-            Console.WriteLine($"locals / mutable: {(double) timeLocals.Ticks / (double) timeMutable.Ticks}");
-            Console.WriteLine($"mutable / locals: {(double) timeMutable.Ticks / (double) timeLocals.Ticks}");
+            Console.WriteLine($"jmp / mutable: {(double) timeJmp.Ticks / (double) timeMutable.Ticks}");
+            Console.WriteLine($"mutable / jmp: {(double) timeMutable.Ticks / (double) timeJmp.Ticks}");
 
             Console.WriteLine("Pass");
             return true;
