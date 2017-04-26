@@ -22,19 +22,7 @@ namespace MonoMod.InlineRT {
 
             ParameterInfo[] args = method.GetParameters();
 
-            Label argsOK = il.DefineLabel();
-
             bool generateLocalBoxValuePtr = true;
-
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Ldlen);
-            il.EmitFast_Ldc_I4(args.Length);
-            il.Emit(OpCodes.Beq, argsOK);
-
-            il.Emit(OpCodes.Newobj, typeof(TargetParameterCountException).GetConstructor(Type.EmptyTypes));
-            il.Emit(OpCodes.Throw);
-
-            il.MarkLabel(argsOK);
 
             if (!method.IsStatic) {
                 il.Emit(OpCodes.Ldarg_0);
