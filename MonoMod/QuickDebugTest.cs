@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Globalization;
 using System.Reflection.Emit;
+using MonoMod.Detour;
 
 namespace MonoMod {
     internal delegate void d_TestA(int a, ref int b, out int c, out QuickDebugTestObject d, ref QuickDebugTestStruct e);
@@ -27,9 +28,30 @@ namespace MonoMod {
             return (
                 TestReflectionHelperRef() &&
                 TestReflectionHelperRefJmp() &&
+                TestRuntimeDetourHelper() &&
                 // TestReflectionHelperTime() &&
                 true) ? 0 : -1;
         }
+
+        public static bool TestRuntimeDetourHelper() {
+            PrintA();
+            typeof(QuickDebugTest).GetMethod("PrintA").DetourJIT(typeof(QuickDebugTest).GetMethod("PrintB"));
+            PrintA();
+            typeof(QuickDebugTest).GetMethod("PrintA").DetourJIT((Action) PrintC);
+            PrintA();
+
+            typeof(QuickDebugTest).GetMethod("PrintB").DetourJIT(typeof(QuickDebugTest).GetMethod("PrintC"));
+            PrintB();
+            typeof(QuickDebugTest).GetMethod("PrintB").DetourJIT((Action) PrintD);
+            PrintB();
+
+            return true;
+        }
+
+        public static void PrintA() => Console.WriteLine("A");
+        public static void PrintB() => Console.WriteLine("B");
+        public static void PrintC() => Console.WriteLine("C");
+        public static void PrintD() => Console.WriteLine("D");
 
         public static bool TestReflectionHelperRef() {
             object[] args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
