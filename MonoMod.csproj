@@ -50,11 +50,9 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
-    <Compile Include="MonoMod\Detour\RuntimeDetourHelper.cs" />
-    <Compile Include="MonoMod\Detour\DetourManager.cs" />
+    <Compile Include="MonoMod\Detour\RuntimeDetour.cs" />
     <Compile Include="MonoMod\Helpers\LongDictionary.cs" />
     <Compile Include="MonoMod\InlineRT\MMILAccessParser.cs" />
-    <Compile Include="MonoMod\Modifiers\MonoModDetour.cs" />
     <Compile Include="MonoMod\QuickDebugTest.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
     <Compile Include="MonoMod\Helpers\IntDictionary.cs" />

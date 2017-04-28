@@ -7,6 +7,8 @@ using System.Threading;
 using System.Globalization;
 using System.Reflection.Emit;
 using MonoMod.Detour;
+using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod {
     internal delegate void d_TestA(int a, ref int b, out int c, out QuickDebugTestObject d, ref QuickDebugTestStruct e);
@@ -35,21 +37,23 @@ namespace MonoMod {
 
         public static bool TestRuntimeDetourHelper() {
             PrintA();
-            typeof(QuickDebugTest).GetMethod("PrintA").DetourJIT(typeof(QuickDebugTest).GetMethod("PrintB"));
+            typeof(QuickDebugTest).GetMethod("PrintA").Detour(typeof(QuickDebugTest).GetMethod("PrintB"));
             PrintA();
-            typeof(QuickDebugTest).GetMethod("PrintA").DetourJIT((Action) PrintC);
+            typeof(QuickDebugTest).GetMethod("PrintA").Detour((Action) PrintC);
             PrintA();
 
-            typeof(QuickDebugTest).GetMethod("PrintB").DetourJIT(typeof(QuickDebugTest).GetMethod("PrintC"));
+            typeof(QuickDebugTest).GetMethod("PrintB").Detour(typeof(QuickDebugTest).GetMethod("PrintC"));
             PrintB();
-            typeof(QuickDebugTest).GetMethod("PrintB").DetourJIT((Action) PrintD);
+            typeof(QuickDebugTest).GetMethod("PrintB").Detour((Action) PrintD);
             PrintB();
 
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintA() => Console.WriteLine("A");
         public static void PrintB() => Console.WriteLine("B");
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintC() => Console.WriteLine("C");
         public static void PrintD() => Console.WriteLine("D");
 
