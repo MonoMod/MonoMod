@@ -80,6 +80,8 @@ namespace MonoMod {
         [Obsolete("The optimization pass has been removed from MonoMod.")]
         public bool SkipOptimization = false;
 
+        public bool PreventInline = false;
+
         public ReadingMode ReadingMode = ReadingMode.Deferred;
 
         protected IAssemblyResolver _assemblyResolver;
@@ -226,6 +228,8 @@ namespace MonoMod {
             }
 
             CleanupEnabled = Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0";
+
+            PreventInline = Environment.GetEnvironmentVariable("MONOMOD_PREVENTINLINE") == "1";
 
             MMILProxyManager.Register(this);
         }
@@ -1571,8 +1575,15 @@ namespace MonoMod {
             foreach (PropertyDefinition prop in type.Properties)
                 RunCustomAttributeHandlers(prop);
 
-            foreach (MethodDefinition method in type.Methods)
+            foreach (MethodDefinition method in type.Methods) {
+                if (PreventInline && method.HasBody) {
+                    method.NoInlining = true;
+                    // Remove AggressiveInlining
+                    method.ImplAttributes = (MethodImplAttributes) ((short) method.ImplAttributes & ~256);
+                }
+
                 RunCustomAttributeHandlers(method);
+            }
 
             foreach (FieldDefinition field in type.Fields)
                 RunCustomAttributeHandlers(field);

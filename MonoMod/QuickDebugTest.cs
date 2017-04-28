@@ -50,11 +50,14 @@ namespace MonoMod {
             return true;
         }
 
+        // Only affects .NET Framework
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintA() => Console.WriteLine("A");
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintB() => Console.WriteLine("B");
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintC() => Console.WriteLine("C");
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintD() => Console.WriteLine("D");
 
         public static bool TestReflectionHelperRef() {
