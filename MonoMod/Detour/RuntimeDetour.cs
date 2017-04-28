@@ -50,6 +50,19 @@ namespace MonoMod.Detour {
         public static unsafe void DetourMethod(IntPtr from, IntPtr to)
             => Detour(from.ToPointer(), to.ToPointer());
 
+        public static unsafe T Detour<T>(this MethodBase from, IntPtr to) {
+            Detour(from, to);
+            return GetTrampoline<T>(from);
+        }
+        public static unsafe T Detour<T>(this MethodBase from, MethodBase to) {
+            Detour(from, to);
+            return GetTrampoline<T>(from);
+        }
+        public static unsafe T Detour<T>(this MethodBase from, Delegate to) {
+            Detour(from, to);
+            return GetTrampoline<T>(from);
+        }
+
         public static unsafe void Detour(void* from, void* to, bool store = true) {
             byte[] orig = null;
             if (store) {

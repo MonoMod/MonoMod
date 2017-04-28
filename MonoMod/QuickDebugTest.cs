@@ -37,23 +37,42 @@ namespace MonoMod {
         }
 
         public static bool TestRuntimeDetourHelper() {
-            PrintA();
-            typeof(QuickDebugTest).GetMethod("PrintA").Detour(typeof(QuickDebugTest).GetMethod("PrintB"));
-            PrintA();
-            typeof(QuickDebugTest).GetMethod("PrintA").GetTrampoline<d_PrintA>()();
-            typeof(QuickDebugTest).GetMethod("PrintA").Detour((Action) PrintC);
-            PrintA();
-            typeof(QuickDebugTest).GetMethod("PrintA").GetTrampoline<d_PrintA>()();
-            typeof(QuickDebugTest).GetMethod("PrintA").GetOrigTrampoline<d_PrintA>()();
+            MethodInfo m_PrintA = typeof(QuickDebugTest).GetMethod("PrintA");
+            MethodInfo m_PrintB = typeof(QuickDebugTest).GetMethod("PrintB");
+            MethodInfo m_PrintC = typeof(QuickDebugTest).GetMethod("PrintC");
 
-            typeof(QuickDebugTest).GetMethod("PrintB").Detour(typeof(QuickDebugTest).GetMethod("PrintC"));
-            PrintB();
-            typeof(QuickDebugTest).GetMethod("PrintB").Detour((Action) PrintD);
-            PrintB();
-
-            typeof(QuickDebugTest).GetMethod("PrintA").Undetour();
-            typeof(QuickDebugTest).GetMethod("PrintA").Undetour();
             PrintA();
+            // A
+
+            d_PrintA t_FromB = m_PrintA.Detour<d_PrintA>(m_PrintB);
+            PrintA();
+            // B
+
+            t_FromB();
+            // A
+
+            d_PrintA t_FromC = m_PrintA.Detour<d_PrintA>((Action) PrintC);
+            PrintA();
+            // C
+
+            t_FromC();
+            // B
+
+            m_PrintA.GetOrigTrampoline<d_PrintA>()();
+            // A
+
+            m_PrintB.Detour(m_PrintC);
+            PrintB();
+            // C
+
+            m_PrintB.Detour((Action) PrintD);
+            PrintB();
+            // D
+
+            m_PrintA.Undetour();
+            m_PrintA.Undetour();
+            PrintA();
+            // A
 
             return true;
         }
