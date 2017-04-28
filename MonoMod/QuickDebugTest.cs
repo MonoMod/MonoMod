@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 
 namespace MonoMod {
     internal delegate void d_TestA(int a, ref int b, out int c, out QuickDebugTestObject d, ref QuickDebugTestStruct e);
+    internal delegate void d_PrintA();
     internal class QuickDebugTestObject {
         public int Value;
         public override string ToString()
@@ -39,13 +40,20 @@ namespace MonoMod {
             PrintA();
             typeof(QuickDebugTest).GetMethod("PrintA").Detour(typeof(QuickDebugTest).GetMethod("PrintB"));
             PrintA();
+            typeof(QuickDebugTest).GetMethod("PrintA").GetTrampoline<d_PrintA>()();
             typeof(QuickDebugTest).GetMethod("PrintA").Detour((Action) PrintC);
             PrintA();
+            typeof(QuickDebugTest).GetMethod("PrintA").GetTrampoline<d_PrintA>()();
+            typeof(QuickDebugTest).GetMethod("PrintA").GetOrigTrampoline<d_PrintA>()();
 
             typeof(QuickDebugTest).GetMethod("PrintB").Detour(typeof(QuickDebugTest).GetMethod("PrintC"));
             PrintB();
             typeof(QuickDebugTest).GetMethod("PrintB").Detour((Action) PrintD);
             PrintB();
+
+            typeof(QuickDebugTest).GetMethod("PrintA").Undetour();
+            typeof(QuickDebugTest).GetMethod("PrintA").Undetour();
+            PrintA();
 
             return true;
         }
