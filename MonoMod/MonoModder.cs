@@ -478,7 +478,7 @@ namespace MonoMod {
             OnReadMod?.Invoke(mod);
         }
         public virtual void ReadMod(Stream stream) {
-            Log($"[ReadMod] Loading mod: stream#{stream.GetHashCode()}");
+            Log($"[ReadMod] Loading mod: stream#{(uint) stream.GetHashCode()}");
             ModuleDefinition mod = MonoModExt.ReadModule(stream, GenReaderParameters(false));
             ParseRules(mod);
             Mods.Add(mod);
@@ -707,7 +707,7 @@ namespace MonoMod {
                 if (!Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
-                return Module.ImportReference(FindTypeDeep(type.GetPatchFullName()) ?? type);
+                return Module.ImportReference(FindTypeDeep(type.GetPatchFullName()));
             }
 
             if (mtp is FieldReference || mtp is MethodReference)

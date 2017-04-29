@@ -64,9 +64,13 @@ namespace MonoMod.Detour {
 
         public virtual void ReadDetours(ModuleDefinition mod) {
             // Could be extended in the future.
+            MapDependencies(mod);
             NextLevel(mod);
             PatchModule(mod);
+            ModuleDefinition target = Module;
+            Module = mod;
             PatchRefs(mod);
+            Module = target;
             Apply();
         }
 
@@ -103,7 +107,7 @@ namespace MonoMod.Detour {
             if (SkipList.Contains(method.GetFindableID(type: typeName)))
                 return null;
 
-            if (existingMethod == null && method.HasMMAttribute("NoNew"))
+            if (existingMethod == null)
                 return null;
 
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
