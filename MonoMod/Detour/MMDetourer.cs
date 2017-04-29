@@ -34,6 +34,9 @@ namespace MonoMod.Detour {
         private Module _RuntimeTargetModule;
         public Module RuntimeTargetModule {
             get {
+                if (RuntimeTarget == null)
+                    RuntimeTarget = Assembly.Load(Module.Assembly.Name.FullName);
+
                 if (_RuntimeTargetModule != null && (
                         RuntimeTarget == null ||
                         Module == null ||
@@ -90,15 +93,13 @@ namespace MonoMod.Detour {
             if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
                 isOriginal = true;
 
-            TransformMethodToExtension(targetType, method);
-
             if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals(Module))
                 // Ignore ignored methods
                 return null;
 
             string typeName = targetType.GetPatchFullName();
 
-            MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
+            MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(withType: false));
 
             if (method.HasMMAttribute("Ignore"))
                 // Custom attribute carrying doesn't apply here.
@@ -107,8 +108,12 @@ namespace MonoMod.Detour {
             if (SkipList.Contains(method.GetFindableID(type: typeName)))
                 return null;
 
-            if (existingMethod == null)
+            if (existingMethod == null) {
+                LogVerbose($"[PatchMethod] Method {method.GetFindableID(withType: false)} not found in target type {typeName}");
                 return null;
+            }
+
+            TransformMethodToExtension(targetType, method);
 
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
             if (method.HasMMAttribute("Constructor")) {
