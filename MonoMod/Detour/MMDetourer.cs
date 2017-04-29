@@ -27,6 +27,9 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 namespace MonoMod.Detour {
     public class MonoModDetourer : MonoModder {
 
+        public static ConstructorInfo c_ExtensionAttribute =
+            typeof(System.Runtime.CompilerServices.ExtensionAttribute).GetConstructor(new Type[0]);
+
         public Assembly RuntimeTarget;
         private Module _RuntimeTargetModule;
         public Module RuntimeTargetModule {
@@ -53,15 +56,15 @@ namespace MonoMod.Detour {
         public override void Log(string str)
             => base.Log("[Detourer] " + str);
 
-        public virtual MonoModDetourerLevel NextLevel(string name) {
-            MonoModDetourerLevel level = new MonoModDetourerLevel(this, name);
+        public virtual MonoModDetourerLevel NextLevel(ModuleDefinition mod) {
+            MonoModDetourerLevel level = new MonoModDetourerLevel(this, mod);
             Levels.Push(level);
             return level;
         }
 
         public virtual void ReadDetours(ModuleDefinition mod) {
             // Could be extended in the future.
-            NextLevel(mod.Assembly.Name.FullName);
+            NextLevel(mod);
             PatchModule(mod);
             PatchRefs(mod);
             Apply();
@@ -82,6 +85,8 @@ namespace MonoMod.Detour {
             bool isOriginal = false;
             if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
                 isOriginal = true;
+
+            TransformMethodToExtension(targetType, method);
 
             if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals(Module))
                 // Ignore ignored methods
@@ -113,15 +118,15 @@ namespace MonoMod.Detour {
                 return null;
 
             if (isOriginal) {
-                PatchTrampoline(targetType, method);
+                PatchTrampoline(existingMethod, method);
             } else {
-                PatchDetour(targetType, method);
+                PatchDetour(existingMethod, method);
             }
 
             return method;
         }
 
-        public virtual void PatchTrampoline(TypeDefinition targetType, MethodDefinition method) {
+        public virtual void PatchTrampoline(MethodDefinition targetMethod, MethodDefinition method) {
             method.IsManaged = true;
             method.IsIL = true;
             method.IsNative = false;
@@ -140,24 +145,53 @@ namespace MonoMod.Detour {
             ILProcessor il = body.GetILProcessor();
             for (int i = 64; i > -1; --i)
                 il.Emit(OpCodes.Nop);
-            if (method.ReturnType.MetadataType != MetadataType.Void)
+            if (method.ReturnType.MetadataType != MetadataType.Void) {
                 il.Emit(OpCodes.Ldnull);
+                if (method.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, method.ReturnType);
+            }
             il.Emit(OpCodes.Ret);
 
-            RegisterTrampoline(targetType, method);
+            RegisterTrampoline(targetMethod, method);
         }
 
-        public virtual void PatchDetour(TypeDefinition targetType, MethodDefinition method) {
-            // TODO: [MMDetourer] Transform virtual instance methods to static extension methods.
+        public virtual void PatchDetour(MethodDefinition targetMethod, MethodDefinition method) {
+            if (method.HasBody) {
+                MethodBody body = method.Body;
+                for (int instri = 0; instri < body.Instructions.Count; instri++) {
+                    Instruction instr = body.Instructions[instri];
+                    
+                    if (instr.OpCode == OpCodes.Callvirt &&
+                        ((MethodReference) method).DeclaringType.Scope == method.Module) {
+                        instr.OpCode = OpCodes.Call;
+                    }
+                }
+            }
 
-            RegisterDetour(targetType, method);
+            RegisterDetour(targetMethod, method);
         }
 
-        public virtual void RegisterTrampoline(TypeDefinition targetType, MethodDefinition method)
-            => Level.RegisterTrampoline(targetType, method);
+        public virtual void TransformMethodToExtension(TypeDefinition targetType, MethodDefinition method) {
+            if (method.IsStatic)
+                return;
 
-        public virtual void RegisterDetour(TypeDefinition targetType, MethodDefinition method)
-            => Level.RegisterDetour(targetType, method);
+            method.IsStatic = true;
+            method.IsVirtual = false;
+            method.IsNewSlot = false;
+            method.IsReuseSlot = true;
+            method.HasThis = false;
+            method.ExplicitThis = false;
+
+            method.AddAttribute(method.Module.ImportReference(c_ExtensionAttribute));
+
+            method.Parameters.Insert(0, new ParameterDefinition("self", ParameterAttributes.None, targetType));
+        }
+
+        public virtual void RegisterTrampoline(MethodDefinition targetMethod, MethodDefinition method)
+            => Level.RegisterTrampoline(targetMethod, method);
+
+        public virtual void RegisterDetour(MethodDefinition targetMethod, MethodDefinition method)
+            => Level.RegisterDetour(targetMethod, method);
 
     }
 }

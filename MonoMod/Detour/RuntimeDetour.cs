@@ -154,9 +154,11 @@ namespace MonoMod.Detour {
 
         public static unsafe T CreateTrampoline<T>(MethodBase target, byte[] code = null) {
             Type t = typeof(T);
-            Delegate del;
+            return (T) (object) CreateTrampoline(target, code, t.GetMethod("Invoke")).CreateDelegate(t);
+        }
 
-            MethodInfo invoke = t.GetMethod("Invoke");
+        public static unsafe DynamicMethod CreateTrampoline(MethodBase target, byte[] code = null, MethodInfo invoke = null) {
+            invoke = invoke ?? (target as MethodInfo);
 
             ParameterInfo[] args = invoke.GetParameters();
             Type[] argTypes = new Type[args.Length];
@@ -169,8 +171,11 @@ namespace MonoMod.Detour {
             if (code != null) {
                 for (int i = 64; i > -1; --i)
                     il.Emit(OpCodes.Nop);
-                if (invoke.ReturnType != typeof(void))
+                if (invoke.ReturnType != typeof(void)) {
                     il.Emit(OpCodes.Ldnull);
+                    if (invoke.ReturnType.IsValueType)
+                        il.Emit(OpCodes.Box, invoke.ReturnType);
+                }
                 il.Emit(OpCodes.Ret);
                 dm.Invoke(null, new object[args.Length]);
                 void* p = GetMethodStart(dm);
@@ -209,9 +214,7 @@ namespace MonoMod.Detour {
                 il.Emit(OpCodes.Ret);
             }
 
-            del = dm.CreateDelegate(t);
-
-            return (T) (object) del;
+            return dm;
         }
 
         public static unsafe void PrepareOrig(long target) {
