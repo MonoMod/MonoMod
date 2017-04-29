@@ -50,6 +50,8 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\Detour\MMDetourerLevel.cs" />
+    <Compile Include="MonoMod\Detour\MMDetourer.cs" />
     <Compile Include="MonoMod\Detour\RuntimeDetour.cs" />
     <Compile Include="MonoMod\Helpers\LongDictionary.cs" />
     <Compile Include="MonoMod\InlineRT\MMILAccessParser.cs" />

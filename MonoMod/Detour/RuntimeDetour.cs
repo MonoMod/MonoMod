@@ -13,9 +13,11 @@ using System.Reflection.Emit;
 namespace MonoMod.Detour {
     public static class RuntimeDetour {
 
-        public static bool IsX64 { get; } = (PlatformHelper.Current & Platform.X64) == Platform.X64;
+        public static bool IsX64 { get; } = IntPtr.Size == 8;
 
-        private readonly static FieldInfo f_DynamicMethod_m_method = typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
+        private readonly static FieldInfo f_DynamicMethod_m_method =
+            typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance) ??
+            typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
         private readonly static MethodInfo m_Console_WriteLine_string = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
 
         private readonly static MethodInfo m_PrepareOrig = typeof(RuntimeDetour).GetMethod("PrepareOrig", new Type[] { typeof(long) });
@@ -111,8 +113,9 @@ namespace MonoMod.Detour {
             if (!_Reverts.TryGetValue((long) target, out reverts) ||
                 reverts.Count == 0)
                 return;
-            byte[] orig = reverts.Pop();
-            Marshal.Copy(orig, 0, new IntPtr(target), orig.Length);
+            byte[] current = reverts.Pop();
+            Marshal.Copy(current, 0, new IntPtr(target), current.Length);
+            _Current[(long) target] = current;
         }
 
         public static unsafe T GetOrigTrampoline<T>(this MethodBase target) {
@@ -166,6 +169,9 @@ namespace MonoMod.Detour {
             if (code != null) {
                 for (int i = 64; i > -1; --i)
                     il.Emit(OpCodes.Nop);
+                if (invoke.ReturnType != typeof(void))
+                    il.Emit(OpCodes.Ldnull);
+                il.Emit(OpCodes.Ret);
                 dm.Invoke(null, new object[args.Length]);
                 void* p = GetMethodStart(dm);
                 Marshal.Copy(code, 0, new IntPtr(p), code.Length);

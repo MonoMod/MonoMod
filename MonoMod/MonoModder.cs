@@ -478,7 +478,11 @@ namespace MonoMod {
             OnReadMod?.Invoke(mod);
         }
         public virtual void ReadMod(Stream stream) {
-            Mods.Add(MonoModExt.ReadModule(stream, GenReaderParameters(false)));
+            Log($"[ReadMod] Loading mod: stream#{stream.GetHashCode()}");
+            ModuleDefinition mod = MonoModExt.ReadModule(stream, GenReaderParameters(false));
+            ParseRules(mod);
+            Mods.Add(mod);
+            OnReadMod?.Invoke(mod);
         }
 
 
@@ -703,7 +707,7 @@ namespace MonoMod {
                 if (!Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
-                return Module.ImportReference(FindTypeDeep(type.GetPatchFullName()));
+                return Module.ImportReference(FindTypeDeep(type.GetPatchFullName()) ?? type);
             }
 
             if (mtp is FieldReference || mtp is MethodReference)
@@ -1000,8 +1004,6 @@ namespace MonoMod {
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
         public virtual void PatchType(TypeDefinition type) {
-            MethodDefinition addMethod;
-
             string typeName = type.GetPatchFullName();
 
             TypeReference targetType = Module.GetType(typeName, false);
@@ -1033,100 +1035,9 @@ namespace MonoMod {
                 if (!targetTypeDef.HasCustomAttribute(attrib.AttributeType.FullName))
                     targetTypeDef.CustomAttributes.Add(attrib.Clone());
 
-            Stack<MethodDefinition> propMethods = new Stack<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
-            foreach (PropertyDefinition prop in type.Properties) {
-                PropertyDefinition targetProp = targetTypeDef.FindProperty(prop.Name);
-                string backingName = $"<{prop.Name}>__BackingField";
-                FieldDefinition backing = type.FindField(backingName);
-                FieldDefinition targetBacking = targetTypeDef.FindField(backingName);
-
-                // Cheap fix: Apply the mod property attributes on the mod backing field.
-                // Causes the field to be ignored / replaced / ... in its own patch pass further below.
-                if (backing != null)
-                    foreach (CustomAttribute attrib in prop.CustomAttributes)
-                        backing.CustomAttributes.Add(attrib.Clone());
-
-                if (prop.HasMMAttribute("Public")) {
-                    (targetProp ?? prop)?.SetPublic(true);
-                    (targetBacking ?? backing)?.SetPublic(true);
-                    (targetProp.GetMethod ?? prop.GetMethod)?.SetPublic(true);
-                    (targetProp.SetMethod ?? prop.SetMethod)?.SetPublic(true);
-                    foreach (MethodDefinition method in targetProp?.OtherMethods ?? prop?.OtherMethods)
-                        method.SetPublic(true);
-                }
-
-                if (prop.HasMMAttribute("Ignore")) {
-                    if (backing != null)
-                        backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
-                    if (prop.GetMethod != null)
-                        propMethods.Push(prop.GetMethod);
-                    if (prop.SetMethod != null)
-                        propMethods.Push(prop.SetMethod);
-                    foreach (MethodDefinition method in prop.OtherMethods)
-                        propMethods.Push(method);
-                    continue;
-                }
-
-                if (prop.HasMMAttribute("Remove") || prop.HasMMAttribute("Replace")) {
-                    if (targetProp != null) {
-                        targetTypeDef.Properties.Remove(targetProp);
-                        if (targetBacking != null)
-                            targetTypeDef.Fields.Remove(targetBacking);
-                        if (targetProp.GetMethod != null)
-                            targetTypeDef.Methods.Remove(targetProp.GetMethod);
-                        if (targetProp.SetMethod != null)
-                            targetTypeDef.Methods.Remove(targetProp.SetMethod);
-                        foreach (MethodDefinition method in targetProp.OtherMethods)
-                            targetTypeDef.Methods.Remove(method);
-                    }
-                    if (prop.HasMMAttribute("Remove"))
-                        continue;
-                }
-
-                if (targetProp == null) {
-                    // Add missing property
-                    PropertyDefinition newProp = targetProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
-                    newProp.AddAttribute(GetMonoModAddedCtor());
-
-                    foreach (ParameterDefinition param in prop.Parameters)
-                        newProp.Parameters.Add(param.Clone());
-
-                    newProp.DeclaringType = targetTypeDef;
-                    targetTypeDef.Properties.Add(newProp);
-
-                    if (backing != null) {
-                        FieldDefinition newBacking = targetBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
-                        targetTypeDef.Fields.Add(newBacking);
-                    }
-                }
-
-                foreach (CustomAttribute attrib in prop.CustomAttributes)
-                    targetProp.CustomAttributes.Add(attrib.Clone());
-
-                MethodDefinition getter = prop.GetMethod;
-                if (getter != null &&
-                    (addMethod = PatchMethod(targetTypeDef, getter)) != null) {
-                    targetProp.GetMethod = addMethod;
-                    foreach (CustomAttribute attrib in prop.CustomAttributes)
-                        addMethod.CustomAttributes.Add(attrib.Clone());
-                    propMethods.Push(getter);
-                }
-
-                MethodDefinition setter = prop.SetMethod;
-                if (setter != null &&
-                    (addMethod = PatchMethod(targetTypeDef, setter)) != null) {
-                    targetProp.SetMethod = addMethod;
-                    foreach (CustomAttribute attrib in prop.CustomAttributes)
-                        addMethod.CustomAttributes.Add(attrib.Clone());
-                    propMethods.Push(setter);
-                }
-
-                foreach (MethodDefinition method in prop.OtherMethods)
-                    if ((addMethod = PatchMethod(targetTypeDef, method)) != null) {
-                        targetProp.OtherMethods.Add(addMethod);
-                        propMethods.Push(method);
-                    }
-            }
+            HashSet<MethodDefinition> propMethods = new HashSet<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
+            foreach (PropertyDefinition prop in type.Properties)
+                PatchProperty(targetTypeDef, prop, propMethods);
 
             foreach (MethodDefinition method in type.Methods)
                 if (!propMethods.Contains(method))
@@ -1146,42 +1057,8 @@ namespace MonoMod {
             if (type.HasMMAttribute("Public"))
                 type.SetPublic(true);
 
-            foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals(Module))
-                    continue;
-
-                if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
-                    FieldDefinition targetField = targetTypeDef.FindField(field.Name);
-                    if (targetField != null)
-                        targetTypeDef.Fields.Remove(targetField);
-                    if (field.HasMMAttribute("Remove"))
-                        continue;
-                }
-
-                FieldDefinition existingField = type.FindField(field.Name);
-
-                if (field.HasMMAttribute("Public"))
-                    (existingField ?? field)?.SetPublic(true);
-
-                if (type.HasMMAttribute("Ignore") && existingField != null) {
-                    // MonoModIgnore is a special case, as registered custom attributes should still be applied.
-                    foreach (CustomAttribute attrib in field.CustomAttributes)
-                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
-                            existingField.CustomAttributes.Add(attrib.Clone());
-                    continue;
-                }
-
-                if (targetTypeDef.HasField(field))
-                    continue;
-
-                FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
-                newField.AddAttribute(GetMonoModAddedCtor());
-                newField.InitialValue = field.InitialValue;
-                newField.Constant = field.Constant;
-                foreach (CustomAttribute attrib in field.CustomAttributes)
-                    newField.CustomAttributes.Add(attrib.Clone());
-                targetTypeDef.Fields.Add(newField);
-            }
+            foreach (FieldDefinition field in type.Fields)
+                PatchField(targetTypeDef, field);
 
             PatchNested(type);
         }
@@ -1190,6 +1067,142 @@ namespace MonoMod {
             for (int i = 0; i < type.NestedTypes.Count; i++) {
                 PatchType(type.NestedTypes[i]);
             }
+        }
+
+        public virtual void PatchProperty(TypeDefinition targetType, PropertyDefinition prop, HashSet<MethodDefinition> propMethods = null) {
+            MethodDefinition addMethod;
+
+            PropertyDefinition targetProp = targetType.FindProperty(prop.Name);
+            string backingName = $"<{prop.Name}>__BackingField";
+            FieldDefinition backing = prop.DeclaringType.FindField(backingName);
+            FieldDefinition targetBacking = targetType.FindField(backingName);
+
+            // Cheap fix: Apply the mod property attributes on the mod backing field.
+            // Causes the field to be ignored / replaced / ... in its own patch pass further below.
+            if (backing != null)
+                foreach (CustomAttribute attrib in prop.CustomAttributes)
+                    backing.CustomAttributes.Add(attrib.Clone());
+
+            if (prop.HasMMAttribute("Public")) {
+                (targetProp ?? prop)?.SetPublic(true);
+                (targetBacking ?? backing)?.SetPublic(true);
+                (targetProp.GetMethod ?? prop.GetMethod)?.SetPublic(true);
+                (targetProp.SetMethod ?? prop.SetMethod)?.SetPublic(true);
+                foreach (MethodDefinition method in targetProp?.OtherMethods ?? prop?.OtherMethods)
+                    method.SetPublic(true);
+            }
+
+            if (prop.HasMMAttribute("Ignore")) {
+                if (backing != null)
+                    backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
+                if (prop.GetMethod != null)
+                    propMethods?.Add(prop.GetMethod);
+                if (prop.SetMethod != null)
+                    propMethods?.Add(prop.SetMethod);
+                foreach (MethodDefinition method in prop.OtherMethods)
+                    propMethods?.Add(method);
+                return;
+            }
+
+            if (prop.HasMMAttribute("Remove") || prop.HasMMAttribute("Replace")) {
+                if (targetProp != null) {
+                    targetType.Properties.Remove(targetProp);
+                    if (targetBacking != null)
+                        targetType.Fields.Remove(targetBacking);
+                    if (targetProp.GetMethod != null)
+                        targetType.Methods.Remove(targetProp.GetMethod);
+                    if (targetProp.SetMethod != null)
+                        targetType.Methods.Remove(targetProp.SetMethod);
+                    foreach (MethodDefinition method in targetProp.OtherMethods)
+                        targetType.Methods.Remove(method);
+                }
+                if (prop.HasMMAttribute("Remove"))
+                    return;
+            }
+
+            if (targetProp == null) {
+                // Add missing property
+                PropertyDefinition newProp = targetProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
+                newProp.AddAttribute(GetMonoModAddedCtor());
+
+                foreach (ParameterDefinition param in prop.Parameters)
+                    newProp.Parameters.Add(param.Clone());
+
+                newProp.DeclaringType = targetType;
+                targetType.Properties.Add(newProp);
+
+                if (backing != null) {
+                    FieldDefinition newBacking = targetBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
+                    targetType.Fields.Add(newBacking);
+                }
+            }
+
+            foreach (CustomAttribute attrib in prop.CustomAttributes)
+                targetProp.CustomAttributes.Add(attrib.Clone());
+
+            MethodDefinition getter = prop.GetMethod;
+            if (getter != null &&
+                (addMethod = PatchMethod(targetType, getter)) != null) {
+                targetProp.GetMethod = addMethod;
+                foreach (CustomAttribute attrib in prop.CustomAttributes)
+                    addMethod.CustomAttributes.Add(attrib.Clone());
+                propMethods?.Add(getter);
+            }
+
+            MethodDefinition setter = prop.SetMethod;
+            if (setter != null &&
+                (addMethod = PatchMethod(targetType, setter)) != null) {
+                targetProp.SetMethod = addMethod;
+                foreach (CustomAttribute attrib in prop.CustomAttributes)
+                    addMethod.CustomAttributes.Add(attrib.Clone());
+                propMethods?.Add(setter);
+            }
+
+            foreach (MethodDefinition method in prop.OtherMethods)
+                if ((addMethod = PatchMethod(targetType, method)) != null) {
+                    targetProp.OtherMethods.Add(addMethod);
+                    propMethods?.Add(method);
+                }
+        }
+
+        public virtual void PatchField(TypeDefinition targetType, FieldDefinition field) {
+            TypeDefinition type = field.DeclaringType;
+            string typeName = type.GetPatchFullName();
+
+            if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals(Module))
+                return;
+
+            if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
+                FieldDefinition targetField = targetType.FindField(field.Name);
+                if (targetField != null)
+                    targetType.Fields.Remove(targetField);
+                if (field.HasMMAttribute("Remove"))
+                    return;
+            }
+
+            FieldDefinition existingField = type.FindField(field.Name);
+
+            if (field.HasMMAttribute("Public"))
+                (existingField ?? field)?.SetPublic(true);
+
+            if (type.HasMMAttribute("Ignore") && existingField != null) {
+                // MonoModIgnore is a special case, as registered custom attributes should still be applied.
+                foreach (CustomAttribute attrib in field.CustomAttributes)
+                    if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                        existingField.CustomAttributes.Add(attrib.Clone());
+                return;
+            }
+
+            if (targetType.HasField(field))
+                return;
+
+            FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
+            newField.AddAttribute(GetMonoModAddedCtor());
+            newField.InitialValue = field.InitialValue;
+            newField.Constant = field.Constant;
+            foreach (CustomAttribute attrib in field.CustomAttributes)
+                newField.CustomAttributes.Add(attrib.Clone());
+            targetType.Fields.Add(newField);
         }
 
         public virtual MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {
@@ -1354,6 +1367,11 @@ namespace MonoMod {
                 PatchRefsInType(type);
         }
 
+        public virtual void PatchRefs(ModuleDefinition mod) {
+            foreach (TypeDefinition type in mod.Types)
+                PatchRefsInType(type);
+        }
+
         public virtual void PatchRefsInType(TypeDefinition type) {
             LogVerbose($"[VERBOSE] [PatchRefsInType] Patching refs in {type}");
 
@@ -1498,7 +1516,7 @@ namespace MonoMod {
 
                 // Reference importing
                 if (operand is IMetadataTokenProvider)
-                    operand = Module.ImportReference((IMetadataTokenProvider) operand);
+                    operand = method.Module.ImportReference((IMetadataTokenProvider) operand);
 
                 instr.Operand = operand;
 

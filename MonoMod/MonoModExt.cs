@@ -612,6 +612,31 @@ namespace MonoMod {
 
             return null;
         }
+        public static System.Reflection.MethodInfo FindMethod(this Type type, string findableID, bool simple = true) {
+            System.Reflection.MethodInfo[] methods = type.GetMethods(
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static |
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+            );
+            // First pass: With type name (f.e. global searches)
+            foreach (System.Reflection.MethodInfo method in methods)
+                if (method.GetFindableID() == findableID) return method;
+            // Second pass: Without type name (f.e. LinkTo)
+            foreach (System.Reflection.MethodInfo method in methods)
+                if (method.GetFindableID(withType: false) == findableID) return method;
+
+            if (!simple)
+                return null;
+
+            // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
+            // First simple pass: With type name (just "Namespace.Type::MethodName")
+            foreach (System.Reflection.MethodInfo method in methods)
+                if (method.GetFindableID(simple: true) == findableID) return method;
+            // Second simple pass: Without type name (basically name only)
+            foreach (System.Reflection.MethodInfo method in methods)
+                if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
+
+            return null;
+        }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
             foreach (PropertyDefinition prop in type.Properties)
                 if (prop.Name == name) return prop;
