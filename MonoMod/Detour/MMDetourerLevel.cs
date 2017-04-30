@@ -76,7 +76,6 @@ namespace MonoMod.Detour {
             unsafe {
                 foreach (Tuple<int, int> tuple in _Trampolines) {
                     _MMD.LogVerbose($"[Apply] [Trampoline] {tuple.Item2} -> {tuple.Item1}");
-                    // TODO: [MMDetourer] Trampoline one level up, not to orig. Provide code argument!
                     RuntimeDetour.Detour(
                         RuntimeDetour.GetMethodStart(_Module.ResolveMethod(tuple.Item2)),
                         RuntimeDetour.GetMethodStart(RuntimeDetour.CreateTrampoline(_MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1))),

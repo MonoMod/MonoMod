@@ -21,6 +21,8 @@ namespace MonoMod.Detour {
             // Mono
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
         private readonly static MethodInfo m_DynamicMethod_CreateDynMethod =
+            // .NET
+            typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance) ??
             // Mono
             typeof(DynamicMethod).GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance);
         private readonly static DynamicMethodDelegate dmd_DynamicMethod_CreateDynMethod =
@@ -165,7 +167,7 @@ namespace MonoMod.Detour {
             if (_OrigTrampolines.TryGetValue(key, t, out del))
                 return (T) (object) del;
 
-            del = (Delegate) (object) CreateTrampoline<T>(target);
+            del = (Delegate) (object) CreateTrampolineDirect<T>(target);
             _OrigTrampolines[key, t] = del;
             return (T) (object) del;
         }
@@ -183,16 +185,33 @@ namespace MonoMod.Detour {
             byte[] code = reverts.Peek();
             ulong key = (ulong) p;
             Type t = typeof(T);
-            T del = CreateTrampoline<T>(target, code);
+            T del = CreateTrampolineDirect<T>(target, code);
             return (T) (object) del;
         }
 
-        public static unsafe T CreateTrampoline<T>(MethodBase target, byte[] code = null) {
+        public static unsafe T CreateTrampolineDirect<T>(MethodBase target, byte[] code = null) {
             Type t = typeof(T);
-            return (T) (object) CreateTrampoline(target, code, t.GetMethod("Invoke")).CreateDelegate(t);
+            return (T) (object) CreateTrampolineDirect(target, code, t.GetMethod("Invoke")).CreateDelegate(t);
         }
 
-        public static unsafe DynamicMethod CreateTrampoline(MethodBase target, byte[] code = null, MethodInfo invoke = null) {
+        public static unsafe DynamicMethod CreateOrigTrampoline(this MethodBase target, MethodInfo invoke = null)
+            => CreateTrampolineDirect(target, null, invoke);
+
+        public static unsafe DynamicMethod CreateTrampoline(this MethodBase target, MethodInfo invoke = null) {
+            void* p = GetMethodStart(target);
+            Stack<byte[]> reverts;
+            if (!_Reverts.TryGetValue((long) p, out reverts) ||
+                reverts.Count == 0)
+                return null;
+
+            if (reverts.Count == 1)
+                return CreateOrigTrampoline(target, invoke);
+
+            byte[] code = reverts.Peek();
+            return CreateTrampolineDirect(target, code, invoke);
+        }
+
+        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target, byte[] code = null, MethodInfo invoke = null) {
             _CreateToken(target);
 
             invoke = invoke ?? (target as MethodInfo);

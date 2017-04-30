@@ -40,6 +40,7 @@ namespace MonoMod {
             MethodInfo m_PrintA = typeof(QuickDebugTest).GetMethod("PrintA");
             MethodInfo m_PrintB = typeof(QuickDebugTest).GetMethod("PrintB");
             MethodInfo m_PrintC = typeof(QuickDebugTest).GetMethod("PrintC");
+            MethodInfo m_PrintATrampoline = typeof(QuickDebugTest).GetMethod("PrintATrampoline");
 
             PrintA();
             // A
@@ -50,6 +51,15 @@ namespace MonoMod {
 
             t_FromB();
             // A
+
+            unsafe
+            {
+                m_PrintATrampoline.Detour(
+                    RuntimeDetour.CreateTrampoline(m_PrintA)
+                );
+                PrintATrampoline();
+                // A
+            }
 
             d_PrintA t_FromC = m_PrintA.Detour<d_PrintA>((Action) PrintC);
             PrintA();
@@ -86,6 +96,8 @@ namespace MonoMod {
         public static void PrintC() => Console.WriteLine("C");
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintD() => Console.WriteLine("D");
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void PrintATrampoline() => Console.WriteLine("SHOULD BE DETOURED");
 
         public static bool TestReflectionHelperRef() {
             object[] args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
