@@ -44,12 +44,12 @@ namespace MonoMod.Detour {
         }
 
         public void RegisterTrampoline(MethodDefinition targetMethod, MethodDefinition method) {
-            _MMD.LogVerbose($"[RegisterTrampoline] {method.GetFindableID()} ({method.MetadataToken.RID}) -> {targetMethod.GetFindableID()} ({targetMethod.MetadataToken.RID})");
+            _MMD.LogVerbose($"[RegisterTrampoline] {method.GetFindableID()} ({method.MetadataToken.ToInt32()}) -> {targetMethod.GetFindableID()} ({targetMethod.MetadataToken.ToInt32()})");
             _Trampolines.Add(Tuple.Create(targetMethod.MetadataToken.ToInt32(), method.MetadataToken.ToInt32()));
         }
 
         public void RegisterDetour(MethodDefinition targetMethod, MethodDefinition method) {
-            _MMD.LogVerbose($"[RegisterDetour] {targetMethod.GetFindableID()} ({targetMethod.MetadataToken.RID}) -> {method.GetFindableID()} ({method.MetadataToken.RID})");
+            _MMD.LogVerbose($"[RegisterDetour] {targetMethod.GetFindableID()} ({targetMethod.MetadataToken.ToInt32()}) -> {method.GetFindableID()} ({method.MetadataToken.ToInt32()})");
             _Detours.Add(Tuple.Create(targetMethod.MetadataToken.ToInt32(), method.MetadataToken.ToInt32()));
         }
 
@@ -58,6 +58,13 @@ namespace MonoMod.Detour {
                 _Mod.Write(asmStream);
                 _Assembly = Assembly.Load(asmStream.GetBuffer());
             }
+
+            /**/
+            using (FileStream debugStream = File.OpenWrite(Path.Combine(
+                _MMD.DependencyDirs[0], $"{_Mod.Name.Substring(0, _Mod.Name.Length - 4)}.MonoModDetourer.dll")))
+                _Mod.Write(debugStream);
+            /**/
+
             _Module = _Assembly.GetModule(_Mod.Name);
 
             foreach (Tuple<int, int> tuple in _Detours) {
@@ -66,15 +73,20 @@ namespace MonoMod.Detour {
                     .Detour(_Module.ResolveMethod(tuple.Item2));
             }
 
-            foreach (Tuple<int, int> tuple in _Trampolines) {
-                _MMD.LogVerbose($"[Apply] [Trampoline] {tuple.Item2} -> {tuple.Item1}");
-                _Module.ResolveMethod(tuple.Item2)
-                    .Detour(RuntimeDetour.CreateTrampoline(_MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1)));
+            unsafe {
+                foreach (Tuple<int, int> tuple in _Trampolines) {
+                    _MMD.LogVerbose($"[Apply] [Trampoline] {tuple.Item2} -> {tuple.Item1}");
+                    // TODO: [MMDetourer] Trampoline one level up, not to orig. Provide code argument!
+                    RuntimeDetour.Detour(
+                        RuntimeDetour.GetMethodStart(_Module.ResolveMethod(tuple.Item2)),
+                        RuntimeDetour.GetMethodStart(RuntimeDetour.CreateTrampoline(_MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1))),
+                    false);
+                }
             }
         }
 
         public void Revert() {
-            // TODO: [MMDetourer] Implement undetouring
+            // TODO: [MMDetourer] Implement undetouring.
         }
 
     }

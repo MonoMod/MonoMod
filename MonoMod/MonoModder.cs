@@ -1748,6 +1748,47 @@ namespace MonoMod {
             Module.Types.Add(attrType);
             return _mmAddedCtor;
         }
+
+        protected MethodDefinition _mmPatchCtor;
+        public virtual MethodReference GetMonoModPatchCtor() {
+            if (_mmPatchCtor != null && _mmPatchCtor.Module != Module) {
+                _mmPatchCtor = null;
+            }
+            if (_mmPatchCtor != null) {
+                return _mmPatchCtor;
+            }
+
+            TypeDefinition attrType = null;
+            for (int ti = 0; ti < Module.Types.Count; ti++) {
+                if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModPatch") {
+                    attrType = Module.Types[ti];
+                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                        if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
+                            continue;
+                        }
+                        return _mmPatchCtor = attrType.Methods[mi];
+                    }
+                }
+            }
+            Log("[MonoModPatch] Adding MonoMod.MonoModPatch");
+            attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModPatch", TypeAttributes.Public | TypeAttributes.Class) {
+                BaseType = Module.ImportReference(typeof(Attribute))
+            };
+            _mmPatchCtor = new MethodDefinition(".ctor",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                Module.TypeSystem.Void
+            );
+            _mmPatchCtor.Parameters.Add(new ParameterDefinition("name", ParameterAttributes.None, Module.TypeSystem.String));
+            _mmPatchCtor.MetadataToken = GetMetadataToken(TokenType.Method);
+            _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+            _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+            )));
+            _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+            attrType.Methods.Add(_mmPatchCtor);
+            Module.Types.Add(attrType);
+            return _mmPatchCtor;
+        }
         #endregion
 
 

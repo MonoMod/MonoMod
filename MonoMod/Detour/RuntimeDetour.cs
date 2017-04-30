@@ -1,5 +1,4 @@
-﻿using MonoMod.InlineRT;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,6 +8,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
+using MonoMod.InlineRT;
 
 namespace MonoMod.Detour {
     public static class RuntimeDetour {
@@ -16,23 +16,47 @@ namespace MonoMod.Detour {
         public static bool IsX64 { get; } = IntPtr.Size == 8;
 
         private readonly static FieldInfo f_DynamicMethod_m_method =
+            // .NET
             typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance) ??
+            // Mono
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
-        private readonly static MethodInfo m_Console_WriteLine_string = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
-
-        private readonly static MethodInfo m_PrepareOrig = typeof(RuntimeDetour).GetMethod("PrepareOrig", new Type[] { typeof(long) });
-        private readonly static MethodInfo m_UnprepareOrig = typeof(RuntimeDetour).GetMethod("UnprepareOrig", new Type[] { typeof(long) });
+        private readonly static MethodInfo m_DynamicMethod_CreateDynMethod =
+            // Mono
+            typeof(DynamicMethod).GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance);
+        private readonly static DynamicMethodDelegate dmd_DynamicMethod_CreateDynMethod =
+            m_DynamicMethod_CreateDynMethod?.CreateDelegate();
+        private readonly static MethodInfo m_Console_WriteLine_string =
+            typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
 
         private readonly static unsafe LongDictionary<byte[]> _Origs = new LongDictionary<byte[]>();
         private readonly static unsafe LongDictionary<Stack<byte[]>> _Reverts = new LongDictionary<Stack<byte[]>>();
         private readonly static unsafe LongDictionary<byte[]> _Current = new LongDictionary<byte[]>();
         private readonly static unsafe FastDictionary<ulong, Type, Delegate> _OrigTrampolines = new FastDictionary<ulong, Type, Delegate>();
 
-        public static unsafe void* GetMethodStart(MethodBase method) {
-            RuntimeMethodHandle handle;
+        private readonly static unsafe LongDictionary<MethodBase> _TokenToMethod = new LongDictionary<MethodBase>();
+        private readonly static unsafe HashSet<MethodBase> _Tokenized = new HashSet<MethodBase>();
+
+        private static void _CreateToken(MethodBase method) {
             if (method is DynamicMethod)
+                return;
+            if (_Tokenized.Contains(method))
+                return;
+            _Tokenized.Add(method);
+
+            long token = GetToken(method);
+            _TokenToMethod[token] = method;
+        }
+
+        public static unsafe void* GetMethodStart(long token)
+            => GetMethodStart(_TokenToMethod[token]);
+        public static unsafe void* GetMethodStart(MethodBase method) {
+            _CreateToken(method);
+
+            RuntimeMethodHandle handle;
+            if (method is DynamicMethod) {
+                dmd_DynamicMethod_CreateDynMethod?.Invoke(method);
                 handle = (RuntimeMethodHandle) f_DynamicMethod_m_method.GetValue(method);
-            else
+            } else
                 handle = method.MethodHandle;
 
             RuntimeHelpers.PrepareMethod(handle);
@@ -42,6 +66,18 @@ namespace MonoMod.Detour {
             RuntimeHelpers.PrepareDelegate(d);
             return Marshal.GetFunctionPointerForDelegate(d).ToPointer();
         }
+
+        public static unsafe long GetToken(MethodBase method)
+            => (long) ((ulong) method.MetadataToken) << 32 | (
+                (uint) ((method.Module.Name.GetHashCode() << 5) + method.Module.Name.GetHashCode()) ^
+                (uint) method.Module.Assembly.FullName.GetHashCode()
+            );
+
+        public static long GetToken(Mono.Cecil.MethodReference method)
+            => (long) ((ulong) method.MetadataToken.ToInt32()) << 32 | (
+                (uint) ((method.Module.Name.GetHashCode() << 5) + method.Module.Name.GetHashCode()) ^
+                (uint) method.Module.Assembly.FullName.GetHashCode()
+            );
 
         public static unsafe void Detour(this MethodBase from, IntPtr to)
             => Detour(GetMethodStart(from), to.ToPointer());
@@ -84,7 +120,7 @@ namespace MonoMod.Detour {
                 *((byte*)  ((ulong) from + 5))  = 0xC3;
             }
 
-            if (orig == null)
+            if (!store)
                 return;
 
             long key = (long) from;
@@ -120,8 +156,7 @@ namespace MonoMod.Detour {
 
         public static unsafe T GetOrigTrampoline<T>(this MethodBase target) {
             void* p = GetMethodStart(target);
-            byte[] orig;
-            if (!_Origs.TryGetValue((long) p, out orig))
+            if (!_Origs.ContainsKey((long) p))
                 return default(T);
 
             ulong key = (ulong) p;
@@ -145,10 +180,10 @@ namespace MonoMod.Detour {
             if (reverts.Count == 1)
                 return GetOrigTrampoline<T>(target);
 
-            byte[] orig = reverts.Peek();
+            byte[] code = reverts.Peek();
             ulong key = (ulong) p;
             Type t = typeof(T);
-            T del = CreateTrampoline<T>(target, orig);
+            T del = CreateTrampoline<T>(target, code);
             return (T) (object) del;
         }
 
@@ -158,14 +193,25 @@ namespace MonoMod.Detour {
         }
 
         public static unsafe DynamicMethod CreateTrampoline(MethodBase target, byte[] code = null, MethodInfo invoke = null) {
+            _CreateToken(target);
+
             invoke = invoke ?? (target as MethodInfo);
 
             ParameterInfo[] args = invoke.GetParameters();
-            Type[] argTypes = new Type[args.Length];
-            for (int i = 0; i < args.Length; i++)
-                argTypes[i] = args[i].ParameterType;
+            Type[] argTypes;
 
-            DynamicMethod dm = new DynamicMethod($"trampoline_{target.Name}_{(code?.GetHashCode())?.ToString() ?? "orig"}", invoke.ReturnType, argTypes, typeof(ReflectionHelper).Module, true);
+            if (invoke == target && !target.IsStatic) {
+                argTypes = new Type[args.Length + 1];
+                argTypes[0] = target.DeclaringType;
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i + 1] = args[i].ParameterType;
+            } else {
+                argTypes = new Type[args.Length];
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i] = args[i].ParameterType;
+            }
+
+            DynamicMethod dm = new DynamicMethod($"trampoline_{target.Name}_{(code?.GetHashCode())?.ToString() ?? "orig"}", invoke.ReturnType, argTypes, target.Module, true);
             ILGenerator il = dm.GetILGenerator();
 
             if (code != null) {
@@ -177,52 +223,47 @@ namespace MonoMod.Detour {
                         il.Emit(OpCodes.Box, invoke.ReturnType);
                 }
                 il.Emit(OpCodes.Ret);
-                dm.Invoke(null, new object[args.Length]);
+
+                dm.Invoke(null, new object[argTypes.Length]);
+
                 void* p = GetMethodStart(dm);
                 Marshal.Copy(code, 0, new IntPtr(p), code.Length);
                 p = (void*) ((ulong) p + (ulong) code.Length);
                 Detour(p, GetMethodStart(target), false);
 
             } else {
-                LocalBuilder retVal = null;
-                if (target is MethodInfo && ((MethodInfo) target).ReturnType != typeof(void)) {
-                    retVal = il.DeclareLocal(((MethodInfo) target).ReturnType);
-                } else if (target is ConstructorInfo) {
-                    retVal = il.DeclareLocal(target.DeclaringType);
-                }
+                il.Emit(OpCodes.Ldc_I8, GetToken(target));
+                il.Emit(OpCodes.Call, TrampolinePrefix);
 
-                il.Emit(OpCodes.Ldc_I8, (long) GetMethodStart(target));
-                il.Emit(OpCodes.Call, m_PrepareOrig);
-
-                for (int i = 0; i < args.Length; i++)
-                    // TODO: [RuntimeDetour] Can be optimized; What about ref types?
+                // TODO: [RuntimeDetour] Can be optimized; What about ref types?
+                for (int i = 0; i < argTypes.Length; i++)
                     il.Emit(OpCodes.Ldarg, i);
 
                 if (target is MethodInfo)
                     il.Emit(OpCodes.Call, (MethodInfo) target);
                 else if (target is ConstructorInfo)
-                    il.Emit(OpCodes.Newobj, (ConstructorInfo) target);
+                    // Calls base constructor
+                    il.Emit(OpCodes.Call, (ConstructorInfo) target);
 
-                if (retVal != null)
-                    il.Emit(OpCodes.Stloc_0);
+                il.Emit(OpCodes.Ldc_I8, GetToken(target));
+                il.Emit(OpCodes.Call, TrampolineSuffix);
 
-                il.Emit(OpCodes.Ldc_I8, (long) GetMethodStart(target));
-                il.Emit(OpCodes.Call, m_UnprepareOrig);
-
-                if (retVal != null)
-                    il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Ret);
             }
 
             return dm;
         }
 
-        public static unsafe void PrepareOrig(long target) {
+        public static MethodInfo TrampolinePrefix = typeof(RuntimeDetour).GetMethod("PrepareOrig", new Type[] { typeof(long) });
+        public static unsafe void PrepareOrig(long targetToken) {
+            long target = (long) GetMethodStart(targetToken);
             byte[] code = _Origs[target];
             Marshal.Copy(code, 0, new IntPtr(target), code.Length);
         }
 
-        public static unsafe void UnprepareOrig(long target) {
+        public static MethodInfo TrampolineSuffix = typeof(RuntimeDetour).GetMethod("UnprepareOrig", new Type[] { typeof(long) });
+        public static unsafe void UnprepareOrig(long targetToken) {
+            long target = (long) GetMethodStart(targetToken);
             byte[] code = _Current[target];
             Marshal.Copy(code, 0, new IntPtr(target), code.Length);
         }

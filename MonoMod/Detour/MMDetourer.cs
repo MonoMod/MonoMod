@@ -27,8 +27,10 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 namespace MonoMod.Detour {
     public class MonoModDetourer : MonoModder {
 
-        public static ConstructorInfo c_ExtensionAttribute =
+        private readonly static ConstructorInfo c_ExtensionAttribute =
             typeof(System.Runtime.CompilerServices.ExtensionAttribute).GetConstructor(new Type[0]);
+        private readonly Type t_SecurityPermissionAttribute =
+            typeof(System.Security.Permissions.SecurityPermissionAttribute);
 
         public Assembly RuntimeTarget;
         private Module _RuntimeTargetModule;
@@ -67,7 +69,7 @@ namespace MonoMod.Detour {
 
         public virtual void ReadDetours(ModuleDefinition mod) {
             // Could be extended in the future.
-            MapDependencies(mod);
+            MapDependencies();
             NextLevel(mod);
             PatchModule(mod);
             ModuleDefinition target = Module;
@@ -75,10 +77,25 @@ namespace MonoMod.Detour {
             PatchRefs(mod);
             Module = target;
             Apply();
+            ClearCaches(moduleSpecific: true);
         }
 
         public virtual void Apply()
             => Level.Apply();
+
+        public override void PatchType(TypeDefinition type) {
+            base.PatchType(type);
+
+            CustomAttribute patchName = type.GetMMAttribute("Patch");
+            CustomAttributeArgument patchNameArg = new CustomAttributeArgument(Module.TypeSystem.String, type.FullName);
+            if (patchName != null) {
+                patchName.ConstructorArguments[0] = patchNameArg;
+            } else {
+                patchName = new CustomAttribute(GetMonoModPatchCtor());
+                patchName.ConstructorArguments.Add(patchNameArg);
+                type.AddAttribute(patchName);
+            }
+        }
 
         public override void PatchProperty(TypeDefinition targetType, PropertyDefinition prop, HashSet<MethodDefinition> propMethods = null) {
             // no-op
@@ -89,31 +106,51 @@ namespace MonoMod.Detour {
         }
 
         public override MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {
-            bool isOriginal = false;
             if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
-                isOriginal = true;
+                return null;
 
-            if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals(Module))
+            string id = method.GetFindableID(withType: false);
+            string idOrig = method.GetFindableID(name: method.GetOriginalName(), withType: false);
+
+            MethodDefinition targetMethod = targetType.FindMethod(id);
+
+            MethodDefinition ret = _PatchMethod(targetMethod, method, false);
+            if (ret == null)
+                return null;
+
+            MethodDefinition orig = method.DeclaringType.FindMethod(idOrig);
+            if (orig != null)
+                _PatchMethod(targetMethod, orig, true);
+
+            return ret;
+        }
+
+        private MethodDefinition _PatchMethod(MethodDefinition targetMethod, MethodDefinition method, bool isOriginal) {
+            if (!AllowedSpecialName(method, targetMethod.DeclaringType) || !method.MatchingConditionals(Module))
                 // Ignore ignored methods
                 return null;
 
-            string typeName = targetType.GetPatchFullName();
-
-            MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(withType: false));
+            string typeName = targetMethod.DeclaringType.Name;
+            string idFull = method.GetFindableID(type: typeName);
+            string idFullDirect = method.GetFindableID();
+            string id = method.GetFindableID(withType: false);
 
             if (method.HasMMAttribute("Ignore"))
                 // Custom attribute carrying doesn't apply here.
                 return null;
 
-            if (SkipList.Contains(method.GetFindableID(type: typeName)))
+            if (SkipList.Contains(id))
                 return null;
 
-            if (existingMethod == null) {
-                LogVerbose($"[PatchMethod] Method {method.GetFindableID(withType: false)} not found in target type {typeName}");
+            TransformMethodToExtension(targetMethod.DeclaringType, method);
+            Tuple<string, string> relinkTo = Tuple.Create(method.DeclaringType.Name, method.GetFindableID(withType: false));
+            RelinkMap[method.GetFindableID(type: typeName)] = relinkTo;
+            RelinkMap[method.GetFindableID()] = relinkTo;
+
+            if (targetMethod == null) {
+                LogVerbose($"[PatchMethod] Method {id} not found in target type {typeName}");
                 return null;
             }
-
-            TransformMethodToExtension(targetType, method);
 
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
             if (method.HasMMAttribute("Constructor")) {
@@ -127,9 +164,9 @@ namespace MonoMod.Detour {
                 return null;
 
             if (isOriginal) {
-                PatchTrampoline(existingMethod, method);
+                PatchTrampoline(targetMethod, method);
             } else {
-                PatchDetour(existingMethod, method);
+                PatchDetour(targetMethod, method);
             }
 
             return method;
@@ -140,18 +177,19 @@ namespace MonoMod.Detour {
             method.IsIL = true;
             method.IsNative = false;
             method.PInvokeInfo = null;
-            method.IsPreserveSig = true;
             method.IsInternalCall = false;
             method.IsPInvokeImpl = false;
             method.NoInlining = true;
 
             MethodBody body;
-            if (!method.HasBody)
+            // if (!method.HasBody)
                 body = method.Body = new MethodBody(method);
-            else
-                body = method.Body;
+            // else
+            //    body = method.Body;
 
             ILProcessor il = body.GetILProcessor();
+
+            /**/
             for (int i = 64; i > -1; --i)
                 il.Emit(OpCodes.Nop);
             if (method.ReturnType.MetadataType != MetadataType.Void) {
@@ -160,6 +198,38 @@ namespace MonoMod.Detour {
                     il.Emit(OpCodes.Box, method.ReturnType);
             }
             il.Emit(OpCodes.Ret);
+            /**/
+
+            /**//*
+            VariableDefinition retVar = null;
+            if (targetMethod.ReturnType.MetadataType != MetadataType.Void)
+                body.Variables.Add(retVar = new VariableDefinition(targetMethod.ReturnType));
+
+            il.Emit(OpCodes.Ldc_I8, RuntimeDetour.GetToken(targetMethod));
+            il.Emit(OpCodes.Call, method.Module.ImportReference(RuntimeDetour.TrampolinePrefix));
+
+            for (int i = 0; i < method.Parameters.Count; i++)
+                // TODO: [RuntimeDetour] Can be optimized; What about ref types?
+                il.Emit(OpCodes.Ldarg, i);
+
+            il.Emit(OpCodes.Call, targetMethod);
+
+            if (retVar != null)
+                il.Emit(OpCodes.Stloc_0);
+
+            il.Emit(OpCodes.Ldc_I8, RuntimeDetour.GetToken(targetMethod));
+            il.Emit(OpCodes.Call, method.Module.ImportReference(RuntimeDetour.TrampolineSuffix));
+
+            if (retVar != null)
+                il.Emit(OpCodes.Ldloc_0);
+            il.Emit(OpCodes.Ret);
+
+            SecurityDeclaration secDecl = new SecurityDeclaration(SecurityAction.Demand);
+            method.SecurityDeclarations.Add(secDecl);
+            SecurityAttribute secAttrib = new SecurityAttribute(method.Module.ImportReference(t_SecurityPermissionAttribute));
+            secDecl.SecurityAttributes.Add(secAttrib);
+            secAttrib.Properties.Add(new Mono.Cecil.CustomAttributeNamedArgument("SkipVerification", new CustomAttributeArgument(method.Module.TypeSystem.Boolean, true)));
+            /**/
 
             RegisterTrampoline(targetMethod, method);
         }
