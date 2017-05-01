@@ -20,13 +20,28 @@ namespace MonoMod.Detour {
             typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance) ??
             // Mono
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
+
         private readonly static MethodInfo m_DynamicMethod_CreateDynMethod =
-            // .NET
-            typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance) ??
             // Mono
             typeof(DynamicMethod).GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance);
         private readonly static DynamicMethodDelegate dmd_DynamicMethod_CreateDynMethod =
             m_DynamicMethod_CreateDynMethod?.CreateDelegate();
+
+        private readonly static MethodInfo m_DynamicMethod_GetMethodDescriptor =
+            // .NET
+            typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance);
+        private readonly static DynamicMethodDelegate dmd_DynamicMethod_GetMethodDescriptor =
+            m_DynamicMethod_GetMethodDescriptor?.CreateDelegate();
+
+        private readonly static MethodInfo m_RuntimeHelpers__CompileMethod =
+            // .NET
+            typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
+        private readonly static DynamicMethodDelegate dmd_RuntimeHelpers__CompileMethod =
+            m_RuntimeHelpers__CompileMethod?.CreateDelegate();
+        private readonly static bool m_RuntimeHelpers__CompileMethod_TakesIntPtr =
+            m_RuntimeHelpers__CompileMethod != null &&
+            m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType == typeof(IntPtr);
+
         private readonly static MethodInfo m_Console_WriteLine_string =
             typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
 
@@ -49,6 +64,18 @@ namespace MonoMod.Detour {
             _TokenToMethod[token] = method;
         }
 
+        private static void _CreateDynMethod(DynamicMethod dm) {
+            if (dmd_DynamicMethod_CreateDynMethod != null) {
+                dmd_DynamicMethod_CreateDynMethod(dm);
+            } else {
+                RuntimeMethodHandle handle = (RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(dm);
+                if (m_RuntimeHelpers__CompileMethod_TakesIntPtr)
+                    dmd_RuntimeHelpers__CompileMethod(null, handle.Value);
+                else
+                    dmd_RuntimeHelpers__CompileMethod(null, handle);
+            }
+        }
+
         public static unsafe void* GetMethodStart(long token)
             => GetMethodStart(_TokenToMethod[token]);
         public static unsafe void* GetMethodStart(MethodBase method) {
@@ -56,7 +83,7 @@ namespace MonoMod.Detour {
 
             RuntimeMethodHandle handle;
             if (method is DynamicMethod) {
-                dmd_DynamicMethod_CreateDynMethod?.Invoke(method);
+                _CreateDynMethod((DynamicMethod) method);
                 handle = (RuntimeMethodHandle) f_DynamicMethod_m_method.GetValue(method);
             } else
                 handle = method.MethodHandle;
