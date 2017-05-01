@@ -23,6 +23,7 @@ using FieldAttributes = Mono.Cecil.FieldAttributes;
 using PropertyAttributes = Mono.Cecil.PropertyAttributes;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
+using System.Reflection.Emit;
 
 namespace MonoMod.Detour {
     public sealed class MonoModDetourerLevel {
@@ -59,7 +60,7 @@ namespace MonoMod.Detour {
                 _Assembly = Assembly.Load(asmStream.GetBuffer());
             }
 
-            /**/
+            /**//*
             using (FileStream debugStream = File.OpenWrite(Path.Combine(
                 _MMD.DependencyDirs[0], $"{_Mod.Name.Substring(0, _Mod.Name.Length - 4)}.MonoModDetourer.dll")))
                 _Mod.Write(debugStream);
@@ -67,21 +68,33 @@ namespace MonoMod.Detour {
 
             _Module = _Assembly.GetModule(_Mod.Name);
 
-            foreach (Tuple<int, int> tuple in _Detours) {
-                _MMD.LogVerbose($"[Apply] [Detour] {tuple.Item1} -> {tuple.Item2}");
-                _MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1)
-                    .Detour(_Module.ResolveMethod(tuple.Item2));
-            }
+            foreach (Tuple<int, int> tuple in _Detours)
+                ApplyDetour(_MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1), _Module.ResolveMethod(tuple.Item2));
 
-            unsafe {
-                foreach (Tuple<int, int> tuple in _Trampolines) {
-                    _MMD.LogVerbose($"[Apply] [Trampoline] {tuple.Item2} -> {tuple.Item1}");
-                    RuntimeDetour.Detour(
-                        RuntimeDetour.GetMethodStart(_Module.ResolveMethod(tuple.Item2)),
-                        RuntimeDetour.GetMethodStart(RuntimeDetour.CreateTrampoline(_MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1))),
-                    false);
-                }
-            }
+            foreach (Tuple<int, int> tuple in _Trampolines)
+                ApplyTrampoline(_Module.ResolveMethod(tuple.Item2), _MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1));
+        }
+
+        public void ApplyDetour(MethodBase from, MethodBase to) {
+            _MMD.LogVerbose($"[ApplyDetour] {from} -> {to}");
+            from.Detour(to);
+        }
+
+        public unsafe void ApplyTrampoline(MethodBase from, MethodBase to) {
+            DynamicMethod trampoline = to.CreateTrampoline();
+            trampoline = to.CreateTrampoline();
+            _MMD.LogVerbose($"[ApplyTrampoline] {from} -> {to} ({trampoline})");
+
+            // Note: Detouring to `to` causes a stack overflow... which is correct.
+            // _MMD.LogVerbose($"[ApplyTrampoline] 0x{((ulong) RuntimeDetour.GetMethodStart(from)).ToString("X16")} -> 0x{((ulong) RuntimeDetour.GetMethodStart(trampoline)).ToString("X16")}");
+
+            // FIXME: [MMDetourer] Fix nasty heisenbug that's being amplified by this.
+            RuntimeDetour.GetMethodStart(to.CreateTrampoline());
+
+            RuntimeDetour.Detour(
+                RuntimeDetour.GetMethodStart(from),
+                RuntimeDetour.GetMethodStart(to.CreateTrampoline()),
+            false);
         }
 
         public void Revert() {

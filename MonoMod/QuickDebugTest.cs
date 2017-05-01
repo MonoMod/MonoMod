@@ -13,10 +13,13 @@ using System.Runtime.CompilerServices;
 namespace MonoMod {
     internal delegate void d_TestA(int a, ref int b, out int c, out QuickDebugTestObject d, ref QuickDebugTestStruct e);
     internal delegate void d_PrintA();
+    internal delegate void d_PrintQDTO(QuickDebugTestObject qdto);
     internal class QuickDebugTestObject {
         public int Value;
         public override string ToString()
             => $"{{QuickDebugTestObject:{Value}}}";
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void PrintQDTO() => Console.WriteLine("QDTO");
     }
     internal struct QuickDebugTestStruct {
         public int Value;
@@ -84,6 +87,31 @@ namespace MonoMod {
             PrintA();
             // A
 
+
+            MethodInfo m_PrintQDTO = typeof(QuickDebugTestObject).GetMethod("PrintQDTO");
+            MethodInfo m_PrintQDTODetour = typeof(QuickDebugTest).GetMethod("PrintQDTODetour");
+            MethodInfo m_PrintQDTOTrampoline = typeof(QuickDebugTest).GetMethod("PrintQDTOTrampoline");
+
+            QuickDebugTestObject qdto = new QuickDebugTestObject();
+            qdto.PrintQDTO();
+            // QDTO
+
+            d_PrintQDTO t_FromQDTO = m_PrintQDTO.Detour<d_PrintQDTO>(m_PrintQDTODetour);
+            qdto.PrintQDTO();
+            // QDTO Detour
+
+            t_FromQDTO(qdto);
+            // QDTO
+
+            unsafe
+            {
+                m_PrintQDTOTrampoline.Detour(
+                    RuntimeDetour.CreateTrampoline(m_PrintQDTO)
+                );
+                PrintQDTOTrampoline(qdto);
+                // QDTO
+            }
+
             return true;
         }
 
@@ -98,6 +126,10 @@ namespace MonoMod {
         public static void PrintD() => Console.WriteLine("D");
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void PrintATrampoline() => Console.WriteLine("SHOULD BE DETOURED");
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void PrintQDTODetour(QuickDebugTestObject qdto) => Console.WriteLine("QDTO Detoured");
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void PrintQDTOTrampoline(QuickDebugTestObject qdto) => Console.WriteLine("SHOULD BE DETOURED");
 
         public static bool TestReflectionHelperRef() {
             object[] args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };

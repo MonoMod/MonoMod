@@ -32,6 +32,9 @@ namespace MonoMod.Detour {
         private readonly Type t_SecurityPermissionAttribute =
             typeof(System.Security.Permissions.SecurityPermissionAttribute);
 
+        private readonly static MethodInfo m_Console_WriteLine_string =
+            typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
+
         public Assembly RuntimeTarget;
         private Module _RuntimeTargetModule;
         public Module RuntimeTargetModule {
@@ -179,14 +182,9 @@ namespace MonoMod.Detour {
             method.PInvokeInfo = null;
             method.IsInternalCall = false;
             method.IsPInvokeImpl = false;
-            method.NoInlining = true;
+            method.NoInlining = false;
 
-            MethodBody body;
-            // if (!method.HasBody)
-                body = method.Body = new MethodBody(method);
-            // else
-            //    body = method.Body;
-
+            MethodBody body = method.Body = new MethodBody(method);
             ILProcessor il = body.GetILProcessor();
 
             /**/
@@ -201,29 +199,6 @@ namespace MonoMod.Detour {
             /**/
 
             /**//*
-            VariableDefinition retVar = null;
-            if (targetMethod.ReturnType.MetadataType != MetadataType.Void)
-                body.Variables.Add(retVar = new VariableDefinition(targetMethod.ReturnType));
-
-            il.Emit(OpCodes.Ldc_I8, RuntimeDetour.GetToken(targetMethod));
-            il.Emit(OpCodes.Call, method.Module.ImportReference(RuntimeDetour.TrampolinePrefix));
-
-            for (int i = 0; i < method.Parameters.Count; i++)
-                // TODO: [RuntimeDetour] Can be optimized; What about ref types?
-                il.Emit(OpCodes.Ldarg, i);
-
-            il.Emit(OpCodes.Call, targetMethod);
-
-            if (retVar != null)
-                il.Emit(OpCodes.Stloc_0);
-
-            il.Emit(OpCodes.Ldc_I8, RuntimeDetour.GetToken(targetMethod));
-            il.Emit(OpCodes.Call, method.Module.ImportReference(RuntimeDetour.TrampolineSuffix));
-
-            if (retVar != null)
-                il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Ret);
-
             SecurityDeclaration secDecl = new SecurityDeclaration(SecurityAction.Demand);
             method.SecurityDeclarations.Add(secDecl);
             SecurityAttribute secAttrib = new SecurityAttribute(method.Module.ImportReference(t_SecurityPermissionAttribute));
