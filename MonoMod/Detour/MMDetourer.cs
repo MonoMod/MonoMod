@@ -182,7 +182,7 @@ namespace MonoMod.Detour {
             method.PInvokeInfo = null;
             method.IsInternalCall = false;
             method.IsPInvokeImpl = false;
-            method.NoInlining = false;
+            method.NoInlining = true;
 
             MethodBody body = method.Body = new MethodBody(method);
             ILProcessor il = body.GetILProcessor();

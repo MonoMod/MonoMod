@@ -80,21 +80,35 @@ namespace MonoMod.Detour {
             from.Detour(to);
         }
 
+        delegate string d_T(IntPtr o);
         public unsafe void ApplyTrampoline(MethodBase from, MethodBase to) {
             DynamicMethod trampoline = to.CreateTrampoline();
-            trampoline = to.CreateTrampoline();
             _MMD.LogVerbose($"[ApplyTrampoline] {from} -> {to} ({trampoline})");
+            _MMD.LogVerbose($"[ApplyTrampoline] 0x{((ulong) RuntimeDetour.GetMethodStart(from)).ToString("X16")} -> 0x{((ulong) RuntimeDetour.GetMethodStart(trampoline)).ToString("X16")}");
+            
+            /*
+            Console.WriteLine(null == ((d_T) Marshal.GetDelegateForFunctionPointer(new IntPtr(RuntimeDetour.GetMethodStart(from)), typeof(d_T)))(IntPtr.Zero));
+            try {
+                Console.WriteLine(((d_T) Marshal.GetDelegateForFunctionPointer(new IntPtr(RuntimeDetour.GetMethodStart(trampoline)), typeof(d_T)))(IntPtr.Zero));
+            } catch (NullReferenceException) {
+                Console.WriteLine("True");
+            }
+            */
 
             // Note: Detouring to `to` causes a stack overflow... which is correct.
-            // _MMD.LogVerbose($"[ApplyTrampoline] 0x{((ulong) RuntimeDetour.GetMethodStart(from)).ToString("X16")} -> 0x{((ulong) RuntimeDetour.GetMethodStart(trampoline)).ToString("X16")}");
-
-            // FIXME: [MMDetourer] Fix nasty heisenbug that's being amplified by this.
-            RuntimeDetour.GetMethodStart(to.CreateTrampoline());
-
             RuntimeDetour.Detour(
                 RuntimeDetour.GetMethodStart(from),
-                RuntimeDetour.GetMethodStart(to.CreateTrampoline()),
+                RuntimeDetour.GetMethodStart(trampoline),
             false);
+
+            /*
+            try {
+                Console.WriteLine(((d_T) Marshal.GetDelegateForFunctionPointer(new IntPtr(RuntimeDetour.GetMethodStart(trampoline)), typeof(d_T)))(IntPtr.Zero));
+            } catch (NullReferenceException) {
+                Console.WriteLine("True");
+            }
+            RuntimeDetour.UnprepareOrig(RuntimeDetour.GetToken(to));
+            */
         }
 
         public void Revert() {

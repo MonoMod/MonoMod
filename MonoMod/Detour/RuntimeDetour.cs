@@ -17,9 +17,7 @@ namespace MonoMod.Detour {
 
         private readonly static FieldInfo f_DynamicMethod_m_method =
             // .NET
-            typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance) ??
-            // Mono
-            typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
 
         private readonly static MethodInfo m_DynamicMethod_CreateDynMethod =
             // Mono
@@ -84,7 +82,10 @@ namespace MonoMod.Detour {
             RuntimeMethodHandle handle;
             if (method is DynamicMethod) {
                 _CreateDynMethod((DynamicMethod) method);
-                handle = (RuntimeMethodHandle) f_DynamicMethod_m_method.GetValue(method);
+                if (f_DynamicMethod_m_method != null)
+                    handle = (RuntimeMethodHandle) f_DynamicMethod_m_method.GetValue(method);
+                else
+                    handle = method.MethodHandle;
             } else
                 handle = method.MethodHandle;
 
