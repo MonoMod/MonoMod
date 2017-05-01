@@ -52,12 +52,13 @@ namespace MonoMod.Detour {
         private readonly static unsafe HashSet<MethodBase> _Tokenized = new HashSet<MethodBase>();
 
         private static void _CreateToken(MethodBase method) {
-            if (method is DynamicMethod)
-                return;
             if (_Tokenized.Contains(method))
                 return;
             _Tokenized.Add(method);
 
+            // DynamicMethod can get disposed.
+            if (method is DynamicMethod)
+                return;
             long token = GetToken(method);
             _TokenToMethod[token] = method;
         }
