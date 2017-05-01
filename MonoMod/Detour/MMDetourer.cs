@@ -187,7 +187,6 @@ namespace MonoMod.Detour {
             MethodBody body = method.Body = new MethodBody(method);
             ILProcessor il = body.GetILProcessor();
 
-            /**/
             for (int i = 64; i > -1; --i)
                 il.Emit(OpCodes.Nop);
             if (method.ReturnType.MetadataType != MetadataType.Void) {
@@ -196,15 +195,6 @@ namespace MonoMod.Detour {
                     il.Emit(OpCodes.Box, method.ReturnType);
             }
             il.Emit(OpCodes.Ret);
-            /**/
-
-            /**//*
-            SecurityDeclaration secDecl = new SecurityDeclaration(SecurityAction.Demand);
-            method.SecurityDeclarations.Add(secDecl);
-            SecurityAttribute secAttrib = new SecurityAttribute(method.Module.ImportReference(t_SecurityPermissionAttribute));
-            secDecl.SecurityAttributes.Add(secAttrib);
-            secAttrib.Properties.Add(new Mono.Cecil.CustomAttributeNamedArgument("SkipVerification", new CustomAttributeArgument(method.Module.TypeSystem.Boolean, true)));
-            /**/
 
             RegisterTrampoline(targetMethod, method);
         }

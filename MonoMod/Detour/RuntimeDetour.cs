@@ -305,7 +305,6 @@ namespace MonoMod.Detour {
         public static MethodInfo TrampolinePrefix = typeof(RuntimeDetour).GetMethod("PrepareOrig", new Type[] { typeof(long) });
         public static unsafe void PrepareOrig(long targetToken) {
             long target = (long) GetMethodStart(targetToken);
-            Console.WriteLine($"  PrepareOrig: token: {targetToken}; target: {target}; method: {_TokenToMethod[targetToken]}");
             byte[] code = _Origs[target];
             Marshal.Copy(code, 0, new IntPtr(target), code.Length);
         }
@@ -314,7 +313,6 @@ namespace MonoMod.Detour {
         public static unsafe void UnprepareOrig(long targetToken) {
             long target = (long) GetMethodStart(targetToken);
             byte[] code = _Current[target];
-            Console.WriteLine($"UnprepareOrig: token: {targetToken}; target: {target}; method: {_TokenToMethod[targetToken]}");
             Marshal.Copy(code, 0, new IntPtr(target), code.Length);
         }
 
