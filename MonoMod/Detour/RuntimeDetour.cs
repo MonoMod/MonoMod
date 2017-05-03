@@ -10,10 +10,14 @@ using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
 using MonoMod.InlineRT;
 
+using Trampolines = System.Collections.Generic.HashSet<System.Reflection.Emit.DynamicMethod>;
+using TargetTokenToTrampolinesStackMap = MonoMod.Helpers.LongDictionary<System.Collections.Generic.List<System.Collections.Generic.HashSet<System.Reflection.Emit.DynamicMethod>>>;
+
 namespace MonoMod.Detour {
     public static class RuntimeDetour {
 
         public static bool IsX64 { get; } = IntPtr.Size == 8;
+        public static int DetourLength { get; } = IsX64 ? 12 : 6;
 
         private readonly static FieldInfo f_DynamicMethod_m_method =
             // .NET
@@ -43,13 +47,25 @@ namespace MonoMod.Detour {
         private readonly static MethodInfo m_Console_WriteLine_string =
             typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
 
-        private readonly static unsafe LongDictionary<byte[]> _Origs = new LongDictionary<byte[]>();
-        private readonly static unsafe LongDictionary<Stack<byte[]>> _Reverts = new LongDictionary<Stack<byte[]>>();
-        private readonly static unsafe LongDictionary<byte[]> _Current = new LongDictionary<byte[]>();
+        private readonly static unsafe LongDictionary<IntPtr> _Origs = new LongDictionary<IntPtr>();
+        private readonly static unsafe LongDictionary<List<IntPtr>> _Reverts = new LongDictionary<List<IntPtr>>();
+        private readonly static unsafe LongDictionary<IntPtr> _Current = new LongDictionary<IntPtr>();
         private readonly static unsafe FastDictionary<ulong, Type, Delegate> _OrigTrampolines = new FastDictionary<ulong, Type, Delegate>();
 
         private readonly static unsafe LongDictionary<MethodBase> _TokenToMethod = new LongDictionary<MethodBase>();
         private readonly static unsafe HashSet<MethodBase> _Tokenized = new HashSet<MethodBase>();
+
+        private readonly static unsafe TargetTokenToTrampolinesStackMap _Trampolines = new TargetTokenToTrampolinesStackMap();
+
+        private unsafe static void _Copy(void* from, void* to) {
+            if (IsX64) {
+                *((ulong*) ((ulong) to)) = *((ulong*) ((ulong) from));
+                *((uint*) ((ulong) to + 8)) = *((uint*) ((ulong) from + 8));
+            } else {
+                *((uint*) ((uint) to)) = *((uint*) ((uint) from));
+                *((ushort*) ((uint) to + 4)) = *((ushort*) ((uint) from + 4));
+            }
+        }
 
         private static void _CreateToken(MethodBase method) {
             if (_Tokenized.Contains(method))
@@ -133,10 +149,10 @@ namespace MonoMod.Detour {
         }
 
         public static unsafe void Detour(void* from, void* to, bool store = true) {
-            byte[] orig = null;
+            IntPtr orig = IntPtr.Zero;
             if (store) {
-                orig = new byte[IsX64 ? 12 : 6];
-                Marshal.Copy(new IntPtr(from), orig, 0, orig.Length);
+                orig = Marshal.AllocHGlobal(DetourLength);
+                _Copy(from, orig.ToPointer());
             }
 
             if (IsX64) {
@@ -159,51 +175,60 @@ namespace MonoMod.Detour {
             if (!_Origs.ContainsKey(key))
                 _Origs[key] = orig;
 
-            Stack<byte[]> reverts;
+            List<IntPtr> reverts;
             if (!_Reverts.TryGetValue(key, out reverts)) {
-                reverts = new Stack<byte[]>();
+                reverts = new List<IntPtr>();
                 _Reverts[key] = reverts; 
             }
-            reverts.Push(orig);
+            reverts.Add(orig);
 
-            byte[] curr = new byte[orig.Length];
-            Marshal.Copy(new IntPtr(from), curr, 0, curr.Length);
+            IntPtr curr = Marshal.AllocHGlobal(DetourLength);
+            _Copy(from, curr.ToPointer());
             _Current[key] = curr;
+
+            _GetAllTrampolines(from).Add(new Trampolines());
         }
 
-        public static unsafe void Undetour(this MethodBase target, int level = 0)
+        public static unsafe void Undetour(this MethodBase target, int level = -1)
             => Undetour(GetMethodStart(target), level);
-        public static unsafe void Undetour(this Delegate target, int level = 0)
+        public static unsafe void Undetour(this Delegate target, int level = -1)
             => Undetour(GetDelegateStart(target), level);
-        public static unsafe void Undetour(void* target, int level = 0) {
-            Stack<byte[]> reverts;
+        public static unsafe void Undetour(void* target, int level = -1) {
+            List<IntPtr> reverts;
             if (!_Reverts.TryGetValue((long) target, out reverts) ||
                 reverts.Count == 0)
                 return;
 
-            if (level == 0)
-                level = reverts.Count;
-            if (level < 1)
-                level = 1;
-            if (level > reverts.Count)
-                level = reverts.Count;
+            if (level < 0)
+                level = reverts.Count + level;
+            if (level < 0)
+                level = 0;
+            if (level >= reverts.Count)
+                level = reverts.Count - 1;
+
+            IntPtr current = reverts[level];
+            reverts.RemoveAt(level);
+
             if (level == reverts.Count) {
-                byte[] current = reverts.Pop();
-                if (reverts.Count == 0)
+                if (reverts.Count == 0) {
                     current = _Origs[(long) target];
-                Marshal.Copy(current, 0, new IntPtr(target), current.Length);
+                }
+                _Copy(current.ToPointer(), target);
                 _Current[(long) target] = current;
                 return;
             }
 
-            Stack<byte[]> tmp = new Stack<byte[]>(level);
-            while (reverts.Count > level)
-                tmp.Push(reverts.Pop());
-            reverts.Pop();
-            while (tmp.Count > 0)
-                reverts.Push(tmp.Pop());
+            Marshal.FreeHGlobal(current);
 
-            // TODO: [MMDetourer] Invalidate / refresh trampolines.
+            List<Trampolines> allTrampolines = _GetAllTrampolines(target);
+            allTrampolines.RemoveAt(level);
+            void* code;
+            for (int tlevel = level; tlevel < reverts.Count; tlevel++) {
+                code = reverts[tlevel].ToPointer();
+                Trampolines trampolines = allTrampolines[tlevel];
+                foreach (DynamicMethod dm in trampolines)
+                    _Copy(code, GetMethodStart(dm));
+            }
         }
 
         public static unsafe int GetDetourLevel(this MethodBase target)
@@ -211,10 +236,35 @@ namespace MonoMod.Detour {
         public static unsafe int GetDetourLevel(this Delegate target)
             => GetDetourLevel(GetDelegateStart(target));
         public static unsafe int GetDetourLevel(void* target) {
-            Stack<byte[]> reverts;
+            List<IntPtr> reverts;
             if (!_Reverts.TryGetValue((long) target, out reverts))
                 return 0;
             return reverts.Count;
+        }
+
+        private static unsafe List<Trampolines> _GetAllTrampolines(this MethodBase target)
+            => _GetAllTrampolines(GetMethodStart(target));
+        private static unsafe List<Trampolines> _GetAllTrampolines(void* target) {
+            long key = (long) target;
+            List<Trampolines> trampolines;
+            if (_Trampolines.TryGetValue(key, out trampolines))
+                return trampolines;
+            return _Trampolines[key] = new List<Trampolines>();
+        }
+
+        private static unsafe Trampolines _GetTrampolines(this MethodBase target, int level = -1)
+            => _GetTrampolines(GetMethodStart(target), level);
+        private static unsafe Trampolines _GetTrampolines(void* target, int level) {
+            List<Trampolines> trampolines = _GetAllTrampolines(target);
+
+            if (level < 0)
+                level = trampolines.Count + level;
+            if (level < 0)
+                level = 0;
+            if (level >= trampolines.Count)
+                level = trampolines.Count - 1;
+
+            return trampolines.Count == 0 ? null : trampolines[level - 1];
         }
 
         public static unsafe T GetOrigTrampoline<T>(this MethodBase target) {
@@ -235,7 +285,7 @@ namespace MonoMod.Detour {
 
         public static unsafe T GetTrampoline<T>(this MethodBase target) {
             void* p = GetMethodStart(target);
-            Stack<byte[]> reverts;
+            List<IntPtr> reverts;
             if (!_Reverts.TryGetValue((long) p, out reverts) ||
                 reverts.Count == 0)
                 return default(T);
@@ -243,24 +293,26 @@ namespace MonoMod.Detour {
             if (reverts.Count == 1)
                 return GetOrigTrampoline<T>(target);
 
-            byte[] code = reverts.Peek();
+            IntPtr code = reverts[reverts.Count - 1];
             ulong key = (ulong) p;
             Type t = typeof(T);
             T del = CreateTrampolineDirect<T>(target, code);
             return (T) (object) del;
         }
 
-        public static unsafe T CreateTrampolineDirect<T>(MethodBase target, byte[] code = null) {
+        public static unsafe T CreateTrampolineDirect<T>(MethodBase target)
+            => CreateTrampolineDirect<T>(target, IntPtr.Zero);
+        public static unsafe T CreateTrampolineDirect<T>(MethodBase target, IntPtr code) {
             Type t = typeof(T);
             return (T) (object) CreateTrampolineDirect(target, code, t.GetMethod("Invoke")).CreateDelegate(t);
         }
 
         public static unsafe DynamicMethod CreateOrigTrampoline(this MethodBase target, MethodInfo invoke = null)
-            => CreateTrampolineDirect(target, null, invoke);
+            => CreateTrampolineDirect(target, IntPtr.Zero, invoke);
 
         public static unsafe DynamicMethod CreateTrampoline(this MethodBase target, MethodInfo invoke = null) {
             void* p = GetMethodStart(target);
-            Stack<byte[]> reverts;
+            List<IntPtr> reverts;
             if (!_Reverts.TryGetValue((long) p, out reverts) ||
                 reverts.Count == 0)
                 return null;
@@ -268,11 +320,13 @@ namespace MonoMod.Detour {
             if (reverts.Count == 1)
                 return CreateOrigTrampoline(target, invoke);
 
-            byte[] code = reverts.Peek();
+            IntPtr code = reverts[reverts.Count - 1];
             return CreateTrampolineDirect(target, code, invoke);
         }
 
-        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target, byte[] code = null, MethodInfo invoke = null) {
+        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target)
+            => CreateTrampolineDirect(target, IntPtr.Zero);
+        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target, IntPtr code, MethodInfo invoke = null) {
             _CreateToken(target);
 
             invoke = invoke ?? (target as MethodInfo);
@@ -291,10 +345,10 @@ namespace MonoMod.Detour {
                     argTypes[i] = args[i].ParameterType;
             }
 
-            DynamicMethod dm = new DynamicMethod($"trampoline_{target.Name}_{(code?.GetHashCode())?.ToString() ?? "orig"}", invoke.ReturnType, argTypes, target.Module, true);
+            DynamicMethod dm = new DynamicMethod($"trampoline_{target.Name}_{(code == IntPtr.Zero ? "orig" : ((ulong) code).ToString(IsX64 ? "X16" : "X8"))}", invoke.ReturnType, argTypes, target.Module, true);
             ILGenerator il = dm.GetILGenerator();
 
-            if (code != null) {
+            if (code != IntPtr.Zero) {
                 for (int i = 64; i > -1; --i)
                     il.Emit(OpCodes.Nop);
                 if (invoke.ReturnType != typeof(void)) {
@@ -306,10 +360,10 @@ namespace MonoMod.Detour {
 
                 dm.Invoke(null, new object[argTypes.Length]);
 
-                void* p = GetMethodStart(dm);
-                Marshal.Copy(code, 0, new IntPtr(p), code.Length);
-                p = (void*) ((ulong) p + (ulong) code.Length);
-                Detour(p, GetMethodStart(target), false);
+                _Copy(code.ToPointer(), GetMethodStart(dm));
+
+                // Need to be added this early - they aren't cached, but updated.
+                target._GetTrampolines().Add(dm);
 
             } else {
                 il.Emit(OpCodes.Ldc_I8, GetToken(target));
@@ -337,15 +391,15 @@ namespace MonoMod.Detour {
         public static MethodInfo TrampolinePrefix = typeof(RuntimeDetour).GetMethod("PrepareOrig", new Type[] { typeof(long) });
         public static unsafe void PrepareOrig(long targetToken) {
             long target = (long) GetMethodStart(targetToken);
-            byte[] code = _Origs[target];
-            Marshal.Copy(code, 0, new IntPtr(target), code.Length);
+            IntPtr code = _Origs[target];
+            _Copy(code.ToPointer(), (void*) target);
         }
 
         public static MethodInfo TrampolineSuffix = typeof(RuntimeDetour).GetMethod("UnprepareOrig", new Type[] { typeof(long) });
         public static unsafe void UnprepareOrig(long targetToken) {
             long target = (long) GetMethodStart(targetToken);
-            byte[] code = _Current[target];
-            Marshal.Copy(code, 0, new IntPtr(target), code.Length);
+            IntPtr code = _Current[target];
+            _Copy(code.ToPointer(), (void*) target);
         }
 
     }

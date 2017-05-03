@@ -116,7 +116,7 @@ namespace MonoMod.Detour {
         }
 
         public void RevertDetour(MethodBase from, MethodBase to) {
-            _MMD.LogVerbose($"[ApplyDetour] {from} -> {to}");
+            _MMD.LogVerbose($"[RevertDetour] {from} -> {to}");
             from.Undetour(_DetourLevels[(long)
                 ((ulong) from.MetadataToken) << 32 |
                 ((uint) to.MetadataToken)
