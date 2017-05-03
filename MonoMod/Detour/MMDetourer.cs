@@ -70,6 +70,22 @@ namespace MonoMod.Detour {
             return level;
         }
 
+        public virtual MonoModDetourerLevel FindLevel(string modName) {
+            foreach (MonoModDetourerLevel level in Levels)
+                if (level._Mod.Name == modName ||
+                    level._Mod.Assembly.Name.Name == modName ||
+                    level._Mod.Assembly.Name.FullName == modName)
+                    return level;
+            return null;
+        }
+
+        public virtual MonoModDetourerLevel FindLevel(ModuleDefinition mod) {
+            foreach (MonoModDetourerLevel level in Levels)
+                if (level._Mod == mod)
+                    return level;
+            return null;
+        }
+
         public virtual void ReadDetours(ModuleDefinition mod) {
             // Could be extended in the future.
             MapDependencies();

@@ -87,6 +87,18 @@ namespace MonoMod {
             PrintA();
             // A
 
+            m_PrintA.Detour(m_PrintB);
+            m_PrintA.Detour((Action) PrintD);
+            PrintA();
+            // D
+
+            m_PrintA.Undetour(1);
+            PrintA();
+            // D
+
+            m_PrintA.Undetour(1);
+            PrintA();
+            // A
 
             MethodInfo m_PrintQDTO = typeof(QuickDebugTestObject).GetMethod("PrintQDTO");
             MethodInfo m_PrintQDTODetour = typeof(QuickDebugTest).GetMethod("PrintQDTODetour");

@@ -28,13 +28,21 @@ using System.Reflection.Emit;
 namespace MonoMod.Detour {
     public sealed class MonoModDetourerLevel {
 
+        private readonly static MethodInfo m_DynamicMethod_Finalize =
+            // Mono
+            typeof(DynamicMethod).GetMethod("Finalize", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        private readonly static DynamicMethodDelegate dmd_DynamicMethod_Finalize =
+            m_DynamicMethod_Finalize?.CreateDelegate();
+
         internal readonly MonoModDetourer _MMD;
         internal readonly ModuleDefinition _Mod;
 
         public readonly string Name;
 
-        internal readonly HashSet<Tuple<int, int>> _Trampolines = new HashSet<Tuple<int, int>>();
         internal readonly HashSet<Tuple<int, int>> _Detours = new HashSet<Tuple<int, int>>();
+        internal readonly HashSet<Tuple<int, int>> _Trampolines = new HashSet<Tuple<int, int>>();
+        internal readonly LongDictionary<int> _DetourLevels = new LongDictionary<int>();
+        internal readonly LongDictionary<DynamicMethod> _TrampolineDMs = new LongDictionary<DynamicMethod>();
 
         internal Assembly _Assembly;
         internal Module _Module;
@@ -78,6 +86,10 @@ namespace MonoMod.Detour {
         public void ApplyDetour(MethodBase from, MethodBase to) {
             _MMD.LogVerbose($"[ApplyDetour] {from} -> {to}");
             from.Detour(to);
+            _DetourLevels[(long)
+                ((ulong) from.MetadataToken) << 32 |
+                ((uint) to.MetadataToken)
+            ] = from.GetDetourLevel();
         }
 
         public unsafe void ApplyTrampoline(MethodBase from, MethodBase to) {
@@ -89,10 +101,36 @@ namespace MonoMod.Detour {
                 RuntimeDetour.GetMethodStart(from),
                 RuntimeDetour.GetMethodStart(trampoline),
             false);
+            _TrampolineDMs[(long)
+                ((ulong) from.MetadataToken) << 32 |
+                ((uint ) to.MetadataToken)
+            ] = trampoline;
         }
 
         public void Revert() {
-            // TODO: [MMDetourer] Implement undetouring.
+            foreach (Tuple<int, int> tuple in _Detours)
+                RevertDetour(_MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1), _Module.ResolveMethod(tuple.Item2));
+
+            foreach (Tuple<int, int> tuple in _Trampolines)
+                RevertTrampoline(_Module.ResolveMethod(tuple.Item2), _MMD.RuntimeTargetModule.ResolveMethod(tuple.Item1));
+        }
+
+        public void RevertDetour(MethodBase from, MethodBase to) {
+            _MMD.LogVerbose($"[ApplyDetour] {from} -> {to}");
+            from.Undetour(_DetourLevels[(long)
+                ((ulong) from.MetadataToken) << 32 |
+                ((uint) to.MetadataToken)
+            ]);
+        }
+
+        public void RevertTrampoline(MethodBase from, MethodBase to) {
+            _MMD.LogVerbose($"[RevertTrampoline] {from} -> {to}");
+            if (dmd_DynamicMethod_Finalize == null)
+                return;
+            dmd_DynamicMethod_Finalize(_TrampolineDMs[(long)
+                ((ulong) from.MetadataToken) << 32 |
+                ((uint ) to.MetadataToken)
+            ]);
         }
 
     }

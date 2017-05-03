@@ -171,18 +171,50 @@ namespace MonoMod.Detour {
             _Current[key] = curr;
         }
 
-        public static unsafe void Undetour(this MethodBase target)
-            => Undetour(GetMethodStart(target));
-        public static unsafe void Undetour(this Delegate target)
-            => Undetour(GetDelegateStart(target));
-        public static unsafe void Undetour(void* target) {
+        public static unsafe void Undetour(this MethodBase target, int level = 0)
+            => Undetour(GetMethodStart(target), level);
+        public static unsafe void Undetour(this Delegate target, int level = 0)
+            => Undetour(GetDelegateStart(target), level);
+        public static unsafe void Undetour(void* target, int level = 0) {
             Stack<byte[]> reverts;
             if (!_Reverts.TryGetValue((long) target, out reverts) ||
                 reverts.Count == 0)
                 return;
-            byte[] current = reverts.Pop();
-            Marshal.Copy(current, 0, new IntPtr(target), current.Length);
-            _Current[(long) target] = current;
+
+            if (level == 0)
+                level = reverts.Count;
+            if (level < 1)
+                level = 1;
+            if (level > reverts.Count)
+                level = reverts.Count;
+            if (level == reverts.Count) {
+                byte[] current = reverts.Pop();
+                if (reverts.Count == 0)
+                    current = _Origs[(long) target];
+                Marshal.Copy(current, 0, new IntPtr(target), current.Length);
+                _Current[(long) target] = current;
+                return;
+            }
+
+            Stack<byte[]> tmp = new Stack<byte[]>(level);
+            while (reverts.Count > level)
+                tmp.Push(reverts.Pop());
+            reverts.Pop();
+            while (tmp.Count > 0)
+                reverts.Push(tmp.Pop());
+
+            // TODO: [MMDetourer] Invalidate / refresh trampolines.
+        }
+
+        public static unsafe int GetDetourLevel(this MethodBase target)
+            => GetDetourLevel(GetMethodStart(target));
+        public static unsafe int GetDetourLevel(this Delegate target)
+            => GetDetourLevel(GetDelegateStart(target));
+        public static unsafe int GetDetourLevel(void* target) {
+            Stack<byte[]> reverts;
+            if (!_Reverts.TryGetValue((long) target, out reverts))
+                return 0;
+            return reverts.Count;
         }
 
         public static unsafe T GetOrigTrampoline<T>(this MethodBase target) {
