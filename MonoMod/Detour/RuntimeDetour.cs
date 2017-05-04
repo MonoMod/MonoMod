@@ -17,7 +17,7 @@ namespace MonoMod.Detour {
     public static class RuntimeDetour {
 
         public static bool IsX64 { get; } = IntPtr.Size == 8;
-        public static int DetourLength { get; } = IsX64 ? 12 : 6;
+        public static int DetourSize { get; } = IsX64 ? 12 : 6;
 
         private readonly static FieldInfo f_DynamicMethod_m_method =
             // .NET
@@ -151,7 +151,7 @@ namespace MonoMod.Detour {
         public static unsafe void Detour(void* from, void* to, bool store = true) {
             IntPtr orig = IntPtr.Zero;
             if (store) {
-                orig = Marshal.AllocHGlobal(DetourLength);
+                orig = Marshal.AllocHGlobal(DetourSize);
                 _Copy(from, orig.ToPointer());
             }
 
@@ -182,7 +182,7 @@ namespace MonoMod.Detour {
             }
             reverts.Add(orig);
 
-            IntPtr curr = Marshal.AllocHGlobal(DetourLength);
+            IntPtr curr = Marshal.AllocHGlobal(DetourSize);
             _Copy(from, curr.ToPointer());
             _Current[key] = curr;
 
@@ -297,6 +297,24 @@ namespace MonoMod.Detour {
             ulong key = (ulong) p;
             Type t = typeof(T);
             T del = CreateTrampolineDirect<T>(target, code);
+            return (T) (object) del;
+        }
+
+        public static unsafe T GetNextTrampoline<T>(this MethodBase target) {
+            void* p = GetMethodStart(target);
+            IntPtr code;
+            bool codeTmp = false;
+            if (!_Current.TryGetValue((long) p, out code)) {
+                codeTmp = true;
+                code = Marshal.AllocHGlobal(DetourSize);
+                _Copy(p, code.ToPointer());
+            }
+
+            ulong key = (ulong) p;
+            Type t = typeof(T);
+            T del = CreateTrampolineDirect<T>(target, code);
+            if (codeTmp)
+                Marshal.FreeHGlobal(code);
             return (T) (object) del;
         }
 

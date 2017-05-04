@@ -141,7 +141,7 @@ namespace MonoMod.InlineRT {
                 instrs.RemoveAt(instri); // index
                 while ((instr = instrs[instri]).OpCode != OpCodes.Stelem_Ref || depth > 0) {
                     // Nested parsing
-                    self.DefaultParser(body, instrs[instri], ref instri);
+                    self.DefaultParser(self, body, instrs[instri], ref instri);
 
                     if (instr.OpCode == OpCodes.Newarr)
                         depth++;
@@ -286,7 +286,7 @@ namespace MonoMod.InlineRT {
             // Skip any target-loading instructions
             while (!((instrs[instri].Operand as MethodReference)?.DeclaringType?.Name?.StartsWith("BatchAccess") ?? false)) {
                 // Nested parsing
-                self.DefaultParser(body, instrs[instri], ref instri);
+                self.DefaultParser(self, body, instrs[instri], ref instri);
                 instri++;
             }
 

@@ -14,10 +14,10 @@ using StringInject;
 namespace MonoMod {
 
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
-    public delegate bool MethodParser(MethodBody body, Instruction instr, ref int instri);
-    public delegate void MethodRewriter(MethodDefinition method);
-    public delegate void MethodBodyRewriter(MethodBody body, Instruction instr, int instri);
-    public delegate ModuleDefinition MissingDependencyResolver(ModuleDefinition main, string name, string fullName);
+    public delegate bool MethodParser(MonoModder mod, MethodBody body, Instruction instr, ref int instri);
+    public delegate void MethodRewriter(MonoModder mod, MethodDefinition method);
+    public delegate void MethodBodyRewriter(MonoModder mod, MethodBody body, Instruction instr, int instri);
+    public delegate ModuleDefinition MissingDependencyResolver(MonoModder mod, ModuleDefinition main, string name, string fullName);
 
     public static class MonoModExt {
 

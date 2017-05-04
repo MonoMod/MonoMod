@@ -403,7 +403,7 @@ namespace MonoMod {
 
             if (path != null && File.Exists(path)) {
                 dep = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
-            } else if ((dep = MissingDependencyResolver?.Invoke(main, name, fullName)) == null) return;
+            } else if ((dep = MissingDependencyResolver?.Invoke(this, main, name, fullName)) == null) return;
 
             LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
             DependencyMap[main].Add(dep);
@@ -411,7 +411,7 @@ namespace MonoMod {
             DependencyCache[name] = dep;
             MapDependencies(dep);
         }
-        public virtual ModuleDefinition DefaultMissingDependencyResolver(ModuleDefinition main, string name, string fullName) {
+        public virtual ModuleDefinition DefaultMissingDependencyResolver(MonoModder mod, ModuleDefinition main, string name, string fullName) {
             if (Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0")
                 throw new InvalidOperationException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found");
             return null;
@@ -803,7 +803,7 @@ namespace MonoMod {
         }
 
 
-        public virtual bool DefaultParser(MethodBody body, Instruction instr, ref int instri) {
+        public virtual bool DefaultParser(MonoModder mod, MethodBody body, Instruction instr, ref int instri) {
             if (instr.Operand is MethodReference && (
                 ((MethodReference) instr.Operand).DeclaringType.FullName.StartsWith("MMIL")
             ))
@@ -1448,7 +1448,7 @@ namespace MonoMod {
                 if (handler.CatchType != null)
                     handler.CatchType = Relink(handler.CatchType, method);
 
-            MethodRewriter?.Invoke(method);
+            MethodRewriter?.Invoke(this, method);
 
             IDictionary<Instruction, SequencePoint> symbols;
             try {
@@ -1474,7 +1474,7 @@ namespace MonoMod {
 
                 // TODO: Split out the MonoMod inline parsing.
 
-                if (!MethodParser(body, instr, ref instri))
+                if (!MethodParser(this, body, instr, ref instri))
                     continue;
 
                 // General relinking
@@ -1520,7 +1520,7 @@ namespace MonoMod {
 
                 instr.Operand = operand;
 
-                MethodBodyRewriter?.Invoke(body, instr, instri);
+                MethodBodyRewriter?.Invoke(this, body, instr, instri);
             }
         }
 
