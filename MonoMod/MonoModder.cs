@@ -1199,7 +1199,8 @@ namespace MonoMod {
             FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
             newField.AddAttribute(GetMonoModAddedCtor());
             newField.InitialValue = field.InitialValue;
-            newField.Constant = field.Constant;
+            if (field.HasConstant)
+                newField.Constant = field.Constant;
             foreach (CustomAttribute attrib in field.CustomAttributes)
                 newField.CustomAttributes.Add(attrib.Clone());
             targetType.Fields.Add(newField);
