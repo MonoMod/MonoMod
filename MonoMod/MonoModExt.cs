@@ -524,13 +524,14 @@ namespace MonoMod {
 
         public static ParameterDefinition Clone(this ParameterDefinition param) {
             ParameterDefinition newParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType) {
-                Constant = param.Constant,
                 IsIn = param.IsIn,
                 IsLcid = param.IsLcid,
                 IsOptional = param.IsOptional,
                 IsOut = param.IsOut,
                 IsReturnValue = param.IsReturnValue
             };
+            if (param.HasConstant)
+                newParam.Constant = param.Constant;
             foreach (CustomAttribute attrib in param.CustomAttributes)
                 newParam.CustomAttributes.Add(attrib.Clone());
             return newParam;
