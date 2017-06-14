@@ -19,6 +19,8 @@ namespace MonoMod.DebugIL {
 
         public MonoModder Modder;
 
+        public bool Relative = false;
+
         public string OutputPath;
         public Stack<string> CurrentPath = new Stack<string>();
         public string FullPath {
@@ -44,6 +46,8 @@ namespace MonoMod.DebugIL {
 
             OutputPath = Path.GetFullPath(modder.OutputPath);
             modder.OutputPath = Path.Combine(OutputPath, Path.GetFileName(modder.InputPath));
+
+            Relative = Environment.GetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE") == "1";
         }
 
         public static void DeleteRecursive(string path) {
@@ -251,7 +255,7 @@ namespace MonoMod.DebugIL {
                     ILProcessor il = method.Body.GetILProcessor();
                     for (int instri = 0; instri < method.Body.Instructions.Count; instri++) {
                         Instruction instr = method.Body.Instructions[instri];
-                        string instrStr = instr.ToString();
+                        string instrStr = Relative ? instr.ToRelativeString() : instr.ToString();
 
                         method.DebugInformation.SequencePoints.Add(
                             new SequencePoint(instr, symbolDoc) {
