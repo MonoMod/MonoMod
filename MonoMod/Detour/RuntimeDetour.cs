@@ -44,6 +44,12 @@ namespace MonoMod.Detour {
             m_RuntimeHelpers__CompileMethod != null &&
             m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType == typeof(IntPtr);
 
+        private readonly static MethodInfo m_RuntimeMethodHandle_GetMethodInfo =
+            // .NET
+            typeof(RuntimeMethodHandle).GetMethod("GetMethodInfo", BindingFlags.NonPublic | BindingFlags.Instance);
+        private readonly static DynamicMethodDelegate dmd_RuntimeMethodHandle_GetMethodInfo =
+            m_RuntimeMethodHandle_GetMethodInfo?.CreateDelegate();
+
         private readonly static MethodInfo m_Console_WriteLine_string =
             typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
 
@@ -87,7 +93,7 @@ namespace MonoMod.Detour {
                 if (m_RuntimeHelpers__CompileMethod_TakesIntPtr)
                     dmd_RuntimeHelpers__CompileMethod(null, handle.Value);
                 else
-                    dmd_RuntimeHelpers__CompileMethod(null, handle);
+                    dmd_RuntimeHelpers__CompileMethod(null, dmd_RuntimeMethodHandle_GetMethodInfo(handle));
             }
         }
 
