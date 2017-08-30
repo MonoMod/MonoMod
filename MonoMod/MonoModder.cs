@@ -1217,6 +1217,16 @@ namespace MonoMod {
 
             string typeName = targetType.GetPatchFullName();
 
+            if (SkipList.Contains(method.GetFindableID(type: typeName)))
+                return null;
+
+            // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
+            if (method.HasMMAttribute("Constructor")) {
+                method.Name = method.IsStatic ? ".cctor" : ".ctor";
+                method.IsSpecialName = true;
+                method.IsRuntimeSpecialName = true;
+            }
+
             MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
 
@@ -1233,18 +1243,8 @@ namespace MonoMod {
                 return null;
             }
 
-            if (SkipList.Contains(method.GetFindableID(type: typeName)))
-                return null;
-
             if (existingMethod == null && method.HasMMAttribute("NoNew"))
                 return null;
-
-            // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
-            if (method.HasMMAttribute("Constructor")) {
-                method.Name = method.IsStatic ? ".cctor" : ".ctor";
-                method.IsSpecialName = true;
-                method.IsRuntimeSpecialName = true;
-            }
 
             if (method.HasMMAttribute("Replace")) {
                 method.Name = method.GetPatchName();
