@@ -221,7 +221,7 @@ namespace MonoMod {
         }
 
         public static string GetFindableID(this System.Reflection.MethodInfo method, string name = null, string type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {
-            while (method.IsGenericMethod)
+            while (method.IsGenericMethod && !method.IsGenericMethodDefinition)
                 method = method.GetGenericMethodDefinition();
 
             StringBuilder builder = new StringBuilder();
