@@ -1262,12 +1262,8 @@ namespace MonoMod {
                 origMethod.Body = existingMethod.Body.Clone(origMethod);
                 origMethod.Attributes = existingMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName;
                 origMethod.ImplAttributes = existingMethod.ImplAttributes;
-                origMethod.IsManaged = existingMethod.IsManaged;
-                origMethod.IsIL = existingMethod.IsIL;
-                origMethod.IsNative = existingMethod.IsNative;
                 origMethod.PInvokeInfo = existingMethod.PInvokeInfo;
                 origMethod.IsPreserveSig = existingMethod.IsPreserveSig;
-                origMethod.IsInternalCall = existingMethod.IsInternalCall;
                 origMethod.IsPInvokeImpl = existingMethod.IsPInvokeImpl;
 
                 origMethod.IsVirtual = false; // Fix overflow when calling orig_ method, but orig_ method already defined higher up
@@ -1317,20 +1313,13 @@ namespace MonoMod {
                 clone.CallingConvention = method.CallingConvention;
                 clone.ExplicitThis = method.ExplicitThis;
                 clone.MethodReturnType = method.MethodReturnType;
-                clone.NoInlining = method.NoInlining;
-                clone.NoOptimization = method.NoOptimization;
                 clone.Attributes = method.Attributes;
                 clone.ImplAttributes = method.ImplAttributes;
                 clone.SemanticsAttributes = method.SemanticsAttributes;
                 clone.DeclaringType = targetType;
                 clone.ReturnType = method.ReturnType;
                 clone.Body = method.Body.Clone(clone);
-                clone.IsManaged = method.IsManaged;
-                clone.IsIL = method.IsIL;
-                clone.IsNative = method.IsNative;
                 clone.PInvokeInfo = method.PInvokeInfo;
-                clone.IsPreserveSig = method.IsPreserveSig;
-                clone.IsInternalCall = method.IsInternalCall;
                 clone.IsPInvokeImpl = method.IsPInvokeImpl;
 
                 foreach (GenericParameter genParam in method.GenericParameters)
