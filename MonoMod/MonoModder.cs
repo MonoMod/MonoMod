@@ -1828,7 +1828,7 @@ namespace MonoMod {
             if (method.Name.StartsWith("op_"))
                 return true;
 
-            return !method.Attributes.HasFlag(MethodAttributes.SpecialName);
+            return !method.Attributes.HasFlag(MethodAttributes.RTSpecialName); // Formerly SpecialName. If something breaks, blame UnderRail.
         }
         #endregion
 
