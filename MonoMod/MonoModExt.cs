@@ -732,28 +732,12 @@ namespace MonoMod {
         }
 
         public static string GetPatchName(this MemberReference mr) {
-            ICustomAttributeProvider cap = mr as ICustomAttributeProvider;
-            if (cap != null)
-                return cap.GetPatchName();
-            // TODO: This increases the PatchRefs pass time and should be optimized.
-            try {
-                return (mr.Resolve() as ICustomAttributeProvider).GetPatchName();
-            } catch {
-                // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
-                return mr.Name;
-            }
+            // TODO: Resolve increases the PatchRefs pass time and could be optimized.
+            return (mr as ICustomAttributeProvider)?.GetPatchName() ?? (mr.Resolve() as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
         }
         public static string GetPatchFullName(this MemberReference mr) {
-            ICustomAttributeProvider cap = mr as ICustomAttributeProvider;
-            if (cap != null)
-                return cap.GetPatchFullName(mr);
-            // TODO: This increases the PatchRefs pass time and could be optimized.
-            try {
-                return (mr.Resolve() as ICustomAttributeProvider).GetPatchFullName(mr);
-            } catch {
-                // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
-                return mr.FullName;
-            }
+            // TODO: Resolve increases the PatchRefs pass time and could be optimized.
+            return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? (mr.Resolve() as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
         }
 
         private static string GetPatchName(this ICustomAttributeProvider cap) {
