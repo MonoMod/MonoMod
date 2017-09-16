@@ -1505,7 +1505,8 @@ namespace MonoMod {
                 }
 
                 // "general" static method <-> virtual method reference fix: call <-> callvirt
-                else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference) {
+                else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference &&
+                    !instr.IsBaseMethodCall(body)) {
                     instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
                 }
 

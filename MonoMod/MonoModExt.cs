@@ -454,7 +454,7 @@ namespace MonoMod {
                     return fp;
                 }
 
-				throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
+                throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
             }
 
             if (type.IsGenericParameter) {
@@ -756,8 +756,7 @@ namespace MonoMod {
 
                 if (name.StartsWith("global::"))
                     name = name.Substring(8); // Patch name is refering to a global type.
-                else if (name.Contains(".") || name.Contains("/"))
-                    { } // Patch name is already a full name.
+                else if (name.Contains(".") || name.Contains("/")) { } // Patch name is already a full name.
                 else if (!string.IsNullOrEmpty(type.Namespace))
                     name = $"{type.Namespace}.{name}";
                 else if (type.IsNested)
@@ -841,6 +840,30 @@ namespace MonoMod {
                 throw new InvalidOperationException("GetPatchFullName not supported on MethodReferences - use GetFindableID instead");
 
             throw new InvalidOperationException($"GetPatchFullName not supported on type {cap.GetType()}");
+        }
+
+        public static bool IsBaseMethodCall(this Instruction instr, MethodBody body) {
+            MethodDefinition caller = body.Method;
+            MethodReference called = instr.Operand as MethodReference;
+            if (called == null)
+                return false;
+            string calledTypeName = called.DeclaringType.GetPatchFullName();
+
+            bool callingBaseType = false;
+            try {
+                TypeDefinition baseType = caller.DeclaringType;
+                while ((baseType = baseType.BaseType?.Resolve()) != null)
+                    if (baseType.GetPatchFullName() == calledTypeName) {
+                        callingBaseType = true;
+                        break;
+                    }
+            } catch {
+                callingBaseType = caller.DeclaringType.GetPatchFullName() == calledTypeName;
+            }
+            if (!callingBaseType)
+                return false;
+
+            return caller.GetFindableID(withType: false) == called.GetFindableID(withType: false);
         }
 
     }
