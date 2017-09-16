@@ -843,6 +843,9 @@ namespace MonoMod {
         }
 
         public static bool IsBaseMethodCall(this Instruction instr, MethodBody body) {
+            if (instr.OpCode != OpCodes.Call)
+                return false;
+
             MethodDefinition caller = body.Method;
             MethodReference called = instr.Operand as MethodReference;
             if (called == null)
@@ -866,7 +869,8 @@ namespace MonoMod {
             if (!callingBaseType)
                 return false;
 
-            return caller.IsMatchingSignature(called);
+            // return caller.IsMatchingSignature(called);
+            return true;
         }
 
         // IsMatchingSignature and related methods taken and adapted from the Mono.Linker:
