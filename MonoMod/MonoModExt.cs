@@ -809,7 +809,7 @@ namespace MonoMod {
                             format.Append(" *(");
                             if (fpt.HasParameters)
                                 for (int i = 0; i < fpt.Parameters.Count; i++) {
-                                    var parameter = fpt.Parameters[i];
+                                    ParameterDefinition parameter = fpt.Parameters[i];
                                     if (i > 0)
                                         format.Append(",");
 
@@ -847,7 +847,10 @@ namespace MonoMod {
             MethodReference called = instr.Operand as MethodReference;
             if (called == null)
                 return false;
-            string calledTypeName = called.DeclaringType.GetPatchFullName();
+            TypeReference calledType = called.DeclaringType;
+            while (calledType is TypeSpecification)
+                calledType = ((TypeSpecification) calledType).ElementType;
+            string calledTypeName = calledType.GetPatchFullName();
 
             bool callingBaseType = false;
             try {
@@ -863,7 +866,206 @@ namespace MonoMod {
             if (!callingBaseType)
                 return false;
 
-            return caller.GetFindableID(withType: false) == called.GetFindableID(withType: false);
+            return caller.IsMatchingSignature(called);
+        }
+
+        // IsMatchingSignature and related methods taken and adapted from the Mono.Linker:
+        // https://github.com/mono/linker/blob/e4dfcf006b0705aba6b204aab2d603b781c5fc44/linker/Mono.Linker.Steps/TypeMapStep.cs
+
+        public static bool IsMatchingSignature(this MethodDefinition method, MethodReference candidate) {
+            if (method.Parameters.Count != candidate.Parameters.Count)
+                return false;
+
+            if (method.Name != candidate.Name)
+                return false;
+
+            if (!method.ReturnType._InflateGenericType(method).IsMatchingSignature(
+                    candidate.ReturnType._InflateGenericType(candidate)
+                ))
+                return false;
+
+            if (method.GenericParameters.Count != candidate.GenericParameters.Count)
+                return false;
+
+            if (method.HasParameters) {
+                for (int i = 0; i < method.Parameters.Count; i++)
+                    if (!method.Parameters[i].ParameterType._InflateGenericType(method).IsMatchingSignature(
+                        candidate.Parameters[i].ParameterType._InflateGenericType(candidate)
+                    ))
+                        return false;
+            }
+
+            if (!candidate.Resolve()?.IsVirtual ?? false)
+                return false;
+
+            return true;
+        }
+
+        public static bool IsMatchingSignature(this IModifierType a, IModifierType b) {
+            if (!a.ModifierType.IsMatchingSignature(b.ModifierType))
+                return false;
+
+            return a.ElementType.IsMatchingSignature(b.ElementType);
+        }
+
+        public static bool IsMatchingSignature(this TypeSpecification a, TypeSpecification b) {
+            if (a.GetType() != b.GetType())
+                return false;
+
+            GenericInstanceType gita = a as GenericInstanceType;
+            if (gita != null)
+                return gita.IsMatchingSignature((GenericInstanceType) b);
+
+            IModifierType mta = a as IModifierType;
+            if (mta != null)
+                return mta.IsMatchingSignature((IModifierType) b);
+
+            return IsMatchingSignature(a.ElementType, b.ElementType);
+        }
+
+        public static bool IsMatchingSignature(this GenericInstanceType a, GenericInstanceType b) {
+            if (!a.ElementType.IsMatchingSignature(b.ElementType))
+                return false;
+
+            if (a.HasGenericArguments != b.HasGenericArguments)
+                return false;
+
+            if (!a.HasGenericArguments)
+                return true;
+
+            if (a.GenericArguments.Count != b.GenericArguments.Count)
+                return false;
+
+            for (int i = 0; i < a.GenericArguments.Count; i++) {
+                if (!a.GenericArguments[i].IsMatchingSignature(b.GenericArguments[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static bool IsMatchingSignature(this GenericParameter a, GenericParameter b) {
+            if (a.Position != b.Position)
+                return false;
+
+            if (a.Type != b.Type)
+                return false;
+
+            return true;
+        }
+
+        public static bool IsMatchingSignature(this TypeReference a, TypeReference b) {
+            if (a is TypeSpecification || b is TypeSpecification)
+                return 
+                    (a is TypeSpecification && b is TypeSpecification) &&
+                    ((TypeSpecification) a).IsMatchingSignature((TypeSpecification) b);
+
+            if (a is GenericParameter && b is GenericParameter)
+                return ((GenericParameter) a).IsMatchingSignature((GenericParameter) b);
+
+            return a.FullName == b.FullName;
+        }
+
+        private static TypeReference _InflateGenericType(this TypeReference type, MethodReference method) {
+            if (!(method.DeclaringType is GenericInstanceType))
+                return type;
+            return _InflateGenericType(method.DeclaringType as GenericInstanceType, type);
+        }
+
+        private static TypeReference _InflateGenericType(GenericInstanceType genericInstanceProvider, TypeReference typeToInflate) {
+            ArrayType arrayType = typeToInflate as ArrayType;
+            if (arrayType != null) {
+                TypeReference inflatedElementType = _InflateGenericType(genericInstanceProvider, arrayType.ElementType);
+
+                if (inflatedElementType != arrayType.ElementType)
+                    return new ArrayType(inflatedElementType, arrayType.Rank);
+
+                return arrayType;
+            }
+
+            GenericInstanceType genericInst = typeToInflate as GenericInstanceType;
+            if (genericInst != null) {
+                GenericInstanceType result = new GenericInstanceType(genericInst.ElementType);
+
+                for (int i = 0; i < genericInst.GenericArguments.Count; ++i)
+                    result.GenericArguments.Add(_InflateGenericType(genericInstanceProvider, genericInst.GenericArguments[i]));
+
+                return result;
+            }
+
+            GenericParameter genericParameter = typeToInflate as GenericParameter;
+            if (genericParameter != null) {
+                if (genericParameter.Owner is MethodReference)
+                    return genericParameter;
+
+                TypeDefinition elementType = genericInstanceProvider.ElementType.Resolve();
+                GenericParameter parameter = elementType.GetGenericParameter(genericParameter.Name);
+                return genericInstanceProvider.GenericArguments[parameter.Position];
+            }
+
+            FunctionPointerType functionPointerType = typeToInflate as FunctionPointerType;
+            if (functionPointerType != null) {
+                FunctionPointerType result = new FunctionPointerType();
+                result.ReturnType = _InflateGenericType(genericInstanceProvider, functionPointerType.ReturnType);
+
+                for (int i = 0; i < functionPointerType.Parameters.Count; i++)
+                    result.Parameters.Add(new ParameterDefinition(_InflateGenericType(genericInstanceProvider, functionPointerType.Parameters[i].ParameterType)));
+
+                return result;
+            }
+
+            IModifierType modifierType = typeToInflate as IModifierType;
+            if (modifierType != null) {
+                TypeReference modifier = _InflateGenericType(genericInstanceProvider, modifierType.ModifierType);
+                TypeReference elementType = _InflateGenericType(genericInstanceProvider, modifierType.ElementType);
+
+                if (modifierType is OptionalModifierType)
+                    return new OptionalModifierType(modifier, elementType);
+
+                return new RequiredModifierType(modifier, elementType);
+            }
+
+            PinnedType pinnedType = typeToInflate as PinnedType;
+            if (pinnedType != null) {
+                TypeReference elementType = _InflateGenericType(genericInstanceProvider, pinnedType.ElementType);
+
+                if (elementType != pinnedType.ElementType)
+                    return new PinnedType(elementType);
+
+                return pinnedType;
+            }
+
+            PointerType pointerType = typeToInflate as PointerType;
+            if (pointerType != null) {
+                TypeReference elementType = _InflateGenericType(genericInstanceProvider, pointerType.ElementType);
+
+                if (elementType != pointerType.ElementType)
+                    return new PointerType(elementType);
+
+                return pointerType;
+            }
+
+            ByReferenceType byReferenceType = typeToInflate as ByReferenceType;
+            if (byReferenceType != null) {
+                TypeReference elementType = _InflateGenericType(genericInstanceProvider, byReferenceType.ElementType);
+
+                if (elementType != byReferenceType.ElementType)
+                    return new ByReferenceType(elementType);
+
+                return byReferenceType;
+            }
+
+            SentinelType sentinelType = typeToInflate as SentinelType;
+            if (sentinelType != null) {
+                TypeReference elementType = _InflateGenericType(genericInstanceProvider, sentinelType.ElementType);
+
+                if (elementType != sentinelType.ElementType)
+                    return new SentinelType(elementType);
+
+                return sentinelType;
+            }
+
+            return typeToInflate;
         }
 
     }
