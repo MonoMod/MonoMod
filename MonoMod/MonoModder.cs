@@ -1487,7 +1487,7 @@ namespace MonoMod {
                 }
 
                 // field <-> method reference fix: ld(s)fld / st(s)fld <-> call
-                if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
+                else if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
                     instr.OpCode = OpCodes.Callvirt;
 
                 } else if ((instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Stsfld) && operand is MethodReference) {
@@ -1502,6 +1502,11 @@ namespace MonoMod {
                     // Setters don't return anything.
                     TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
                     instr.OpCode = returnType == null || returnType.MetadataType == MetadataType.Void ? OpCodes.Stsfld : OpCodes.Ldsfld;
+                }
+
+                // "general" static method <-> virtual method reference fix: call <-> callvirt
+                else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference) {
+                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
                 }
 
                 // Reference importing
