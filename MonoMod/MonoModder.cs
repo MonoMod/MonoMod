@@ -633,9 +633,9 @@ namespace MonoMod {
 
                 if (i == 0) { // Type
                     if (value is string)
-                        type = FindTypeDeep((string) value).Resolve();
+                        type = FindTypeDeep((string) value).SafeResolve();
                     else if (value is TypeReference)
-                        type = Relink((TypeReference) value, context).Resolve();
+                        type = Relink((TypeReference) value, context).SafeResolve();
 
                 } else if (i == 1) { // Member
                     if (orig is MethodReference)
@@ -678,11 +678,11 @@ namespace MonoMod {
             if (cap == null) // TODO: This increases the PatchRefs pass time and could be optimized.
                 try {
                     if (mtp is TypeReference)
-                        cap = ((TypeReference) mtp).Resolve() as ICustomAttributeProvider;
+                        cap = ((TypeReference) mtp).SafeResolve() as ICustomAttributeProvider;
                     else if (mtp is MethodReference)
-                        cap = ((MethodReference) mtp).Resolve() as ICustomAttributeProvider;
+                        cap = ((MethodReference) mtp).SafeResolve() as ICustomAttributeProvider;
                     else if (mtp is FieldReference)
-                        cap = ((FieldReference) mtp).Resolve() as ICustomAttributeProvider;
+                        cap = ((FieldReference) mtp).SafeResolve() as ICustomAttributeProvider;
                 } catch {
                     // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
                     cap = null;
@@ -761,7 +761,7 @@ namespace MonoMod {
                 if (val is Tuple<string, string>) {
                     Tuple<string, string> tuple = (Tuple<string, string>) val;
                     string typeName = tuple.Item1 as string;
-                    TypeDefinition type = FindTypeDeep(typeName)?.Resolve();
+                    TypeDefinition type = FindTypeDeep(typeName)?.SafeResolve();
                     if (type == null)
                         return RelinkMapCache[name] = ResolveRelinkTarget(mtp, false, relinkModule);
 
@@ -926,7 +926,7 @@ namespace MonoMod {
 
             // Check if type exists in target module or dependencies.
             TypeReference targetType = forceAdd ? null : Module.GetType(typeName, false); // For PrePatch, we need to check in the target assembly only
-            TypeDefinition targetTypeDef = targetType?.Resolve();
+            TypeDefinition targetTypeDef = targetType?.SafeResolve();
             if (type.HasMMAttribute("Replace") || type.HasMMAttribute("Remove")) {
                 if (targetTypeDef != null) {
                     if (targetTypeDef.DeclaringType == null)
@@ -1008,7 +1008,7 @@ namespace MonoMod {
 
             TypeReference targetType = Module.GetType(typeName, false);
             if (targetType == null) return; // Type should've been added or removed accordingly.
-            TypeDefinition targetTypeDef = targetType?.Resolve();
+            TypeDefinition targetTypeDef = targetType?.SafeResolve();
 
             if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || // Fix legacy issue: Copy / inline any used modifiers.
                 SkipList.Contains(typeName) ||

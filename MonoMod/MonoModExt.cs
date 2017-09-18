@@ -657,9 +657,9 @@ namespace MonoMod {
             => type.FindField(field.Name) != null;
 
         public static void SetPublic(this IMetadataTokenProvider mtp, bool p) {
-            if (mtp is TypeReference) ((TypeReference) mtp).Resolve()?.SetPublic(p);
-            if (mtp is FieldReference) ((FieldReference) mtp).Resolve()?.SetPublic(p);
-            if (mtp is MethodReference) ((MethodReference) mtp).Resolve()?.SetPublic(p);
+            if (mtp is TypeReference) ((TypeReference) mtp).SafeResolve()?.SetPublic(p);
+            if (mtp is FieldReference) ((FieldReference) mtp).SafeResolve()?.SetPublic(p);
+            if (mtp is MethodReference) ((MethodReference) mtp).SafeResolve()?.SetPublic(p);
             else if (mtp is TypeDefinition) ((TypeDefinition) mtp).SetPublic(p);
             else if (mtp is FieldDefinition) ((FieldDefinition) mtp).SetPublic(p);
             else if (mtp is MethodDefinition) ((MethodDefinition) mtp).SetPublic(p);
@@ -731,13 +731,45 @@ namespace MonoMod {
             return mtp;
         }
 
+        public static IMemberDefinition SafeResolve(this MemberReference r) {
+            try {
+                return r.Resolve();
+            } catch {
+                return null;
+            }
+        }
+
+        public static TypeDefinition SafeResolve(this TypeReference r) {
+            try {
+                return r.Resolve();
+            } catch {
+                return null;
+            }
+        }
+
+        public static FieldDefinition SafeResolve(this FieldReference r) {
+            try {
+                return r.Resolve();
+            } catch {
+                return null;
+            }
+        }
+
+        public static MethodDefinition SafeResolve(this MethodReference r) {
+            try {
+                return r.Resolve();
+            } catch {
+                return null;
+            }
+        }
+
         public static string GetPatchName(this MemberReference mr) {
             // TODO: Resolve increases the PatchRefs pass time and could be optimized.
-            return (mr as ICustomAttributeProvider)?.GetPatchName() ?? (mr.Resolve() as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
+            return (mr as ICustomAttributeProvider)?.GetPatchName() ?? (mr.SafeResolve() as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
         }
         public static string GetPatchFullName(this MemberReference mr) {
             // TODO: Resolve increases the PatchRefs pass time and could be optimized.
-            return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? (mr.Resolve() as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
+            return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? (mr.SafeResolve() as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
         }
 
         private static string GetPatchName(this ICustomAttributeProvider cap) {
@@ -858,7 +890,7 @@ namespace MonoMod {
             bool callingBaseType = false;
             try {
                 TypeDefinition baseType = caller.DeclaringType;
-                while ((baseType = baseType.BaseType?.Resolve()) != null)
+                while ((baseType = baseType.BaseType?.SafeResolve()) != null)
                     if (baseType.GetPatchFullName() == calledTypeName) {
                         callingBaseType = true;
                         break;
@@ -899,7 +931,7 @@ namespace MonoMod {
                         return false;
             }
 
-            if (!candidate.Resolve()?.IsVirtual ?? false)
+            if (!candidate.SafeResolve()?.IsVirtual ?? false)
                 return false;
 
             return true;
