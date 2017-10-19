@@ -463,12 +463,12 @@ namespace MonoMod {
             if (Directory.Exists(path)) {
                 Log($"[ReadMod] Loading mod dir: {path}");
                 string mainName = Module.Name.Substring(0, Module.Name.Length - 3);
-				string mainNameSpaceless = mainName.Replace(" ", "");
+                string mainNameSpaceless = mainName.Replace(" ", "");
                 DependencyDirs.Add(path);
                 foreach (string modFile in Directory.GetFiles(path))
                     if ((Path.GetFileName(modFile).StartsWith(mainName) ||
-						Path.GetFileName(modFile).StartsWith(mainNameSpaceless)) &&
-						modFile.ToLower().EndsWith(".mm.dll"))
+                        Path.GetFileName(modFile).StartsWith(mainNameSpaceless)) &&
+                        modFile.ToLower().EndsWith(".mm.dll"))
                         ReadMod(modFile);
                 return;
             }
