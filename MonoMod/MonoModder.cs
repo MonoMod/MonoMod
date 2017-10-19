@@ -69,6 +69,8 @@ namespace MonoMod {
         public IDictionary<string, ModuleDefinition> DependencyCache = new FastDictionary<string, ModuleDefinition>();
         public List<string> DependencyDirs = new List<string>();
         public bool CleanupEnabled;
+        
+        public bool Strict;
 
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
@@ -230,6 +232,8 @@ namespace MonoMod {
             CleanupEnabled = Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0";
 
             PreventInline = Environment.GetEnvironmentVariable("MONOMOD_PREVENTINLINE") == "1";
+
+            Strict = Environment.GetEnvironmentVariable("MONOMOD_STRICT") == "1";
 
             MMILProxyManager.Register(this);
         }
@@ -412,8 +416,9 @@ namespace MonoMod {
             MapDependencies(dep);
         }
         public virtual ModuleDefinition DefaultMissingDependencyResolver(MonoModder mod, ModuleDefinition main, string name, string fullName) {
-            if (Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0")
-                throw new InvalidOperationException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found");
+            if (Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0" ||
+                Strict)
+                throw new RelinkTargetNotFoundException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found", main);
             return null;
         }
 
@@ -651,12 +656,12 @@ namespace MonoMod {
             }
 
             if (type == null)
-                throw new InvalidOperationException($"Could not resolve MonoModLinkTo on {orig}: Type not found.");
+                throw new RelinkTargetNotFoundException($"Could not resolve MonoModLinkTo on {orig}: Type not found.", orig);
             if (orig is TypeReference)
                 return Module.ImportReference(type);
 
             if (member == null)
-                throw new InvalidOperationException($"Could not resolve MonoModLinkTo on {orig}: Member not found.");
+                throw new RelinkTargetNotFoundException($"Could not resolve MonoModLinkTo on {orig}: Member not found.", orig);
             if (orig is MethodReference)
                 return Module.ImportReference((MethodReference) member);
             if (orig is FieldReference)
@@ -696,7 +701,7 @@ namespace MonoMod {
                     MainRelinker(mtp, context),
                     context);
             } catch (Exception e) {
-                throw new InvalidOperationException($"MonoMod failed relinking {mtp} (context: {context})", e);
+                throw new RelinkFailedException(null, e, mtp, context);
             }
         }
         public virtual IMetadataTokenProvider DefaultMainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
@@ -707,7 +712,11 @@ namespace MonoMod {
                 if (!Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
-                return Module.ImportReference(FindTypeDeep(type.GetPatchFullName()));
+                TypeReference found = FindTypeDeep(type.GetPatchFullName());
+
+                if (found == null)
+                    throw new RelinkTargetNotFoundException(mtp, context);
+                return Module.ImportReference(found);
             }
 
             if (mtp is FieldReference || mtp is MethodReference)
@@ -770,19 +779,25 @@ namespace MonoMod {
                     else if (mtp is FieldReference)
                         val = type.FindField(tuple.Item2);
                     else
-                        throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<string, string>");
+                        throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<string, string> as the remap");
+                    if (val == null)
+                        throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} ({tuple.Item1}, {tuple.Item2}) (remap: {mtp})", mtp);
                     return RelinkMapCache[name] = Module.ImportReference((IMetadataTokenProvider) val);
                 }
 
-                if (val is string && mtp is TypeReference)
+                if (val is string && mtp is TypeReference) {
+                    IMetadataTokenProvider found = FindTypeDeep((string) val);
+                    if (found == null)
+                        throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {val} (remap: {mtp})", mtp);
                     val = Module.ImportReference(
-                        ResolveRelinkTarget(FindTypeDeep((string) val), false, relinkModule)
+                        ResolveRelinkTarget(found, false, relinkModule)
                     );
+                }
 
                 if (val is IMetadataTokenProvider)
                     return RelinkMapCache[name] = (IMetadataTokenProvider) val;
 
-                throw new InvalidOperationException($"MonoMod doesn't support RelinkMap value of type {val.GetType()}");
+                throw new InvalidOperationException($"MonoMod doesn't support RelinkMap value of type {val.GetType()} (remap: {mtp})");
             }
 
 
@@ -793,8 +808,12 @@ namespace MonoMod {
                 type = (TypeReference) mtp;
 
                 ModuleDefinition scope;
-                if (RelinkModuleMap.TryGetValue(type.Scope.Name, out scope))
-                    return RelinkModuleMapCache[name] = Module.ImportReference(scope.GetType(type.FullName));
+                if (RelinkModuleMap.TryGetValue(type.Scope.Name, out scope)) {
+                    TypeReference found = scope.GetType(type.FullName);
+                    if (found == null)
+                        throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (remap: {mtp})", mtp);
+                    return RelinkModuleMapCache[name] = Module.ImportReference(found);
+                }
 
                 return RelinkModuleMapCache[name] = Module.ImportReference(type);
             }

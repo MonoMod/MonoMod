@@ -54,6 +54,8 @@
     <Compile Include="MonoMod\Detour\MMDetourer.cs" />
     <Compile Include="MonoMod\Detour\RuntimeDetour.cs" />
     <Compile Include="MonoMod\Helpers\LongDictionary.cs" />
+    <Compile Include="MonoMod\Helpers\RelinkFailedException.cs" />
+    <Compile Include="MonoMod\Helpers\RelinkTargetNotFoundException.cs" />
     <Compile Include="MonoMod\InlineRT\MMILAccessParser.cs" />
     <Compile Include="MonoMod\QuickDebugTest.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
