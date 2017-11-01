@@ -107,6 +107,8 @@ namespace MonoMod.Detour {
                 _CreateDynMethod((DynamicMethod) method);
                 if (f_DynamicMethod_m_method != null)
                     handle = (RuntimeMethodHandle) f_DynamicMethod_m_method.GetValue(method);
+                else if (dmd_DynamicMethod_GetMethodDescriptor != null)
+                    handle = (RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(method);
                 else
                     handle = method.MethodHandle;
             } else
@@ -246,6 +248,19 @@ namespace MonoMod.Detour {
             if (!_Reverts.TryGetValue((long) target, out reverts))
                 return 0;
             return reverts.Count;
+        }
+
+        public static unsafe bool Refresh(this MethodBase target)
+            => Refresh(GetMethodStart(target));
+        public static unsafe bool Refresh(this Delegate target)
+            => Refresh(GetDelegateStart(target));
+        public static unsafe bool Refresh(void* target) {
+            List<IntPtr> reverts;
+            if (!_Reverts.TryGetValue((long) target, out reverts) ||
+                reverts.Count == 0)
+                return false;
+            _Copy(_Current[(long) target].ToPointer(), target);
+            return true;
         }
 
         private static unsafe List<Trampolines> _GetAllTrampolines(this MethodBase target)
