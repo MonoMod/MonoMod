@@ -459,6 +459,8 @@ namespace MonoMod {
 
             if (type.IsGenericParameter) {
                 GenericParameter genParam = context.GetGenericParameter(((GenericParameter) type).Name);
+                if (genParam == null)
+                    throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
                 for (int i = 0; i < genParam.Constraints.Count; i++)
                     if (!genParam.Constraints[i].IsGenericInstance) // That is somehow possible and causes a stack overflow.
                         genParam.Constraints[i] = genParam.Constraints[i].Relink(relinker, context);
