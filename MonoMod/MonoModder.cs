@@ -1727,7 +1727,7 @@ namespace MonoMod {
                         if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
-                        return _mmOriginalCtor = attrType.Methods[mi];
+                        return _mmOriginalNameCtor = attrType.Methods[mi];
                     }
                 }
             }
@@ -1735,20 +1735,20 @@ namespace MonoMod {
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModOriginalName", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
-            _mmOriginalCtor = new MethodDefinition(".ctor",
+            _mmOriginalNameCtor = new MethodDefinition(".ctor",
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                 Module.TypeSystem.Void
             );
-            _mmOriginalCtor.Parameters.Add(new ParameterDefinition("n", ParameterAttributes.None, Module.TypeSystem.String));
-            _mmOriginalCtor.MetadataToken = GetMetadataToken(TokenType.Method);
-            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
+            _mmOriginalNameCtor.Parameters.Add(new ParameterDefinition("n", ParameterAttributes.None, Module.TypeSystem.String));
+            _mmOriginalNameCtor.MetadataToken = GetMetadataToken(TokenType.Method);
+            _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+            _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
                 typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
-            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-            attrType.Methods.Add(_mmOriginalCtor);
+            _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+            attrType.Methods.Add(_mmOriginalNameCtor);
             Module.Types.Add(attrType);
-            return _mmOriginalCtor;
+            return _mmOriginalNameCtor;
         }
 
         protected MethodDefinition _mmAddedCtor;
