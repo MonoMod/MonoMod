@@ -379,31 +379,32 @@ namespace MonoMod {
             return clone;
         }
 
-        public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, string name) {
+        public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, GenericParameter orig) {
             // Don't ask me, that's possible for T[,].Get in "Enter the Gungeon"...?!
-            if (provider is GenericParameter && ((GenericParameter) provider).Name == name)
+            if (provider is GenericParameter && ((GenericParameter) provider).Name == orig.Name)
                 return (GenericParameter) provider;
 
             foreach (GenericParameter param in provider.GenericParameters)
-                if (param.Name == name)
+                if (param.Name == orig.Name)
                     return param;
 
-            int index;
-            if (provider is MethodReference && MethodGenericParamRegex.IsMatch(name))
-                if ((index = int.Parse(name.Substring(2))) < provider.GenericParameters.Count)
+            int index = orig.Position;
+            if (provider is MethodReference && orig.DeclaringMethod != null) {
+                if (index < provider.GenericParameters.Count)
                     return provider.GenericParameters[index];
                 else
-                    return new GenericParameter(name, provider).Update(index, GenericParameterType.Method);
+                    return new GenericParameter(orig.Name, provider).Update(index, GenericParameterType.Method);
+            }
 
-            if (provider is TypeReference && TypeGenericParamRegex.IsMatch(name))
-                if ((index = int.Parse(name.Substring(1))) < provider.GenericParameters.Count)
+            if (provider is TypeReference && orig.DeclaringType != null)
+                if (index < provider.GenericParameters.Count)
                     return provider.GenericParameters[index];
                 else
-                    return new GenericParameter(name, provider).Update(index, GenericParameterType.Type);
+                    return new GenericParameter(orig.Name, provider).Update(index, GenericParameterType.Type);
 
             return
-                (provider as TypeSpecification)?.ElementType.GetGenericParameter(name) ??
-                (provider as MemberReference)?.DeclaringType?.GetGenericParameter(name);
+                (provider as TypeSpecification)?.ElementType.GetGenericParameter(orig) ??
+                (provider as MemberReference)?.DeclaringType?.GetGenericParameter(orig);
         }
 
         public static IMetadataTokenProvider Relink(this IMetadataTokenProvider mtp, Relinker relinker, IGenericParameterProvider context) {
@@ -459,7 +460,7 @@ namespace MonoMod {
             }
 
             if (type.IsGenericParameter) {
-                GenericParameter genParam = context.GetGenericParameter(((GenericParameter) type).Name);
+                GenericParameter genParam = context.GetGenericParameter((GenericParameter) type);
                 if (genParam == null)
                     throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
                 for (int i = 0; i < genParam.Constraints.Count; i++)
@@ -1093,7 +1094,7 @@ namespace MonoMod {
                     return genericParameter;
 
                 TypeDefinition elementType = genericInstanceProvider.ElementType.Resolve();
-                GenericParameter parameter = elementType.GetGenericParameter(genericParameter.Name);
+                GenericParameter parameter = elementType.GetGenericParameter(genericParameter);
                 return genericInstanceProvider.GenericArguments[parameter.Position];
             }
 
