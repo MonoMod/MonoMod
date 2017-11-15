@@ -1642,6 +1642,9 @@ namespace MonoMod {
                     method.ImplAttributes = (MethodImplAttributes) ((short) method.ImplAttributes & ~256);
                 }
 
+                method.RecalculateILOffsets();
+                method.ConvertShortLongOps();
+
                 RunCustomAttributeHandlers(method);
             }
 

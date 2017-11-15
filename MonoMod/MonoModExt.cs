@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.NET40Shim;
 using StringInject;
+using MonoMod.Helpers;
 
 namespace MonoMod {
 
@@ -905,6 +906,61 @@ namespace MonoMod {
 
             // return caller.IsMatchingSignature(called);
             return true;
+        }
+
+        public static void RecalculateILOffsets(this MethodDefinition method) {
+            if (!method.HasBody)
+                return;
+            // Calculate updated offsets required for any further manual fixes.
+            int offs = 0;
+            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                Instruction instr = method.Body.Instructions[i];
+                instr.Offset = offs;
+                offs += instr.GetSize();
+            }
+
+        }
+
+        public static void ConvertShortLongOps(this MethodDefinition method) {
+            if (!method.HasBody)
+                return;
+            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                Instruction instr = method.Body.Instructions[i];
+                // Change short <-> long operations as the method grows / shrinks.
+                if (instr.Operand is Instruction) {
+                    int offs = ((Instruction) instr.Operand).Offset - instr.Offset;
+                    // sbyte.MinValue is -128, but -127 is the first "long" value.
+                    if (offs <= -127 || offs >= 127)
+                        instr.OpCode = instr.OpCode.ShortToLongOp();
+                    else
+                        instr.OpCode = instr.OpCode.LongToShortOp();
+                }
+            }
+        }
+
+        private readonly static Type t_Code = typeof(Code);
+        private readonly static Type t_OpCodes = typeof(OpCodes);
+
+        private readonly static IntDictionary<OpCode> _ShortToLongOp = new IntDictionary<OpCode>();
+        public static OpCode ShortToLongOp(this OpCode op) {
+            string name = Enum.GetName(t_Code, op.Code);
+            if (!name.EndsWith("_S"))
+                return op;
+            OpCode found;
+            if (_ShortToLongOp.TryGetValue((int) op.Code, out found))
+                return found;
+            return _ShortToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
+        }
+
+        private readonly static IntDictionary<OpCode> _LongToShortOp = new IntDictionary<OpCode>();
+        public static OpCode LongToShortOp(this OpCode op) {
+            string name = Enum.GetName(t_Code, op.Code);
+            if (name.EndsWith("_S"))
+                return op;
+            OpCode found;
+            if (_LongToShortOp.TryGetValue((int) op.Code, out found))
+                return found;
+            return _LongToShortOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
         }
 
         // IsMatchingSignature and related methods taken and adapted from the Mono.Linker:
