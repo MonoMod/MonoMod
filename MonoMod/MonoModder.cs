@@ -69,6 +69,7 @@ namespace MonoMod {
         public IDictionary<string, ModuleDefinition> DependencyCache = new FastDictionary<string, ModuleDefinition>();
         public List<string> DependencyDirs = new List<string>();
         public bool CleanupEnabled;
+        public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
         
         public bool Strict;
 
@@ -1580,6 +1581,13 @@ namespace MonoMod {
                 }
                 CleanupType(type, all: all);
             }
+
+            if (all) {
+                Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
+                for (int i = deps.Count - 1; i > -1; --i)
+                    if (deps[i].Name.StartsWith("MonoMod"))
+                        deps.RemoveAt(i);
+            }
         }
 
         public virtual void CleanupType(TypeDefinition type, bool all = false) {
@@ -1604,9 +1612,10 @@ namespace MonoMod {
             Collection<CustomAttribute> attribs = cap.CustomAttributes;
             for (int i = attribs.Count - 1; i > -1; --i) {
                 TypeReference attribType = attribs[i].AttributeType;
-                if (attribType.Scope.Name.StartsWith("MonoMod") ||
-                    (all && (attribType.Namespace.StartsWith("MonoMod") || attribType.Name.StartsWith("MonoMod")))
-                ) {
+                if (ShouldCleanupAttrib?.Invoke(cap, attribType) ?? (
+                    attribType.Scope.Name.StartsWith("MonoMod") ||
+                    attribType.Namespace.StartsWith("MonoMod") || attribType.Name.StartsWith("MonoMod")
+                )) {
                     attribs.RemoveAt(i);
                 }
             }
@@ -1619,13 +1628,8 @@ namespace MonoMod {
             foreach (TypeDefinition type in Module.Types)
                 DefaultPostProcessType(type);
 
-            if (CleanupEnabled) {
+            if (CleanupEnabled)
                 Cleanup(all: Environment.GetEnvironmentVariable("MONOMOD_CLEANUP_ALL") == "1");
-                Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
-                for (int i = deps.Count - 1; i > -1; --i)
-                    if (deps[i].Name.StartsWith("MonoMod"))
-                        deps.RemoveAt(i);
-            }
         }
 
         public virtual void DefaultPostProcessType(TypeDefinition type) {

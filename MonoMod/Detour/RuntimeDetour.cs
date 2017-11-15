@@ -114,11 +114,9 @@ namespace MonoMod.Detour {
             } else
                 handle = method.MethodHandle;
 
-            RuntimeHelpers.PrepareMethod(handle);
             return handle.GetFunctionPointer().ToPointer();
         }
         public static unsafe void* GetDelegateStart(Delegate d) {
-            RuntimeHelpers.PrepareDelegate(d);
             return Marshal.GetFunctionPointerForDelegate(d).ToPointer();
         }
 
