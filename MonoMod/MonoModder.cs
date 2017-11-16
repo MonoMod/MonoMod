@@ -1254,6 +1254,10 @@ namespace MonoMod {
         }
 
         public virtual MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {
+            if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
+                // Ignore original method stubs
+                return null;
+
             if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals(Module))
                 // Ignore ignored methods
                 return null;
@@ -1276,9 +1280,8 @@ namespace MonoMod {
             if (method.HasMMAttribute("Public"))
                 method.SetPublic(true);
 
-            if (method.HasMMAttribute("Ignore") ||
-                method.Name.StartsWith("orig_") || method.HasMMAttribute("Original")) {
-                // MonoModIgnore / Orig is a special case, as registered custom attributes should still be applied.
+            if (method.HasMMAttribute("Ignore")) {
+                // MonoModIgnore is a special case, as registered custom attributes should still be applied.
                 if (existingMethod != null)
                     foreach (CustomAttribute attrib in method.CustomAttributes)
                         if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName) ||
@@ -1325,6 +1328,14 @@ namespace MonoMod {
                     origMethod.Overrides.Add(@override);
 
                 origMethod.AddAttribute(GetMonoModOriginalCtor());
+
+                // Check if we've got custom attributes on our own orig_ method.
+                MethodDefinition modOrigMethod = method.DeclaringType.FindMethod(method.GetFindableID(name: method.GetOriginalName()));
+                if (modOrigMethod != null)
+                    foreach (CustomAttribute attrib in modOrigMethod.CustomAttributes)
+                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName) ||
+                            CustomMethodAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                            origMethod.CustomAttributes.Add(attrib.Clone());
 
                 targetType.Methods.Add(origMethod);
             }
