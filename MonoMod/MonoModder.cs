@@ -1219,10 +1219,8 @@ namespace MonoMod {
         public virtual void PatchEvent(TypeDefinition targetType, EventDefinition srcEvent, HashSet<MethodDefinition> propMethods = null)
         {
             MethodDefinition addMethod;
-            Log($"Patching {targetType.Name}.{srcEvent.Name}");
             EventDefinition targetEvent = targetType.FindEvent(srcEvent.Name);
             string backingName = $"<{srcEvent.Name}>__BackingField";
-            Log(backingName);
             FieldDefinition backing = srcEvent.DeclaringType.FindField(backingName);
             FieldDefinition targetBacking = targetType.FindField(backingName);
 
