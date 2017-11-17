@@ -1439,6 +1439,14 @@ namespace MonoMod {
 
                 origMethod.AddAttribute(GetMonoModOriginalCtor());
 
+                // Check if we've got custom attributes on our own orig_ method.
+                MethodDefinition modOrigMethod = method.DeclaringType.FindMethod(method.GetFindableID(name: method.GetOriginalName()));
+                if (modOrigMethod != null)
+                    foreach (CustomAttribute attrib in modOrigMethod.CustomAttributes)
+                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName) ||
+                            CustomMethodAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                            origMethod.CustomAttributes.Add(attrib.Clone());
+
                 targetType.Methods.Add(origMethod);
             }
 
