@@ -1296,8 +1296,9 @@ namespace MonoMod {
                 (addMethod = PatchMethod(targetType, adder)) != null)
             {
                 targetEvent.AddMethod = addMethod;
+                /* Old code that would add the base attributes to the add method.  Causes weird behavior.
                 foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
-                    addMethod.CustomAttributes.Add(attrib.Clone());
+                    addMethod.CustomAttributes.Add(attrib.Clone()); */
                 propMethods?.Add(adder);
             }
 
@@ -1306,8 +1307,9 @@ namespace MonoMod {
                 (addMethod = PatchMethod(targetType, remover)) != null)
             {
                 targetEvent.RemoveMethod = addMethod;
+                /* Old code that would add the base attributes to the remove method.  Causes weird behavior.
                 foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
-                    addMethod.CustomAttributes.Add(attrib.Clone());
+                    addMethod.CustomAttributes.Add(attrib.Clone());*/
                 propMethods?.Add(remover);
             }
 
