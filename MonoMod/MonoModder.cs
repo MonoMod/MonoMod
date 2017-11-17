@@ -1086,8 +1086,12 @@ namespace MonoMod {
             foreach (PropertyDefinition prop in type.Properties)
                 PatchProperty(targetTypeDef, prop, propMethods);
 
+            HashSet<MethodDefinition> eventMethods = new HashSet<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
+            foreach (EventDefinition eventdef in type.Events)
+                PatchEvent(targetTypeDef, eventdef, eventMethods);
+
             foreach (MethodDefinition method in type.Methods)
-                if (!propMethods.Contains(method))
+                if (!propMethods.Contains(method) && !eventMethods.Contains(method))
                     PatchMethod(targetTypeDef, method);
 
             if (type.HasMMAttribute("EnumReplace")) {
@@ -1211,6 +1215,112 @@ namespace MonoMod {
                     propMethods?.Add(method);
                 }
         }
+
+        public virtual void PatchEvent(TypeDefinition targetType, EventDefinition srcEvent, HashSet<MethodDefinition> propMethods = null)
+        {
+            MethodDefinition addMethod;
+            Log($"Patching {targetType.Name}.{srcEvent.Name}");
+            EventDefinition targetEvent = targetType.FindEvent(srcEvent.Name);
+            string backingName = $"<{srcEvent.Name}>__BackingField";
+            Log(backingName);
+            FieldDefinition backing = srcEvent.DeclaringType.FindField(backingName);
+            FieldDefinition targetBacking = targetType.FindField(backingName);
+
+            // Cheap fix: Apply the mod property attributes on the mod backing field.
+            // Causes the field to be ignored / replaced / ... in its own patch pass further below.
+            if (backing != null)
+                foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
+                    backing.CustomAttributes.Add(attrib.Clone());
+
+            if (srcEvent.HasMMAttribute("Public"))
+            {
+                (targetEvent ?? srcEvent)?.SetPublic(true);
+                (targetBacking ?? backing)?.SetPublic(true);
+                (targetEvent?.AddMethod ?? srcEvent.AddMethod)?.SetPublic(true);
+                (targetEvent?.RemoveMethod ?? srcEvent.RemoveMethod)?.SetPublic(true);
+                foreach (MethodDefinition method in targetEvent?.OtherMethods ?? srcEvent?.OtherMethods)
+                    method.SetPublic(true);
+            }
+
+            if (srcEvent.HasMMAttribute("Ignore"))
+            {
+                if (backing != null)
+                    backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
+                if (srcEvent.AddMethod != null)
+                    propMethods?.Add(srcEvent.AddMethod);
+                if (srcEvent.RemoveMethod != null)
+                    propMethods?.Add(srcEvent.RemoveMethod);
+                foreach (MethodDefinition method in srcEvent.OtherMethods)
+                    propMethods?.Add(method);
+                return;
+            }
+
+            if (srcEvent.HasMMAttribute("Remove") || srcEvent.HasMMAttribute("Replace"))
+            {
+                if (targetEvent != null)
+                {
+                    targetType.Events.Remove(targetEvent);
+                    if (targetBacking != null)
+                        targetType.Fields.Remove(targetBacking);
+                    if (targetEvent.AddMethod != null)
+                        targetType.Methods.Remove(targetEvent.AddMethod);
+                    if (targetEvent.RemoveMethod != null)
+                        targetType.Methods.Remove(targetEvent.RemoveMethod);
+                    if (targetEvent.OtherMethods != null)
+                        foreach (MethodDefinition method in targetEvent.OtherMethods)
+                            targetType.Methods.Remove(method);
+                }
+                if (srcEvent.HasMMAttribute("Remove"))
+                    return;
+            }
+
+            if (targetEvent == null)
+            {
+                // Add missing event
+                EventDefinition newEvent = targetEvent = new EventDefinition(srcEvent.Name, srcEvent.Attributes, srcEvent.EventType);
+                newEvent.AddAttribute(GetMonoModAddedCtor());
+
+                newEvent.DeclaringType = targetType;
+                targetType.Events.Add(newEvent);
+
+                if (backing != null)
+                {
+                    FieldDefinition newBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
+                    targetType.Fields.Add(newBacking);
+                }
+            }
+
+            foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
+                targetEvent.CustomAttributes.Add(attrib.Clone());
+
+            MethodDefinition adder = srcEvent.AddMethod;
+            if (adder != null &&
+                (addMethod = PatchMethod(targetType, adder)) != null)
+            {
+                targetEvent.AddMethod = addMethod;
+                foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
+                    addMethod.CustomAttributes.Add(attrib.Clone());
+                propMethods?.Add(adder);
+            }
+
+            MethodDefinition remover = srcEvent.RemoveMethod;
+            if (remover != null &&
+                (addMethod = PatchMethod(targetType, remover)) != null)
+            {
+                targetEvent.RemoveMethod = addMethod;
+                foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
+                    addMethod.CustomAttributes.Add(attrib.Clone());
+                propMethods?.Add(remover);
+            }
+
+            foreach (MethodDefinition method in srcEvent.OtherMethods)
+                if ((addMethod = PatchMethod(targetType, method)) != null)
+                {
+                    targetEvent.OtherMethods.Add(addMethod);
+                    propMethods?.Add(method);
+                }
+        }
+
 
         public virtual void PatchField(TypeDefinition targetType, FieldDefinition field) {
             TypeDefinition type = field.DeclaringType;
@@ -1433,6 +1543,13 @@ namespace MonoMod {
                     prop.CustomAttributes[i] = Relink(prop.CustomAttributes[i], type);
             }
 
+            foreach (EventDefinition eventDef in type.Events)
+            {
+                eventDef.EventType = Relink(eventDef.EventType, type);
+                for (int i = 0; i < eventDef.CustomAttributes.Count; i++)
+                    eventDef.CustomAttributes[i] = Relink(eventDef.CustomAttributes[i], type);
+            }
+
             foreach (MethodDefinition method in type.Methods)
                 PatchRefsInMethod(method);
 
@@ -1441,6 +1558,8 @@ namespace MonoMod {
                 foreach (CustomAttribute attrib in field.CustomAttributes)
                     Relink(attrib, type);
             }
+
+            
 
             PatchRefsInTypeNested(type);
         }
@@ -1603,6 +1722,9 @@ namespace MonoMod {
             foreach (FieldDefinition field in type.Fields)
                 Cleanup(field, all: all);
 
+            foreach (EventDefinition eventDef in type.Events)
+                Cleanup(eventDef, all: all);
+
 
             foreach (TypeDefinition nested in type.NestedTypes)
                 CleanupType(nested, all: all);
@@ -1635,6 +1757,8 @@ namespace MonoMod {
         public virtual void DefaultPostProcessType(TypeDefinition type) {
             RunCustomAttributeHandlers(type);
 
+            foreach (EventDefinition eventDef in type.Events)
+                RunCustomAttributeHandlers(eventDef);
 
             foreach (PropertyDefinition prop in type.Properties)
                 RunCustomAttributeHandlers(prop);

@@ -653,12 +653,21 @@ namespace MonoMod {
             return null;
         }
 
+        public static EventDefinition FindEvent(this TypeDefinition type, string name)
+        {
+            foreach (EventDefinition eventDef in type.Events)
+                if (eventDef.Name == name) return eventDef;
+            return null;
+        }
+
         public static bool HasMethod(this TypeDefinition type, MethodDefinition method)
             => type.FindMethod(method.GetFindableID(withType: false)) != null;
         public static bool HasProperty(this TypeDefinition type, PropertyDefinition prop)
             => type.FindProperty(prop.Name) != null;
         public static bool HasField(this TypeDefinition type, FieldDefinition field)
             => type.FindField(field.Name) != null;
+        public static bool HasEvent(this TypeDefinition type, EventDefinition eventDef)
+            => type.FindEvent(eventDef.Name) != null;
 
         public static void SetPublic(this IMetadataTokenProvider mtp, bool p) {
             if (mtp is TypeReference) ((TypeReference) mtp).SafeResolve()?.SetPublic(p);
