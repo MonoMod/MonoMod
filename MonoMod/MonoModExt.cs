@@ -653,8 +653,7 @@ namespace MonoMod {
             return null;
         }
 
-        public static EventDefinition FindEvent(this TypeDefinition type, string name)
-        {
+        public static EventDefinition FindEvent(this TypeDefinition type, string name) {
             foreach (EventDefinition eventDef in type.Events)
                 if (eventDef.Name == name) return eventDef;
             return null;

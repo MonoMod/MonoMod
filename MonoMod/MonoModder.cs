@@ -1195,8 +1195,6 @@ namespace MonoMod {
             if (getter != null &&
                 (addMethod = PatchMethod(targetType, getter)) != null) {
                 targetProp.GetMethod = addMethod;
-                foreach (CustomAttribute attrib in prop.CustomAttributes)
-                    addMethod.CustomAttributes.Add(attrib.Clone());
                 propMethods?.Add(getter);
             }
 
@@ -1204,8 +1202,6 @@ namespace MonoMod {
             if (setter != null &&
                 (addMethod = PatchMethod(targetType, setter)) != null) {
                 targetProp.SetMethod = addMethod;
-                foreach (CustomAttribute attrib in prop.CustomAttributes)
-                    addMethod.CustomAttributes.Add(attrib.Clone());
                 propMethods?.Add(setter);
             }
 
@@ -1216,8 +1212,7 @@ namespace MonoMod {
                 }
         }
 
-        public virtual void PatchEvent(TypeDefinition targetType, EventDefinition srcEvent, HashSet<MethodDefinition> propMethods = null)
-        {
+        public virtual void PatchEvent(TypeDefinition targetType, EventDefinition srcEvent, HashSet<MethodDefinition> propMethods = null) {
             MethodDefinition addMethod;
             EventDefinition targetEvent = targetType.FindEvent(srcEvent.Name);
             string backingName = $"<{srcEvent.Name}>__BackingField";
@@ -1230,8 +1225,7 @@ namespace MonoMod {
                 foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
                     backing.CustomAttributes.Add(attrib.Clone());
 
-            if (srcEvent.HasMMAttribute("Public"))
-            {
+            if (srcEvent.HasMMAttribute("Public")) {
                 (targetEvent ?? srcEvent)?.SetPublic(true);
                 (targetBacking ?? backing)?.SetPublic(true);
                 (targetEvent?.AddMethod ?? srcEvent.AddMethod)?.SetPublic(true);
@@ -1240,8 +1234,7 @@ namespace MonoMod {
                     method.SetPublic(true);
             }
 
-            if (srcEvent.HasMMAttribute("Ignore"))
-            {
+            if (srcEvent.HasMMAttribute("Ignore")) {
                 if (backing != null)
                     backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
                 if (srcEvent.AddMethod != null)
@@ -1253,10 +1246,8 @@ namespace MonoMod {
                 return;
             }
 
-            if (srcEvent.HasMMAttribute("Remove") || srcEvent.HasMMAttribute("Replace"))
-            {
-                if (targetEvent != null)
-                {
+            if (srcEvent.HasMMAttribute("Remove") || srcEvent.HasMMAttribute("Replace")) {
+                if (targetEvent != null) {
                     targetType.Events.Remove(targetEvent);
                     if (targetBacking != null)
                         targetType.Fields.Remove(targetBacking);
@@ -1272,8 +1263,7 @@ namespace MonoMod {
                     return;
             }
 
-            if (targetEvent == null)
-            {
+            if (targetEvent == null) {
                 // Add missing event
                 EventDefinition newEvent = targetEvent = new EventDefinition(srcEvent.Name, srcEvent.Attributes, srcEvent.EventType);
                 newEvent.AddAttribute(GetMonoModAddedCtor());
@@ -1281,8 +1271,7 @@ namespace MonoMod {
                 newEvent.DeclaringType = targetType;
                 targetType.Events.Add(newEvent);
 
-                if (backing != null)
-                {
+                if (backing != null) {
                     FieldDefinition newBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
                     targetType.Fields.Add(newBacking);
                 }
@@ -1293,29 +1282,20 @@ namespace MonoMod {
 
             MethodDefinition adder = srcEvent.AddMethod;
             if (adder != null &&
-                (addMethod = PatchMethod(targetType, adder)) != null)
-            {
+                (addMethod = PatchMethod(targetType, adder)) != null) {
                 targetEvent.AddMethod = addMethod;
-                /* Old code that would add the base attributes to the add method.  Causes weird behavior.
-                foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
-                    addMethod.CustomAttributes.Add(attrib.Clone()); */
                 propMethods?.Add(adder);
             }
 
             MethodDefinition remover = srcEvent.RemoveMethod;
             if (remover != null &&
-                (addMethod = PatchMethod(targetType, remover)) != null)
-            {
+                (addMethod = PatchMethod(targetType, remover)) != null) {
                 targetEvent.RemoveMethod = addMethod;
-                /* Old code that would add the base attributes to the remove method.  Causes weird behavior.
-                foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
-                    addMethod.CustomAttributes.Add(attrib.Clone());*/
                 propMethods?.Add(remover);
             }
 
             foreach (MethodDefinition method in srcEvent.OtherMethods)
-                if ((addMethod = PatchMethod(targetType, method)) != null)
-                {
+                if ((addMethod = PatchMethod(targetType, method)) != null) {
                     targetEvent.OtherMethods.Add(addMethod);
                     propMethods?.Add(method);
                 }
@@ -1518,6 +1498,30 @@ namespace MonoMod {
 
         #region PatchRefs Pass
         public virtual void PatchRefs() {
+            // Attempt to remap and remove redundant mscorlib references.
+            // Subpass 1: Find newest referred version.
+            AssemblyNameReference mscorlibDep = null;
+            bool mscorlibMulti = false;
+            for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
+                AssemblyNameReference dep = Module.AssemblyReferences[i];
+                if (dep.Name == "mscorlib" && (mscorlibDep == null || mscorlibDep.Version < dep.Version)) {
+                    mscorlibMulti = mscorlibDep != null;
+                    mscorlibDep = dep;
+                }
+            }
+            // Subpass 2: Apply changes if found.
+            ModuleDefinition mscorlib;
+            if (mscorlibMulti && DependencyCache.TryGetValue(mscorlibDep.FullName, out mscorlib)) {
+                for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
+                    AssemblyNameReference dep = Module.AssemblyReferences[i];
+                    if (dep.Name == "mscorlib" && mscorlibDep.Version > dep.Version) {
+                        RelinkModuleMap[dep.FullName] = mscorlib;
+                        Module.AssemblyReferences.RemoveAt(i);
+                        --i;
+                    }
+                }
+            }
+
             foreach (TypeDefinition type in Module.Types)
                 PatchRefsInType(type);
         }
