@@ -1,4 +1,4 @@
-﻿using Mono.Cecil;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
@@ -348,9 +348,16 @@ namespace MonoMod {
         }
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null) {
             ModuleDefinition dep;
-            if ((fullName != null && DependencyCache.TryGetValue(fullName, out dep)) ||
-                                     DependencyCache.TryGetValue(name    , out dep)) {
+            if (fullName != null && DependencyCache.TryGetValue(fullName, out dep)) {
                 LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
+                DependencyMap[main].Add(dep);
+                MapDependencies(dep);
+                return;
+            }
+
+            if (fullName == null && DependencyCache.TryGetValue(name, out dep))
+            {
+                LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} ({name}) from cache");
                 DependencyMap[main].Add(dep);
                 MapDependencies(dep);
                 return;
@@ -432,6 +439,7 @@ namespace MonoMod {
             outputPath = outputPath ?? OutputPath;
 
             PatchWasHere();
+            PatchRefs();
 
             if (output != null) {
                 Log("[Write] Writing modded module into output stream.");
@@ -1500,24 +1508,31 @@ namespace MonoMod {
         public virtual void PatchRefs() {
             // Attempt to remap and remove redundant mscorlib references.
             // Subpass 1: Find newest referred version.
-            AssemblyNameReference mscorlibDep = null;
-            bool mscorlibMulti = false;
+            List<AssemblyNameReference> mscorlibDeps = new List<AssemblyNameReference>();
             for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
                 AssemblyNameReference dep = Module.AssemblyReferences[i];
-                if (dep.Name == "mscorlib" && (mscorlibDep == null || mscorlibDep.Version < dep.Version)) {
-                    mscorlibMulti = mscorlibDep != null;
-                    mscorlibDep = dep;
+                if (dep.Name == "mscorlib") {
+                    mscorlibDeps.Add(dep);
                 }
             }
-            // Subpass 2: Apply changes if found.
-            ModuleDefinition mscorlib;
-            if (mscorlibMulti && DependencyCache.TryGetValue(mscorlibDep.FullName, out mscorlib)) {
-                for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
-                    AssemblyNameReference dep = Module.AssemblyReferences[i];
-                    if (dep.Name == "mscorlib" && mscorlibDep.Version > dep.Version) {
-                        RelinkModuleMap[dep.FullName] = mscorlib;
-                        Module.AssemblyReferences.RemoveAt(i);
-                        --i;
+            if (mscorlibDeps.Count > 1)
+            {
+                LogVerbose("[PatchRefs] Found Duplicate mscorlib");
+                // Subpass 2: Apply changes if found.
+                AssemblyNameReference maxmscorlib = mscorlibDeps.OrderByDescending(x => x.Version).First();
+                ModuleDefinition mscorlib;
+                if (DependencyCache.TryGetValue(maxmscorlib.FullName, out mscorlib))
+                {
+                    for (int i = 0; i < Module.AssemblyReferences.Count; i++)
+                    {
+                        AssemblyNameReference dep = Module.AssemblyReferences[i];
+                        if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version)
+                        {
+                            Log("[PatchRefs] Removing and Relinking: " + dep.Version);
+                            RelinkModuleMap[dep.FullName] = mscorlib;
+                            Module.AssemblyReferences.RemoveAt(i);
+                            --i;
+                        }
                     }
                 }
             }
