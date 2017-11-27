@@ -116,46 +116,64 @@ namespace MonoMod.InlineRT {
             IMetadataTokenProvider member = null;
             ParseMMILAccessCtorHead(self, body, callCtor, callCtorOrig, ref instri, out type, out member);
 
-            // Currently in front of us:
-            /*
-            ld arrsize
-            newarr
-            arr element #0
-            arr element #1
-            arr element #n
-            call New / Call / Get / Set
-            */
+            if (instrs[instri + 1].OpCode == OpCodes.Newarr) {
+                // Currently in front of us:
+                /*
+                ld arrsize
+                newarr
+                arr element #0
+                arr element #1
+                arr element #n
+                call New / Call / Get / Set
+                */
 
-            int count = instrs[instri].GetInt();
-            instrs.RemoveAt(instri);
+                int count = instrs[instri].GetInt();
+                instrs.RemoveAt(instri);
 
-            // Remove the newarr
-            instrs.RemoveAt(instri);
 
-            // Parse array content
-            int depth = 0;
-            Instruction instr = null;
-            // Skip anything including nested arrays
-            for (int i = 0; i < count; i++) {
-                instrs.RemoveAt(instri); // arr
-                instrs.RemoveAt(instri); // index
-                while ((instr = instrs[instri]).OpCode != OpCodes.Stelem_Ref || depth > 0) {
+                // Remove the newarr
+                instrs.RemoveAt(instri);
+
+                // Parse array content
+                int depth = 0;
+                Instruction instr = null;
+                // Skip anything including nested arrays
+                for (int i = 0; i < count; i++) {
+                    instrs.RemoveAt(instri); // arr
+                    instrs.RemoveAt(instri); // index
+                    while ((instr = instrs[instri]).OpCode != OpCodes.Stelem_Ref || depth > 0) {
+                        // Nested parsing
+                        self.DefaultParser(self, body, instrs[instri], ref instri);
+
+                        if (instr.OpCode == OpCodes.Newarr)
+                            depth++;
+                        else if (depth > 0 && instr.OpCode == OpCodes.Stelem_Ref)
+                            depth--;
+
+                        instri++;
+                    }
+                    // At Stelem_Ref right now
+                    if (instrs[instri - 1].OpCode == OpCodes.Box) {
+                        instrs.RemoveAt(instri - 1);
+                        instri--;
+                    }
+                    instrs.RemoveAt(instri); // stelem.ref
+                }
+
+            } else {
+                // Currently in front of us:
+                /*
+                ANYTHING
+                call New / Call / Get / Set
+                */
+                for (Instruction instr = instrs[instri]; instri < instrs.Count && !(
+                        (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) &&
+                        (instr.Operand as MethodReference).DeclaringType.Namespace == "MMILAccess"
+                    ); instr = instrs[++instri]) {
+                    instr = instrs[instri];
                     // Nested parsing
                     self.DefaultParser(self, body, instrs[instri], ref instri);
-
-                    if (instr.OpCode == OpCodes.Newarr)
-                        depth++;
-                    else if (depth > 0 && instr.OpCode == OpCodes.Stelem_Ref)
-                        depth--;
-
-                    instri++;
                 }
-                // At Stelem_Ref right now
-                if (instrs[instri - 1].OpCode == OpCodes.Box) {
-                    instrs.RemoveAt(instri - 1);
-                    instri--;
-                }
-                instrs.RemoveAt(instri); // stelem.ref
             }
 
             // FINALLY replace the call as required
