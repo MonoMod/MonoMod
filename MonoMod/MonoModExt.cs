@@ -423,6 +423,9 @@ namespace MonoMod {
                 TypeSpecification ts = (TypeSpecification) type;
                 TypeReference relinkedElem = ts.ElementType.Relink(relinker, context);
 
+                if (type.IsSentinel)
+                    return new SentinelType(relinkedElem);
+
                 if (type.IsByReference)
                     return new ByReferenceType(relinkedElem);
 
@@ -815,6 +818,7 @@ namespace MonoMod {
                         else if (ts.IsPointer)
                             formats.Push("{0}*");
                         else if (ts.IsPinned) { } // FullName not overriden.
+                        else if (ts.IsSentinel) { } // FullName not overriden.
                         else if (ts.IsArray) {
                             ArrayType array = (ArrayType) ts;
                             if (array.IsVector)
