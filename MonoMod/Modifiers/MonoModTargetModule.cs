@@ -8,6 +8,7 @@ namespace MonoMod {
     /// For example, one can define the target assembly version using MonoModTargetModule,
     /// or use the same MonoMod mod on multiple differing input assemblies.
     /// </summary>
+    [MonoMod__SafeToCopy__]
     public class MonoModTargetModule : Attribute {
         public MonoModTargetModule(string name) { }
     }

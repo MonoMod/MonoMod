@@ -4,6 +4,7 @@
 /// Generic platform enum.
 /// </summary>
 [Flags]
+[MonoMod.MonoMod__SafeToCopy__]
 public enum Platform : int {
     // Underlying platform categories
     OS = 1,

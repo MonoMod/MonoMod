@@ -438,8 +438,7 @@ namespace MonoMod {
             output = output ?? Output;
             outputPath = outputPath ?? OutputPath;
 
-            PatchWasHere();
-            PatchRefs();
+            PatchRefsInType(PatchWasHere());
 
             if (output != null) {
                 Log("[Write] Writing modded module into output stream.");

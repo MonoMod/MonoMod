@@ -2,6 +2,7 @@
 using System.IO;
 using System.Reflection;
 
+[MonoMod.MonoMod__SafeToCopy__]
 public static class PlatformHelper {
 
     static PlatformHelper() {

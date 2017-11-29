@@ -8,6 +8,7 @@ namespace MonoMod {
     /// Apply it onto a property and it will be removed first, as if you're just adding your own.
     /// Apply it onto a type and the original type will be removed first.
     /// </summary>
+    [MonoMod__SafeToCopy__]
     public class MonoModReplace : Attribute {
     }
 }

@@ -5,6 +5,7 @@ namespace MonoMod {
     /// MonoMod linkto attribute.
     /// Apply it onto a type / method / field and calls to it by mods will be relinked to another target.
     /// </summary>
+    [MonoMod__SafeToCopy__]
     public class MonoModLinkTo : Attribute {
         public MonoModLinkTo(string t) {
         }
