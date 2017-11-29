@@ -119,6 +119,9 @@ namespace MonoMod {
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModOriginalName")
                     return (string) attrib.ConstructorArguments[0].Value;
 
+            if (method.HasMMAttribute("Constructor"))
+                return "orig_ctor_" + ((ICustomAttributeProvider) method.DeclaringType).GetPatchName();
+
             return "orig_" + method.Name;
         }
 
