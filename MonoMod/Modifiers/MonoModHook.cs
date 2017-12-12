@@ -7,9 +7,14 @@ namespace MonoMod {
     /// </summary>
     [MonoMod__SafeToCopy__]
     public class MonoModHook : Attribute {
-        public MonoModHook(string f) {
+        public string FindableID;
+        public Type Type;
+        public MonoModHook(string findableID) {
+            FindableID = findableID;
         }
-        public MonoModHook(Type f) {
+        public MonoModHook(Type type) {
+            Type = type;
+            FindableID = type.FullName;
         }
     }
 }
