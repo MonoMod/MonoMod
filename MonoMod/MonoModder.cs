@@ -355,7 +355,7 @@ namespace MonoMod {
                 return;
             }
 
-            if (fullName == null && DependencyCache.TryGetValue(name, out dep))
+            if (DependencyCache.TryGetValue(name, out dep))
             {
                 LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} ({name}) from cache");
                 DependencyMap[main].Add(dep);
