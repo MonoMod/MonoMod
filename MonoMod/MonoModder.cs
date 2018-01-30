@@ -208,6 +208,36 @@ namespace MonoMod {
             }
         }
 
+        protected string _CORLIBPath;
+        public string CORLIBPath {
+            get {
+                if (_CORLIBPath == null) {
+                    string os;
+                    System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                    if (property_platform != null) {
+                        // For mono, get from
+                        // static extern PlatformID Platform
+                        os = property_platform.GetValue(null, null).ToString().ToLower();
+                    } else {
+                        // For .NET, use default value
+                        os = Environment.OSVersion.Platform.ToString().ToLower();
+                        // .NET also prefixes the version with a v
+                    }
+                    if (os.Contains("win")) {
+                        // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
+                        _GACPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
+                        _GACPath = Path.Combine(_GACPath, "Framework");
+                    }
+                    // TODO: Get CORLIB path on platforms other than Windows.
+                }
+
+                return _GACPath;
+            }
+            set {
+                _GACPath = value;
+            }
+        }
+
         public MonoModder() {
             Relinker = DefaultRelinker;
             MainRelinker = DefaultMainRelinker;
@@ -348,15 +378,19 @@ namespace MonoMod {
         }
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null) {
             ModuleDefinition dep;
-            if (fullName != null && DependencyCache.TryGetValue(fullName, out dep)) {
+            if (fullName != null && (
+                DependencyCache.TryGetValue(fullName, out dep) ||
+                DependencyCache.TryGetValue(fullName + " [RT:" + main.RuntimeVersion + "]", out dep)
+            )) {
                 LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
                 DependencyMap[main].Add(dep);
                 MapDependencies(dep);
                 return;
             }
 
-            if (DependencyCache.TryGetValue(name, out dep))
-            {
+            if (DependencyCache.TryGetValue(name, out dep) ||
+                DependencyCache.TryGetValue(name + " [RT:" + main.RuntimeVersion + "]", out dep)
+            ) {
                 LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} ({name}) from cache");
                 DependencyMap[main].Add(dep);
                 MapDependencies(dep);
@@ -378,17 +412,8 @@ namespace MonoMod {
                 else path = null;
             }
 
-            // Check if available in GAC
-            if (path == null && fullName != null) {
-                System.Reflection.Assembly asm = null;
-                try {
-                    asm = System.Reflection.Assembly.ReflectionOnlyLoad(fullName);
-                } catch { }
-                path = asm?.Location;
-            }
-
             // Manually check in GAC
-            if (path == null && fullName == null) {
+            if (path == null) {
                 path = Path.Combine(GACPath, name);
 
                 if (Directory.Exists(path)) {
@@ -396,7 +421,10 @@ namespace MonoMod {
                     int highest = 0;
                     int highestIndex = 0;
                     for (int i = 0; i < versions.Length; i++) {
-                        Match versionMatch = Regex.Match(versions[i].Substring(path.Length + 1), "\\d+");
+                        string versionPath = versions[i];
+                        if (versionPath.StartsWith(path))
+                            versionPath = versionPath.Substring(path.Length + 1);
+                        Match versionMatch = Regex.Match(versionPath, "\\d+");
                         if (!versionMatch.Success) {
                             continue;
                         }
@@ -411,6 +439,37 @@ namespace MonoMod {
                 } else {
                     path = null;
                 }
+            }
+
+            // Manually check in CORLIB path
+            if (path == null) {
+                path = Path.Combine(CORLIBPath, main.RuntimeVersion);
+
+                if (Directory.Exists(path)) {
+                    path = Path.Combine(path, name + ".dll");
+                    if (File.Exists(path)) {
+                        // Prevent multiple runtime versions from colliding.
+                        name += " [RT:" + main.RuntimeVersion + "]";
+                        if (fullName != null)
+                            fullName += " [RT:" + main.RuntimeVersion + "]";
+                    } else {
+                        path = null;
+                    }
+                } else {
+                    // Not CORLIBPath/Version, but ???
+                }
+
+            }
+
+            // Check if available in GAC
+            // Note: This is a fallback as MonoMod depends on a low version of the .NET Framework.
+            // This unfortunately breaks ReflectionOnlyLoad on targets higher than the MonoMod target.
+            if (path == null && fullName != null) {
+                System.Reflection.Assembly asm = null;
+                try {
+                    asm = System.Reflection.Assembly.ReflectionOnlyLoad(fullName);
+                } catch { }
+                path = asm?.Location;
             }
 
             if (path != null && File.Exists(path)) {
