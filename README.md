@@ -65,10 +65,6 @@ Yes.
 Ask the creator of the input assembly, the patches and your lawyer (actually not your lawyer).
 
 
-## Am I allowed to redistribute MonoMod?
-Yes. Do so freely, as long as you don't charge the user any costs for using / downloading MonoMod.
-
-
 ## Is it possible to patch patches?
 Yes, but the orig_ methods will be ignored by MonoMod.
 
