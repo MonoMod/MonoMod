@@ -53,6 +53,9 @@ namespace MonoMod.Detour {
         private readonly static MethodInfo m_Console_WriteLine_string =
             typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
 
+        // TODO: Free the GCHandles!
+        private readonly static unsafe FastDictionary<Delegate, GCHandle> _DelegateGCHandles = new FastDictionary<Delegate, GCHandle>();
+
         private readonly static unsafe LongDictionary<IntPtr> _Origs = new LongDictionary<IntPtr>();
         private readonly static unsafe LongDictionary<List<IntPtr>> _Reverts = new LongDictionary<List<IntPtr>>();
         private readonly static unsafe LongDictionary<IntPtr> _Current = new LongDictionary<IntPtr>();
@@ -62,6 +65,33 @@ namespace MonoMod.Detour {
         private readonly static unsafe HashSet<MethodBase> _Tokenized = new HashSet<MethodBase>();
 
         private readonly static unsafe TargetTokenToTrampolinesStackMap _Trampolines = new TargetTokenToTrampolinesStackMap();
+
+        [Flags]
+        private enum Protection {
+            PAGE_NOACCESS = 0x01,
+            PAGE_READONLY = 0x02,
+            PAGE_READWRITE = 0x04,
+            PAGE_WRITECOPY = 0x08,
+            PAGE_EXECUTE = 0x10,
+            PAGE_EXECUTE_READ = 0x20,
+            PAGE_EXECUTE_READWRITE = 0x40,
+            PAGE_EXECUTE_WRITECOPY = 0x80,
+            PAGE_GUARD = 0x100,
+            PAGE_NOCACHE = 0x200,
+            PAGE_WRITECOMBINE = 0x400
+        }
+
+        [DllImport("kernel32.dll")]
+        private static extern bool VirtualProtect(IntPtr lpAddress, IntPtr dwSize, Protection flNewProtect, out Protection lpflOldProtect);
+
+        private unsafe static void _Unprotect(void* addr) {
+            if ((PlatformHelper.Current & Platform.Windows) == Platform.Windows) {
+                Protection oldProtection;
+                // For comparison: dwSize is 1 in Harmony.
+                if (!VirtualProtect((IntPtr) addr, (IntPtr) DetourSize, Protection.PAGE_EXECUTE_READWRITE, out oldProtection))
+                    throw new System.ComponentModel.Win32Exception();
+            }
+        }
 
         private unsafe static void _Copy(void* from, void* to) {
             if (IsX64) {
@@ -114,9 +144,18 @@ namespace MonoMod.Detour {
             } else
                 handle = method.MethodHandle;
 
+            // "Pin" the method.
+            RuntimeHelpers.PrepareMethod(handle);
+
             return handle.GetFunctionPointer().ToPointer();
         }
+        [Obsolete("Delegates behave uncontrollably. Use MethodBases instead. This API will be removed soon.")]
         public static unsafe void* GetDelegateStart(Delegate d) {
+            // Prevent the GC from touching the delegate.
+            _DelegateGCHandles[d] = GCHandle.Alloc(d);
+            // "Pin" the method.
+            RuntimeHelpers.PrepareDelegate(d);
+            RuntimeHelpers.PrepareMethod(d.Method.MethodHandle);
             return Marshal.GetFunctionPointerForDelegate(d).ToPointer();
         }
 
@@ -136,6 +175,7 @@ namespace MonoMod.Detour {
             => Detour(GetMethodStart(from), to.ToPointer());
         public static unsafe void Detour(this MethodBase from, MethodBase to)
             => Detour(GetMethodStart(from), GetMethodStart(to));
+        [Obsolete("Delegates behave uncontrollably. Use MethodBases instead. This API will be removed soon.")]
         public static unsafe void Detour(this MethodBase from, Delegate to)
             => Detour(GetMethodStart(from), GetDelegateStart(to));
         public static unsafe void DetourMethod(IntPtr from, IntPtr to)
@@ -149,15 +189,20 @@ namespace MonoMod.Detour {
             Detour(from, to);
             return GetTrampoline<T>(from);
         }
+        [Obsolete("Delegates behave uncontrollably. Use MethodBases instead. This API will be removed soon.")]
         public static unsafe T Detour<T>(this MethodBase from, Delegate to) {
             Detour(from, to);
             return GetTrampoline<T>(from);
         }
 
         public static unsafe void Detour(void* from, void* to, bool store = true) {
+            _Unprotect(from);
+            _Unprotect(to);
+
             IntPtr orig = IntPtr.Zero;
             if (store) {
                 orig = Marshal.AllocHGlobal(DetourSize);
+                _Unprotect(orig.ToPointer());
                 _Copy(from, orig.ToPointer());
             }
 
@@ -197,6 +242,7 @@ namespace MonoMod.Detour {
 
         public static unsafe void Undetour(this MethodBase target, int level = -1)
             => Undetour(GetMethodStart(target), level);
+        [Obsolete("Delegates behave uncontrollably. Use MethodBases instead. This API will be removed soon.")]
         public static unsafe void Undetour(this Delegate target, int level = -1)
             => Undetour(GetDelegateStart(target), level);
         public static unsafe void Undetour(void* target, int level = -1) {
@@ -239,6 +285,7 @@ namespace MonoMod.Detour {
 
         public static unsafe int GetDetourLevel(this MethodBase target)
             => GetDetourLevel(GetMethodStart(target));
+        [Obsolete("Delegates behave uncontrollably. Use MethodBases instead. This API will be removed soon.")]
         public static unsafe int GetDetourLevel(this Delegate target)
             => GetDetourLevel(GetDelegateStart(target));
         public static unsafe int GetDetourLevel(void* target) {
@@ -250,6 +297,7 @@ namespace MonoMod.Detour {
 
         public static unsafe bool Refresh(this MethodBase target)
             => Refresh(GetMethodStart(target));
+        [Obsolete("Delegates behave uncontrollably. Use MethodBases instead. This API will be removed soon.")]
         public static unsafe bool Refresh(this Delegate target)
             => Refresh(GetDelegateStart(target));
         public static unsafe bool Refresh(void* target) {
