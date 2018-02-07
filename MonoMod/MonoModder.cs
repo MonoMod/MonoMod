@@ -1724,9 +1724,10 @@ namespace MonoMod {
                 Type = DocumentType.Text
             };
 
-            IDictionary<TypeReference, VariableDefinition> tmpAddrLocs = new FastDictionary<TypeReference, VariableDefinition>();
+            IDictionary<TypeReference, VariableDefinition> tmpAddrLocMap = new FastDictionary<TypeReference, VariableDefinition>();
 
             MethodBody body = method.Body;
+
             for (int instri = 0; method.HasBody && instri < body.Instructions.Count; instri++) {
                 Instruction instr = body.Instructions[instri];
                 object operand = instr.Operand;
@@ -1737,6 +1738,9 @@ namespace MonoMod {
 
                 if (!MethodParser(this, body, instr, ref instri))
                     continue;
+
+                ParameterDefinition param = instr.GetParam(method);
+                VariableDefinition local = instr.GetLocal(method);
 
                 // General relinking
                 if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand, method);
@@ -1754,7 +1758,7 @@ namespace MonoMod {
                 // .ctor -> static method reference fix: newobj -> call
                 if ((instr.OpCode == OpCodes.Newobj || instr.OpCode == OpCodes.Newarr) && operand is MethodReference &&
                     ((MethodReference) operand).Name != ".ctor") {
-                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
+                    instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
 
                 // field -> property reference fix: ld(s)fld(a) / st(s)fld(a) <-> call get / set
                 } else if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Ldflda || instr.OpCode == OpCodes.Stfld || instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Ldsflda || instr.OpCode == OpCodes.Stsfld) && operand is PropertyReference) {
@@ -1765,24 +1769,25 @@ namespace MonoMod {
                         operand = prop.SetMethod;
                     }
                     if (instr.OpCode == OpCodes.Ldflda || instr.OpCode == OpCodes.Ldsflda)
-                        body.AppendGetAddr(instr, prop.PropertyType, tmpAddrLocs);
-                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
+                        body.AppendGetAddr(instr, prop.PropertyType, tmpAddrLocMap);
+                    instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
 
                 // field <-> method reference fix: ld(s)fld / st(s)fld <-> call
                 } else if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Ldflda || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
-                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
                     if (instr.OpCode == OpCodes.Ldflda)
-                        body.AppendGetAddr(instr, ((PropertyReference) operand).PropertyType, tmpAddrLocs);
+                        body.AppendGetAddr(instr, ((PropertyReference) operand).PropertyType, tmpAddrLocMap);
+                    instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
 
                 } else if ((instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Ldsflda || instr.OpCode == OpCodes.Stsfld) && operand is MethodReference) {
-                    instr.OpCode = OpCodes.Call;
                     if (instr.OpCode == OpCodes.Ldsflda)
-                        body.AppendGetAddr(instr, ((PropertyReference) operand).PropertyType, tmpAddrLocs);
+                        body.AppendGetAddr(instr, ((PropertyReference) operand).PropertyType, tmpAddrLocMap);
+                    instr.OpCode = OpCodes.Call;
 
                 } else if ((instr.OpCode == OpCodes.Callvirt || instr.OpCode == OpCodes.Call) && operand is FieldReference) {
                     // Setters don't return anything.
                     TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
                     bool set = returnType == null || returnType.MetadataType == MetadataType.Void;
+                    // This assumption is dangerous.
                     bool instance = ((MethodReference) instr.Operand).HasThis;
                     if (instance)
                         instr.OpCode = set ? OpCodes.Stfld : OpCodes.Ldfld;
@@ -1794,7 +1799,7 @@ namespace MonoMod {
                 // "general" static method <-> virtual method reference fix: call <-> callvirt
                 else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference &&
                     !instr.IsBaseMethodCall(body)) {
-                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
+                    instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
                 }
 
                 // Reference importing

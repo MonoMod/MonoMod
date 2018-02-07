@@ -335,6 +335,29 @@ namespace MonoMod {
             return null;
         }
 
+        public static ParameterDefinition GetParam(this Instruction instr, MethodDefinition method) {
+            OpCode op = instr.OpCode;
+            int offs = method.HasThis ? -1 : 0;
+            if (op == OpCodes.Ldarg_0) return method.HasThis ? null : method.Parameters[offs + 0];
+            if (op == OpCodes.Ldarg_1) return method.Parameters[offs + 1];
+            if (op == OpCodes.Ldarg_2) return method.Parameters[offs + 2];
+            if (op == OpCodes.Ldarg_3) return method.Parameters[offs + 3];
+            if (op == OpCodes.Ldarg_S) return (ParameterDefinition) instr.Operand;
+            if (op == OpCodes.Ldarg) return (ParameterDefinition) instr.Operand;
+            return null;
+        }
+
+        public static VariableDefinition GetLocal(this Instruction instr, MethodDefinition method) {
+            OpCode op = instr.OpCode;
+            if (op == OpCodes.Ldloc_0) return method.Body.Variables[0];
+            if (op == OpCodes.Ldloc_1) return method.Body.Variables[1];
+            if (op == OpCodes.Ldloc_2) return method.Body.Variables[2];
+            if (op == OpCodes.Ldloc_3) return method.Body.Variables[3];
+            if (op == OpCodes.Ldloca_S) return (VariableDefinition) instr.Operand;
+            if (op == OpCodes.Ldloc) return (VariableDefinition) instr.Operand;
+            return null;
+        }
+
         [Obsolete("Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.")]
         public static bool ParseOnPlatform(this MethodDefinition method, ref int instri) {
             // Crawl back until we hit "newarr Platform" or "newarr int"
@@ -953,6 +976,22 @@ namespace MonoMod {
             return true;
         }
 
+        public static bool IsCallvirt(this MethodReference method) {
+            if (!method.HasThis)
+                return false;
+            if (method.DeclaringType.IsValueType)
+                return false;
+            return true;
+        }
+
+        public static bool IsStruct(this TypeReference type) {
+            if (!type.IsValueType)
+                return false;
+            if (type.IsPrimitive)
+                return false;
+            return true;
+        }
+
         public static void RecalculateILOffsets(this MethodDefinition method) {
             if (!method.HasBody)
                 return;
@@ -966,6 +1005,7 @@ namespace MonoMod {
 
         }
 
+        // Required for field -> call conversions where the original access was an address access.
         public static void AppendGetAddr(this MethodBody body, Instruction instr, TypeReference type, IDictionary<TypeReference, VariableDefinition> localMap = null) {
             VariableDefinition local;
             if (localMap == null || !localMap.TryGetValue(type, out local)) {
@@ -976,9 +1016,15 @@ namespace MonoMod {
             }
 
             ILProcessor il = body.GetILProcessor();
+            Instruction tmp = instr;
             // TODO: Fast stloc / ldloca!
-            il.InsertAfter(instr, instr = il.Create(OpCodes.Stloc, local));
-            il.InsertAfter(instr, instr = il.Create(OpCodes.Ldloca, local));
+            il.InsertAfter(tmp, tmp = il.Create(OpCodes.Stloc, local));
+            il.InsertAfter(tmp, tmp = il.Create(OpCodes.Ldloca, local));
+        }
+
+        public static void PrependGetValue(this MethodBody body, Instruction instr, TypeReference type) {
+            ILProcessor il = body.GetILProcessor();
+            il.InsertBefore(instr, il.Create(OpCodes.Ldobj, type));
         }
 
         public static void ConvertShortLongOps(this MethodDefinition method) {
