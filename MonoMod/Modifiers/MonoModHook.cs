@@ -6,6 +6,7 @@ namespace MonoMod {
     /// Apply it onto a type / method / field and calls to the item it hooks will be relinked to the item the attribute gets applied to.
     /// </summary>
     [MonoMod__SafeToCopy__]
+    [AttributeUsage(AttributeTargets.All, AllowMultiple = true, Inherited = false)]
     public class MonoModHook : Attribute {
         public string FindableID;
         public Type Type;

@@ -484,7 +484,8 @@ namespace MonoMod {
         }
         public virtual ModuleDefinition DefaultMissingDependencyResolver(MonoModder mod, ModuleDefinition main, string name, string fullName) {
             if (Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0" ||
-                Strict)
+                Strict
+            )
                 throw new RelinkTargetNotFoundException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found", main);
             return null;
         }
@@ -591,8 +592,7 @@ namespace MonoMod {
 
             CustomAttribute hook;
 
-            hook = type.GetMMAttribute("Hook");
-            if (hook != null)
+            for (hook = type.GetMMAttribute("Hook"); hook != null; hook = type.GetNextMMAttribute("Hook"))
                 ParseHook(type, hook);
 
             if (type.HasMMAttribute("Ignore"))
@@ -602,8 +602,7 @@ namespace MonoMod {
                 if (!method.MatchingConditionals(Module))
                     continue;
 
-                hook = method.GetMMAttribute("Hook");
-                if (hook != null)
+                for (hook = method.GetMMAttribute("Hook"); hook != null; hook = method.GetNextMMAttribute("Hook"))
                     ParseHook(method, hook);
             }
 
@@ -611,9 +610,16 @@ namespace MonoMod {
                 if (!field.MatchingConditionals(Module))
                     continue;
 
-                hook = field.GetMMAttribute("Hook");
-                if (hook != null)
+                for (hook = field.GetMMAttribute("Hook"); hook != null; hook = field.GetNextMMAttribute("Hook"))
                     ParseHook(field, hook);
+            }
+
+            foreach (PropertyDefinition prop in type.Properties) {
+                if (!prop.MatchingConditionals(Module))
+                    continue;
+
+                for (hook = prop.GetMMAttribute("Hook"); hook != null; hook = prop.GetNextMMAttribute("Hook"))
+                    ParseHook(prop, hook);
             }
 
             foreach (TypeDefinition nested in type.NestedTypes)
@@ -625,16 +631,21 @@ namespace MonoMod {
 
             object to;
             if (target is TypeReference)
-                to = ((TypeReference) target).FullName;
+                to = ((TypeReference) target).GetPatchFullName();
             else if (target is MethodReference)
                 to = Tuple.Create(
-                    ((MethodReference) target).DeclaringType.FullName,
+                    ((MethodReference) target).DeclaringType.GetPatchFullName(),
                     ((MethodReference) target).GetFindableID(withType: false)
                 );
             else if (target is FieldReference)
                 to = Tuple.Create(
-                    ((FieldReference) target).DeclaringType.FullName,
+                    ((FieldReference) target).DeclaringType.GetPatchFullName(),
                     ((FieldReference) target).Name
+                );
+            else if (target is PropertyReference)
+                to = Tuple.Create(
+                    ((PropertyReference) target).DeclaringType.GetPatchFullName(),
+                    ((PropertyReference) target).Name
                 );
             else
                 return;
@@ -718,6 +729,8 @@ namespace MonoMod {
                     // Instead of waiting until the 4th pass, just use the type name once and return in the 3rd pass.
                     else if (orig is FieldReference)
                         member = type.FindField((string) value);
+                    else if (orig is PropertyReference)
+                        member = type.FindProperty((string) value);
                 }
 
             }
@@ -763,6 +776,8 @@ namespace MonoMod {
                         cap = ((MethodReference) mtp).SafeResolve() as ICustomAttributeProvider;
                     else if (mtp is FieldReference)
                         cap = ((FieldReference) mtp).SafeResolve() as ICustomAttributeProvider;
+                    else if (mtp is PropertyReference)
+                        cap = ((PropertyReference) mtp).SafeResolve() as ICustomAttributeProvider;
                 } catch {
                     // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
                     cap = null;
@@ -775,9 +790,11 @@ namespace MonoMod {
                         return linkToRef;
                 }
 
+                // TODO: Handle mtp being deleted but being hooked in a better, Strict-compatible way.
                 return PostRelinker(
-                    MainRelinker(mtp, context),
-                    context);
+                    MainRelinker(mtp, context) ?? mtp,
+                    context
+                );
             } catch (Exception e) {
                 throw new RelinkFailedException(null, e, mtp, context);
             }
@@ -797,7 +814,7 @@ namespace MonoMod {
                 return Module.ImportReference(found);
             }
 
-            if (mtp is FieldReference || mtp is MethodReference)
+            if (mtp is FieldReference || mtp is MethodReference || mtp is PropertyReference)
                 // Don't relink those. It'd be useful to f.e. link to member B instead of member A.
                 // MonoModExt already handles the default "deep" relinking.
                 return mtp;
@@ -816,7 +833,7 @@ namespace MonoMod {
         public virtual TypeReference Relink(TypeReference type, IGenericParameterProvider context) {
             return type.Relink(Relinker, context);
         }
-        public virtual MethodReference Relink(MethodReference method, IGenericParameterProvider context) {
+        public virtual IMetadataTokenProvider Relink(MethodReference method, IGenericParameterProvider context) {
             return method.Relink(Relinker, context);
         }
         public virtual CustomAttribute Relink(CustomAttribute attrib, IGenericParameterProvider context) {
@@ -833,6 +850,8 @@ namespace MonoMod {
                 nameAlt = ((MethodReference) mtp).GetFindableID(simple: true);
             } else if (mtp is FieldReference) {
                 name = ((FieldReference) mtp).FullName;
+            } else if (mtp is PropertyReference) {
+                name = ((PropertyReference) mtp).FullName;
             } else
                 return null;
 
@@ -856,12 +875,12 @@ namespace MonoMod {
                     if (type == null)
                         return RelinkMapCache[name] = ResolveRelinkTarget(mtp, false, relinkModule);
 
-                    if (mtp is MethodReference)
-                        val = type.FindMethod(tuple.Item2);
-                    else if (mtp is FieldReference)
-                        val = type.FindField(tuple.Item2);
-                    else
-                        throw new InvalidOperationException($"MonoMod doesn't support RelinkMap member type {val.GetType()} with Tuple<string, string> as the remap");
+                    val =
+                        type.FindMethod(tuple.Item2) ??
+                        type.FindField(tuple.Item2) ??
+                        type.FindProperty(tuple.Item2) ??
+                        (object) null
+                    ;
                     if (val == null) {
                         if (Strict)
                             throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} ({tuple.Item1}, {tuple.Item2}) (remap: {mtp})", mtp);
@@ -1628,8 +1647,7 @@ namespace MonoMod {
                     prop.CustomAttributes[i] = Relink(prop.CustomAttributes[i], type);
             }
 
-            foreach (EventDefinition eventDef in type.Events)
-            {
+            foreach (EventDefinition eventDef in type.Events) {
                 eventDef.EventType = Relink(eventDef.EventType, type);
                 for (int i = 0; i < eventDef.CustomAttributes.Count; i++)
                     eventDef.CustomAttributes[i] = Relink(eventDef.CustomAttributes[i], type);
@@ -1676,7 +1694,7 @@ namespace MonoMod {
                 method.CustomAttributes[i] = Relink(method.CustomAttributes[i], method);
 
             for (int i = 0; i < method.Overrides.Count; i++)
-                method.Overrides[i] = Relink(method.Overrides[i], method);
+                method.Overrides[i] = (MethodReference) Relink(method.Overrides[i], method);
 
             method.ReturnType = Relink(method.ReturnType, method);
 
@@ -1705,6 +1723,8 @@ namespace MonoMod {
                 HashAlgorithm = DocumentHashAlgorithm.None,
                 Type = DocumentType.Text
             };
+
+            IDictionary<TypeReference, VariableDefinition> tmpAddrLocs = new FastDictionary<TypeReference, VariableDefinition>();
 
             MethodBody body = method.Body;
             for (int instri = 0; method.HasBody && instri < body.Instructions.Count; instri++) {
@@ -1735,24 +1755,40 @@ namespace MonoMod {
                 if ((instr.OpCode == OpCodes.Newobj || instr.OpCode == OpCodes.Newarr) && operand is MethodReference &&
                     ((MethodReference) operand).Name != ".ctor") {
                     instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
-                }
+
+                // field -> property reference fix: ld(s)fld(a) / st(s)fld(a) <-> call get / set
+                } else if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Ldflda || instr.OpCode == OpCodes.Stfld || instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Ldsflda || instr.OpCode == OpCodes.Stsfld) && operand is PropertyReference) {
+                    PropertyDefinition prop = ((PropertyReference) operand).Resolve();
+                    if (instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Ldflda || instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Ldsflda)
+                        operand = prop.GetMethod;
+                    else {
+                        operand = prop.SetMethod;
+                    }
+                    if (instr.OpCode == OpCodes.Ldflda || instr.OpCode == OpCodes.Ldsflda)
+                        body.AppendGetAddr(instr, prop.PropertyType, tmpAddrLocs);
+                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
 
                 // field <-> method reference fix: ld(s)fld / st(s)fld <-> call
-                else if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
-                    instr.OpCode = OpCodes.Callvirt;
+                } else if ((instr.OpCode == OpCodes.Ldfld || instr.OpCode == OpCodes.Ldflda || instr.OpCode == OpCodes.Stfld) && operand is MethodReference) {
+                    instr.OpCode = ((MethodReference) operand).HasThis ? OpCodes.Callvirt : OpCodes.Call;
+                    if (instr.OpCode == OpCodes.Ldflda)
+                        body.AppendGetAddr(instr, ((PropertyReference) operand).PropertyType, tmpAddrLocs);
 
-                } else if ((instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Stsfld) && operand is MethodReference) {
+                } else if ((instr.OpCode == OpCodes.Ldsfld || instr.OpCode == OpCodes.Ldsflda || instr.OpCode == OpCodes.Stsfld) && operand is MethodReference) {
                     instr.OpCode = OpCodes.Call;
+                    if (instr.OpCode == OpCodes.Ldsflda)
+                        body.AppendGetAddr(instr, ((PropertyReference) operand).PropertyType, tmpAddrLocs);
 
-                } else if (instr.OpCode == OpCodes.Callvirt && operand is FieldReference) {
+                } else if ((instr.OpCode == OpCodes.Callvirt || instr.OpCode == OpCodes.Call) && operand is FieldReference) {
                     // Setters don't return anything.
                     TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
-                    instr.OpCode = returnType == null || returnType.MetadataType == MetadataType.Void ? OpCodes.Stfld : OpCodes.Ldfld;
-
-                } else if (instr.OpCode == OpCodes.Call && operand is FieldReference) {
-                    // Setters don't return anything.
-                    TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
-                    instr.OpCode = returnType == null || returnType.MetadataType == MetadataType.Void ? OpCodes.Stsfld : OpCodes.Ldsfld;
+                    bool set = returnType == null || returnType.MetadataType == MetadataType.Void;
+                    bool instance = ((MethodReference) instr.Operand).HasThis;
+                    if (instance)
+                        instr.OpCode = set ? OpCodes.Stfld : OpCodes.Ldfld;
+                    else
+                        instr.OpCode = set ? OpCodes.Stsfld : OpCodes.Ldsfld;
+                    // TODO: When should we emit ldflda / ldsflda?
                 }
 
                 // "general" static method <-> virtual method reference fix: call <-> callvirt

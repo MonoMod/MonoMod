@@ -97,6 +97,8 @@ namespace MonoMod {
             => cap.HasCustomAttribute("MonoMod.MonoMod" + attribute);
         public static CustomAttribute GetMMAttribute(this ICustomAttributeProvider cap, string attribute)
             => cap.GetCustomAttribute("MonoMod.MonoMod" + attribute);
+        public static CustomAttribute GetNextMMAttribute(this ICustomAttributeProvider cap, string attribute)
+            => cap.GetNextCustomAttribute("MonoMod.MonoMod" + attribute);
 
         public static CustomAttribute GetCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
             if (cap == null || !cap.HasCustomAttributes) return null;
@@ -105,6 +107,25 @@ namespace MonoMod {
                     return attrib;
             return null;
         }
+
+        public static CustomAttribute GetNextCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
+            if (cap == null || !cap.HasCustomAttributes) return null;
+            bool next = false;
+            for (int i = 0; i < cap.CustomAttributes.Count; i++) {
+                CustomAttribute attrib = cap.CustomAttributes[i];
+                if (attrib.AttributeType.FullName != attribute)
+                    continue;
+                if (!next) {
+                    cap.CustomAttributes.RemoveAt(i);
+                    i--;
+                    next = true;
+                    continue;
+                }
+                return attrib;
+            }
+            return null;
+        }
+
         /// <summary>
         /// Determines if the attribute provider has got a specific custom attribute.
         /// </summary>
@@ -478,10 +499,10 @@ namespace MonoMod {
             return (TypeReference) relinker(type, context);
         }
 
-        public static MethodReference Relink(this MethodReference method, Relinker relinker, IGenericParameterProvider context) {
+        public static IMetadataTokenProvider Relink(this MethodReference method, Relinker relinker, IGenericParameterProvider context) {
             if (method.IsGenericInstance) {
                 GenericInstanceMethod methodg = ((GenericInstanceMethod) method);
-                GenericInstanceMethod gim = new GenericInstanceMethod(methodg.ElementMethod.Relink(relinker, context));
+                GenericInstanceMethod gim = new GenericInstanceMethod((MethodReference) methodg.ElementMethod.Relink(relinker, context));
                 foreach (TypeReference arg in methodg.GenericArguments)
                     // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(arg.Relink(relinker, context));
@@ -515,16 +536,16 @@ namespace MonoMod {
                 relink.Parameters.Add(param);
             }
 
-            return (MethodReference) relinker(relink, context);
+            return relinker(relink, context);
         }
 
-        public static FieldReference Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
+        public static IMetadataTokenProvider Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
             TypeReference declaringType = field.DeclaringType.Relink(relinker, context);
-            return (FieldReference) relinker(new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType), context);
+            return relinker(new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType), context);
         }
 
-        public static ParameterDefinition Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
-            param = ((MethodReference) param.Method).Relink(relinker, context).Parameters[param.Index];
+        public static IMetadataTokenProvider Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
+            param = ((MethodReference) ((MethodReference) param.Method)/*.Relink(relinker, context)*/).Parameters[param.Index];
             param.ParameterType = param.ParameterType.Relink(relinker, context);
             // Don't foreach when modifying the collection
             for (int i = 0; i < param.CustomAttributes.Count; i++)
@@ -548,7 +569,7 @@ namespace MonoMod {
         }
 
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker, IGenericParameterProvider context) {
-            attrib.Constructor = attrib.Constructor.Relink(relinker, context);
+            attrib.Constructor = (MethodReference) attrib.Constructor.Relink(relinker, context);
             // Don't foreach when modifying the collection
             for (int i = 0; i < attrib.ConstructorArguments.Count; i++) {
                 CustomAttributeArgument attribArg = attrib.ConstructorArguments[i];
@@ -781,6 +802,14 @@ namespace MonoMod {
             }
         }
 
+        public static PropertyDefinition SafeResolve(this PropertyReference r) {
+            try {
+                return r.Resolve();
+            } catch {
+                return null;
+            }
+        }
+
         public static string GetPatchName(this MemberReference mr) {
             // TODO: Resolve increases the PatchRefs pass time and could be optimized.
             return (mr as ICustomAttributeProvider)?.GetPatchName() ?? (mr.SafeResolve() as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
@@ -935,6 +964,21 @@ namespace MonoMod {
                 offs += instr.GetSize();
             }
 
+        }
+
+        public static void AppendGetAddr(this MethodBody body, Instruction instr, TypeReference type, IDictionary<TypeReference, VariableDefinition> localMap = null) {
+            VariableDefinition local;
+            if (localMap == null || !localMap.TryGetValue(type, out local)) {
+                local = new VariableDefinition(type);
+                body.Variables.Add(local);
+                if (localMap != null)
+                    localMap[type] = local;
+            }
+
+            ILProcessor il = body.GetILProcessor();
+            // TODO: Fast stloc / ldloca!
+            il.InsertAfter(instr, instr = il.Create(OpCodes.Stloc, local));
+            il.InsertAfter(instr, instr = il.Create(OpCodes.Ldloca, local));
         }
 
         public static void ConvertShortLongOps(this MethodDefinition method) {
