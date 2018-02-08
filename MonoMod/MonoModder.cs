@@ -73,6 +73,10 @@ namespace MonoMod {
         
         public bool Strict;
 
+        public bool MissingDependencyThrow;
+
+        public bool RemovePatchReferences;
+
         public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
 
         public int CurrentRID = 0;
@@ -265,6 +269,10 @@ namespace MonoMod {
             PreventInline = Environment.GetEnvironmentVariable("MONOMOD_PREVENTINLINE") == "1";
 
             Strict = Environment.GetEnvironmentVariable("MONOMOD_STRICT") == "1";
+
+            MissingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0";
+
+            RemovePatchReferences = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_REMOVE_PATCH") != "0";
 
             MMILProxyManager.Register(this);
         }
@@ -483,7 +491,11 @@ namespace MonoMod {
             MapDependencies(dep);
         }
         public virtual ModuleDefinition DefaultMissingDependencyResolver(MonoModder mod, ModuleDefinition main, string name, string fullName) {
-            if (Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0" ||
+            if (MissingDependencyThrow && Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") == "0") {
+                Log("[MissingDependencyResolver] Warning: Use MMILRT.Modder.MissingDependencyThrow instead of setting the env var MONOMOD_DEPENDENCY_MISSING_THROW");
+                MissingDependencyThrow = false;
+            }
+            if (MissingDependencyThrow ||
                 Strict
             )
                 throw new RelinkTargetNotFoundException($"MonoMod cannot map dependency {main.Name} -> (({fullName}), ({name})) - not found", main);
@@ -992,7 +1004,7 @@ namespace MonoMod {
                 return null;
             crawled.Push(main);
             foreach (ModuleDefinition dep in DependencyMap[main])
-                if ((type = FindType(dep, fullName, crawled)) != null)
+                if ((!RemovePatchReferences || !dep.Assembly.Name.Name.EndsWith(".mm")) && (type = FindType(dep, fullName, crawled)) != null)
                     return type;
             return null;
         }
@@ -1827,12 +1839,11 @@ namespace MonoMod {
                 CleanupType(type, all: all);
             }
 
-            if (all) {
-                Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
-                for (int i = deps.Count - 1; i > -1; --i)
-                    if (deps[i].Name.StartsWith("MonoMod"))
-                        deps.RemoveAt(i);
-            }
+            Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
+            for (int i = deps.Count - 1; i > -1; --i)
+                if ((all && deps[i].Name.StartsWith("MonoMod")) ||
+                    (RemovePatchReferences && deps[i].Name.EndsWith(".mm")))
+                    deps.RemoveAt(i);
         }
 
         public virtual void CleanupType(TypeDefinition type, bool all = false) {
