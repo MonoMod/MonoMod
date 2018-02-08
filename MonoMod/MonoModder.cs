@@ -492,7 +492,7 @@ namespace MonoMod {
         }
         public virtual ModuleDefinition DefaultMissingDependencyResolver(MonoModder mod, ModuleDefinition main, string name, string fullName) {
             if (MissingDependencyThrow && Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") == "0") {
-                Log("[MissingDependencyResolver] Warning: Use MMILRT.Modder.MissingDependencyThrow instead of setting the env var MONOMOD_DEPENDENCY_MISSING_THROW");
+                Log("[MissingDependencyResolver] [WARNING] Use MMILRT.Modder.MissingDependencyThrow instead of setting the env var MONOMOD_DEPENDENCY_MISSING_THROW");
                 MissingDependencyThrow = false;
             }
             if (MissingDependencyThrow ||
