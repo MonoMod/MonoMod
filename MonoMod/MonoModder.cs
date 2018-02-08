@@ -1004,7 +1004,7 @@ namespace MonoMod {
                 return null;
             crawled.Push(main);
             foreach (ModuleDefinition dep in DependencyMap[main])
-                if ((!RemovePatchReferences || !dep.Assembly.Name.Name.EndsWith(".mm")) && (type = FindType(dep, fullName, crawled)) != null)
+                if (!(RemovePatchReferences && dep.Assembly.Name.Name.EndsWith(".mm")) && (type = FindType(dep, fullName, crawled)) != null)
                     return type;
             return null;
         }
