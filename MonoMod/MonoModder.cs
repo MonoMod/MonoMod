@@ -20,10 +20,10 @@ namespace MonoMod {
 
         public readonly static Version Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 
-        public static Action<string> DefaultLogger;
-        public static Action<string> DefaultVerboseLogger;
-        public Action<string> Logger;
-        public Action<string> VerboseLogger;
+        public static Logger DefaultLogger;
+        public static Logger DefaultVerboseLogger;
+        public Logger Logger;
+        public Logger VerboseLogger;
 
         public static IDictionary<string, object> Data = new FastDictionary<string, object>() {
             { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
@@ -52,8 +52,8 @@ namespace MonoMod {
         public MethodRewriter MethodRewriter;
         public MethodBodyRewriter MethodBodyRewriter;
 
-        public Action<ModuleDefinition> OnReadMod;
-        public Action PostProcessors;
+        public ModReadEventHandler OnReadMod;
+        public PostProcessor PostProcessors;
 
         public IDictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new FastDictionary<string, DynamicMethodDelegate>();
         public IDictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new FastDictionary<string, DynamicMethodDelegate>();
@@ -257,7 +257,7 @@ namespace MonoMod {
                 Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1" ||
                 Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1" // Backwards-compatible
             ) {
-                VerboseLogger = Log;
+                VerboseLogger = (modder, text) => modder.Log(text);
             }
 
             if (Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "0") {
@@ -316,20 +316,20 @@ namespace MonoMod {
             Output?.Dispose();
         }
 
-        public virtual void Log(object obj) {
-            Log(obj.ToString());
+        public virtual void Log(object value) {
+            Log(value.ToString());
         }
-        public virtual void Log(string txt) {
+        public virtual void Log(string text) {
             if (Logger != null) {
-                Logger(txt);
+                Logger(this, text);
                 return;
             }
             if (DefaultLogger != null) {
-                DefaultLogger(txt);
+                DefaultLogger(this, text);
                 return;
             }
             Console.Write("[MonoMod] ");
-            Console.WriteLine(txt);
+            Console.WriteLine(text);
         }
 
         public virtual void LogVerbose(object obj) {
@@ -337,11 +337,11 @@ namespace MonoMod {
         }
         public virtual void LogVerbose(string txt) {
             if (VerboseLogger != null) {
-                VerboseLogger(txt);
+                VerboseLogger(this, txt);
                 return;
             }
             if (DefaultVerboseLogger != null) {
-                DefaultVerboseLogger(txt);
+                DefaultVerboseLogger(this, txt);
                 return;
             }
         }
@@ -560,14 +560,14 @@ namespace MonoMod {
                 DependencyDirs.Add(path);
             ParseRules(mod);
             Mods.Add(mod);
-            OnReadMod?.Invoke(mod);
+            OnReadMod?.Invoke(this, mod);
         }
         public virtual void ReadMod(Stream stream) {
             Log($"[ReadMod] Loading mod: stream#{(uint) stream.GetHashCode()}");
             ModuleDefinition mod = MonoModExt.ReadModule(stream, GenReaderParameters(false));
             ParseRules(mod);
             Mods.Add(mod);
-            OnReadMod?.Invoke(mod);
+            OnReadMod?.Invoke(this, mod);
         }
 
 
@@ -711,7 +711,7 @@ namespace MonoMod {
                 Delegate[] pps = PostProcessors.GetInvocationList();
                 for (int i = 0; i < pps.Length; i++) {
                     Log($"[PostProcessor] PostProcessor pass #{i + 1}");
-                    ((Action) pps[i])?.Invoke();
+                    ((PostProcessor) pps[i])?.Invoke(this);
                 }
             }
         }
@@ -1883,7 +1883,7 @@ namespace MonoMod {
         #endregion
 
         #region Default PostProcessor Pass
-        public virtual void DefaultPostProcessor() {
+        public virtual void DefaultPostProcessor(MonoModder modder) {
             foreach (TypeDefinition type in Module.Types)
                 DefaultPostProcessType(type);
 

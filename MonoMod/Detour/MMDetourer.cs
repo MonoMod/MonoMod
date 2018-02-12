@@ -86,7 +86,7 @@ namespace MonoMod.Detour {
             return null;
         }
 
-        public virtual void ReadDetours(ModuleDefinition mod) {
+        public virtual void ReadDetours(MonoModder modder, ModuleDefinition mod) {
             // Could be extended in the future.
             MapDependencies();
             NextLevel(mod);

@@ -26,7 +26,7 @@ namespace MonoMod.InlineRT {
             MonoModder wrapperMod = new MonoModder() {
                 Module = wrapper,
 
-                Logger = msg => self.Log("[MonoModRule] " + msg),
+                Logger = (modder, msg) => self.Log("[MonoModRule] " + msg),
 
                 CleanupEnabled = false,
 

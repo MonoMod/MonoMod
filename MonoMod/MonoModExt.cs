@@ -14,11 +14,14 @@ using MonoMod.Helpers;
 
 namespace MonoMod {
 
+    public delegate void Logger(MonoModder modder, string text);
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
-    public delegate bool MethodParser(MonoModder mod, MethodBody body, Instruction instr, ref int instri);
-    public delegate void MethodRewriter(MonoModder mod, MethodDefinition method);
-    public delegate void MethodBodyRewriter(MonoModder mod, MethodBody body, Instruction instr, int instri);
-    public delegate ModuleDefinition MissingDependencyResolver(MonoModder mod, ModuleDefinition main, string name, string fullName);
+    public delegate bool MethodParser(MonoModder modder, MethodBody body, Instruction instr, ref int instri);
+    public delegate void MethodRewriter(MonoModder modder, MethodDefinition method);
+    public delegate void MethodBodyRewriter(MonoModder modder, MethodBody body, Instruction instr, int instri);
+    public delegate ModuleDefinition MissingDependencyResolver(MonoModder modder, ModuleDefinition main, string name, string fullName);
+    public delegate void PostProcessor(MonoModder modder);
+    public delegate void ModReadEventHandler(MonoModder modder, ModuleDefinition mod);
 
     public static class MonoModExt {
 
