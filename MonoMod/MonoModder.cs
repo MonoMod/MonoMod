@@ -149,66 +149,73 @@ namespace MonoMod {
             }
         }
 
-        protected string _GACPath;
-        public string GACPath {
+        protected string[] _GACPaths;
+        public string[] GACPaths {
             get {
-                if (_GACPath == null) {
-                    string os;
-                    System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                    if (property_platform != null) {
-                        // For mono, get from
-                        // static extern PlatformID Platform
-                        os = property_platform.GetValue(null, null).ToString().ToLower();
-                    } else {
-                        // For .NET, use default value
-                        os = Environment.OSVersion.Platform.ToString().ToLower();
-                        // .NET also prefixes the version with a v
-                    }
-                    if (os.Contains("win")) {
-                        // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
-                        _GACPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
-                        _GACPath = Path.Combine(_GACPath, "assembly");
-                        _GACPath = Path.Combine(_GACPath, "GAC_MSIL");
+                if (_GACPaths != null)
+                    return _GACPaths;
 
-                        /*} else if (os.Contains("mac") || os.Contains("osx")) {
-                        // TODO: Test GAC path for Mono on Mac
-                        // should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
-                    } else if (os.Contains("lin") || os.Contains("unix")) {*/
-                        // For now let's just pretend it's the same as with Linux...
-                    } else if (os.Contains("mac") || os.Contains("osx") || os.Contains("lin") || os.Contains("unix")) {
-                        // <prefix>/lib/mono/gac
-
-                        Process which = new Process();
-                        which.StartInfo.FileName = "which";
-                        which.StartInfo.Arguments = "mono";
-                        which.StartInfo.CreateNoWindow = true;
-                        which.StartInfo.RedirectStandardOutput = true;
-                        which.StartInfo.UseShellExecute = false;
-                        which.EnableRaisingEvents = true;
-
-                        StringBuilder whichOutputBuilder = new StringBuilder();
-
-                        which.OutputDataReceived += new DataReceivedEventHandler(
-                            delegate (object sender, DataReceivedEventArgs e) {
-                                whichOutputBuilder.Append(e.Data);
-                            }
-                        );
-                        which.Start();
-                        which.BeginOutputReadLine();
-                        which.WaitForExit();
-                        which.CancelOutputRead();
-
-                        _GACPath = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
-                        _GACPath = Path.Combine(_GACPath, "lib");
-                        _GACPath = Path.Combine(_GACPath, "mono");
-                        _GACPath = Path.Combine(_GACPath, "gac");
-                    }
+                string os;
+                System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                if (property_platform != null) {
+                    // For mono, get from
+                    // static extern PlatformID Platform
+                    os = property_platform.GetValue(null, null).ToString().ToLower();
+                } else {
+                    // For .NET, use default value
+                    os = Environment.OSVersion.Platform.ToString().ToLower();
+                    // .NET also prefixes the version with a v
                 }
 
-                return _GACPath;
+                if (os.Contains("win")) {
+                    // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
+                    string path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
+                    path = Path.Combine(path, "assembly");
+                    _GACPaths = new string[] {
+                        Path.Combine(path, "GAC_32"),
+                        Path.Combine(path, "GAC_64"),
+                        Path.Combine(path, "GAC_MSIL")
+                    };
+
+                /*} else if (os.Contains("mac") || os.Contains("osx")) {
+                    // TODO: Test GAC path for Mono on Mac
+                    // should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
+                } else if (os.Contains("lin") || os.Contains("unix")) {*/
+                    // For now let's just pretend it's the same as with Linux...
+                } else if (os.Contains("mac") || os.Contains("osx") || os.Contains("lin") || os.Contains("unix")) {
+                    // <prefix>/lib/mono/gac
+
+                    Process which = new Process();
+                    which.StartInfo.FileName = "which";
+                    which.StartInfo.Arguments = "mono";
+                    which.StartInfo.CreateNoWindow = true;
+                    which.StartInfo.RedirectStandardOutput = true;
+                    which.StartInfo.UseShellExecute = false;
+                    which.EnableRaisingEvents = true;
+
+                    StringBuilder whichOutputBuilder = new StringBuilder();
+
+                    which.OutputDataReceived += new DataReceivedEventHandler(
+                        delegate (object sender, DataReceivedEventArgs e) {
+                            whichOutputBuilder.Append(e.Data);
+                        }
+                    );
+                    which.Start();
+                    which.BeginOutputReadLine();
+                    which.WaitForExit();
+                    which.CancelOutputRead();
+
+                    string path = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
+                    path = Path.Combine(path, "lib");
+                    path = Path.Combine(path, "mono");
+                    path = Path.Combine(path, "gac");
+                    _GACPaths = new string[] { path };
+                }
+
+                return _GACPaths;
             }
             set {
-                _GACPath = value;
+                _GACPaths = value;
             }
         }
 
@@ -229,16 +236,16 @@ namespace MonoMod {
                     }
                     if (os.Contains("win")) {
                         // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
-                        _GACPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
-                        _GACPath = Path.Combine(_GACPath, "Framework");
+                        _CORLIBPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
+                        _CORLIBPath = Path.Combine(_CORLIBPath, "Framework");
                     }
                     // TODO: Get CORLIB path on platforms other than Windows.
                 }
 
-                return _GACPath;
+                return _CORLIBPath;
             }
             set {
-                _GACPath = value;
+                _CORLIBPath = value;
             }
         }
 
@@ -422,30 +429,33 @@ namespace MonoMod {
 
             // Manually check in GAC
             if (path == null) {
-                path = Path.Combine(GACPath, name);
+                foreach (string gacpath in GACPaths) {
+                    path = Path.Combine(gacpath, name);
 
-                if (Directory.Exists(path)) {
-                    string[] versions = Directory.GetDirectories(path);
-                    int highest = 0;
-                    int highestIndex = 0;
-                    for (int i = 0; i < versions.Length; i++) {
-                        string versionPath = versions[i];
-                        if (versionPath.StartsWith(path))
-                            versionPath = versionPath.Substring(path.Length + 1);
-                        Match versionMatch = Regex.Match(versionPath, "\\d+");
-                        if (!versionMatch.Success) {
-                            continue;
+                    if (Directory.Exists(path)) {
+                        string[] versions = Directory.GetDirectories(path);
+                        int highest = 0;
+                        int highestIndex = 0;
+                        for (int i = 0; i < versions.Length; i++) {
+                            string versionPath = versions[i];
+                            if (versionPath.StartsWith(path))
+                                versionPath = versionPath.Substring(path.Length + 1);
+                            Match versionMatch = Regex.Match(versionPath, "\\d+");
+                            if (!versionMatch.Success) {
+                                continue;
+                            }
+                            int version = int.Parse(versionMatch.Value);
+                            if (version > highest) {
+                                highest = version;
+                                highestIndex = i;
+                            }
+                            // Maybe check minor versions?
                         }
-                        int version = int.Parse(versionMatch.Value);
-                        if (version > highest) {
-                            highest = version;
-                            highestIndex = i;
-                        }
-                        // Maybe check minor versions?
+                        path = Path.Combine(versions[highestIndex], name + ".dll");
+                        break;
+                    } else {
+                        path = null;
                     }
-                    path = Path.Combine(versions[highestIndex], name + ".dll");
-                } else {
-                    path = null;
                 }
             }
 
