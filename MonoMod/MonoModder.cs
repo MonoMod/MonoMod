@@ -18,6 +18,8 @@ using MonoMod.Helpers;
 namespace MonoMod {
     public class MonoModder : IDisposable {
 
+        public readonly static bool IsMono = Type.GetType("Mono.Runtime") != null;
+
         public readonly static Version Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 
         public static Logger DefaultLogger;
@@ -167,7 +169,7 @@ namespace MonoMod {
                     // .NET also prefixes the version with a v
                 }
 
-                if (os.Contains("win")) {
+                if (!IsMono) {
                     // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
                     string path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
                     path = Path.Combine(path, "assembly");
@@ -177,39 +179,34 @@ namespace MonoMod {
                         Path.Combine(path, "GAC_MSIL")
                     };
 
-                /*} else if (os.Contains("mac") || os.Contains("osx")) {
-                    // TODO: Test GAC path for Mono on Mac
-                    // should be <prefix>/lib/mono/gac, too, but what's prefix on Mac?
-                } else if (os.Contains("lin") || os.Contains("unix")) {*/
-                    // For now let's just pretend it's the same as with Linux...
-                } else if (os.Contains("mac") || os.Contains("osx") || os.Contains("lin") || os.Contains("unix")) {
-                    // <prefix>/lib/mono/gac
-
-                    Process which = new Process();
-                    which.StartInfo.FileName = "which";
-                    which.StartInfo.Arguments = "mono";
-                    which.StartInfo.CreateNoWindow = true;
-                    which.StartInfo.RedirectStandardOutput = true;
-                    which.StartInfo.UseShellExecute = false;
-                    which.EnableRaisingEvents = true;
-
-                    StringBuilder whichOutputBuilder = new StringBuilder();
-
-                    which.OutputDataReceived += new DataReceivedEventHandler(
-                        delegate (object sender, DataReceivedEventArgs e) {
-                            whichOutputBuilder.Append(e.Data);
-                        }
+                } else {
+                    List<string> paths = new List<string>();
+                    string gac = Path.Combine(
+                        Path.GetDirectoryName(
+                            Path.GetDirectoryName(typeof(object).Module.FullyQualifiedName)
+                        ),
+                        "gac"
                     );
-                    which.Start();
-                    which.BeginOutputReadLine();
-                    which.WaitForExit();
-                    which.CancelOutputRead();
+                    if (Directory.Exists(gac))
+                        paths.Add(gac);
 
-                    string path = Directory.GetParent(whichOutputBuilder.ToString().Trim()).Parent.FullName;
-                    path = Path.Combine(path, "lib");
-                    path = Path.Combine(path, "mono");
-                    path = Path.Combine(path, "gac");
-                    _GACPaths = new string[] { path };
+                    string prefixesEnv = Environment.GetEnvironmentVariable("MONO_GAC_PREFIX");
+                    if (!string.IsNullOrEmpty(prefixesEnv)) {
+                        string[] prefixes = prefixesEnv.Split(Path.PathSeparator);
+                        foreach (string prefix in prefixes) {
+                            if (string.IsNullOrEmpty(prefix))
+                                continue;
+
+                            string path = prefix;
+                            path = Path.Combine(path, "lib");
+                            path = Path.Combine(path, "mono");
+                            path = Path.Combine(path, "gac");
+                            if (Directory.Exists(path) && !paths.Contains(path))
+                                paths.Add(path);
+                        }
+                    }
+
+                    _GACPaths = paths.ToArray();
                 }
 
                 return _GACPaths;
@@ -222,24 +219,25 @@ namespace MonoMod {
         protected string _CORLIBPath;
         public string CORLIBPath {
             get {
-                if (_CORLIBPath == null) {
-                    string os;
-                    System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                    if (property_platform != null) {
-                        // For mono, get from
-                        // static extern PlatformID Platform
-                        os = property_platform.GetValue(null, null).ToString().ToLower();
-                    } else {
-                        // For .NET, use default value
-                        os = Environment.OSVersion.Platform.ToString().ToLower();
-                        // .NET also prefixes the version with a v
-                    }
-                    if (os.Contains("win")) {
-                        // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
-                        _CORLIBPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
-                        _CORLIBPath = Path.Combine(_CORLIBPath, "Framework");
-                    }
-                    // TODO: Get CORLIB path on platforms other than Windows.
+                if (_CORLIBPath != null)
+                    return _CORLIBPath;
+
+                string os;
+                System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                if (property_platform != null) {
+                    // For mono, get from
+                    // static extern PlatformID Platform
+                    os = property_platform.GetValue(null, null).ToString().ToLower();
+                } else {
+                    // For .NET, use default value
+                    os = Environment.OSVersion.Platform.ToString().ToLower();
+                    // .NET also prefixes the version with a v
+                }
+                if (os.Contains("win")) {
+                    _CORLIBPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
+                    _CORLIBPath = Path.Combine(_CORLIBPath, "Framework");
+                } else {
+                    _CORLIBPath = Path.GetDirectoryName(typeof(object).Assembly.Location);
                 }
 
                 return _CORLIBPath;
