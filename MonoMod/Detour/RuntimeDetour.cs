@@ -392,10 +392,10 @@ namespace MonoMod.Detour {
             return (T) (object) CreateTrampolineDirect(target, code, t.GetMethod("Invoke")).CreateDelegate(t);
         }
 
-        public static unsafe DynamicMethod CreateOrigTrampoline(this MethodBase target, MethodInfo invoke = null)
-            => CreateTrampolineDirect(target, IntPtr.Zero, invoke);
+        public static unsafe DynamicMethod CreateOrigTrampoline(this MethodBase target, MethodInfo invokeInfo = null)
+            => CreateTrampolineDirect(target, IntPtr.Zero, invokeInfo);
 
-        public static unsafe DynamicMethod CreateTrampoline(this MethodBase target, MethodInfo invoke = null) {
+        public static unsafe DynamicMethod CreateTrampoline(this MethodBase target, MethodInfo invokeInfo = null) {
             void* p = GetMethodStart(target);
             List<IntPtr> reverts;
             if (!_Reverts.TryGetValue((long) p, out reverts) ||
@@ -403,23 +403,24 @@ namespace MonoMod.Detour {
                 return null;
 
             if (reverts.Count == 1)
-                return CreateOrigTrampoline(target, invoke);
+                return CreateOrigTrampoline(target, invokeInfo);
 
             IntPtr code = reverts[reverts.Count - 1];
-            return CreateTrampolineDirect(target, code, invoke);
+            return CreateTrampolineDirect(target, code, invokeInfo);
         }
 
         public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target)
             => CreateTrampolineDirect(target, IntPtr.Zero);
-        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target, IntPtr code, MethodInfo invoke = null) {
+        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target, IntPtr code, MethodInfo invokeInfo = null) {
             _CreateToken(target);
 
-            invoke = invoke ?? (target as MethodInfo);
+            invokeInfo = invokeInfo ?? (target as MethodInfo);
+            Type returnType = invokeInfo?.ReturnType ?? target.DeclaringType;
 
-            ParameterInfo[] args = invoke.GetParameters();
+            ParameterInfo[] args = invokeInfo.GetParameters();
             Type[] argTypes;
 
-            if (invoke == target && !target.IsStatic) {
+            if (!target.IsStatic) {
                 argTypes = new Type[args.Length + 1];
                 argTypes[0] = target.DeclaringType;
                 for (int i = 0; i < args.Length; i++)
@@ -430,16 +431,16 @@ namespace MonoMod.Detour {
                     argTypes[i] = args[i].ParameterType;
             }
 
-            DynamicMethod dm = new DynamicMethod($"trampoline_{target.Name}_{(code == IntPtr.Zero ? "orig" : ((ulong) code).ToString(IsX64 ? "X16" : "X8"))}", invoke.ReturnType, argTypes, target.Module, true);
+            DynamicMethod dm = new DynamicMethod($"trampoline_{target.Name}_{(code == IntPtr.Zero ? "orig" : ((ulong) code).ToString(IsX64 ? "X16" : "X8"))}", returnType, argTypes, target.Module, true);
             ILGenerator il = dm.GetILGenerator();
 
             if (code != IntPtr.Zero) {
                 for (int i = 64; i > -1; --i)
                     il.Emit(OpCodes.Nop);
-                if (invoke.ReturnType != typeof(void)) {
+                if (returnType != typeof(void)) {
                     il.Emit(OpCodes.Ldnull);
-                    if (invoke.ReturnType.IsValueType)
-                        il.Emit(OpCodes.Box, invoke.ReturnType);
+                    if (returnType.IsValueType)
+                        il.Emit(OpCodes.Box, returnType);
                 }
                 il.Emit(OpCodes.Ret);
 
@@ -448,7 +449,7 @@ namespace MonoMod.Detour {
                 _Copy(code.ToPointer(), GetMethodStart(dm));
 
                 // Need to be added this early - they aren't cached, but updated.
-                target._GetTrampolines().Add(dm);
+                invokeInfo._GetTrampolines().Add(dm);
 
             } else {
                 il.Emit(OpCodes.Ldc_I8, GetToken(target));
