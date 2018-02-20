@@ -420,7 +420,7 @@ namespace MonoMod.Detour {
             ParameterInfo[] args = invokeInfo.GetParameters();
             Type[] argTypes;
 
-            if (!target.IsStatic) {
+            if (invokeInfo == target /* not a delegate Invoke method */ && !target.IsStatic) {
                 argTypes = new Type[args.Length + 1];
                 argTypes[0] = target.DeclaringType;
                 for (int i = 0; i < args.Length; i++)
@@ -449,7 +449,7 @@ namespace MonoMod.Detour {
                 _Copy(code.ToPointer(), GetMethodStart(dm));
 
                 // Need to be added this early - they aren't cached, but updated.
-                invokeInfo._GetTrampolines().Add(dm);
+                target._GetTrampolines().Add(dm);
 
             } else {
                 il.Emit(OpCodes.Ldc_I8, GetToken(target));
