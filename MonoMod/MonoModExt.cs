@@ -23,6 +23,20 @@ namespace MonoMod {
     public delegate void PostProcessor(MonoModder modder);
     public delegate void ModReadEventHandler(MonoModder modder, ModuleDefinition mod);
 
+    public class RelinkMapEntry {
+
+        public string Type;
+        public string FindableID;
+
+        public RelinkMapEntry() {
+        }
+        public RelinkMapEntry(string type, string findableID) {
+            Type = type;
+            FindableID = findableID;
+        }
+
+    }
+
     public static class MonoModExt {
 
         public static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");

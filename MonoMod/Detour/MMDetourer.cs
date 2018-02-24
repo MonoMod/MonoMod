@@ -162,7 +162,7 @@ namespace MonoMod.Detour {
                 return null;
 
             TransformMethodToExtension(targetMethod.DeclaringType, method);
-            Tuple<string, string> relinkTo = Tuple.Create(method.DeclaringType.Name, method.GetFindableID(withType: false));
+            RelinkMapEntry relinkTo = new RelinkMapEntry(method.DeclaringType.Name, method.GetFindableID(withType: false));
             RelinkMap[method.GetFindableID(type: typeName)] = relinkTo;
             RelinkMap[method.GetFindableID()] = relinkTo;
 

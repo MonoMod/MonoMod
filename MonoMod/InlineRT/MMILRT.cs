@@ -50,7 +50,7 @@ namespace MonoMod.InlineRT {
                 toMember = toMember.Inject(MonoModder.Data);
 
                 self.Log($"[MonoModRules] RelinkMember: {from} -> {toType}::{toMember}");
-                self.RelinkMap[from] = Tuple.Create(toType, toMember);
+                self.RelinkMap[from] = new RelinkMapEntry(toType, toMember);
             }
 
 

@@ -653,17 +653,17 @@ namespace MonoMod {
             if (target is TypeReference)
                 to = ((TypeReference) target).GetPatchFullName();
             else if (target is MethodReference)
-                to = Tuple.Create(
+                to = new RelinkMapEntry(
                     ((MethodReference) target).DeclaringType.GetPatchFullName(),
                     ((MethodReference) target).GetFindableID(withType: false)
                 );
             else if (target is FieldReference)
-                to = Tuple.Create(
+                to = new RelinkMapEntry(
                     ((FieldReference) target).DeclaringType.GetPatchFullName(),
                     ((FieldReference) target).Name
                 );
             else if (target is PropertyReference)
-                to = Tuple.Create(
+                to = new RelinkMapEntry(
                     ((PropertyReference) target).DeclaringType.GetPatchFullName(),
                     ((PropertyReference) target).Name
                 );
@@ -888,22 +888,30 @@ namespace MonoMod {
                 if (val is IMetadataTokenProvider)
                     return RelinkMapCache[name] = Module.ImportReference((IMetadataTokenProvider) val);
 
-                if (val is Tuple<string, string>) {
-                    Tuple<string, string> tuple = (Tuple<string, string>) val;
-                    string typeName = tuple.Item1 as string;
+                if (val is Tuple<string, string> || val is RelinkMapEntry) {
+                    string typeName, findableID;
+
+                    if (val is Tuple<string, string>) {
+                        typeName = ((Tuple<string, string>) val).Item1 as string;
+                        findableID = ((Tuple<string, string>) val).Item2 as string;
+                    } else {
+                        typeName = ((RelinkMapEntry) val).Type as string;
+                        findableID = ((RelinkMapEntry) val).FindableID as string;
+                    }
+
                     TypeDefinition type = FindTypeDeep(typeName)?.SafeResolve();
                     if (type == null)
                         return RelinkMapCache[name] = ResolveRelinkTarget(mtp, false, relinkModule);
 
                     val =
-                        type.FindMethod(tuple.Item2) ??
-                        type.FindField(tuple.Item2) ??
-                        type.FindProperty(tuple.Item2) ??
+                        type.FindMethod(findableID) ??
+                        type.FindField(findableID) ??
+                        type.FindProperty(findableID) ??
                         (object) null
                     ;
                     if (val == null) {
                         if (Strict)
-                            throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} ({tuple.Item1}, {tuple.Item2}) (remap: {mtp})", mtp);
+                            throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} ({typeName}, {findableID}) (remap: {mtp})", mtp);
                         else
                             return null;
                     }
