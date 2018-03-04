@@ -157,18 +157,6 @@ namespace MonoMod {
                 if (_GACPaths != null)
                     return _GACPaths;
 
-                string os;
-                System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                if (property_platform != null) {
-                    // For mono, get from
-                    // static extern PlatformID Platform
-                    os = property_platform.GetValue(null, null).ToString().ToLower();
-                } else {
-                    // For .NET, use default value
-                    os = Environment.OSVersion.Platform.ToString().ToLower();
-                    // .NET also prefixes the version with a v
-                }
-
                 if (!IsMono) {
                     // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
                     string path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
@@ -261,6 +249,13 @@ namespace MonoMod {
             string dependencyDirsEnv = Environment.GetEnvironmentVariable("MONOMOD_DEPDIRS");
             if (!string.IsNullOrEmpty(dependencyDirsEnv)) {
                 DependencyDirs.AddRange(dependencyDirsEnv.Split(':').Select(dir => dir.Trim()));
+            }
+
+            string modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
+            if (!string.IsNullOrEmpty(modsEnv)) {
+                foreach (string path in modsEnv.Split(':').Select(path => path.Trim())) {
+                    ReadMod(path);
+                }
             }
 
             if (
