@@ -86,15 +86,15 @@ namespace MonoMod.InlineRT {
 
         public static class Flag {
 
-            public static bool Get(MonoModder self, string k) => MonoModder.Data[k] as bool? ?? false;
-            public static void Set(MonoModder self, string k, bool v) => MonoModder.Data[k] = v;
+            public static bool Get(string k) => MonoModder.Data[k] as bool? ?? false;
+            public static void Set(string k, bool v) => MonoModder.Data[k] = v;
 
         }
 
         public static class Data {
 
-            public static object Get(MonoModder self, string k) => MonoModder.Data[k];
-            public static void Set(MonoModder self, string k, object v) => MonoModder.Data[k] = v;
+            public static object Get(string k) => MonoModder.Data[k];
+            public static void Set(string k, object v) => MonoModder.Data[k] = v;
 
         }
 
