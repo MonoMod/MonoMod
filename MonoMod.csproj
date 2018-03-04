@@ -63,7 +63,7 @@
     <Compile Include="MonoMod\Helpers\IntDictionary.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary.cs" />
     <Compile Include="MonoMod\InlineRT\MonoModRulesManager.cs" />
-    <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
+    <Compile Include="MonoMod\InlineRT\MonoModRule.cs" />
     <Compile Include="MonoMod\Helpers\ReflectionHelper.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModCustomAttribute.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModHook.cs" />
