@@ -204,37 +204,6 @@ namespace MonoMod {
             }
         }
 
-        protected string _CORLIBPath;
-        public string CORLIBPath {
-            get {
-                if (_CORLIBPath != null)
-                    return _CORLIBPath;
-
-                string os;
-                System.Reflection.PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                if (property_platform != null) {
-                    // For mono, get from
-                    // static extern PlatformID Platform
-                    os = property_platform.GetValue(null, null).ToString().ToLower();
-                } else {
-                    // For .NET, use default value
-                    os = Environment.OSVersion.Platform.ToString().ToLower();
-                    // .NET also prefixes the version with a v
-                }
-                if (os.Contains("win")) {
-                    _CORLIBPath = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
-                    _CORLIBPath = Path.Combine(_CORLIBPath, "Framework");
-                } else {
-                    _CORLIBPath = Path.GetDirectoryName(typeof(object).Assembly.Location);
-                }
-
-                return _CORLIBPath;
-            }
-            set {
-                _CORLIBPath = value;
-            }
-        }
-
         public MonoModder() {
             Relinker = DefaultRelinker;
             MainRelinker = DefaultMainRelinker;
@@ -386,10 +355,10 @@ namespace MonoMod {
             foreach (AssemblyNameReference dep in main.AssemblyReferences)
                 MapDependency(main, dep);
         }
-        public virtual void MapDependency(ModuleDefinition main, AssemblyNameReference dep) {
-            MapDependency(main, dep.Name, dep.FullName);
+        public virtual void MapDependency(ModuleDefinition main, AssemblyNameReference depRef) {
+            MapDependency(main, depRef.Name, depRef.FullName, depRef);
         }
-        public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null) {
+        public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null, AssemblyNameReference depRef = null) {
             ModuleDefinition dep;
             if (fullName != null && (
                 DependencyCache.TryGetValue(fullName, out dep) ||
@@ -425,6 +394,13 @@ namespace MonoMod {
                 else path = null;
             }
 
+            // If we've got an AssemblyNameReference, use it to resolve the module.
+            if (path == null && depRef != null) {
+                dep = AssemblyResolver.Resolve(depRef)?.MainModule;
+                if (dep != null)
+                    path = dep.FileName;
+            }
+
             // Manually check in GAC
             if (path == null) {
                 foreach (string gacpath in GACPaths) {
@@ -457,24 +433,11 @@ namespace MonoMod {
                 }
             }
 
-            // Manually check in CORLIB path
+            // Try to use the AssemblyResolver with the full name (or even partial name).
             if (path == null) {
-                path = Path.Combine(CORLIBPath, main.RuntimeVersion);
-
-                if (Directory.Exists(path)) {
-                    path = Path.Combine(path, name + ".dll");
-                    if (File.Exists(path)) {
-                        // Prevent multiple runtime versions from colliding.
-                        name += " [RT:" + main.RuntimeVersion + "]";
-                        if (fullName != null)
-                            fullName += " [RT:" + main.RuntimeVersion + "]";
-                    } else {
-                        path = null;
-                    }
-                } else {
-                    // Not CORLIBPath/Version, but ???
-                }
-
+                dep = AssemblyResolver.Resolve(new AssemblyNameReference(fullName ?? name, new Version(0, 0, 0, 0)))?.MainModule;
+                if (dep != null)
+                    path = dep.FileName;
             }
 
             // Check if available in GAC
@@ -488,9 +451,13 @@ namespace MonoMod {
                 path = asm?.Location;
             }
 
-            if (path != null && File.Exists(path)) {
-                dep = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
-            } else if ((dep = MissingDependencyResolver?.Invoke(this, main, name, fullName)) == null) return;
+            if (dep == null) {
+                if (path != null && File.Exists(path)) {
+                    dep = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
+                } else if ((dep = MissingDependencyResolver?.Invoke(this, main, name, fullName)) == null) {
+                    return;
+                }
+            }
 
             LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
             DependencyMap[main].Add(dep);
