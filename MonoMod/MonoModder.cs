@@ -217,7 +217,10 @@ namespace MonoMod {
 
             string dependencyDirsEnv = Environment.GetEnvironmentVariable("MONOMOD_DEPDIRS");
             if (!string.IsNullOrEmpty(dependencyDirsEnv)) {
-                DependencyDirs.AddRange(dependencyDirsEnv.Split(Path.PathSeparator).Select(dir => dir.Trim()));
+                foreach (string dir in dependencyDirsEnv.Split(Path.PathSeparator).Select(dir => dir.Trim())) {
+                    (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(dir);
+                    DependencyDirs.Add(dir);
+                }
             }
 
             if (
@@ -323,6 +326,7 @@ namespace MonoMod {
                     Module = MonoModExt.ReadModule(Input, GenReaderParameters(true));
                 } else if (InputPath != null) {
                     Log("Reading input file into module.");
+                    (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(Path.GetDirectoryName(InputPath));
                     DependencyDirs.Add(Path.GetDirectoryName(InputPath));
                     Module = MonoModExt.ReadModule(InputPath, GenReaderParameters(true, InputPath));
                 }
@@ -396,7 +400,9 @@ namespace MonoMod {
 
             // If we've got an AssemblyNameReference, use it to resolve the module.
             if (path == null && depRef != null) {
-                dep = AssemblyResolver.Resolve(depRef)?.MainModule;
+                try {
+                    dep = AssemblyResolver.Resolve(depRef)?.MainModule;
+                } catch { }
                 if (dep != null)
                     path = dep.FileName;
             }
@@ -435,7 +441,9 @@ namespace MonoMod {
 
             // Try to use the AssemblyResolver with the full name (or even partial name).
             if (path == null) {
-                dep = AssemblyResolver.Resolve(new AssemblyNameReference(fullName ?? name, new Version(0, 0, 0, 0)))?.MainModule;
+                try {
+                    dep = AssemblyResolver.Resolve(new AssemblyNameReference(fullName ?? name, new Version(0, 0, 0, 0)))?.MainModule;
+                } catch { }
                 if (dep != null)
                     path = dep.FileName;
             }
@@ -519,7 +527,10 @@ namespace MonoMod {
                 Log($"[ReadMod] Loading mod dir: {path}");
                 string mainName = Module.Name.Substring(0, Module.Name.Length - 3);
                 string mainNameSpaceless = mainName.Replace(" ", "");
-                DependencyDirs.Add(path);
+                if (!DependencyDirs.Contains(path)) {
+                    (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(path);
+                    DependencyDirs.Add(path);
+                }
                 foreach (string modFile in Directory.GetFiles(path))
                     if ((Path.GetFileName(modFile).StartsWith(mainName) ||
                         Path.GetFileName(modFile).StartsWith(mainNameSpaceless)) &&
@@ -531,8 +542,10 @@ namespace MonoMod {
             Log($"[ReadMod] Loading mod: {path}");
             ModuleDefinition mod = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
             string dir = Path.GetDirectoryName(path);
-            if (!DependencyDirs.Contains(dir))
-                DependencyDirs.Add(path);
+            if (!DependencyDirs.Contains(dir)) {
+                (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(dir);
+                DependencyDirs.Add(dir);
+            }
             ParseRules(mod);
             Mods.Add(mod);
             OnReadMod?.Invoke(this, mod);
