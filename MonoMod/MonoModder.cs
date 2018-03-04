@@ -258,6 +258,11 @@ namespace MonoMod {
 
             PostProcessors += DefaultPostProcessor;
 
+            string dependencyDirsEnv = Environment.GetEnvironmentVariable("MONOMOD_DEPDIRS");
+            if (!string.IsNullOrEmpty(dependencyDirsEnv)) {
+                DependencyDirs.AddRange(dependencyDirsEnv.Split(':').Select(dir => dir.Trim()));
+            }
+
             if (
                 Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1" ||
                 Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1" // Backwards-compatible
