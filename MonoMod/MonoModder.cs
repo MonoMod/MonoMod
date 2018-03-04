@@ -217,12 +217,12 @@ namespace MonoMod {
 
             string dependencyDirsEnv = Environment.GetEnvironmentVariable("MONOMOD_DEPDIRS");
             if (!string.IsNullOrEmpty(dependencyDirsEnv)) {
-                DependencyDirs.AddRange(dependencyDirsEnv.Split(':').Select(dir => dir.Trim()));
+                DependencyDirs.AddRange(dependencyDirsEnv.Split(Path.PathSeparator).Select(dir => dir.Trim()));
             }
 
             string modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
             if (!string.IsNullOrEmpty(modsEnv)) {
-                foreach (string path in modsEnv.Split(':').Select(path => path.Trim())) {
+                foreach (string path in modsEnv.Split(Path.PathSeparator).Select(path => path.Trim())) {
                     ReadMod(path);
                 }
             }
