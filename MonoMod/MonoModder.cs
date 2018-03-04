@@ -220,13 +220,6 @@ namespace MonoMod {
                 DependencyDirs.AddRange(dependencyDirsEnv.Split(Path.PathSeparator).Select(dir => dir.Trim()));
             }
 
-            string modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
-            if (!string.IsNullOrEmpty(modsEnv)) {
-                foreach (string path in modsEnv.Split(Path.PathSeparator).Select(path => path.Trim())) {
-                    ReadMod(path);
-                }
-            }
-
             if (
                 Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1" ||
                 Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1" // Backwards-compatible
@@ -332,6 +325,13 @@ namespace MonoMod {
                     Log("Reading input file into module.");
                     DependencyDirs.Add(Path.GetDirectoryName(InputPath));
                     Module = MonoModExt.ReadModule(InputPath, GenReaderParameters(true, InputPath));
+                }
+
+                string modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
+                if (!string.IsNullOrEmpty(modsEnv)) {
+                    foreach (string path in modsEnv.Split(Path.PathSeparator).Select(path => path.Trim())) {
+                        ReadMod(path);
+                    }
                 }
             }
         }
