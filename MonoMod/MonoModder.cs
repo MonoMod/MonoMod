@@ -964,9 +964,7 @@ namespace MonoMod {
 
 
         public virtual bool DefaultParser(MonoModder mod, MethodBody body, Instruction instr, ref int instri) {
-            if (instr.Operand is MethodReference && (
-                ((MethodReference) instr.Operand).DeclaringType.FullName.StartsWith("MMIL")
-            ))
+            if ((instr.Operand as MethodReference)?.DeclaringType?.FullName?.StartsWith("MMIL") ?? false)
                 return ParseMMILCall(body, (MethodReference) instr.Operand, ref instri);
 
             return true;

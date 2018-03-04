@@ -80,7 +80,7 @@ namespace MonoMod.InlineRT {
                     AssemblyResolver = self.AssemblyResolver,
                     Kind = ModuleKind.Dll,
                     MetadataResolver = orig.Module.MetadataResolver,
-                    Runtime = orig.Module.Runtime
+                    Runtime = TargetRuntime.Net_2_0
                 }
             );
             MonoModder wrapperMod = new MonoModder() {
