@@ -1,4 +1,5 @@
 ﻿using Mono.Cecil;
+using MonoMod.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,14 +8,73 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace MonoMod.InlineRT {
-    public static class MMILExec {
+    public static class MonoModRulesManager {
+
+        public static IDictionary<long, WeakReference> ModderMap = new FastDictionary<long, WeakReference>();
+        public static ObjectIDGenerator ModderIdGen = new ObjectIDGenerator();
+
+        private static Assembly MonoModAsm = Assembly.GetExecutingAssembly();
+
+        public static MonoModder Modder {
+            get {
+                StackTrace st = new StackTrace();
+                for (int i = 1; i < st.FrameCount; i++) {
+                    StackFrame frame = st.GetFrame(i);
+                    MethodBase method = frame.GetMethod();
+                    Assembly asm = method.DeclaringType.Assembly;
+                    if (asm != MonoModAsm)
+                        return GetModder(method.DeclaringType.Assembly.GetName().Name);
+                }
+                return null;
+            }
+        }
+
+        public static Type RuleType {
+            get {
+                StackTrace st = new StackTrace();
+                for (int i = 1; i < st.FrameCount; i++) {
+                    StackFrame frame = st.GetFrame(i);
+                    MethodBase method = frame.GetMethod();
+                    Assembly asm = method.DeclaringType.Assembly;
+                    if (asm != MonoModAsm)
+                        return method.DeclaringType;
+                }
+                return null;
+            }
+        }
+
+        public static void Register(MonoModder self) {
+            bool firstTime;
+            ModderMap[ModderIdGen.GetId(self, out firstTime)] = new WeakReference(self);
+            if (!firstTime)
+                throw new InvalidOperationException("MonoModder instance already registered in MMILProxyManager");
+        }
+
+        public static long GetId(MonoModder self) {
+            bool firstTime;
+            long id = ModderIdGen.GetId(self, out firstTime);
+            if (firstTime)
+                throw new InvalidOperationException("MonoModder instance wasn't registered in MMILProxyManager");
+            return id;
+        }
+
+        public static MonoModder GetModder(string asmName) {
+            string idString = asmName;
+            idString = idString.Substring(idString.IndexOf("-ID:") + 4) + ' ';
+            idString = idString.Substring(0, idString.IndexOf(' '));
+            long id;
+            if (!long.TryParse(idString, out id))
+                throw new InvalidOperationException($"Cannot get MonoModder ID from assembly name {asmName}");
+            return (MonoModder) ModderMap[id].Target;
+        }
 
         public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
             ModuleDefinition wrapper = ModuleDefinition.CreateModule(
-                $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules -ID:{MMILProxyManager.GetId(self)} -MMILRT",
+                $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules -ID:{GetId(self)} -MMILRT",
                 new ModuleParameters() {
                     Architecture = orig.Module.Architecture,
                     AssemblyResolver = self.AssemblyResolver,
@@ -46,8 +106,6 @@ namespace MonoMod.InlineRT {
             wrapperMod.Mods.Add(self.Module);
 
             wrapperMod.Relinker = (mtp, context) =>
-                mtp is TypeReference && ((TypeReference) mtp).IsMMILType() ?
-                    MMILProxyManager.RelinkToProxy(wrapperMod, (TypeReference) mtp) :
                 mtp is TypeReference && ((TypeReference) mtp).FullName == orig.FullName ?
                     wrapper.GetType(orig.FullName) :
                 wrapperMod.DefaultRelinker(mtp, context);

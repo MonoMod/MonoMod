@@ -62,10 +62,9 @@
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
     <Compile Include="MonoMod\Helpers\IntDictionary.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary.cs" />
-    <Compile Include="MonoMod\InlineRT\MMILExec.cs" />
+    <Compile Include="MonoMod\InlineRT\MonoModRulesManager.cs" />
     <Compile Include="MonoMod\InlineRT\MMILRT.cs" />
-    <Compile Include="MonoMod\InlineRT\MMILProxyManager.cs" />
-    <Compile Include="MonoMod\InlineRT\ReflectionHelper.cs" />
+    <Compile Include="MonoMod\Helpers\ReflectionHelper.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModCustomAttribute.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModHook.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModIfFlag.cs" />
@@ -93,7 +92,6 @@
     <Compile Include="MonoMod\Modifiers\MonoModConstructor.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModLinkTo.cs" />
     <Compile Include="MonoMod\Modifiers\MonoModEnumReplace.cs" />
-    <Compile Include="MonoMod\Modifiers\MonoModInline.cs" />
     <Compile Include="MonoMod\Helpers\NET40Shim.cs" />
   </ItemGroup>
   <ItemGroup>

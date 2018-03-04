@@ -279,7 +279,7 @@ namespace MonoMod {
 
             RemovePatchReferences = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_REMOVE_PATCH") != "0";
 
-            MMILProxyManager.Register(this);
+            MonoModRulesManager.Register(this);
         }
 
         public void SetupLegacy() {
@@ -583,7 +583,7 @@ namespace MonoMod {
             TypeDefinition rulesType = mod.GetType("MonoMod.MonoModRules");
             Type rulesTypeMMILRT = null;
             if (rulesType != null) {
-                rulesTypeMMILRT = MMILExec.ExecuteRules(this, rulesType);
+                rulesTypeMMILRT = MonoModRulesManager.ExecuteRules(this, rulesType);
                 // Finally, remove the type, otherwise it'll easily conflict with other mods' rules.
                 mod.Types.Remove(rulesType);
             }

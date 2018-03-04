@@ -2,6 +2,7 @@
 using StringInject;
 using System;
 using MonoMod.NET40Shim;
+using MonoMod.Helpers;
 
 namespace MonoMod.InlineRT {
     public static partial class MMILRT {
@@ -9,7 +10,7 @@ namespace MonoMod.InlineRT {
         // MMILRT.Modder is easier to understand than MMILProxyManager.Self.
         public static MonoModder Modder {
             get {
-                return MMILProxyManager.Self;
+                return MonoModRulesManager.Modder;
             }
         }
 
@@ -66,11 +67,11 @@ namespace MonoMod.InlineRT {
 
 
             public static void RegisterCustomAttribute(MonoModder self, string attribName, string handlerName) {
-                self.CustomAttributeHandlers[attribName] = MMILProxyManager.RuleType.GetMethod(handlerName).GetDelegate();
+                self.CustomAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetMethod(handlerName).GetDelegate();
             }
 
             public static void RegisterCustomMethodAttribute(MonoModder self, string attribName, string handlerName) {
-                self.CustomMethodAttributeHandlers[attribName] = MMILProxyManager.RuleType.GetMethod(handlerName).GetDelegate();
+                self.CustomMethodAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetMethod(handlerName).GetDelegate();
             }
 
         }

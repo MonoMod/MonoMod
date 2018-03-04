@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace MonoMod.InlineRT {
+namespace MonoMod.Helpers {
     public delegate object DynamicMethodDelegate(object target, params object[] args);
     /// <summary>
     /// Based on ReflectionHelper from http://theinstructionlimit.com/fast-net-reflection and FEZ. Thanks, Renaud!

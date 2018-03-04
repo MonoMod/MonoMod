@@ -9,6 +9,7 @@ using System.Reflection.Emit;
 using MonoMod.Detour;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using MonoMod.Helpers;
 
 namespace MonoMod {
     internal delegate void d_TestA(int a, ref int b, out int c, out QuickDebugTestObject d, ref QuickDebugTestStruct e);
