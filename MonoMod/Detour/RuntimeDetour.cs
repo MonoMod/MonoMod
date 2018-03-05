@@ -120,10 +120,12 @@ namespace MonoMod.Detour {
                 dmd_DynamicMethod_CreateDynMethod(dm);
             } else {
                 RuntimeMethodHandle handle = (RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(dm);
-                if (m_RuntimeHelpers__CompileMethod_TakesIntPtr)
+                if (m_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                     dmd_RuntimeHelpers__CompileMethod(null, handle.Value);
-                else
-                    dmd_RuntimeHelpers__CompileMethod(null, dmd_RuntimeMethodHandle_GetMethodInfo(handle));
+                } else {
+                    // This likes to die with leo's HookedMethod.
+                    // dmd_RuntimeHelpers__CompileMethod(null, dmd_RuntimeMethodHandle_GetMethodInfo(handle));
+                }
             }
         }
 
