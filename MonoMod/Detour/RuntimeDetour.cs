@@ -42,7 +42,10 @@ namespace MonoMod.Detour {
             m_RuntimeHelpers__CompileMethod?.CreateDelegate();
         private readonly static bool m_RuntimeHelpers__CompileMethod_TakesIntPtr =
             m_RuntimeHelpers__CompileMethod != null &&
-            m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType == typeof(IntPtr);
+            m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IntPtr";
+        private readonly static bool m_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo =
+            m_RuntimeHelpers__CompileMethod != null &&
+            m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
 
         private readonly static MethodInfo m_RuntimeMethodHandle_GetMethodInfo =
             // .NET
@@ -122,9 +125,14 @@ namespace MonoMod.Detour {
                 RuntimeMethodHandle handle = (RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(dm);
                 if (m_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                     dmd_RuntimeHelpers__CompileMethod(null, handle.Value);
-                } else {
-                    // This likes to die with leo's HookedMethod.
+                } else if (m_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
+                    // This likes to die.
                     // dmd_RuntimeHelpers__CompileMethod(null, dmd_RuntimeMethodHandle_GetMethodInfo(handle));
+                    // This should work just fine.
+                    try {
+                        dm.CreateDelegate(typeof(MulticastDelegate));
+                    } catch {
+                    }
                 }
             }
         }
