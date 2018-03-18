@@ -27,7 +27,7 @@ namespace MonoMod {
         public Logger Logger;
         public Logger VerboseLogger;
 
-        public static IDictionary<string, object> Data = new FastDictionary<string, object>() {
+        public static IDictionary<string, object> Data = new Dictionary<string, object>() {
             { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
             { "PlatformPrefix",     (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
             { "Arch",               (PlatformHelper.Current & Platform.X64).ToString() },
@@ -36,12 +36,12 @@ namespace MonoMod {
             { "ArchitecturePrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" }
         };
 
-        public IDictionary<string, object> RelinkMap = new FastDictionary<string, object>();
-        public IDictionary<string, ModuleDefinition> RelinkModuleMap = new FastDictionary<string, ModuleDefinition>();
+        public IDictionary<string, object> RelinkMap = new Dictionary<string, object>();
+        public IDictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
         public HashSet<string> SkipList = new HashSet<string>(EqualityComparer<string>.Default);
 
-        public IDictionary<string, IMetadataTokenProvider> RelinkMapCache = new FastDictionary<string, IMetadataTokenProvider>();
-        public IDictionary<string, TypeReference> RelinkModuleMapCache = new FastDictionary<string, TypeReference>();
+        public IDictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
+        public IDictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
 
         public FastDictionary<IMetadataTokenProvider, IGenericParameterProvider, IMetadataTokenProvider> RelinkerCache = new FastDictionary<IMetadataTokenProvider, IGenericParameterProvider, IMetadataTokenProvider>();
 
@@ -57,8 +57,8 @@ namespace MonoMod {
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
-        public IDictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new FastDictionary<string, DynamicMethodDelegate>();
-        public IDictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new FastDictionary<string, DynamicMethodDelegate>();
+        public IDictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+        public IDictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -67,8 +67,8 @@ namespace MonoMod {
         public Stream Output;
         public string OutputPath;
         public ModuleDefinition Module;
-        public IDictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new FastDictionary<ModuleDefinition, List<ModuleDefinition>>();
-        public IDictionary<string, ModuleDefinition> DependencyCache = new FastDictionary<string, ModuleDefinition>();
+        public IDictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
+        public IDictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
         public List<string> DependencyDirs = new List<string>();
         public bool CleanupEnabled;
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
@@ -79,7 +79,7 @@ namespace MonoMod {
 
         public bool RemovePatchReferences;
 
-        public List<ModuleDefinition> Mods = new List<ModuleDefinition>();
+        public List<ModuleReference> Mods = new List<ModuleReference>();
 
         public int CurrentRID = 0;
 
@@ -1730,7 +1730,7 @@ namespace MonoMod {
                 Type = DocumentType.Text
             };
 
-            IDictionary<TypeReference, VariableDefinition> tmpAddrLocMap = new FastDictionary<TypeReference, VariableDefinition>();
+            IDictionary<TypeReference, VariableDefinition> tmpAddrLocMap = new Dictionary<TypeReference, VariableDefinition>();
 
             MethodBody body = method.Body;
 

@@ -14,7 +14,7 @@ using System.Text;
 namespace MonoMod.InlineRT {
     public static class MonoModRulesManager {
 
-        public static IDictionary<long, WeakReference> ModderMap = new FastDictionary<long, WeakReference>();
+        public static IDictionary<long, WeakReference> ModderMap = new Dictionary<long, WeakReference>();
         public static ObjectIDGenerator ModderIdGen = new ObjectIDGenerator();
 
         private static Assembly MonoModAsm = Assembly.GetExecutingAssembly();

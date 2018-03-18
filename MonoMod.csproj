@@ -61,7 +61,6 @@
     <Compile Include="MonoMod\QuickDebugTest.cs" />
     <Compile Include="MonoMod\Helpers\FastDictionary`3.cs" />
     <Compile Include="MonoMod\Helpers\IntDictionary.cs" />
-    <Compile Include="MonoMod\Helpers\FastDictionary.cs" />
     <Compile Include="MonoMod\InlineRT\MonoModRulesManager.cs" />
     <Compile Include="MonoMod\InlineRT\MonoModRule.cs" />
     <Compile Include="MonoMod\Helpers\ReflectionHelper.cs" />

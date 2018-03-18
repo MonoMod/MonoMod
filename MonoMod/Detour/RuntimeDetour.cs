@@ -57,7 +57,7 @@ namespace MonoMod.Detour {
             typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
 
         // TODO: Free the GCHandles!
-        private readonly static unsafe FastDictionary<Delegate, GCHandle> _DelegateGCHandles = new FastDictionary<Delegate, GCHandle>();
+        private readonly static unsafe Dictionary<Delegate, GCHandle> _DelegateGCHandles = new Dictionary<Delegate, GCHandle>();
 
         private readonly static unsafe LongDictionary<IntPtr> _Origs = new LongDictionary<IntPtr>();
         private readonly static unsafe LongDictionary<List<IntPtr>> _Reverts = new LongDictionary<List<IntPtr>>();

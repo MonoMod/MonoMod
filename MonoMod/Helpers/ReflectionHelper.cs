@@ -11,7 +11,7 @@ namespace MonoMod.Helpers {
     /// </summary>
     public static class ReflectionHelper {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
-        private static readonly IDictionary<MethodInfo, DynamicMethodDelegate> _MethodCache = new FastDictionary<MethodInfo, DynamicMethodDelegate>();
+        private static readonly IDictionary<MethodInfo, DynamicMethodDelegate> _MethodCache = new Dictionary<MethodInfo, DynamicMethodDelegate>();
 
         private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(object) });
         private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
