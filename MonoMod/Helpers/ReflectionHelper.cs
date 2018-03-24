@@ -5,10 +5,12 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 namespace MonoMod.Helpers {
+    [MonoMod__SafeToCopy__]
     public delegate object DynamicMethodDelegate(object target, params object[] args);
     /// <summary>
     /// Based on ReflectionHelper from http://theinstructionlimit.com/fast-net-reflection and FEZ. Thanks, Renaud!
     /// </summary>
+    [MonoMod__SafeToCopy__]
     public static class ReflectionHelper {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
         private static readonly IDictionary<MethodInfo, DynamicMethodDelegate> _MethodCache = new Dictionary<MethodInfo, DynamicMethodDelegate>();

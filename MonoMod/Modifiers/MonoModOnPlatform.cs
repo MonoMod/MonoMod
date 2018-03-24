@@ -1,3 +1,4 @@
+using MonoMod.Helpers;
 using System;
 
 namespace MonoMod {
