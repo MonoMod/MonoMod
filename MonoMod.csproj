@@ -54,8 +54,11 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
-    <Compile Include="MonoMod\Detour\MMDetourerLevel.cs" />
-    <Compile Include="MonoMod\Detour\MMDetourer.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\DetourHelper.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\DetourNative.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\DetourRuntimePlatforms.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\DetourNativePlatforms.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\DetourManager.cs" />
     <Compile Include="MonoMod\Detour\RuntimeDetour.cs" />
     <Compile Include="MonoMod\Helpers\LongDictionary.cs" />
     <Compile Include="MonoMod\Helpers\RelinkFailedException.cs" />

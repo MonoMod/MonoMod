@@ -14,6 +14,7 @@ using Trampolines = System.Collections.Generic.HashSet<System.Reflection.Emit.Dy
 using TargetTokenToTrampolinesStackMap = MonoMod.Helpers.LongDictionary<System.Collections.Generic.List<System.Collections.Generic.HashSet<System.Reflection.Emit.DynamicMethod>>>;
 
 namespace MonoMod.Detour {
+    [Obsolete("Not maintained anymore, but kept for backwards-compatibility. Please switch to the new DetourManager.")]
     public static class RuntimeDetour {
 
         public static bool IsX64 { get; } = IntPtr.Size == 8;
