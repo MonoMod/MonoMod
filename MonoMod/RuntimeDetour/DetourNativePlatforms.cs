@@ -12,11 +12,14 @@ using MonoMod.InlineRT;
 
 namespace MonoMod.RuntimeDetour {
     public interface IDetourNativePlatform {
-        DetourNative Create(IntPtr from, IntPtr to);
-        void Free(DetourNative detour);
-        void Copy(DetourNative detour, IntPtr dst);
-        void MakeWritable(DetourNative detour);
-        void MakeExecutable(DetourNative detour);
+        NativeDetourData Create(IntPtr from, IntPtr to);
+        void Free(NativeDetourData detour);
+        void Apply(NativeDetourData detour);
+        void Copy(IntPtr src, IntPtr dst, int size);
+        void MakeWritable(NativeDetourData detour);
+        void MakeExecutable(NativeDetourData detour);
+        IntPtr MemAlloc(int size);
+        void MemFree(IntPtr ptr);
     }
 
     public unsafe sealed class DetourNativeX86Platform : IDetourNativePlatform {
@@ -32,8 +35,8 @@ namespace MonoMod.RuntimeDetour {
             return SIZE32BIT;
         }
 
-        public DetourNative Create(IntPtr from, IntPtr to) {
-            DetourNative detour = new DetourNative {
+        public NativeDetourData Create(IntPtr from, IntPtr to) {
+            NativeDetourData detour = new NativeDetourData {
                 Method = from,
                 Target = to
             };
@@ -41,11 +44,11 @@ namespace MonoMod.RuntimeDetour {
             return detour;
         }
 
-        public void Free(DetourNative detour) {
+        public void Free(NativeDetourData detour) {
             // No extra data.
         }
 
-        public void Apply(DetourNative detour) {
+        public void Apply(NativeDetourData detour) {
             int offs = 0;
 
             if (Is64BitTarget(detour.Target)) {
@@ -73,50 +76,70 @@ namespace MonoMod.RuntimeDetour {
             detour.Method.Write(ref offs, (byte) 0xC3);
         }
 
-        public void Copy(DetourNative detour, IntPtr dst) {
-            if (detour.Size == SIZE64BIT) {
-                *((ulong*) ((ulong) dst)) = *((ulong*) ((ulong) detour.Method));
-                *((uint*) ((ulong) dst + 8)) = *((uint*) ((ulong) detour.Method + 8));
-                *((ushort*) ((ulong) dst + 12)) = *((ushort*) ((ulong) detour.Method + 12));
+        public void Copy(IntPtr src, IntPtr dst, int size) {
+            if (size == SIZE64BIT) {
+                *((ulong*) ((ulong) dst)) = *((ulong*) ((ulong) src));
+                *((uint*) ((ulong) dst + 8)) = *((uint*) ((ulong) src + 8));
+                *((ushort*) ((ulong) dst + 12)) = *((ushort*) ((ulong) src + 12));
                 return;
             }
 
-            if (detour.Size == SIZE32BIT) {
-                *((uint*) ((uint) dst)) = *((uint*) ((uint) detour.Method));
-                *((ushort*) ((uint) dst + 4)) = *((ushort*) ((uint) detour.Method + 4));
+            if (size == SIZE32BIT) {
+                *((uint*) ((uint) dst)) = *((uint*) ((uint) src));
+                *((ushort*) ((uint) dst + 4)) = *((ushort*) ((uint) src + 4));
                 return;
             }
 
-            throw new Exception($"Unknown X86 detour size {detour.Size}");
+            throw new Exception($"Unknown X86 detour size {size}");
         }
 
-        public void MakeWritable(DetourNative detour) {
+        public void MakeWritable(NativeDetourData detour) {
             // no-op.
         }
 
-        public void MakeExecutable(DetourNative detour) {
+        public void MakeExecutable(NativeDetourData detour) {
             // no-op.
+        }
+
+        public IntPtr MemAlloc(int size) {
+            return Marshal.AllocHGlobal(size);
+        }
+
+        public void MemFree(IntPtr ptr) {
+            Marshal.FreeHGlobal(ptr);
         }
     }
 
     public unsafe sealed class DetourNativeARMPlatform : IDetourNativePlatform {
-        public void Copy(DetourNative detour, IntPtr dst) {
+        public void Apply(NativeDetourData detour) {
             throw new NotImplementedException();
         }
 
-        public DetourNative Create(IntPtr from, IntPtr to) {
+        public void Copy(IntPtr src, IntPtr dst, int size) {
             throw new NotImplementedException();
         }
 
-        public void Free(DetourNative detour) {
+        public NativeDetourData Create(IntPtr from, IntPtr to) {
             throw new NotImplementedException();
         }
 
-        public void MakeExecutable(DetourNative detour) {
+        public void Free(NativeDetourData detour) {
             throw new NotImplementedException();
         }
 
-        public void MakeWritable(DetourNative detour) {
+        public void MakeExecutable(NativeDetourData detour) {
+            throw new NotImplementedException();
+        }
+
+        public void MakeWritable(NativeDetourData detour) {
+            throw new NotImplementedException();
+        }
+
+        public IntPtr MemAlloc(int size) {
+            throw new NotImplementedException();
+        }
+
+        public void MemFree(IntPtr ptr) {
             throw new NotImplementedException();
         }
     }
@@ -146,7 +169,7 @@ namespace MonoMod.RuntimeDetour {
         [DllImport("kernel32.dll")]
         private static extern bool VirtualProtect(IntPtr lpAddress, IntPtr dwSize, Protection flNewProtect, out Protection lpflOldProtect);
 
-        public void MakeWritable(DetourNative detour) {
+        public void MakeWritable(NativeDetourData detour) {
             Protection oldProtection;
             if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_EXECUTE_READWRITE, out oldProtection))
                 throw new System.ComponentModel.Win32Exception();
@@ -154,20 +177,36 @@ namespace MonoMod.RuntimeDetour {
             Inner.MakeWritable(detour);
         }
 
-        public void MakeExecutable(DetourNative detour) {
+        public void MakeExecutable(NativeDetourData detour) {
+            Protection oldProtection;
+            if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_EXECUTE_READWRITE, out oldProtection))
+                throw new System.ComponentModel.Win32Exception();
+
             Inner.MakeExecutable(detour);
         }
 
-        public DetourNative Create(IntPtr from, IntPtr to) {
+        public NativeDetourData Create(IntPtr from, IntPtr to) {
             return Inner.Create(from, to);
         }
 
-        public void Free(DetourNative detour) {
+        public void Free(NativeDetourData detour) {
             Inner.Free(detour);
         }
 
-        public void Copy(DetourNative detour, IntPtr dst) {
-            Inner.Copy(detour, dst);
+        public void Apply(NativeDetourData detour) {
+            Inner.Apply(detour);
+        }
+
+        public void Copy(IntPtr src, IntPtr dst, int size) {
+            Inner.Copy(src, dst, size);
+        }
+
+        public IntPtr MemAlloc(int size) {
+            return Inner.MemAlloc(size);
+        }
+
+        public void MemFree(IntPtr ptr) {
+            Inner.MemFree(ptr);
         }
     }
 

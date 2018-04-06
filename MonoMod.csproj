@@ -54,8 +54,9 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\DetourExample.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourHelper.cs" />
-    <Compile Include="MonoMod\RuntimeDetour\DetourNative.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\NativeDetour.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourRuntimePlatforms.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourNativePlatforms.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourManager.cs" />

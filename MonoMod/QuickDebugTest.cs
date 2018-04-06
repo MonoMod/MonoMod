@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Globalization;
 using System.Reflection.Emit;
-using MonoMod.Detour;
+using MonoMod.RuntimeDetour;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using MonoMod.Helpers;
@@ -29,7 +29,7 @@ namespace MonoMod {
     }
     internal static class QuickDebugTest {
 
-        public static int Run(object[] args) {
+        public static int Run(string[] args) {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
             return (
@@ -41,108 +41,9 @@ namespace MonoMod {
         }
 
         public static bool TestRuntimeDetourHelper() {
-            MethodInfo m_PrintA = typeof(QuickDebugTest).GetMethod("PrintA");
-            MethodInfo m_PrintB = typeof(QuickDebugTest).GetMethod("PrintB");
-            MethodInfo m_PrintC = typeof(QuickDebugTest).GetMethod("PrintC");
-            MethodInfo m_PrintATrampoline = typeof(QuickDebugTest).GetMethod("PrintATrampoline");
-
-            PrintA();
-            // A
-
-            d_PrintA t_FromB = m_PrintA.Detour<d_PrintA>(m_PrintB);
-            PrintA();
-            // B
-
-            t_FromB();
-            // A
-
-            unsafe
-            {
-                m_PrintATrampoline.Detour(
-                    RuntimeDetour.CreateTrampoline(m_PrintA)
-                );
-                PrintATrampoline();
-                // A
-            }
-
-            d_PrintA t_FromC = m_PrintA.Detour<d_PrintA>((Action) PrintC);
-            PrintA();
-            // C
-
-            t_FromC();
-            // B
-
-            m_PrintA.GetOrigTrampoline<d_PrintA>()();
-            // A
-
-            m_PrintB.Detour(m_PrintC);
-            PrintB();
-            // C
-
-            m_PrintB.Detour((Action) PrintD);
-            PrintB();
-            // D
-
-            m_PrintA.Undetour();
-            m_PrintA.Undetour();
-            PrintA();
-            // A
-
-            m_PrintA.Detour(m_PrintB);
-            m_PrintA.Detour((Action) PrintD);
-            PrintA();
-            // D
-
-            m_PrintA.Undetour(1);
-            PrintA();
-            // D
-
-            m_PrintA.Undetour(1);
-            PrintA();
-            // A
-
-            MethodInfo m_PrintQDTO = typeof(QuickDebugTestObject).GetMethod("PrintQDTO");
-            MethodInfo m_PrintQDTODetour = typeof(QuickDebugTest).GetMethod("PrintQDTODetour");
-            MethodInfo m_PrintQDTOTrampoline = typeof(QuickDebugTest).GetMethod("PrintQDTOTrampoline");
-
-            QuickDebugTestObject qdto = new QuickDebugTestObject();
-            qdto.PrintQDTO();
-            // QDTO
-
-            d_PrintQDTO t_FromQDTO = m_PrintQDTO.Detour<d_PrintQDTO>(m_PrintQDTODetour);
-            qdto.PrintQDTO();
-            // QDTO Detour
-
-            t_FromQDTO(qdto);
-            // QDTO
-
-            unsafe
-            {
-                m_PrintQDTOTrampoline.Detour(
-                    RuntimeDetour.CreateTrampoline(m_PrintQDTO)
-                );
-                PrintQDTOTrampoline(qdto);
-                // QDTO
-            }
-
+            DetourExample.Run();
             return true;
         }
-
-        // Only affects .NET Framework
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void PrintA() => Console.WriteLine("A");
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void PrintB() => Console.WriteLine("B");
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void PrintC() => Console.WriteLine("C");
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void PrintD() => Console.WriteLine("D");
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void PrintATrampoline() => Console.WriteLine("SHOULD BE DETOURED");
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void PrintQDTODetour(QuickDebugTestObject qdto) => Console.WriteLine("QDTO Detoured");
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void PrintQDTOTrampoline(QuickDebugTestObject qdto) => Console.WriteLine("SHOULD BE DETOURED");
 
         public static bool TestReflectionHelperRef() {
             object[] args = new object[] { 1, 0, 0, null, new QuickDebugTestStruct() };
