@@ -35,44 +35,66 @@ namespace MonoMod.RuntimeDetour {
 
     public class NativeDetour {
 
-        public NativeDetourData Data;
-        public IntPtr Backup;
+        public readonly NativeDetourData Data;
+        public readonly MethodBase Method;
+
+        private DynamicMethod BackupMethod;
+        private IntPtr BackupNative;
 
         private bool IsFree;
 
-        public NativeDetour(IntPtr from, IntPtr to) {
+        public NativeDetour(MethodBase method, IntPtr from, IntPtr to) {
             Data = DetourManager.Native.Create(from, to);
+            Method = method;
+
+            if (Method != null && Method.GetMethodBody() != null)
+                BackupMethod = method.CreateILCopy();
+
             Apply();
         }
 
+        public NativeDetour(IntPtr from, IntPtr to)
+            : this(null, from, to) {
+        }
         public NativeDetour(MethodBase from, IntPtr to)
-            : this(from.GetMethodStart(), to) {
-        }
-        public NativeDetour(IntPtr from, MethodBase to)
-            : this(from, to.GetMethodStart()) {
-        }
-        public NativeDetour(MethodBase from, MethodBase to)
-            : this(from.GetMethodStart(), to.GetMethodStart()) {
+            : this(from, from.GetJITStart(), to) {
         }
 
-        public NativeDetour(Expression<Action> from, IntPtr to)
-            : this(from.Body.GetMethodStart(), to) {
+        public NativeDetour(IntPtr from, MethodBase to)
+            : this(from, to.GetJITStart()) {
         }
-        public NativeDetour(IntPtr from, Expression<Action> to)
-            : this(from, to.Body.GetMethodStart()) {
-        }
-        public NativeDetour(Expression<Action> from, Expression<Action> to)
-            : this(from.Body.GetMethodStart(), to.Body.GetMethodStart()) {
+        public NativeDetour(MethodBase from, MethodBase to)
+            : this(from, to.GetJITStart()) {
         }
 
         public NativeDetour(Delegate from, IntPtr to)
-            : this(from.Method.GetMethodStart(), to) {
+            : this(from.Method, to) {
         }
         public NativeDetour(IntPtr from, Delegate to)
-            : this(from, to.Method.GetMethodStart()) {
+            : this(from, to.Method) {
         }
         public NativeDetour(Delegate from, Delegate to)
-            : this(from.Method.GetMethodStart(), to.Method.GetMethodStart()) {
+            : this(from.Method, to.Method) {
+        }
+
+        public NativeDetour(Expression from, IntPtr to)
+            : this(((MethodCallExpression) from).Method, to) {
+        }
+        public NativeDetour(IntPtr from, Expression to)
+            : this(from, ((MethodCallExpression) to).Method) {
+        }
+        public NativeDetour(Expression from, Expression to)
+            : this(((MethodCallExpression) from).Method, ((MethodCallExpression) to).Method) {
+        }
+
+        public NativeDetour(Expression<Action> from, IntPtr to)
+            : this(from.Body, to) {
+        }
+        public NativeDetour(IntPtr from, Expression<Action> to)
+            : this(from, to.Body) {
+        }
+        public NativeDetour(Expression<Action> from, Expression<Action> to)
+            : this(from.Body, to.Body) {
         }
 
         /// <summary>
@@ -82,9 +104,9 @@ namespace MonoMod.RuntimeDetour {
             if (IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
-            if (Backup == IntPtr.Zero) {
-                Backup = DetourManager.Native.MemAlloc(Data.Size);
-                DetourManager.Native.Copy(Data.Method, Backup, Data.Size);
+            if (BackupMethod == null && BackupNative == IntPtr.Zero) {
+                BackupNative = DetourManager.Native.MemAlloc(Data.Size);
+                DetourManager.Native.Copy(Data.Method, BackupNative, Data.Size);
             }
 
             DetourManager.Native.Apply(Data);
@@ -97,7 +119,7 @@ namespace MonoMod.RuntimeDetour {
             if (IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
-            DetourManager.Native.Copy(Backup, Data.Method, Data.Size);
+            DetourManager.Native.Copy(BackupNative, Data.Method, Data.Size);
         }
 
         /// <summary>
@@ -107,29 +129,84 @@ namespace MonoMod.RuntimeDetour {
             if (IsFree)
                 return;
             IsFree = true;
+
+            if (BackupNative != IntPtr.Zero) {
+                DetourManager.Native.MemFree(BackupNative);
+            }
+            DetourManager.Native.Free(Data);
+        }
+
+        public T GenerateTrampoline<T>() where T : class {
+            if (IsFree)
+                throw new InvalidOperationException("Free() has been called on this detour.");
+            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
+                throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
+
+            if (BackupMethod != null) {
+                // If we're detouring an IL method and have an IL copy, invoke the IL copy.
+                return BackupMethod.CreateDelegate(typeof(T)) as T;
+            }
+
+            // Otherwise, undo the detour, call the method and reapply the detour.
+
+            MethodInfo delegateInvoke = typeof(T).GetMethod("Invoke");
+
+            Type returnType = delegateInvoke?.ReturnType;
+
+            ParameterInfo[] args = delegateInvoke.GetParameters();
+            Type[] argTypes = new Type[args.Length];
+            for (int i = 0; i < args.Length; i++)
+                argTypes[i] = args[i].ParameterType;
+
+            DynamicMethod dm = new DynamicMethod(
+                $"trampoline_native_{Method.Name}_{GetHashCode()}",
+                returnType, argTypes,
+                Method.Module, true
+            );
+            ILGenerator il = dm.GetILGenerator();
+
+            il.EmitDetourCopy(BackupNative, Data.Method, Data.Size);
+
+            // TODO: [RuntimeDetour] Use specialized Ldarg.* if possible; What about ref types?
+            for (int i = 0; i < argTypes.Length; i++)
+                il.Emit(OpCodes.Ldarg, i);
+
+            // TODO: Wrap call in try, reapply the detour in finalize.
+
+            if (Method is MethodInfo)
+                il.Emit(OpCodes.Call, (MethodInfo) Method);
+            else if (Method is ConstructorInfo)
+                il.Emit(OpCodes.Call, (ConstructorInfo) Method);
+
+            il.EmitDetourApply(Data);
+
+            il.Emit(OpCodes.Ret);
+
+            return dm.CreateDelegate(typeof(T)) as T;
         }
 
     }
 
-    public class NativeDetour<T> : NativeDetour {
+    public class NativeDetour<T> : NativeDetour  {
         public NativeDetour(Expression<Func<T>> from, IntPtr to)
-            : base(from.Body.GetMethodStart(), to) {
+            : base(from.Body, to) {
         }
         public NativeDetour(IntPtr from, Expression<Func<T>> to)
-            : base(from, to.Body.GetMethodStart()) {
+            : base(from, to.Body) {
         }
         public NativeDetour(Expression<Func<T>> from, Expression<Func<T>> to)
-            : base(from.Body.GetMethodStart(), to.Body.GetMethodStart()) {
+            : base(from.Body, to.Body) {
         }
 
         public NativeDetour(T from, IntPtr to)
-            : base((from as Delegate).GetMethodStart(), to) {
+            : base(from as Delegate, to) {
         }
         public NativeDetour(IntPtr from, T to)
-            : base(from, (to as Delegate).GetMethodStart()) {
+            : base(from, to as Delegate) {
         }
         public NativeDetour(T from, T to)
-            : base((from as Delegate).GetMethodStart(), (to as Delegate).Method.GetMethodStart()) {
+            : base(from as Delegate, to as Delegate) {
         }
+
     }
 }

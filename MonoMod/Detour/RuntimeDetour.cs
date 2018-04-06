@@ -14,7 +14,7 @@ using Trampolines = System.Collections.Generic.HashSet<System.Reflection.Emit.Dy
 using TargetTokenToTrampolinesStackMap = MonoMod.Helpers.LongDictionary<System.Collections.Generic.List<System.Collections.Generic.HashSet<System.Reflection.Emit.DynamicMethod>>>;
 
 namespace MonoMod.Detour {
-    [Obsolete("Not maintained anymore, but kept for backwards-compatibility. Please switch to the new DetourManager.")]
+    [Obsolete("Not maintained anymore, but kept for backwards-compatibility. Please switch to the new MonoMod.RuntimeDetour namespace.")]
     public static class RuntimeDetour {
 
         public static bool IsX64 { get; } = IntPtr.Size == 8;
@@ -378,22 +378,8 @@ namespace MonoMod.Detour {
             return (T) (object) del;
         }
 
-        public static unsafe T GetNextTrampoline<T>(this MethodBase target) {
-            void* p = GetMethodStart(target);
-            IntPtr code;
-            bool codeTmp = false;
-            if (!_Current.TryGetValue((long) p, out code)) {
-                codeTmp = true;
-                code = Marshal.AllocHGlobal(DetourSize);
-                _Copy(p, code.ToPointer());
-            }
-
-            ulong key = (ulong) p;
-            Type t = typeof(T);
-            T del = CreateTrampolineDirect<T>(target, code);
-            if (codeTmp)
-                Marshal.FreeHGlobal(code);
-            return (T) (object) del;
+        public static T GetNextTrampoline<T>(this MethodBase target) {
+            throw new NotSupportedException();
         }
 
         public static unsafe T CreateTrampolineDirect<T>(MethodBase target)
@@ -403,25 +389,17 @@ namespace MonoMod.Detour {
             return (T) (object) CreateTrampolineDirect(target, code, t.GetMethod("Invoke")).CreateDelegate(t);
         }
 
-        public static unsafe DynamicMethod CreateOrigTrampoline(this MethodBase target, MethodInfo invokeInfo = null)
-            => CreateTrampolineDirect(target, IntPtr.Zero, invokeInfo);
-
-        public static unsafe DynamicMethod CreateTrampoline(this MethodBase target, MethodInfo invokeInfo = null) {
-            void* p = GetMethodStart(target);
-            List<IntPtr> reverts;
-            if (!_Reverts.TryGetValue((long) p, out reverts) ||
-                reverts.Count == 0)
-                return null;
-
-            if (reverts.Count == 1)
-                return CreateOrigTrampoline(target, invokeInfo);
-
-            IntPtr code = reverts[reverts.Count - 1];
-            return CreateTrampolineDirect(target, code, invokeInfo);
+        public static unsafe DynamicMethod CreateOrigTrampoline(this MethodBase target, MethodInfo invokeInfo = null) {
+            throw new NotSupportedException();
         }
 
-        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target)
-            => CreateTrampolineDirect(target, IntPtr.Zero);
+        public static unsafe DynamicMethod CreateTrampoline(this MethodBase target, MethodInfo invokeInfo = null) {
+            throw new NotSupportedException();
+        }
+
+        public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target) {
+            throw new NotSupportedException();
+        }
         public static unsafe DynamicMethod CreateTrampolineDirect(MethodBase target, IntPtr code, MethodInfo invokeInfo = null) {
             _CreateToken(target);
 

@@ -30,5 +30,35 @@ namespace MonoMod.RuntimeDetour {
             offs += 8;
         }
 
+        public static DynamicMethod CreateILCopy(this MethodBase method) {
+            MethodBody body = method.GetMethodBody();
+            if (body == null) {
+                throw new InvalidOperationException("P/Invoke methods cannot be copied!");
+            }
+
+            ParameterInfo[] args = method.GetParameters();
+            Type[] argTypes;
+            if (!method.IsStatic) {
+                argTypes = new Type[args.Length + 1];
+                argTypes[0] = method.DeclaringType;
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i + 1] = args[i].ParameterType;
+            } else {
+                argTypes = new Type[args.Length];
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i] = args[i].ParameterType;
+            }
+
+            DynamicMethod dm = new DynamicMethod(
+                $"orig_{method.Name}",
+                (method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
+                method.Module, true
+            );
+
+            dm.GetDynamicILInfo().SetCode(body.GetILAsByteArray(), body.MaxStackSize);
+
+            return dm;
+        }
+
     }
 }

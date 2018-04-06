@@ -17,8 +17,6 @@ namespace MonoMod.RuntimeDetour {
         public static IDetourRuntimePlatform Runtime;
         public static IDetourNativePlatform Native;
 
-        private static LongDictionary<DynamicMethod> Things;
-
         static DetourManager() {
             if (Type.GetType("Mono.Runtime") != null) {
                 Runtime = new DetourRuntimeMonoPlatform();
@@ -34,12 +32,64 @@ namespace MonoMod.RuntimeDetour {
             // TODO: Do Linux, macOS and other systems require protection lifting?
         }
 
-        public static IntPtr GetMethodStart(this MethodBase method)
-            => Runtime.GetMethodStart(method);
-        public static IntPtr GetMethodStart(this Delegate method)
-            => method.Method.GetMethodStart();
-        public static IntPtr GetMethodStart(this Expression method)
-            => (method as MethodCallExpression).Method.GetMethodStart();
+        public static IntPtr GetJITStart(this MethodBase method)
+            => Runtime.GetJITStart(method);
+        public static IntPtr GetJITStart(this Delegate method)
+            => method.Method.GetJITStart();
+        public static IntPtr GetJITStart(this Expression method)
+            => ((MethodCallExpression) method).Method.GetJITStart();
+
+        public static NativeDetourData ToNativeDetourData(IntPtr method, IntPtr target, int size, IntPtr extra)
+            => new NativeDetourData {
+                Method = method,
+                Target = target,
+                Size = size,
+                Extra = extra
+            };
+
+        #region IL emitters
+
+        private readonly static FieldInfo _Native = typeof(DetourManager).GetField("Native");
+        private readonly static MethodInfo _ToNativeDetourData = typeof(DetourManager).GetMethod("ToNativeDetourData");
+        private readonly static MethodInfo _Copy = typeof(IDetourNativePlatform).GetMethod("Copy");
+        private readonly static MethodInfo _Apply = typeof(IDetourNativePlatform).GetMethod("Apply");
+
+        public static void EmitDetourCopy(this ILGenerator il, IntPtr src, IntPtr dst, int size) {
+            // Load NativePlatform instance.
+            il.Emit(OpCodes.Ldsfld, _Native);
+
+            // Fill stack with src, dst, size
+            il.Emit(OpCodes.Ldc_I8, (long) src);
+            il.Emit(OpCodes.Conv_I);
+            il.Emit(OpCodes.Ldc_I8, (long) dst);
+            il.Emit(OpCodes.Conv_I);
+            il.Emit(OpCodes.Ldc_I4, size);
+
+            // Copy.
+            il.Emit(OpCodes.Callvirt, _Copy);
+        }
+
+        public static void EmitDetourApply(this ILGenerator il, NativeDetourData data) {
+            // Load NativePlatform instance.
+            il.Emit(OpCodes.Ldsfld, _Native);
+
+            // Fill stack with data values.
+            il.Emit(OpCodes.Ldc_I8, (long) data.Method);
+            il.Emit(OpCodes.Conv_I);
+            il.Emit(OpCodes.Ldc_I8, (long) data.Target);
+            il.Emit(OpCodes.Conv_I);
+            il.Emit(OpCodes.Ldc_I4, data.Size);
+            il.Emit(OpCodes.Ldc_I8, (long) data.Extra);
+            il.Emit(OpCodes.Conv_I);
+
+            // Put values in stack into NativeDetourData.
+            il.Emit(OpCodes.Call, _ToNativeDetourData);
+
+            // Apply.
+            il.Emit(OpCodes.Callvirt, _Apply);
+        }
+
+        #endregion
 
     }
 }

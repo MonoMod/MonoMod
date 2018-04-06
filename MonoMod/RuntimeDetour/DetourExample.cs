@@ -45,9 +45,9 @@ namespace MonoMod.RuntimeDetour {
             Test();
             Console.WriteLine();
 
-            // Three examples of detouring.
+            // Three examples of using NativeDetour.
             // Note that you can't mix and match those.
-            // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about them!
+            // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
             NativeDetour detourTestMethodA = new NativeDetour(
                 () => default(DetourExample).TestMethod(default(int), default(int)),
                 () => TestMethod_A(default(DetourExample), default(int), default(int))
@@ -66,6 +66,9 @@ namespace MonoMod.RuntimeDetour {
             Console.WriteLine("Detours: A");
             Test();
             Console.WriteLine();
+
+            // Hacky test for trampolines.
+            detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(1, 2);
 
             return;
 

@@ -12,13 +12,13 @@ using MonoMod.InlineRT;
 
 namespace MonoMod.RuntimeDetour {
     public interface IDetourRuntimePlatform {
-        IntPtr GetMethodStart(MethodBase method);
+        IntPtr GetJITStart(MethodBase method);
     }
 
     public abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
-        public IntPtr GetMethodStart(MethodBase method) {
+        public IntPtr GetJITStart(MethodBase method) {
             RuntimeMethodHandle handle = GetMethodHandle(method);
             // "Pin" the method.
             RuntimeHelpers.PrepareMethod(handle);
