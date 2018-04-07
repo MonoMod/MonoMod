@@ -51,13 +51,44 @@ namespace MonoMod.RuntimeDetour {
 
             DynamicMethod dm = new DynamicMethod(
                 $"orig_{method.Name}",
+                // method.Attributes, method.CallingConvention, // DynamicMethod only supports public, static and standard
                 (method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                method.Module, true
+                method.DeclaringType,
+                false
             );
 
-            dm.GetDynamicILInfo().SetCode(body.GetILAsByteArray(), body.MaxStackSize);
+            ILGenerator il = dm.GetILGenerator();
+
+            // TODO: Move away from using Harmony's ILCopying code in MonoMod...
+            List<Label> endLabels = new List<Label>();
+            List<Harmony.ILCopying.ExceptionBlock> endBlocks = new List<Harmony.ILCopying.ExceptionBlock>();
+            Harmony.ILCopying.MethodCopier copier = new Harmony.ILCopying.MethodCopier(method, il);
+            copier.Finalize(endLabels, endBlocks);
+            foreach (Label label in endLabels)
+                il.MarkLabel(label);
+            foreach (Harmony.ILCopying.ExceptionBlock block in endBlocks)
+                Harmony.ILCopying.Emitter.MarkBlockAfter(il, block);
 
             return dm;
+        }
+
+        static OpCodeContainer[] GetOpCodes(byte[] data) {
+            List<OpCodeContainer> opCodes = new List<OpCodeContainer>();
+            foreach (byte opCodeByte in data)
+                opCodes.Add(new OpCodeContainer(opCodeByte));
+            return opCodes.ToArray();
+        }
+
+        class OpCodeContainer {
+            public OpCode? code;
+            byte data;
+
+            public OpCodeContainer(byte opCode) {
+                data = opCode;
+                try {
+                    code = (OpCode) typeof(OpCodes).GetFields().First(t => ((OpCode) (t.GetValue(null))).Value == opCode).GetValue(null);
+                } catch { }
+            }
         }
 
     }

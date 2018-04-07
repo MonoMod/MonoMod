@@ -68,7 +68,8 @@ namespace MonoMod.RuntimeDetour {
             Console.WriteLine();
 
             // Hacky test for trampolines.
-            detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(1, 2);
+            Console.WriteLine("Testing trampoline");
+            detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
 
             return;
 

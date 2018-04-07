@@ -56,6 +56,15 @@
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourExample.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourHelper.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\AccessCache.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\AccessTools.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\ByteBuffer.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\CodeInstruction.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\CodeTranspiler.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\Emitter.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\ILInstruction.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\MethodCopier.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\ILCopying\Traverse.cs" />
     <Compile Include="MonoMod\RuntimeDetour\NativeDetour.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourRuntimePlatforms.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourNativePlatforms.cs" />
@@ -102,6 +111,7 @@
     <Compile Include="MonoMod\Helpers\NET40Shim.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="MonoMod\RuntimeDetour\ILCopying\README.md" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
