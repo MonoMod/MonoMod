@@ -27,6 +27,8 @@ namespace MonoMod.RuntimeDetour {
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void TestVoidMethod(int a, int b) {
             Console.WriteLine($"{a} {b}");
+            if (a > 0)
+                TestVoidMethod(a - 1, b - 1);
         }
 
         public static void Test() {
@@ -68,7 +70,7 @@ namespace MonoMod.RuntimeDetour {
             Console.WriteLine();
 
             // Hacky test for trampolines.
-            Console.WriteLine("Testing trampoline");
+            Console.WriteLine("Testing trampoline, TestVoidMethod(2, 3)");
             detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
 
             return;
