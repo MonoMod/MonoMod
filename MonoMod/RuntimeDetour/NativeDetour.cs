@@ -154,6 +154,11 @@ namespace MonoMod.RuntimeDetour {
 
             // Otherwise, undo the detour, call the method and reapply the detour.
 
+            MethodBase methodCallable = Method;
+            if (methodCallable == null) {
+                methodCallable = _GenerateNativeProxy(signature);
+            }
+
             Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
 
             ParameterInfo[] args = signature.GetParameters();
@@ -181,16 +186,16 @@ namespace MonoMod.RuntimeDetour {
 
             il.EmitDetourCopy(BackupNative, Data.Method, Data.Size);
 
-            // TODO: [RuntimeDetour] Use specialized Ldarg.* if possible; What about ref types?
+            // TODO: Use specialized Ldarg.* if possible; What about ref types?
             for (int i = 0; i < argTypes.Length; i++)
                 il.Emit(OpCodes.Ldarg, i);
 
             // TODO: Wrap call in try, reapply the detour in finalize.
 
-            if (Method is MethodInfo)
-                il.Emit(OpCodes.Call, (MethodInfo) Method);
-            else if (Method is ConstructorInfo)
-                il.Emit(OpCodes.Call, (ConstructorInfo) Method);
+            if (methodCallable is MethodInfo)
+                il.Emit(OpCodes.Call, (MethodInfo) methodCallable);
+            else if (methodCallable is ConstructorInfo)
+                il.Emit(OpCodes.Call, (ConstructorInfo) methodCallable);
 
             il.EmitDetourApply(Data);
 
@@ -216,6 +221,42 @@ namespace MonoMod.RuntimeDetour {
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
             return (T) (object) GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T));
+        }
+
+        private DynamicMethod _GenerateNativeProxy(MethodBase signature) {
+            // Generate a method to call the native function.
+            // Effectively a "proxy" into the native space.
+            // This is invoked by the trampoline.
+
+            Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
+
+            ParameterInfo[] args = signature.GetParameters();
+            Type[] argTypes = new Type[args.Length];
+            for (int i = 0; i < args.Length; i++)
+                argTypes[i] = args[i].ParameterType;
+
+            DynamicMethod dm = new DynamicMethod(
+                $"native_{((long) Data.Method).ToString("X16")}_{GetHashCode()}",
+                returnType, argTypes,
+                true
+            );
+            ILGenerator il = dm.GetILGenerator();
+
+            for (int i = 128; i > -1; --i)
+                il.Emit(OpCodes.Nop);
+            if (returnType != typeof(void)) {
+                il.Emit(OpCodes.Ldnull);
+                if (returnType.IsValueType)
+                    il.Emit(OpCodes.Box, returnType);
+            }
+            il.Emit(OpCodes.Ret);
+
+            // Detour it.
+            NativeDetourData detour = DetourManager.Native.Create(dm.GetJITStart(), Data.Method);
+            DetourManager.Native.Apply(detour);
+            DetourManager.Native.Free(detour);
+
+            return dm;
         }
 
     }
