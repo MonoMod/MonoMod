@@ -136,24 +136,27 @@ namespace MonoMod.RuntimeDetour {
             DetourManager.Native.Free(Data);
         }
 
-        public T GenerateTrampoline<T>() where T : class {
+        public DynamicMethod GenerateTrampoline(MethodBase signature = null) {
             if (IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
-            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
-                throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
             if (BackupMethod != null) {
                 // If we're detouring an IL method and have an IL copy, invoke the IL copy.
-                return BackupMethod.CreateDelegate(typeof(T)) as T;
+                // Note that this ignores the passed signature.
+                return BackupMethod;
+            }
+
+            if (signature == null)
+                signature = BackupMethod;
+            if (signature == null) {
+                throw new ArgumentNullException("A signature must be given if the NativeDetour doesn't hold a reference to a managed method.");
             }
 
             // Otherwise, undo the detour, call the method and reapply the detour.
 
-            MethodInfo delegateInvoke = typeof(T).GetMethod("Invoke");
+            Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
 
-            Type returnType = delegateInvoke?.ReturnType;
-
-            ParameterInfo[] args = delegateInvoke.GetParameters();
+            ParameterInfo[] args = signature.GetParameters();
             Type[] argTypes = new Type[args.Length];
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
@@ -182,7 +185,26 @@ namespace MonoMod.RuntimeDetour {
 
             il.Emit(OpCodes.Ret);
 
-            return dm.CreateDelegate(typeof(T)) as T;
+            return dm;
+        }
+
+        public T GenerateTrampoline<T>() where T : class {
+            if (IsFree)
+                throw new InvalidOperationException("Free() has been called on this detour.");
+            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
+                throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
+
+            return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
+        }
+
+        // Used in RuntimeDetour legacy shim.
+        internal T _GenerateTrampoline<T>() {
+            if (IsFree)
+                throw new InvalidOperationException("Free() has been called on this detour.");
+            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
+                throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
+
+            return (T) (object) GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T));
         }
 
     }
