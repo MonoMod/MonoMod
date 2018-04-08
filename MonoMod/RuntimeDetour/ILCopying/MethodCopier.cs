@@ -213,9 +213,9 @@ namespace Harmony.ILCopying
 			}
 		}
 
-        // use parsed IL codes and emit them to a generator
-        //
-        public void FinalizeILCodes(List<Label> endLabels, List<ExceptionBlock> endBlocks)
+		// use parsed IL codes and emit them to a generator
+		//
+		public void FinalizeILCodes(List<Label> endLabels, List<ExceptionBlock> endBlocks)
 		{
 			if (generator == null) return;
 
@@ -257,13 +257,16 @@ namespace Harmony.ILCopying
 				}
 			}
 
-            // pass2 - filter through all processors
-            //
-            var codeTranspiler = new CodeTranspiler(ilInstructions);
-            var codeInstructions = codeTranspiler.GetResult(generator, method);
+			// pass2 - filter through all processors
+			//
+			var codeTranspiler = new CodeTranspiler(ilInstructions);
+            // Not in MonoMod.
+			var codeInstructions = codeTranspiler.GetResult(generator, method);
 
             // pass3 - remove RET if it appears at the end
-            while (true)
+            // Not in MonoMod.
+            /*
+			while (true)
 			{
 				var lastInstruction = codeInstructions.LastOrDefault();
 				if (lastInstruction == null || lastInstruction.opcode != OpCodes.Ret) break;
@@ -273,18 +276,19 @@ namespace Harmony.ILCopying
 
 				var l = codeInstructions.ToList();
 				l.RemoveAt(l.Count - 1);
-                codeInstructions = l;
+				codeInstructions = l;
 			}
+            */
 
-			// pass4 - mark labels and exceptions and emit codes
-			//
-			var instructions = codeInstructions.ToArray();
+            // pass4 - mark labels and exceptions and emit codes
+            //
+            var instructions = codeInstructions.ToArray();
 			var idx = 0;
-            foreach (var codeInstruction in instructions)
+			foreach (var codeInstruction in instructions)
 			{
-                // mark all labels
+				// mark all labels
                 foreach (var label in codeInstruction.labels)
-                    generator.MarkLabel(label);
+				    generator.MarkLabel(label);
 
                 // start all exception blocks
                 // TODO: we ignore the resulting label because we have no way to use it
@@ -299,6 +303,8 @@ namespace Harmony.ILCopying
 				var operand = codeInstruction.operand;
 
 				// replace RET with a jump to the end (outside this code)
+                // Not in MonoMod.
+                /*
 				if (code == OpCodes.Ret)
 				{
 					var endLabel = generator.DefineLabel();
@@ -306,6 +312,7 @@ namespace Harmony.ILCopying
 					operand = endLabel;
 					endLabels.Add(endLabel);
 				}
+                */
 
 				var emitCode = true;
 
@@ -666,7 +673,7 @@ namespace Harmony.ILCopying
 				var types = pinfos.Select(p => p.ParameterType).ToArray();
 				if (types[0] != typeof(OpCode)) continue;
 				emitMethods[types[1]] = method;
-			};
+			}
 		}
 
 		// a custom this parameter

@@ -26,9 +26,10 @@ namespace MonoMod.RuntimeDetour {
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void TestVoidMethod(int a, int b) {
-            Console.WriteLine($"{a} {b}");
-            if (a > 0)
+            Console.WriteLine($"{a} {b} {TestStaticMethod(a, b)}");
+            if (a > 0) {
                 TestVoidMethod(a - 1, b - 1);
+            }
         }
 
         public static void Test() {
