@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\IDetour.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourExample.cs" />
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\AccessCache.cs" />
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\AccessTools.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\ILInstruction.cs" />
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\MethodCopier.cs" />
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\Traverse.cs" />
+    <Compile Include="MonoMod\RuntimeDetour\Detour.cs" />
     <Compile Include="MonoMod\RuntimeDetour\NativeDetour.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourRuntimePlatforms.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourNativePlatforms.cs" />

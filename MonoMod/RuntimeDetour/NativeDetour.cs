@@ -12,6 +12,9 @@ using MonoMod.InlineRT;
 using System.Linq.Expressions;
 
 namespace MonoMod.RuntimeDetour {
+    /// <summary>
+    /// The data forming a "raw" native detour, created and consumed by DetourManager.Native.
+    /// </summary>
     public struct NativeDetourData {
         /// <summary>
         /// The method to detour from. Set when the structure is created by the IDetourNativePlatform.
@@ -28,12 +31,20 @@ namespace MonoMod.RuntimeDetour {
         public int Size;
 
         /// <summary>
-        /// Platform-specific data.
+        /// DetourManager.Native-specific data.
         /// </summary>
         public IntPtr Extra;
     }
 
-    public class NativeDetour {
+    /// <summary>
+    /// A "raw" native detour, acting as a wrapper around NativeDetourData with a few helpers.
+    /// Only one NativeDetour for a method to detour from can exist at any given time. NativeDetours cannot be layered.
+    /// If you don't need the trampoline generator or any of the management helpers, use DetourManager.Native directly.
+    /// Unless you're writing your own detour manager or need to detour native functions, it's better to create instances of Detour instead.
+    /// </summary>
+    public class NativeDetour : IDetour {
+
+        public bool IsValid => !IsFree;
 
         public readonly NativeDetourData Data;
         public readonly MethodBase Method;
@@ -47,8 +58,13 @@ namespace MonoMod.RuntimeDetour {
             Data = DetourManager.Native.Create(from, to);
             Method = method;
 
+            // Backing up the original function only needs to happen once.
             if (Method != null && Method.GetMethodBody() != null)
                 BackupMethod = method.CreateILCopy();
+
+            // BackupNative is required even if BackupMethod is present to undo the detour.
+            BackupNative = DetourManager.Native.MemAlloc(Data.Size);
+            DetourManager.Native.Copy(Data.Method, BackupNative, Data.Size);
 
             Apply();
         }
@@ -57,14 +73,14 @@ namespace MonoMod.RuntimeDetour {
             : this(null, from, to) {
         }
         public NativeDetour(MethodBase from, IntPtr to)
-            : this(from, from.GetJITStart(), to) {
+            : this(from, from.GetExecutableStart(), to) {
         }
 
         public NativeDetour(IntPtr from, MethodBase to)
-            : this(from, to.GetJITStart()) {
+            : this(from, to.GetExecutableStart()) {
         }
         public NativeDetour(MethodBase from, MethodBase to)
-            : this(from, to.GetJITStart()) {
+            : this(from, to.GetExecutableStart()) {
         }
 
         public NativeDetour(Delegate from, IntPtr to)
@@ -98,16 +114,11 @@ namespace MonoMod.RuntimeDetour {
         }
 
         /// <summary>
-        /// Apply the native detour, creating a backup. This automatically happens when creating the RawDetour.
+        /// Apply the native detour. This automatically happens when creating an instance.
         /// </summary>
         public void Apply() {
             if (IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
-
-            if (BackupMethod == null && BackupNative == IntPtr.Zero) {
-                BackupNative = DetourManager.Native.MemAlloc(Data.Size);
-                DetourManager.Native.Copy(Data.Method, BackupNative, Data.Size);
-            }
 
             DetourManager.Native.Apply(Data);
         }
@@ -123,16 +134,14 @@ namespace MonoMod.RuntimeDetour {
         }
 
         /// <summary>
-        /// Free the detour's data without undoing it. This makes any further operations on this Detour invalid.
+        /// Free the detour's data without undoing it. This makes any further operations on this detour invalid.
         /// </summary>
         public void Free() {
             if (IsFree)
-                return;
+                throw new InvalidOperationException("Free() has been called on this detour.");
             IsFree = true;
 
-            if (BackupNative != IntPtr.Zero) {
-                DetourManager.Native.MemFree(BackupNative);
-            }
+            DetourManager.Native.MemFree(BackupNative);
             DetourManager.Native.Free(Data);
         }
 
@@ -161,7 +170,7 @@ namespace MonoMod.RuntimeDetour {
 
             MethodBase methodCallable = Method;
             if (methodCallable == null) {
-                methodCallable = _GenerateNativeProxy(signature);
+                methodCallable = DetourManager.GenerateNativeProxy(Data.Method, signature);
             }
 
             Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
@@ -201,6 +210,8 @@ namespace MonoMod.RuntimeDetour {
                 il.Emit(OpCodes.Call, (MethodInfo) methodCallable);
             else if (methodCallable is ConstructorInfo)
                 il.Emit(OpCodes.Call, (ConstructorInfo) methodCallable);
+            else
+                throw new NotSupportedException($"Method type {methodCallable.GetType().FullName} not supported.");
 
             il.BeginFinallyBlock();
 
@@ -227,53 +238,6 @@ namespace MonoMod.RuntimeDetour {
 
             return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
         }
-
-        // Used in RuntimeDetour legacy shim.
-        internal T _GenerateTrampoline<T>() {
-            if (IsFree)
-                throw new InvalidOperationException("Free() has been called on this detour.");
-            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
-                throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
-
-            return (T) (object) GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T));
-        }
-
-        private DynamicMethod _GenerateNativeProxy(MethodBase signature) {
-            // Generate a method to call the native function.
-            // Effectively a "proxy" into the native space.
-            // This is invoked by the trampoline.
-
-            Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
-
-            ParameterInfo[] args = signature.GetParameters();
-            Type[] argTypes = new Type[args.Length];
-            for (int i = 0; i < args.Length; i++)
-                argTypes[i] = args[i].ParameterType;
-
-            DynamicMethod dm = new DynamicMethod(
-                $"native_{((long) Data.Method).ToString("X16")}_{GetHashCode()}",
-                returnType, argTypes,
-                true
-            );
-            ILGenerator il = dm.GetILGenerator();
-
-            for (int i = 128; i > -1; --i)
-                il.Emit(OpCodes.Nop);
-            if (returnType != typeof(void)) {
-                il.Emit(OpCodes.Ldnull);
-                if (returnType.IsValueType)
-                    il.Emit(OpCodes.Box, returnType);
-            }
-            il.Emit(OpCodes.Ret);
-
-            // Detour it.
-            NativeDetourData detour = DetourManager.Native.Create(dm.GetJITStart(), Data.Method);
-            DetourManager.Native.Apply(detour);
-            DetourManager.Native.Free(detour);
-
-            return dm;
-        }
-
     }
 
     public class NativeDetour<T> : NativeDetour  {
@@ -296,6 +260,5 @@ namespace MonoMod.RuntimeDetour {
         public NativeDetour(T from, T to)
             : base(from as Delegate, to as Delegate) {
         }
-
     }
 }

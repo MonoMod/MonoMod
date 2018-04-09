@@ -34,10 +34,10 @@ namespace MonoMod.Detour {
             throw new NotSupportedException("Tokens no longer supported.");
         }
         public static unsafe void* GetMethodStart(MethodBase method) {
-            return method.GetJITStart().ToPointer();
+            return method.GetExecutableStart().ToPointer();
         }
         public static unsafe void* GetDelegateStart(Delegate d) {
-            return d.Method.GetJITStart().ToPointer();
+            return d.Method.GetExecutableStart().ToPointer();
         }
 
         public static long GetToken(MethodBase method) {
@@ -111,8 +111,12 @@ namespace MonoMod.Detour {
             return true;
         }
 
+        // NativeDetour.GenerateTrampoline restricts T : class
+        private static T _GenerateTrampoline<T>(this NativeDetour detour)
+            => (T) (object) detour.GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T));
+
         public static T GetOrigTrampoline<T>(this MethodBase target) {
-            Stack<NativeDetour> detours = _GetDetours((long) target.GetJITStart());
+            Stack<NativeDetour> detours = _GetDetours((long) target.GetExecutableStart());
             if (detours.Count == 0)
                 return default(T);
             // Last() returns the first element in a Stack.
@@ -120,7 +124,7 @@ namespace MonoMod.Detour {
         }
 
         public static T GetTrampoline<T>(this MethodBase target) {
-            Stack<NativeDetour> detours = _GetDetours((long) target.GetJITStart());
+            Stack<NativeDetour> detours = _GetDetours((long) target.GetExecutableStart());
             if (detours.Count == 0)
                 return default(T);
             return detours.Peek()._GenerateTrampoline<T>();
@@ -131,7 +135,7 @@ namespace MonoMod.Detour {
         }
 
         public static T CreateTrampolineDirect<T>(MethodBase target) {
-            Stack<NativeDetour> detours = _GetDetours((long) target.GetJITStart());
+            Stack<NativeDetour> detours = _GetDetours((long) target.GetExecutableStart());
             if (detours.Count == 0)
                 return default(T);
             return detours.Peek()._GenerateTrampoline<T>();
@@ -141,7 +145,7 @@ namespace MonoMod.Detour {
         }
 
         public static DynamicMethod CreateOrigTrampoline(this MethodBase target, MethodInfo invokeInfo = null) {
-            Stack<NativeDetour> detours = _GetDetours((long) target.GetJITStart());
+            Stack<NativeDetour> detours = _GetDetours((long) target.GetExecutableStart());
             if (detours.Count == 0)
                 return null;
             // Last() returns the first element in a Stack.
@@ -149,7 +153,7 @@ namespace MonoMod.Detour {
         }
 
         public static DynamicMethod CreateTrampoline(this MethodBase target, MethodInfo invokeInfo = null) {
-            Stack<NativeDetour> detours = _GetDetours((long) target.GetJITStart());
+            Stack<NativeDetour> detours = _GetDetours((long) target.GetExecutableStart());
             if (detours.Count == 0)
                 return null;
             return detours.Peek().GenerateTrampoline(invokeInfo);
