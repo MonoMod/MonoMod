@@ -136,6 +136,11 @@ namespace MonoMod.RuntimeDetour {
             DetourManager.Native.Free(Data);
         }
 
+        /// <summary>
+        /// Generate a new DynamicMethod with which you invoke the previous state.
+        /// If the NativeDetour holds a reference to a managed method, a copy of the original method is returned.
+        /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
+        /// </summary>
         public DynamicMethod GenerateTrampoline(MethodBase signature = null) {
             if (IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
@@ -186,24 +191,34 @@ namespace MonoMod.RuntimeDetour {
 
             il.EmitDetourCopy(BackupNative, Data.Method, Data.Size);
 
+            Label blockTry = il.BeginExceptionBlock();
+
             // TODO: Use specialized Ldarg.* if possible; What about ref types?
             for (int i = 0; i < argTypes.Length; i++)
                 il.Emit(OpCodes.Ldarg, i);
-
-            // TODO: Wrap call in try, reapply the detour in finalize.
 
             if (methodCallable is MethodInfo)
                 il.Emit(OpCodes.Call, (MethodInfo) methodCallable);
             else if (methodCallable is ConstructorInfo)
                 il.Emit(OpCodes.Call, (ConstructorInfo) methodCallable);
 
+            il.BeginFinallyBlock();
+
+            // Reapply the detour even if the method threw an exception.
             il.EmitDetourApply(Data);
+
+            il.EndExceptionBlock();
 
             il.Emit(OpCodes.Ret);
 
             return dm;
         }
 
+        /// <summary>
+        /// Generate a new DynamicMethod with which you invoke the previous state.
+        /// If the NativeDetour holds a reference to a managed method, a copy of the original method is returned.
+        /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
+        /// </summary>
         public T GenerateTrampoline<T>() where T : class {
             if (IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");

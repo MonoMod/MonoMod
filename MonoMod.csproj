@@ -55,7 +55,6 @@
     <Compile Include="MonoMod\DebugIL\DebugILGeneratorExt.cs" />
     <Compile Include="MonoMod\DebugIL\DebugILGenerator.cs" />
     <Compile Include="MonoMod\RuntimeDetour\DetourExample.cs" />
-    <Compile Include="MonoMod\RuntimeDetour\DetourHelper.cs" />
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\AccessCache.cs" />
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\AccessTools.cs" />
     <Compile Include="MonoMod\RuntimeDetour\ILCopying\ByteBuffer.cs" />
