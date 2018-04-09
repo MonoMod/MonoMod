@@ -12,14 +12,14 @@ using MonoMod.InlineRT;
 
 namespace MonoMod.RuntimeDetour {
     public interface IDetourRuntimePlatform {
-        IntPtr GetExecutableStart(MethodBase method);
+        IntPtr GetNativeStart(MethodBase method);
         DynamicMethod CreateCopy(MethodBase method);
     }
 
     public abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
-        public IntPtr GetExecutableStart(MethodBase method) {
+        public IntPtr GetNativeStart(MethodBase method) {
             RuntimeMethodHandle handle = GetMethodHandle(method);
             // "Pin" the method.
             RuntimeHelpers.PrepareMethod(handle);

@@ -19,7 +19,7 @@ namespace MonoMod.RuntimeDetour {
         void Undo();
         void Free();
 
-        DynamicMethod GenerateTrampoline(MethodBase signature = null);
+        MethodBase GenerateTrampoline(MethodBase signature = null);
         T GenerateTrampoline<T>() where T : class;
     }
 }

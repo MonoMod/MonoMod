@@ -20,6 +20,7 @@ namespace MonoMod.RuntimeDetour {
     public class Detour : IDetour {
 
         private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
+        private static Dictionary<MethodBase, DynamicMethod> _BackupMethods = new Dictionary<MethodBase, DynamicMethod>();
 
         public bool IsValid => _DetourMap[Method].Contains(this);
 
@@ -29,7 +30,6 @@ namespace MonoMod.RuntimeDetour {
             }
             set {
                 List<Detour> detours = _DetourMap[Method];
-
                 lock (detours) {
                     int valueOld = detours.IndexOf(this);
                     if (valueOld == -1)
@@ -50,23 +50,60 @@ namespace MonoMod.RuntimeDetour {
 
                     Detour top = detours[detours.Count - 1];
                     if (top != this)
-                        TopDetourUndo();
-                    top.TopDetourApply();
+                        _TopUndo();
+                    top._TopApply();
+                    _UpdateChainedTrampolines(Method);
                 }
             }
         }
 
-        public readonly long ID;
-
         public readonly MethodBase Method;
         public readonly MethodBase Target;
 
-        private NativeDetour TopDetour;
+        // The active NativeDetour. Only present if the current Detour is on the top of the Detour chain.
+        private NativeDetour _TopDetour;
+
+        // Called by the generated trampolines, updated when the Detour chain changes.
+        private DynamicMethod _ChainedTrampoline;
 
         public Detour(MethodBase from, MethodBase to) {
-            ID = BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0);
             Method = from;
             Target = to;
+
+            if (!_BackupMethods.ContainsKey(Method))
+                _BackupMethods[Method] = Method.CreateILCopy();
+
+            // Generate a "chained trampoline" DynamicMethod.
+            ParameterInfo[] args = Method.GetParameters();
+            Type[] argTypes;
+            if (!Method.IsStatic) {
+                argTypes = new Type[args.Length + 1];
+                argTypes[0] = Method.DeclaringType;
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i + 1] = args[i].ParameterType;
+            } else {
+                argTypes = new Type[args.Length];
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i] = args[i].ParameterType;
+            }
+
+            DynamicMethod dm = new DynamicMethod(
+                $"chain_{Method.Name}_{GetHashCode()}",
+                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
+                Method.DeclaringType,
+                false
+            );
+
+            ILGenerator il = dm.GetILGenerator();
+
+            if (dm.ReturnType != typeof(void)) {
+                il.Emit(OpCodes.Ldnull);
+                if (dm.ReturnType.IsValueType)
+                    il.Emit(OpCodes.Box, dm.ReturnType);
+            }
+            il.Emit(OpCodes.Ret);
+
+            _ChainedTrampoline = dm;
 
             // Add the detour to the detour map.
             List<Detour> detours;
@@ -75,9 +112,29 @@ namespace MonoMod.RuntimeDetour {
                     _DetourMap[Method] = detours = new List<Detour>();
             }
             lock (detours) {
+                // New Detour instances are always on the top.
                 if (detours.Count > 0)
-                    detours[detours.Count - 1].TopDetourUndo();
-                TopDetourApply();
+                    detours[detours.Count - 1]._TopUndo();
+                _TopApply();
+
+                // Do the initial "chained trampoline" setup.
+                NativeDetourData link;
+                if (detours.Count > 0) {
+                    // If a previous Detour exists in the chain, detour our "chained trampoline" to it,
+                    link = DetourManager.Native.Create(
+                        _ChainedTrampoline.GetNativeStart(),
+                        detours[detours.Count - 1].Target.GetNativeStart()
+                    );
+                } else {
+                    // If this is the first Detour in the chain, detour our "chained trampoline" to the original method.
+                    link = DetourManager.Native.Create(
+                        _ChainedTrampoline.GetNativeStart(),
+                        _BackupMethods[Method].GetNativeStart()
+                    );
+                }
+                DetourManager.Native.Apply(link);
+                DetourManager.Native.Free(link);
+
                 detours.Add(this);
             }
         }
@@ -125,10 +182,13 @@ namespace MonoMod.RuntimeDetour {
                 throw new InvalidOperationException("This detour has been undone.");
 
             List<Detour> detours = _DetourMap[Method];
-            detours.Remove(this);
-            TopDetourUndo();
-            if (detours.Count > 0)
-                detours[detours.Count - 1].TopDetourApply();
+            lock (detours) {
+                detours.Remove(this);
+                _TopUndo();
+                if (detours.Count > 0)
+                    detours[detours.Count - 1]._TopApply();
+                _UpdateChainedTrampolines(Method);
+            }
         }
 
         /// <summary>
@@ -140,27 +200,96 @@ namespace MonoMod.RuntimeDetour {
             Undo();
         }
 
-        public DynamicMethod GenerateTrampoline(MethodBase signature = null) {
-            throw new NotImplementedException();
+        /// <summary>
+        /// Generate a new DynamicMethod with which you can invoke the previous state.
+        /// </summary>
+        public MethodBase GenerateTrampoline(MethodBase signature = null) {
+            if (signature == null)
+                signature = Target;
+
+            // Note: It'd be more performant to skip this step and just return the "chained trampoline."
+            // Unfortunately, it'd allow a third party to break the Detour trampoline chain, among other things.
+            // Instead, we create and return a DynamicMethod calling the "chained trampoline."
+
+            Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
+
+            ParameterInfo[] args = signature.GetParameters();
+            Type[] argTypes = new Type[args.Length];
+            for (int i = 0; i < args.Length; i++)
+                argTypes[i] = args[i].ParameterType;
+
+            DynamicMethod dm;
+            string name = $"trampoline_{Method.Name}_{GetHashCode()}";
+            dm = new DynamicMethod(
+                name,
+                returnType, argTypes,
+                Method.DeclaringType,
+                true
+            );
+
+            ILGenerator il = dm.GetILGenerator();
+
+            // TODO: Use specialized Ldarg.* if possible; What about ref types?
+            for (int i = 0; i < argTypes.Length; i++)
+                il.Emit(OpCodes.Ldarg, i);
+            il.Emit(OpCodes.Call, _ChainedTrampoline);
+            il.Emit(OpCodes.Ret);
+
+            return dm;
         }
 
+        /// <summary>
+        /// Generate a new DynamicMethod with which you can invoke the previous state.
+        /// </summary>
         public T GenerateTrampoline<T>() where T : class {
-            throw new NotImplementedException();
+            if (!IsValid)
+                throw new InvalidOperationException("This detour has been undone.");
+            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
+                throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
+
+            return ((DynamicMethod) GenerateTrampoline(typeof(T).GetMethod("Invoke"))).CreateDelegate(typeof(T)) as T;
         }
 
-        private void TopDetourUndo() {
-            if (TopDetour == null)
+        private void _TopUndo() {
+            if (_TopDetour == null)
                 return;
 
-            TopDetour.Undo();
-            TopDetour.Free();
-            TopDetour = null;
+            _TopDetour.Undo();
+            _TopDetour.Free();
+            _TopDetour = null;
         }
-        private void TopDetourApply() {
-            if (TopDetour != null)
+        private void _TopApply() {
+            if (_TopDetour != null)
                 return;
 
-            TopDetour = new NativeDetour(Method, Target);
+            // GetNativeStart to prevent managed backups.
+            _TopDetour = new NativeDetour(Method.GetNativeStart(), Target.GetNativeStart());
+        }
+
+        private static void _UpdateChainedTrampolines(MethodBase method) {
+            List<Detour> detours = _DetourMap[method];
+            lock (detours) {
+                if (detours.Count == 0)
+                    return;
+
+                NativeDetourData link;
+
+                for (int i = 1; i < detours.Count; i++) {
+                    link = DetourManager.Native.Create(
+                        detours[i]._ChainedTrampoline.GetNativeStart(),
+                        detours[i - 1].Target.GetNativeStart()
+                    );
+                    DetourManager.Native.Apply(link);
+                    DetourManager.Native.Free(link);
+                }
+
+                link = DetourManager.Native.Create(
+                    detours[0]._ChainedTrampoline.GetNativeStart(),
+                    _BackupMethods[method].GetNativeStart()
+                );
+                DetourManager.Native.Apply(link);
+                DetourManager.Native.Free(link);
+            }
         }
     }
 

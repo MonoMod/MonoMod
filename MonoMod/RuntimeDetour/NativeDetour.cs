@@ -44,15 +44,15 @@ namespace MonoMod.RuntimeDetour {
     /// </summary>
     public class NativeDetour : IDetour {
 
-        public bool IsValid => !IsFree;
+        public bool IsValid => !_IsFree;
 
         public readonly NativeDetourData Data;
         public readonly MethodBase Method;
 
-        private DynamicMethod BackupMethod;
-        private IntPtr BackupNative;
+        private DynamicMethod _BackupMethod;
+        private IntPtr _BackupNative;
 
-        private bool IsFree;
+        private bool _IsFree;
 
         public NativeDetour(MethodBase method, IntPtr from, IntPtr to) {
             Data = DetourManager.Native.Create(from, to);
@@ -60,11 +60,11 @@ namespace MonoMod.RuntimeDetour {
 
             // Backing up the original function only needs to happen once.
             if (Method != null && Method.GetMethodBody() != null)
-                BackupMethod = method.CreateILCopy();
+                _BackupMethod = method.CreateILCopy();
 
             // BackupNative is required even if BackupMethod is present to undo the detour.
-            BackupNative = DetourManager.Native.MemAlloc(Data.Size);
-            DetourManager.Native.Copy(Data.Method, BackupNative, Data.Size);
+            _BackupNative = DetourManager.Native.MemAlloc(Data.Size);
+            DetourManager.Native.Copy(Data.Method, _BackupNative, Data.Size);
 
             Apply();
         }
@@ -73,14 +73,14 @@ namespace MonoMod.RuntimeDetour {
             : this(null, from, to) {
         }
         public NativeDetour(MethodBase from, IntPtr to)
-            : this(from, from.GetExecutableStart(), to) {
+            : this(from, from.GetNativeStart(), to) {
         }
 
         public NativeDetour(IntPtr from, MethodBase to)
-            : this(from, to.GetExecutableStart()) {
+            : this(from, to.GetNativeStart()) {
         }
         public NativeDetour(MethodBase from, MethodBase to)
-            : this(from, to.GetExecutableStart()) {
+            : this(from, to.GetNativeStart()) {
         }
 
         public NativeDetour(Delegate from, IntPtr to)
@@ -117,7 +117,7 @@ namespace MonoMod.RuntimeDetour {
         /// Apply the native detour. This automatically happens when creating an instance.
         /// </summary>
         public void Apply() {
-            if (IsFree)
+            if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
             DetourManager.Native.Apply(Data);
@@ -127,44 +127,43 @@ namespace MonoMod.RuntimeDetour {
         /// Undo the native detour. Doesn't free the detour native data, allowing you to reapply it later.
         /// </summary>
         public void Undo() {
-            if (IsFree)
+            if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
-            DetourManager.Native.Copy(BackupNative, Data.Method, Data.Size);
+            DetourManager.Native.Copy(_BackupNative, Data.Method, Data.Size);
         }
 
         /// <summary>
         /// Free the detour's data without undoing it. This makes any further operations on this detour invalid.
         /// </summary>
         public void Free() {
-            if (IsFree)
+            if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
-            IsFree = true;
+            _IsFree = true;
 
-            DetourManager.Native.MemFree(BackupNative);
+            DetourManager.Native.MemFree(_BackupNative);
             DetourManager.Native.Free(Data);
         }
 
         /// <summary>
-        /// Generate a new DynamicMethod with which you invoke the previous state.
+        /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// If the NativeDetour holds a reference to a managed method, a copy of the original method is returned.
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
         /// </summary>
-        public DynamicMethod GenerateTrampoline(MethodBase signature = null) {
-            if (IsFree)
+        public MethodBase GenerateTrampoline(MethodBase signature = null) {
+            if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
-            if (BackupMethod != null) {
+            if (_BackupMethod != null) {
                 // If we're detouring an IL method and have an IL copy, invoke the IL copy.
                 // Note that this ignores the passed signature.
-                return BackupMethod;
+                return _BackupMethod;
             }
 
             if (signature == null)
-                signature = BackupMethod;
-            if (signature == null) {
+                signature = _BackupMethod;
+            if (signature == null)
                 throw new ArgumentNullException("A signature must be given if the NativeDetour doesn't hold a reference to a managed method.");
-            }
 
             // Otherwise, undo the detour, call the method and reapply the detour.
 
@@ -198,7 +197,7 @@ namespace MonoMod.RuntimeDetour {
             }
             ILGenerator il = dm.GetILGenerator();
 
-            il.EmitDetourCopy(BackupNative, Data.Method, Data.Size);
+            il.EmitDetourCopy(_BackupNative, Data.Method, Data.Size);
 
             Label blockTry = il.BeginExceptionBlock();
 
@@ -226,17 +225,17 @@ namespace MonoMod.RuntimeDetour {
         }
 
         /// <summary>
-        /// Generate a new DynamicMethod with which you invoke the previous state.
+        /// Generate a new delegate with which you can invoke the previous state.
         /// If the NativeDetour holds a reference to a managed method, a copy of the original method is returned.
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
         /// </summary>
         public T GenerateTrampoline<T>() where T : class {
-            if (IsFree)
+            if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
             if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
-            return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
+            return ((DynamicMethod) GenerateTrampoline(typeof(T).GetMethod("Invoke"))).CreateDelegate(typeof(T)) as T;
         }
     }
 

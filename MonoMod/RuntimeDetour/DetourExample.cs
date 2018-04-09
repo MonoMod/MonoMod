@@ -69,6 +69,8 @@ namespace MonoMod.RuntimeDetour {
             );
             Console.WriteLine("Detours: A");
             Test();
+            Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
+            detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
             Console.WriteLine();
 
             IDetour detourTestMethodB = new Detour(
@@ -85,6 +87,9 @@ namespace MonoMod.RuntimeDetour {
             );
             Console.WriteLine("Detours: A + B");
             Test();
+            Console.WriteLine("Testing trampoline, should invoke hook A, TestVoidMethod(2, 3)");
+            Action<int, int> trampolineTestVoidMethodB = detourTestVoidMethodB.GenerateTrampoline<Action<int, int>>();
+            trampolineTestVoidMethodB(2, 3);
             Console.WriteLine();
 
             detourTestMethodA.Undo();
@@ -92,6 +97,8 @@ namespace MonoMod.RuntimeDetour {
             detourTestVoidMethodA.Undo();
             Console.WriteLine("Detours: B");
             Test();
+            Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
+            trampolineTestVoidMethodB(2, 3);
             Console.WriteLine();
 
             detourTestMethodB.Undo();

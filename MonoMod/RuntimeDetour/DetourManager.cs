@@ -71,12 +71,12 @@ namespace MonoMod.RuntimeDetour {
         /// Get a pointer to the start of the executable section of the method.
         /// Normally, this is the JITed "native" function.
         /// </summary>
-        public static IntPtr GetExecutableStart(this MethodBase method)
-            => Runtime.GetExecutableStart(method);
-        public static IntPtr GetExecutableStart(this Delegate method)
-            => method.Method.GetExecutableStart();
-        public static IntPtr GetExecutableStart(this Expression method)
-            => ((MethodCallExpression) method).Method.GetExecutableStart();
+        public static IntPtr GetNativeStart(this MethodBase method)
+            => Runtime.GetNativeStart(method);
+        public static IntPtr GetNativeStart(this Delegate method)
+            => method.Method.GetNativeStart();
+        public static IntPtr GetNativeStart(this Expression method)
+            => ((MethodCallExpression) method).Method.GetNativeStart();
 
         public static DynamicMethod CreateILCopy(this MethodBase method)
             => Runtime.CreateCopy(method);
@@ -114,7 +114,7 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Ret);
 
             // Detour the new DynamicMethod into the target.
-            NativeDetourData detour = Native.Create(dm.GetExecutableStart(), target);
+            NativeDetourData detour = Native.Create(dm.GetNativeStart(), target);
             Native.Apply(detour);
             Native.Free(detour);
 
