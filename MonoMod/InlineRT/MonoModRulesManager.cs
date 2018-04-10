@@ -64,8 +64,8 @@ namespace MonoMod.InlineRT {
 
         public static MonoModder GetModder(string asmName) {
             string idString = asmName;
-            idString = idString.Substring(idString.IndexOf("-ID:") + 4) + ' ';
-            idString = idString.Substring(0, idString.IndexOf(' '));
+            idString = idString.Substring(idString.IndexOf("[MMILRT, ID:") + 12);
+            idString = idString.Substring(0, idString.IndexOf(']'));
             long id;
             if (!long.TryParse(idString, out id))
                 throw new InvalidOperationException($"Cannot get MonoModder ID from assembly name {asmName}");
@@ -74,7 +74,7 @@ namespace MonoMod.InlineRT {
 
         public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
             ModuleDefinition wrapper = ModuleDefinition.CreateModule(
-                $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules -ID:{GetId(self)} -MMILRT",
+                $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules [MMILRT, ID:{GetId(self)}]",
                 new ModuleParameters() {
                     Architecture = orig.Module.Architecture,
                     AssemblyResolver = self.AssemblyResolver,
@@ -96,11 +96,20 @@ namespace MonoMod.InlineRT {
             wrapperMod.WriterParameters.WriteSymbols = false;
             wrapperMod.WriterParameters.SymbolWriterProvider = null;
 
+            bool missingDependencyThrow = self.MissingDependencyThrow;
+            self.MissingDependencyThrow = false;
+
+            // Copy all dependencies.
+            ModuleDefinition scope = (ModuleDefinition) orig.Scope;
+            wrapper.AssemblyReferences.AddRange(scope.AssemblyReferences);
+            wrapperMod.DependencyMap[wrapper] = new List<ModuleDefinition>(self.DependencyMap[scope]);
+
             // Only add a copy of the map - adding the MMILRT asm itself to the map only causes issues.
             wrapperMod.DependencyCache.AddRange(self.DependencyCache);
             foreach (KeyValuePair<ModuleDefinition, List<ModuleDefinition>> mapping in self.DependencyMap)
                 wrapperMod.DependencyMap[mapping.Key] = new List<ModuleDefinition>(mapping.Value);
 
+            wrapperMod.Mods.AddRange(self.Mods);
             // Required as the relinker only deep-relinks if the method the type comes from is a mod.
             // Fixes nasty reference import sharing issues.
             wrapperMod.Mods.Add(self.Module);
@@ -113,7 +122,8 @@ namespace MonoMod.InlineRT {
             wrapperMod.PrePatchType(orig, forceAdd: true);
             wrapperMod.PatchType(orig);
             TypeDefinition rulesCecil = wrapper.GetType(orig.FullName);
-            wrapperMod.PatchRefsInType(rulesCecil);
+            // wrapperMod.PatchRefsInType(rulesCecil);
+            wrapperMod.PatchRefs(); // Runs any special passes in-between, f.e. upgrading from pre-split to post-split.
 
             Assembly asm;
             using (MemoryStream asmStream = new MemoryStream()) {
@@ -126,6 +136,8 @@ namespace MonoMod.InlineRT {
                 self.DependencyDirs[0], $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules-MMILRT.dll")))
                 wrapperMod.Write(debugStream);
             /**/
+
+            self.MissingDependencyThrow = missingDependencyThrow;
 
             Type rules = asm.GetType(orig.FullName);
             RuntimeHelpers.RunClassConstructor(rules.TypeHandle);

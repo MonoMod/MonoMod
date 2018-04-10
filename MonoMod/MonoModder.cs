@@ -111,10 +111,6 @@ namespace MonoMod {
 
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
-        // NO-OP: Keep for compatibility with that random old installer:tm:.
-        [Obsolete("The optimization pass has been removed from MonoMod.")]
-        public bool SkipOptimization = false;
-
         public bool PreventInline = false;
 
         public ReadingMode ReadingMode = ReadingMode.Deferred;
@@ -248,33 +244,19 @@ namespace MonoMod {
                     DependencyDirs.Add(dir);
                 }
             }
-
-            if (
-                Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1" ||
-                Environment.GetEnvironmentVariable("MONOMOD_VERBOSE") == "1" // Backwards-compatible
-            ) {
+            if (Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1") {
                 VerboseLogger = (modder, text) => modder.Log(text);
             }
-
             if (Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "0") {
                 Relinker = DefaultUncachedRelinker;
             }
-
             CleanupEnabled = Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0";
-
             PreventInline = Environment.GetEnvironmentVariable("MONOMOD_PREVENTINLINE") == "1";
-
             Strict = Environment.GetEnvironmentVariable("MONOMOD_STRICT") == "1";
-
             MissingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0";
-
             RemovePatchReferences = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_REMOVE_PATCH") != "0";
 
             MonoModRulesManager.Register(this);
-        }
-
-        public void SetupLegacy() {
-            ReadingMode = ReadingMode.Immediate;
         }
 
         public virtual void ClearCaches(bool all = false, bool shareable = false, bool moduleSpecific = false) {
@@ -366,20 +348,14 @@ namespace MonoMod {
             }
         }
 
-        [Obsolete("Use Read() and MapDependencies() instead.")]
-        public virtual void Read(bool loadDependencies = true) {
-            Read();
-            if (loadDependencies)
-                MapDependencies();
-        }
-
         public virtual void MapDependencies() {
             foreach (ModuleDefinition mod in Mods)
                 MapDependencies(mod);
             MapDependencies(Module);
         }
         public virtual void MapDependencies(ModuleDefinition main) {
-            if (DependencyMap.ContainsKey(main)) return;
+            if (DependencyMap.ContainsKey(main))
+                return;
             DependencyMap[main] = new List<ModuleDefinition>();
 
             foreach (AssemblyNameReference dep in main.AssemblyReferences)
@@ -389,13 +365,17 @@ namespace MonoMod {
             MapDependency(main, depRef.Name, depRef.FullName, depRef);
         }
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null, AssemblyNameReference depRef = null) {
+            List<ModuleDefinition> mapped;
+            if (!DependencyMap.TryGetValue(main, out mapped))
+                DependencyMap[main] = mapped = new List<ModuleDefinition>();
+
             ModuleDefinition dep;
             if (fullName != null && (
                 DependencyCache.TryGetValue(fullName, out dep) ||
                 DependencyCache.TryGetValue(fullName + " [RT:" + main.RuntimeVersion + "]", out dep)
             )) {
                 LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
-                DependencyMap[main].Add(dep);
+                mapped.Add(dep);
                 MapDependencies(dep);
                 return;
             }
@@ -404,7 +384,7 @@ namespace MonoMod {
                 DependencyCache.TryGetValue(name + " [RT:" + main.RuntimeVersion + "]", out dep)
             ) {
                 LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} ({name}) from cache");
-                DependencyMap[main].Add(dep);
+                mapped.Add(dep);
                 MapDependencies(dep);
                 return;
             }
@@ -494,7 +474,7 @@ namespace MonoMod {
             }
 
             LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
-            DependencyMap[main].Add(dep);
+            mapped.Add(dep);
             DependencyCache[fullName] = dep;
             DependencyCache[name] = dep;
             MapDependencies(dep);
@@ -572,7 +552,6 @@ namespace MonoMod {
                 (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(dir);
                 DependencyDirs.Add(dir);
             }
-            ParseRules(mod);
             Mods.Add(mod);
             OnReadMod?.Invoke(this, mod);
         }
@@ -583,7 +562,6 @@ namespace MonoMod {
             Mods.Add(mod);
             OnReadMod?.Invoke(this, mod);
         }
-
 
         public virtual void ParseRules(ModuleDefinition mod) {
             TypeDefinition rulesType = mod.GetType("MonoMod.MonoModRules");
@@ -597,7 +575,6 @@ namespace MonoMod {
             // Rule parsing pass: Check for MonoModHook and similar attributes
             foreach (TypeDefinition type in mod.Types)
                 ParseRulesInType(type, rulesTypeMMILRT);
-
         }
 
         public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
@@ -697,6 +674,10 @@ namespace MonoMod {
         /// Automatically mods the module, loading Input, writing the modded module to Output.
         /// </summary>
         public virtual void AutoPatch() {
+            Log("[AutoPatch] Parsing rules in loaded mods");
+            foreach (ModuleDefinition mod in Mods)
+                ParseRules(mod);
+
             /* WHY PRE-PATCH?
              * Custom attributes and other stuff refering to possibly new types
              * 1. could access yet undefined types that need to be copied over
@@ -836,8 +817,11 @@ namespace MonoMod {
 
                 TypeReference found = FindTypeDeep(type.GetPatchFullName());
 
-                if (found == null)
+                if (found == null) {
+                    if (RelinkMap.ContainsKey(type.FullName))
+                        return null; // Let the post-relinker handle this.
                     throw new RelinkTargetNotFoundException(mtp, context);
+                }
                 return Module.ImportReference(found);
             }
 
@@ -989,16 +973,6 @@ namespace MonoMod {
                 callName = call.Name;
             else
                 callName = $"{call.DeclaringType.FullName}::{call.Name}";
-
-            // Obsoleted methods - keep them "alive" for some time.
-            if (callName == "DisablePublicAccess" || callName == "EnablePublicAccess") {
-                Log($"[Inline] [WARNING] MMIL.{callName} is obsolete and not implemented anymore. Use MMIL.Access instead.");
-                return true;
-            }
-            if (callName == "OnPlatform") {
-                Log("[Inline] [WARNING] MMIL.OnPlatform is obsolete and not implemented anymore. Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.");
-                return true;
-            }
 
             return true;
         }
@@ -1609,6 +1583,11 @@ namespace MonoMod {
 
         #region PatchRefs Pass
         public virtual void PatchRefs() {
+            if (Environment.GetEnvironmentVariable("MONOMOD_LEGACY_RELINKMAP") != "0") {
+                // TODO: Make this "opt-in" in the future.
+                _SplitUpgrade();
+            }
+
             // Attempt to remap and remove redundant mscorlib references.
             // Subpass 1: Find newest referred version.
             List<AssemblyNameReference> mscorlibDeps = new List<AssemblyNameReference>();
@@ -1618,20 +1597,15 @@ namespace MonoMod {
                     mscorlibDeps.Add(dep);
                 }
             }
-            if (mscorlibDeps.Count > 1)
-            {
-                LogVerbose("[PatchRefs] Found Duplicate mscorlib");
+            if (mscorlibDeps.Count > 1) {
                 // Subpass 2: Apply changes if found.
                 AssemblyNameReference maxmscorlib = mscorlibDeps.OrderByDescending(x => x.Version).First();
                 ModuleDefinition mscorlib;
-                if (DependencyCache.TryGetValue(maxmscorlib.FullName, out mscorlib))
-                {
-                    for (int i = 0; i < Module.AssemblyReferences.Count; i++)
-                    {
+                if (DependencyCache.TryGetValue(maxmscorlib.FullName, out mscorlib)) {
+                    for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
                         AssemblyNameReference dep = Module.AssemblyReferences[i];
-                        if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version)
-                        {
-                            Log("[PatchRefs] Removing and Relinking: " + dep.Version);
+                        if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version) {
+                            Log("[PatchRefs] Removing and relinking duplicate mscorlib: " + dep.Version);
                             RelinkModuleMap[dep.FullName] = mscorlib;
                             Module.AssemblyReferences.RemoveAt(i);
                             --i;
@@ -1642,6 +1616,83 @@ namespace MonoMod {
 
             foreach (TypeDefinition type in Module.Types)
                 PatchRefsInType(type);
+        }
+
+        // Private because this method isn't here to stay.
+        private void _SplitUpgrade() {
+            // This is required to stay compatible with mods created before splitting MonoMod into pieces.
+
+            // Only run if the mod refers to MonoMod <= 18.03.* and if MonoModExt is no longer present in MonoMod.
+            if (FindType("MonoMod.MonoModExt") != null)
+                return;
+            bool requiresUpgrade = false;
+            foreach (ModuleDefinition mod in Mods) {
+                for (int i = 0; i < mod.AssemblyReferences.Count; i++) {
+                    AssemblyNameReference dep = mod.AssemblyReferences[i];
+                    if (dep.Name == "MonoMod") {
+                        if (dep.Version.Major <= 18 && dep.Version.Minor <= 3) {
+                            requiresUpgrade = true;
+                        }
+                        break;
+                    }
+                }
+                if (requiresUpgrade)
+                    break;
+            }
+            if (!requiresUpgrade)
+                return;
+
+            Log("[UpgradeSplit] Upgrading from MonoMod pre-18.03 to 18.04+");
+            Log("[UpgradeSplit] THIS STEP WILL BE REMOVED IN A FUTURE RELEASE.");
+            Log("[UpgradeSplit] It is only meant to preserve compatibility with mods during the transition to a \"split\" MonoMod.");
+
+            string root = Path.GetDirectoryName(DependencyCache["MonoMod"].FileName);
+
+            bool found = false;
+            // Don't compact this, otherwise it'll only run until the first "true" upgrade.
+            found |= _SplitUpgrade("Utils");
+            found |= _SplitUpgrade("RuntimeDetour");
+            if (!found) {
+                Log("[UpgradeSplit] No MonoMod \"split\" upgrade targets found. Upgrade skipped.");
+                return;
+            }
+        }
+
+        private bool _SplitUpgrade(string split) {
+            split = "MonoMod." + split;
+
+            bool missingDependencyThrow = MissingDependencyThrow;
+            MissingDependencyThrow = false;
+            MapDependency(Module, split);
+            MissingDependencyThrow = missingDependencyThrow;
+
+            ModuleDefinition splitModule;
+            if (!DependencyCache.TryGetValue(split, out splitModule)) {
+                Log($"[UpgradeSplit] {split} doesn't exist, skipping it.");
+                return false;
+            }
+
+            _SplitUpgrade(splitModule);
+            return true;
+        }
+
+        private void _SplitUpgrade(ModuleDefinition split) {
+            Log($"[UpgradeSplit] Upgrading split {split.Name}");
+
+            foreach (TypeDefinition type in split.Types)
+                _SplitUpgrade(type);
+        }
+
+        private void _SplitUpgrade(TypeDefinition type) {
+            RelinkMap[type.FullName] = type;
+
+            CustomAttribute attribOldName = type.GetMMAttribute("__OldName__");
+            if (attribOldName != null) {
+                RelinkMap[(string) attribOldName.ConstructorArguments[0].Value] = type;
+            }
+
+            foreach (TypeDefinition nested in type.NestedTypes)
+                _SplitUpgrade(nested);
         }
 
         public virtual void PatchRefs(ModuleDefinition mod) {
@@ -2116,17 +2167,19 @@ namespace MonoMod {
         #endregion
 
 
-        #region Static helper methods
+        #region Helper methods
         /// <summary>
         /// Creates a new non-conflicting MetadataToken.
         /// </summary>
         /// <param name="type">The type of the new token.</param>
         /// <returns>A MetadataToken with an unique RID for the target module.</returns>
         public virtual MetadataToken GetMetadataToken(TokenType type) {
-            if (Module.Name.Contains(" -MMILRT"))
-                return new MetadataToken(type, CurrentRID++);
-            while (Module.LookupToken(CurrentRID | (int) type) != null) {
-                ++CurrentRID;
+            try {
+                while (Module.LookupToken(CurrentRID | (int) type) != null) {
+                    ++CurrentRID;
+                }
+            } catch {
+                CurrentRID++;
             }
             return new MetadataToken(type, CurrentRID);
         }

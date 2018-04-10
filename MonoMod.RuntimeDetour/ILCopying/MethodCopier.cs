@@ -72,11 +72,11 @@ namespace Harmony.ILCopying
 
 			var body = method.GetMethodBody();
 			if (body == null)
-				throw new ArgumentException("Method " + Extensions.GetFindableID(method) + " has no body");
+				throw new ArgumentException("Method " + method.Name + " has no body");
 
 			var bytes = body.GetILAsByteArray();
 			if (bytes == null)
-				throw new ArgumentException("Can not get IL bytes of method " + Extensions.GetFindableID(method));
+				throw new ArgumentException("Can not get IL bytes of method " + method.Name);
 			ilBytes = new ByteBuffer(bytes);
 			ilInstructions = new List<ILInstruction>((bytes.Length + 1) / 2);
 

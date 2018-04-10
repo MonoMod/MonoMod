@@ -5,6 +5,7 @@ namespace MonoMod.Utils {
     /// Generic platform enum.
     /// </summary>
     [Flags]
+    [MonoMod__OldName__("MonoMod.Helpers.Platform")]
     public enum Platform : int {
         // Underlying platform categories
         OS = 1,

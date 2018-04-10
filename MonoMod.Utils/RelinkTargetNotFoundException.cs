@@ -6,6 +6,7 @@ using System.Text;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
+    [MonoMod__OldName__("MonoMod.RelinkTargetNotFoundException")]
     public class RelinkTargetNotFoundException : RelinkFailedException {
 
         public new const string DefaultMessage = "MonoMod relinker failed finding";

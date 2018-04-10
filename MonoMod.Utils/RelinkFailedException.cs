@@ -6,6 +6,7 @@ using System.Text;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
+    [MonoMod__OldName__("MonoMod.RelinkFailedException")]
     public class RelinkFailedException : Exception {
 
         public const string DefaultMessage = "MonoMod failed relinking";

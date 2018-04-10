@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 
 namespace MonoMod.Utils {
+    [MonoMod__OldName__("MonoMod.Helpers.PlatformHelper")]
     public static class PlatformHelper {
 
         static PlatformHelper() {
