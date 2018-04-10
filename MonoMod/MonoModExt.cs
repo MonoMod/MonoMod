@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using MonoMod.NET40Shim;
 using StringInject;
 using MonoMod.Helpers;
 
@@ -174,7 +173,7 @@ namespace MonoMod {
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModOnPlatform") {
                     CustomAttributeArgument[] plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
                     for (int i = 0; i < plats.Length; i++) {
-                        if (PlatformHelper.Current.HasFlag((Platform) plats[i].Value)) {
+                        if (PlatformHelper.Is((Platform) plats[i].Value)) {
                             // status &= true;
                             continue;
                         }
@@ -388,7 +387,7 @@ namespace MonoMod {
                 Platform plat = (Platform) method.Body.Instructions[ii + 2].GetInt();
                 // stelem.i4
 
-                if (PlatformHelper.Current.HasFlag(plat)) {
+                if (PlatformHelper.Is(plat)) {
                     matchingPlatformIL = true;
                     break;
                 }

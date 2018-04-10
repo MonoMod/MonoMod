@@ -1,7 +1,6 @@
 ﻿using Mono.Cecil;
 using StringInject;
 using System;
-using MonoMod.NET40Shim;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using Mono.Collections.Generic;

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Collections;
-using MonoMod.NET40Shim;
 
 namespace MonoMod.Helpers {
     public class FastDictionary<K1, K2, V> {

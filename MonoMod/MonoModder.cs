@@ -12,7 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using MonoMod.NET40Shim;
 using MonoMod.Helpers;
 
 namespace MonoMod {
@@ -868,16 +867,9 @@ namespace MonoMod {
                 if (val is IMetadataTokenProvider)
                     return RelinkMapCache[name] = Module.ImportReference((IMetadataTokenProvider) val);
 
-                if (val is Tuple<string, string> || val is RelinkMapEntry) {
-                    string typeName, findableID;
-
-                    if (val is Tuple<string, string>) {
-                        typeName = ((Tuple<string, string>) val).Item1 as string;
-                        findableID = ((Tuple<string, string>) val).Item2 as string;
-                    } else {
-                        typeName = ((RelinkMapEntry) val).Type as string;
-                        findableID = ((RelinkMapEntry) val).FindableID as string;
-                    }
+                if (val is RelinkMapEntry) {
+                    string typeName = ((RelinkMapEntry) val).Type as string;
+                    string findableID = ((RelinkMapEntry) val).FindableID as string;
 
                     TypeDefinition type = FindTypeDeep(typeName)?.SafeResolve();
                     if (type == null)
@@ -2142,7 +2134,7 @@ namespace MonoMod {
             if (method.Name.StartsWith("op_"))
                 return true;
 
-            return !method.Attributes.HasFlag(MethodAttributes.RTSpecialName); // Formerly SpecialName. If something breaks, blame UnderRail.
+            return !method.IsRuntimeSpecialName; // Formerly SpecialName. If something breaks, blame UnderRail.
         }
         #endregion
 

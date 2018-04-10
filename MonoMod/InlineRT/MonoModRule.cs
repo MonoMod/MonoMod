@@ -1,7 +1,6 @@
 ﻿using Mono.Cecil;
 using StringInject;
 using System;
-using MonoMod.NET40Shim;
 using MonoMod.Helpers;
 
 namespace MonoMod.InlineRT {

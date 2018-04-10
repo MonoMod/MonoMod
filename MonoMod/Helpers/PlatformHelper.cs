@@ -39,5 +39,8 @@ namespace MonoMod.Helpers {
 
         public static Platform Current { get; private set; }
 
+        public static bool Is(Platform platform)
+            => (Current & platform) == platform;
+
     }
 }
