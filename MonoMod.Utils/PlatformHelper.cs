@@ -2,8 +2,7 @@
 using System.IO;
 using System.Reflection;
 
-namespace MonoMod.Helpers {
-    [MonoMod__SafeToCopy__]
+namespace MonoMod.Utils {
     public static class PlatformHelper {
 
         static PlatformHelper() {

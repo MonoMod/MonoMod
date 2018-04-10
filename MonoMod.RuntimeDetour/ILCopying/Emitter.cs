@@ -1,12 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
+﻿using System.Linq;
 using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 
-namespace Harmony.ILCopying
-{
-	static class Emitter
+namespace Harmony.ILCopying {
+    static class Emitter
 	{
         public static string FormatArgument(object argument)
 		{

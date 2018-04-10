@@ -1,5 +1,6 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

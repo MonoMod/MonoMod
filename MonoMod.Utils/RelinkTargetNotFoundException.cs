@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Mono.Cecil;
 
-namespace MonoMod/*.Helpers*/ {
+namespace MonoMod.Utils {
     public class RelinkTargetNotFoundException : RelinkFailedException {
 
         public new const string DefaultMessage = "MonoMod relinker failed finding";

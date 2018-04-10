@@ -4,7 +4,6 @@ using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
 using Mono.Collections.Generic;
 using MonoMod.InlineRT;
-using StringInject;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,9 +11,46 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using MonoMod.Helpers;
+using MonoMod.Utils;
 
 namespace MonoMod {
+
+    public delegate void Logger(MonoModder modder, string text);
+    public delegate bool MethodParser(MonoModder modder, MethodBody body, Instruction instr, ref int instri);
+    public delegate void MethodRewriter(MonoModder modder, MethodDefinition method);
+    public delegate void MethodBodyRewriter(MonoModder modder, MethodBody body, Instruction instr, int instri);
+    public delegate ModuleDefinition MissingDependencyResolver(MonoModder modder, ModuleDefinition main, string name, string fullName);
+    public delegate void PostProcessor(MonoModder modder);
+    public delegate void ModReadEventHandler(MonoModder modder, ModuleDefinition mod);
+
+    public class RelinkMapEntry {
+        public string Type;
+        public string FindableID;
+
+        public RelinkMapEntry() {
+        }
+        public RelinkMapEntry(string type, string findableID) {
+            Type = type;
+            FindableID = findableID;
+        }
+    }
+
+    public struct RelinkCacheKey {
+        public IMetadataTokenProvider TokenProvider;
+        public IGenericParameterProvider Context;
+
+        public RelinkCacheKey(IMetadataTokenProvider tokenProvider, IGenericParameterProvider context) {
+            TokenProvider = tokenProvider;
+            Context = context;
+        }
+    }
+
+    public enum DebugSymbolFormat {
+        Auto,
+        MDB,
+        PDB
+    }
+
     public class MonoModder : IDisposable {
 
         public readonly static bool IsMono = Type.GetType("Mono.Runtime") != null;
@@ -26,15 +62,6 @@ namespace MonoMod {
         public Logger Logger;
         public Logger VerboseLogger;
 
-        public static IDictionary<string, object> Data = new Dictionary<string, object>() {
-            { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
-            { "PlatformPrefix",     (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
-            { "Arch",               (PlatformHelper.Current & Platform.X64).ToString() },
-            { "Architecture",       (PlatformHelper.Current & Platform.X64).ToString() },
-            { "ArchPrefix",         (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" },
-            { "ArchitecturePrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" }
-        };
-
         public IDictionary<string, object> RelinkMap = new Dictionary<string, object>();
         public IDictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
         public HashSet<string> SkipList = new HashSet<string>(EqualityComparer<string>.Default);
@@ -42,7 +69,7 @@ namespace MonoMod {
         public IDictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
         public IDictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
 
-        public FastDictionary<IMetadataTokenProvider, IGenericParameterProvider, IMetadataTokenProvider> RelinkerCache = new FastDictionary<IMetadataTokenProvider, IGenericParameterProvider, IMetadataTokenProvider>();
+        public Dictionary<RelinkCacheKey, IMetadataTokenProvider> RelinkerCache = new Dictionary<RelinkCacheKey, IMetadataTokenProvider>();
 
         public Relinker Relinker;
         public Relinker MainRelinker;
@@ -759,9 +786,10 @@ namespace MonoMod {
 
         public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             IMetadataTokenProvider cached;
-            if (RelinkerCache.TryGetValue(mtp, context, out cached))
+            RelinkCacheKey key = new RelinkCacheKey(mtp, context);
+            if (RelinkerCache.TryGetValue(key, out cached))
                 return cached;
-            return RelinkerCache[mtp, context] = DefaultUncachedRelinker(mtp, context);
+            return RelinkerCache[key] = DefaultUncachedRelinker(mtp, context);
         }
 
         public virtual IMetadataTokenProvider DefaultUncachedRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {

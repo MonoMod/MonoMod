@@ -1,5 +1,5 @@
 ﻿using Mono.Cecil;
-using StringInject;
+using MonoMod.Utils;
 using System;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;

@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using MonoMod.Helpers;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
-using MonoMod.InlineRT;
+using MonoMod.Utils;
 
 namespace MonoMod.RuntimeDetour {
     public interface IDetourRuntimePlatform {

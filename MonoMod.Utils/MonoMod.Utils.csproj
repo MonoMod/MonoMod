@@ -4,16 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{68E38462-2DB9-4692-AD91-077A8FBE8AE9}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MonoMod.DebugIL</RootNamespace>
-    <AssemblyName>MonoMod.DebugIL</AssemblyName>
+    <RootNamespace>MonoMod.Utils</RootNamespace>
+    <AssemblyName>MonoMod.Utils</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -51,23 +49,18 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DebugILGenerator.cs" />
-    <Compile Include="DebugILGeneratorExt.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="MonoModExt.cs" />
+    <Compile Include="Platform.cs" />
+    <Compile Include="PlatformHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="FastReflectionHelper.cs" />
+    <Compile Include="RelinkFailedException.cs" />
+    <Compile Include="RelinkTargetNotFoundException.cs" />
+    <Compile Include="StringInjectExtension.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj">
-      <Project>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</Project>
-      <Name>MonoMod.Utils</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MonoMod\MonoMod.csproj">
-      <Project>{8a17c958-5c33-4035-af76-f94a3aa2dc4f}</Project>
-      <Name>MonoMod</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

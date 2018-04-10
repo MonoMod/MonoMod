@@ -1,4 +1,4 @@
-using MonoMod;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,11 +72,11 @@ namespace Harmony.ILCopying
 
 			var body = method.GetMethodBody();
 			if (body == null)
-				throw new ArgumentException("Method " + method.GetFindableID() + " has no body");
+				throw new ArgumentException("Method " + Extensions.GetFindableID(method) + " has no body");
 
 			var bytes = body.GetILAsByteArray();
 			if (bytes == null)
-				throw new ArgumentException("Can not get IL bytes of method " + method.GetFindableID());
+				throw new ArgumentException("Can not get IL bytes of method " + Extensions.GetFindableID(method));
 			ilBytes = new ByteBuffer(bytes);
 			ilInstructions = new List<ILInstruction>((bytes.Length + 1) / 2);
 

@@ -8,40 +8,26 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using StringInject;
-using MonoMod.Helpers;
 
-namespace MonoMod {
-
-    public delegate void Logger(MonoModder modder, string text);
+namespace MonoMod.Utils {
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
-    public delegate bool MethodParser(MonoModder modder, MethodBody body, Instruction instr, ref int instri);
-    public delegate void MethodRewriter(MonoModder modder, MethodDefinition method);
-    public delegate void MethodBodyRewriter(MonoModder modder, MethodBody body, Instruction instr, int instri);
-    public delegate ModuleDefinition MissingDependencyResolver(MonoModder modder, ModuleDefinition main, string name, string fullName);
-    public delegate void PostProcessor(MonoModder modder);
-    public delegate void ModReadEventHandler(MonoModder modder, ModuleDefinition mod);
 
-    public class RelinkMapEntry {
-
-        public string Type;
-        public string FindableID;
-
-        public RelinkMapEntry() {
-        }
-        public RelinkMapEntry(string type, string findableID) {
-            Type = type;
-            FindableID = findableID;
-        }
-
-    }
-
+    /// <summary>
+    /// Huge collection of MonoMod-related Mono.Cecil extensions.
+    /// </summary>
     public static class MonoModExt {
 
-        public static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");
-        public static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
+        public static IDictionary<string, object> SharedData = new Dictionary<string, object>() {
+            { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
+            { "PlatformPrefix",     (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
+            { "Arch",               (PlatformHelper.Current & Platform.X64).ToString() },
+            { "Architecture",       (PlatformHelper.Current & Platform.X64).ToString() },
+            { "ArchPrefix",         (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" },
+            { "ArchitecturePrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" }
+        };
 
-        public static Type t_ParamArrayAttribute = typeof(ParamArrayAttribute);
+        static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");
+        static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
 
         public static ModuleDefinition ReadModule(string path, ReaderParameters rp) {
             Retry:
@@ -186,7 +172,7 @@ namespace MonoMod {
                     string flag = (string) attrib.ConstructorArguments[0].Value;
                     object valueObj;
                     bool value;
-                    if (!MonoModder.Data.TryGetValue(flag, out valueObj) || !(valueObj is bool))
+                    if (!SharedData.TryGetValue(flag, out valueObj) || !(valueObj is bool))
                         if (attrib.ConstructorArguments.Count == 2)
                             value = (bool) attrib.ConstructorArguments[1].Value;
                         else
@@ -198,7 +184,7 @@ namespace MonoMod {
                 }
 
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModTargetModule") {
-                    string name = ((string) attrib.ConstructorArguments[0].Value).Inject(MonoModder.Data);
+                    string name = ((string) attrib.ConstructorArguments[0].Value).Inject(SharedData);
                     status &= asmName.Name == name || asmName.FullName == name;
                     continue;
                 }
@@ -254,59 +240,6 @@ namespace MonoMod {
 
                     builder.Append(parameter.ParameterType.GetPatchFullName());
                 }
-            }
-
-            builder.Append(")");
-
-            return builder.ToString();
-        }
-
-        public static string GetFindableID(this System.Reflection.MethodBase method, string name = null, string type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {
-            while (method is System.Reflection.MethodInfo && method.IsGenericMethod && !method.IsGenericMethodDefinition)
-                method = ((System.Reflection.MethodInfo) method).GetGenericMethodDefinition();
-
-            StringBuilder builder = new StringBuilder();
-
-            if (simple) {
-                if (withType)
-                    builder.Append(type ?? method.DeclaringType.FullName).Append("::");
-                builder.Append(name ?? method.Name);
-                return builder.ToString();
-            }
-
-            builder
-                .Append((method as System.Reflection.MethodInfo)?.ReturnType?.FullName ?? "System.Void")
-                .Append(" ");
-
-            if (withType)
-                builder.Append(type ?? method.DeclaringType.FullName.Replace("+", "/")).Append("::");
-
-            builder
-                .Append(name ?? method.Name);
-
-            if (method.ContainsGenericParameters) {
-                builder.Append("<");
-                Type[] arguments = method.GetGenericArguments();
-                for (int i = 0; i < arguments.Length; i++) {
-                    if (i > 0)
-                        builder.Append(",");
-                    builder.Append(arguments[i].Name);
-                }
-                builder.Append(">");
-            }
-
-            builder.Append("(");
-
-            System.Reflection.ParameterInfo[] parameters = method.GetParameters();
-            for (int i = proxyMethod ? 1 : 0; i < parameters.Length; i++) {
-                System.Reflection.ParameterInfo parameter = parameters[i];
-                if (i > (proxyMethod ? 1 : 0))
-                    builder.Append(",");
-
-                if (Attribute.IsDefined(parameter, t_ParamArrayAttribute))
-                    builder.Append("...,");
-
-                builder.Append(parameter.ParameterType.FullName);
             }
 
             builder.Append(")");
@@ -374,72 +307,9 @@ namespace MonoMod {
             return null;
         }
 
-        [Obsolete("Use [MonoModOnPlatform(...)] on separate methods and [MonoModHook(...)] instead.")]
-        public static bool ParseOnPlatform(this MethodDefinition method, ref int instri) {
-            // Crawl back until we hit "newarr Platform" or "newarr int"
-            int posNewarr = instri;
-            for (; 1 <= posNewarr && method.Body.Instructions[posNewarr].OpCode != OpCodes.Newarr; posNewarr--) ;
-            int pArrSize = method.Body.Instructions[posNewarr - 1].GetInt();
-            bool matchingPlatformIL = pArrSize == 0;
-            for (int ii = posNewarr + 1; ii < instri; ii += 4) {
-                // dup
-                // ldc.i4 INDEX
-                Platform plat = (Platform) method.Body.Instructions[ii + 2].GetInt();
-                // stelem.i4
-
-                if (PlatformHelper.Is(plat)) {
-                    matchingPlatformIL = true;
-                    break;
-                }
-            }
-
-            // If not matching platform, remove array code.
-            if (!matchingPlatformIL) {
-                for (int offsi = posNewarr - 1; offsi < instri; offsi++) {
-                    method.Body.Instructions.RemoveAt(offsi);
-                    instri = Math.Max(0, instri - 1);
-                    method.Body.UpdateOffsets(instri, -1);
-                    continue;
-                }
-            }
-            return matchingPlatformIL;
-        }
-
         public static void AddRange<T>(this Collection<T> list, Collection<T> other) {
             for (int i = 0; i < other.Count; i++)
                 list.Add(other[i]);
-        }
-        public static void AddRange(this IDictionary dict, IDictionary other) {
-            foreach (DictionaryEntry entry in other)
-                dict.Add(entry.Key, entry.Value);
-        }
-        public static void AddRange<K, V>(this IDictionary<K, V> dict, IDictionary<K, V> other) {
-            foreach (KeyValuePair<K, V> entry in other)
-                dict.Add(entry.Key, entry.Value);
-        }
-
-        public static void PushRange<T>(this Stack<T> stack, T[] other) {
-            foreach (T entry in other)
-                stack.Push(entry);
-        }
-        public static void PopRange<T>(this Stack<T> stack, int n) {
-            for (int i = 0; i < n; i++)
-                stack.Pop();
-        }
-
-        public static void EnqueueRange<T>(this Queue<T> queue, T[] other) {
-            foreach (T entry in other)
-                queue.Enqueue(entry);
-        }
-        public static void DequeueRange<T>(this Queue<T> queue, int n) {
-            for (int i = 0; i < n; i++)
-                queue.Dequeue();
-        }
-
-        public static T[] Clone<T>(this T[] array, int length) {
-            T[] clone = new T[length];
-            Array.Copy(array, clone, length);
-            return clone;
         }
 
         public static GenericParameter GetGenericParameter(this IGenericParameterProvider provider, GenericParameter orig) {
@@ -683,31 +553,6 @@ namespace MonoMod {
 
             return null;
         }
-        public static System.Reflection.MethodInfo FindMethod(this Type type, string findableID, bool simple = true) {
-            System.Reflection.MethodInfo[] methods = type.GetMethods(
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static |
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
-            );
-            // First pass: With type name (f.e. global searches)
-            foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID() == findableID) return method;
-            // Second pass: Without type name (f.e. LinkTo)
-            foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID(withType: false) == findableID) return method;
-
-            if (!simple)
-                return null;
-
-            // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
-            // First simple pass: With type name (just "Namespace.Type::MethodName")
-            foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID(simple: true) == findableID) return method;
-            // Second simple pass: Without type name (basically name only)
-            foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
-
-            return null;
-        }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
             foreach (PropertyDefinition prop in type.Properties)
                 if (prop.Name == name) return prop;
@@ -861,7 +706,7 @@ namespace MonoMod {
         private static string GetPatchName(this ICustomAttributeProvider cap) {
             CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
             if (patchAttrib != null)
-                return ((string) patchAttrib.ConstructorArguments[0].Value).Inject(MonoModder.Data);
+                return ((string) patchAttrib.ConstructorArguments[0].Value).Inject(SharedData);
 
             // Backwards-compatibility: Check for patch_
             string name = ((MemberReference) cap).Name;
@@ -1063,7 +908,7 @@ namespace MonoMod {
         private readonly static Type t_Code = typeof(Code);
         private readonly static Type t_OpCodes = typeof(OpCodes);
 
-        private readonly static IntDictionary<OpCode> _ShortToLongOp = new IntDictionary<OpCode>();
+        private readonly static Dictionary<int, OpCode> _ShortToLongOp = new Dictionary<int, OpCode>();
         public static OpCode ShortToLongOp(this OpCode op) {
             string name = Enum.GetName(t_Code, op.Code);
             if (!name.EndsWith("_S"))
@@ -1074,7 +919,7 @@ namespace MonoMod {
             return _ShortToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
         }
 
-        private readonly static IntDictionary<OpCode> _LongToShortOp = new IntDictionary<OpCode>();
+        private readonly static Dictionary<int, OpCode> _LongToShortOp = new Dictionary<int, OpCode>();
         public static OpCode LongToShortOp(this OpCode op) {
             string name = Enum.GetName(t_Code, op.Code);
             if (name.EndsWith("_S"))

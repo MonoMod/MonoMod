@@ -1,13 +1,12 @@
-using MonoMod;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace Harmony
-{
-	class Traverse
+namespace Harmony {
+    class Traverse
 	{
 		static AccessCache Cache;
 
@@ -115,7 +114,7 @@ namespace Harmony
 			if (_info is PropertyInfo)
 				((PropertyInfo)_info).SetValue(_root, value, AccessTools.all, null, _params, CultureInfo.CurrentCulture);
 			if (_method != null)
-				throw new Exception("cannot set value of method " + _method.GetFindableID());
+				throw new Exception("cannot set value of method " + Extensions.GetFindableID(_method));
 			return this;
 		}
 

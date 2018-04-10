@@ -1,7 +1,6 @@
 ﻿using Mono.Cecil;
-using StringInject;
+using MonoMod.Utils;
 using System;
-using MonoMod.Helpers;
 
 namespace MonoMod.InlineRT {
     public static partial class MonoModRule {
@@ -16,8 +15,8 @@ namespace MonoMod.InlineRT {
         public static void RelinkModule(string from, string toName) {
             MonoModder self = Modder;
 
-            from = from.Inject(MonoModder.Data);
-            toName = toName.Inject(MonoModder.Data);
+            from = from.Inject(MonoModExt.SharedData);
+            toName = toName.Inject(MonoModExt.SharedData);
 
             bool retrying = false;
             ModuleDefinition to = null;
@@ -39,8 +38,8 @@ namespace MonoMod.InlineRT {
         public static void RelinkType(string from, string to) {
             MonoModder self = Modder;
 
-            from = from.Inject(MonoModder.Data);
-            to = to.Inject(MonoModder.Data);
+            from = from.Inject(MonoModExt.SharedData);
+            to = to.Inject(MonoModExt.SharedData);
 
             self.Log($"[MonoModRules] RelinkType: {from} -> {to}");
             self.RelinkMap[from] = to;
@@ -49,9 +48,9 @@ namespace MonoMod.InlineRT {
         public static void RelinkMember(string from, string toType, string toMember) {
             MonoModder self = Modder;
 
-            from = from.Inject(MonoModder.Data);
-            toType = toType.Inject(MonoModder.Data);
-            toMember = toMember.Inject(MonoModder.Data);
+            from = from.Inject(MonoModExt.SharedData);
+            toType = toType.Inject(MonoModExt.SharedData);
+            toMember = toMember.Inject(MonoModExt.SharedData);
 
             self.Log($"[MonoModRules] RelinkMember: {from} -> {toType}::{toMember}");
             self.RelinkMap[from] = new RelinkMapEntry(toType, toMember);
@@ -61,7 +60,7 @@ namespace MonoMod.InlineRT {
         public static void Patch(string id, bool patch) {
             MonoModder self = Modder;
 
-            id = id.Inject(MonoModder.Data);
+            id = id.Inject(MonoModExt.SharedData);
                 
             self.Log($"[MonoModRules] Patch: {id}: {patch}");
             if (patch && self.SkipList.Contains(id))
@@ -85,15 +84,15 @@ namespace MonoMod.InlineRT {
 
         public static class Flag {
 
-            public static bool Get(string k) => MonoModder.Data[k] as bool? ?? false;
-            public static void Set(string k, bool v) => MonoModder.Data[k] = v;
+            public static bool Get(string k) => MonoModExt.SharedData[k] as bool? ?? false;
+            public static void Set(string k, bool v) => MonoModExt.SharedData[k] = v;
 
         }
 
         public static class Data {
 
-            public static object Get(string k) => MonoModder.Data[k];
-            public static void Set(string k, object v) => MonoModder.Data[k] = v;
+            public static object Get(string k) => MonoModExt.SharedData[k];
+            public static void Set(string k, object v) => MonoModExt.SharedData[k] = v;
 
         }
 

@@ -1,17 +1,14 @@
-﻿using MonoMod.Helpers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace MonoMod.Helpers {
-    [MonoMod__SafeToCopy__]
+namespace MonoMod.Utils {
     public delegate object DynamicMethodDelegate(object target, params object[] args);
     /// <summary>
     /// Based on ReflectionHelper from http://theinstructionlimit.com/fast-net-reflection and FEZ. Thanks, Renaud!
     /// </summary>
-    [MonoMod__SafeToCopy__]
-    public static class ReflectionHelper {
+    public static class FastReflectionHelper {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
         private static readonly IDictionary<MethodInfo, DynamicMethodDelegate> _MethodCache = new Dictionary<MethodInfo, DynamicMethodDelegate>();
 
@@ -19,7 +16,7 @@ namespace MonoMod.Helpers {
         private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
 
         public static DynamicMethodDelegate CreateDelegate(this MethodBase method, bool directBoxValueAccess = true) {
-            DynamicMethod dynam = new DynamicMethod(string.Empty, typeof(object), _DynamicMethodDelegateArgs, typeof(ReflectionHelper).Module, true);
+            DynamicMethod dynam = new DynamicMethod(string.Empty, typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
             ParameterInfo[] args = method.GetParameters();
@@ -117,7 +114,7 @@ namespace MonoMod.Helpers {
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dynam = new DynamicMethod(string.Empty, invoke.ReturnType, argTypes, typeof(ReflectionHelper).Module, true);
+            DynamicMethod dynam = new DynamicMethod(string.Empty, invoke.ReturnType, argTypes, typeof(FastReflectionHelper).Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
             il.Emit(OpCodes.Jmp, (MethodInfo) method);

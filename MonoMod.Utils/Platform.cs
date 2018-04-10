@@ -1,11 +1,10 @@
 ﻿using System;
 
-namespace MonoMod.Helpers {
+namespace MonoMod.Utils {
     /// <summary>
     /// Generic platform enum.
     /// </summary>
     [Flags]
-    [MonoMod__SafeToCopy__]
     public enum Platform : int {
         // Underlying platform categories
         OS = 1,

@@ -5,7 +5,7 @@ using System.Collections;
 using System.Globalization;
 using System.ComponentModel;
 
-namespace StringInject {
+namespace MonoMod.Utils {
     public static class StringInjectExtension {
         /// <summary>
         /// Extension method that replaces keys in a string with the values of matching object properties.

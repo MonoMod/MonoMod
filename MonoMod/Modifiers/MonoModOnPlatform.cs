@@ -1,4 +1,4 @@
-using MonoMod.Helpers;
+using MonoMod.Utils;
 using System;
 
 namespace MonoMod {
