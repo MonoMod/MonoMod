@@ -375,6 +375,10 @@ namespace MonoMod.Utils {
             foreach (KeyValuePair<K, V> entry in other)
                 dict.Add(entry.Key, entry.Value);
         }
+        public static void AddRange<K, V>(this Dictionary<K, V> dict, Dictionary<K, V> other) {
+            foreach (KeyValuePair<K, V> entry in other)
+                dict.Add(entry.Key, entry.Value);
+        }
 
         public static void PushRange<T>(this Stack<T> stack, T[] other) {
             foreach (T entry in other)

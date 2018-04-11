@@ -43,6 +43,31 @@ namespace MonoMod {
             TokenProvider = tokenProvider;
             Context = context;
         }
+
+        public override int GetHashCode() {
+            return TokenProvider.GetHashCode() ^ Context.GetHashCode();
+        }
+
+        public override bool Equals(object obj) {
+            if (!(obj is RelinkCacheKey))
+                return false;
+            RelinkCacheKey other = (RelinkCacheKey) obj;
+            return TokenProvider.Equals(other.TokenProvider) && Context.Equals(other.Context);
+        }
+
+        public override string ToString() {
+            return $"[RelinkCacheKey ({TokenProvider}) ({Context})]";
+        }
+    }
+
+    public class RelinkCacheKeyEqualityComparer : EqualityComparer<RelinkCacheKey> {
+        public override bool Equals(RelinkCacheKey x, RelinkCacheKey y) {
+            return x.Equals(y);
+        }
+
+        public override int GetHashCode(RelinkCacheKey obj) {
+            return obj.TokenProvider.GetHashCode() ^ obj.Context.GetHashCode();
+        }
     }
 
     public enum DebugSymbolFormat {
@@ -62,14 +87,14 @@ namespace MonoMod {
         public Logger Logger;
         public Logger VerboseLogger;
 
-        public IDictionary<string, object> RelinkMap = new Dictionary<string, object>();
-        public IDictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
+        public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
+        public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
         public HashSet<string> SkipList = new HashSet<string>(EqualityComparer<string>.Default);
 
-        public IDictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
-        public IDictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
+        public Dictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
+        public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
 
-        public Dictionary<RelinkCacheKey, IMetadataTokenProvider> RelinkerCache = new Dictionary<RelinkCacheKey, IMetadataTokenProvider>();
+        public Dictionary<RelinkCacheKey, IMetadataTokenProvider> RelinkerCache = new Dictionary<RelinkCacheKey, IMetadataTokenProvider>(new RelinkCacheKeyEqualityComparer());
 
         public Relinker Relinker;
         public Relinker MainRelinker;
@@ -83,8 +108,8 @@ namespace MonoMod {
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
-        public IDictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
-        public IDictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+        public Dictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+        public Dictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -93,8 +118,8 @@ namespace MonoMod {
         public Stream Output;
         public string OutputPath;
         public ModuleDefinition Module;
-        public IDictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
-        public IDictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
+        public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
+        public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
         public List<string> DependencyDirs = new List<string>();
         public bool CleanupEnabled;
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
@@ -475,6 +500,8 @@ namespace MonoMod {
 
             LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) loaded");
             mapped.Add(dep);
+            if (fullName == null)
+                fullName = dep.Assembly.FullName;
             DependencyCache[fullName] = dep;
             DependencyCache[name] = dep;
             MapDependencies(dep);
@@ -1703,7 +1730,8 @@ namespace MonoMod {
         public virtual void PatchRefsInType(TypeDefinition type) {
             LogVerbose($"[VERBOSE] [PatchRefsInType] Patching refs in {type}");
 
-            if (type.BaseType != null) type.BaseType = Relink(type.BaseType, type);
+            if (type.BaseType != null)
+                type.BaseType = Relink(type.BaseType, type);
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < type.Interfaces.Count; i++) {
@@ -1739,15 +1767,8 @@ namespace MonoMod {
                     Relink(attrib, type);
             }
 
-            
-
-            PatchRefsInTypeNested(type);
-        }
-
-        protected virtual void PatchRefsInTypeNested(TypeDefinition type) {
-            for (int i = 0; i < type.NestedTypes.Count; i++) {
+            for (int i = 0; i < type.NestedTypes.Count; i++)
                 PatchRefsInType(type.NestedTypes[i]);
-            }
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
@@ -1801,7 +1822,7 @@ namespace MonoMod {
                 Type = DocumentType.Text
             };
 
-            IDictionary<TypeReference, VariableDefinition> tmpAddrLocMap = new Dictionary<TypeReference, VariableDefinition>();
+            Dictionary<TypeReference, VariableDefinition> tmpAddrLocMap = new Dictionary<TypeReference, VariableDefinition>();
 
             MethodBody body = method.Body;
 
