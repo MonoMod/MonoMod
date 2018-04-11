@@ -73,6 +73,15 @@ namespace MonoMod.InlineRT {
         }
 
         public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
+            ModuleDefinition scope = (ModuleDefinition) orig.Scope;
+            if (!self.DependencyMap.ContainsKey(scope)) {
+                // Runtime relinkers can parse rules by passing the "rule module" directly.
+                // Unfortunately, it bypasses the "MonoMod split upgrade hack."
+                // This hack fixes that hack.
+                self.MapDependencies(scope);
+                // Don't add scope to Mods, as that'd affect any further patching passes.
+            }
+
             ModuleDefinition wrapper = ModuleDefinition.CreateModule(
                 $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules [MMILRT, ID:{GetId(self)}]",
                 new ModuleParameters() {
@@ -100,7 +109,6 @@ namespace MonoMod.InlineRT {
             self.MissingDependencyThrow = false;
 
             // Copy all dependencies.
-            ModuleDefinition scope = (ModuleDefinition) orig.Scope;
             wrapper.AssemblyReferences.AddRange(scope.AssemblyReferences);
             wrapperMod.DependencyMap[wrapper] = new List<ModuleDefinition>(self.DependencyMap[scope]);
 

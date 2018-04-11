@@ -1666,11 +1666,13 @@ namespace MonoMod {
             if (FindType("MonoMod.MonoModExt") != null)
                 return;
             bool requiresUpgrade = false;
-            foreach (ModuleDefinition mod in Mods) {
+            List<ModuleReference> modules = new List<ModuleReference>(Mods);
+            modules.Add(Module);
+            foreach (ModuleDefinition mod in modules) {
                 for (int i = 0; i < mod.AssemblyReferences.Count; i++) {
                     AssemblyNameReference dep = mod.AssemblyReferences[i];
                     if (dep.Name == "MonoMod") {
-                        if (dep.Version.Major <= 18 && dep.Version.Minor <= 3) {
+                        if (dep.Version.Major < 18 || (dep.Version.Major == 18 && dep.Version.Minor <= 3)) {
                             requiresUpgrade = true;
                         }
                         break;
@@ -1716,20 +1718,19 @@ namespace MonoMod {
         }
 
         private void _SplitUpgrade(ModuleDefinition split) {
-            Log($"[UpgradeSplit] Upgrading split {split.Name}");
+            Log($"[UpgradeSplit] Upgrading to split {split.Name}");
 
             foreach (TypeDefinition type in split.Types)
                 _SplitUpgrade(type);
         }
 
         private void _SplitUpgrade(TypeDefinition type) {
-            RelinkMap[type.FullName] = type;
-
             CustomAttribute typeAttribOldName = type.GetMMAttribute("__OldName__");
             string typeOldName = typeAttribOldName == null ? null : (string) typeAttribOldName.ConstructorArguments[0].Value;
-            if (typeOldName != null) {
+
+            RelinkMap[type.FullName] = type;
+            if (typeOldName != null)
                 RelinkMap[typeOldName] = type;
-            }
 
             foreach (FieldDefinition field in type.Fields) {
                 if (field.HasMMAttribute("__WasIDictionary__")) {
@@ -1741,9 +1742,8 @@ namespace MonoMod {
                     );
                     fieldTypeOld.GenericArguments.AddRange(fieldType.GenericArguments);
                     RelinkMap[$"{fieldTypeOld} {type.FullName}::{field.Name}"] = type.FindProperty($"_{field.Name}");
-                    if (typeOldName != null) {
+                    if (typeOldName != null)
                         RelinkMap[$"{fieldTypeOld} {typeOldName}::{field.Name}"] = type.FindProperty($"_{field.Name}");
-                    }
                 }
             }
 

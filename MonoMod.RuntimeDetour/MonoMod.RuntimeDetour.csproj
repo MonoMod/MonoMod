@@ -40,6 +40,7 @@
     <Compile Include="DetourManager.cs" />
     <Compile Include="DetourNativePlatforms.cs" />
     <Compile Include="DetourRuntimePlatforms.cs" />
+    <Compile Include="Detour\RuntimeDetour.cs" />
     <Compile Include="IDetour.cs" />
     <Compile Include="ILCopying\AccessCache.cs" />
     <Compile Include="ILCopying\AccessTools.cs" />
