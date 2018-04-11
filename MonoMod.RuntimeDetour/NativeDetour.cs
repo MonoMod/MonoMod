@@ -191,6 +191,11 @@ namespace MonoMod.RuntimeDetour {
 
             il.EmitDetourCopy(_BackupNative, Data.Method, Data.Size);
 
+            // Store the return value in a local as we can't preserve the stack across exception block boundaries.
+            LocalBuilder localResult = null;
+            if (returnType != typeof(void))
+                localResult = il.DeclareLocal(returnType);
+
             Label blockTry = il.BeginExceptionBlock();
 
             // TODO: Use specialized Ldarg.* if possible; What about ref types?
@@ -204,12 +209,18 @@ namespace MonoMod.RuntimeDetour {
             else
                 throw new NotSupportedException($"Method type {methodCallable.GetType().FullName} not supported.");
 
+            if (localResult != null)
+                il.Emit(OpCodes.Stloc_0);
+
             il.BeginFinallyBlock();
 
             // Reapply the detour even if the method threw an exception.
             il.EmitDetourApply(Data);
 
             il.EndExceptionBlock();
+
+            if (localResult != null)
+                il.Emit(OpCodes.Ldloc_0);
 
             il.Emit(OpCodes.Ret);
 
