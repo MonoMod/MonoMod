@@ -87,12 +87,22 @@ namespace MonoMod {
         public Logger Logger;
         public Logger VerboseLogger;
 
+        // WasIDictionary and the _ IDictionaries are used when upgrading mods.
+
+        [MonoMod__WasIDictionary__]
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
+        public IDictionary<string, object> _RelinkMap { get { return RelinkMap; } set { RelinkMap = (Dictionary<string, object>) value; } }
+        [MonoMod__WasIDictionary__]
         public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
+        public IDictionary<string, ModuleDefinition> _RelinkModuleMap { get { return RelinkModuleMap; } set { RelinkModuleMap = (Dictionary<string, ModuleDefinition>) value; } }
         public HashSet<string> SkipList = new HashSet<string>(EqualityComparer<string>.Default);
 
+        [MonoMod__WasIDictionary__]
         public Dictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
+        public IDictionary<string, IMetadataTokenProvider> _RelinkMapCache { get { return RelinkMapCache; } set { RelinkMapCache = (Dictionary<string, IMetadataTokenProvider>) value; } }
+        [MonoMod__WasIDictionary__]
         public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
+        public IDictionary<string, TypeReference> _RelinkModuleMapCache { get { return RelinkModuleMapCache; } set { RelinkModuleMapCache = (Dictionary<string, TypeReference>) value; } }
 
         public Dictionary<RelinkCacheKey, IMetadataTokenProvider> RelinkerCache = new Dictionary<RelinkCacheKey, IMetadataTokenProvider>(new RelinkCacheKeyEqualityComparer());
 
@@ -108,8 +118,12 @@ namespace MonoMod {
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
+        [MonoMod__WasIDictionary__]
         public Dictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+        public IDictionary<string, DynamicMethodDelegate> _CustomAttributeHandlers { get { return CustomAttributeHandlers; } set { CustomAttributeHandlers = (Dictionary<string, DynamicMethodDelegate>) value; } }
+        [MonoMod__WasIDictionary__]
         public Dictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
+        public IDictionary<string, DynamicMethodDelegate> _CustomMethodAttributeHandlers { get { return CustomMethodAttributeHandlers; } set { CustomMethodAttributeHandlers = (Dictionary<string, DynamicMethodDelegate>) value; } }
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -118,27 +132,26 @@ namespace MonoMod {
         public Stream Output;
         public string OutputPath;
         public ModuleDefinition Module;
+        [MonoMod__WasIDictionary__]
         public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
+        public IDictionary<ModuleDefinition, List<ModuleDefinition>> _DependencyMap { get { return DependencyMap; } set { DependencyMap = (Dictionary<ModuleDefinition, List<ModuleDefinition>>) value; } }
+        [MonoMod__WasIDictionary__]
         public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
+        public IDictionary<string, ModuleDefinition> _DependencyCache { get { return DependencyCache; } set { DependencyCache = (Dictionary<string, ModuleDefinition>) value; } }
         public List<string> DependencyDirs = new List<string>();
         public bool CleanupEnabled;
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
-        
-        public bool Strict;
-
-        public bool MissingDependencyThrow;
-
-        public bool RemovePatchReferences;
 
         public List<ModuleReference> Mods = new List<ModuleReference>();
 
-        public int CurrentRID = 0;
-
+        public bool Strict;
+        public bool MissingDependencyThrow;
+        public bool RemovePatchReferences;
+        public bool PreventInline = false;
+        public ReadingMode ReadingMode = ReadingMode.Deferred;
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
-        public bool PreventInline = false;
-
-        public ReadingMode ReadingMode = ReadingMode.Deferred;
+        public int CurrentRID = 0;
 
         protected IAssemblyResolver _assemblyResolver;
         public virtual IAssemblyResolver AssemblyResolver {
@@ -1006,7 +1019,7 @@ namespace MonoMod {
 
 
         public virtual TypeReference FindType(string name)
-            => FindType(Module, name, new Stack<ModuleDefinition>()) ?? Module.GetType(name, true);
+            => FindType(Module, name, new Stack<ModuleDefinition>()) ?? Module.GetType(name, false);
         public virtual TypeReference FindType(string name, bool runtimeName)
             => FindType(Module, name, new Stack<ModuleDefinition>()) ?? Module.GetType(name, runtimeName);
         protected virtual TypeReference FindType(ModuleDefinition main, string fullName, Stack<ModuleDefinition> crawled) {
@@ -1677,8 +1690,9 @@ namespace MonoMod {
 
             bool found = false;
             // Don't compact this, otherwise it'll only run until the first "true" upgrade.
-            found |= _SplitUpgrade("Utils");
-            found |= _SplitUpgrade("RuntimeDetour");
+            found |= _SplitUpgrade("MonoMod");
+            found |= _SplitUpgrade("MonoMod.Utils");
+            found |= _SplitUpgrade("MonoMod.RuntimeDetour");
             if (!found) {
                 Log("[UpgradeSplit] No MonoMod \"split\" upgrade targets found. Upgrade skipped.");
                 return;
@@ -1686,8 +1700,6 @@ namespace MonoMod {
         }
 
         private bool _SplitUpgrade(string split) {
-            split = "MonoMod." + split;
-
             bool missingDependencyThrow = MissingDependencyThrow;
             MissingDependencyThrow = false;
             MapDependency(Module, split);
@@ -1713,9 +1725,26 @@ namespace MonoMod {
         private void _SplitUpgrade(TypeDefinition type) {
             RelinkMap[type.FullName] = type;
 
-            CustomAttribute attribOldName = type.GetMMAttribute("__OldName__");
-            if (attribOldName != null) {
-                RelinkMap[(string) attribOldName.ConstructorArguments[0].Value] = type;
+            CustomAttribute typeAttribOldName = type.GetMMAttribute("__OldName__");
+            string typeOldName = typeAttribOldName == null ? null : (string) typeAttribOldName.ConstructorArguments[0].Value;
+            if (typeOldName != null) {
+                RelinkMap[typeOldName] = type;
+            }
+
+            foreach (FieldDefinition field in type.Fields) {
+                if (field.HasMMAttribute("__WasIDictionary__")) {
+                    // MonoMod moved from IDictionary to Dictionary, but provides proxies for old mods.
+                    // Relink from old field type + new field name => proxy property.
+                    GenericInstanceType fieldType = (GenericInstanceType) field.FieldType;
+                    GenericInstanceType fieldTypeOld = new GenericInstanceType(
+                        FindTypeDeep("System.Collections.Generic.IDictionary`2")
+                    );
+                    fieldTypeOld.GenericArguments.AddRange(fieldType.GenericArguments);
+                    RelinkMap[$"{fieldTypeOld} {type.FullName}::{field.Name}"] = type.FindProperty($"_{field.Name}");
+                    if (typeOldName != null) {
+                        RelinkMap[$"{fieldTypeOld} {typeOldName}::{field.Name}"] = type.FindProperty($"_{field.Name}");
+                    }
+                }
             }
 
             foreach (TypeDefinition nested in type.NestedTypes)
