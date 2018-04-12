@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Linq.Expressions;
 using MonoMod.Utils;
+using System.Collections.Generic;
 
 namespace MonoMod.RuntimeDetour {
     public static class DetourManager {
@@ -61,11 +62,11 @@ namespace MonoMod.RuntimeDetour {
         #region Method-related helpers
 
         /// <summary>
-        /// Get a pointer to the start of the executable section of the method.
-        /// Normally, this is the JITed "native" function.
+        /// Get a pointer to the start of the executable section of the method. Normally, this is the JITed "native" function.
+        /// Note: DetourManager.GetNativeStart silently pins your method. If you want to skip pinning, use DetourManager.Runtime.GetNativeStart directly.
         /// </summary>
         public static IntPtr GetNativeStart(this MethodBase method)
-            => Runtime.GetNativeStart(method);
+            => Runtime.GetNativeStart(method.Pin());
         public static IntPtr GetNativeStart(this Delegate method)
             => method.Method.GetNativeStart();
         public static IntPtr GetNativeStart(this Expression method)
@@ -73,6 +74,11 @@ namespace MonoMod.RuntimeDetour {
 
         public static DynamicMethod CreateILCopy(this MethodBase method)
             => Runtime.CreateCopy(method);
+
+        public static T Pin<T>(this T method) where T : MethodBase {
+            Runtime.Pin(method);
+            return method;
+        }
 
         #endregion
 
@@ -111,7 +117,7 @@ namespace MonoMod.RuntimeDetour {
             Native.Apply(detour);
             Native.Free(detour);
 
-            return dm;
+            return dm.Pin();
         }
 
         // Used in EmitDetourApply.

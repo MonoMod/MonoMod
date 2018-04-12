@@ -96,7 +96,7 @@ namespace MonoMod.RuntimeDetour {
             }
             il.Emit(OpCodes.Ret);
 
-            _ChainedTrampoline = dm;
+            _ChainedTrampoline = dm.Pin();
 
             // Add the detour to the detour map.
             List<Detour> detours;
@@ -228,7 +228,7 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Call, _ChainedTrampoline);
             il.Emit(OpCodes.Ret);
 
-            return dm;
+            return dm.Pin();
         }
 
         /// <summary>

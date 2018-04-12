@@ -9,16 +9,29 @@ namespace MonoMod.RuntimeDetour {
     public interface IDetourRuntimePlatform {
         IntPtr GetNativeStart(MethodBase method);
         DynamicMethod CreateCopy(MethodBase method);
+        void Pin(MethodBase method);
     }
 
     public abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
+        // Prevent the GC from collecting those.
+        protected HashSet<DynamicMethod> PinnedDynamicMethods = new HashSet<DynamicMethod>();
+
         public IntPtr GetNativeStart(MethodBase method) {
             RuntimeMethodHandle handle = GetMethodHandle(method);
-            // "Pin" the method.
-            RuntimeHelpers.PrepareMethod(handle);
             return handle.GetFunctionPointer();
+        }
+
+        public void Pin(MethodBase method) {
+            RuntimeMethodHandle handle = GetMethodHandle(method);
+
+            if (method is DynamicMethod) {
+                DynamicMethod dm = (DynamicMethod) method;
+                PinnedDynamicMethods.Add(dm);
+            }
+
+            RuntimeHelpers.PrepareMethod(handle);
         }
 
         public DynamicMethod CreateCopy(MethodBase method) {
@@ -60,7 +73,7 @@ namespace MonoMod.RuntimeDetour {
             foreach (Harmony.ILCopying.ExceptionBlock block in endBlocks)
                 Harmony.ILCopying.Emitter.MarkBlockAfter(il, block);
 
-            return dm;
+            return dm.Pin();
         }
     }
 

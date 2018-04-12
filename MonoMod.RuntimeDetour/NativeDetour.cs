@@ -224,7 +224,7 @@ namespace MonoMod.RuntimeDetour {
 
             il.Emit(OpCodes.Ret);
 
-            return dm;
+            return dm.Pin();
         }
 
         /// <summary>
