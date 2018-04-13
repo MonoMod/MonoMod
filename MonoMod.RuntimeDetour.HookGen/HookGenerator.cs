@@ -237,6 +237,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 IsRuntime = true,
                 IsManaged = true
             };
+            ctor.Parameters.Add(new ParameterDefinition(OutputModule.TypeSystem.Object));
+            ctor.Parameters.Add(new ParameterDefinition(OutputModule.TypeSystem.IntPtr));
             ctor.Body = new MethodBody(ctor);
             del.Methods.Add(ctor);
 
