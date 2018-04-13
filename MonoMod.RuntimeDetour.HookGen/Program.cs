@@ -29,6 +29,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     i++;
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE", args[i]);
                     pathInI = i + 1;
+                } else if (args[i] == "--hook-orig") {
+                    Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_HOOKORIG", "1");
                 }
             }
 

@@ -18,6 +18,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public ModuleDefinition OutputModule;
 
         public string Namespace;
+        public bool HookOrig;
 
         public ModuleDefinition md_RuntimeDetour;
 
@@ -45,6 +46,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Namespace = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE");
             if (string.IsNullOrEmpty(Namespace))
                 Namespace = "On";
+            HookOrig = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_HOOKORIG") == "1";
 
             modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour");
             if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour", out md_RuntimeDetour))
@@ -128,6 +130,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public bool GenerateFor(TypeDefinition hookType, MethodDefinition method) {
             if (method.HasGenericParameters ||
                 method.IsSpecialName)
+                return false;
+
+            if (!HookOrig && method.Name.StartsWith("orig_"))
                 return false;
 
             int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name).ToList().IndexOf(method);
