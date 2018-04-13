@@ -17,6 +17,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public ModuleDefinition OutputModule;
 
+        public string Namespace;
+
         public ModuleDefinition md_RuntimeDetour;
 
         public TypeReference t_MulticastDelegate;
@@ -33,12 +35,16 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public HookGenerator(MonoModder modder) {
             Modder = modder;
 
-            OutputModule = ModuleDefinition.CreateModule("MMHOOK_" + modder.Module.Name, new ModuleParameters {
+            OutputModule = ModuleDefinition.CreateModule("MMHOOK_" + Path.ChangeExtension(modder.Module.Name, "dll"), new ModuleParameters {
                 Architecture = modder.Module.Architecture,
                 AssemblyResolver = modder.Module.AssemblyResolver,
                 Kind = ModuleKind.Dll,
                 Runtime = modder.Module.Runtime
             });
+
+            Namespace = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE");
+            if (string.IsNullOrEmpty(Namespace))
+                Namespace = "On";
 
             modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour");
             if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour", out md_RuntimeDetour))
@@ -89,35 +95,40 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public TypeDefinition GenerateFor(TypeDefinition type) {
             if (type.HasGenericParameters ||
                 type.IsRuntimeSpecialName ||
-                type.FullName == "<Module>")
+                type.Name.StartsWith("<"))
                 return null;
 
             Log($"Generating for type {type.FullName}");
 
             TypeDefinition hookType = new TypeDefinition(
-                type.DeclaringType != null ? null : ("MMHOOK" + (string.IsNullOrEmpty(type.Namespace) ? "" : ("." + type.Namespace))),
+                type.IsNested ? null : (Namespace + (string.IsNullOrEmpty(type.Namespace) ? "" : ("." + type.Namespace))),
                 type.Name,
-                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class,
+                (type.IsNested ? TypeAttributes.NestedPublic : TypeAttributes.Public) | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class,
                 OutputModule.TypeSystem.Object
             );
 
+            bool add = false;
+
             foreach (MethodDefinition method in type.Methods)
-                GenerateFor(hookType, method);
+                add |= GenerateFor(hookType, method);
 
             foreach (TypeDefinition nested in type.NestedTypes) {
                 TypeDefinition hookNested = GenerateFor(nested);
                 if (hookNested == null)
                     continue;
+                add = true;
                 hookType.NestedTypes.Add(hookNested);
             }
 
+            if (!add)
+                return null;
             return hookType;
         }
 
-        public void GenerateFor(TypeDefinition hookType, MethodDefinition method) {
+        public bool GenerateFor(TypeDefinition hookType, MethodDefinition method) {
             if (method.HasGenericParameters ||
                 method.IsSpecialName)
-                return;
+                return false;
 
             int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name).ToList().IndexOf(method);
             string suffix = "";
@@ -192,6 +203,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 RemoveMethod = remove
             };
             hookType.Events.Add(ev);
+
+            return true;
         }
 
         public TypeDefinition GenerateDelegateFor(TypeDefinition hookType, MethodDefinition method) {
@@ -207,7 +220,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             TypeDefinition del = new TypeDefinition(
                 null, null,
-                TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.Class,
+                TypeAttributes.NestedPublic | TypeAttributes.Sealed | TypeAttributes.Class,
                 t_MulticastDelegate
             );
 

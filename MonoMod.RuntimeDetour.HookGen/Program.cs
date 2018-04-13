@@ -25,7 +25,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             int pathInI = 0;
 
             for (int i = 0; i < args.Length; i++) {
-                // TODO: Parse args.
+                if (args[i] == "--namespace" && i + 2 < args.Length) {
+                    i++;
+                    Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE", args[i]);
+                    pathInI = i + 1;
+                }
             }
 
             if (pathInI >= args.Length) {
