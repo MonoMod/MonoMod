@@ -21,6 +21,7 @@ namespace MonoMod.DebugIL {
         public MonoModder Modder;
 
         public bool Relative = false;
+        public bool SkipMaxStack = false;
 
         public string OutputPath;
         public Stack<string> CurrentPath = new Stack<string>();
@@ -49,6 +50,7 @@ namespace MonoMod.DebugIL {
             modder.OutputPath = Path.Combine(OutputPath, Path.GetFileName(modder.InputPath));
 
             Relative = Environment.GetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE") == "1";
+            SkipMaxStack = Environment.GetEnvironmentVariable("MONOMOD_DEBUGIL_SKIP_MAXSTACK") == "1";
         }
 
         public static void DeleteRecursive(string path) {
@@ -212,8 +214,10 @@ namespace MonoMod.DebugIL {
                 } else {
                     // TODO: [DbgILGen] Method body metadata?
 
-                    writer.Write(".maxstack ");
-                    writer.WriteLine(method.Body.MaxStackSize); Line++;
+                    if (!SkipMaxStack) {
+                        writer.Write(".maxstack ");
+                        writer.WriteLine(method.Body.MaxStackSize); Line++;
+                    }
 
                     // Always assure a debug scope exists!
                     method.DebugInformation.GetOrAddScope().Variables.Clear();

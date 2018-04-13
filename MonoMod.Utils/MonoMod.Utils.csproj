@@ -49,6 +49,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DynamicMethodHelper.cs" />
     <Compile Include="MonoMod__OldName__.cs" />
     <Compile Include="MonoModExt.cs" />
     <Compile Include="Platform.cs" />

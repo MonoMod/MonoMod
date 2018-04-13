@@ -63,6 +63,8 @@ namespace MonoMod.RuntimeDetour {
             Method = from;
             Target = to;
 
+            // TODO: Check target method arguments.
+
             if (!_BackupMethods.ContainsKey(Method))
                 _BackupMethods[Method] = Method.CreateILCopy();
 
@@ -212,15 +214,16 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             DynamicMethod dm;
-            string name = $"trampoline_{Method.Name}_{GetHashCode()}";
+            ILGenerator il;
+
             dm = new DynamicMethod(
-                name,
+                $"trampoline_{Method.Name}_{GetHashCode()}",
                 returnType, argTypes,
                 Method.DeclaringType,
                 true
             );
 
-            ILGenerator il = dm.GetILGenerator();
+            il = dm.GetILGenerator();
 
             // TODO: Use specialized Ldarg.* if possible; What about ref types?
             for (int i = 0; i < argTypes.Length; i++)

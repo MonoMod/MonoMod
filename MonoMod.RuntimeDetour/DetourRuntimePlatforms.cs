@@ -108,16 +108,19 @@ namespace MonoMod.RuntimeDetour {
             if (method is DynamicMethod) {
                 // Compile the method handle before getting our hands on the final method handle.
                 DynamicMethod dm = (DynamicMethod) method;
+                // This likes to die.
+                /*
                 if (m_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                     dmd_RuntimeHelpers__CompileMethod(null, ((RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(dm)).Value);
                 } else if (m_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
-                    // This likes to die.
-                    // dmd_RuntimeHelpers__CompileMethod(null, dmd_RuntimeMethodHandle_GetMethodInfo(handle));
-                    // This should work just fine.
-                    try {
-                        dm.CreateDelegate(typeof(MulticastDelegate));
-                    } catch {
-                    }
+                    dmd_RuntimeHelpers__CompileMethod(null, dmd_RuntimeMethodHandle_GetMethodInfo((RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(dm)));
+                }
+                */
+                // This should work just fine.
+                // It abuses the fact that CreateDelegate first compiles the DynamicMethod, before creating the delegate and failing.
+                try {
+                    dm.CreateDelegate(typeof(MulticastDelegate));
+                } catch {
                 }
 
                 if (f_DynamicMethod_m_method != null)

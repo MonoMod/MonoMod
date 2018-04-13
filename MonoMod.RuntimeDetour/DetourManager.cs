@@ -133,7 +133,6 @@ namespace MonoMod.RuntimeDetour {
         private readonly static MethodInfo _ToNativeDetourData = typeof(DetourManager).GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
         private readonly static MethodInfo _Copy = typeof(IDetourNativePlatform).GetMethod("Copy");
         private readonly static MethodInfo _Apply = typeof(IDetourNativePlatform).GetMethod("Apply");
-        private readonly static MethodInfo _GetMethodFromHandle = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
 
         /// <summary>
         /// Emit a call to DetourManager.Native.Copy using the given parameters.
@@ -174,20 +173,6 @@ namespace MonoMod.RuntimeDetour {
 
             // Apply.
             il.Emit(OpCodes.Callvirt, _Apply);
-        }
-
-        /// <summary>
-        /// Emit a ldtoken + MethodBase.GetMethodFromHandle. This would be methodof(...) in C#, if it would exist.
-        /// </summary>
-        public static void EmitMethodOf(this ILGenerator il, MethodBase method) {
-            if (method is MethodInfo)
-                il.Emit(OpCodes.Call, (MethodInfo) method);
-            else if (method is ConstructorInfo)
-                il.Emit(OpCodes.Call, (ConstructorInfo) method);
-            else
-                throw new NotSupportedException($"Method type {method.GetType().FullName} not supported.");
-
-            il.Emit(OpCodes.Call, _GetMethodFromHandle);
         }
 
         #endregion

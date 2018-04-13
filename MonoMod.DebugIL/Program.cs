@@ -22,11 +22,15 @@ namespace MonoMod.DebugIL {
 
             int pathInI = 0;
 
-            for (int i = 0; i < args.Length; i++)
-                if (args[i] == "--debug-il-relative" || args[i] == "--dbg-il-relative") {
+            for (int i = 0; i < args.Length; i++) {
+                if (args[i] == "--relative") {
                     Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE", "1");
                     pathInI = i + 1;
+                } else if (args[i] == "--skip-maxstack") {
+                    Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_SKIP_MAXSTACK", "1");
+                    pathInI = i + 1;
                 }
+            }
 
             if (pathInI >= args.Length) {
                 Console.WriteLine("No assembly path passed.");

@@ -11,6 +11,8 @@
     <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -36,11 +38,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Detour.cs" />
-    <Compile Include="DetourExample.cs" />
     <Compile Include="DetourManager.cs" />
     <Compile Include="DetourNativePlatforms.cs" />
     <Compile Include="DetourRuntimePlatforms.cs" />
     <Compile Include="Detour\RuntimeDetour.cs" />
+    <Compile Include="Hook.cs" />
     <Compile Include="IDetour.cs" />
     <Compile Include="ILCopying\AccessCache.cs" />
     <Compile Include="ILCopying\AccessTools.cs" />
