@@ -62,7 +62,7 @@ namespace MonoMod {
 
     public class RelinkCacheKeyEqualityComparer : EqualityComparer<RelinkCacheKey> {
         public override bool Equals(RelinkCacheKey x, RelinkCacheKey y) {
-            return x.Equals(y);
+            return x.TokenProvider.Equals(y.TokenProvider) && x.Equals(y.Context);
         }
 
         public override int GetHashCode(RelinkCacheKey obj) {
@@ -2047,7 +2047,7 @@ namespace MonoMod {
             }
             Log("[PatchWasHere] Adding type MonoMod.WasHere");
             TypeDefinition wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
-                BaseType = Module.ImportReference(typeof(object))
+                BaseType = Module.TypeSystem.Object
             };
             Module.Types.Add(wasHere);
             return wasHere;

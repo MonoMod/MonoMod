@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.Utils", "MonoMod.Ut
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.UnitTest", "MonoMod.UnitTest\MonoMod.UnitTest.csproj", "{9CE10DFD-A61B-4DFB-B8C0-1C4B2B5BC476}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.RuntimeDetour.HookGen", "MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj", "{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{9CE10DFD-A61B-4DFB-B8C0-1C4B2B5BC476}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CE10DFD-A61B-4DFB-B8C0-1C4B2B5BC476}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CE10DFD-A61B-4DFB-B8C0-1C4B2B5BC476}.Release|Any CPU.Build.0 = Release|Any CPU
+		{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

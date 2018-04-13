@@ -4,17 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{D0C584C0-81D7-486E-B70E-D7F9256E0909}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MonoMod.RuntimeDetour</RootNamespace>
-    <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
+    <RootNamespace>MonoMod.RuntimeDetour.HookGen</RootNamespace>
+    <AssemblyName>MonoMod.RuntimeDetour.HookGen</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,49 +21,56 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Mono.Cecil, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Mdb, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.Mdb.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Pdb, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.Pdb.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.Rocks.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Detour.cs" />
-    <Compile Include="HookManager.cs" />
-    <Compile Include="DetourManager.cs" />
-    <Compile Include="DetourNativePlatforms.cs" />
-    <Compile Include="DetourRuntimePlatforms.cs" />
-    <Compile Include="Detour\RuntimeDetour.cs" />
-    <Compile Include="Hook.cs" />
-    <Compile Include="IDetour.cs" />
-    <Compile Include="ILCopying\AccessCache.cs" />
-    <Compile Include="ILCopying\AccessTools.cs" />
-    <Compile Include="ILCopying\ByteBuffer.cs" />
-    <Compile Include="ILCopying\CodeInstruction.cs" />
-    <Compile Include="ILCopying\CodeTranspiler.cs" />
-    <Compile Include="ILCopying\Emitter.cs" />
-    <Compile Include="ILCopying\ILInstruction.cs" />
-    <Compile Include="ILCopying\MethodCopier.cs" />
-    <Compile Include="ILCopying\Traverse.cs" />
-    <Compile Include="NativeDetour.cs" />
+    <Compile Include="HookGenerator.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ILCopying\README.md" />
-  </ItemGroup>
-  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj">
+      <Project>{d0c584c0-81d7-486e-b70e-d7f9256e0909}</Project>
+      <Name>MonoMod.RuntimeDetour</Name>
+    </ProjectReference>
     <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj">
       <Project>{1839cfe2-3db0-45a8-b03d-9aa797479a3a}</Project>
       <Name>MonoMod.Utils</Name>
     </ProjectReference>
+    <ProjectReference Include="..\MonoMod\MonoMod.csproj">
+      <Project>{8a17c958-5c33-4035-af76-f94a3aa2dc4f}</Project>
+      <Name>MonoMod</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
