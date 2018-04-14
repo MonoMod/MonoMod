@@ -33,10 +33,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public MethodReference m_Add;
         public MethodReference m_Remove;
 
-        public HookGenerator(MonoModder modder) {
+        public HookGenerator(MonoModder modder, string name) {
             Modder = modder;
 
-            OutputModule = ModuleDefinition.CreateModule("MMHOOK_" + Path.ChangeExtension(modder.Module.Name, "dll"), new ModuleParameters {
+            OutputModule = ModuleDefinition.CreateModule(name, new ModuleParameters {
                 Architecture = modder.Module.Architecture,
                 AssemblyResolver = modder.Module.AssemblyResolver,
                 Kind = ModuleKind.Dll,
