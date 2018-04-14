@@ -625,23 +625,22 @@ namespace MonoMod.Utils {
         }
 
         public static MethodDefinition FindMethod(this TypeDefinition type, string findableID, bool simple = true) {
+            if (simple && !findableID.Contains(" ")) {
+                // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
+                // First simple pass: With type name (just "Namespace.Type::MethodName")
+                foreach (MethodDefinition method in type.Methods)
+                    if (method.GetFindableID(simple: true) == findableID) return method;
+                // Second simple pass: Without type name (basically name only)
+                foreach (MethodDefinition method in type.Methods)
+                    if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
+            }
+
             // First pass: With type name (f.e. global searches)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID() == findableID) return method;
             // Second pass: Without type name (f.e. LinkTo)
             foreach (MethodDefinition method in type.Methods)
                 if (method.GetFindableID(withType: false) == findableID) return method;
-
-            if (!simple)
-                return null;
-
-            // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
-            // First simple pass: With type name (just "Namespace.Type::MethodName")
-            foreach (MethodDefinition method in type.Methods)
-                if (method.GetFindableID(simple: true) == findableID) return method;
-            // Second simple pass: Without type name (basically name only)
-            foreach (MethodDefinition method in type.Methods)
-                if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
 
             return null;
         }
@@ -838,9 +837,9 @@ namespace MonoMod.Utils {
                     name = name.Substring(8); // Patch name is refering to a global type.
                 else if (name.Contains(".") || name.Contains("/")) { } // Patch name is already a full name.
                 else if (!string.IsNullOrEmpty(type.Namespace))
-                    name = $"{type.Namespace}.{name}";
+                    name = type.Namespace + "." + name;
                 else if (type.IsNested)
-                    name = $"{type.DeclaringType.GetPatchFullName()}/{name}";
+                    name = type.DeclaringType.GetPatchFullName() + "/" + name;
 
                 if (mr is TypeSpecification) {
                     // Collect TypeSpecifications and append formats back to front.

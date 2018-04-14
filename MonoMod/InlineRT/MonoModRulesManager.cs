@@ -92,10 +92,9 @@ namespace MonoMod.InlineRT {
                     Runtime = TargetRuntime.Net_2_0
                 }
             );
-            MonoModder wrapperMod = new MonoModder() {
+            MonoModder wrapperMod = new MonoModRulesModder() {
                 Module = wrapper,
-
-                Logger = (modder, msg) => self.Log("[MonoModRule] " + msg),
+                Orig = orig,
 
                 CleanupEnabled = false,
 
@@ -121,11 +120,6 @@ namespace MonoMod.InlineRT {
             // Required as the relinker only deep-relinks if the method the type comes from is a mod.
             // Fixes nasty reference import sharing issues.
             wrapperMod.Mods.Add(self.Module);
-
-            wrapperMod.Relinker = (mtp, context) =>
-                mtp is TypeReference && ((TypeReference) mtp).FullName == orig.FullName ?
-                    wrapper.GetType(orig.FullName) :
-                wrapperMod.DefaultRelinker(mtp, context);
 
             wrapperMod.PrePatchType(orig, forceAdd: true);
             wrapperMod.PatchType(orig);

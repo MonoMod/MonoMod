@@ -55,7 +55,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 mm.MapDependencies();
 
                 if (File.Exists(pathOut)) {
-                    mm.Log($"Clearing {pathOut}");
+                    mm.Log($"[HookGen] Clearing {pathOut}");
                     File.Delete(pathOut);
                 }
 
@@ -71,7 +71,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                 Console.ReadKey();
-            return;
         }
     }
 }

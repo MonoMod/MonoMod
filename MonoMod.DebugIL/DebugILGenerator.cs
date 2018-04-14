@@ -67,22 +67,9 @@ namespace MonoMod.DebugIL {
         public static void Generate(MonoModder modder)
             => new DebugILGenerator(modder).Generate();
 
-        public void Log(object obj) {
-            Log(obj.ToString());
-        }
-
-        public void Log(string txt) {
-            if (Modder.Logger != null) {
-                Modder.Logger(Modder, txt);
-                return;
-            }
-            Console.Write("[MonoMod] [DbgILGen] ");
-            Console.WriteLine(txt);
-        }
-
         public void Generate() {
             if (Directory.Exists(FullPath)) {
-                Log($"Clearing {FullPath}");
+                Modder.Log($"[DbgIlGen] Clearing {FullPath}");
                 DeleteRecursive(FullPath);
             }
 
@@ -146,7 +133,7 @@ namespace MonoMod.DebugIL {
             CurrentPath.Push(PathVerifyRegex.Replace(type.Name, ""));
             Directory.CreateDirectory(FullPath);
 
-            Log($"Generating for type {type.FullName}");
+            Modder.Log($"[DbgIlGen] Generating for type {type.FullName}");
 
             CurrentPath.Push("TypeInfo.il");
             using (StreamWriter writer = new StreamWriter(FullPath)) {

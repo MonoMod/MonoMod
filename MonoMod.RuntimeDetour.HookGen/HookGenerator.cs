@@ -72,19 +72,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         }
 
-        public void Log(object obj) {
-            Log(obj.ToString());
-        }
-
-        public void Log(string txt) {
-            if (Modder.Logger != null) {
-                Modder.Logger(Modder, txt);
-                return;
-            }
-            Console.Write("[MonoMod] [HookGen] ");
-            Console.WriteLine(txt);
-        }
-
         public void Generate() {
             foreach (TypeDefinition type in Modder.Module.Types) {
                 TypeDefinition hookType = GenerateFor(type);
@@ -100,7 +87,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 type.Name.StartsWith("<"))
                 return null;
 
-            Log($"Generating for type {type.FullName}");
+            Modder.LogVerbose($"[HookGen] Generating for type {type.FullName}");
 
             TypeDefinition hookType = new TypeDefinition(
                 type.IsNested ? null : (Namespace + (string.IsNullOrEmpty(type.Namespace) ? "" : ("." + type.Namespace))),

@@ -15,7 +15,6 @@ using MonoMod.Utils;
 
 namespace MonoMod {
 
-    public delegate void Logger(MonoModder modder, string text);
     public delegate bool MethodParser(MonoModder modder, MethodBody body, Instruction instr, ref int instri);
     public delegate void MethodRewriter(MonoModder modder, MethodDefinition method);
     public delegate void MethodBodyRewriter(MonoModder modder, MethodBody body, Instruction instr, int instri);
@@ -35,41 +34,6 @@ namespace MonoMod {
         }
     }
 
-    public struct RelinkCacheKey {
-        public IMetadataTokenProvider TokenProvider;
-        public IGenericParameterProvider Context;
-
-        public RelinkCacheKey(IMetadataTokenProvider tokenProvider, IGenericParameterProvider context) {
-            TokenProvider = tokenProvider;
-            Context = context;
-        }
-
-        public override int GetHashCode() {
-            return TokenProvider.GetHashCode() ^ Context.GetHashCode();
-        }
-
-        public override bool Equals(object obj) {
-            if (!(obj is RelinkCacheKey))
-                return false;
-            RelinkCacheKey other = (RelinkCacheKey) obj;
-            return TokenProvider.Equals(other.TokenProvider) && Context.Equals(other.Context);
-        }
-
-        public override string ToString() {
-            return $"[RelinkCacheKey ({TokenProvider}) ({Context})]";
-        }
-    }
-
-    public class RelinkCacheKeyEqualityComparer : EqualityComparer<RelinkCacheKey> {
-        public override bool Equals(RelinkCacheKey x, RelinkCacheKey y) {
-            return x.TokenProvider.Equals(y.TokenProvider) && x.Equals(y.Context);
-        }
-
-        public override int GetHashCode(RelinkCacheKey obj) {
-            return obj.TokenProvider.GetHashCode() ^ obj.Context.GetHashCode();
-        }
-    }
-
     public enum DebugSymbolFormat {
         Auto,
         MDB,
@@ -81,11 +45,6 @@ namespace MonoMod {
         public readonly static bool IsMono = Type.GetType("Mono.Runtime") != null;
 
         public readonly static Version Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-
-        public static Logger DefaultLogger;
-        public static Logger DefaultVerboseLogger;
-        public Logger Logger;
-        public Logger VerboseLogger;
 
         // WasIDictionary and the _ IDictionaries are used when upgrading mods.
 
@@ -104,17 +63,6 @@ namespace MonoMod {
         public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
         public IDictionary<string, TypeReference> _RelinkModuleMapCache { get { return RelinkModuleMapCache; } set { RelinkModuleMapCache = (Dictionary<string, TypeReference>) value; } }
 
-        public Dictionary<RelinkCacheKey, IMetadataTokenProvider> RelinkerCache = new Dictionary<RelinkCacheKey, IMetadataTokenProvider>(new RelinkCacheKeyEqualityComparer());
-
-        public Relinker Relinker;
-        public Relinker MainRelinker;
-        public Relinker PostRelinker;
-
-        public MethodParser MethodParser;
-
-        public MethodRewriter MethodRewriter;
-        public MethodBodyRewriter MethodBodyRewriter;
-
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
@@ -127,20 +75,29 @@ namespace MonoMod {
 
         public MissingDependencyResolver MissingDependencyResolver;
 
+        public MethodParser MethodParser;
+        public MethodRewriter MethodRewriter;
+        public MethodBodyRewriter MethodBodyRewriter;
+
         public Stream Input;
         public string InputPath;
         public Stream Output;
         public string OutputPath;
+        public List<string> DependencyDirs = new List<string>();
         public ModuleDefinition Module;
+
         [MonoMod__WasIDictionary__]
         public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
         public IDictionary<ModuleDefinition, List<ModuleDefinition>> _DependencyMap { get { return DependencyMap; } set { DependencyMap = (Dictionary<ModuleDefinition, List<ModuleDefinition>>) value; } }
         [MonoMod__WasIDictionary__]
         public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
         public IDictionary<string, ModuleDefinition> _DependencyCache { get { return DependencyCache; } set { DependencyCache = (Dictionary<string, ModuleDefinition>) value; } }
-        public List<string> DependencyDirs = new List<string>();
-        public bool CleanupEnabled;
+
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
+
+        public bool LogVerboseEnabled;
+        public bool RelinkerCacheEnabled;
+        public bool CleanupEnabled;
 
         public List<ModuleReference> Mods = new List<ModuleReference>();
 
@@ -148,7 +105,7 @@ namespace MonoMod {
         public bool MissingDependencyThrow;
         public bool RemovePatchReferences;
         public bool PreventInline = false;
-        public ReadingMode ReadingMode = ReadingMode.Deferred;
+        public ReadingMode ReadingMode = ReadingMode.Immediate;
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
         public int CurrentRID = 0;
@@ -265,10 +222,6 @@ namespace MonoMod {
         }
 
         public MonoModder() {
-            Relinker = DefaultRelinker;
-            MainRelinker = DefaultMainRelinker;
-            PostRelinker = DefaultPostRelinker;
-
             MethodParser = DefaultParser;
 
             MissingDependencyResolver = DefaultMissingDependencyResolver;
@@ -282,12 +235,8 @@ namespace MonoMod {
                     DependencyDirs.Add(dir);
                 }
             }
-            if (Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1") {
-                VerboseLogger = (modder, text) => modder.Log(text);
-            }
-            if (Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "0") {
-                Relinker = DefaultUncachedRelinker;
-            }
+            LogVerboseEnabled = Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1";
+            RelinkerCacheEnabled = Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "1";
             CleanupEnabled = Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0";
             PreventInline = Environment.GetEnvironmentVariable("MONOMOD_PREVENTINLINE") == "1";
             Strict = Environment.GetEnvironmentVariable("MONOMOD_STRICT") == "1";
@@ -307,7 +256,6 @@ namespace MonoMod {
             if (all || moduleSpecific) {
                 RelinkMapCache.Clear();
                 RelinkModuleMapCache.Clear();
-                RelinkerCache.Clear();
             }
         }
 
@@ -336,30 +284,19 @@ namespace MonoMod {
             Log(value.ToString());
         }
         public virtual void Log(string text) {
-            if (Logger != null) {
-                Logger(this, text);
-                return;
-            }
-            if (DefaultLogger != null) {
-                DefaultLogger(this, text);
-                return;
-            }
             Console.Write("[MonoMod] ");
             Console.WriteLine(text);
         }
 
-        public virtual void LogVerbose(object obj) {
-            LogVerbose(obj.ToString());
+        public virtual void LogVerbose(object value) {
+            if (!LogVerboseEnabled)
+                return;
+            Log(value);
         }
-        public virtual void LogVerbose(string txt) {
-            if (VerboseLogger != null) {
-                VerboseLogger(this, txt);
+        public virtual void LogVerbose(string text) {
+            if (!LogVerboseEnabled)
                 return;
-            }
-            if (DefaultVerboseLogger != null) {
-                DefaultVerboseLogger(this, txt);
-                return;
-            }
+            Log(text);
         }
 
         /// <summary>
@@ -805,15 +742,7 @@ namespace MonoMod {
             throw new InvalidOperationException($"Cannot link from {orig} - unknown type {orig.GetType()}");
         }
 
-        public virtual IMetadataTokenProvider DefaultRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            IMetadataTokenProvider cached;
-            RelinkCacheKey key = new RelinkCacheKey(mtp, context);
-            if (RelinkerCache.TryGetValue(key, out cached))
-                return cached;
-            return RelinkerCache[key] = DefaultUncachedRelinker(mtp, context);
-        }
-
-        public virtual IMetadataTokenProvider DefaultUncachedRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+        public virtual IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             // LinkTo bypasses all relinking maps.
             ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
             if (cap == null) // TODO: This increases the PatchRefs pass time and could be optimized.
@@ -847,7 +776,7 @@ namespace MonoMod {
                 throw new RelinkFailedException(null, e, mtp, context);
             }
         }
-        public virtual IMetadataTokenProvider DefaultMainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
+        public virtual IMetadataTokenProvider MainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
              if (mtp is TypeReference) {
                 TypeReference type = (TypeReference) mtp;
 
@@ -872,8 +801,7 @@ namespace MonoMod {
 
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
         }
-        public virtual IMetadataTokenProvider DefaultPostRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-
+        public virtual IMetadataTokenProvider PostRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             // The post relinker doesn't care if it can't handle a specific metadata token provider type; Just run ResolveRelinkTarget
             return ResolveRelinkTarget(mtp) ?? mtp;
         }
@@ -1114,7 +1042,7 @@ namespace MonoMod {
             }
 
             // Add the type.
-            Log($"[PrePatchType] Adding {typeName} to the target module.");
+            LogVerbose($"[PrePatchType] Adding {typeName} to the target module.");
 
             TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType);
 
@@ -1198,9 +1126,9 @@ namespace MonoMod {
             }
 
             if (typeName == type.FullName)
-                Log($"[PatchType] Patching type {typeName}");
+                LogVerbose($"[PatchType] Patching type {typeName}");
             else
-                Log($"[PatchType] Patching type {typeName} (prefixed: {type.FullName})");
+                LogVerbose($"[PatchType] Patching type {typeName} (prefixed: {type.FullName})");
 
             // Add "new" custom attributes
             foreach (CustomAttribute attrib in type.CustomAttributes)
@@ -1645,7 +1573,7 @@ namespace MonoMod {
                     for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
                         AssemblyNameReference dep = Module.AssemblyReferences[i];
                         if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version) {
-                            Log("[PatchRefs] Removing and relinking duplicate mscorlib: " + dep.Version);
+                            LogVerbose("[PatchRefs] Removing and relinking duplicate mscorlib: " + dep.Version);
                             RelinkModuleMap[dep.FullName] = mscorlib;
                             Module.AssemblyReferences.RemoveAt(i);
                             --i;
@@ -2041,11 +1969,11 @@ namespace MonoMod {
         public virtual TypeDefinition PatchWasHere() {
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "WasHere") {
-                    Log("[PatchWasHere] Type MonoMod.WasHere already existing");
+                    LogVerbose("[PatchWasHere] Type MonoMod.WasHere already existing");
                     return Module.Types[ti];
                 }
             }
-            Log("[PatchWasHere] Adding type MonoMod.WasHere");
+            LogVerbose("[PatchWasHere] Adding type MonoMod.WasHere");
             TypeDefinition wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.TypeSystem.Object
             };
@@ -2074,7 +2002,7 @@ namespace MonoMod {
                     }
                 }
             }
-            Log("[MonoModOriginal] Adding MonoMod.MonoModOriginal");
+            LogVerbose("[MonoModOriginal] Adding MonoMod.MonoModOriginal");
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModOriginal", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
@@ -2114,7 +2042,7 @@ namespace MonoMod {
                     }
                 }
             }
-            Log("[MonoModOriginalName] Adding MonoMod.MonoModOriginalName");
+            LogVerbose("[MonoModOriginalName] Adding MonoMod.MonoModOriginalName");
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModOriginalName", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
@@ -2155,7 +2083,7 @@ namespace MonoMod {
                     }
                 }
             }
-            Log("[MonoModAdded] Adding MonoMod.MonoModAdded");
+            LogVerbose("[MonoModAdded] Adding MonoMod.MonoModAdded");
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModAdded", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };
@@ -2195,7 +2123,7 @@ namespace MonoMod {
                     }
                 }
             }
-            Log("[MonoModPatch] Adding MonoMod.MonoModPatch");
+            LogVerbose("[MonoModPatch] Adding MonoMod.MonoModPatch");
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModPatch", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.ImportReference(typeof(Attribute))
             };

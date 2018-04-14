@@ -53,7 +53,7 @@ namespace MonoMod.RuntimeDetour {
                 if (!(obj is HookKey))
                     return false;
                 HookKey other = (HookKey) obj;
-                return Method.Equals(other.Method) && Hook.Equals(other.Hook);
+                return ReferenceEquals(Method, other.Method) && ReferenceEquals(Hook, other.Hook);
             }
 
             public override string ToString() {
@@ -63,7 +63,7 @@ namespace MonoMod.RuntimeDetour {
 
         private class HookKeyEqualityComparer : EqualityComparer<HookKey> {
             public override bool Equals(HookKey x, HookKey y) {
-                return x.Method.Equals(y.Method) && x.Hook.Equals(y.Hook);
+                return ReferenceEquals(x.Method, y.Method) && ReferenceEquals(x.Hook, y.Hook);
             }
 
             public override int GetHashCode(HookKey obj) {
