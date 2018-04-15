@@ -6,22 +6,22 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    public static class UtilsTest {
+    public static class ModInteropTest {
         [Test]
         public static void TestUtils() {
-            typeof(UtilsC).RegisterUtils();
+            typeof(UtilsC).RegisterModInterop();
 
-            typeof(UtilsA).RegisterUtils();
+            typeof(UtilsA).RegisterModInterop();
             Assert.AreEqual(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
             Assert.AreEqual(UtilsA.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
 
-            typeof(UtilsB).RegisterUtils();
+            typeof(UtilsB).RegisterModInterop();
             Assert.AreEqual(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
             Assert.AreEqual(UtilsB.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
 
         }
 
-        [Utility("ModA")] // Abused for this test, please ignore.
+        [ModExportName("ModA")] // Abused for this test, please ignore.
         public static class UtilsA {
 
             public static int Something(int a, int b) {
@@ -34,7 +34,7 @@ namespace MonoMod.UnitTest {
 
         }
 
-        [Utility("ModB")] // Abused for this test, please ignore.
+        [ModExportName("ModB")] // Abused for this test, please ignore.
         public static class UtilsB {
 
             public static int Something(int a, int b) {
@@ -47,18 +47,18 @@ namespace MonoMod.UnitTest {
 
         }
 
-        [Utility("ModC")] // Abused for this test, please ignore.
+        [ModExportName("ModC")] // Abused for this test, please ignore.
         public static class UtilsC {
 
             // Simple use case: Get the first registered "Something".
             public readonly static Func<int, int, int> Something;
 
             // More complicated use case: Get AnotherThing, apply it on a field of another name.
-            [Utility("AnotherThing")]
+            [ModImport("AnotherThing")]
             public readonly static Func<int, int, int> AnotherThingFromAnywhere;
 
             // More complicated use case: Only get AnotherThing from ModB specifically.
-            [Utility("ModB.AnotherThing")]
+            [ModImport("ModB.AnotherThing")]
             // This is only called AnotherThing because we're wrapping this.
             public readonly static Func<int, int, int> AnotherThingFromModB;
 

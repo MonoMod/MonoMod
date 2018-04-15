@@ -6,20 +6,20 @@ using System.Text;
 
 namespace MonoMod.Utils {
     // This is a horrible place for this.
-    public static class UtilityManager {
+    public static class ModInteropManager {
 
-        private static List<Type> Registered = new List<Type>();
+        private static HashSet<Type> Registered = new HashSet<Type>();
 
         private static Dictionary<string, List<MethodInfo>> Methods = new Dictionary<string, List<MethodInfo>>();
         private static List<FieldInfo> Fields = new List<FieldInfo>();
 
-        public static void RegisterUtils(this Type type) {
+        public static void RegisterModInterop(this Type type) {
             if (Registered.Contains(type))
                 return;
             Registered.Add(type);
 
             string prefix = type.Assembly.GetName().Name;
-            foreach (UtilityAttribute attrib in type.GetCustomAttributes(typeof(UtilityAttribute), false)) {
+            foreach (ModExportNameAttribute attrib in type.GetCustomAttributes(typeof(ModExportNameAttribute), false)) {
                 prefix = attrib.Name;
             }
 
@@ -30,14 +30,14 @@ namespace MonoMod.Utils {
                 Fields.Add(field);
             }
             foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
-                method.RegisterUtil();
-                method.RegisterUtil(prefix);
+                method.RegisterModExport();
+                method.RegisterModExport(prefix);
             }
 
             // Refresh all existing fields and methods.
             foreach (FieldInfo field in Fields) {
                 List<MethodInfo> methods;
-                if (!Methods.TryGetValue(field.GetUtilName(), out methods)) {
+                if (!Methods.TryGetValue(field.GetModImportName(), out methods)) {
                     field.SetValue(null, null);
                     continue;
                 }
@@ -57,31 +57,43 @@ namespace MonoMod.Utils {
             }
         }
 
-        public static void RegisterUtil(this MethodInfo method, string prefix = null) {
+        public static void RegisterModExport(this MethodInfo method, string prefix = null) {
             if (!method.IsPublic || !method.IsStatic)
                 throw new MemberAccessException("Utility must be public static");
             string name = method.Name;
             if (!string.IsNullOrEmpty(prefix))
                 name = prefix + "." + name;
+
             List<MethodInfo> methods;
             if (!Methods.TryGetValue(name, out methods))
                 Methods[name] = methods = new List<MethodInfo>();
-            methods.Add(method);
+
+            if (!methods.Contains(method))
+                methods.Add(method);
         }
 
-        private static string GetUtilName(this FieldInfo field) {
-            foreach (UtilityAttribute attrib in field.GetCustomAttributes(typeof(UtilityAttribute), false)) {
+        private static string GetModImportName(this FieldInfo field) {
+            foreach (ModImportAttribute attrib in field.GetCustomAttributes(typeof(ModImportAttribute), false)) {
                 return attrib.Name;
             }
+
             return field.Name;
         }
 
     }
 
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Field)]
-    public class UtilityAttribute : Attribute {
+    [AttributeUsage(AttributeTargets.Field)]
+    public class ModImportAttribute : Attribute {
         public string Name;
-        public UtilityAttribute(string name) {
+        public ModImportAttribute(string name) {
+            Name = name;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Class)]
+    public class ModExportNameAttribute : Attribute {
+        public string Name;
+        public ModExportNameAttribute(string name) {
             Name = name;
         }
     }

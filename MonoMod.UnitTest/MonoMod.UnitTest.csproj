@@ -59,7 +59,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="RuntimeDetour\DetourExample.cs" />
-    <Compile Include="RuntimeDetour\UtilsTest.cs" />
+    <Compile Include="RuntimeDetour\ModInteropTest.cs" />
     <Compile Include="RuntimeDetour\HookTest.cs" />
     <Compile Include="RuntimeDetour\DetourTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
