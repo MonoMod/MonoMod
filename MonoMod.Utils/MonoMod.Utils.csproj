@@ -59,6 +59,7 @@
     <Compile Include="RelinkFailedException.cs" />
     <Compile Include="RelinkTargetNotFoundException.cs" />
     <Compile Include="StringInjectExtension.cs" />
+    <Compile Include="UtilityManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
