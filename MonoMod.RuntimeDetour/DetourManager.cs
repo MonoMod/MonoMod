@@ -103,14 +103,7 @@ namespace MonoMod.RuntimeDetour {
                 returnType, argTypes,
                 true
             );
-            ILGenerator il = dm.GetILGenerator();
-
-            if (returnType != typeof(void)) {
-                il.Emit(OpCodes.Ldnull);
-                if (returnType.IsValueType)
-                    il.Emit(OpCodes.Box, returnType);
-            }
-            il.Emit(OpCodes.Ret);
+            dm.GetILGenerator().Emit(OpCodes.Ret);
 
             // Detour the new DynamicMethod into the target.
             NativeDetourData detour = Native.Create(dm.GetNativeStart(), target);

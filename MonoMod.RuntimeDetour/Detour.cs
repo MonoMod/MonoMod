@@ -88,16 +88,7 @@ namespace MonoMod.RuntimeDetour {
                 Method.DeclaringType,
                 true
             );
-
-            ILGenerator il = dm.GetILGenerator();
-
-            if (dm.ReturnType != typeof(void)) {
-                il.Emit(OpCodes.Ldnull);
-                if (dm.ReturnType.IsValueType)
-                    il.Emit(OpCodes.Box, dm.ReturnType);
-            }
-            il.Emit(OpCodes.Ret);
-
+            dm.GetILGenerator().Emit(OpCodes.Ret);
             _ChainedTrampoline = dm.Pin();
 
             // Add the detour to the detour map.

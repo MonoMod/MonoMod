@@ -75,16 +75,7 @@ namespace MonoMod.RuntimeDetour {
                     Method.DeclaringType,
                     true
                 );
-
-                il = dm.GetILGenerator();
-
-                if (dm.ReturnType != typeof(void)) {
-                    il.Emit(OpCodes.Ldnull);
-                    if (dm.ReturnType.IsValueType)
-                        il.Emit(OpCodes.Box, dm.ReturnType);
-                }
-                il.Emit(OpCodes.Ret);
-
+                dm.GetILGenerator().Emit(OpCodes.Ret);
                 trampoline = dm.Pin();
             }
 
