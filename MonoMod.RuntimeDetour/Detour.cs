@@ -86,7 +86,7 @@ namespace MonoMod.RuntimeDetour {
                 $"chain_{Method.Name}_{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
-                false
+                true
             );
 
             ILGenerator il = dm.GetILGenerator();
@@ -289,14 +289,7 @@ namespace MonoMod.RuntimeDetour {
         }
     }
 
-    public class Detour<T> : Detour  {
-        public Detour(Expression<Func<T>> from, IntPtr to)
-            : base(from.Body, to) {
-        }
-        public Detour(Expression<Func<T>> from, Expression<Func<T>> to)
-            : base(from.Body, to.Body) {
-        }
-
+    public class Detour<T> : Detour where T : class {
         public Detour(T from, IntPtr to)
             : base(from as Delegate, to) {
         }

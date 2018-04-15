@@ -85,26 +85,6 @@ namespace MonoMod.RuntimeDetour {
             : this(from.Method, to.Method) {
         }
 
-        public NativeDetour(Expression from, IntPtr to)
-            : this(((MethodCallExpression) from).Method, to) {
-        }
-        public NativeDetour(IntPtr from, Expression to)
-            : this(from, ((MethodCallExpression) to).Method) {
-        }
-        public NativeDetour(Expression from, Expression to)
-            : this(((MethodCallExpression) from).Method, ((MethodCallExpression) to).Method) {
-        }
-
-        public NativeDetour(Expression<Action> from, IntPtr to)
-            : this(from.Body, to) {
-        }
-        public NativeDetour(IntPtr from, Expression<Action> to)
-            : this(from, to.Body) {
-        }
-        public NativeDetour(Expression<Action> from, Expression<Action> to)
-            : this(from.Body, to.Body) {
-        }
-
         /// <summary>
         /// Apply the native detour. This automatically happens when creating an instance.
         /// </summary>
@@ -239,28 +219,6 @@ namespace MonoMod.RuntimeDetour {
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
             return ((DynamicMethod) GenerateTrampoline(typeof(T).GetMethod("Invoke"))).CreateDelegate(typeof(T)) as T;
-        }
-    }
-
-    public class NativeDetour<T> : NativeDetour  {
-        public NativeDetour(Expression<Func<T>> from, IntPtr to)
-            : base(from.Body, to) {
-        }
-        public NativeDetour(IntPtr from, Expression<Func<T>> to)
-            : base(from, to.Body) {
-        }
-        public NativeDetour(Expression<Func<T>> from, Expression<Func<T>> to)
-            : base(from.Body, to.Body) {
-        }
-
-        public NativeDetour(T from, IntPtr to)
-            : base(from as Delegate, to) {
-        }
-        public NativeDetour(IntPtr from, T to)
-            : base(from, to as Delegate) {
-        }
-        public NativeDetour(T from, T to)
-            : base(from as Delegate, to as Delegate) {
         }
     }
 }

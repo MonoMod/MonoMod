@@ -36,11 +36,15 @@ namespace MonoMod.UnitTest {
             );
             IDetour hookTestStaticMethodB = new Hook(
                 typeof(DetourExample).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
-                typeof(HookTest).GetMethod("TestStaticMethod_B", BindingFlags.Static | BindingFlags.Public)
+                new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
+                    return orig(a, b) + 2;
+                })
             );
             IDetour hookTestVoidMethodB = new Hook(
                 typeof(DetourExample).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                typeof(HookTest).GetMethod("TestVoidMethod_B", BindingFlags.Static | BindingFlags.Public)
+                new Action<int, int>((a, b) => {
+                    Console.WriteLine("Hook B");
+                })
             );
             Console.WriteLine("Hooks: A + B");
             DetourExample.TestStep(42 + 42, 12 + 2);
@@ -77,12 +81,5 @@ namespace MonoMod.UnitTest {
             return orig(self, a, b) + 42;
         }
 
-        public static int TestStaticMethod_B(Func<int, int, int> orig, int a, int b) {
-            return orig(a, b) + 2;
-        }
-
-        public static void TestVoidMethod_B(int a, int b) {
-            Console.WriteLine("Hook B");
-        }
     }
 }

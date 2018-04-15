@@ -843,16 +843,16 @@ namespace MonoMod.Utils {
 
                 if (mr is TypeSpecification) {
                     // Collect TypeSpecifications and append formats back to front.
-                    Stack<TypeSpecification> formats = new Stack<TypeSpecification>();
+                    List<TypeSpecification> formats = new List<TypeSpecification>();
                     TypeSpecification ts = (TypeSpecification) mr;
                     do {
-                        formats.Push(ts);
+                        formats.Add(ts);
                     } while ((ts = (ts.ElementType as TypeSpecification)) != null);
 
                     StringBuilder builder = new StringBuilder(name.Length + formats.Count * 4);
                     builder.Append(name);
-                    while (formats.Count > 0) {
-                        ts = formats.Pop();
+                    for (int formati = formats.Count - 1; formati > -1; --formati) {
+                        ts = formats[formati];
 
                         if (ts.IsByReference)
                             builder.Append("&");

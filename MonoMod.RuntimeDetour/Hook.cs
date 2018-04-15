@@ -16,14 +16,19 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _Hook;
         private Detour _Detour;
 
-        private int? _TrampolineRef;
+        private int? _RefTarget;
+        private int? _RefTrampoline;
 
-        public Hook(MethodBase from, MethodInfo to) {
+        public Hook(MethodBase from, MethodInfo to, object target) {
             Method = from;
             _Hook = to;
 
             if (_Hook.ReturnType != ((from as MethodInfo)?.ReturnType ?? typeof(void)))
                 throw new InvalidOperationException($"Return type of hook for {from} doesn't match, must be {((from as MethodInfo)?.ReturnType ?? typeof(void)).FullName}");
+
+            if (target == null && !to.IsStatic) {
+                throw new InvalidOperationException($"Hook for method {from} must be static, or you must pass a target instance.");
+            }
 
             ParameterInfo[] hookArgs = _Hook.GetParameters();
 
@@ -87,13 +92,17 @@ namespace MonoMod.RuntimeDetour {
                 $"hook_{Method.Name}_{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
-                false
+                true
             );
 
             il = dm.GetILGenerator();
 
+            if (target != null) {
+                _RefTarget = il.EmitReference(target);
+            }
+
             if (trampoline != null) {
-                _TrampolineRef = il.EmitReference(trampoline.CreateDelegate(origType));
+                _RefTrampoline = il.EmitReference(trampoline.CreateDelegate(origType));
             }
 
             // TODO: Use specialized Ldarg.* if possible; What about ref types?
@@ -117,26 +126,26 @@ namespace MonoMod.RuntimeDetour {
                 DetourManager.Native.Free(link);
             }
         }
+        public Hook(MethodBase from, MethodInfo to)
+            : this(from, to, null) {
+        }
 
         public Hook(MethodBase method, IntPtr to)
-            : this(method, DetourManager.GenerateNativeProxy(to, method)) {
+            : this(method, DetourManager.GenerateNativeProxy(to, method), null) {
         }
         public Hook(MethodBase method, Delegate to)
-            : this(method, to.Method) {
+            : this(method, to.Method, to.Target) {
         }
 
         public Hook(Delegate from, IntPtr to)
             : this(from.Method, to) {
         }
         public Hook(Delegate from, Delegate to)
-            : this(from.Method, to.Method) {
+            : this(from.Method, to) {
         }
 
         public Hook(Expression from, IntPtr to)
             : this(((MethodCallExpression) from).Method, to) {
-        }
-        public Hook(Expression from, Expression to)
-            : this(((MethodCallExpression) from).Method, ((MethodCallExpression) to).Method) {
         }
         public Hook(Expression from, Delegate to)
             : this(((MethodCallExpression) from).Method, to) {
@@ -144,9 +153,6 @@ namespace MonoMod.RuntimeDetour {
 
         public Hook(Expression<Action> from, IntPtr to)
             : this(from.Body, to) {
-        }
-        public Hook(Expression<Action> from, Expression<Action> to)
-            : this(from.Body, to.Body) {
         }
         public Hook(Expression<Action> from, Delegate to)
             : this(from.Body, to) {
@@ -177,8 +183,10 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private void _Free() {
-            if (_TrampolineRef != null)
-                DynamicMethodHelper.FreeReference(_TrampolineRef.Value);
+            if (_RefTarget != null)
+                DynamicMethodHelper.FreeReference(_RefTarget.Value);
+            if (_RefTrampoline != null)
+                DynamicMethodHelper.FreeReference(_RefTrampoline.Value);
         }
 
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
@@ -206,9 +214,6 @@ namespace MonoMod.RuntimeDetour {
 
         public Hook(Expression<Func<T>> from, IntPtr to)
             : base(from.Body, to) {
-        }
-        public Hook(Expression<Func<T>> from, Expression<Func<T>> to)
-            : base(from.Body, to.Body) {
         }
         public Hook(Expression<Func<T>> from, Delegate to)
             : base(from.Body, to) {
