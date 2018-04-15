@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Linq.Expressions;
+using MonoMod.Utils;
 
 namespace MonoMod.RuntimeDetour {
     /// <summary>
@@ -82,14 +83,12 @@ namespace MonoMod.RuntimeDetour {
                     argTypes[i] = args[i].ParameterType;
             }
 
-            DynamicMethod dm = new DynamicMethod(
+            _ChainedTrampoline = new DynamicMethod(
                 $"chain_{Method.Name}_{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
-                true
-            );
-            dm.GetILGenerator().Emit(OpCodes.Ret);
-            _ChainedTrampoline = dm.Pin();
+                false // Otherwise just ret is invalid for whatever reason.
+            ).Stub().Pin();
 
             // Add the detour to the detour map.
             List<Detour> detours;

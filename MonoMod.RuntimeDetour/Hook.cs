@@ -69,14 +69,12 @@ namespace MonoMod.RuntimeDetour {
 
             DynamicMethod trampoline = null;
             if (origType != null) {
-                dm = new DynamicMethod(
+                trampoline = new DynamicMethod(
                     $"trampoline_{Method.Name}_{GetHashCode()}",
                     _Hook.ReturnType, argTypes,
                     Method.DeclaringType,
-                    true
-                );
-                dm.GetILGenerator().Emit(OpCodes.Ret);
-                trampoline = dm.Pin();
+                    false // Otherwise just ret is invalid for whatever reason.
+                ).Stub().Pin();
             }
 
             dm = new DynamicMethod(
@@ -85,7 +83,6 @@ namespace MonoMod.RuntimeDetour {
                 Method.DeclaringType,
                 true
             );
-
             il = dm.GetILGenerator();
 
             if (target != null) {

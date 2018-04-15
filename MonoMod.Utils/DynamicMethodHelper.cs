@@ -23,6 +23,23 @@ namespace MonoMod.Utils {
         private readonly static MethodInfo _GetReference = typeof(DynamicMethodHelper).GetMethod("GetReference");
 
         /// <summary>
+        /// Fill the DynamicMethod with a stub.
+        /// </summary>
+        public static DynamicMethod Stub(this DynamicMethod dm) {
+            ILGenerator il = dm.GetILGenerator();
+
+            if (dm.ReturnType != typeof(void)) {
+                il.DeclareLocal(dm.ReturnType);
+                il.Emit(OpCodes.Ldloca_S, (sbyte) 0);
+                il.Emit(OpCodes.Initobj, dm.ReturnType);
+                il.Emit(OpCodes.Ldloc_0);
+            }
+
+            il.Emit(OpCodes.Ret);
+            return dm;
+        }
+
+        /// <summary>
         /// Emit a ldtoken + MethodBase.GetMethodFromHandle. This would be methodof(...) in C#, if it would exist.
         /// </summary>
         public static void EmitMethodOf(this ILGenerator il, MethodBase method) {

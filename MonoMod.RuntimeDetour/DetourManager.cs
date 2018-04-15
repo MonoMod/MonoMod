@@ -102,8 +102,7 @@ namespace MonoMod.RuntimeDetour {
                 $"native_{((long) target).ToString("X16")}",
                 returnType, argTypes,
                 true
-            );
-            dm.GetILGenerator().Emit(OpCodes.Ret);
+            ).Stub();
 
             // Detour the new DynamicMethod into the target.
             NativeDetourData detour = Native.Create(dm.GetNativeStart(), target);
