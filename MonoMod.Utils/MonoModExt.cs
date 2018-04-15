@@ -484,7 +484,7 @@ namespace MonoMod.Utils {
                     return fp;
                 }
 
-                throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
+                throw new NotSupportedException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
             }
 
             if (type.IsGenericParameter) {
@@ -696,12 +696,10 @@ namespace MonoMod.Utils {
             => type.FindEvent(eventDef.Name) != null;
 
         public static void SetPublic(this IMetadataTokenProvider mtp, bool p) {
-            if (mtp is TypeReference) ((TypeReference) mtp).SafeResolve()?.SetPublic(p);
-            if (mtp is FieldReference) ((FieldReference) mtp).SafeResolve()?.SetPublic(p);
-            if (mtp is MethodReference) ((MethodReference) mtp).SafeResolve()?.SetPublic(p);
-            else if (mtp is TypeDefinition) ((TypeDefinition) mtp).SetPublic(p);
+            if (mtp is TypeDefinition) ((TypeDefinition) mtp).SetPublic(p);
             else if (mtp is FieldDefinition) ((FieldDefinition) mtp).SetPublic(p);
             else if (mtp is MethodDefinition) ((MethodDefinition) mtp).SetPublic(p);
+            else throw new InvalidOperationException($"MonoMod can't set metadata token providers of the type {mtp.GetType()} public.");
         }
         public static void SetPublic(this FieldDefinition o, bool p) {
             if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
@@ -811,12 +809,10 @@ namespace MonoMod.Utils {
         }
 
         public static string GetPatchName(this MemberReference mr) {
-            // TODO: Resolve increases the PatchRefs pass time and could be optimized.
-            return (mr as ICustomAttributeProvider)?.GetPatchName() ?? (mr.SafeResolve() as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
+            return (mr as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
         }
         public static string GetPatchFullName(this MemberReference mr) {
-            // TODO: Resolve increases the PatchRefs pass time and could be optimized.
-            return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? (mr.SafeResolve() as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
+            return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
         }
 
         private static string GetPatchName(this ICustomAttributeProvider cap) {
@@ -902,7 +898,7 @@ namespace MonoMod.Utils {
                                 }
                             builder.Append(")");
                         } else
-                            throw new InvalidOperationException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
+                            throw new NotSupportedException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
                     }
 
                     name = builder.ToString();

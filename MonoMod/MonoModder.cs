@@ -743,24 +743,9 @@ namespace MonoMod {
         }
 
         public virtual IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            // LinkTo bypasses all relinking maps.
-            ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
-            if (cap == null) // TODO: This increases the PatchRefs pass time and could be optimized.
-                try {
-                    if (mtp is TypeReference)
-                        cap = ((TypeReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                    else if (mtp is MethodReference)
-                        cap = ((MethodReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                    else if (mtp is FieldReference)
-                        cap = ((FieldReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                    else if (mtp is PropertyReference)
-                        cap = ((PropertyReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                } catch {
-                    // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
-                    cap = null;
-                }
-
             try {
+                // LinkTo bypasses all relinking maps.
+                ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
                 if (cap?.GetMMAttribute("LinkTo") != null) {
                     MemberReference linkToRef = GetLinkToRef(cap, context);
                     if (linkToRef != null)
