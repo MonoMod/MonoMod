@@ -1,4 +1,5 @@
-﻿using MonoMod.RuntimeDetour;
+﻿using MonoMod.ModInterop;
+using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using NUnit.Framework;
 using System;
@@ -9,19 +10,22 @@ namespace MonoMod.UnitTest {
     public static class ModInteropTest {
         [Test]
         public static void TestUtils() {
-            typeof(UtilsC).RegisterModInterop();
+            typeof(UtilsC).ModInterop();
+            typeof(UtilsD).ModInterop();
 
-            typeof(UtilsA).RegisterModInterop();
+            typeof(UtilsA).ModInterop();
             Assert.AreEqual(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
             Assert.AreEqual(UtilsA.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
 
-            typeof(UtilsB).RegisterModInterop();
+            typeof(UtilsB).ModInterop();
             Assert.AreEqual(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
             Assert.AreEqual(UtilsB.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
 
+            Assert.AreEqual(UtilsB.Something(2, 3),     UtilsD.Something(2, 3));
+            Assert.AreEqual(UtilsB.AnotherThing(2, 3),  UtilsD.AnotherThing(2, 3));
         }
 
-        [ModExportName("ModA")] // Abused for this test, please ignore.
+        [ModExportName("ModA")]
         public static class UtilsA {
 
             public static int Something(int a, int b) {
@@ -34,7 +38,7 @@ namespace MonoMod.UnitTest {
 
         }
 
-        [ModExportName("ModB")] // Abused for this test, please ignore.
+        [ModExportName("ModB")]
         public static class UtilsB {
 
             public static int Something(int a, int b) {
@@ -47,18 +51,18 @@ namespace MonoMod.UnitTest {
 
         }
 
-        [ModExportName("ModC")] // Abused for this test, please ignore.
+        [ModExportName("ModC")]
         public static class UtilsC {
 
             // Simple use case: Get the first registered "Something".
             public readonly static Func<int, int, int> Something;
 
             // More complicated use case: Get AnotherThing, apply it on a field of another name.
-            [ModImport("AnotherThing")]
+            [ModImportName("AnotherThing")]
             public readonly static Func<int, int, int> AnotherThingFromAnywhere;
 
             // More complicated use case: Only get AnotherThing from ModB specifically.
-            [ModImport("ModB.AnotherThing")]
+            [ModImportName("ModB.AnotherThing")]
             // This is only called AnotherThing because we're wrapping this.
             public readonly static Func<int, int, int> AnotherThingFromModB;
 
@@ -72,6 +76,13 @@ namespace MonoMod.UnitTest {
                 return AnotherThingFromAnywhere(a, b);
             }
 
+        }
+
+        [ModExportName("ModD")]
+        [ModImportName("ModB")] // We want to only import things from ModB.
+        public static class UtilsD {
+            public readonly static Func<int, int, int> Something;
+            public readonly static Func<int, int, int> AnotherThing;
         }
 
     }

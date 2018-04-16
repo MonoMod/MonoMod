@@ -4,8 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace MonoMod.Utils {
-    // This is a horrible place for this.
+namespace MonoMod.ModInterop {
     public static class ModInteropManager {
 
         private static HashSet<Type> Registered = new HashSet<Type>();
@@ -13,7 +12,7 @@ namespace MonoMod.Utils {
         private static Dictionary<string, List<MethodInfo>> Methods = new Dictionary<string, List<MethodInfo>>();
         private static List<FieldInfo> Fields = new List<FieldInfo>();
 
-        public static void RegisterModInterop(this Type type) {
+        public static void ModInterop(this Type type) {
             if (Registered.Contains(type))
                 return;
             Registered.Add(type);
@@ -73,28 +72,16 @@ namespace MonoMod.Utils {
         }
 
         private static string GetModImportName(this FieldInfo field) {
-            foreach (ModImportAttribute attrib in field.GetCustomAttributes(typeof(ModImportAttribute), false)) {
+            foreach (ModImportNameAttribute attrib in field.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
                 return attrib.Name;
+            }
+
+            foreach (ModImportNameAttribute attrib in field.DeclaringType.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
+                return attrib.Name + "." + field.Name;
             }
 
             return field.Name;
         }
 
-    }
-
-    [AttributeUsage(AttributeTargets.Field)]
-    public class ModImportAttribute : Attribute {
-        public string Name;
-        public ModImportAttribute(string name) {
-            Name = name;
-        }
-    }
-
-    [AttributeUsage(AttributeTargets.Class)]
-    public class ModExportNameAttribute : Attribute {
-        public string Name;
-        public ModExportNameAttribute(string name) {
-            Name = name;
-        }
     }
 }

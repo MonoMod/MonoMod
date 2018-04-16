@@ -50,6 +50,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DynamicMethodHelper.cs" />
+    <Compile Include="ModInterop\ModExportName.cs" />
+    <Compile Include="ModInterop\ModImportName.cs" />
     <Compile Include="MonoMod__OldName__.cs" />
     <Compile Include="MonoModExt.cs" />
     <Compile Include="Platform.cs" />
@@ -59,7 +61,7 @@
     <Compile Include="RelinkFailedException.cs" />
     <Compile Include="RelinkTargetNotFoundException.cs" />
     <Compile Include="StringInjectExtension.cs" />
-    <Compile Include="ModInteropManager.cs" />
+    <Compile Include="ModInterop\ModInteropManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
