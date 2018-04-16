@@ -6,7 +6,7 @@ using System.Text;
 
 namespace MonoMod.ModInterop {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Field)]
-    public class ModImportNameAttribute : Attribute {
+    public sealed class ModImportNameAttribute : Attribute {
         public string Name;
         public ModImportNameAttribute(string name) {
             Name = name;
