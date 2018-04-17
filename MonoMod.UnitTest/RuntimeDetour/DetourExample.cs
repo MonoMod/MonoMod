@@ -8,6 +8,8 @@ using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
     public class DetourExample {
+        public static int VoidResult;
+
         // Prevent JIT from inlining the method call.
         [MethodImpl(MethodImplOptions.NoInlining)]
         public int TestMethod(int a, int b) {
@@ -22,12 +24,13 @@ namespace MonoMod.UnitTest {
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void TestVoidMethod(int a, int b) {
             Console.WriteLine($"{a} {b} {TestStaticMethod(a, b)}");
-            if (a > 0) {
+            VoidResult += a * b;
+            if (a > 1 && b > 1) {
                 TestVoidMethod(a - 1, b - 1);
             }
         }
 
-        public static void TestStep(int instanceExpected, int staticExpected) {
+        public static void TestStep(int instanceExpected, int staticExpected, int voidExpected) {
             DetourExample instance = new DetourExample();
             int instanceResult = instance.TestMethod(2, 3);
             Console.WriteLine($"instance.TestMethod(2, 3): {instanceResult}");
@@ -38,7 +41,9 @@ namespace MonoMod.UnitTest {
             Assert.AreEqual(staticExpected, staticResult);
 
             Console.WriteLine("TestVoidMethod(2, 3):");
+            VoidResult = 0;
             TestVoidMethod(2, 3);
+            Assert.AreEqual(voidExpected, VoidResult);
         }
     }
 }

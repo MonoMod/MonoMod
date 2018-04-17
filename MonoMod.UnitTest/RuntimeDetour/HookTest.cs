@@ -11,7 +11,7 @@ namespace MonoMod.UnitTest {
         [Test]
         public static void TestHooks() {
             Console.WriteLine("Hooks: none");
-            DetourExample.TestStep(5, 6);
+            DetourExample.TestStep(5, 6, 8);
             Console.WriteLine();
 
             IDetour hookTestMethodA = new Hook(
@@ -27,7 +27,7 @@ namespace MonoMod.UnitTest {
                 typeof(HookTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
             );
             Console.WriteLine("Hooks: A");
-            DetourExample.TestStep(42, 12);
+            DetourExample.TestStep(42, 12, 1);
             Console.WriteLine();
 
             IDetour hookTestMethodB = new Hook(
@@ -44,24 +44,25 @@ namespace MonoMod.UnitTest {
                 typeof(DetourExample).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                 new Action<int, int>((a, b) => {
                     Console.WriteLine("Hook B");
+                    DetourExample.VoidResult = 2;
                 })
             );
             Console.WriteLine("Hooks: A + B");
-            DetourExample.TestStep(42 + 42, 12 + 2);
+            DetourExample.TestStep(42 + 42, 12 + 2, 2);
             Console.WriteLine();
 
             hookTestMethodA.Undo();
             hookTestStaticMethodA.Undo();
             hookTestVoidMethodA.Undo();
             Console.WriteLine("Hooks: B");
-            DetourExample.TestStep(5 + 42, 6 + 2);
+            DetourExample.TestStep(5 + 42, 6 + 2, 2);
             Console.WriteLine();
 
             hookTestMethodB.Undo();
             hookTestStaticMethodB.Undo();
             hookTestVoidMethodB.Undo();
             Console.WriteLine("Detours: none");
-            DetourExample.TestStep(5, 6);
+            DetourExample.TestStep(5, 6, 8);
             Console.WriteLine();
         }
 
@@ -75,6 +76,7 @@ namespace MonoMod.UnitTest {
 
         public static void TestVoidMethod_A(int a, int b) {
             Console.WriteLine("Hook A");
+            DetourExample.VoidResult = 1;
         }
 
         public static int TestMethod_B(Func<DetourExample, int, int, int> orig, DetourExample self, int a, int b) {
