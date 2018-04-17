@@ -84,7 +84,7 @@ namespace MonoMod.UnitTest {
 
         public static void TestVoidMethod_A(int a, int b) {
             Console.WriteLine("Detour A");
-            DetourExample.VoidResult = 1;
+            DetourExample.VoidResult += 1;
         }
 
         public static int TestMethod_B(DetourExample self, int a, int b) {
@@ -97,7 +97,7 @@ namespace MonoMod.UnitTest {
 
         public static void TestVoidMethod_B(int a, int b) {
             Console.WriteLine("Detour B");
-            DetourExample.VoidResult = 2;
+            DetourExample.VoidResult += 2;
         }
     }
 }

@@ -102,7 +102,7 @@ namespace MonoMod.RuntimeDetour {
                 $"native_{((long) target).ToString("X16")}",
                 returnType, argTypes,
                 true
-            ).Stub();
+            ).StubCriticalDetour();
 
             // Detour the new DynamicMethod into the target.
             NativeDetourData detour = Native.Create(dm.GetNativeStart(), target);
@@ -125,6 +125,20 @@ namespace MonoMod.RuntimeDetour {
         private readonly static MethodInfo _ToNativeDetourData = typeof(DetourManager).GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
         private readonly static MethodInfo _Copy = typeof(IDetourNativePlatform).GetMethod("Copy");
         private readonly static MethodInfo _Apply = typeof(IDetourNativePlatform).GetMethod("Apply");
+        private readonly static ConstructorInfo _ctor_Exception = typeof(Exception).GetConstructor(new Type[] { typeof(string) });
+
+        /// <summary>
+        /// Fill the DynamicMethod with a throw.
+        /// </summary>
+        public static DynamicMethod StubCriticalDetour(this DynamicMethod dm) {
+            ILGenerator il = dm.GetILGenerator();
+            for (int i = 0; i < 100; i++) { // Prevent old Unity mono from inlining the DynamicMethod.
+                il.Emit(OpCodes.Ldstr, $"{dm.Name} should've been detoured!");
+                il.Emit(OpCodes.Newobj, _ctor_Exception);
+                il.Emit(OpCodes.Throw);
+            }
+            return dm;
+        }
 
         /// <summary>
         /// Emit a call to DetourManager.Native.Copy using the given parameters.

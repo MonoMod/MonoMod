@@ -87,7 +87,6 @@ namespace MonoMod.RuntimeDetour {
             m_DynamicMethod_GetMethodDescriptor?.CreateDelegate();
 
         private readonly static MethodInfo m_RuntimeHelpers__CompileMethod =
-            // .NET
             typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
         private readonly static DynamicMethodDelegate dmd_RuntimeHelpers__CompileMethod =
             m_RuntimeHelpers__CompileMethod?.CreateDelegate();
@@ -99,7 +98,6 @@ namespace MonoMod.RuntimeDetour {
             m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
 
         private readonly static MethodInfo m_RuntimeMethodHandle_GetMethodInfo =
-            // .NET
             typeof(RuntimeMethodHandle).GetMethod("GetMethodInfo", BindingFlags.NonPublic | BindingFlags.Instance);
         private readonly static DynamicMethodDelegate dmd_RuntimeMethodHandle_GetMethodInfo =
             m_RuntimeMethodHandle_GetMethodInfo?.CreateDelegate();
@@ -125,7 +123,7 @@ namespace MonoMod.RuntimeDetour {
 
                 if (f_DynamicMethod_m_method != null)
                     return (RuntimeMethodHandle) f_DynamicMethod_m_method.GetValue(method);
-                else if (dmd_DynamicMethod_GetMethodDescriptor != null)
+                if (dmd_DynamicMethod_GetMethodDescriptor != null)
                     return (RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(method);
             }
 
@@ -139,11 +137,15 @@ namespace MonoMod.RuntimeDetour {
         private readonly static DynamicMethodDelegate dmd_DynamicMethod_CreateDynMethod =
             m_DynamicMethod_CreateDynMethod?.CreateDelegate();
 
+        private readonly static FieldInfo f_DynamicMethod_mhandle =
+            typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
+
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             if (method is DynamicMethod) {
                 // Compile the method handle before getting our hands on the final method handle.
                 dmd_DynamicMethod_CreateDynMethod?.Invoke(method);
-                // Mono doesn't hide the DynamicMethod handle.
+                if (f_DynamicMethod_mhandle != null)
+                    return (RuntimeMethodHandle) f_DynamicMethod_mhandle.GetValue(method);
             }
 
             return method.MethodHandle;

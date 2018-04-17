@@ -42,20 +42,21 @@ namespace MonoMod.UnitTest {
             );
             IDetour hookTestVoidMethodB = new Hook(
                 typeof(DetourExample).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                new Action<int, int>((a, b) => {
+                new Action<Action<int, int>, int, int>((orig, a, b) => {
                     Console.WriteLine("Hook B");
-                    DetourExample.VoidResult = 2;
+                    DetourExample.VoidResult += 2;
+                    orig(a, b);
                 })
             );
             Console.WriteLine("Hooks: A + B");
-            DetourExample.TestStep(42 + 42, 12 + 2, 2);
+            DetourExample.TestStep(42 + 42, 12 + 2, 3);
             Console.WriteLine();
 
             hookTestMethodA.Undo();
             hookTestStaticMethodA.Undo();
             hookTestVoidMethodA.Undo();
             Console.WriteLine("Hooks: B");
-            DetourExample.TestStep(5 + 42, 6 + 2, 2);
+            DetourExample.TestStep(5 + 42, 6 + 2, 12);
             Console.WriteLine();
 
             hookTestMethodB.Undo();
@@ -76,7 +77,7 @@ namespace MonoMod.UnitTest {
 
         public static void TestVoidMethod_A(int a, int b) {
             Console.WriteLine("Hook A");
-            DetourExample.VoidResult = 1;
+            DetourExample.VoidResult += 1;
         }
 
         public static int TestMethod_B(Func<DetourExample, int, int, int> orig, DetourExample self, int a, int b) {

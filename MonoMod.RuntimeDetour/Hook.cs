@@ -74,7 +74,7 @@ namespace MonoMod.RuntimeDetour {
                     _Hook.ReturnType, argTypes,
                     Method.DeclaringType,
                     false // Otherwise just ret is invalid for whatever reason.
-                ).Stub().Pin();
+                ).StubCriticalDetour().Pin();
             }
 
             dm = new DynamicMethod(

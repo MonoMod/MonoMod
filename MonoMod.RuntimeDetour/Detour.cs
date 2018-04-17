@@ -88,7 +88,7 @@ namespace MonoMod.RuntimeDetour {
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 false // Otherwise just ret is invalid for whatever reason.
-            ).Stub().Pin();
+            ).StubCriticalDetour().Pin();
 
             // Add the detour to the detour map.
             List<Detour> detours;
