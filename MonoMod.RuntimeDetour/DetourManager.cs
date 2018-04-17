@@ -132,11 +132,13 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         public static DynamicMethod StubCriticalDetour(this DynamicMethod dm) {
             ILGenerator il = dm.GetILGenerator();
-            for (int i = 0; i < 100; i++) { // Prevent old Unity mono from inlining the DynamicMethod.
-                il.Emit(OpCodes.Ldstr, $"{dm.Name} should've been detoured!");
-                il.Emit(OpCodes.Newobj, _ctor_Exception);
-                il.Emit(OpCodes.Throw);
+            for (int i = 0; i < 10; i++) {
+                // Prevent old Unity mono from inlining the DynamicMethod.
+                il.Emit(OpCodes.Nop);
             }
+            il.Emit(OpCodes.Ldstr, $"{dm.Name} should've been detoured!");
+            il.Emit(OpCodes.Newobj, _ctor_Exception);
+            il.Emit(OpCodes.Throw);
             return dm;
         }
 

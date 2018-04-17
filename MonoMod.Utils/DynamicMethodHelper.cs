@@ -27,15 +27,17 @@ namespace MonoMod.Utils {
         /// </summary>
         public static DynamicMethod Stub(this DynamicMethod dm) {
             ILGenerator il = dm.GetILGenerator();
-            for (int i = 0; i < 100; i++) { // Prevent old Unity mono from inlining the DynamicMethod.
-                if (dm.ReturnType != typeof(void)) {
-                    il.DeclareLocal(dm.ReturnType);
-                    il.Emit(OpCodes.Ldloca_S, (sbyte) 0);
-                    il.Emit(OpCodes.Initobj, dm.ReturnType);
-                    il.Emit(OpCodes.Ldloc_0);
-                }
-                il.Emit(OpCodes.Ret);
+            for (int i = 0; i < 10; i++) {
+                // Prevent old Unity mono from inlining the DynamicMethod.
+                il.Emit(OpCodes.Nop);
             }
+            if (dm.ReturnType != typeof(void)) {
+                il.DeclareLocal(dm.ReturnType);
+                il.Emit(OpCodes.Ldloca_S, (sbyte) 0);
+                il.Emit(OpCodes.Initobj, dm.ReturnType);
+                il.Emit(OpCodes.Ldloc_0);
+            }
+            il.Emit(OpCodes.Ret);
             return dm;
         }
 
