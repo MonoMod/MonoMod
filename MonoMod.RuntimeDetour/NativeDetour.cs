@@ -92,7 +92,9 @@ namespace MonoMod.RuntimeDetour {
             if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
+            DetourManager.Native.MakeWritable(Data);
             DetourManager.Native.Apply(Data);
+            DetourManager.Native.MakeExecutable(Data);
         }
 
         /// <summary>

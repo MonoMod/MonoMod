@@ -110,7 +110,9 @@ namespace MonoMod.RuntimeDetour {
                     trampoline.GetNativeStart(),
                     GenerateTrampoline(origInvoke).GetNativeStart()
                 );
+                DetourManager.Native.MakeWritable(link);
                 DetourManager.Native.Apply(link);
+                DetourManager.Native.MakeExecutable(link);
                 DetourManager.Native.Free(link);
             }
         }

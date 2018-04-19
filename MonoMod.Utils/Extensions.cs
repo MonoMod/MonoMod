@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Utils {
@@ -144,6 +145,35 @@ namespace MonoMod.Utils {
             for (int i = 0; i < delegates.Length; i++)
                 delegatesDest[i] = delegates[i].CastDelegate(type);
             return Delegate.Combine(delegatesDest);
+        }
+
+        /// <summary>
+        /// Print the exception to the console, including extended loading / reflection data useful for mods.
+        /// </summary>
+        public static void LogDetailed(this Exception e, string tag = null) {
+            if (tag == null) {
+                Console.WriteLine("--------------------------------");
+                Console.WriteLine("Detailed exception log:");
+            }
+            for (Exception e_ = e; e_ != null; e_ = e_.InnerException) {
+                Console.WriteLine("--------------------------------");
+                Console.WriteLine(e_.GetType().FullName + ": " + e_.Message + "\n" + e_.StackTrace);
+                if (e_ is ReflectionTypeLoadException) {
+                    ReflectionTypeLoadException rtle = (ReflectionTypeLoadException) e_;
+                    for (int i = 0; i < rtle.Types.Length; i++) {
+                        Console.WriteLine("ReflectionTypeLoadException.Types[" + i + "]: " + rtle.Types[i]);
+                    }
+                    for (int i = 0; i < rtle.LoaderExceptions.Length; i++) {
+                        LogDetailed(rtle.LoaderExceptions[i], tag + (tag == null ? "" : ", ") + "rtle:" + i);
+                    }
+                }
+                if (e_ is TypeLoadException) {
+                    Console.WriteLine("TypeLoadException.TypeName: " + ((TypeLoadException) e_).TypeName);
+                }
+                if (e_ is BadImageFormatException) {
+                    Console.WriteLine("BadImageFormatException.FileName: " + ((BadImageFormatException) e_).FileName);
+                }
+            }
         }
 
     }

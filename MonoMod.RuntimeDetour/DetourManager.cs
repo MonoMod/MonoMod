@@ -106,7 +106,9 @@ namespace MonoMod.RuntimeDetour {
 
             // Detour the new DynamicMethod into the target.
             NativeDetourData detour = Native.Create(dm.GetNativeStart(), target);
+            Native.MakeWritable(detour);
             Native.Apply(detour);
+            Native.MakeExecutable(detour);
             Native.Free(detour);
 
             return dm.Pin();

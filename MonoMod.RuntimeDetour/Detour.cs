@@ -117,7 +117,9 @@ namespace MonoMod.RuntimeDetour {
                         _BackupMethods[Method].GetNativeStart()
                     );
                 }
+                DetourManager.Native.MakeWritable(link);
                 DetourManager.Native.Apply(link);
+                DetourManager.Native.MakeExecutable(link);
                 DetourManager.Native.Free(link);
 
                 detours.Add(this);
@@ -265,7 +267,9 @@ namespace MonoMod.RuntimeDetour {
                         detours[i]._ChainedTrampoline.GetNativeStart(),
                         detours[i - 1].Target.GetNativeStart()
                     );
+                    DetourManager.Native.MakeWritable(link);
                     DetourManager.Native.Apply(link);
+                    DetourManager.Native.MakeExecutable(link);
                     DetourManager.Native.Free(link);
                 }
 
@@ -273,7 +277,9 @@ namespace MonoMod.RuntimeDetour {
                     detours[0]._ChainedTrampoline.GetNativeStart(),
                     _BackupMethods[method].GetNativeStart()
                 );
+                DetourManager.Native.MakeWritable(link);
                 DetourManager.Native.Apply(link);
+                DetourManager.Native.MakeExecutable(link);
                 DetourManager.Native.Free(link);
             }
         }
