@@ -146,12 +146,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
             delHookBeginInvoke.Parameters.Insert(0, new ParameterDefinition("orig", ParameterAttributes.None, delOrig));
             hookType.NestedTypes.Add(delHook);
 
-            hookType.Fields.Add(new FieldDefinition(
-                "." + name,
-                FieldAttributes.Private | FieldAttributes.Static,
-                delHook
-            ));
-
             ILProcessor il;
 
             MethodDefinition add = new MethodDefinition(
