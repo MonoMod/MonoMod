@@ -746,6 +746,25 @@ namespace MonoMod {
             try {
                 // LinkTo bypasses all relinking maps.
                 ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
+                // Resolving is required as the methods hold unresolved references.
+                if (cap == null &&
+                    // The following check should technically be a scope check instead.
+                    // Mods.Contains((mtp as TypeReference)?.Module ?? (mtp as MemberReference)?.DeclaringType?.Module)
+                    true // TODO: Always resolving references just to find a LinkTo attribute is highly inefficient.
+                )
+                    try {
+                        if (mtp is TypeReference)
+                            cap = ((TypeReference) mtp).SafeResolve() as ICustomAttributeProvider;
+                        else if (mtp is MethodReference)
+                            cap = ((MethodReference) mtp).SafeResolve() as ICustomAttributeProvider;
+                        else if (mtp is FieldReference)
+                            cap = ((FieldReference) mtp).SafeResolve() as ICustomAttributeProvider;
+                        else if (mtp is PropertyReference)
+                            cap = ((PropertyReference) mtp).SafeResolve() as ICustomAttributeProvider;
+                    } catch {
+                        // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
+                        cap = null;
+                    }
                 if (cap?.GetMMAttribute("LinkTo") != null) {
                     MemberReference linkToRef = GetLinkToRef(cap, context);
                     if (linkToRef != null)
@@ -769,6 +788,8 @@ namespace MonoMod {
                 if (!Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
+                // Type is coming from a mod module - resolve it just to be safe.
+                type = type.Resolve();
                 TypeReference found = FindTypeDeep(type.GetPatchFullName());
 
                 if (found == null) {
