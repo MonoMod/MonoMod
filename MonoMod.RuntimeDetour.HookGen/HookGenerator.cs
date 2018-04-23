@@ -254,7 +254,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             del.Methods.Add(invokeBegin);
 
             MethodDefinition invokeEnd = new MethodDefinition(
-                "BeginInvoke",
+                "EndInvoke",
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual,
                 OutputModule.TypeSystem.Object
             ) {
