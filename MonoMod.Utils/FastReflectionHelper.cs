@@ -5,19 +5,19 @@ using System.Reflection.Emit;
 
 namespace MonoMod.Utils {
     [MonoMod__OldName__("MonoMod.Helpers.DynamicMethodDelegate")]
-    public delegate object DynamicMethodDelegate(object target, params object[] args);
+    public delegate object FastReflectionDelegate(object target, params object[] args);
     /// <summary>
     /// Based on ReflectionHelper from http://theinstructionlimit.com/fast-net-reflection and FEZ. Thanks, Renaud!
     /// </summary>
     [MonoMod__OldName__("MonoMod.Helpers.ReflectionHelper")]
     public static class FastReflectionHelper {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
-        private static readonly IDictionary<MethodInfo, DynamicMethodDelegate> _MethodCache = new Dictionary<MethodInfo, DynamicMethodDelegate>();
+        private static readonly IDictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new Dictionary<MethodInfo, FastReflectionDelegate>();
 
         private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(object) });
         private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
 
-        public static DynamicMethodDelegate CreateDelegate(this MethodBase method, bool directBoxValueAccess = true) {
+        public static FastReflectionDelegate CreateFastDelegate(this MethodBase method, bool directBoxValueAccess = true) {
             DynamicMethod dynam = new DynamicMethod(string.Empty, typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
@@ -103,7 +103,7 @@ namespace MonoMod.Utils {
 
             il.Emit(OpCodes.Ret);
 
-            return (DynamicMethodDelegate) dynam.CreateDelegate(typeof(DynamicMethodDelegate));
+            return (FastReflectionDelegate) dynam.CreateDelegate(typeof(FastReflectionDelegate));
         }
 
 
@@ -125,17 +125,17 @@ namespace MonoMod.Utils {
         }
 
 
-        public static DynamicMethodDelegate GetDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
-            DynamicMethodDelegate dmd;
+        public static FastReflectionDelegate GetFastDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
+            FastReflectionDelegate dmd;
             if (_MethodCache.TryGetValue(method, out dmd))
                 return dmd;
 
-            dmd = CreateDelegate(method, directBoxValueAccess);
+            dmd = CreateFastDelegate(method, directBoxValueAccess);
             _MethodCache.Add(method, dmd);
             return dmd;
         }
 
-        public static void EmitFast_Ldc_I4(this ILGenerator il, int value) {
+        private static void EmitFast_Ldc_I4(this ILGenerator il, int value) {
             switch (value) {
                 case -1:
                     il.Emit(OpCodes.Ldc_I4_M1); return;

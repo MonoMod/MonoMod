@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MonoMod.Utils {
@@ -174,6 +176,35 @@ namespace MonoMod.Utils {
                     Console.WriteLine("BadImageFormatException.FileName: " + ((BadImageFormatException) e_).FileName);
                 }
             }
+        }
+
+        /// <summary>
+        /// Creates a delegate of the specified type from this method.
+        /// </summary>
+        /// <param name="method">The method to create the delegate from.</param>
+        /// <param name="delegateType">The type of the delegate to create.</param>
+        /// <returns>The delegate for this method.</returns>
+        public static Delegate CreateDelegate(this MethodBase method, Type delegateType)
+            => CreateDelegate(method, delegateType, null);
+        /// <summary>
+        /// Creates a delegate of the specified type with the specified target from this method.
+        /// </summary>
+        /// <param name="method">The method to create the delegate from.</param>
+        /// <param name="delegateType">The type of the delegate to create.</param>
+        /// <param name="target">The object targeted by the delegate.</param>
+        /// <returns>The delegate for this method.</returns>
+        public static Delegate CreateDelegate(this MethodBase method, Type delegateType, object target) {
+            if (!typeof(Delegate).IsAssignableFrom(delegateType))
+                throw new ArgumentException("Type argument must be a delegate type!");
+            if (method is DynamicMethod)
+                return ((DynamicMethod) method).CreateDelegate(delegateType, target);
+
+            // TODO: Check delegate Invoke parameters against method parameters.
+
+            RuntimeMethodHandle handle = method.MethodHandle;
+            RuntimeHelpers.PrepareMethod(handle);
+            IntPtr ptr = handle.GetFunctionPointer();
+            return (Delegate) Activator.CreateInstance(delegateType, target, ptr);
         }
 
     }

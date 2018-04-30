@@ -81,7 +81,7 @@ namespace MonoMod.BaseLoader {
         internal static List<ModBase> _Mods = new List<ModBase>();
         private static List<Type> _ModuleTypes = new List<Type>();
         private static List<IDictionary<string, MethodInfo>> _ModuleMethods = new List<IDictionary<string, MethodInfo>>();
-        private static List<IDictionary<string, DynamicMethodDelegate>> _ModuleMethodDelegates = new List<IDictionary<string, DynamicMethodDelegate>>();
+        private static List<IDictionary<string, FastReflectionDelegate>> _ModuleMethodDelegates = new List<IDictionary<string, FastReflectionDelegate>>();
 
         /// <summary>
         /// The path to the game's directory. Defaults to the entry assembly's directory.
@@ -143,7 +143,7 @@ namespace MonoMod.BaseLoader {
                 _Mods.Add(module);
                 _ModuleTypes.Add(module.GetType());
                 _ModuleMethods.Add(new Dictionary<string, MethodInfo>());
-                _ModuleMethodDelegates.Add(new Dictionary<string, DynamicMethodDelegate>());
+                _ModuleMethodDelegates.Add(new Dictionary<string, FastReflectionDelegate>());
             }
 
             module.LoadSettings();
@@ -218,8 +218,8 @@ namespace MonoMod.BaseLoader {
                 // Unfortunately prevents us from stepping into invoked methods.
                 for (int i = 0; i < _Mods.Count; i++) {
                     ModBase module = _Mods[i];
-                    IDictionary<string, DynamicMethodDelegate> moduleMethods = _ModuleMethodDelegates[i];
-                    DynamicMethodDelegate method;
+                    IDictionary<string, FastReflectionDelegate> moduleMethods = _ModuleMethodDelegates[i];
+                    FastReflectionDelegate method;
 
                     if (moduleMethods.TryGetValue(methodName, out method)) {
                         if (method == null)
@@ -230,7 +230,7 @@ namespace MonoMod.BaseLoader {
 
                     MethodInfo methodInfo = _ModuleTypes[i].GetMethod(methodName, argsTypes);
                     if (methodInfo != null)
-                        method = methodInfo.GetDelegate();
+                        method = methodInfo.GetFastDelegate();
                     moduleMethods[methodName] = method;
                     if (method == null)
                         continue;

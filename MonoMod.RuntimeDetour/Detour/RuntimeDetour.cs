@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using MonoMod.RuntimeDetour;
+using MonoMod.Utils;
 
 namespace MonoMod.Detour {
     [Obsolete("Please switch to the new MonoMod.RuntimeDetour namespace. A subset of the old API is still available, using the new ")]
@@ -110,7 +111,7 @@ namespace MonoMod.Detour {
 
         // NativeDetour.GenerateTrampoline restricts T : class
         private static T _GenerateTrampoline<T>(this NativeDetour detour)
-            => (T) (object) ((DynamicMethod) detour.GenerateTrampoline(typeof(T).GetMethod("Invoke"))).CreateDelegate(typeof(T));
+            => (T) (object) detour.GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T));
 
         public static T GetOrigTrampoline<T>(this MethodBase target) {
             Stack<NativeDetour> detours = _GetDetours((long) target.GetNativeStart());

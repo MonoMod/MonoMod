@@ -67,11 +67,11 @@ namespace MonoMod {
         public PostProcessor PostProcessors;
 
         [MonoMod__WasIDictionary__]
-        public Dictionary<string, DynamicMethodDelegate> CustomAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
-        public IDictionary<string, DynamicMethodDelegate> _CustomAttributeHandlers { get { return CustomAttributeHandlers; } set { CustomAttributeHandlers = (Dictionary<string, DynamicMethodDelegate>) value; } }
+        public Dictionary<string, FastReflectionDelegate> CustomAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
+        public IDictionary<string, FastReflectionDelegate> _CustomAttributeHandlers { get { return CustomAttributeHandlers; } set { CustomAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; } }
         [MonoMod__WasIDictionary__]
-        public Dictionary<string, DynamicMethodDelegate> CustomMethodAttributeHandlers = new Dictionary<string, DynamicMethodDelegate>();
-        public IDictionary<string, DynamicMethodDelegate> _CustomMethodAttributeHandlers { get { return CustomMethodAttributeHandlers; } set { CustomMethodAttributeHandlers = (Dictionary<string, DynamicMethodDelegate>) value; } }
+        public Dictionary<string, FastReflectionDelegate> CustomMethodAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
+        public IDictionary<string, FastReflectionDelegate> _CustomMethodAttributeHandlers { get { return CustomMethodAttributeHandlers; } set { CustomMethodAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; } }
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -564,11 +564,11 @@ namespace MonoMod {
 
             caHandler = type.GetMMAttribute("CustomAttributeAttribute");
             if (caHandler != null)
-                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetDelegate();
+                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
 
             caHandler = type.GetMMAttribute("CustomMethodAttributeAttribute");
             if (caHandler != null)
-                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetDelegate();
+                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
 
             CustomAttribute hook;
 
@@ -638,7 +638,7 @@ namespace MonoMod {
                 return;
 
             foreach (CustomAttribute attrib in cap.CustomAttributes) {
-                DynamicMethodDelegate handler;
+                FastReflectionDelegate handler;
                 if (CustomAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))
                     handler?.Invoke(null, cap, attrib);
                 if (cap is MethodReference && CustomMethodAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))

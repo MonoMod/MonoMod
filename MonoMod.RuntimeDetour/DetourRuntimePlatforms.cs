@@ -83,13 +83,13 @@ namespace MonoMod.RuntimeDetour {
 
         private readonly static MethodInfo m_DynamicMethod_GetMethodDescriptor =
             typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance);
-        private readonly static DynamicMethodDelegate dmd_DynamicMethod_GetMethodDescriptor =
-            m_DynamicMethod_GetMethodDescriptor?.CreateDelegate();
+        private readonly static FastReflectionDelegate dmd_DynamicMethod_GetMethodDescriptor =
+            m_DynamicMethod_GetMethodDescriptor?.CreateFastDelegate();
 
         private readonly static MethodInfo m_RuntimeHelpers__CompileMethod =
             typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
-        private readonly static DynamicMethodDelegate dmd_RuntimeHelpers__CompileMethod =
-            m_RuntimeHelpers__CompileMethod?.CreateDelegate();
+        private readonly static FastReflectionDelegate dmd_RuntimeHelpers__CompileMethod =
+            m_RuntimeHelpers__CompileMethod?.CreateFastDelegate();
         private readonly static bool m_RuntimeHelpers__CompileMethod_TakesIntPtr =
             m_RuntimeHelpers__CompileMethod != null &&
             m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IntPtr";
@@ -99,8 +99,8 @@ namespace MonoMod.RuntimeDetour {
 
         private readonly static MethodInfo m_RuntimeMethodHandle_GetMethodInfo =
             typeof(RuntimeMethodHandle).GetMethod("GetMethodInfo", BindingFlags.NonPublic | BindingFlags.Instance);
-        private readonly static DynamicMethodDelegate dmd_RuntimeMethodHandle_GetMethodInfo =
-            m_RuntimeMethodHandle_GetMethodInfo?.CreateDelegate();
+        private readonly static FastReflectionDelegate dmd_RuntimeMethodHandle_GetMethodInfo =
+            m_RuntimeMethodHandle_GetMethodInfo?.CreateFastDelegate();
 
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             if (method is DynamicMethod) {
@@ -134,8 +134,8 @@ namespace MonoMod.RuntimeDetour {
     public sealed class DetourRuntimeMonoPlatform : DetourRuntimeILPlatform {
         private readonly static MethodInfo m_DynamicMethod_CreateDynMethod =
             typeof(DynamicMethod).GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance);
-        private readonly static DynamicMethodDelegate dmd_DynamicMethod_CreateDynMethod =
-            m_DynamicMethod_CreateDynMethod?.CreateDelegate();
+        private readonly static FastReflectionDelegate dmd_DynamicMethod_CreateDynMethod =
+            m_DynamicMethod_CreateDynMethod?.CreateFastDelegate();
 
         private readonly static FieldInfo f_DynamicMethod_mhandle =
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);

@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Linq.Expressions;
+using MonoMod.Utils;
 
 namespace MonoMod.RuntimeDetour {
     /// <summary>
@@ -220,7 +221,7 @@ namespace MonoMod.RuntimeDetour {
             if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
-            return ((DynamicMethod) GenerateTrampoline(typeof(T).GetMethod("Invoke"))).CreateDelegate(typeof(T)) as T;
+            return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
         }
     }
 }
