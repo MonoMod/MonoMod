@@ -9,7 +9,7 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 - [Using HookGen (ext)](/README-RuntimeDetour.md)
 - [FAQ](#using-monomod)
 
-[![MonoMod Discord](https://discordapp.com/api/guilds/295566538981769216/embed.png?style=banner1)](https://discord.gg/jm7GCZB)
+[![MonoMod Discord](https://discordapp.com/api/guilds/295566538981769216/embed.png?style=banner2)](https://discord.gg/jm7GCZB)
 
 ### Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
 - [Chad Yates](https://twitter.com/ChadCYates)
