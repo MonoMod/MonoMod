@@ -19,13 +19,14 @@ MonoMod is a flexible toolset consisting of the following parts:
 - **MonoMod.RuntimeDetour.HookGen:** Shortened "HookGen", it's an utiltiy generating a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events.
 
 
-## Why would I want to use MonoMod?
+## Why should you use MonoMod?
 - Cross-version compatibility, even with obfuscated assemblies.
 - Cross-platform compatibility, even if the game uses another engine (f.e. XNA vs FNA in Celeste).
 - Using language features which otherwise wouldn't be supported (f.e. C# 7 in Unity 4.3).
 - Patching being done on the player's machine with a mod installer - no need to pre-patch and redistribute a dozen patched assemblies.
 - With HookGen, runtime hooks are basically `On.Namespace.Type.Method += (orig, self, a, b, c) => { /* ... */ }` - no reflection black magic.
-
+- [You are a civilized person accepting alternatives to "decompile-patch-recompile"-modding and redistributing the patched game.
+](https://cdn.discordapp.com/attachments/234007828728119299/441937768898363394/unknown.png)
 
 ## How to use MonoMod?
 Drop `MonoMod.exe`, all dependencies (Utils, cecil) and your patches into the game directory. Then, in your favorite shell (cmd, bash):
