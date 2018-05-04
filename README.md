@@ -33,8 +33,6 @@ MonoMod is a modding "basework" (base tools and framework) consisting of the fol
 - Using language features which otherwise wouldn't be supported (f.e. C# 7 in Unity 4.3).
 - Patching being done on the player's machine with a mod installer - no need to pre-patch and redistribute a dozen patched assemblies.
 - With HookGen, runtime hooks are basically `On.Namespace.Type.Method += (orig, self, a, b, c) => { /* ... */ }` - no reflection black magic.
-- [You are a civilized person accepting alternatives to "decompile-patch-recompile"-modding and redistributing the patched game.
-](https://cdn.discordapp.com/attachments/234007828728119299/441937768898363394/unknown.png)
 
 ----
 
