@@ -72,6 +72,14 @@
     <Compile Include="YamlHelper.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MonoMod.DebugIL\MonoMod.DebugIL.csproj">
+      <Project>{68e38462-2db9-4692-ad91-077a8fbe8ae9}</Project>
+      <Name>MonoMod.DebugIL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj">
+      <Project>{032b42a5-c409-4b69-b8e6-ec468eedfec1}</Project>
+      <Name>MonoMod.RuntimeDetour.HookGen</Name>
+    </ProjectReference>
     <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj">
       <Project>{d0c584c0-81d7-486e-b70e-d7f9256e0909}</Project>
       <Name>MonoMod.RuntimeDetour</Name>
