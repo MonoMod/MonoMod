@@ -53,6 +53,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\MonoMod\Properties\AssemblyInfo.Common.cs">
+      <Link>AssemblyInfo.Common.cs</Link>
+    </Compile>
     <Compile Include="ModSettings.cs" />
     <Compile Include="ModBase.cs" />
     <Compile Include="ModContent.cs" />

@@ -81,6 +81,7 @@
     <Compile Include="Modifiers\MonoModConstructor.cs" />
     <Compile Include="Modifiers\MonoModLinkTo.cs" />
     <Compile Include="Modifiers\MonoModEnumReplace.cs" />
+    <Compile Include="Properties\AssemblyInfo.Common.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
