@@ -53,6 +53,7 @@
       <Link>AssemblyInfo.Common.cs</Link>
     </Compile>
     <Compile Include="DynamicMethodHelper.cs" />
+    <Compile Include="DynDll.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="LimitedStream.cs" />
     <Compile Include="ModInterop\ModExportName.cs" />
