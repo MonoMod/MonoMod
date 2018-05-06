@@ -1921,8 +1921,8 @@ namespace MonoMod {
             for (int i = attribs.Count - 1; i > -1; --i) {
                 TypeReference attribType = attribs[i].AttributeType;
                 if (ShouldCleanupAttrib?.Invoke(cap, attribType) ?? (
-                    attribType.Scope.Name.StartsWith("MonoMod") ||
-                    attribType.Namespace.StartsWith("MonoMod") || attribType.Name.StartsWith("MonoMod")
+                    (attribType.Scope.Name == "MonoMod" || attribType.Scope.Name == "MonoMod.exe" || attribType.Scope.Name == "MonoMod.dll") ||
+                    (attribType.FullName.StartsWith("MonoMod.MonoMod"))
                 )) {
                     attribs.RemoveAt(i);
                 }
