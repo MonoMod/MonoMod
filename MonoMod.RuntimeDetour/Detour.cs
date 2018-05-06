@@ -184,6 +184,8 @@ namespace MonoMod.RuntimeDetour {
         public void Free() {
             // NativeDetour allows freeing without undoing, but Detours are fully managed.
             // Freeing a Detour without undoing it would leave a hole open in the detour chain.
+            if (!IsValid)
+                return;
             Undo();
         }
 

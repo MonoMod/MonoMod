@@ -28,9 +28,10 @@ namespace MonoMod.RuntimeDetour {
             HookKey key = new HookKey(method, hookDelegate);
             Stack<Hook> hooks;
             if (!_HookMap.TryGetValue(key, out hooks))
-                throw new KeyNotFoundException($"No hooks for {method} -> {hookDelegate} found");
+                return;
 
             hooks.Pop().Undo();
+            hooks.Pop().Free();
 
             if (hooks.Count == 0)
                 _HookMap.Remove(key);

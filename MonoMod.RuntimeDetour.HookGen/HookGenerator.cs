@@ -19,6 +19,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public string Namespace;
         public bool HookOrig;
+        public bool HookPrivate;
 
         public ModuleDefinition md_RuntimeDetour;
 
@@ -46,7 +47,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Namespace = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE");
             if (string.IsNullOrEmpty(Namespace))
                 Namespace = "On";
-            HookOrig = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_HOOKORIG") == "1";
+            HookOrig = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_ORIG") == "1";
+            HookPrivate = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_PRIVATE") == "1";
 
             modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour");
             if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour", out md_RuntimeDetour))
@@ -87,6 +89,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 type.Name.StartsWith("<"))
                 return null;
 
+            if (!HookPrivate && type.IsNotPublic)
+                return null;
+
             Modder.LogVerbose($"[HookGen] Generating for type {type.FullName}");
 
             TypeDefinition hookType = new TypeDefinition(
@@ -120,6 +125,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return false;
 
             if (!HookOrig && method.Name.StartsWith("orig_"))
+                return false;
+            if (!HookPrivate && method.IsPrivate)
                 return false;
 
             int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name).ToList().IndexOf(method);
@@ -231,8 +238,20 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 IsRuntime = true,
                 IsManaged = true
             };
-            if (!method.IsStatic)
-                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, OutputModule.ImportReference(method.DeclaringType)));
+            if (!method.IsStatic) {
+                // Check if the declaring type is accessible.
+                // If not, use System.Object instead.
+                TypeDefinition typeParent = method.DeclaringType;
+                bool isPublic = true;
+                while (typeParent != null && (isPublic = typeParent.IsPublic))
+                    typeParent = typeParent.DeclaringType;
+                TypeReference typeSelf;
+                if (isPublic)
+                    typeSelf = OutputModule.ImportReference(method.DeclaringType);
+                else
+                    typeSelf = OutputModule.TypeSystem.Object;
+                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, typeSelf));
+            }
             foreach (ParameterDefinition param in method.Parameters)
                 invoke.Parameters.Add(new ParameterDefinition(param.Name, param.Attributes & ~ParameterAttributes.Optional, OutputModule.ImportReference(param.ParameterType)));
             invoke.Body = new MethodBody(invoke);

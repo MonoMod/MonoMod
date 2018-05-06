@@ -166,7 +166,7 @@ namespace MonoMod.RuntimeDetour {
 
         public void Free() {
             if (!IsValid)
-                throw new InvalidOperationException("This hook has been undone.");
+                return;
 
             _Detour.Free();
             _Free();
