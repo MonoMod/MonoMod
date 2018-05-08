@@ -1,4 +1,5 @@
 # MonoMod
+<a href="https://discord.gg/jm7GCZB"><img align="right" alt="MonoMod Discord" src="https://discordapp.com/api/guilds/295566538981769216/embed.png?style=banner2" /></a>
 A general purpose .NET assembly modding "basework", powered by [cecil](https://github.com/jbevain/cecil/).  
 *MIT-licensed.*
 
@@ -8,8 +9,6 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 - [Using ModInterop (ext)](/README-ModInterop.md)
 - [Using HookGen (ext)](/README-RuntimeDetour.md)
 - [FAQ](#using-monomod)
-
-[![MonoMod Discord](https://discordapp.com/api/guilds/295566538981769216/embed.png?style=banner2)](https://discord.gg/jm7GCZB)
 
 ### Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
 - [Chad Yates](https://twitter.com/ChadCYates)
