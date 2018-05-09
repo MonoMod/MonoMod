@@ -121,6 +121,14 @@ namespace MonoMod.RuntimeDetour {
         }
 
         /// <summary>
+        /// Undo and free this temporary detour.
+        /// </summary>
+        public void Dispose() {
+            Undo();
+            Free();
+        }
+
+        /// <summary>
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// If the NativeDetour holds a reference to a managed method, a copy of the original method is returned.
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.

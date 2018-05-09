@@ -1,7 +1,8 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 
 namespace MonoMod.RuntimeDetour {
-    public interface IDetour {
+    public interface IDetour : IDisposable {
         bool IsValid { get; }
 
         void Apply();

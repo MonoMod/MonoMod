@@ -190,6 +190,14 @@ namespace MonoMod.RuntimeDetour {
         }
 
         /// <summary>
+        /// Undo and free this temporary detour.
+        /// </summary>
+        public void Dispose() {
+            Undo();
+            Free();
+        }
+
+        /// <summary>
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public MethodBase GenerateTrampoline(MethodBase signature = null) {

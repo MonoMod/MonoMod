@@ -172,6 +172,11 @@ namespace MonoMod.RuntimeDetour {
             _Free();
         }
 
+        public void Dispose() {
+            Undo();
+            Free();
+        }
+
         private void _Free() {
             if (_RefTarget != null)
                 DynamicMethodHelper.FreeReference(_RefTarget.Value);
