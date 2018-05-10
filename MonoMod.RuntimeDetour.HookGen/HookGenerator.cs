@@ -121,7 +121,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public bool GenerateFor(TypeDefinition hookType, MethodDefinition method) {
             if (method.HasGenericParameters ||
-                method.IsSpecialName)
+                (method.IsSpecialName && !method.IsConstructor))
                 return false;
 
             if (!HookOrig && method.Name.StartsWith("orig_"))
@@ -137,7 +137,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     suffix = "_" + suffix;
                 } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && other.Name == (method.Name + suffix)));
             }
-            string name = method.Name + suffix;
+            string name = method.Name;
+            if (name.StartsWith("."))
+                name = name.Substring(1);
+            name = name + suffix;
 
             // TODO: Fix possible conflict when other members with the same names exist.
 
@@ -209,7 +212,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     suffix = "_" + suffix;
                 } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && other.Name == (method.Name + suffix)));
             }
-            string name = "d_" + method.Name + suffix;
+            string name = method.Name;
+            if (name.StartsWith("."))
+                name = name.Substring(1);
+            name = "d_" + name+ suffix;
 
             TypeDefinition del = new TypeDefinition(
                 null, null,
