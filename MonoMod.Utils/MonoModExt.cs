@@ -560,7 +560,8 @@ namespace MonoMod.Utils {
                 IsLcid = param.IsLcid,
                 IsOptional = param.IsOptional,
                 IsOut = param.IsOut,
-                IsReturnValue = param.IsReturnValue
+                IsReturnValue = param.IsReturnValue,
+                MarshalInfo = param.MarshalInfo
             };
             if (param.HasConstant)
                 newParam.Constant = param.Constant;
