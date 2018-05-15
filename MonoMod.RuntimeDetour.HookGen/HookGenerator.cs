@@ -249,7 +249,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 // If not, use System.Object instead.
                 TypeDefinition typeParent = method.DeclaringType;
                 bool isPublic = true;
-                while (typeParent != null && (isPublic = typeParent.IsPublic))
+                while (typeParent != null && (isPublic = (typeParent.IsNestedPublic || typeParent.IsPublic)))
                     typeParent = typeParent.DeclaringType;
                 TypeReference typeSelf;
                 if (isPublic)
