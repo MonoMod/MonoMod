@@ -82,7 +82,7 @@ namespace MonoMod.BaseLoader {
         /// <summary>
         /// The path to the original /Content directory. Used to shorten any "full" asset paths.
         /// </summary>
-        public static string PathContentOrig { get; internal set; }
+        public static string PathContentOrig;
 
         /// <summary>
         /// List of all currently loaded content mods.
@@ -261,6 +261,9 @@ namespace MonoMod.BaseLoader {
         /// <returns>The processed asset.</returns>
         public static object Process(object asset, string assetNameFull) {
             string assetName = assetNameFull;
+            if (string.IsNullOrEmpty(PathContentOrig) && !string.IsNullOrEmpty(ModManager.PathGame)) {
+                PathContentOrig = Path.Combine(ModManager.PathGame, "Content");
+            }
             if (!string.IsNullOrEmpty(PathContentOrig) && assetName.StartsWith(PathContentOrig)) {
                 assetName = assetName.Substring(PathContentOrig.Length + 1);
             }

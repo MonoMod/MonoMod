@@ -28,18 +28,18 @@ namespace MonoMod.BaseLoader {
                 return _VersionString;
             }
             set {
-                VersionString = value;
+                _VersionString = value;
 
-                int versionSplitIndex = VersionString.IndexOf('-');
+                int versionSplitIndex = _VersionString.IndexOf('-');
                 if (versionSplitIndex == -1) {
-                    Version = new Version(VersionString);
+                    Version = new Version(_VersionString);
                     VersionSuffix = "";
                     VersionTag = "";
                     VersionCommit = "";
 
                 } else {
-                    Version = new Version(VersionString.Substring(0, versionSplitIndex));
-                    VersionSuffix = VersionString.Substring(versionSplitIndex + 1);
+                    Version = new Version(_VersionString.Substring(0, versionSplitIndex));
+                    VersionSuffix = _VersionString.Substring(versionSplitIndex + 1);
                     versionSplitIndex = VersionSuffix.IndexOf('-');
                     if (versionSplitIndex == -1) {
                         VersionTag = VersionSuffix;
@@ -86,11 +86,11 @@ namespace MonoMod.BaseLoader {
         /// <summary>
         /// The path to the game's directory. Defaults to the entry assembly's directory.
         /// </summary>
-        public static string PathGame { get; internal set; }
+        public static string PathGame;
         /// <summary>
         /// The path to the /ModSettings directory.
         /// </summary>
-        public static string PathSettings { get; internal set; }
+        public static string PathSettings;
 
         private static bool _Booted;
         public static void Boot(string name, string version) {
