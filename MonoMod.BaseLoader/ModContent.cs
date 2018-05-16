@@ -152,8 +152,9 @@ namespace MonoMod.BaseLoader {
                 metadataPrev = null;
 
             // Hardcoded case: Handle directories separately.
-            else if (metadata.Type == typeof(AssetTypeDirectory))
+            if (metadata.Type == typeof(AssetTypeDirectory))
                 MapDirs[path] = metadata;
+
             else
                 Map[path] = metadata;
 
