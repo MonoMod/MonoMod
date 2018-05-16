@@ -38,6 +38,8 @@ namespace MonoMod.BaseLoader {
         protected override void Crawl() => Crawl(null);
 
         protected virtual void Crawl(string dir, string root = null) {
+            if (dir == null)
+                dir = Path;
             if (root == null)
                 root = dir;
             string[] files = Directory.GetFiles(dir);
