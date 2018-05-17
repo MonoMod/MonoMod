@@ -93,7 +93,7 @@ namespace MonoMod.BaseLoader {
         public static string PathSettings;
 
         private static bool _Booted;
-        public static void Boot(string name, string version) {
+        public static void Boot(string name, string version, ModBase coreModule) {
             if (_Booted)
                 return;
             _Booted = true;
@@ -113,6 +113,13 @@ namespace MonoMod.BaseLoader {
             Directory.CreateDirectory(PathSettings);
 
             // Automatically load all modules.
+            if (coreModule != null) {
+                coreModule.Metadata = coreModule.Metadata ?? new ModMetadata {
+                    Name = Name,
+                    Version = Version
+                };
+                Register(coreModule);
+            }
             ModLoader.LoadAuto();
 
             // Also let all mods parse the arguments.
