@@ -133,6 +133,37 @@ namespace MonoMod.BaseLoader {
         }
 
         /// <summary>
+        /// Gets the ModAsset mapped to the given relative path.
+        /// </summary>
+        /// <param name="path">The relative asset path.</param>
+        /// <param name="metadata">The resulting mod asset meta object.</param>
+        /// <param name="includeDirs">Whether to include directories or not.</param>
+        /// <returns>True if a mapping for the given path is present, false otherwise.</returns>
+        public static bool TryGet<T>(string path, out ModAsset metadata, bool includeDirs = false) {
+            path = path.Replace('\\', '/');
+
+            if (includeDirs && MapDirs.TryGetValue(path, out metadata) && metadata.Type == typeof(T))
+                return true;
+            if (Map.TryGetValue(path, out metadata) && metadata.Type == typeof(T))
+                return true;
+
+            metadata = null;
+            return false;
+        }
+        /// <summary>
+        /// Gets the ModAsset mapped to the given relative path.
+        /// </summary>
+        /// <param name="path">The relative asset path.</param>
+        /// <param name="includeDirs">Whether to include directories or not.</param>
+        /// <returns>The resulting mod asset meta object, or null.</returns>
+        public static ModAsset Get<T>(string path, bool includeDirs = false) {
+            ModAsset metadata;
+            if (TryGet<T>(path, out metadata, includeDirs))
+                return metadata;
+            return null;
+        }
+
+        /// <summary>
         /// Adds a new mapping for the given relative content path.
         /// </summary>
         /// <param name="path">The relative asset path.</param>
