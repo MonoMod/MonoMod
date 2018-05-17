@@ -535,7 +535,6 @@ namespace MonoMod {
         public virtual void ReadMod(Stream stream) {
             Log($"[ReadMod] Loading mod: stream#{(uint) stream.GetHashCode()}");
             ModuleDefinition mod = MonoModExt.ReadModule(stream, GenReaderParameters(false));
-            ParseRules(mod);
             Mods.Add(mod);
             OnReadMod?.Invoke(this, mod);
         }
