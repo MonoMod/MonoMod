@@ -14,24 +14,14 @@ namespace MonoMod.RuntimeDetour {
     }
 
     public unsafe sealed class DetourNativeX86Platform : IDetourNativePlatform {
-        private const int SIZE64BIT = 1 + 1 + 4 + 8;
-        private const int SIZE32BIT = 1 + 4 + 1;
-
-        private static bool Is64BitTarget(IntPtr to)
-            => (((ulong) to) & 0x00000000FFFFFFFF) != ((ulong) to);
-
-        private static int Size(IntPtr to) {
-            if (Is64BitTarget(to))
-                return SIZE64BIT;
-            return SIZE32BIT;
-        }
+        private const int SIZE = 1 + 4;
 
         public NativeDetourData Create(IntPtr from, IntPtr to) {
             NativeDetourData detour = new NativeDetourData {
                 Method = from,
                 Target = to
             };
-            detour.Size = Size(to);
+            detour.Size = SIZE;
             return detour;
         }
 
@@ -42,46 +32,19 @@ namespace MonoMod.RuntimeDetour {
         public void Apply(NativeDetourData detour) {
             int offs = 0;
 
-            if (Is64BitTarget(detour.Target)) {
-                // PUSH can only push 32-bit values and MOV RAX, <to>; JMP RAX voids RAX.
-                // Registerless JMP [rip+0] + data "absolute jump."
-
-                // JMP [rip+0]
-                detour.Method.Write(ref offs, (byte) 0xFF);
-                detour.Method.Write(ref offs, (byte) 0x25);
-                detour.Method.Write(ref offs, (uint) 0x00000000);
-
-                // <to>
-                detour.Method.Write(ref offs, (ulong) detour.Target);
-
-                return;
-            }
-
-            // Registerless PUSH + RET "absolute jump."
-
-            // PUSH <to>
-            detour.Method.Write(ref offs, (byte) 0x68);
-            detour.Method.Write(ref offs, (uint) detour.Target);
-
-            // RET
-            detour.Method.Write(ref offs, (byte) 0xC3);
+            // JMP DeltaNextInstr
+            detour.Method.Write(ref offs, (byte) 0xE9);
+            detour.Method.Write(ref offs, (uint) (int) (
+                (long) detour.Target - ((long) detour.Method + 5)
+            ));
         }
 
         public void Copy(IntPtr src, IntPtr dst, int size) {
-            if (size == SIZE64BIT) {
-                *((ulong*) ((ulong) dst)) = *((ulong*) ((ulong) src));
-                *((uint*) ((ulong) dst + 8)) = *((uint*) ((ulong) src + 8));
-                *((ushort*) ((ulong) dst + 12)) = *((ushort*) ((ulong) src + 12));
-                return;
-            }
+            if (size != SIZE)
+                    throw new Exception($"Unknown X86 detour size {size}");
 
-            if (size == SIZE32BIT) {
-                *((uint*) ((uint) dst)) = *((uint*) ((uint) src));
-                *((ushort*) ((uint) dst + 4)) = *((ushort*) ((uint) src + 4));
-                return;
-            }
-
-            throw new Exception($"Unknown X86 detour size {size}");
+            *((uint*) ((ulong) dst)) = *((uint*) ((ulong) src));
+            *((byte*) ((ulong) dst) + 4) = *((byte*) ((ulong) src) + 4);
         }
 
         public void MakeWritable(NativeDetourData detour) {

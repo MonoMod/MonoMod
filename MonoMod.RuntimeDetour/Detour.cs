@@ -227,11 +227,7 @@ namespace MonoMod.RuntimeDetour {
 
             il = dm.GetILGenerator();
 
-            // TODO: Use specialized Ldarg.* if possible; What about ref types?
-            for (int i = 0; i < argTypes.Length; i++)
-                il.Emit(OpCodes.Ldarg, i);
-            il.Emit(OpCodes.Call, _ChainedTrampoline);
-            il.Emit(OpCodes.Ret);
+            il.Emit(OpCodes.Jmp, _ChainedTrampoline);
 
             return dm.Pin();
         }

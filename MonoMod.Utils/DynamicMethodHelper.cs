@@ -46,9 +46,9 @@ namespace MonoMod.Utils {
         /// </summary>
         public static void EmitMethodOf(this ILGenerator il, MethodBase method) {
             if (method is MethodInfo)
-                il.Emit(OpCodes.Call, (MethodInfo) method);
+                il.Emit(OpCodes.Ldtoken, (MethodInfo) method);
             else if (method is ConstructorInfo)
-                il.Emit(OpCodes.Call, (ConstructorInfo) method);
+                il.Emit(OpCodes.Ldtoken, (ConstructorInfo) method);
             else
                 throw new NotSupportedException($"Method type {method.GetType().FullName} not supported.");
 
