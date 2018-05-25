@@ -12,17 +12,17 @@ namespace MonoMod.UnitTest {
 
         // Prevent JIT from inlining the method call.
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public int TestMethod(int a, int b) {
+        public int TestMethod(int a, int b = 3) {
             return a + b;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static int TestStaticMethod(int a, int b) {
+        public static int TestStaticMethod(int a, int b = 3) {
             return a * b;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void TestVoidMethod(int a, int b) {
+        public static void TestVoidMethod(int a, int b = 3) {
             Console.WriteLine($"{a} {b} {TestStaticMethod(a, b)}");
             VoidResult += a * b;
             if (a > 1 && b > 1) {

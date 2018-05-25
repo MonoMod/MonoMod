@@ -67,16 +67,6 @@ namespace MonoMod.RuntimeDetour {
             DynamicMethod dm;
             ILGenerator il;
 
-            DynamicMethod trampoline = null;
-            if (origType != null) {
-                trampoline = new DynamicMethod(
-                    $"trampoline_{Method.Name}_{GetHashCode()}",
-                    _Hook.ReturnType, argTypes,
-                    Method.DeclaringType,
-                    false // Otherwise just ret is invalid for whatever reason.
-                ).StubCriticalDetour().Pin();
-            }
-
             dm = new DynamicMethod(
                 $"hook_{Method.Name}_{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
@@ -89,8 +79,8 @@ namespace MonoMod.RuntimeDetour {
                 _RefTarget = il.EmitReference(target);
             }
 
-            if (trampoline != null) {
-                _RefTrampoline = il.EmitReference(trampoline.CreateDelegate(origType));
+            if (origType != null) {
+                _RefTrampoline = il.EmitReference<Delegate>(null);
             }
 
             // TODO: Use specialized Ldarg.* if possible; What about ref types?
@@ -105,15 +95,8 @@ namespace MonoMod.RuntimeDetour {
 
             _Detour = new Detour(Method, Target);
             
-            if (trampoline != null) {
-                NativeDetourData link = DetourManager.Native.Create(
-                    trampoline.GetNativeStart(),
-                    GenerateTrampoline(origInvoke).GetNativeStart()
-                );
-                DetourManager.Native.MakeWritable(link);
-                DetourManager.Native.Apply(link);
-                DetourManager.Native.MakeExecutable(link);
-                DetourManager.Native.Free(link);
+            if (origType != null) {
+                DynamicMethodHelper.SetReference(_RefTrampoline.Value, GenerateTrampoline(origInvoke).CreateDelegate(origType));
             }
         }
         public Hook(MethodBase from, MethodInfo to)

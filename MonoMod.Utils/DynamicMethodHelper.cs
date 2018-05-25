@@ -11,6 +11,7 @@ namespace MonoMod.Utils {
         // Used in EmitReference.
         private static List<object> References = new List<object>();
         public static object GetReference(int id) => References[id];
+        public static void SetReference(int id, object obj) => References[id] = obj;
         private static int AddReference(object obj) {
             lock (References) {
                 References.Add(obj);
