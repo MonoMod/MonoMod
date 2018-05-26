@@ -1179,6 +1179,9 @@ namespace MonoMod {
         }
 
         public virtual void PatchProperty(TypeDefinition targetType, PropertyDefinition prop, HashSet<MethodDefinition> propMethods = null) {
+            if (!prop.MatchingConditionals(Module))
+                return;
+
             MethodDefinition addMethod;
 
             PropertyDefinition targetProp = targetType.FindProperty(prop.Name);
