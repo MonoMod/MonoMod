@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace MonoMod.Utils {
     public static class DynDll {
@@ -56,6 +57,11 @@ namespace MonoMod.Utils {
 
             IntPtr e = IntPtr.Zero;
             lib = dlopen(name, RTLD_NOW);
+
+            if (lib == IntPtr.Zero && File.Exists(name)) {
+                lib = dlopen(Path.GetFullPath(name), RTLD_NOW);
+            }
+
             if ((e = dlerror()) != IntPtr.Zero) {
                 Console.WriteLine($"DynDll can't access {name ?? "entry point"}!");
                 Console.WriteLine("dlerror: " + Marshal.PtrToStringAnsi(e));
