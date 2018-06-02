@@ -201,8 +201,29 @@ namespace MonoMod.RuntimeDetour {
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
+#if !MONOMOD_RUNTIMEDETOUR_TRAMPOLINEGEN_SAFE
+            // Screw detour chain safety.
+            return _ChainedTrampoline;
+
+#else
             if (signature == null)
                 signature = Target;
+
+            // Workaround for a "bug" in Mono where get_parameter_info calls mono_class_from_mono_type with type->type == 0x00
+            MethodInfo signatureInfo = signature as MethodInfo;
+            if (signatureInfo != null) {
+                MethodInfo signatureResolved = signatureInfo;
+                if (signatureResolved.IsGenericMethod)
+                    signatureResolved = signatureResolved.GetGenericMethodDefinition();
+
+                signatureResolved = MethodBase.GetMethodFromHandle(signatureResolved.MethodHandle, signature.DeclaringType.TypeHandle) as MethodInfo;
+                if (signatureResolved != null) {
+                    if (signatureInfo.IsGenericMethod)
+                        signatureResolved = signatureResolved.MakeGenericMethod(signatureInfo.GetGenericArguments());
+
+                    signature = signatureResolved;
+                }
+            }
 
             // Note: It'd be more performant to skip this step and just return the "chained trampoline."
             // Unfortunately, it'd allow a third party to break the Detour trampoline chain, among other things.
@@ -227,9 +248,11 @@ namespace MonoMod.RuntimeDetour {
 
             il = dm.GetILGenerator();
 
+            // The jump seems to cause a NullReferenceException on Mono, but only with trampolines pointing towards detours..?!
             il.Emit(OpCodes.Jmp, _ChainedTrampoline);
 
             return dm.Pin();
+#endif
         }
 
         /// <summary>
