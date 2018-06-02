@@ -8,9 +8,14 @@ namespace MonoMod.Utils {
     public static class DynDll {
 
         /// <summary>
-        /// Allows you to remap a .dll. Useful for cross-platform compatibility. Applies only to DynDll.
+        /// Allows you to remap library paths / names. Useful for cross-platform compatibility. Applies only to DynDll.
         /// </summary>
         public static Dictionary<string, string> DllMap = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Allows you to provide custom flags when loading libraries. Platform-dependant.
+        /// </summary>
+        public static Dictionary<string, int> DllFlags = new Dictionary<string, int>();
 
         #region kernel32 imports
 
@@ -25,7 +30,10 @@ namespace MonoMod.Utils {
 
         #region dl imports
 
-        private const int RTLD_NOW = 2;
+        private const int RTLD_LAZY = 0x0001;
+        private const int RTLD_NOW = 0x0002;
+        private const int RTLD_LOCAL = 0x0000;
+        private const int RTLD_GLOBAL = 0x0100;
         [DllImport("dl", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr dlopen([MarshalAs(UnmanagedType.LPTStr)] string filename, int flags);
         [DllImport("dl", CallingConvention = CallingConvention.Cdecl)]
@@ -55,11 +63,15 @@ namespace MonoMod.Utils {
                 return lib;
             }
 
+            int mappedFlags;
+            if (!DllFlags.TryGetValue(name, out mappedFlags))
+                mappedFlags = RTLD_NOW;
+
             IntPtr e = IntPtr.Zero;
-            lib = dlopen(name, RTLD_NOW);
+            lib = dlopen(name, mappedFlags);
 
             if (lib == IntPtr.Zero && File.Exists(name)) {
-                lib = dlopen(Path.GetFullPath(name), RTLD_NOW);
+                lib = dlopen(Path.GetFullPath(name), mappedFlags);
             }
 
             if ((e = dlerror()) != IntPtr.Zero) {
