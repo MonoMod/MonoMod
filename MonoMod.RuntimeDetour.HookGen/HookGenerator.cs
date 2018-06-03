@@ -259,7 +259,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, typeSelf));
             }
             foreach (ParameterDefinition param in method.Parameters)
-                invoke.Parameters.Add(new ParameterDefinition(param.Name, param.Attributes & ~ParameterAttributes.Optional, OutputModule.ImportReference(param.ParameterType)));
+                invoke.Parameters.Add(new ParameterDefinition(
+                    param.Name,
+                    param.Attributes & ~ParameterAttributes.Optional & ~ParameterAttributes.HasDefault,
+                    OutputModule.ImportReference(param.ParameterType
+                )));
             invoke.Body = new MethodBody(invoke);
             del.Methods.Add(invoke);
 

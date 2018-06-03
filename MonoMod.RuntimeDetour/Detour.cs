@@ -209,22 +209,6 @@ namespace MonoMod.RuntimeDetour {
             if (signature == null)
                 signature = Target;
 
-            // Workaround for a "bug" in Mono where get_parameter_info calls mono_class_from_mono_type with type->type == 0x00
-            MethodInfo signatureInfo = signature as MethodInfo;
-            if (signatureInfo != null) {
-                MethodInfo signatureResolved = signatureInfo;
-                if (signatureResolved.IsGenericMethod)
-                    signatureResolved = signatureResolved.GetGenericMethodDefinition();
-
-                signatureResolved = MethodBase.GetMethodFromHandle(signatureResolved.MethodHandle, signature.DeclaringType.TypeHandle) as MethodInfo;
-                if (signatureResolved != null) {
-                    if (signatureInfo.IsGenericMethod)
-                        signatureResolved = signatureResolved.MakeGenericMethod(signatureInfo.GetGenericArguments());
-
-                    signature = signatureResolved;
-                }
-            }
-
             // Note: It'd be more performant to skip this step and just return the "chained trampoline."
             // Unfortunately, it'd allow a third party to break the Detour trampoline chain, among other things.
             // Instead, we create and return a DynamicMethod calling the "chained trampoline."
