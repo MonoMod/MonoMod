@@ -129,9 +129,9 @@ namespace MonoMod.BaseLoader {
                 foreach (ModMetadata multimeta in multimetas) {
                     LoadModDelayed(multimeta, contentCrawl);
                 }
+            } else {
+                LoadModDelayed(meta, contentCrawl);
             }
-
-            LoadModDelayed(meta, contentCrawl);
         }
 
         /// <summary>
