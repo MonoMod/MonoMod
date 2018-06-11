@@ -26,8 +26,11 @@ namespace MonoMod.InlineRT {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
                     Assembly asm = method.DeclaringType.Assembly;
-                    if (asm != MonoModAsm)
-                        return GetModder(method.DeclaringType.Assembly.GetName().Name);
+                    if (asm == MonoModAsm)
+                        continue;
+                    MonoModder modder = GetModder(method.DeclaringType.Assembly.GetName().Name);
+                    if (modder != null)
+                        return modder;
                 }
                 return null;
             }
@@ -64,12 +67,18 @@ namespace MonoMod.InlineRT {
 
         public static MonoModder GetModder(string asmName) {
             string idString = asmName;
-            idString = idString.Substring(idString.IndexOf("[MMILRT, ID:") + 12);
+            int idIndex = idString.IndexOf("[MMILRT, ID:");
+            if (idIndex == -1)
+                return null;
+            idString = idString.Substring(idIndex + 12);
             idString = idString.Substring(0, idString.IndexOf(']'));
             long id;
             if (!long.TryParse(idString, out id))
                 throw new InvalidOperationException($"Cannot get MonoModder ID from assembly name {asmName}");
-            return (MonoModder) ModderMap[id].Target;
+            WeakReference modder;
+            if (!ModderMap.TryGetValue(id, out modder) || !modder.IsAlive)
+                return null;
+            return (MonoModder) modder.Target;
         }
 
         public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
