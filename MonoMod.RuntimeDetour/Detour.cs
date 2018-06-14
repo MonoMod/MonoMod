@@ -201,11 +201,6 @@ namespace MonoMod.RuntimeDetour {
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
-#if !MONOMOD_RUNTIMEDETOUR_TRAMPOLINEGEN_SAFE
-            // Screw detour chain safety.
-            return _ChainedTrampoline;
-
-#else
             if (signature == null)
                 signature = Target;
 
@@ -232,11 +227,9 @@ namespace MonoMod.RuntimeDetour {
 
             il = dm.GetILGenerator();
 
-            // The jump seems to cause a NullReferenceException on Mono, but only with trampolines pointing towards detours..?!
             il.Emit(OpCodes.Jmp, _ChainedTrampoline);
 
             return dm.Pin();
-#endif
         }
 
         /// <summary>
