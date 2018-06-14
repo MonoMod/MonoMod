@@ -228,6 +228,10 @@ namespace MonoMod.RuntimeDetour {
             il = dm.GetILGenerator();
 
             il.Emit(OpCodes.Jmp, _ChainedTrampoline);
+            for (int i = 0; i < 10; i++) {
+                // Prevent old Unity mono from inlining the DynamicMethod.
+                il.Emit(OpCodes.Nop);
+            }
 
             return dm.Pin();
         }
