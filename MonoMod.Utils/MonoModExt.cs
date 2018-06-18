@@ -919,12 +919,8 @@ namespace MonoMod.Utils {
             throw new InvalidOperationException($"GetPatchFullName not supported on type {cap.GetType()}");
         }
 
-        public static bool IsBaseMethodCall(this Instruction instr, MethodBody body) {
-            if (instr.OpCode != OpCodes.Call)
-                return false;
-
+        public static bool IsBaseMethodCall(this MethodBody body, MethodReference called) {
             MethodDefinition caller = body.Method;
-            MethodReference called = instr.Operand as MethodReference;
             if (called == null)
                 return false;
             TypeReference calledType = called.DeclaringType;

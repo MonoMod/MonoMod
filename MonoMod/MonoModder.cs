@@ -573,6 +573,8 @@ namespace MonoMod {
 
             for (hook = type.GetMMAttribute("Hook"); hook != null; hook = type.GetNextMMAttribute("Hook"))
                 ParseHook(type, hook);
+            for (hook = type.GetMMAttribute("LinkFrom"); hook != null; hook = type.GetNextMMAttribute("LinkFrom"))
+                ParseHook(type, hook);
 
             if (type.HasMMAttribute("Ignore"))
                 return;
@@ -583,6 +585,8 @@ namespace MonoMod {
 
                 for (hook = method.GetMMAttribute("Hook"); hook != null; hook = method.GetNextMMAttribute("Hook"))
                     ParseHook(method, hook);
+                for (hook = method.GetMMAttribute("LinkFrom"); hook != null; hook = method.GetNextMMAttribute("LinkFrom"))
+                    ParseHook(method, hook);
             }
 
             foreach (FieldDefinition field in type.Fields) {
@@ -591,6 +595,8 @@ namespace MonoMod {
 
                 for (hook = field.GetMMAttribute("Hook"); hook != null; hook = field.GetNextMMAttribute("Hook"))
                     ParseHook(field, hook);
+                for (hook = field.GetMMAttribute("LinkFrom"); hook != null; hook = field.GetNextMMAttribute("LinkFrom"))
+                    ParseHook(field, hook);
             }
 
             foreach (PropertyDefinition prop in type.Properties) {
@@ -598,6 +604,8 @@ namespace MonoMod {
                     continue;
 
                 for (hook = prop.GetMMAttribute("Hook"); hook != null; hook = prop.GetNextMMAttribute("Hook"))
+                    ParseHook(prop, hook);
+                for (hook = prop.GetMMAttribute("LinkFrom"); hook != null; hook = prop.GetNextMMAttribute("LinkFrom"))
                     ParseHook(prop, hook);
             }
 
@@ -1861,7 +1869,7 @@ namespace MonoMod {
 
                 // "general" static method <-> virtual method reference fix: call <-> callvirt
                 else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference &&
-                    !instr.IsBaseMethodCall(body)) {
+                    !body.IsBaseMethodCall(operand as MethodReference)) {
                     instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
                 }
 
