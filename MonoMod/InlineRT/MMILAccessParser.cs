@@ -49,28 +49,28 @@ namespace MonoMod.InlineRT {
         call New / Call / Get / Set
         */
 
-        public static bool ParseMMILAccessCall(this MonoModder self, MethodBody body, MethodReference call, MethodReference callOrig, ref int instri) {
+        public static bool ParseMMILAccessCall(this MonoModder self, MethodBody body, MethodReference call, ref int instri) {
             string callName = $"{call.DeclaringType.FullName.Substring(11)}::{call.Name}";
 
             if (callName == "Access::.ctor" || callName == "StaticAccess::.ctor" ||
                 callName == "Access`1::.ctor" || callName == "StaticAccess`1::.ctor")
-                return ParseMMILAccessCtorCall(self, body, call, callOrig, ref instri);
+                return ParseMMILAccessCtorCall(self, body, call, ref instri);
 
             if (callName == "BatchAccess::.ctor" || callName == "BatchAccess`1::.ctor")
-                return ParseMMILBatchAccessCtorCall(self, body, call, callOrig, ref instri);
+                return ParseMMILBatchAccessCtorCall(self, body, call, ref instri);
 
             return true;
         }
 
         public static void ParseMMILAccessCtorHead(
-            MonoModder self, MethodBody body, MethodReference callCtor, MethodReference callCtorOrig, ref int instri,
+            MonoModder self, MethodBody body, MethodReference callCtor, ref int instri,
             out TypeReference type_, out IMetadataTokenProvider member_
         ) {
             TypeReference type = null;
             IMetadataTokenProvider member = null;
 
-            if (callCtorOrig.DeclaringType.IsGenericInstance) {
-                type = self.Relink(((GenericInstanceType) callCtorOrig.DeclaringType).GenericArguments[0], body.Method);
+            if (callCtor.DeclaringType.IsGenericInstance) {
+                type = self.Relink(((GenericInstanceType) callCtor.DeclaringType).GenericArguments[0], body.Method);
             }
 
             if (callCtor.Parameters.Count >= 2 && callCtor.Parameters[callCtor.Parameters.Count - 2].Name == "type") {
@@ -106,14 +106,14 @@ namespace MonoMod.InlineRT {
             member_ = member;
         }
 
-        public static bool ParseMMILAccessCtorCall(MonoModder self, MethodBody body, MethodReference callCtor, MethodReference callCtorOrig, ref int instri) {
+        public static bool ParseMMILAccessCtorCall(MonoModder self, MethodBody body, MethodReference callCtor, ref int instri) {
             ILProcessor il = body.GetILProcessor();
             Collection<Instruction> instrs = body.Instructions;
 
             bool staticAccess = callCtor.DeclaringType.Name == "StaticAccess" || callCtor.DeclaringType.Name == "StaticAccess`1";
             TypeReference type = null;
             IMetadataTokenProvider member = null;
-            ParseMMILAccessCtorHead(self, body, callCtor, callCtorOrig, ref instri, out type, out member);
+            ParseMMILAccessCtorHead(self, body, callCtor, ref instri, out type, out member);
 
             if (instrs[instri + 1].OpCode == OpCodes.Newarr) {
                 // Currently in front of us:
@@ -241,13 +241,13 @@ namespace MonoMod.InlineRT {
         }
 
 
-        public static bool ParseMMILBatchAccessCtorCall(this MonoModder self, MethodBody body, MethodReference callCtor, MethodReference callCtorOrig, ref int instri) {
+        public static bool ParseMMILBatchAccessCtorCall(this MonoModder self, MethodBody body, MethodReference callCtor, ref int instri) {
             ILProcessor il = body.GetILProcessor();
             Collection<Instruction> instrs = body.Instructions;
 
             TypeReference type = null;
             IMetadataTokenProvider member = null;
-            ParseMMILAccessCtorHead(self, body, callCtor, callCtorOrig, ref instri, out type, out member);
+            ParseMMILAccessCtorHead(self, body, callCtor, ref instri, out type, out member);
             TypeDefinition typeDef = type.Resolve();
 
             List<string> with = new List<string>();

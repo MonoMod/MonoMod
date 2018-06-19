@@ -572,9 +572,11 @@ namespace MonoMod {
             CustomAttribute hook;
 
             for (hook = type.GetMMAttribute("Hook"); hook != null; hook = type.GetNextMMAttribute("Hook"))
-                ParseHook(type, hook);
+                ParseLinkFrom(type, hook);
             for (hook = type.GetMMAttribute("LinkFrom"); hook != null; hook = type.GetNextMMAttribute("LinkFrom"))
-                ParseHook(type, hook);
+                ParseLinkFrom(type, hook);
+            for (hook = type.GetMMAttribute("LinkTo"); hook != null; hook = type.GetNextMMAttribute("LinkTo"))
+                ParseLinkTo(type, hook);
 
             if (type.HasMMAttribute("Ignore"))
                 return;
@@ -584,9 +586,11 @@ namespace MonoMod {
                     continue;
 
                 for (hook = method.GetMMAttribute("Hook"); hook != null; hook = method.GetNextMMAttribute("Hook"))
-                    ParseHook(method, hook);
+                    ParseLinkFrom(method, hook);
                 for (hook = method.GetMMAttribute("LinkFrom"); hook != null; hook = method.GetNextMMAttribute("LinkFrom"))
-                    ParseHook(method, hook);
+                    ParseLinkFrom(method, hook);
+                for (hook = method.GetMMAttribute("LinkTo"); hook != null; hook = method.GetNextMMAttribute("LinkTo"))
+                    ParseLinkTo(method, hook);
             }
 
             foreach (FieldDefinition field in type.Fields) {
@@ -594,9 +598,11 @@ namespace MonoMod {
                     continue;
 
                 for (hook = field.GetMMAttribute("Hook"); hook != null; hook = field.GetNextMMAttribute("Hook"))
-                    ParseHook(field, hook);
+                    ParseLinkFrom(field, hook);
                 for (hook = field.GetMMAttribute("LinkFrom"); hook != null; hook = field.GetNextMMAttribute("LinkFrom"))
-                    ParseHook(field, hook);
+                    ParseLinkFrom(field, hook);
+                for (hook = field.GetMMAttribute("LinkTo"); hook != null; hook = field.GetNextMMAttribute("LinkTo"))
+                    ParseLinkTo(field, hook);
             }
 
             foreach (PropertyDefinition prop in type.Properties) {
@@ -604,16 +610,18 @@ namespace MonoMod {
                     continue;
 
                 for (hook = prop.GetMMAttribute("Hook"); hook != null; hook = prop.GetNextMMAttribute("Hook"))
-                    ParseHook(prop, hook);
+                    ParseLinkFrom(prop, hook);
                 for (hook = prop.GetMMAttribute("LinkFrom"); hook != null; hook = prop.GetNextMMAttribute("LinkFrom"))
-                    ParseHook(prop, hook);
+                    ParseLinkFrom(prop, hook);
+                for (hook = prop.GetMMAttribute("LinkTo"); hook != null; hook = prop.GetNextMMAttribute("LinkTo"))
+                    ParseLinkTo(prop, hook);
             }
 
             foreach (TypeDefinition nested in type.NestedTypes)
                 ParseRulesInType(nested, rulesTypeMMILRT);
         }
 
-        public virtual void ParseHook(IMetadataTokenProvider target, CustomAttribute hook) {
+        public virtual void ParseLinkFrom(MemberReference target, CustomAttribute hook) {
             string from = (string) hook.ConstructorArguments[0].Value;
 
             object to;
@@ -638,6 +646,17 @@ namespace MonoMod {
                 return;
 
             RelinkMap[from] = to;
+        }
+
+        public virtual void ParseLinkTo(MemberReference from, CustomAttribute hook) {
+            string fromID = (from as MethodReference)?.GetFindableID() ?? from.GetPatchFullName();
+            if (hook.ConstructorArguments.Count == 1)
+                RelinkMap[fromID] = (string) hook.ConstructorArguments[0].Value;
+            else
+                RelinkMap[fromID] = new RelinkMapEntry(
+                    (string) hook.ConstructorArguments[0].Value,
+                    (string) hook.ConstructorArguments[1].Value
+                );
         }
 
         public virtual void RunCustomAttributeHandlers(ICustomAttributeProvider cap) {
@@ -695,89 +714,8 @@ namespace MonoMod {
             }
         }
 
-        public virtual MemberReference GetLinkToRef(ICustomAttributeProvider orig, IGenericParameterProvider context) {
-            CustomAttribute linkto = orig?.GetMMAttribute("LinkTo");
-            if (linkto == null) return null;
-
-            TypeDefinition type = null;
-            MemberReference member = null;
-            for (int i = 0; i < linkto.ConstructorArguments.Count; i++) {
-                CustomAttributeArgument arg = linkto.ConstructorArguments[i];
-                object value = arg.Value;
-
-                if (i == 0) { // Type
-                    if (value is string)
-                        type = FindTypeDeep((string) value).SafeResolve();
-                    else if (value is TypeReference)
-                        type = Relink((TypeReference) value, context).SafeResolve();
-
-                } else if (i == 1) { // Member
-                    if (orig is MethodReference)
-                        member =
-                            type.FindMethod((string) value, simple: false) ??
-                            type.FindMethod(((MethodReference) orig).GetFindableID(name: (string) value, type: type.FullName));
-                    // Microoptimization with the type: type.FullName above:
-                    // Instead of waiting until the 4th pass, just use the type name once and return in the 3rd pass.
-                    else if (orig is FieldReference)
-                        member = type.FindField((string) value);
-                    else if (orig is PropertyReference)
-                        member = type.FindProperty((string) value);
-                }
-
-            }
-
-            if (type == null) {
-                if (Strict)
-                    throw new RelinkTargetNotFoundException($"Could not resolve MonoModLinkTo on {orig}: Type not found.", orig);
-                else
-                    return null;
-            }
-            if (orig is TypeReference)
-                return Module.ImportReference(type);
-
-            if (member == null) {
-                if (Strict)
-                    throw new RelinkTargetNotFoundException($"Could not resolve MonoModLinkTo on {orig}: Member not found.", orig);
-                else
-                    return null;
-            }
-            if (orig is MethodReference)
-                return Module.ImportReference((MethodReference) member);
-            if (orig is FieldReference)
-                return Module.ImportReference((FieldReference) member);
-
-            throw new InvalidOperationException($"Cannot link from {orig} - unknown type {orig.GetType()}");
-        }
-
         public virtual IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             try {
-                // LinkTo bypasses all relinking maps.
-                ICustomAttributeProvider cap = mtp as ICustomAttributeProvider;
-                // Resolving is required as the methods hold unresolved references.
-                if (cap == null &&
-                    // The following check should technically be a scope check instead.
-                    // Mods.Contains((mtp as TypeReference)?.Module ?? (mtp as MemberReference)?.DeclaringType?.Module)
-                    true // TODO: Always resolving references just to find a LinkTo attribute is highly inefficient.
-                )
-                    try {
-                        if (mtp is TypeReference)
-                            cap = ((TypeReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                        else if (mtp is MethodReference)
-                            cap = ((MethodReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                        else if (mtp is FieldReference)
-                            cap = ((FieldReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                        else if (mtp is PropertyReference)
-                            cap = ((PropertyReference) mtp).SafeResolve() as ICustomAttributeProvider;
-                    } catch {
-                        // Could not resolve assembly - f.e. MonoModRules refering to MonoMod itself
-                        cap = null;
-                    }
-                if (cap?.GetMMAttribute("LinkTo") != null) {
-                    MemberReference linkToRef = GetLinkToRef(cap, context);
-                    if (linkToRef != null)
-                        return linkToRef;
-                }
-
                 // TODO: Handle mtp being deleted but being hooked in a better, Strict-compatible way.
                 return PostRelinker(
                     MainRelinker(mtp, context) ?? mtp,
@@ -936,25 +874,9 @@ namespace MonoMod {
         }
 
         public virtual bool ParseMMILCall(MethodBody body, MethodReference call, ref int instri) {
-            MethodReference callOrig = call;
-            call = call.Resolve();
-            call = (MethodReference) GetLinkToRef((MethodDefinition) call, body.Method) ?? call;
-
             if (call.DeclaringType.Namespace == "MMILAccess" &&
-                !this.ParseMMILAccessCall(body, call, callOrig, ref instri))
+                !this.ParseMMILAccessCall(body, call, ref instri))
                 return false;
-
-            string callName;
-            callName = call.DeclaringType.FullName.Substring(4);
-            if (callName.StartsWith("Ext."))
-                callName = $"{callName.Substring(4)}::{call.Name}";
-            else if (callName.Length != 0 && callName[0] == '/')
-                callName = $"{callName.Substring(1)}::{call.Name}";
-            else if (callName.Length == 0)
-                callName = call.Name;
-            else
-                callName = $"{call.DeclaringType.FullName}::{call.Name}";
-
             return true;
         }
 
