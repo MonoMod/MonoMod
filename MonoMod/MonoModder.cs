@@ -63,6 +63,8 @@ namespace MonoMod {
         public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
         public IDictionary<string, TypeReference> _RelinkModuleMapCache { get { return RelinkModuleMapCache; } set { RelinkModuleMapCache = (Dictionary<string, TypeReference>) value; } }
 
+        public Dictionary<string, OpCode> ForceCallMap = new Dictionary<string, OpCode>();
+
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
@@ -591,6 +593,11 @@ namespace MonoMod {
                     ParseLinkFrom(method, hook);
                 for (hook = method.GetMMAttribute("LinkTo"); hook != null; hook = method.GetNextMMAttribute("LinkTo"))
                     ParseLinkTo(method, hook);
+
+                if (method.HasMMAttribute("ForceCall"))
+                    ForceCallMap[method.GetFindableID()] = OpCodes.Call;
+                else if (method.HasMMAttribute("ForceCallvirt"))
+                    ForceCallMap[method.GetFindableID()] = OpCodes.Callvirt;
             }
 
             foreach (FieldDefinition field in type.Fields) {
@@ -1708,21 +1715,6 @@ namespace MonoMod {
 
             MethodRewriter?.Invoke(this, method);
 
-            IDictionary<Instruction, SequencePoint> symbols;
-            try {
-                symbols = method.DebugInformation.GetSequencePointMapping();
-            } catch (ArgumentException) {
-                // One Instruction, multiple CodePoints
-                method.DebugInformation.SequencePoints.Clear();
-                symbols = method.DebugInformation.GetSequencePointMapping();
-            }
-            Document symbolDoc = new Document($"/MonoMod/{Version}/{method.DeclaringType.FullName}.cil") {
-                LanguageVendor = DocumentLanguageVendor.Microsoft,
-                Language = DocumentLanguage.Cil,
-                HashAlgorithm = DocumentHashAlgorithm.None,
-                Type = DocumentType.Text
-            };
-
             Dictionary<TypeReference, VariableDefinition> tmpAddrLocMap = new Dictionary<TypeReference, VariableDefinition>();
 
             MethodBody body = method.Body;
@@ -1738,11 +1730,34 @@ namespace MonoMod {
                 if (!MethodParser(this, body, instr, ref instri))
                     continue;
 
+                // Before relinking, check for an existing forced call opcode mapping.
+                OpCode forceCall = default(OpCode);
+                bool hasForceCall = operand is MethodReference && (
+                    ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(), out forceCall) ||
+                    ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(simple: true), out forceCall)
+                );
+
                 ParameterDefinition param = instr.GetParam(method);
                 VariableDefinition local = instr.GetLocal(method);
 
                 // General relinking
-                if (operand is IMetadataTokenProvider) operand = Relink((IMetadataTokenProvider) operand, method);
+                if (operand is IMetadataTokenProvider)
+                    operand = Relink((IMetadataTokenProvider) operand, method);
+
+                // Check again after relinking.
+                if (!hasForceCall && operand is MethodReference) {
+                    OpCode forceCallRelinked;
+                    bool hasForceCallRelinked = 
+                        ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(), out forceCallRelinked) ||
+                        ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(simple: true), out forceCallRelinked)
+                    ;
+                    // If a relinked force call exists, prefer it over the existing forced call opcode.
+                    // Otherwise keep the existing forced call opcode.
+                    if (hasForceCallRelinked) {
+                        forceCall = forceCallRelinked;
+                        hasForceCall = true;
+                    }
+                }
 
                 // patch_ constructor fix: If referring to itself, refer to the original constructor.
                 if (instr.OpCode == OpCodes.Call && operand is MethodReference &&
@@ -1796,9 +1811,12 @@ namespace MonoMod {
                 }
 
                 // "general" static method <-> virtual method reference fix: call <-> callvirt
-                else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference &&
-                    !body.IsBaseMethodCall(operand as MethodReference)) {
-                    instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
+                else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference) {
+                    if (hasForceCall) {
+                        instr.OpCode = forceCall;
+                    } else if (!body.IsBaseMethodCall(operand as MethodReference)) {
+                        instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
+                    }
                 }
 
                 // Reference importing

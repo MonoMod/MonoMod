@@ -55,6 +55,8 @@
   <ItemGroup>
     <Compile Include="InlineRT\MMILAccessParser.cs" />
     <Compile Include="InlineRT\MonoModRulesModder.cs" />
+    <Compile Include="Modifiers\MonoModForceCallvirt.cs" />
+    <Compile Include="Modifiers\MonoModForceCall.cs" />
     <Compile Include="Modifiers\MonoModLinkFrom.cs" />
     <Compile Include="Modifiers\MonoMod__WasIDictionary__.cs" />
     <Compile Include="Modifiers\MonoMod__SafeToCopy__.cs" />
