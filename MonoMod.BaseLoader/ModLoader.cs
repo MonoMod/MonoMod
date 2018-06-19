@@ -116,7 +116,7 @@ namespace MonoMod.BaseLoader {
                     }
                 }
 
-            ModContentSource contentMeta = new DirectoryModContent(dir);
+            ModContent contentMeta = new FileSystemModContent(dir);
 
             Action contentCrawl = () => {
                 if (contentMeta == null)

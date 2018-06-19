@@ -15,23 +15,33 @@ namespace MonoMod.BaseLoader {
     // Special meta types.
     public sealed class AssetTypeDirectory { private AssetTypeDirectory() { } }
     public sealed class AssetTypeAssembly { private AssetTypeAssembly() { } }
+    public sealed class AssetTypeYaml { private AssetTypeYaml() { } }
 
     // Delegate types.
     public delegate string TypeGuesser(string file, out Type type, out string format);
 
     // Source types.
-    public abstract class ModContentSource {
+    public abstract class ModContent {
+        public List<ModAsset> List = new List<ModAsset>();
+        public Dictionary<string, ModAsset> Map = new Dictionary<string, ModAsset>();
+
         protected abstract void Crawl();
         internal void _Crawl() => Crawl();
+
+        protected void Add(string path, ModAsset asset) {
+            asset = ModContentManager.Add(path, asset);
+            List.Add(asset);
+            Map[asset.PathVirtual] = asset;
+        }
     }
 
-    public class DirectoryModContent : ModContentSource {
+    public class FileSystemModContent : ModContent {
         /// <summary>
         /// The path to the mod directory.
         /// </summary>
         public string Path;
 
-        public DirectoryModContent(string path) {
+        public FileSystemModContent(string path) {
             Path = path;
         }
 
@@ -45,7 +55,7 @@ namespace MonoMod.BaseLoader {
             string[] files = Directory.GetFiles(dir);
             for (int i = 0; i < files.Length; i++) {
                 string file = files[i];
-                ModContentManager.Add(file.Substring(root.Length + 1), new FileSystemModAsset(file));
+                Add(file.Substring(root.Length + 1), new FileSystemModAsset(this, file));
             }
             files = Directory.GetDirectories(dir);
             for (int i = 0; i < files.Length; i++) {
@@ -55,7 +65,7 @@ namespace MonoMod.BaseLoader {
         }
     }
 
-    public class AssemblyModContent : ModContentSource {
+    public class AssemblyModContent : ModContent {
         /// <summary>
         /// The assembly containing the mod content as resources.
         /// </summary>
@@ -73,7 +83,7 @@ namespace MonoMod.BaseLoader {
                 if (indexOfContent < 0)
                     continue;
                 name = name.Substring(indexOfContent + 8);
-                ModContentManager.Add(name, new AssemblyModAsset(Assembly, resourceNames[i]));
+                Add(name, new AssemblyModAsset(this, resourceNames[i]));
             }
         }
     }
@@ -89,7 +99,7 @@ namespace MonoMod.BaseLoader {
         /// <summary>
         /// List of all currently loaded content mods.
         /// </summary>
-        public readonly static List<ModContentSource> Mods = new List<ModContentSource>();
+        public readonly static List<ModContent> Mods = new List<ModContent>();
 
         /// <summary>
         /// Mod content mapping. Use Content.Add, Get, and TryGet where applicable instead.
@@ -225,10 +235,20 @@ namespace MonoMod.BaseLoader {
         /// <returns>The passed asset path, trimmed if required.</returns>
         public static string GuessType(string file, out Type type, out string format) {
             type = typeof(object);
-            format = file.Length < 4 ? null : file.Substring(file.Length - 3);
+            format = Path.GetExtension(file) ?? "";
+            if (format.Length >= 1)
+                format = format.Substring(1);
 
             if (file.EndsWith(".dll")) {
                 type = typeof(AssetTypeAssembly);
+
+            } else if (file.EndsWith(".yaml")) {
+                type = typeof(AssetTypeYaml);
+                file = file.Substring(0, file.Length - 5);
+                format = ".yml";
+            } else if (file.EndsWith(".yml")) {
+                type = typeof(AssetTypeYaml);
+                file = file.Substring(0, file.Length - 4);
 
             } else if (OnGuessType != null) {
                 // Allow mods to parse custom types.
@@ -264,7 +284,7 @@ namespace MonoMod.BaseLoader {
         /// Crawl through the content mod and automatically fill the mod asset map.
         /// </summary>
         /// <param name="meta">The content mod to crawl through.</param>
-        public static void Crawl(ModContentSource meta) {
+        public static void Crawl(ModContent meta) {
             if (!Mods.Contains(meta))
                 Mods.Add(meta);
             meta._Crawl();

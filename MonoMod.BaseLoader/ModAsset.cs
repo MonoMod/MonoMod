@@ -8,6 +8,11 @@ namespace MonoMod.BaseLoader {
     public abstract class ModAsset {
 
         /// <summary>
+        /// The mod asset's source.
+        /// </summary>
+        public ModContent Source;
+
+        /// <summary>
         /// The type matching the mod asset.
         /// </summary>
         public Type Type = null;
@@ -72,6 +77,10 @@ namespace MonoMod.BaseLoader {
             }
         }
 
+        protected ModAsset(ModContent source) {
+            Source = source;
+        }
+
         /// <summary>
         /// Open a stream to read the asset data from.
         /// </summary>
@@ -79,54 +88,148 @@ namespace MonoMod.BaseLoader {
         /// <param name="isSection">Is the stream already a section (SectionOffset and SectionLength)?</param>
         protected abstract void Open(out Stream stream, out bool isSection);
 
+        /// <summary>
+        /// Deserialize the asset using a deserializer based on the AssetType (f.e. AssetTypeYaml -> YamlDotNet).
+        /// </summary>
+        /// <typeparam name="T">The target type.</typeparam>
+        /// <param name="result">The asset in its deserialized (object) form.</param>
+        /// <returns>True if deserializing the asset succeeded, false otherwise.</returns>
+        public bool TryDeserialize<T>(out T result) {
+            if (Type == typeof(AssetTypeYaml)) {
+                using (StreamReader reader = new StreamReader(Stream))
+                    result = YamlHelper.Deserializer.Deserialize<T>(reader);
+                return true;
+            }
+
+            // TODO: Deserialize AssetTypeXml
+
+            result = default(T);
+            return false;
+        }
+
+        /// <summary>
+        /// Deserialize the asset using a deserializer based on the AssetType (f.e. AssetTypeYaml -> YamlDotNet).
+        /// </summary>
+        /// <typeparam name="T">The target type.</typeparam>
+        /// <returns>The asset in its deserialized (object) form or default(T).</returns>
+        public T Deserialize<T>() {
+            T result;
+            TryDeserialize(out result);
+            return result;
+        }
+
+        /// <summary>
+        /// Deserialize this asset's matching .meta asset. Uses TryDeserialize internally.
+        /// </summary>
+        /// <typeparam name="T">The target meta type.</typeparam>
+        /// <param name="meta">The requested meta object.</param>
+        /// <returns>True if deserializing the meta asset succeeded, false otherwise.</returns>
+        public bool TryGetMeta<T>(out T meta) {
+            ModAsset metaAsset;
+            if (ModContentManager.TryGet(PathVirtual + ".meta", out metaAsset) &&
+                metaAsset.TryDeserialize(out meta)
+            )
+                return true;
+            meta = default(T);
+            return false;
+        }
+
+        /// <summary>
+        /// Deserialize this asset's matching .meta asset. Uses TryDeserialize internally.
+        /// </summary>
+        /// <typeparam name="T">The target meta type.</typeparam>
+        /// <returns>The requested meta object or default(T).</returns>
+        public T GetMeta<T>() {
+            T meta;
+            TryGetMeta(out meta);
+            return meta;
+        }
+
+    }
+
+    public abstract class ModAsset<T> : ModAsset where T : ModContent {
+        public new T Source => base.Source as T;
+        protected ModAsset(T source)
+            : base(source) {
+        }
     }
 
     public sealed class ModAssetBranch : ModAsset {
+        public ModAssetBranch()
+            : base(null) {
+        }
+
         protected override void Open(out Stream stream, out bool isSection) {
             throw new InvalidOperationException();
         }
     }
 
-    public class FileSystemModAsset : ModAsset {
+    public class FileSystemModAsset : ModAsset<FileSystemModContent> {
         /// <summary>
         /// The path to the source file.
         /// </summary>
-        public string PathFile;
+        public string Path;
 
-        public FileSystemModAsset(string file) {
-            PathFile = file;
+        public FileSystemModAsset(FileSystemModContent source, string path)
+            : base(source) {
+            Path = path;
         }
 
         protected override void Open(out Stream stream, out bool isSection) {
-            if (!File.Exists(PathFile)) {
+            if (!File.Exists(Path)) {
                 stream = null;
                 isSection = false;
                 return;
             }
 
-            stream = File.OpenRead(PathFile);
+            stream = File.OpenRead(Path);
             isSection = false;
         }
     }
 
-    public class AssemblyModAsset : ModAsset {
-        /// <summary>
-        /// The containing assembly.
-        /// </summary>
-        public Assembly Assembly;
+    public class AssemblyModAsset : ModAsset<AssemblyModContent> {
         /// <summary>
         /// The name of the resource in the assembly.
         /// </summary>
         public string ResourceName;
 
-        public AssemblyModAsset(Assembly assembly, string resourceName) {
-            Assembly = assembly;
+        public AssemblyModAsset(AssemblyModContent source, string resourceName)
+            : base(source) {
             ResourceName = resourceName;
         }
 
         protected override void Open(out Stream stream, out bool isSection) {
-            stream = Assembly.GetManifestResourceStream(ResourceName);
+            stream = Source.Assembly.GetManifestResourceStream(ResourceName);
             isSection = false;
         }
     }
+
+#if MONOMOD_BASELOADER_ZIP
+    public class ZipModAsset : ModAsset<ZipModContent> {
+        /// <summary>
+        /// The path to the source file inside the archive.
+        /// </summary>
+        public string Path;
+
+        public ZipModAsset(ZipModContent source, string path)
+            : base(source) {
+            Path = path;
+        }
+
+        protected override void Open(out Stream stream, out bool isSection) {
+            string file = Path.Replace('\\', '/');
+            using (ZipFile zip = new ZipFile(Source.Path)) {
+                foreach (ZipEntry entry in zip.Entries) {
+                    if (entry.FileName.Replace('\\', '/') == file) {
+                        stream = entry.ExtractStream();
+                        isSection = false;
+                        return;
+                    }
+                }
+            }
+
+            throw new KeyNotFoundException($"{GetType().Name} {Path} not found in archive {Source.Path}");
+        }
+    }
+#endif
 }
