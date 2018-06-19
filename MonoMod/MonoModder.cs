@@ -1374,6 +1374,12 @@ namespace MonoMod {
             if (existingMethod == null && method.HasMMAttribute("NoNew"))
                 return null;
 
+            if (method.HasMMAttribute("Remove")) {
+                if (existingMethod != null)
+                    targetType.Methods.Remove(existingMethod);
+                return null;
+            }
+
             if (method.HasMMAttribute("Replace")) {
                 method.Name = method.GetPatchName();
                 if (existingMethod != null) {
