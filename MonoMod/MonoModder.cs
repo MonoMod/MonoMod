@@ -752,7 +752,7 @@ namespace MonoMod {
                 return Module.ImportReference(found);
             }
 
-            if (mtp is FieldReference || mtp is MethodReference || mtp is PropertyReference)
+            if (mtp is FieldReference || mtp is MethodReference || mtp is PropertyReference || mtp is EventReference)
                 // Don't relink those. It'd be useful to f.e. link to member B instead of member A.
                 // MonoModExt already handles the default "deep" relinking.
                 return mtp;

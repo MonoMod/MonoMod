@@ -55,7 +55,7 @@ namespace MonoMod.RuntimeDetour {
                     // JMP DeltaNextInstr
                     detour.Method.Write(ref offs, (byte) 0xE9);
                     detour.Method.Write(ref offs, (uint) (int) (
-                        (long) detour.Target - ((long) detour.Method + 5)
+                        (long) detour.Target - ((long) detour.Method + offs + sizeof(uint))
                     ));
                     break;
 

@@ -437,6 +437,8 @@ namespace MonoMod.Utils {
             if (mtp is MethodReference) return ((MethodReference) mtp).Relink(relinker, context);
             if (mtp is FieldReference) return ((FieldReference) mtp).Relink(relinker, context);
             if (mtp is ParameterDefinition) return ((ParameterDefinition) mtp).Relink(relinker, context);
+            // TODO: relink EventDefinitions
+            // if (mtp is EventDefinition) return ((EventDefinition) mtp).Relink(relinker, context);
             throw new InvalidOperationException($"MonoMod can't handle metadata token providers of the type {mtp.GetType()}");
         }
 
@@ -700,6 +702,8 @@ namespace MonoMod.Utils {
             if (mtp is TypeDefinition) ((TypeDefinition) mtp).SetPublic(p);
             else if (mtp is FieldDefinition) ((FieldDefinition) mtp).SetPublic(p);
             else if (mtp is MethodDefinition) ((MethodDefinition) mtp).SetPublic(p);
+            else if (mtp is PropertyDefinition) ((PropertyDefinition) mtp).SetPublic(p);
+            else if (mtp is EventDefinition) ((EventDefinition) mtp).SetPublic(p);
             else throw new InvalidOperationException($"MonoMod can't set metadata token providers of the type {mtp.GetType()} public.");
         }
         public static void SetPublic(this FieldDefinition o, bool p) {
@@ -714,6 +718,25 @@ namespace MonoMod.Utils {
                 return;
             o.IsPrivate = !p;
             o.IsPublic = p;
+            if (p) o.DeclaringType.SetPublic(true);
+        }
+        public static void SetPublic(this PropertyDefinition o, bool p) {
+            if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
+                return;
+            o.GetMethod?.SetPublic(p);
+            o.SetMethod?.SetPublic(p);
+            foreach (MethodDefinition method in o.OtherMethods)
+                method.SetPublic(p);
+            if (p) o.DeclaringType.SetPublic(true);
+        }
+        public static void SetPublic(this EventDefinition o, bool p) {
+            if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
+                return;
+            o.AddMethod?.SetPublic(p);
+            o.RemoveMethod?.SetPublic(p);
+            o.InvokeMethod?.SetPublic(p);
+            foreach (MethodDefinition method in o.OtherMethods)
+                method.SetPublic(p);
             if (p) o.DeclaringType.SetPublic(true);
         }
         public static void SetPublic(this TypeDefinition o, bool p) {
