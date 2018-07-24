@@ -147,7 +147,15 @@ namespace MonoMod.Utils {
                     return (string) attrib.ConstructorArguments[0].Value;
 
             if (method.HasMMAttribute("Constructor"))
-                return "orig_ctor_" + ((ICustomAttributeProvider) method.DeclaringType).GetPatchName();
+            {
+                string patchName = ((ICustomAttributeProvider)method.DeclaringType).GetPatchName();
+                int dotIndex = patchName.LastIndexOf('.');
+                if (dotIndex != -1 && dotIndex != patchName.Length - 1)
+                {
+                    patchName = patchName.Substring(dotIndex + 1);
+                }
+                return "orig_ctor_" + patchName;
+            }
 
             return "orig_" + method.Name;
         }
