@@ -146,15 +146,8 @@ namespace MonoMod.Utils {
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModOriginalName")
                     return (string) attrib.ConstructorArguments[0].Value;
 
-            if (method.HasMMAttribute("Constructor"))
-            {
-                string patchName = ((ICustomAttributeProvider)method.DeclaringType).GetPatchName();
-                int dotIndex = patchName.LastIndexOf('.');
-                if (dotIndex != -1 && dotIndex != patchName.Length - 1)
-                {
-                    patchName = patchName.Substring(dotIndex + 1);
-                }
-                return "orig_ctor_" + patchName;
+            if (method.Name == ".ctor" || method.Name == ".cctor") {
+                return "orig_ctor_" + ((MemberReference) method.DeclaringType).GetPatchName();
             }
 
             return "orig_" + method.Name;
@@ -848,18 +841,35 @@ namespace MonoMod.Utils {
         }
 
         private static string GetPatchName(this ICustomAttributeProvider cap) {
+            string name;
+
             CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
-            if (patchAttrib != null)
-                return ((string) patchAttrib.ConstructorArguments[0].Value).Inject(SharedData);
+            if (patchAttrib != null) {
+                name = ((string) patchAttrib.ConstructorArguments[0].Value).Inject(SharedData);
+                int dotIndex = name.LastIndexOf('.');
+                if (dotIndex != -1 && dotIndex != name.Length - 1) {
+                    name = name.Substring(dotIndex + 1);
+                }
+                return name;
+            }
 
             // Backwards-compatibility: Check for patch_
-            string name = ((MemberReference) cap).Name;
+            name = ((MemberReference) cap).Name;
             return name.StartsWith("patch_") ? name.Substring(6) : name;
         }
         private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
             if (cap is TypeReference) {
                 TypeReference type = (TypeReference) cap;
-                string name = cap.GetPatchName();
+                CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
+                string name;
+
+                if (patchAttrib != null) {
+                    name = ((string) patchAttrib.ConstructorArguments[0].Value).Inject(SharedData);
+                } else {
+                    // Backwards-compatibility: Check for patch_
+                    name = ((MemberReference) cap).Name;
+                    name = name.StartsWith("patch_") ? name.Substring(6) : name;
+                }
 
                 if (name.StartsWith("global::"))
                     name = name.Substring(8); // Patch name is refering to a global type.
