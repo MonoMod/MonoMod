@@ -19,7 +19,14 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 
 ## Introduction
 MonoMod is a modding "basework" (base tools and framework) consisting of the following parts:
-- **MonoMod:** The core MonoMod IL patcher and relinker. Used to patch [Gungeon](https://modthegungeon.github.io/), [Hollow Knight](https://github.com/seanpr96/HollowKnight.Modding), [Celeste](https://everestapi.github.io/), [Rain World (via Partiality wrapper)](http://www.raindb.net/) and [FEZ (abandoned)](https://github.com/0x0ade/FEZMod-Legacy), among other games. *Ping me if your mod uses MonoMod!*
+- **MonoMod:** The core MonoMod IL patcher and relinker. Used to patch:
+	- Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
+	- Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding),
+	- Celeste: [Everest](https://everestapi.github.io/)
+	- Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding)
+	- Rain World, and many other Unity games: [via Partiality wrapper](http://www.raindb.net/)
+	- FEZ: [FEZMod (abandoned)](https://github.com/0x0ade/FEZMod-Legacy)
+	- *Ping me if your mod uses MonoMod!*
 - **MonoMod.Utils:** Utilities and helpers that not only benefit MonoMod, but also mods in general. It contains classes such as `FastReflectionHelper`, `LimitedStream`, `DynamicMethodHelper` and the `ModInterop` namespace.
 - **MonoMod.DebugIL:** Enable IL-level debugging of third-party assemblies in Visual Studio.
 - **MonoMod.BaseLoader:** A base on which a C# mod loader can be built upon, including a basic engine-agnostic mod content manager and mod relinker.
