@@ -100,6 +100,7 @@ namespace MonoMod {
         public bool LogVerboseEnabled;
         public bool RelinkerCacheEnabled;
         public bool CleanupEnabled;
+        public bool PublicEverything;
 
         public List<ModuleReference> Mods = new List<ModuleReference>();
 
@@ -240,6 +241,7 @@ namespace MonoMod {
             LogVerboseEnabled = Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1";
             RelinkerCacheEnabled = Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "1";
             CleanupEnabled = Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0";
+            PublicEverything = Environment.GetEnvironmentVariable("MONOMOD_PUBLIC_EVERYTHING") == "1";
             PreventInline = Environment.GetEnvironmentVariable("MONOMOD_PREVENTINLINE") == "1";
             Strict = Environment.GetEnvironmentVariable("MONOMOD_STRICT") == "1";
             MissingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0";
@@ -1100,9 +1102,6 @@ namespace MonoMod {
                 }
             }
 
-            if (type.HasMMAttribute("Public"))
-                type.SetPublic(true);
-
             foreach (FieldDefinition field in type.Fields)
                 PatchField(targetTypeDef, field);
 
@@ -1131,15 +1130,6 @@ namespace MonoMod {
             if (backing != null)
                 foreach (CustomAttribute attrib in prop.CustomAttributes)
                     backing.CustomAttributes.Add(attrib.Clone());
-
-            if (prop.HasMMAttribute("Public")) {
-                (targetProp ?? prop)?.SetPublic(true);
-                (targetBacking ?? backing)?.SetPublic(true);
-                (targetProp.GetMethod ?? prop.GetMethod)?.SetPublic(true);
-                (targetProp.SetMethod ?? prop.SetMethod)?.SetPublic(true);
-                foreach (MethodDefinition method in targetProp?.OtherMethods ?? prop?.OtherMethods)
-                    method.SetPublic(true);
-            }
 
             if (prop.HasMMAttribute("Ignore")) {
                 if (backing != null)
@@ -1222,15 +1212,6 @@ namespace MonoMod {
             if (backing != null)
                 foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
                     backing.CustomAttributes.Add(attrib.Clone());
-
-            if (srcEvent.HasMMAttribute("Public")) {
-                (targetEvent ?? srcEvent)?.SetPublic(true);
-                (targetBacking ?? backing)?.SetPublic(true);
-                (targetEvent?.AddMethod ?? srcEvent.AddMethod)?.SetPublic(true);
-                (targetEvent?.RemoveMethod ?? srcEvent.RemoveMethod)?.SetPublic(true);
-                foreach (MethodDefinition method in targetEvent?.OtherMethods ?? srcEvent?.OtherMethods)
-                    method.SetPublic(true);
-            }
 
             if (srcEvent.HasMMAttribute("Ignore")) {
                 if (backing != null)
@@ -1317,9 +1298,6 @@ namespace MonoMod {
 
             FieldDefinition existingField = type.FindField(field.Name);
 
-            if (field.HasMMAttribute("Public"))
-                (existingField ?? field)?.SetPublic(true);
-
             if (type.HasMMAttribute("Ignore") && existingField != null) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
                 foreach (CustomAttribute attrib in field.CustomAttributes)
@@ -1364,9 +1342,6 @@ namespace MonoMod {
 
             MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
-
-            if (method.HasMMAttribute("Public"))
-                method.SetPublic(true);
 
             if (method.HasMMAttribute("Ignore")) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1897,15 +1872,39 @@ namespace MonoMod {
         }
 
         public virtual void DefaultPostProcessType(TypeDefinition type) {
+            if (PublicEverything || type.HasMMAttribute("Public"))
+                type.SetPublic(true);
+
             RunCustomAttributeHandlers(type);
 
-            foreach (EventDefinition eventDef in type.Events)
-                RunCustomAttributeHandlers(eventDef);
+            foreach (EventDefinition eventDef in type.Events) {
+                if (PublicEverything || eventDef.HasMMAttribute("Public")) {
+                    eventDef.SetPublic(true);
+                    eventDef.AddMethod?.SetPublic(true);
+                    eventDef.RemoveMethod?.SetPublic(true);
+                    foreach (MethodDefinition method in eventDef.OtherMethods)
+                        method.SetPublic(true);
+                }
 
-            foreach (PropertyDefinition prop in type.Properties)
+                RunCustomAttributeHandlers(eventDef);
+            }
+
+            foreach (PropertyDefinition prop in type.Properties) {
+                if (PublicEverything || prop.HasMMAttribute("Public")) {
+                    prop.SetPublic(true);
+                    prop.GetMethod?.SetPublic(true);
+                    prop.SetMethod?.SetPublic(true);
+                    foreach (MethodDefinition method in prop.OtherMethods)
+                        method.SetPublic(true);
+                }
+
                 RunCustomAttributeHandlers(prop);
+            }
 
             foreach (MethodDefinition method in type.Methods) {
+                if (PublicEverything || method.HasMMAttribute("Public"))
+                    method.SetPublic(true);
+
                 if (PreventInline && method.HasBody) {
                     method.NoInlining = true;
                     // Remove AggressiveInlining
@@ -1918,8 +1917,12 @@ namespace MonoMod {
                 RunCustomAttributeHandlers(method);
             }
 
-            foreach (FieldDefinition field in type.Fields)
+            foreach (FieldDefinition field in type.Fields) {
+                if (PublicEverything || field.HasMMAttribute("Public"))
+                    field.SetPublic(true);
+
                 RunCustomAttributeHandlers(field);
+            }
 
 
             foreach (TypeDefinition nested in type.NestedTypes)
