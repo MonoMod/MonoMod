@@ -244,26 +244,42 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 IsRuntime = true,
                 IsManaged = true
             };
-            if (!method.IsStatic) {
-                // Check if the declaring type is accessible.
-                // If not, use System.Object instead.
-                TypeDefinition typeParent = method.DeclaringType;
-                bool isPublic = true;
-                while (typeParent != null && (isPublic = (typeParent.IsNestedPublic || typeParent.IsPublic)))
-                    typeParent = typeParent.DeclaringType;
-                TypeReference typeSelf;
-                if (isPublic)
-                    typeSelf = OutputModule.ImportReference(method.DeclaringType);
-                else
-                    typeSelf = OutputModule.TypeSystem.Object;
-                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, typeSelf));
-            }
+            if (!method.IsStatic)
+                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, method.DeclaringType));
             foreach (ParameterDefinition param in method.Parameters)
                 invoke.Parameters.Add(new ParameterDefinition(
                     param.Name,
                     param.Attributes & ~ParameterAttributes.Optional & ~ParameterAttributes.HasDefault,
                     OutputModule.ImportReference(param.ParameterType
                 )));
+            foreach (ParameterDefinition param in method.Parameters) {
+                // Check if the declaring type is accessible.
+                // If not, use its base type instead.
+                // Note: This will break down with type specifications!
+                TypeDefinition paramType = param.ParameterType?.SafeResolve();
+                TypeReference paramTypeRef = null;
+                Retry:
+                if (paramType == null)
+                    continue;
+
+                for (TypeDefinition parent = paramType; parent != null; parent = parent.DeclaringType) {
+                    if (parent.IsNestedPublic || parent.IsPublic)
+                        continue;
+
+                    if (paramType.IsEnum) {
+                        paramTypeRef = paramType.FindField("value__").FieldType;
+                        break;
+                    }
+
+                    paramTypeRef = paramType.BaseType;
+                    paramType = paramType.BaseType?.SafeResolve();
+                    goto Retry;
+                }
+
+                // If paramTypeRef is null because the type is accessible, don't change it.
+                if (paramTypeRef != null)
+                    param.ParameterType = OutputModule.ImportReference(paramTypeRef);
+            }
             invoke.Body = new MethodBody(invoke);
             del.Methods.Add(invoke);
 
