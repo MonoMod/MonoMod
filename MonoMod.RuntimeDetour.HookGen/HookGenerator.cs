@@ -245,13 +245,13 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 IsManaged = true
             };
             if (!method.IsStatic)
-                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, method.DeclaringType));
+                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, OutputModule.ImportReference(method.DeclaringType)));
             foreach (ParameterDefinition param in method.Parameters)
                 invoke.Parameters.Add(new ParameterDefinition(
                     param.Name,
                     param.Attributes & ~ParameterAttributes.Optional & ~ParameterAttributes.HasDefault,
-                    OutputModule.ImportReference(param.ParameterType
-                )));
+                    OutputModule.ImportReference(param.ParameterType)
+                ));
             foreach (ParameterDefinition param in method.Parameters) {
                 // Check if the declaring type is accessible.
                 // If not, use its base type instead.
