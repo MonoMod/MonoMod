@@ -1335,6 +1335,13 @@ namespace MonoMod {
 
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
             if (method.HasMMAttribute("Constructor")) {
+                // Add MonoModOriginalName as the orig name data gets lost otherwise.
+                if (!method.IsSpecialName && !method.HasMMAttribute("OriginalName")) {
+                    CustomAttribute origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
+                    origNameAttrib.ConstructorArguments.Add(new CustomAttributeArgument(Module.TypeSystem.String, "orig_" + method.Name));
+                    method.AddAttribute(origNameAttrib);
+                }
+
                 method.Name = method.IsStatic ? ".cctor" : ".ctor";
                 method.IsSpecialName = true;
                 method.IsRuntimeSpecialName = true;
