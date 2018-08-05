@@ -36,9 +36,9 @@ MonoMod is a modding "basework" (base tools and framework) consisting of the fol
 ### Why?
 - Cross-version compatibility, even with obfuscated assemblies.
 - Cross-platform compatibility, even if the game uses another engine (f.e. XNA vs FNA in Celeste).
-- Using language features which otherwise wouldn't be supported (f.e. C# 7 in Unity 4.3).
-- Patching being done on the player's machine with a mod installer - no need to pre-patch and redistribute a dozen patched assemblies.
-- With HookGen, runtime hooks are basically `On.Namespace.Type.Method += (orig, self, a, b, c) => { /* ... */ }` - no reflection black magic.
+- Use language features which otherwise wouldn't be supported (f.e. C# 7 in Unity 4.3).
+- The patching process can happen on the player's machine with a mod installer. No need to pre-patch and share patched assemblies, which you probably aren't allowed to redistribute anyway.
+- With HookGen, runtime hooks are as simple as `On.Namespace.Type.Method += (orig, self, a, b, c) => { /* ... */ }`
 
 ----
 
@@ -54,7 +54,7 @@ MonoMod scans the directory for files named `[Assembly].*.mm.dll` and generates 
 You've got `Celeste.exe` and want to patch the method `public override void Celeste.Player.Added(Scene scene)`.
 
 If you haven't created a mod project yet, create a shared C# library project called `Celeste.ModNameHere.mm`, targeting the same framework as `Celeste.exe`.  
-Add `Celeste.exe`, `MonoMod.exe`, all dependencies (.Utils, cecil) and (optionally) `MonoMod.RuntimeDetour.dll` as assembly references.  
+Add `Celeste.exe`, `MonoMod.exe` and all dependencies (.Utils, cecil) as assembly references.  
 *Note:* Make sure to set "Copy Local" to `False` on the game's assemblies. Otherwise your patch will ship with a copy of the game!
  
 ```cs
@@ -112,8 +112,8 @@ if (Assembly.GetExecutingAssembly().GetType("MonoMod.WasHere") != null) {
 }
 ```
 
-*Note:* This can be easily bypassed by modifying MonoMod and doesn't detect changes outside of MonoMod.  
-Please don't fight against the modding community. If you're worried about cheating, we modders are willing to help. And sadly, you can't prevent the game from being modified by other means.
+*Note:* This can be easily bypassed by modifying MonoMod. It also doesn't detect changes made using other tools like dnSpy.  
+If you're a gamedev worried about cheating: Please don't fight against the modding community. Cheaters will find another way to cheat, and modders love to work together with gamedevs.
 
 
 ### Am I allowed to redistribute the patched assembly?
