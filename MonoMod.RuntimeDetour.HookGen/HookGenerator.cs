@@ -225,11 +225,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             MethodDefinition ctor = new MethodDefinition(
                 ".ctor",
-                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName | MethodAttributes.ReuseSlot,
                 OutputModule.TypeSystem.Void
             ) {
-                IsRuntime = true,
-                IsManaged = true
+                ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
+                HasThis = true
             };
             ctor.Parameters.Add(new ParameterDefinition(OutputModule.TypeSystem.Object));
             ctor.Parameters.Add(new ParameterDefinition(OutputModule.TypeSystem.IntPtr));
@@ -238,11 +238,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             MethodDefinition invoke = new MethodDefinition(
                 "Invoke",
-                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual,
+                MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.NewSlot ,
                 OutputModule.ImportReference(method.ReturnType)
             ) {
-                IsRuntime = true,
-                IsManaged = true
+                ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
+                HasThis = true
             };
             if (!method.IsStatic)
                 invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, OutputModule.ImportReference(method.DeclaringType)));
@@ -285,11 +285,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             MethodDefinition invokeBegin = new MethodDefinition(
                 "BeginInvoke",
-                MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual,
+                MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.NewSlot,
                 t_IAsyncResult
             ) {
-                IsRuntime = true,
-                IsManaged = true
+                ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
+                HasThis = true
             };
             foreach (ParameterDefinition param in invoke.Parameters)
                 invokeBegin.Parameters.Add(new ParameterDefinition(param.Name, param.Attributes, param.ParameterType));
@@ -300,11 +300,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             MethodDefinition invokeEnd = new MethodDefinition(
                 "EndInvoke",
-                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual,
+                MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.NewSlot,
                 OutputModule.TypeSystem.Object
             ) {
-                IsRuntime = true,
-                IsManaged = true
+                ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
+                HasThis = true
             };
             invokeEnd.Parameters.Add(new ParameterDefinition("result", ParameterAttributes.None, t_IAsyncResult));
             invokeEnd.Body = new MethodBody(invokeEnd);
