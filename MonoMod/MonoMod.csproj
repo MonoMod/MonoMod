@@ -53,8 +53,8 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="InlineRT\MMILAccessParser.cs" />
     <Compile Include="InlineRT\MonoModRulesModder.cs" />
+    <Compile Include="MMIL\Inject.cs" />
     <Compile Include="Modifiers\MonoModForceCallvirt.cs" />
     <Compile Include="Modifiers\MonoModForceCall.cs" />
     <Compile Include="Modifiers\MonoModLinkFrom.cs" />
@@ -65,8 +65,6 @@
     <Compile Include="Modifiers\MonoModCustomAttribute.cs" />
     <Compile Include="Modifiers\MonoModHook.cs" />
     <Compile Include="Modifiers\MonoModIfFlag.cs" />
-    <Compile Include="Modifiers\TemporaryMMILAccessExample.cs" />
-    <Compile Include="Modifiers\MonoModInline.Access.cs" />
     <Compile Include="Modifiers\MonoModNoNew.cs" />
     <Compile Include="Modifiers\MonoModOnPlatform.cs" />
     <Compile Include="Modifiers\MonoModAdded.cs" />

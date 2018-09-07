@@ -876,16 +876,6 @@ namespace MonoMod {
 
 
         public virtual bool DefaultParser(MonoModder mod, MethodBody body, Instruction instr, ref int instri) {
-            if ((instr.Operand as MethodReference)?.DeclaringType?.FullName?.StartsWith("MMIL") ?? false)
-                return ParseMMILCall(body, (MethodReference) instr.Operand, ref instri);
-
-            return true;
-        }
-
-        public virtual bool ParseMMILCall(MethodBody body, MethodReference call, ref int instri) {
-            if (call.DeclaringType.Namespace == "MMILAccess" &&
-                !this.ParseMMILAccessCall(body, call, ref instri))
-                return false;
             return true;
         }
 

@@ -64,14 +64,9 @@ namespace MonoMod.RuntimeDetour {
             ILGenerator il = dm.GetILGenerator();
 
             // TODO: Move away from using Harmony's ILCopying code in MonoMod...
-            List<Label> endLabels = new List<Label>();
-            List<Harmony.ILCopying.ExceptionBlock> endBlocks = new List<Harmony.ILCopying.ExceptionBlock>();
-            Harmony.ILCopying.MethodCopier copier = new Harmony.ILCopying.MethodCopier(method, il);
-            copier.Finalize(endLabels, endBlocks);
-            foreach (Label label in endLabels)
-                il.MarkLabel(label);
-            foreach (Harmony.ILCopying.ExceptionBlock block in endBlocks)
-                Harmony.ILCopying.Emitter.MarkBlockAfter(il, block);
+            using (Harmony.ILCopying.MethodCopier copier = new Harmony.ILCopying.MethodCopier(method, il)) {
+                copier.Copy();
+            }
 
             return dm.Pin();
         }

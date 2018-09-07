@@ -48,15 +48,8 @@
     <Compile Include="Detour\RuntimeDetour.cs" />
     <Compile Include="Hook.cs" />
     <Compile Include="IDetour.cs" />
-    <Compile Include="ILCopying\AccessCache.cs" />
-    <Compile Include="ILCopying\AccessTools.cs" />
-    <Compile Include="ILCopying\ByteBuffer.cs" />
-    <Compile Include="ILCopying\CodeInstruction.cs" />
-    <Compile Include="ILCopying\CodeTranspiler.cs" />
-    <Compile Include="ILCopying\Emitter.cs" />
     <Compile Include="ILCopying\ILInstruction.cs" />
     <Compile Include="ILCopying\MethodCopier.cs" />
-    <Compile Include="ILCopying\Traverse.cs" />
     <Compile Include="NativeDetour.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
