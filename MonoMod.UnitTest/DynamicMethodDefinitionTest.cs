@@ -14,8 +14,10 @@ namespace MonoMod.UnitTest {
         public static void TestDMD() {
             Counter = 0;
 
+            // Run the original method.
             Assert.AreEqual(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
+            // Generate the DynamicMethodDefinition from a modified MethodDefinition.
             DynamicMethodDefinition dmd;
             using (ModuleDefinition module = ModuleDefinition.ReadModule(Assembly.GetExecutingAssembly().Location)) {
                 MethodDefinition definition = module.GetType("MonoMod.UnitTest.DynamicMethodDefinitionTest").FindMethod(nameof(ExampleMethod));
@@ -28,12 +30,15 @@ namespace MonoMod.UnitTest {
                 dmd = new DynamicMethodDefinition(definition);
             }
 
+            // Run the DynamicMethod.
             Assert.AreEqual(Tuple.Create(StringPatched, 3), dmd.Dynamic.Invoke(null, new object[] { 2 }));
 
+            // Detour the original method to the patched DynamicMethod, then run the original.
             using (new RuntimeDetour.Detour(dmd.Original, dmd)) {
                 Assert.AreEqual(Tuple.Create(StringPatched, 6), ExampleMethod(3));
             }
 
+            // Run the original method again.
             Assert.AreEqual(Tuple.Create(StringOriginal, 10), ExampleMethod(4));
         }
 

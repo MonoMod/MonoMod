@@ -75,37 +75,8 @@ namespace MonoMod.Utils {
             );
             ILGenerator il = Dynamic.GetILGenerator();
 
-            MemberInfo _Resolve(MemberReference mref) {
-                MemberReference mdef = mref.Resolve() as MemberReference;
-
-                MemberInfo info = Assembly.Load(mdef.Module.Assembly.Name.FullName)
-                    .GetModule(mdef.Module.Name)
-                    .ResolveMember(mdef.MetadataToken.ToInt32(), genericArgsType, genericArgsMethod);
-
-                if (mref is TypeSpecification ts) {
-                    Type type = _Resolve(ts.ElementType) as Type;
-
-                    if (ts.IsByReference)
-                        return type.MakeByRefType();
-
-                    if (ts.IsPointer)
-                        return type.MakePointerType();
-
-                    if (ts.IsArray)
-                        return type.MakeArrayType((ts as ArrayType).Dimensions.Count);
-
-                    if (ts.IsGenericInstance)
-                        return type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _Resolve(arg) as Type).ToArray());
-
-                } else if (mref is GenericInstanceMethod mrefGenMethod) {
-                    return (info as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _Resolve(arg) as Type).ToArray());
-                }
-
-                return info;
-            }
-
             LocalBuilder[] locals = Definition.Body.Variables.Select(
-                var => il.DeclareLocal(_Resolve(var.VariableType) as Type, var.IsPinned)
+                var => il.DeclareLocal(ResolveMember(var.VariableType, genericArgsType, genericArgsMethod) as Type, var.IsPinned)
             ).ToArray();
 
             // Pre-pass - Set up label map.
@@ -142,7 +113,7 @@ namespace MonoMod.Utils {
                 } else if (operand is VariableDefinition var) {
                     operand = locals[var.Index];
                 } else if (operand is MemberReference mref) {
-                    operand = _Resolve(mref);
+                    operand = ResolveMember(mref, genericArgsType, genericArgsMethod);
                 }
 
                 if (instr.OpCode.OperandType == Mono.Cecil.Cil.OperandType.InlineNone)
@@ -167,6 +138,35 @@ namespace MonoMod.Utils {
 
             }
 
+        }
+
+        private static MemberInfo ResolveMember(MemberReference mref, Type[] genericTypeArguments, Type[] genericMethodArguments) {
+            MemberReference mdef = mref.Resolve() as MemberReference;
+
+            MemberInfo info = Assembly.Load(mdef.Module.Assembly.Name.FullName)
+                .GetModule(mdef.Module.Name)
+                .ResolveMember(mdef.MetadataToken.ToInt32(), genericTypeArguments, genericMethodArguments);
+
+            if (mref is TypeSpecification ts) {
+                Type type = ResolveMember(ts.ElementType, genericTypeArguments, genericMethodArguments) as Type;
+
+                if (ts.IsByReference)
+                    return type.MakeByRefType();
+
+                if (ts.IsPointer)
+                    return type.MakePointerType();
+
+                if (ts.IsArray)
+                    return type.MakeArrayType((ts as ArrayType).Dimensions.Count);
+
+                if (ts.IsGenericInstance)
+                    return type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+
+            } else if (mref is GenericInstanceMethod mrefGenMethod) {
+                return (info as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+            }
+
+            return info;
         }
 
         public static implicit operator MethodDefinition(DynamicMethodDefinition v) => v.Definition;
