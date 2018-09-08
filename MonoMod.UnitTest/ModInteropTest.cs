@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 namespace MonoMod.UnitTest {
     public static class ModInteropTest {
         [Test]
-        public static void TestUtils() {
+        public static void TestModInterop() {
             typeof(UtilsC).ModInterop();
             typeof(UtilsD).ModInterop();
 

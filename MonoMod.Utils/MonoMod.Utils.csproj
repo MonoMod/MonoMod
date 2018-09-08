@@ -52,6 +52,7 @@
     <Compile Include="..\MonoMod\Properties\AssemblyInfo.Common.cs">
       <Link>AssemblyInfo.Common.cs</Link>
     </Compile>
+    <Compile Include="DynamicMethodDefinition.cs" />
     <Compile Include="DynamicMethodHelper.cs" />
     <Compile Include="DynDll.cs" />
     <Compile Include="Extensions.cs" />

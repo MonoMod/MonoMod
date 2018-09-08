@@ -236,41 +236,13 @@ namespace Harmony.ILCopying {
                 var code = instr.opcode;
                 var operand = instr.argument;
 
-                // replace RET with a jump to the end (outside this code)
-                // Not in MonoMod.
-                /*
-				if (code == OpCodes.Ret)
-				{
-					var endLabel = generator.DefineLabel();
-					code = OpCodes.Br;
-					operand = endLabel;
-					endLabels.Add(endLabel);
-				}
-                */
-
-                var emitCode = true;
-
-                //if (code == OpCodes.Leave || code == OpCodes.Leave_S)
-                //{
-                //	// skip LEAVE on EndExceptionBlock
-                //	if (codeInstruction.blocks.Any(block => block.blockType == ExceptionBlockType.EndExceptionBlock))
-                //		emitCode = false;
-
-                //	// skip LEAVE on next instruction starts a new exception handler and we are already in 
-                //	if (idx < instructions.Length - 1)
-                //		if (instructions[idx + 1].blocks.Any(block => block.blockType != ExceptionBlockType.EndExceptionBlock))
-                //			emitCode = false;
-                //}
-
-                if (emitCode) {
-                    if (code.OperandType == OperandType.InlineNone)
-                        generator.Emit(code);
-                    else {
-                        if (operand == null) throw new Exception("Wrong null argument: " + instr);
-                        var emitMethod = EmitMethodForType(operand.GetType());
-                        if (emitMethod == null) throw new Exception("Unknown Emit argument type " + operand.GetType() + " in " + instr);
-                        emitMethod.Invoke(generator, new object[] { code, operand });
-                    }
+                if (code.OperandType == OperandType.InlineNone)
+                    generator.Emit(code);
+                else {
+                    if (operand == null) throw new Exception("Wrong null argument: " + instr);
+                    var emitMethod = EmitMethodForType(operand.GetType());
+                    if (emitMethod == null) throw new Exception("Unknown Emit argument type " + operand.GetType() + " in " + instr);
+                    emitMethod.Invoke(generator, new object[] { code, operand });
                 }
 
                 foreach (var block in instr.blocks)
