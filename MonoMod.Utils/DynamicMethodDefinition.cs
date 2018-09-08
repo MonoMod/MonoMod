@@ -47,11 +47,12 @@ namespace MonoMod.Utils {
 
         public readonly DynamicMethod Dynamic;
 
-        public DynamicMethodDefinition(MethodDefinition def, Module context = null) {
+        public DynamicMethodDefinition(MethodDefinition def, MethodBase original = null) {
             Definition = def;
 
-            Context = context ?? Assembly.Load(def.Module.Assembly.Name.FullName).GetModule(def.Module.Name);
-            Original = Context.ResolveMethod(def.MetadataToken.ToInt32());
+            Original = original ?? (Assembly.Load(def.Module.Assembly.Name.FullName).GetModule(def.Module.Name)).ResolveMethod(def.MetadataToken.ToInt32());
+            Type[] genericArgsType = Original.DeclaringType.IsGenericType ? Original.DeclaringType.GetGenericArguments() : null;
+            Type[] genericArgsMethod = Original.IsGenericMethod ? Original.GetGenericArguments() : null;
 
             ParameterInfo[] args = Original.GetParameters();
             Type[] argTypes;
@@ -74,16 +75,37 @@ namespace MonoMod.Utils {
             );
             ILGenerator il = Dynamic.GetILGenerator();
 
-            LocalBuilder[] locals = Definition.Body.Variables.Select(
-                var => {
-                    TypeDefinition tdef = var.VariableType.Resolve();
-                    return il.DeclareLocal(
-                        Assembly.Load(tdef.Module.Assembly.Name.FullName)
-                            .GetModule(tdef.Module.Name)
-                            .ResolveType(tdef.MetadataToken.ToInt32()),
-                        var.IsPinned
-                    );
+            MemberInfo _Resolve(MemberReference mref) {
+                MemberReference mdef = mref.Resolve() as MemberReference;
+
+                MemberInfo info = Assembly.Load(mdef.Module.Assembly.Name.FullName)
+                    .GetModule(mdef.Module.Name)
+                    .ResolveMember(mdef.MetadataToken.ToInt32(), genericArgsType, genericArgsMethod);
+
+                if (mref is TypeSpecification ts) {
+                    Type type = _Resolve(ts.ElementType) as Type;
+
+                    if (ts.IsByReference)
+                        return type.MakeByRefType();
+
+                    if (ts.IsPointer)
+                        return type.MakePointerType();
+
+                    if (ts.IsArray)
+                        return type.MakeArrayType((ts as ArrayType).Dimensions.Count);
+
+                    if (ts.IsGenericInstance)
+                        return type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _Resolve(arg) as Type).ToArray());
+
+                } else if (mref is GenericInstanceMethod mrefGenMethod) {
+                    return (info as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _Resolve(arg) as Type).ToArray());
                 }
+
+                return info;
+            }
+
+            LocalBuilder[] locals = Definition.Body.Variables.Select(
+                var => il.DeclareLocal(_Resolve(var.VariableType) as Type, var.IsPinned)
             ).ToArray();
 
             // Pre-pass - Set up label map.
@@ -104,7 +126,6 @@ namespace MonoMod.Utils {
             }
 
             object[] emitArgs = new object[2];
-
             foreach (Instruction instr in Definition.Body.Instructions) {
                 if (labelMap.TryGetValue(instr.Offset, out Label label)) {
                     il.MarkLabel(label);
@@ -121,12 +142,7 @@ namespace MonoMod.Utils {
                 } else if (operand is VariableDefinition var) {
                     operand = locals[var.Index];
                 } else if (operand is MemberReference mref) {
-                    MemberReference mdef = mref.Resolve() as MemberReference;
-                    // FIXME: What about TypeSpecifications?
-                    operand =
-                        Assembly.Load(mdef.Module.Assembly.Name.FullName)
-                        .GetModule(mdef.Module.Name)
-                        .ResolveMember(mdef.MetadataToken.ToInt32());
+                    operand = _Resolve(mref);
                 }
 
                 if (instr.OpCode.OperandType == Mono.Cecil.Cil.OperandType.InlineNone)

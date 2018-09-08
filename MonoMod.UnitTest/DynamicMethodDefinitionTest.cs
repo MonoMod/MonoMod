@@ -14,8 +14,9 @@ namespace MonoMod.UnitTest {
         public static void TestDMD() {
             Counter = 0;
 
-            Assert.AreEqual(1, ExampleMethod(1));
+            Assert.AreEqual(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
+            DynamicMethodDefinition dmd;
             using (ModuleDefinition module = ModuleDefinition.ReadModule(Assembly.GetExecutingAssembly().Location)) {
                 MethodDefinition definition = module.GetType("MonoMod.UnitTest.DynamicMethodDefinitionTest").FindMethod(nameof(ExampleMethod));
 
@@ -24,9 +25,16 @@ namespace MonoMod.UnitTest {
                         instr.Operand = StringPatched;
                 }
 
-                DynamicMethodDefinition dmd = new DynamicMethodDefinition(definition);
-                Assert.AreEqual(3, dmd.Dynamic.Invoke(null, new object[] { 2 }));
+                dmd = new DynamicMethodDefinition(definition);
             }
+
+            Assert.AreEqual(Tuple.Create(StringPatched, 3), dmd.Dynamic.Invoke(null, new object[] { 2 }));
+
+            using (new RuntimeDetour.Detour(dmd.Original, dmd)) {
+                Assert.AreEqual(Tuple.Create(StringPatched, 6), ExampleMethod(3));
+            }
+
+            Assert.AreEqual(Tuple.Create(StringOriginal, 10), ExampleMethod(4));
         }
 
         public const string StringOriginal = "Hello from ExampleMethod!";
@@ -34,10 +42,10 @@ namespace MonoMod.UnitTest {
 
         public static int Counter;
 
-        public static int ExampleMethod(int i) {
+        public static Tuple<string, int> ExampleMethod(int i) {
             Console.WriteLine(StringOriginal);
             Counter += i;
-            return Counter;
+            return Tuple.Create(StringOriginal, Counter);
         }
     }
 }
