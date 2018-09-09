@@ -9,7 +9,7 @@ using Mono.Cecil.Cil;
 using System.Linq;
 
 namespace MonoMod.Utils {
-    public sealed class DynamicMethodDefinition {
+    public sealed class DynamicMethodDefinition : IDisposable {
 
         private readonly static Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
         private readonly static Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
@@ -40,25 +40,38 @@ namespace MonoMod.Utils {
             }
         }
 
+        private ModuleDefinition _Module;
+
+        public readonly MethodBase Method;
         public readonly MethodDefinition Definition;
 
-        public readonly Module Context;
-        public readonly MethodBase Original;
+        public DynamicMethodDefinition(MethodBase method, ModuleDefinition module = null) {
+            Method = method ?? throw new ArgumentNullException(nameof(method));
+            try {
+                if (module == null) {
+                    _Module = module = ModuleDefinition.ReadModule(method.DeclaringType.Assembly.Location);
+                }
+                Definition = (module.LookupToken(method.MetadataToken) as MethodReference)?.Resolve() ?? throw new ArgumentException("Method not found");
+            } catch {
+                _Module?.Dispose();
+                throw;
+            }
+        }
 
-        public readonly DynamicMethod Dynamic;
+        public DynamicMethodDefinition(MethodDefinition definition, MethodBase method = null) {
+            Definition = definition;
+            Method = method ?? (Assembly.Load(definition.Module.Assembly.Name.FullName).GetModule(definition.Module.Name)).ResolveMethod(definition.MetadataToken.ToInt32());
+        }
 
-        public DynamicMethodDefinition(MethodDefinition def, MethodBase original = null) {
-            Definition = def;
+        public DynamicMethod Generate() {
+            Type[] genericArgsType = Method.DeclaringType.IsGenericType ? Method.DeclaringType.GetGenericArguments() : null;
+            Type[] genericArgsMethod = Method.IsGenericMethod ? Method.GetGenericArguments() : null;
 
-            Original = original ?? (Assembly.Load(def.Module.Assembly.Name.FullName).GetModule(def.Module.Name)).ResolveMethod(def.MetadataToken.ToInt32());
-            Type[] genericArgsType = Original.DeclaringType.IsGenericType ? Original.DeclaringType.GetGenericArguments() : null;
-            Type[] genericArgsMethod = Original.IsGenericMethod ? Original.GetGenericArguments() : null;
-
-            ParameterInfo[] args = Original.GetParameters();
+            ParameterInfo[] args = Method.GetParameters();
             Type[] argTypes;
-            if (!Original.IsStatic) {
+            if (!Method.IsStatic) {
                 argTypes = new Type[args.Length + 1];
-                argTypes[0] = Original.DeclaringType;
+                argTypes[0] = Method.DeclaringType;
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i + 1] = args[i].ParameterType;
             } else {
@@ -67,13 +80,13 @@ namespace MonoMod.Utils {
                     argTypes[i] = args[i].ParameterType;
             }
 
-            Dynamic = new DynamicMethod(
-                "DynamicMethodDefinition:" + def.DeclaringType.FullName + "::" + def.Name,
-                (Original as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                Original.DeclaringType,
+            DynamicMethod dynamic = new DynamicMethod(
+                "DynamicMethodDefinition:" + Definition.DeclaringType.FullName + "::" + Definition.Name,
+                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
+                Method.DeclaringType,
                 true // If any random errors pop up, try setting this to false first.
             );
-            ILGenerator il = Dynamic.GetILGenerator();
+            ILGenerator il = dynamic.GetILGenerator();
 
             LocalBuilder[] locals = Definition.Body.Variables.Select(
                 var => il.DeclareLocal(ResolveMember(var.VariableType, genericArgsType, genericArgsMethod) as Type, var.IsPinned)
@@ -169,6 +182,7 @@ namespace MonoMod.Utils {
 
             }
 
+            return dynamic;
         }
 
         private static MemberInfo ResolveMember(MemberReference mref, Type[] genericTypeArguments, Type[] genericMethodArguments) {
@@ -200,8 +214,10 @@ namespace MonoMod.Utils {
             return info;
         }
 
-        public static implicit operator MethodDefinition(DynamicMethodDefinition v) => v.Definition;
-        public static implicit operator DynamicMethod(DynamicMethodDefinition v) => v.Dynamic;
+        public void Dispose() {
+            _Module?.Dispose();
+            _Module = null;
+        }
 
     }
 }
