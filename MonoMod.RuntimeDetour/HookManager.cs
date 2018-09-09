@@ -25,6 +25,8 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public static void Remove(MethodBase method, Delegate hookDelegate) {
+            // Note: A hook delegate can be applied multiple times.
+            // The following code removes the last hook of that delegate type.
             HookKey key = new HookKey(method, hookDelegate);
             Stack<Hook> hooks;
             if (!_HookMap.TryGetValue(key, out hooks))

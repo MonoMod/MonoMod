@@ -104,21 +104,47 @@ namespace MonoMod.Utils {
 
                 // TODO: Handle special blocks!
 
-                object operand = instr.Operand;
+                // TODO: This can be improved perf-wise!
+                foreach (ExceptionHandler handler in Definition.Body.ExceptionHandlers) {
+                    if (handler.TryStart == instr) {
+                        il.BeginExceptionBlock();
 
-                if (operand is Instruction[] targets) {
-                    operand = targets.Select(target => labelMap[target.Offset]).ToArray();
-                } else if (operand is Instruction target) {
-                    operand = labelMap[target.Offset];
-                } else if (operand is VariableDefinition var) {
-                    operand = locals[var.Index];
-                } else if (operand is MemberReference mref) {
-                    operand = ResolveMember(mref, genericArgsType, genericArgsMethod);
+                    } else if (handler.FilterStart == instr) {
+                        il.BeginExceptFilterBlock();
+
+                    } else if (handler.HandlerStart == instr) {
+                        switch (handler.HandlerType) {
+                            case ExceptionHandlerType.Filter:
+                                // Handled by FilterStart
+                                break;
+                            case ExceptionHandlerType.Catch:
+                                il.BeginCatchBlock(ResolveMember(handler.CatchType, genericArgsType, genericArgsMethod) as Type);
+                                break;
+                            case ExceptionHandlerType.Finally:
+                                il.BeginFinallyBlock();
+                                break;
+                            case ExceptionHandlerType.Fault:
+                                il.BeginFaultBlock();
+                                break;
+                        }
+                    }
                 }
 
                 if (instr.OpCode.OperandType == Mono.Cecil.Cil.OperandType.InlineNone)
                     il.Emit(_ReflOpCodes[instr.OpCode.Value]);
                 else {
+                    object operand = instr.Operand;
+
+                    if (operand is Instruction[] targets) {
+                        operand = targets.Select(target => labelMap[target.Offset]).ToArray();
+                    } else if (operand is Instruction target) {
+                        operand = labelMap[target.Offset];
+                    } else if (operand is VariableDefinition var) {
+                        operand = locals[var.Index];
+                    } else if (operand is MemberReference mref) {
+                        operand = ResolveMember(mref, genericArgsType, genericArgsMethod);
+                    }
+
                     if (operand == null)
                         throw new NullReferenceException($"Unexpected null @ {Definition} @ {instr}");
 
@@ -134,7 +160,12 @@ namespace MonoMod.Utils {
                     emit.Invoke(il, emitArgs);
                 }
 
-                // TODO: Handle special blocks!
+                // TODO: This can be improved perf-wise!
+                foreach (ExceptionHandler handler in Definition.Body.ExceptionHandlers) {
+                    if (handler.HandlerEnd == instr.Next) {
+                        il.EndExceptionBlock();
+                    }
+                }
 
             }
 

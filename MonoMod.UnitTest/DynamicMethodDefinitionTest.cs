@@ -48,8 +48,12 @@ namespace MonoMod.UnitTest {
         public static int Counter;
 
         public static Tuple<string, int> ExampleMethod(int i) {
-            Console.WriteLine(StringOriginal);
-            Counter += i;
+            try {
+                Console.WriteLine(StringOriginal);
+                Counter += i;
+            } catch (Exception e) {
+                return Tuple.Create("", -1);
+            }
             return Tuple.Create(StringOriginal, Counter);
         }
     }
