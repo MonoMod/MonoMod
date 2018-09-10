@@ -34,8 +34,9 @@ namespace MonoMod.UnitTest {
             // Run the DynamicMethod.
             Assert.AreEqual(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 2 }));
 
-            // Detour the original method to the patched DynamicMethod, then run the original.
-            using (new RuntimeDetour.Detour(original, patched)) {
+            // Detour the original method to the patched DynamicMethod, then run the patched method.
+            using (new Detour(original, patched)) {
+                // The detour is only active in this block.
                 Assert.AreEqual(Tuple.Create(StringPatched, 6), ExampleMethod(3));
             }
 
@@ -52,7 +53,7 @@ namespace MonoMod.UnitTest {
             try {
                 Console.WriteLine(StringOriginal);
                 Counter += i;
-            } catch (Exception e) {
+            } catch (Exception) {
                 return Tuple.Create("", -1);
             }
             return Tuple.Create(StringOriginal, Counter);

@@ -48,9 +48,8 @@ namespace MonoMod.Utils {
         public DynamicMethodDefinition(MethodBase method, ModuleDefinition module = null) {
             Method = method ?? throw new ArgumentNullException(nameof(method));
             try {
-                if (module == null) {
+                if (module == null)
                     _Module = module = ModuleDefinition.ReadModule(method.DeclaringType.Assembly.Location);
-                }
                 Definition = (module.LookupToken(method.MetadataToken) as MethodReference)?.Resolve() ?? throw new ArgumentException("Method not found");
             } catch {
                 _Module?.Dispose();
@@ -96,26 +95,20 @@ namespace MonoMod.Utils {
             Dictionary<int, Label> labelMap = new Dictionary<int, Label>();
             foreach (Instruction instr in Definition.Body.Instructions) {
                 if (instr.Operand is Instruction[] targets) {
-                    foreach (Instruction target in targets) {
-                        if (!labelMap.ContainsKey(target.Offset)) {
+                    foreach (Instruction target in targets)
+                        if (!labelMap.ContainsKey(target.Offset))
                             labelMap[target.Offset] = il.DefineLabel();
-                        }
-                    }
 
                 } else if (instr.Operand is Instruction target) {
-                    if (!labelMap.ContainsKey(target.Offset)) {
+                    if (!labelMap.ContainsKey(target.Offset))
                         labelMap[target.Offset] = il.DefineLabel();
-                    }
                 }
             }
 
             object[] emitArgs = new object[2];
             foreach (Instruction instr in Definition.Body.Instructions) {
-                if (labelMap.TryGetValue(instr.Offset, out Label label)) {
+                if (labelMap.TryGetValue(instr.Offset, out Label label))
                     il.MarkLabel(label);
-                }
-
-                // TODO: Handle special blocks!
 
                 // TODO: This can be improved perf-wise!
                 foreach (ExceptionHandler handler in Definition.Body.ExceptionHandlers) {
@@ -162,9 +155,9 @@ namespace MonoMod.Utils {
                         throw new NullReferenceException($"Unexpected null @ {Definition} @ {instr}");
 
                     Type operandType = operand.GetType();
-                    if (!_Emitters.TryGetValue(operandType, out MethodInfo emit)) {
+                    MethodInfo emit;
+                    if (!_Emitters.TryGetValue(operandType, out emit))
                         emit = _Emitters.FirstOrDefault(kvp => kvp.Key.IsAssignableFrom(operandType)).Value;
-                    }
                     if (emit == null)
                         throw new InvalidOperationException($"Unexpected unemittable {operand.GetType().FullName} @ {Definition} @ {instr}");
 

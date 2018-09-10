@@ -772,7 +772,7 @@ namespace MonoMod {
         public virtual TypeReference Relink(TypeReference type, IGenericParameterProvider context) {
             return type.Relink(Relinker, context);
         }
-        public virtual IMetadataTokenProvider Relink(MethodReference method, IGenericParameterProvider context) {
+        public virtual MethodReference Relink(MethodReference method, IGenericParameterProvider context) {
             return method.Relink(Relinker, context);
         }
         public virtual CustomAttribute Relink(CustomAttribute attrib, IGenericParameterProvider context) {
@@ -794,8 +794,7 @@ namespace MonoMod {
             } else
                 return null;
 
-            IMetadataTokenProvider cached;
-            if (RelinkMapCache.TryGetValue(name, out cached))
+            if (RelinkMapCache.TryGetValue(name, out IMetadataTokenProvider cached))
                 return cached;
 
             object val;
@@ -1191,7 +1190,7 @@ namespace MonoMod {
         }
 
         public virtual void PatchEvent(TypeDefinition targetType, EventDefinition srcEvent, HashSet<MethodDefinition> propMethods = null) {
-            MethodDefinition addMethod;
+            MethodDefinition patched;
             EventDefinition targetEvent = targetType.FindEvent(srcEvent.Name);
             string backingName = $"<{srcEvent.Name}>__BackingField";
             FieldDefinition backing = srcEvent.DeclaringType.FindField(backingName);
@@ -1210,6 +1209,8 @@ namespace MonoMod {
                     propMethods?.Add(srcEvent.AddMethod);
                 if (srcEvent.RemoveMethod != null)
                     propMethods?.Add(srcEvent.RemoveMethod);
+                if (srcEvent.InvokeMethod != null)
+                    propMethods?.Add(srcEvent.InvokeMethod);
                 foreach (MethodDefinition method in srcEvent.OtherMethods)
                     propMethods?.Add(method);
                 return;
@@ -1224,6 +1225,8 @@ namespace MonoMod {
                         targetType.Methods.Remove(targetEvent.AddMethod);
                     if (targetEvent.RemoveMethod != null)
                         targetType.Methods.Remove(targetEvent.RemoveMethod);
+                    if (targetEvent.InvokeMethod != null)
+                        targetType.Methods.Remove(targetEvent.InvokeMethod);
                     if (targetEvent.OtherMethods != null)
                         foreach (MethodDefinition method in targetEvent.OtherMethods)
                             targetType.Methods.Remove(method);
@@ -1251,21 +1254,28 @@ namespace MonoMod {
 
             MethodDefinition adder = srcEvent.AddMethod;
             if (adder != null &&
-                (addMethod = PatchMethod(targetType, adder)) != null) {
-                targetEvent.AddMethod = addMethod;
+                (patched = PatchMethod(targetType, adder)) != null) {
+                targetEvent.AddMethod = patched;
                 propMethods?.Add(adder);
             }
 
             MethodDefinition remover = srcEvent.RemoveMethod;
             if (remover != null &&
-                (addMethod = PatchMethod(targetType, remover)) != null) {
-                targetEvent.RemoveMethod = addMethod;
+                (patched = PatchMethod(targetType, remover)) != null) {
+                targetEvent.RemoveMethod = patched;
                 propMethods?.Add(remover);
             }
 
+            MethodDefinition invoker = srcEvent.InvokeMethod;
+            if (invoker != null &&
+                (patched = PatchMethod(targetType, invoker)) != null) {
+                targetEvent.InvokeMethod = patched;
+                propMethods?.Add(invoker);
+            }
+
             foreach (MethodDefinition method in srcEvent.OtherMethods)
-                if ((addMethod = PatchMethod(targetType, method)) != null) {
-                    targetEvent.OtherMethods.Add(addMethod);
+                if ((patched = PatchMethod(targetType, method)) != null) {
+                    targetEvent.OtherMethods.Add(patched);
                     propMethods?.Add(method);
                 }
         }
@@ -1491,8 +1501,7 @@ namespace MonoMod {
             if (mscorlibDeps.Count > 1) {
                 // Subpass 2: Apply changes if found.
                 AssemblyNameReference maxmscorlib = mscorlibDeps.OrderByDescending(x => x.Version).First();
-                ModuleDefinition mscorlib;
-                if (DependencyCache.TryGetValue(maxmscorlib.FullName, out mscorlib)) {
+                if (DependencyCache.TryGetValue(maxmscorlib.FullName, out ModuleDefinition mscorlib)) {
                     for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
                         AssemblyNameReference dep = Module.AssemblyReferences[i];
                         if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version) {

@@ -54,8 +54,10 @@
     <Compile Include="..\MonoMod\Properties\AssemblyInfo.Common.cs">
       <Link>AssemblyInfo.Common.cs</Link>
     </Compile>
-    <Compile Include="HookGenerator.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="Generator\HookGenerator.cs" />
+    <Compile Include="Runtime\HookEndpointManager.cs" />
+    <Compile Include="Runtime\HookEndpoint.cs" />
+    <Compile Include="Generator\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace MonoMod.RuntimeDetour.HookGen {
+namespace MonoMod.RuntimeDetour.HookGen.Generator {
     class Program {
         static void Main(string[] args) {
             Console.WriteLine("MonoMod.RuntimeDetour.HookGen " + typeof(Program).Assembly.GetName().Version);
@@ -28,6 +28,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 if (args[i] == "--namespace" && i + 2 < args.Length) {
                     i++;
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE", args[i]);
+                } else if (args[i] == "--wrapper" && i + 2 < args.Length) {
+                    i++;
+                    Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_WRAPPER", args[i]);
                 } else if (args[i] == "--orig") {
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_ORIG", "1");
                 } else if (args[i] == "--private") {

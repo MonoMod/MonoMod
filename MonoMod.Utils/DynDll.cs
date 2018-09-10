@@ -49,8 +49,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The library name.</param>
         /// <returns>The library handle, or null if it failed loading.</returns>
         public static IntPtr OpenLibrary(string name) {
-            string mapped;
-            if (name != null && DllMap.TryGetValue(name, out mapped))
+            if (name != null && DllMap.TryGetValue(name, out string mapped))
                 name = mapped;
 
             IntPtr lib;

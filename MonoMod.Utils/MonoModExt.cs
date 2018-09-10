@@ -381,7 +381,7 @@ namespace MonoMod.Utils {
                 dict.Add(entry.Key, entry.Value);
         }
 
-        public static void PushRange<T>(this Stack<T> stack, T[] other) {
+        public static void PushRange<T>(this Stack<T> stack, IEnumerable<T> other) {
             foreach (T entry in other)
                 stack.Push(entry);
         }
@@ -390,7 +390,7 @@ namespace MonoMod.Utils {
                 stack.Pop();
         }
 
-        public static void EnqueueRange<T>(this Queue<T> queue, T[] other) {
+        public static void EnqueueRange<T>(this Queue<T> queue, IEnumerable<T> other) {
             foreach (T entry in other)
                 queue.Enqueue(entry);
         }
@@ -503,10 +503,10 @@ namespace MonoMod.Utils {
             return (TypeReference) relinker(type, context);
         }
 
-        public static IMetadataTokenProvider Relink(this MethodReference method, Relinker relinker, IGenericParameterProvider context) {
+        public static MethodReference Relink(this MethodReference method, Relinker relinker, IGenericParameterProvider context) {
             if (method.IsGenericInstance) {
-                GenericInstanceMethod methodg = ((GenericInstanceMethod) method);
-                GenericInstanceMethod gim = new GenericInstanceMethod((MethodReference) methodg.ElementMethod.Relink(relinker, context));
+                GenericInstanceMethod methodg = (GenericInstanceMethod) method;
+                GenericInstanceMethod gim = new GenericInstanceMethod(methodg.ElementMethod.Relink(relinker, context));
                 foreach (TypeReference arg in methodg.GenericArguments)
                     // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(arg.Relink(relinker, context));
@@ -533,14 +533,14 @@ namespace MonoMod.Utils {
                 }
             }
 
-            relink.ReturnType = method.ReturnType?.Relink(relinker, relink);
+            relink.ReturnType = relink.ReturnType?.Relink(relinker, relink);
 
             foreach (ParameterDefinition param in method.Parameters) {
                 param.ParameterType = param.ParameterType.Relink(relinker, method);
                 relink.Parameters.Add(param);
             }
 
-            return relinker(relink, context);
+            return (MethodReference) relinker(relink, context);
         }
 
         public static IMetadataTokenProvider Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
@@ -574,7 +574,7 @@ namespace MonoMod.Utils {
         }
 
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker, IGenericParameterProvider context) {
-            attrib.Constructor = (MethodReference) attrib.Constructor.Relink(relinker, context);
+            attrib.Constructor = attrib.Constructor.Relink(relinker, context);
             // Don't foreach when modifying the collection
             for (int i = 0; i < attrib.ConstructorArguments.Count; i++) {
                 CustomAttributeArgument attribArg = attrib.ConstructorArguments[i];
@@ -1063,8 +1063,7 @@ namespace MonoMod.Utils {
             string name = Enum.GetName(t_Code, op.Code);
             if (!name.EndsWith("_S"))
                 return op;
-            OpCode found;
-            if (_ShortToLongOp.TryGetValue((int) op.Code, out found))
+            if (_ShortToLongOp.TryGetValue((int) op.Code, out OpCode found))
                 return found;
             return _ShortToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
         }
@@ -1074,8 +1073,7 @@ namespace MonoMod.Utils {
             string name = Enum.GetName(t_Code, op.Code);
             if (name.EndsWith("_S"))
                 return op;
-            OpCode found;
-            if (_LongToShortOp.TryGetValue((int) op.Code, out found))
+            if (_LongToShortOp.TryGetValue((int) op.Code, out OpCode found))
                 return found;
             return _LongToShortOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
         }

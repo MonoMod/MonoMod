@@ -41,11 +41,9 @@
       <Link>AssemblyInfo.Common.cs</Link>
     </Compile>
     <Compile Include="Detour.cs" />
-    <Compile Include="HookManager.cs" />
     <Compile Include="DetourManager.cs" />
     <Compile Include="DetourNativePlatforms.cs" />
     <Compile Include="DetourRuntimePlatforms.cs" />
-    <Compile Include="Detour\RuntimeDetour.cs" />
     <Compile Include="Hook.cs" />
     <Compile Include="IDetour.cs" />
     <Compile Include="ILCopying\ILInstruction.cs" />

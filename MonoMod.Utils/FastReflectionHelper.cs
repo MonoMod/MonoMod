@@ -131,8 +131,7 @@ namespace MonoMod.Utils {
         public static FastReflectionDelegate GetDelegate(MethodInfo method, bool directBoxValueAccess = true)
             => GetFastDelegate(method, directBoxValueAccess);
         public static FastReflectionDelegate GetFastDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
-            FastReflectionDelegate dmd;
-            if (_MethodCache.TryGetValue(method, out dmd))
+            if (_MethodCache.TryGetValue(method, out FastReflectionDelegate dmd))
                 return dmd;
 
             dmd = CreateFastDelegate(method, directBoxValueAccess);
