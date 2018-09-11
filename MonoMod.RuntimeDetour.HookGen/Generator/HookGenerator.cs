@@ -439,7 +439,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
             );
             get.Body = new MethodBody(get);
             il = get.Body.GetILProcessor();
-            il.Emit(OpCodes.Newobj, md_HookWrapper_ctor);
+            il.Emit(OpCodes.Newobj, mg_HookWrapper_ctor);
             il.Emit(OpCodes.Dup);
             il.Emit(OpCodes.Ldtoken, OutputModule.ImportReference(method));
             il.Emit(OpCodes.Call, m_GetMethodFromHandle);
