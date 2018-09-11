@@ -16,6 +16,8 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
 
         const string ObsoleteMessageBackCompat = "This method only exists for backwards-compatibility purposes.";
 
+        readonly static Regex NameVerifyRegex = new Regex("[^a-zA-Z]", RegexOptions.Compiled);
+
         public MonoModder Modder;
 
         public ModuleDefinition OutputModule;
@@ -49,6 +51,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
 
         public string HookWrapperName;
         public TypeDefinition td_HookWrapper;
+        public TypeDefinition td_ILManipulator;
         public MethodDefinition md_HookWrapper_ctor;
         public FieldDefinition fd_HookWrapper_Endpoint;
 
@@ -69,7 +72,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
             HookPrivate = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_PRIVATE") == "1";
             HookWrapperName = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_WRAPPER");
             if (string.IsNullOrEmpty(HookWrapperName))
-                HookWrapperName = $"{Namespace}.{modder.Module.Assembly.Name.Name}Hook";
+                HookWrapperName = $"ᴴᵒᵒᵏː{NameVerifyRegex.Replace(modder.Module.Assembly.Name.Name, "_")}";
 
             modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour.HookGen");
             if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour.HookGen", out module_HookGen))
@@ -106,6 +109,8 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
         }
 
         public void Generate() {
+            ILProcessor il;
+
             // Generate the hook wrapper before generating anything else.
             // This is required to prevent mods from depending on HookGen itself.
             if (td_HookWrapper == null) {
@@ -114,7 +119,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 td_HookWrapper = new TypeDefinition(
                     namespaceIndex < 0 ? "" : HookWrapperName.Substring(0, namespaceIndex),
                     namespaceIndex < 0 ? HookWrapperName : HookWrapperName.Substring(namespaceIndex + 1),
-                    TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.Class,
+                    TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit | TypeAttributes.Class,
                     OutputModule.TypeSystem.Object
                 );
                 if (!td_HookWrapper.Name.EndsWith("`1"))
@@ -125,10 +130,38 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 foreach (GenericParameter genParam in td_HookEndpoint.GenericParameters)
                     td_HookWrapper.GenericParameters.Add(genParam.Relink(Relinker, td_HookWrapper));
 
-                ILProcessor il;
+                // Generate the nested delegate type.
+                MethodDefinition md_ILManipulator_Invoke = td_HookEndpoint.NestedTypes.FirstOrDefault(n => n.Name == "ILManipulator").FindMethod("Invoke");
+                md_ILManipulator_Invoke.IsStatic = true; // Prevent "self" parameter from being generated in new delegate type.
+                td_ILManipulator = GenerateDelegateFor(md_ILManipulator_Invoke);
+                td_ILManipulator.Name = "ILManipulator";
+                td_HookWrapper.NestedTypes.Add(td_ILManipulator);
 
+                // Generate all needed GenericInstanceType references.
+                GenericInstanceType tg_HookWrapper = new GenericInstanceType(td_HookWrapper);
+                foreach (GenericParameter genParam in td_HookWrapper.GenericParameters)
+                    tg_HookWrapper.GenericArguments.Add(genParam);
+
+                GenericInstanceType tg_HookEndpoint = new GenericInstanceType(t_HookEndpoint);
+                foreach (GenericParameter genParam in td_HookWrapper.GenericParameters)
+                    tg_HookEndpoint.GenericArguments.Add(genParam);
+
+                GenericInstanceType tg_ILManipulator = new GenericInstanceType(td_ILManipulator);
+                foreach (GenericParameter genParam in td_HookWrapper.GenericParameters) {
+                    td_ILManipulator.GenericParameters.Add(genParam.Clone());
+                    tg_ILManipulator.GenericArguments.Add(genParam);
+                }
+
+                // Generate the internal Endpoint field.
+                fd_HookWrapper_Endpoint = new FieldDefinition("Endpoint", FieldAttributes.Assembly, tg_HookEndpoint);
+                td_HookWrapper.Fields.Add(fd_HookWrapper_Endpoint);
+
+                FieldReference fg_HookWrapper_Endpoint = fd_HookWrapper_Endpoint.Relink((mtp, ctx) => mtp, td_HookWrapper) as FieldReference;
+                fg_HookWrapper_Endpoint.DeclaringType = tg_HookWrapper;
+
+                // Generate a constructor.
                 md_HookWrapper_ctor = new MethodDefinition(".ctor",
-                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                    MethodAttributes.Assembly | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                     OutputModule.TypeSystem.Void
                 );
                 md_HookWrapper_ctor.Body = new MethodBody(md_HookWrapper_ctor);
@@ -138,8 +171,8 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 il.Emit(OpCodes.Ret);
                 td_HookWrapper.Methods.Add(md_HookWrapper_ctor);
 
-                fd_HookWrapper_Endpoint = new FieldDefinition("Endpoint", FieldAttributes.Public, t_HookEndpoint);
-                td_HookWrapper.Fields.Add(fd_HookWrapper_Endpoint);
+                MethodReference mg_HookWrapper_ctor = md_HookWrapper_ctor.Relink((mtp, ctx) => mtp, td_HookWrapper);
+                mg_HookWrapper_ctor.DeclaringType = tg_HookWrapper;
 
                 // Proxy all public methods, events and properties from HookEndpoint to HookWrapper.
                 foreach (MethodDefinition method in td_HookEndpoint.Methods) {
@@ -153,17 +186,10 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                         proxy.GenericParameters.Add(genParam.Relink(Relinker, proxy));
 
                     foreach (ParameterDefinition param in method.Parameters) {
-                        TypeReference paramType = param.ParameterType;
-
-                        paramType = param.ParameterType.Relink(WrappedRelinker, proxy);
-
-                        proxy.Parameters.Add(new ParameterDefinition(
-                            param.Name,
-                            param.Attributes,
-                            paramType
-                        ) {
-                            Constant = param.Constant
-                        });
+                        ParameterDefinition proxyParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType.Relink(WrappedRelinker, proxy));
+                        if (param.HasConstant)
+                            proxyParam.Constant = param.Constant;
+                        proxy.Parameters.Add(proxyParam);
                     }
 
                     proxy.ReturnType = proxy.ReturnType?.Relink(WrappedRelinker, proxy);
@@ -172,30 +198,33 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                     il = proxy.Body.GetILProcessor();
 
                     if (method.ReturnType.GetElementType().FullName == t_HookEndpoint.FullName) {
-                        il.Emit(OpCodes.Newobj, md_HookWrapper_ctor);
+                        il.Emit(OpCodes.Newobj, mg_HookWrapper_ctor);
                         il.Emit(OpCodes.Dup);
                     }
 
+                    MethodReference methodRef = method.Relink(Relinker, proxy);
+                    methodRef.DeclaringType = tg_HookEndpoint;
+
                     if (!method.IsStatic) {
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, fd_HookWrapper_Endpoint);
+                        il.Emit(OpCodes.Ldfld, fg_HookWrapper_Endpoint);
                         for (int i = 0; i < method.Parameters.Count; i++) {
                             il.Emit(OpCodes.Ldarg, i + 1);
                             if (method.Parameters[i].ParameterType.GetElementType().FullName == t_HookEndpoint.FullName)
-                                il.Emit(OpCodes.Ldfld, fd_HookWrapper_Endpoint);
+                                il.Emit(OpCodes.Ldfld, fg_HookWrapper_Endpoint);
                         }
-                        il.Emit(OpCodes.Callvirt, method.Relink(Relinker, proxy));
+                        il.Emit(OpCodes.Callvirt, methodRef);
                     } else {
                         for (int i = 0; i < method.Parameters.Count; i++) {
                             il.Emit(OpCodes.Ldarg, i);
                             if (method.Parameters[i].ParameterType.GetElementType().FullName == t_HookEndpoint.FullName)
-                                il.Emit(OpCodes.Ldfld, fd_HookWrapper_Endpoint);
+                                il.Emit(OpCodes.Ldfld, fg_HookWrapper_Endpoint);
                         }
-                        il.Emit(OpCodes.Callvirt, method.Relink(Relinker, proxy));
+                        il.Emit(OpCodes.Call, methodRef);
                     }
 
                     if (method.ReturnType.GetElementType().FullName == t_HookEndpoint.FullName)
-                        il.Emit(OpCodes.Stfld, fd_HookWrapper_Endpoint);
+                        il.Emit(OpCodes.Stfld, fg_HookWrapper_Endpoint);
                     il.Emit(OpCodes.Ret);
 
                 }
@@ -259,6 +288,51 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
 
                     Next: continue;
                 }
+
+                // Generate the IL event.
+                // ILManipulators shouldn't be applied immediately, but
+                // we're restricted by the On.Type.Method.IL += syntax.
+                // It skips On.Type.set_Method - queueing is impossible.
+                MethodDefinition add_IL = new MethodDefinition(
+                    "add_IL",
+                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.ReuseSlot,
+                    OutputModule.TypeSystem.Void
+                ) {
+                    HasThis = true
+                };
+                td_HookWrapper.Methods.Add(add_IL);
+                add_IL.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, tg_ILManipulator));
+                add_IL.Body = new MethodBody(add_IL);
+                il = add_IL.Body.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_1);
+                MethodReference mg_Modify = td_HookWrapper.FindMethod("Modify").Relink((mtp, ctx) => mtp, add_IL);
+                mg_Modify.DeclaringType = tg_HookWrapper;
+                il.Emit(OpCodes.Call, mg_Modify);
+                il.Emit(OpCodes.Ret);
+
+                MethodDefinition remove_IL = new MethodDefinition(
+                    "remove_IL",
+                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.ReuseSlot,
+                    OutputModule.TypeSystem.Void
+                ) {
+                    HasThis = true
+                };
+                td_HookWrapper.Methods.Add(remove_IL);
+                remove_IL.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, tg_ILManipulator));
+                remove_IL.Body = new MethodBody(remove_IL);
+                il = remove_IL.Body.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_1);
+                MethodReference mg_Unmodify = td_HookWrapper.FindMethod("Unmodify").Relink((mtp, ctx) => mtp, add_IL);
+                mg_Unmodify.DeclaringType = tg_HookWrapper;
+                il.Emit(OpCodes.Call, mg_Unmodify);
+                il.Emit(OpCodes.Ret);
+
+                EventDefinition evt_IL = new EventDefinition("IL", EventAttributes.None, tg_ILManipulator);
+                evt_IL.AddMethod = add_IL;
+                evt_IL.RemoveMethod = remove_IL;
+                td_HookWrapper.Events.Add(evt_IL);
 
                 OutputModule.Types.Add(td_HookWrapper);
             }
@@ -332,12 +406,12 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
 
             // TODO: Fix possible conflict when other members with the same names exist.
 
-            TypeDefinition delOrig = GenerateDelegateFor(hookType, method);
+            TypeDefinition delOrig = GenerateDelegateFor(method);
             delOrig.Name = "orig_" + name;
             delOrig.CustomAttributes.Add(GenerateEditorBrowsable(EditorBrowsableState.Never));
             hookType.NestedTypes.Add(delOrig);
 
-            TypeDefinition delHook = GenerateDelegateFor(hookType, method);
+            TypeDefinition delHook = GenerateDelegateFor(method);
             delHook.Name = "hook_" + name;
             MethodDefinition delHookInvoke = delHook.FindMethod("Invoke");
             delHookInvoke.Parameters.Insert(0, new ParameterDefinition("orig", ParameterAttributes.None, delOrig));
@@ -346,20 +420,23 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
             delHook.CustomAttributes.Add(GenerateEditorBrowsable(EditorBrowsableState.Never));
             hookType.NestedTypes.Add(delHook);
 
-            GenericInstanceType endpointType = new GenericInstanceType(td_HookWrapper);
-            endpointType.GenericArguments.Add(delHook);
+            GenericInstanceType wrapperType = new GenericInstanceType(td_HookWrapper);
+            wrapperType.GenericArguments.Add(delHook);
             GenericInstanceMethod endpointMethod;
+
+            MethodReference mg_HookWrapper_ctor = md_HookWrapper_ctor.Relink((mtp, ctx) => mtp, td_HookWrapper);
+            mg_HookWrapper_ctor.DeclaringType = wrapperType;
+
+            FieldReference fg_HookWrapper_Endpoint = fd_HookWrapper_Endpoint.Relink((mtp, ctx) => mtp, td_HookWrapper) as FieldReference;
+            fg_HookWrapper_Endpoint.DeclaringType = wrapperType;
 
             ILProcessor il;
 
             MethodDefinition get = new MethodDefinition(
                 "get_" + name,
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Static,
-                endpointType
-            ) {
-                IsIL = true,
-                IsManaged = true
-            };
+                wrapperType
+            );
             get.Body = new MethodBody(get);
             il = get.Body.GetILProcessor();
             il.Emit(OpCodes.Newobj, md_HookWrapper_ctor);
@@ -369,7 +446,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
             endpointMethod = new GenericInstanceMethod(m_Get);
             endpointMethod.GenericArguments.Add(delHook);
             il.Emit(OpCodes.Call, endpointMethod);
-            il.Emit(OpCodes.Stfld, fd_HookWrapper_Endpoint);
+            il.Emit(OpCodes.Stfld, fg_HookWrapper_Endpoint);
             il.Emit(OpCodes.Ret);
             hookType.Methods.Add(get);
 
@@ -377,24 +454,21 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 "set_" + name,
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Static,
                 OutputModule.TypeSystem.Void
-            ) {
-                IsIL = true,
-                IsManaged = true
-            };
-            set.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, endpointType));
+            );
+            set.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, wrapperType));
             set.Body = new MethodBody(set);
             il = set.Body.GetILProcessor();
             il.Emit(OpCodes.Ldtoken, OutputModule.ImportReference(method));
             il.Emit(OpCodes.Call, m_GetMethodFromHandle);
             il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, fd_HookWrapper_Endpoint);
+            il.Emit(OpCodes.Ldfld, fg_HookWrapper_Endpoint);
             endpointMethod = new GenericInstanceMethod(m_Set);
             endpointMethod.GenericArguments.Add(delHook);
             il.Emit(OpCodes.Call, endpointMethod);
             il.Emit(OpCodes.Ret);
             hookType.Methods.Add(set);
 
-            PropertyDefinition prop = new PropertyDefinition(name, PropertyAttributes.None, endpointType) {
+            PropertyDefinition prop = new PropertyDefinition(name, PropertyAttributes.None, wrapperType) {
                 GetMethod = get,
                 SetMethod = set
             };
@@ -406,10 +480,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 "add_" + name,
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Static,
                 OutputModule.TypeSystem.Void
-            ) {
-                IsIL = true,
-                IsManaged = true
-            };
+            );
             add.CustomAttributes.Add(GenerateObsolete(ObsoleteMessageBackCompat, true));
             add.CustomAttributes.Add(GenerateEditorBrowsable(EditorBrowsableState.Never));
             add.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, delHook));
@@ -428,10 +499,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 "remove_" + name,
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Static,
                 OutputModule.TypeSystem.Void
-            ) {
-                IsIL = true,
-                IsManaged = true
-            };
+            );
             remove.CustomAttributes.Add(GenerateObsolete(ObsoleteMessageBackCompat, true));
             remove.CustomAttributes.Add(GenerateEditorBrowsable(EditorBrowsableState.Never));
             remove.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, delHook));
@@ -449,7 +517,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
             return true;
         }
 
-        public TypeDefinition GenerateDelegateFor(TypeDefinition hookType, MethodDefinition method) {
+        public TypeDefinition GenerateDelegateFor(MethodDefinition method) {
             int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name).ToList().IndexOf(method);
             string suffix = "";
             if (index != 0) {
@@ -484,7 +552,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
 
             MethodDefinition invoke = new MethodDefinition(
                 "Invoke",
-                MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.NewSlot ,
+                MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.NewSlot,
                 OutputModule.ImportReference(method.ReturnType)
             ) {
                 ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
@@ -573,14 +641,19 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
         }
 
         IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            return OutputModule.ImportReference(mtp);
+            return OutputModule.ImportReference(Modder.Relinker(mtp, context));
         }
 
         IMetadataTokenProvider WrappedRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            if (mtp is TypeReference type && type.GetElementType().FullName == t_HookEndpoint.FullName)
-                return td_HookWrapper;
+            TypeReference type = (mtp as TypeReference)?.GetElementType();
+            if (type != null) {
+                if (type.FullName == t_HookEndpoint.FullName)
+                    return td_HookWrapper;
+                if (type.DeclaringType?.FullName == t_HookEndpoint.FullName && type.Name == td_ILManipulator.Name)
+                    return td_ILManipulator;
+            }
 
-            return OutputModule.ImportReference(mtp);
+            return Relinker(mtp, context);
         }
 
     }

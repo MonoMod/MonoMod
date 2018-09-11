@@ -50,12 +50,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         [Obsolete("Use Get / Set instead!")]
         public static void Add<T>(MethodBase method, Delegate hookDelegate) where T : class {
-            Get<T>(method).Add(hookDelegate);
+            Get<T>(method)._Add(hookDelegate);
         }
 
         [Obsolete("Use Get / Set instead!")]
         public static void Remove<T>(MethodBase method, Delegate hookDelegate) where T : class {
-            Get<T>(method).Remove(hookDelegate);
+            Get<T>(method)._Remove(hookDelegate);
         }
 
     }

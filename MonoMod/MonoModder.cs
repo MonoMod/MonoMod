@@ -1914,7 +1914,7 @@ namespace MonoMod {
                 if (PreventInline && method.HasBody) {
                     method.NoInlining = true;
                     // Remove AggressiveInlining
-                    method.ImplAttributes = (MethodImplAttributes) ((short) method.ImplAttributes & ~256);
+                    method.ImplAttributes &= ~MethodImplAttributes.AggressiveInlining;
                 }
 
                 method.RecalculateILOffsets();

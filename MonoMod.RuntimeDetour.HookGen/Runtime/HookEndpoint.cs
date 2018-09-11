@@ -5,22 +5,24 @@ using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
-using ILManipulator = System.Action<Mono.Cecil.Cil.MethodBody, Mono.Cecil.Cil.ILProcessor>;
 
 namespace MonoMod.RuntimeDetour.HookGen {
     public sealed class HookEndpoint<T> where T : class {
 
+        // This delegate will be cloned into the wrapper inside of the generated assembly.
+        public delegate void ILManipulator(Mono.Cecil.Cil.MethodBody body, Mono.Cecil.Cil.ILProcessor il);
+
+        // This code will be additionally generated in the wrapper inside of the generated assembly.
+        /*
         public event ILManipulator IL {
             add {
-                // ILManipulators shouldn't be applied immediately, but
-                // we're restricted by the On.Type.Method.IL += syntax.
-                // It skips On.Type.set_Method - queueing is impossible.
-                HookEndpointManager.Verify(this).Modify(value);
+                Modify(value);
             }
             remove {
-                HookEndpointManager.Verify(this).Unmodify(value);
+                Modify(value);
             }
         }
+        */
 
         internal ulong ID = 0;
         internal readonly MethodBase Method;
@@ -37,7 +39,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Queue.EnqueueRange(prev.Queue);
         }
 
-        internal void Add(Delegate hookDelegate) {
+        public void Add(Delegate hookDelegate) {
+            // Note: This makes the current instance unusable for any further operations.
+            HookEndpointManager.Verify(this)._Add(hookDelegate);
+        }
+        internal void _Add(Delegate hookDelegate) {
             if (hookDelegate == null)
                 return;
 
@@ -48,7 +54,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             hooks.Push(new Hook(Method, hookDelegate));
         }
 
-        internal void Remove(Delegate hookDelegate) {
+        public void Remove(Delegate hookDelegate) {
+            // Note: This makes the current instance unusable for any further operations.
+            HookEndpointManager.Verify(this)._Remove(hookDelegate);
+        }
+        internal void _Remove(Delegate hookDelegate) {
             if (hookDelegate == null)
                 return;
 
@@ -64,14 +74,26 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 HookMap.Remove(hookDelegate);
         }
 
-        public void Modify(ILManipulator callback) {
+        public void Modify(Delegate callback) {
+            // Note: This makes the current instance unusable for any further operations.
+            HookEndpointManager.Verify(this)._Modify(callback);
+        }
+        internal void _Modify(Delegate callback) {
             if (callback == null)
                 return;
 
             // TODO: HookEndpoint IL manipulation!
+            // callback.DynamicInvoke(body, il);
         }
 
-        public void Unmodify(ILManipulator callback) {
+        public void Unmodify(Delegate callback) {
+            // Note: This makes the current instance unusable for any further operations.
+            HookEndpointManager.Verify(this)._Unmodify(callback);
+        }
+        internal void _Unmodify(Delegate callback) {
+            // Note: This makes the current instance unusable for any further operations.
+            HookEndpointManager.Verify(this);
+
             if (callback == null)
                 return;
 
@@ -82,16 +104,16 @@ namespace MonoMod.RuntimeDetour.HookGen {
             foreach (QueueEntry entry in Queue) {
                 switch (entry.Operation) {
                     case QueueOperation.Add:
-                        Add(entry.Delegate);
+                        _Add(entry.Delegate);
                         break;
                     case QueueOperation.Remove:
-                        Remove(entry.Delegate);
+                        _Remove(entry.Delegate);
                         break;
                     case QueueOperation.Modify:
-                        Modify(entry.Delegate as ILManipulator);
+                        _Modify(entry.Delegate);
                         break;
                     case QueueOperation.Unmodify:
-                        Unmodify(entry.Delegate as ILManipulator);
+                        _Unmodify(entry.Delegate);
                         break;
                 }
             }
