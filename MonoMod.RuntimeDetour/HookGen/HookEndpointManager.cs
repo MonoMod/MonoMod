@@ -12,6 +12,26 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private static Dictionary<MethodBase, object> HookMap = new Dictionary<MethodBase, object>();
         private static ulong ID = 0;
 
+        private static Dictionary<Assembly, ModuleDefinition> ModuleMap = new Dictionary<Assembly, ModuleDefinition>();
+        private static Dictionary<Assembly, bool> ModuleManagedMap = new Dictionary<Assembly, bool>();
+
+        internal static ModuleDefinition GetModule(Assembly asm) {
+            ModuleDefinition module;
+            if (!ModuleMap.TryGetValue(asm, out module) || module == null) {
+                ModuleMap[asm] = module = ModuleDefinition.ReadModule(asm.Location);
+                ModuleManagedMap[asm] = true;
+            }
+            return module;
+        }
+
+        public static void SetModule(Assembly asm, ModuleDefinition module) {
+            if (ModuleManagedMap.TryGetValue(asm, out bool isManaged) && isManaged) {
+                ModuleMap[asm].Dispose();
+            }
+            ModuleMap[asm] = module;
+            ModuleManagedMap[asm] = false;
+        }
+
         internal static HookEndpoint<T> Verify<T>(HookEndpoint<T> endpoint) where T : class {
             HookEndpoint<T> lastEndpoint = null;
             if (HookMap.TryGetValue(endpoint.Method, out object endpointObj))

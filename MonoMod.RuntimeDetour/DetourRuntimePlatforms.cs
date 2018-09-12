@@ -35,7 +35,12 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public DynamicMethod CreateCopy(MethodBase method) {
-            MethodBody body = method.GetMethodBody();
+            MethodBody body;
+            try {
+                body = method.GetMethodBody();
+            } catch (InvalidOperationException) {
+                body = null;
+            }
             if (body == null) {
                 throw new InvalidOperationException("P/Invoke methods cannot be copied!");
             }

@@ -19,18 +19,53 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 Modify(value);
             }
             remove {
-                Modify(value);
+                Unmodify(value);
             }
         }
         */
 
         internal ulong ID = 0;
         internal readonly MethodBase Method;
+
         private readonly Dictionary<Delegate, Stack<Hook>> HookMap = new Dictionary<Delegate, Stack<Hook>>();
+        private readonly List<ILManipulator> ILList = new List<ILManipulator>();
+
+        private DynamicMethodDefinition DMD;
+        private DynamicMethod ILDetourTarget;
+        private NativeDetour ILDetourTargetDetour;
+        private Detour ILDetour;
+
         private readonly Queue<QueueEntry> Queue = new Queue<QueueEntry>();
 
         internal HookEndpoint(MethodBase method) {
             Method = method;
+
+            // Add a "transparent" detour for IL manipulation.
+            DMD = new DynamicMethodDefinition(method, HookEndpointManager.GetModule(method.DeclaringType.Assembly));
+
+            ParameterInfo[] args = Method.GetParameters();
+            Type[] argTypes;
+            if (!Method.IsStatic) {
+                argTypes = new Type[args.Length + 1];
+                argTypes[0] = Method.DeclaringType;
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i + 1] = args[i].ParameterType;
+            } else {
+                argTypes = new Type[args.Length];
+                for (int i = 0; i < args.Length; i++)
+                    argTypes[i] = args[i].ParameterType;
+            }
+
+            ILDetourTarget = new DynamicMethod(
+                "ILHook:" + DMD.Definition.DeclaringType.FullName + "::" + DMD.Definition.Name,
+                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
+                Method.DeclaringType,
+                false
+            ).Stub().Pin();
+
+            ILDetour = new Detour(method, ILDetourTarget);
+
+            DetourILDetourTarget();
         }
 
         internal HookEndpoint(HookEndpoint<T> prev) {
@@ -38,6 +73,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Method = prev.Method;
             HookMap.AddRange(prev.HookMap);
             Queue.EnqueueRange(prev.Queue);
+        }
+
+        internal void DetourILDetourTarget() {
+            ILDetourTargetDetour?.Dispose();
+            ILDetourTargetDetour = new NativeDetour(ILDetourTarget, DMD.Generate());
         }
 
         public void Add(Delegate hookDelegate) {
@@ -83,8 +123,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (callback == null)
                 return;
 
-            // TODO: HookEndpoint IL manipulation!
-            // callback.DynamicInvoke(body, il);
+            ILManipulator manipulator = callback.CastDelegate<ILManipulator>();
+            ILList.Add(manipulator);
+            manipulator(DMD.Definition.Body, DMD.Definition.Body.GetILProcessor());
+
+            DetourILDetourTarget();
         }
 
         public void Unmodify(Delegate callback) {
@@ -98,7 +141,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (callback == null)
                 return;
 
-            // TODO: HookEndpoint IL manipulation!
+            // TODO: Undo all changes, remove the callback from the list, re-apply all previous changes.
+
+            DetourILDetourTarget();
         }
 
         internal void ApplyQueue() {

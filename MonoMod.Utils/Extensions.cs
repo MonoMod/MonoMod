@@ -135,6 +135,13 @@ namespace MonoMod.Utils {
         /// Cast a delegate from one type to another. Compatible with delegates holding an invocation list (combined delegates).
         /// </summary>
         /// <param name="source">The input delegate.</param>
+        /// <returns>The output delegate.</returns>
+        public static T CastDelegate<T>(this Delegate source) where T : class => source.CastDelegate(typeof(T)) as T;
+
+        /// <summary>
+        /// Cast a delegate from one type to another. Compatible with delegates holding an invocation list (combined delegates).
+        /// </summary>
+        /// <param name="source">The input delegate.</param>
         /// <param name="type">The wanted output delegate type.</param>
         /// <returns>The output delegate.</returns>
         public static Delegate CastDelegate(this Delegate source, Type type) {
