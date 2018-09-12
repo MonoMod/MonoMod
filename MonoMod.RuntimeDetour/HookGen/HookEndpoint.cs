@@ -34,6 +34,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         internal HookEndpoint(HookEndpoint<T> prev) {
+            ID = prev.ID;
             Method = prev.Method;
             HookMap.AddRange(prev.HookMap);
             Queue.EnqueueRange(prev.Queue);
