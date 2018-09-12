@@ -26,7 +26,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
         public bool HookOrig;
         public bool HookPrivate;
 
-        public ModuleDefinition module_HookGen;
+        public ModuleDefinition module_RuntimeDetour;
 
         public TypeReference t_MulticastDelegate;
         public TypeReference t_IAsyncResult;
@@ -74,9 +74,9 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
             if (string.IsNullOrEmpty(HookWrapperName))
                 HookWrapperName = $"ᴴᵒᵒᵏː{NameVerifyRegex.Replace(modder.Module.Assembly.Name.Name, "_")}";
 
-            modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour.HookGen");
-            if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour.HookGen", out module_HookGen))
-                throw new FileNotFoundException("MonoMod.RuntimeDetour.HookGen not found!");
+            modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour");
+            if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour", out module_RuntimeDetour))
+                throw new FileNotFoundException("MonoMod.RuntimeDetour not found!");
 
             t_MulticastDelegate = OutputModule.ImportReference(modder.FindType("System.MulticastDelegate"));
             t_IAsyncResult = OutputModule.ImportReference(modder.FindType("System.IAsyncResult"));
@@ -85,9 +85,9 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
             t_RuntimeMethodHandle = OutputModule.ImportReference(modder.FindType("System.RuntimeMethodHandle"));
             t_EditorBrowsableState = OutputModule.ImportReference(modder.FindType("System.ComponentModel.EditorBrowsableState"));
 
-            TypeDefinition td_HookEndpointManager = module_HookGen.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpointManager");
+            TypeDefinition td_HookEndpointManager = module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpointManager");
             t_HookEndpointManager = OutputModule.ImportReference(td_HookEndpointManager);
-            td_HookEndpoint = module_HookGen.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpoint`1");
+            td_HookEndpoint = module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpoint`1");
             t_HookEndpoint = OutputModule.ImportReference(td_HookEndpoint);
 
             m_Object_ctor = OutputModule.ImportReference(modder.FindType("System.Object").Resolve().FindMethod("System.Void .ctor()"));
