@@ -129,6 +129,7 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
 
                 foreach (GenericParameter genParam in td_HookEndpoint.GenericParameters)
                     td_HookWrapper.GenericParameters.Add(genParam.Relink(Relinker, td_HookWrapper));
+                td_HookWrapper.GenericParameters[0].Constraints.Add(t_MulticastDelegate);
 
                 // Generate the nested delegate type.
                 MethodDefinition md_ILManipulator_Invoke = td_HookEndpoint.NestedTypes.FirstOrDefault(n => n.Name == "ILManipulator").FindMethod("Invoke");
@@ -290,9 +291,6 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 }
 
                 // Generate the IL event.
-                // ILManipulators shouldn't be applied immediately, but
-                // we're restricted by the On.Type.Method.IL += syntax.
-                // It skips On.Type.set_Method - queueing is impossible.
                 MethodDefinition add_IL = new MethodDefinition(
                     "add_IL",
                     MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.ReuseSlot,
@@ -333,6 +331,52 @@ namespace MonoMod.RuntimeDetour.HookGen.Generator {
                 evt_IL.AddMethod = add_IL;
                 evt_IL.RemoveMethod = remove_IL;
                 td_HookWrapper.Events.Add(evt_IL);
+
+                // Generate a helper Hook event.
+                // ... Don't.
+                // Property, indexer, or event 'ᴴᵒᵒᵏːCeleste<Player.hook_GetTrailColor>.Hook' is not supported by the language; try directly calling accessor methods 'ᴴᵒᵒᵏːCeleste<Player.hook_GetTrailColor>.add_Hook(Player.hook_GetTrailColor)' or 'ᴴᵒᵒᵏːCeleste<Player.hook_GetTrailColor>.remove_Hook(Player.hook_GetTrailColor)'
+                /*
+                MethodDefinition add_Hook = new MethodDefinition(
+                    "add_Hook",
+                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.ReuseSlot,
+                    OutputModule.TypeSystem.Void
+                ) {
+                    HasThis = true
+                };
+                td_HookWrapper.Methods.Add(add_Hook);
+                add_Hook.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, td_HookWrapper.GenericParameters[0]));
+                add_Hook.Body = new MethodBody(add_Hook);
+                il = add_Hook.Body.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_1);
+                MethodReference mg_Add = td_HookWrapper.FindMethod("Add").Relink((mtp, ctx) => mtp, add_Hook);
+                mg_Add.DeclaringType = tg_HookWrapper;
+                il.Emit(OpCodes.Call, mg_Add);
+                il.Emit(OpCodes.Ret);
+
+                MethodDefinition remove_Hook = new MethodDefinition(
+                    "remove_Hook",
+                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.ReuseSlot,
+                    OutputModule.TypeSystem.Void
+                ) {
+                    HasThis = true
+                };
+                td_HookWrapper.Methods.Add(remove_Hook);
+                remove_Hook.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, td_HookWrapper.GenericParameters[0]));
+                remove_Hook.Body = new MethodBody(remove_Hook);
+                il = remove_Hook.Body.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_1);
+                MethodReference mg_Remove = td_HookWrapper.FindMethod("Remove").Relink((mtp, ctx) => mtp, add_IL);
+                mg_Remove.DeclaringType = tg_HookWrapper;
+                il.Emit(OpCodes.Call, mg_Remove);
+                il.Emit(OpCodes.Ret);
+
+                EventDefinition evt_Hook = new EventDefinition("Hook", EventAttributes.None, td_HookWrapper.GenericParameters[0]);
+                evt_Hook.AddMethod = add_Hook;
+                evt_Hook.RemoveMethod = remove_Hook;
+                td_HookWrapper.Events.Add(evt_Hook);
+                */
 
                 OutputModule.Types.Add(td_HookWrapper);
             }

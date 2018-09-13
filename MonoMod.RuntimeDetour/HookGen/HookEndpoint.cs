@@ -22,6 +22,15 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 Unmodify(value);
             }
         }
+
+        public event T IL {
+            add {
+                Add(value);
+            }
+            remove {
+                Remove(value);
+            }
+        }
         */
 
         internal ulong ID = 0;
@@ -31,8 +40,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly List<ILManipulator> ILList = new List<ILManipulator>();
 
         private DynamicMethodDefinition DMD;
-        private DynamicMethod ILDetourTarget;
-        private NativeDetour ILDetourTargetDetour;
+        private DynamicMethod ILCopy;
+        private DynamicMethod ILProxy;
+        private NativeDetour ILProxyDetour;
         private Detour ILDetour;
 
         private readonly Queue<QueueEntry> Queue = new Queue<QueueEntry>();
@@ -40,32 +50,37 @@ namespace MonoMod.RuntimeDetour.HookGen {
         internal HookEndpoint(MethodBase method) {
             Method = method;
 
-            // Add a "transparent" detour for IL manipulation.
-            DMD = new DynamicMethodDefinition(method, HookEndpointManager.GetModule(method.DeclaringType.Assembly));
+            try {
+                // Add a "transparent" detour for IL manipulation.
+                DMD = new DynamicMethodDefinition(method, HookEndpointManager.GetModule(method.DeclaringType.Assembly));
+                ILCopy = method.CreateILCopy();
 
-            ParameterInfo[] args = Method.GetParameters();
-            Type[] argTypes;
-            if (!Method.IsStatic) {
-                argTypes = new Type[args.Length + 1];
-                argTypes[0] = Method.DeclaringType;
-                for (int i = 0; i < args.Length; i++)
-                    argTypes[i + 1] = args[i].ParameterType;
-            } else {
-                argTypes = new Type[args.Length];
-                for (int i = 0; i < args.Length; i++)
-                    argTypes[i] = args[i].ParameterType;
+                ParameterInfo[] args = Method.GetParameters();
+                Type[] argTypes;
+                if (!Method.IsStatic) {
+                    argTypes = new Type[args.Length + 1];
+                    argTypes[0] = Method.DeclaringType;
+                    for (int i = 0; i < args.Length; i++)
+                        argTypes[i + 1] = args[i].ParameterType;
+                } else {
+                    argTypes = new Type[args.Length];
+                    for (int i = 0; i < args.Length; i++)
+                        argTypes[i] = args[i].ParameterType;
+                }
+
+                ILProxy = new DynamicMethod(
+                    "ILDetour:" + DMD.Definition.DeclaringType.FullName + "::" + DMD.Definition.Name,
+                    (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
+                    Method.DeclaringType,
+                    false
+                ).Stub().Pin();
+
+                ILDetour = new Detour(method, ILProxy);
+
+                DetourILDetourTarget();
+            } catch {
+                // Fail silently.
             }
-
-            ILDetourTarget = new DynamicMethod(
-                "ILHook:" + DMD.Definition.DeclaringType.FullName + "::" + DMD.Definition.Name,
-                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                Method.DeclaringType,
-                false
-            ).Stub().Pin();
-
-            ILDetour = new Detour(method, ILDetourTarget);
-
-            DetourILDetourTarget();
         }
 
         internal HookEndpoint(HookEndpoint<T> prev) {
@@ -74,15 +89,16 @@ namespace MonoMod.RuntimeDetour.HookGen {
             HookMap.AddRange(prev.HookMap);
             ILList.AddRange(prev.ILList);
             DMD = prev.DMD;
-            ILDetourTarget = prev.ILDetourTarget;
-            ILDetourTargetDetour = prev.ILDetourTargetDetour;
+            ILCopy = prev.ILCopy;
+            ILProxy = prev.ILProxy;
+            ILProxyDetour = prev.ILProxyDetour;
             ILDetour = prev.ILDetour;
             Queue.EnqueueRange(prev.Queue);
         }
 
         internal void DetourILDetourTarget() {
-            ILDetourTargetDetour?.Dispose();
-            ILDetourTargetDetour = new NativeDetour(ILDetourTarget, DMD.Generate());
+            ILProxyDetour?.Dispose();
+            ILProxyDetour = new NativeDetour(ILProxy, ILList.Count == 0 ? ILCopy : DMD.Generate());
         }
 
         public void Add(Delegate hookDelegate) {
