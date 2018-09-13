@@ -32,7 +32,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             ModuleManagedMap[asm] = false;
         }
 
-        internal static HookEndpoint<T> Verify<T>(HookEndpoint<T> endpoint) where T : class {
+        internal static HookEndpoint<T> Verify<T>(HookEndpoint<T> endpoint) where T : Delegate {
             HookEndpoint<T> lastEndpoint = null;
             if (HookMap.TryGetValue(endpoint.Method, out object endpointObj))
                 lastEndpoint = endpointObj as HookEndpoint<T>;
@@ -48,7 +48,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return endpoint;
         }
 
-        public static HookEndpoint<T> Get<T>(MethodBase method) where T : class {
+        public static HookEndpoint<T> Get<T>(MethodBase method) where T : Delegate {
             HookEndpoint<T> endpoint;
             if (HookMap.TryGetValue(method, out object endpointObj))
                 endpoint = endpointObj as HookEndpoint<T>;
@@ -59,7 +59,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return endpoint;
         }
 
-        public static void Set<T>(MethodBase method, HookEndpoint<T> endpoint) where T : class {
+        public static void Set<T>(MethodBase method, HookEndpoint<T> endpoint) where T : Delegate {
             if (endpoint == null)
                 throw new ArgumentNullException("Cannot set a hook endpoint to null");
             if (endpoint.Method != method)
@@ -69,17 +69,17 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         [Obsolete("Use Get / Set instead!")]
-        public static void Add<T>(MethodBase method, Delegate hookDelegate) where T : class {
+        public static void Add<T>(MethodBase method, Delegate hookDelegate) where T : Delegate {
             HookEndpoint<T> endpoint = Get<T>(method);
             endpoint._Add(hookDelegate);
-            Set<T>(method, endpoint);
+            Set(method, endpoint);
         }
 
         [Obsolete("Use Get / Set instead!")]
-        public static void Remove<T>(MethodBase method, Delegate hookDelegate) where T : class {
+        public static void Remove<T>(MethodBase method, Delegate hookDelegate) where T : Delegate {
             HookEndpoint<T> endpoint = Get<T>(method);
             endpoint._Remove(hookDelegate);
-            Set<T>(method, endpoint);
+            Set(method, endpoint);
         }
 
     }

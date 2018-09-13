@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using Mono.Cecil;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    public sealed class HookEndpoint<T> where T : class {
+    public sealed class HookEndpoint<T> where T : Delegate {
 
         // This delegate will be cloned into the wrapper inside of the generated assembly.
         public delegate void ILManipulator(Mono.Cecil.Cil.MethodBody body, Mono.Cecil.Cil.ILProcessor il);
@@ -139,6 +139,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             ILList.Add(manipulator);
             manipulator(DMD.Definition.Body, DMD.Definition.Body.GetILProcessor());
 
+            DMD.Definition.RecalculateILOffsets();
+            DMD.Definition.ConvertShortLongOps();
             DetourILDetourTarget();
         }
 
@@ -155,6 +157,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             // TODO: Undo all changes, remove the callback from the list, re-apply all previous changes.
 
+            DMD.Definition.RecalculateILOffsets();
+            DMD.Definition.ConvertShortLongOps();
             DetourILDetourTarget();
         }
 

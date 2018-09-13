@@ -239,7 +239,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
-        public T GenerateTrampoline<T>() where T : class {
+        public T GenerateTrampoline<T>() where T : Delegate {
             if (!IsValid)
                 throw new InvalidOperationException("This detour has been undone.");
             if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
@@ -295,12 +295,12 @@ namespace MonoMod.RuntimeDetour {
         }
     }
 
-    public class Detour<T> : Detour where T : class {
+    public class Detour<T> : Detour where T : Delegate {
         public Detour(T from, IntPtr to)
-            : base(from as Delegate, to) {
+            : base(from, to) {
         }
         public Detour(T from, T to)
-            : base(from as Delegate, to as Delegate) {
+            : base(from, to) {
         }
     }
 }

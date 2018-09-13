@@ -177,7 +177,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
-        public T GenerateTrampoline<T>() where T : class {
+        public T GenerateTrampoline<T>() where T : Delegate {
             if (!IsValid)
                 throw new InvalidOperationException("This hook has been undone.");
 

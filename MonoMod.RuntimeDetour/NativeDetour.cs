@@ -229,7 +229,7 @@ namespace MonoMod.RuntimeDetour {
         /// If the NativeDetour holds a reference to a managed method, a copy of the original method is returned.
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
         /// </summary>
-        public T GenerateTrampoline<T>() where T : class {
+        public T GenerateTrampoline<T>() where T : Delegate {
             if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
             if (!typeof(Delegate).IsAssignableFrom(typeof(T)))

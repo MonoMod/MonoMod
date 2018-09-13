@@ -10,6 +10,6 @@ namespace MonoMod.RuntimeDetour {
         void Free();
 
         MethodBase GenerateTrampoline(MethodBase signature = null);
-        T GenerateTrampoline<T>() where T : class;
+        T GenerateTrampoline<T>() where T : Delegate;
     }
 }

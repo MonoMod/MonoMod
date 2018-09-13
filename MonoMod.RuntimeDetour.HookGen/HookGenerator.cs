@@ -300,6 +300,13 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 MethodReference methodRef = method.Relink(Relinker, proxy);
                 methodRef.DeclaringType = fromRef ?? methodRef.DeclaringType;
 
+                if (proxy.GenericParameters.Count != 0) {
+                    GenericInstanceMethod methodRefGen = new GenericInstanceMethod(methodRef);
+                    foreach (GenericParameter genParam in proxy.GenericParameters)
+                        methodRefGen.GenericArguments.Add(genParam);
+                    methodRef = methodRefGen;
+                }
+
                 if (!method.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldfld, wrapperField);
