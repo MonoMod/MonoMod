@@ -72,6 +72,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             ID = prev.ID;
             Method = prev.Method;
             HookMap.AddRange(prev.HookMap);
+            ILList.AddRange(prev.ILList);
+            DMD = prev.DMD;
+            ILDetourTarget = prev.ILDetourTarget;
+            ILDetourTargetDetour = prev.ILDetourTargetDetour;
+            ILDetour = prev.ILDetour;
             Queue.EnqueueRange(prev.Queue);
         }
 

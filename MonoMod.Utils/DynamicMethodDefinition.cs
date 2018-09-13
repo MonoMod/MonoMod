@@ -15,6 +15,8 @@ namespace MonoMod.Utils {
         private readonly static Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
         private readonly static Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
 
+        private static Dictionary<string, Assembly> _AssemblyCache = new Dictionary<string, Assembly>();
+
         static DynamicMethodDefinition() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 System.Reflection.Emit.OpCode reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null);
@@ -178,33 +180,50 @@ namespace MonoMod.Utils {
             return dynamic;
         }
 
-        private static MemberInfo ResolveMember(MemberReference mref, Type[] genericTypeArguments, Type[] genericMethodArguments) {
+        private static MemberInfo ResolveMember(MemberReference mref, Type[] genericTypeArguments, Type[] genericMethodArguments, Module module = null) {
             MemberReference mdef = mref.Resolve() as MemberReference;
+            int token = mdef.MetadataToken.ToInt32();
 
-            MemberInfo info = Assembly.Load(mdef.Module.Assembly.Name.FullName)
-                .GetModule(mdef.Module.Name)
-                .ResolveMember(mdef.MetadataToken.ToInt32(), genericTypeArguments, genericMethodArguments);
-
-            if (mref is TypeSpecification ts) {
-                Type type = ResolveMember(ts.ElementType, genericTypeArguments, genericMethodArguments) as Type;
-
-                if (ts.IsByReference)
-                    return type.MakeByRefType();
-
-                if (ts.IsPointer)
-                    return type.MakePointerType();
-
-                if (ts.IsArray)
-                    return type.MakeArrayType((ts as ArrayType).Dimensions.Count);
-
-                if (ts.IsGenericInstance)
-                    return type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
-
-            } else if (mref is GenericInstanceMethod mrefGenMethod) {
-                return (info as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+            if (module == null) {
+                string asmName = mdef.Module.Assembly.Name.FullName;
+                Assembly asm;
+                if (!_AssemblyCache.TryGetValue(asmName, out asm))
+                    _AssemblyCache[asmName] = asm = Assembly.Load(asmName);
+                module = asm.GetModule(mdef.Module.Name);
             }
 
-            return info;
+            Type type;
+
+            if (mref is TypeReference) {
+                type = module.ResolveType(token, genericTypeArguments, genericMethodArguments);
+
+                if (mref is TypeSpecification ts) {
+                    type = ResolveMember(ts.ElementType, genericTypeArguments, genericMethodArguments, module) as Type;
+
+                    if (ts.IsByReference)
+                        return type.MakeByRefType();
+
+                    if (ts.IsPointer)
+                        return type.MakePointerType();
+
+                    if (ts.IsArray)
+                        return type.MakeArrayType((ts as ArrayType).Dimensions.Count);
+
+                    if (ts.IsGenericInstance)
+                        return type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+                }
+
+                return type;
+            }
+
+            type = ResolveMember(mref.DeclaringType, genericTypeArguments, genericMethodArguments, module) as Type;
+
+            MemberInfo member = type.GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => m.MetadataToken == token);
+
+            if (mref is GenericInstanceMethod mrefGenMethod)
+                return (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+
+            return member;
         }
 
         public void Dispose() {
