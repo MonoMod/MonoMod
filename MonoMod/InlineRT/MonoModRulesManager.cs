@@ -142,7 +142,7 @@ namespace MonoMod.InlineRT {
                 asm = Assembly.Load(asmStream.GetBuffer());
             }
 
-            /**//*
+            /*/
             using (FileStream debugStream = File.OpenWrite(Path.Combine(
                 self.DependencyDirs[0], $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules-MMILRT.dll")))
                 wrapperMod.Write(debugStream);

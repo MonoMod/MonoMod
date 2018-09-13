@@ -548,13 +548,19 @@ namespace MonoMod.Utils {
             return relinker(new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType), context);
         }
 
-        public static IMetadataTokenProvider Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
-            param = ((MethodReference) ((MethodReference) param.Method)/*.Relink(relinker, context)*/).Parameters[param.Index];
-            param.ParameterType = param.ParameterType.Relink(relinker, context);
-            // Don't foreach when modifying the collection
-            for (int i = 0; i < param.CustomAttributes.Count; i++)
-                param.CustomAttributes[i] = param.CustomAttributes[i].Relink(relinker, context);
-            return param;
+        public static ParameterDefinition Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
+            param = (param.Method as MethodReference)?.Parameters[param.Index] ?? param;
+            ParameterDefinition newParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType.Relink(relinker, context)) {
+                IsIn = param.IsIn,
+                IsLcid = param.IsLcid,
+                IsOptional = param.IsOptional,
+                IsOut = param.IsOut,
+                IsReturnValue = param.IsReturnValue,
+                MarshalInfo = param.MarshalInfo
+            };
+            if (param.HasConstant)
+                newParam.Constant = param.Constant;
+            return newParam;
         }
 
         public static ParameterDefinition Clone(this ParameterDefinition param) {
@@ -574,29 +580,22 @@ namespace MonoMod.Utils {
         }
 
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker, IGenericParameterProvider context) {
-            attrib.Constructor = attrib.Constructor.Relink(relinker, context);
-            // Don't foreach when modifying the collection
-            for (int i = 0; i < attrib.ConstructorArguments.Count; i++) {
-                CustomAttributeArgument attribArg = attrib.ConstructorArguments[i];
-                attrib.ConstructorArguments[i] = new CustomAttributeArgument(attribArg.Type.Relink(relinker, context), attribArg.Value);
-            }
-            for (int i = 0; i < attrib.Fields.Count; i++) {
-                CustomAttributeNamedArgument attribArg = attrib.Fields[i];
-                attrib.Fields[i] = new CustomAttributeNamedArgument(attribArg.Name,
-                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value)
+            CustomAttribute newAttrib = new CustomAttribute(attrib.Constructor.Relink(relinker, context));
+            foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
+                newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type.Relink(relinker, context), attribArg.Value));
+            foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
+                newAttrib.Fields.Add(new CustomAttributeNamedArgument(attribArg.Name,
+                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value))
                 );
-            }
-            for (int i = 0; i < attrib.Properties.Count; i++) {
-                CustomAttributeNamedArgument attribArg = attrib.Properties[i];
-                attrib.Properties[i] = new CustomAttributeNamedArgument(attribArg.Name,
-                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value)
+            foreach (CustomAttributeNamedArgument attribArg in attrib.Properties)
+                newAttrib.Properties.Add(new CustomAttributeNamedArgument(attribArg.Name,
+                    new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value))
                 );
-            }
-            return attrib;
+            return newAttrib;
         }
 
         public static CustomAttribute Clone(this CustomAttribute attrib) {
-            CustomAttribute newAttrib = new CustomAttribute(attrib.Constructor, attrib.GetBlob());
+            CustomAttribute newAttrib = new CustomAttribute(attrib.Constructor);
             foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
                 newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type, attribArg.Value));
             foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)

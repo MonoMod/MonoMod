@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace MonoMod.RuntimeDetour.HookGen.Generator {
+namespace MonoMod.RuntimeDetour.HookGen {
     class Program {
         static void Main(string[] args) {
             Console.WriteLine("MonoMod.RuntimeDetour.HookGen " + typeof(Program).Assembly.GetName().Version);

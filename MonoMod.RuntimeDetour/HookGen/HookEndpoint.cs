@@ -22,15 +22,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 Unmodify(value);
             }
         }
-
-        public event T IL {
-            add {
-                Add(value);
-            }
-            remove {
-                Remove(value);
-            }
-        }
         */
 
         internal ulong ID = 0;

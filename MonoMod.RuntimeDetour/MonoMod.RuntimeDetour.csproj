@@ -48,6 +48,7 @@
     <Compile Include="DetourNativePlatforms.cs" />
     <Compile Include="DetourRuntimePlatforms.cs" />
     <Compile Include="Hook.cs" />
+    <Compile Include="HookGen\HookExtensions.cs" />
     <Compile Include="IDetour.cs" />
     <Compile Include="ILCopying\ILInstruction.cs" />
     <Compile Include="ILCopying\MethodCopier.cs" />

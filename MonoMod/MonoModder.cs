@@ -757,26 +757,13 @@ namespace MonoMod {
             if (mtp is FieldReference || mtp is MethodReference || mtp is PropertyReference || mtp is EventReference)
                 // Don't relink those. It'd be useful to f.e. link to member B instead of member A.
                 // MonoModExt already handles the default "deep" relinking.
-                return mtp;
+                return Module.ImportReference(mtp);
 
             throw new InvalidOperationException($"MonoMod default relinker can't handle metadata token providers of the type {mtp.GetType()}");
         }
         public virtual IMetadataTokenProvider PostRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             // The post relinker doesn't care if it can't handle a specific metadata token provider type; Just run ResolveRelinkTarget
             return ResolveRelinkTarget(mtp) ?? mtp;
-        }
-
-        public virtual IMetadataTokenProvider Relink(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            return mtp.Relink(Relinker, context);
-        }
-        public virtual TypeReference Relink(TypeReference type, IGenericParameterProvider context) {
-            return type.Relink(Relinker, context);
-        }
-        public virtual MethodReference Relink(MethodReference method, IGenericParameterProvider context) {
-            return method.Relink(Relinker, context);
-        }
-        public virtual CustomAttribute Relink(CustomAttribute attrib, IGenericParameterProvider context) {
-            return attrib.Relink(Relinker, context);
         }
 
         public virtual IMetadataTokenProvider ResolveRelinkTarget(IMetadataTokenProvider mtp, bool relink = true, bool relinkModule = true) {
@@ -988,7 +975,7 @@ namespace MonoMod {
             newType.ClassSize = type.ClassSize;
             if (type.DeclaringType != null) {
                 // The declaring type is existing as this is being called nestedly.
-                newType.DeclaringType = Relink(type.DeclaringType, newType).Resolve();
+                newType.DeclaringType = type.DeclaringType.Relink(Relinker, newType).Resolve();
                 newType.DeclaringType.NestedTypes.Add(newType);
             } else {
                 Module.Types.Add(newType);
@@ -1620,40 +1607,42 @@ namespace MonoMod {
             LogVerbose($"[VERBOSE] [PatchRefsInType] Patching refs in {type}");
 
             if (type.BaseType != null)
-                type.BaseType = Relink(type.BaseType, type);
+                type.BaseType = type.BaseType.Relink(Relinker, type);
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < type.Interfaces.Count; i++) {
                 InterfaceImplementation interf = type.Interfaces[i];
-                InterfaceImplementation newInterf = new InterfaceImplementation(Relink(interf.InterfaceType, type));
+                InterfaceImplementation newInterf = new InterfaceImplementation(interf.InterfaceType.Relink(Relinker, type));
                 foreach (CustomAttribute attrib in interf.CustomAttributes)
-                    newInterf.CustomAttributes.Add(Relink(attrib, type));
+                    newInterf.CustomAttributes.Add(attrib.Relink(Relinker, type));
                 type.Interfaces[i] = newInterf;
             }
 
-            foreach (CustomAttribute attrib in type.CustomAttributes)
-                Relink(attrib, type);
+            // Don't foreach when modifying the collection
+            for (int i = 0; i < type.CustomAttributes.Count; i++)
+                type.CustomAttributes[i] = type.CustomAttributes[i].Relink(Relinker, type);
 
             foreach (PropertyDefinition prop in type.Properties) {
-                prop.PropertyType = Relink(prop.PropertyType, type);
+                prop.PropertyType = prop.PropertyType.Relink(Relinker, type);
                 // Don't foreach when modifying the collection
                 for (int i = 0; i < prop.CustomAttributes.Count; i++)
-                    prop.CustomAttributes[i] = Relink(prop.CustomAttributes[i], type);
+                    prop.CustomAttributes[i] = prop.CustomAttributes[i].Relink(Relinker, type);
             }
 
             foreach (EventDefinition eventDef in type.Events) {
-                eventDef.EventType = Relink(eventDef.EventType, type);
+                eventDef.EventType = eventDef.EventType.Relink(Relinker, type);
                 for (int i = 0; i < eventDef.CustomAttributes.Count; i++)
-                    eventDef.CustomAttributes[i] = Relink(eventDef.CustomAttributes[i], type);
+                    eventDef.CustomAttributes[i] = eventDef.CustomAttributes[i].Relink(Relinker, type);
             }
 
             foreach (MethodDefinition method in type.Methods)
                 PatchRefsInMethod(method);
 
             foreach (FieldDefinition field in type.Fields) {
-                field.FieldType = Relink(field.FieldType, type);
-                foreach (CustomAttribute attrib in field.CustomAttributes)
-                    Relink(attrib, type);
+                field.FieldType = field.FieldType.Relink(Relinker, type);
+                // Don't foreach when modifying the collection
+                for (int i = 0; i < field.CustomAttributes.Count; i++)
+                    field.CustomAttributes[i] = field.CustomAttributes[i].Relink(Relinker, type);
             }
 
             for (int i = 0; i < type.NestedTypes.Count; i++)
@@ -1672,27 +1661,30 @@ namespace MonoMod {
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < method.GenericParameters.Count; i++)
-                method.GenericParameters[i] = (GenericParameter) Relink(method.GenericParameters[i], method);
+                method.GenericParameters[i] = method.GenericParameters[i].Relink(Relinker, method);
 
-            for (int i = 0; i < method.Parameters.Count; i++)
-                method.Parameters[i] = (ParameterDefinition) Relink(method.Parameters[i], method);
+            foreach (ParameterDefinition param in method.Parameters) {
+                param.ParameterType = param.ParameterType.Relink(Relinker, method);
+                for (int i = 0; i < param.CustomAttributes.Count; i++)
+                    param.CustomAttributes[i] = param.CustomAttributes[i].Relink(Relinker, method);
+            }
 
             for (int i = 0; i < method.CustomAttributes.Count; i++)
-                method.CustomAttributes[i] = Relink(method.CustomAttributes[i], method);
+                method.CustomAttributes[i] = method.CustomAttributes[i].Relink(Relinker, method);
 
             for (int i = 0; i < method.Overrides.Count; i++)
-                method.Overrides[i] = (MethodReference) Relink(method.Overrides[i], method);
+                method.Overrides[i] = method.Overrides[i].Relink(Relinker, method);
 
-            method.ReturnType = Relink(method.ReturnType, method);
+            method.ReturnType = method.ReturnType.Relink(Relinker, method);
 
             if (method.Body == null) return;
 
             foreach (VariableDefinition var in method.Body.Variables)
-                var.VariableType = Relink(var.VariableType, method);
+                var.VariableType = var.VariableType.Relink(Relinker, method);
 
             foreach (ExceptionHandler handler in method.Body.ExceptionHandlers)
                 if (handler.CatchType != null)
-                    handler.CatchType = Relink(handler.CatchType, method);
+                    handler.CatchType = handler.CatchType.Relink(Relinker, method);
 
             MethodRewriter?.Invoke(this, method);
 
@@ -1718,12 +1710,9 @@ namespace MonoMod {
                     ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(simple: true), out forceCall)
                 );
 
-                ParameterDefinition param = instr.GetParam(method);
-                VariableDefinition local = instr.GetLocal(method);
-
                 // General relinking
-                if (operand is IMetadataTokenProvider)
-                    operand = Relink((IMetadataTokenProvider) operand, method);
+                if (!(operand is ParameterDefinition) && operand is IMetadataTokenProvider)
+                    operand = ((IMetadataTokenProvider) operand).Relink(Relinker, method);
 
                 // Check again after relinking.
                 if (!hasForceCall && operand is MethodReference) {
