@@ -68,17 +68,27 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Verify(endpoint).ApplyQueue();
         }
 
-        [Obsolete("Use Get / Set instead!")]
         public static void Add<T>(MethodBase method, Delegate hookDelegate) where T : Delegate {
             HookEndpoint<T> endpoint = Get<T>(method);
             endpoint._Add(hookDelegate);
             Set(method, endpoint);
         }
 
-        [Obsolete("Use Get / Set instead!")]
         public static void Remove<T>(MethodBase method, Delegate hookDelegate) where T : Delegate {
             HookEndpoint<T> endpoint = Get<T>(method);
             endpoint._Remove(hookDelegate);
+            Set(method, endpoint);
+        }
+
+        public static void Modify<T>(MethodBase method, Delegate callback) where T : Delegate {
+            HookEndpoint<T> endpoint = Get<T>(method);
+            endpoint._Modify(callback);
+            Set(method, endpoint);
+        }
+
+        public static void Unmodify<T>(MethodBase method, Delegate callback) where T : Delegate {
+            HookEndpoint<T> endpoint = Get<T>(method);
+            endpoint._Unmodify(callback);
             Set(method, endpoint);
         }
 

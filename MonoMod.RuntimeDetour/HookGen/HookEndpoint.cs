@@ -9,21 +9,6 @@ using Mono.Cecil;
 namespace MonoMod.RuntimeDetour.HookGen {
     public sealed class HookEndpoint<T> where T : Delegate {
 
-        // This delegate will be cloned into the wrapper inside of the generated assembly.
-        public delegate void ILManipulator(Mono.Cecil.Cil.MethodBody body, Mono.Cecil.Cil.ILProcessor il);
-
-        // This code will be additionally generated in the wrapper inside of the generated assembly.
-        /*
-        public event ILManipulator IL {
-            add {
-                Modify(value);
-            }
-            remove {
-                Unmodify(value);
-            }
-        }
-        */
-
         internal ulong ID = 0;
         internal readonly MethodBase Method;
 

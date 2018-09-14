@@ -11,6 +11,9 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 namespace MonoMod.RuntimeDetour.HookGen {
     public static class HookExtensions {
 
+        // This delegate will be cloned into the wrapper inside of the generated assembly.
+        public delegate void ILManipulator(MethodBody body, ILProcessor il);
+
         // Used in EmitReference.
         private static List<object> References = new List<object>();
         public static object GetReference(int id) => References[id];

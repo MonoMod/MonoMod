@@ -28,13 +28,21 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 if (args[i] == "--namespace" && i + 2 < args.Length) {
                     i++;
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE", args[i]);
-                } else if (args[i] == "--wrapper" && i + 2 < args.Length) {
+
+                } else if (args[i] == "--namespace-il" && i + 2 < args.Length) {
                     i++;
-                    Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_WRAPPER", args[i]);
+                    Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE_IL", args[i]);
+
+                } else if (args[i] == "--extensions" && i + 2 < args.Length) {
+                    i++;
+                    Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_EXTENSIONS", args[i]);
+
                 } else if (args[i] == "--orig") {
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_ORIG", "1");
+
                 } else if (args[i] == "--private") {
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_PRIVATE", "1");
+
                 } else {
                     pathInI = i;
                     break;
