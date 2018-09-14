@@ -28,7 +28,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         internal readonly MethodBase Method;
 
         private readonly Dictionary<Delegate, Stack<Hook>> HookMap = new Dictionary<Delegate, Stack<Hook>>();
-        private readonly List<ILManipulator> ILList = new List<ILManipulator>();
+        private readonly List<Delegate> ILList = new List<Delegate>();
 
         private DynamicMethodDefinition DMD;
         private DynamicMethod ILCopy;
@@ -135,9 +135,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (callback == null)
                 return;
 
-            ILManipulator manipulator = callback.CastDelegate<ILManipulator>();
-            ILList.Add(manipulator);
-            manipulator(DMD.Definition.Body, DMD.Definition.Body.GetILProcessor());
+            ILList.Add(callback);
+            MethodDefinition def = DMD.Definition;
+            callback.DynamicInvoke(def.Body, def.Body.GetILProcessor());
 
             DMD.Definition.RecalculateILOffsets();
             DMD.Definition.ConvertShortLongOps();
@@ -149,13 +149,14 @@ namespace MonoMod.RuntimeDetour.HookGen {
             HookEndpointManager.Verify(this)._Unmodify(callback);
         }
         internal void _Unmodify(Delegate callback) {
-            // Note: This makes the current instance unusable for any further operations.
-            HookEndpointManager.Verify(this);
-
             if (callback == null)
                 return;
 
-            // TODO: Undo all changes, remove the callback from the list, re-apply all previous changes.
+            ILList.Remove(callback);
+            DMD.Reload(null, true);
+            MethodDefinition def = DMD.Definition;
+            foreach (Delegate cb in ILList)
+                cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
 
             DMD.Definition.RecalculateILOffsets();
             DMD.Definition.ConvertShortLongOps();

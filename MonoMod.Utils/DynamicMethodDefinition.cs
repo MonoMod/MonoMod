@@ -42,29 +42,65 @@ namespace MonoMod.Utils {
             }
         }
 
-        private ModuleDefinition _Module;
+        private readonly static Dictionary<Module, ModuleDefinition> _Modules = new Dictionary<Module, ModuleDefinition>();
+        private readonly static Dictionary<Module, int> _ModuleRefs = new Dictionary<Module, int>();
+        private ModuleDefinition _Module {
+            get {
+                if (_Modules.TryGetValue(Method.Module, out ModuleDefinition module))
+                    return module;
+                return null;
+            }
+            set => _Modules[Method.Module] = value;
+        }
+        private int _ModuleRef {
+            get {
+                if (_ModuleRefs.TryGetValue(Method.Module, out int refs))
+                    return refs;
+                return 0;
+            }
+            set => _ModuleRefs[Method.Module] = value;
+        }
 
-        public readonly MethodBase Method;
-        public readonly MethodDefinition Definition;
+        public MethodBase Method { get; private set; }
+        public MethodDefinition Definition =>
+            (_Module.LookupToken(Method.MetadataToken) as MethodReference)?.Resolve() ??
+            throw new InvalidOperationException("Method definition not found");
 
         public DynamicMethodDefinition(MethodBase method, ModuleDefinition module = null) {
             Method = method ?? throw new ArgumentNullException(nameof(method));
+            Reload(module, false);
+        }
+
+        public void Reload(ModuleDefinition module = null, bool force = false) {
+            ModuleDefinition moduleTmp = null;
+
             try {
-                if (module == null)
-                    _Module = module = ModuleDefinition.ReadModule(method.DeclaringType.Assembly.Location);
-                Definition = (module.LookupToken(method.MetadataToken) as MethodReference)?.Resolve() ?? throw new ArgumentException("Method not found");
-            } catch {
-                _Module?.Dispose();
-                throw;
+                if (module == null) {
+                    if (_Module != null && !force) {
+                        module = _Module;
+                    } else {
+                        _Module?.Dispose();
+                        module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.Assembly.Location);
+                    }
+                }
+                _Module = module;
+                _ModuleRef++;
+            } catch when (_Dispose()) {
+            }
+
+            bool _Dispose() {
+                if (moduleTmp != null) {
+                    moduleTmp.Dispose();
+                    _Module = null;
+                    _ModuleRef = 0;
+                }
+                return false;
             }
         }
 
-        public DynamicMethodDefinition(MethodDefinition definition, MethodBase method = null) {
-            Definition = definition;
-            Method = method ?? (Assembly.Load(definition.Module.Assembly.Name.FullName).GetModule(definition.Module.Name)).ResolveMethod(definition.MetadataToken.ToInt32());
-        }
-
         public DynamicMethod Generate() {
+            MethodDefinition def = Definition;
+
             Type[] genericArgsType = Method.DeclaringType.IsGenericType ? Method.DeclaringType.GetGenericArguments() : null;
             Type[] genericArgsMethod = Method.IsGenericMethod ? Method.GetGenericArguments() : null;
 
@@ -82,20 +118,20 @@ namespace MonoMod.Utils {
             }
 
             DynamicMethod dynamic = new DynamicMethod(
-                "DynamicMethodDefinition:" + Definition.DeclaringType.FullName + "::" + Definition.Name,
+                "DynamicMethodDefinition:" + def.DeclaringType.FullName + "::" + def.Name,
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 true // If any random errors pop up, try setting this to false first.
             );
             ILGenerator il = dynamic.GetILGenerator();
 
-            LocalBuilder[] locals = Definition.Body.Variables.Select(
+            LocalBuilder[] locals = def.Body.Variables.Select(
                 var => il.DeclareLocal(ResolveMember(var.VariableType, genericArgsType, genericArgsMethod) as Type, var.IsPinned)
             ).ToArray();
 
             // Pre-pass - Set up label map.
             Dictionary<int, Label> labelMap = new Dictionary<int, Label>();
-            foreach (Instruction instr in Definition.Body.Instructions) {
+            foreach (Instruction instr in def.Body.Instructions) {
                 if (instr.Operand is Instruction[] targets) {
                     foreach (Instruction target in targets)
                         if (!labelMap.ContainsKey(target.Offset))
@@ -108,12 +144,12 @@ namespace MonoMod.Utils {
             }
 
             object[] emitArgs = new object[2];
-            foreach (Instruction instr in Definition.Body.Instructions) {
+            foreach (Instruction instr in def.Body.Instructions) {
                 if (labelMap.TryGetValue(instr.Offset, out Label label))
                     il.MarkLabel(label);
 
                 // TODO: This can be improved perf-wise!
-                foreach (ExceptionHandler handler in Definition.Body.ExceptionHandlers) {
+                foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
                     if (handler.TryStart == instr) {
                         il.BeginExceptionBlock();
 
@@ -154,14 +190,14 @@ namespace MonoMod.Utils {
                     }
 
                     if (operand == null)
-                        throw new NullReferenceException($"Unexpected null @ {Definition} @ {instr}");
+                        throw new NullReferenceException($"Unexpected null @ {def} @ {instr}");
 
                     Type operandType = operand.GetType();
                     MethodInfo emit;
                     if (!_Emitters.TryGetValue(operandType, out emit))
                         emit = _Emitters.FirstOrDefault(kvp => kvp.Key.IsAssignableFrom(operandType)).Value;
                     if (emit == null)
-                        throw new InvalidOperationException($"Unexpected unemittable {operand.GetType().FullName} @ {Definition} @ {instr}");
+                        throw new InvalidOperationException($"Unexpected unemittable {operand.GetType().FullName} @ {def} @ {instr}");
 
                     emitArgs[0] = _ReflOpCodes[instr.OpCode.Value];
                     emitArgs[1] = operand;
@@ -169,7 +205,7 @@ namespace MonoMod.Utils {
                 }
 
                 // TODO: This can be improved perf-wise!
-                foreach (ExceptionHandler handler in Definition.Body.ExceptionHandlers) {
+                foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
                     if (handler.HandlerEnd == instr.Next) {
                         il.EndExceptionBlock();
                     }
@@ -227,8 +263,10 @@ namespace MonoMod.Utils {
         }
 
         public void Dispose() {
-            _Module?.Dispose();
-            _Module = null;
+            if (_Module != null && (--_ModuleRef) == 0) {
+                _Module.Dispose();
+                _Module = null;
+            }
         }
 
     }
