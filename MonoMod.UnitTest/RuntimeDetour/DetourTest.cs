@@ -1,15 +1,16 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MonoMod.RuntimeDetour;
-using NUnit.Framework;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    public static class DetourTest {
-        [Test]
-        public static void TestDetours() {
+    [TestClass]
+    public class DetourTest {
+        [TestMethod]
+        public void TestDetours() {
             Console.WriteLine("Detours: none");
             DetourExample.TestStep(5, 6, 8);
             Console.WriteLine();

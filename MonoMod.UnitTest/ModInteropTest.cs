@@ -1,15 +1,16 @@
-﻿using MonoMod.ModInterop;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MonoMod.ModInterop;
 using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
-using NUnit.Framework;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    public static class ModInteropTest {
-        [Test]
-        public static void TestModInterop() {
+    [TestClass]
+    public class ModInteropTest {
+        [TestMethod]
+        public void TestModInterop() {
             typeof(UtilsC).ModInterop();
             typeof(UtilsD).ModInterop();
 

@@ -1,18 +1,19 @@
-﻿using Mono.Cecil;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.ModInterop;
 using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
-using NUnit.Framework;
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    public static class DynamicMethodDefinitionTest {
-        [Test]
-        public static void TestDMD() {
+    [TestClass]
+    public class DynamicMethodDefinitionTest {
+        [TestMethod]
+        public void TestDMD() {
             Counter = 0;
 
             // Run the original method.
