@@ -48,11 +48,15 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool GotoNext(this ILProcessor il, ref int index, Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
             Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
-            for (int i = il.ClampWrapIndex(index); i < instrs.Count; i++) {
-                if (predicate(instrs, i)) {
-                    index = i;
-                    return true;
+            try {
+                for (int i = il.ClampWrapIndex(index); i < instrs.Count; i++) {
+                    if (predicate(instrs, i)) {
+                        index = i;
+                        return true;
+                    }
                 }
+            } catch {
+                // Fail silently.
             }
             return false;
         }
@@ -66,6 +70,15 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
             }
             return false;
+        }
+
+        public static void UpdateBranches(this ILProcessor il, int indexFrom, int indexTo) {
+            Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
+            Instruction instrFrom = instrs[indexFrom];
+            Instruction instrTo = instrs[indexTo];
+            foreach (Instruction instr in instrs)
+                if (instr.Operand == instrFrom)
+                    instr.Operand = instrTo;
         }
 
         #endregion

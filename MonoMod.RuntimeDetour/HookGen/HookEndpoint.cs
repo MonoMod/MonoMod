@@ -5,6 +5,8 @@ using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
+using System.Text;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour.HookGen {
     internal sealed class HookEndpoint<T> where T : Delegate {
@@ -58,7 +60,19 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         internal void DetourILDetourTarget() {
             ILProxyDetour?.Dispose();
-            ILProxyDetour = new NativeDetour(ILProxy, ILList.Count == 0 ? ILCopy : DMD.Generate());
+            try {
+                ILProxyDetour = new NativeDetour(ILProxy, ILList.Count == 0 ? ILCopy : DMD.Generate());
+            } catch (Exception e) {
+                StringBuilder builder = new StringBuilder();
+                if (DMD.Definition?.Body?.Instructions != null) {
+                    builder.AppendLine("IL hook failed for:");
+                    foreach (Instruction i in DMD.Definition.Body.Instructions)
+                        builder.AppendLine(i?.ToString() ?? "NULL!");
+                } else {
+                    builder.AppendLine("IL hook failed, no instructions found");
+                }
+                throw new InvalidProgramException(builder.ToString(), e);
+            }
         }
 
         public void Add(Delegate hookDelegate) {

@@ -19,7 +19,7 @@ namespace MonoMod.UnitTest {
             // Note that if you need non-layered, low-level hooks, you can use NativeDetour instead.
             // This is also why the variable type is IDetour.
             // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
-            IDetour detourTestMethodA = new RuntimeDetour.Detour(
+            IDetour detourTestMethodA = new Detour(
                 () => default(DetourExample).TestMethod(default(int), default(int)),
                 () => TestMethod_A(default(DetourExample), default(int), default(int))
             );
@@ -29,7 +29,7 @@ namespace MonoMod.UnitTest {
                 TestStaticMethod_A
             );
             // MethodBase, old syntax.
-            IDetour detourTestVoidMethodA = new RuntimeDetour.Detour(
+            IDetour detourTestVoidMethodA = new Detour(
                 typeof(DetourExample).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                 typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
             );
@@ -39,15 +39,15 @@ namespace MonoMod.UnitTest {
             detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
             Console.WriteLine();
 
-            IDetour detourTestMethodB = new RuntimeDetour.Detour(
+            IDetour detourTestMethodB = new Detour(
                 () => default(DetourExample).TestMethod(default(int), default(int)),
                 () => TestMethod_B(default(DetourExample), default(int), default(int))
             );
-            IDetour detourTestStaticMethodB = new RuntimeDetour.Detour(
+            IDetour detourTestStaticMethodB = new Detour(
                  () => DetourExample.TestStaticMethod(default(int), default(int)),
                  () => TestStaticMethod_B(default(int), default(int))
             );
-            IDetour detourTestVoidMethodB = new RuntimeDetour.Detour(
+            IDetour detourTestVoidMethodB = new Detour(
                  () => DetourExample.TestVoidMethod(default(int), default(int)),
                  () => TestVoidMethod_B(default(int), default(int))
             );
