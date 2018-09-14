@@ -18,7 +18,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         private DynamicMethodDefinition DMD;
         private DynamicMethod ILCopy;
-        private DynamicMethod ILProxy;
         private NativeDetour ILProxyDetour;
         private Detour ILDetour;
 
@@ -29,29 +28,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 // Add a "transparent" detour for IL manipulation.
                 DMD = new DynamicMethodDefinition(method, HookEndpointManager.GetModule(method.DeclaringType.Assembly));
                 ILCopy = method.CreateILCopy();
-
-                ParameterInfo[] args = Method.GetParameters();
-                Type[] argTypes;
-                if (!Method.IsStatic) {
-                    argTypes = new Type[args.Length + 1];
-                    argTypes[0] = Method.DeclaringType;
-                    for (int i = 0; i < args.Length; i++)
-                        argTypes[i + 1] = args[i].ParameterType;
-                } else {
-                    argTypes = new Type[args.Length];
-                    for (int i = 0; i < args.Length; i++)
-                        argTypes[i] = args[i].ParameterType;
-                }
-
-                ILProxy = new DynamicMethod(
-                    "ILDetour:" + DMD.Definition.DeclaringType.FullName + "::" + DMD.Definition.Name,
-                    (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                    Method.DeclaringType,
-                    false
-                ).Stub().Pin();
-
-                ILDetour = new Detour(method, ILProxy);
-
+                ILDetour = new Detour(method, ILCopy);
                 DetourILDetourTarget();
             } catch {
                 // Fail silently.
@@ -60,8 +37,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         internal void DetourILDetourTarget() {
             ILProxyDetour?.Dispose();
+            if (ILList.Count == 0)
+                return;
             try {
-                ILProxyDetour = new NativeDetour(ILProxy, ILList.Count == 0 ? ILCopy : DMD.Generate());
+                ILProxyDetour = new NativeDetour(ILCopy, DMD.Generate());
             } catch (Exception e) {
                 StringBuilder builder = new StringBuilder();
                 if (DMD.Definition?.Body?.Instructions != null) {
