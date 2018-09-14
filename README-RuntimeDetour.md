@@ -5,16 +5,44 @@ HookGen makes runtime detouring easy to use and flexible.
 2. Add `MMHOOK_Celeste.dll` to your assembly references in your mod project.
 3.  
 ```cs
-On.Celeste.PlayerHair.GetHairColor += (orig, self, index) => {
-    // Do anything before.
+// Let's hook Celeste.Player.GetTrailColor
+// Note that we can also -= this (and the IL. manipulation) by using separate methods.
+On.Celeste.Player.GetTrailColor += (orig, player, wasDashB) => {
+    Console.WriteLine("1 - Hello, World!");
 
-    // Feel free to modify the parameters.
-    // You can even replace the method's code entirely by ignoring the orig method.
-    var color = orig(self, index);
-    
-    // Do anything afterwards.
+    // Get the "original" color and manipulate it.
+    // This step is optional - we can return anything we want.
+    // We can also pass anything to the orig method.
+    Color color = orig(player, wasDashB);
+
+    // If the player is facing left, display a modified color.
+    if (player.Facing == Facings.Left)
+        return new Color(0xFF, color.G, color.B, color.A);
+
     return color;
 };
+
+// Or...
+
+IL.Celeste.Player.GetTrailColor += (body, il) => {
+    int index = 0;
+
+    // Insert Console.WriteLine(...) at the beginning.
+    il.Emit(ref index, OpCodes.Ldstr, "2 - Hello, IL manipulation!");
+    il.Emit(ref index, OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) }));
+
+    // After that, emit an inline delegate call.
+    il.EmitDelegateCall(ref index, () => {
+        Console.WriteLine("3 - Hello, C# code in IL!");
+    });
+    
+    // There are also many other helpers to f.e. quickly advance to a region or
+    // push + invoke any arbitrary delegate accepting any arguments, returning anything.
+    // Take a look at the il. autocomplete recommendations.
+
+    // Leave the rest of the method unmodified.
+};
+
 ```
 
 **The generated MMHOOK .dll doesn't contain any hooks in itself - it only enables runtime hooking, using RuntimeDetour behind the scene.**
@@ -22,6 +50,8 @@ On.Celeste.PlayerHair.GetHairColor += (orig, self, index) => {
 For every non-generic method in the input assembly, HookGen generates an event and two delegate types with the "On." namespace prefix.  
 The first delegate type, orig_MethodName, matches the original method's signature, adding a "self" parameter for instance methods.  
 The second type, hook_MethodName, is the event type. The only difference between orig_ and hook_ is that latter takes an orig_ delegate as the first parameter.
+
+It also generates an event with the "IL." namespace prefix to manipulate the IL at runtime. This feature is still WIP, but it's proven to work already.
 
 MonoMod.RuntimeDetour.HookGen and MonoMod.RuntimeDetour handle all the dirty detouring work transparently. You can even remove your hooks the same way you'd remove event handlers:
 
