@@ -3,11 +3,13 @@
 A general purpose .NET assembly modding "basework", powered by [cecil](https://github.com/jbevain/cecil/).  
 *MIT-licensed.*
 
+[![Build Status](https://0x0ade.visualstudio.com/MonoMod/_apis/build/status/0x0ade.MonoMod)](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1)
+
 ## Sections
 - [Introduction](#introduction)
 - [Using MonoMod](#using-monomod)
 - [Using ModInterop (ext)](/README-ModInterop.md)
-- [Using HookGen (ext)](/README-RuntimeDetour.md)
+- [Using RuntimeDetour & HookGen (ext)](/README-RuntimeDetour.md)
 - [FAQ](#using-monomod)
 
 ### Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
@@ -18,29 +20,30 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 ----
 
 ## Introduction
-MonoMod is a modding "basework" (base tools and framework) used in one way or another to mod the following games:
+MonoMod is a modding "basework" (base tools / framework). It already makes modding the following games possible:
 - Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding),
 - Celeste: [Everest](https://everestapi.github.io/)
 - Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding)
-- Rain World, and many other Unity games: [via Partiality wrapper](http://www.raindb.net/)
-- Enter the Gungeon: [Mod the Gungeon (unmaintained)](https://modthegungeon.github.io/)
+- Rain World: [via Partiality wrapper](http://www.raindb.net/)
+- Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
 - FEZ: [FEZMod (defunct)](https://github.com/0x0ade/FEZMod-Legacy)
-- *Ping me if your mod uses MonoMod!*
+- And many more! *Ping me on Discord if your mod uses MonoMod!*
 
-It consists of the following modular parts:
+It consists of the following **modular components**:
 - **MonoMod:** The core MonoMod IL patcher and relinker.
 - **MonoMod.Utils:** Utilities and helpers that not only benefit MonoMod, but also mods in general. It contains classes such as `FastReflectionHelper`, `LimitedStream`, `DynamicMethodHelper` and the `ModInterop` namespace.
 - **MonoMod.DebugIL:** Enable IL-level debugging of third-party assemblies in Visual Studio.
 - **MonoMod.BaseLoader:** A base on which a C# mod loader can be built upon, including a basic engine-agnostic mod content manager and mod relinker.
 - **MonoMod.RuntimeDetour:** A flexible and easily extensible runtime detouring library, which doesn't require cecil.
-- **MonoMod.RuntimeDetour.HookGen:** Shortened "HookGen", it's an utiltiy generating a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events.
+- **HookGen:** Shortened "HookGen", it's an utiltiy generating a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events.
 
 ### Why?
 - Cross-version compatibility, even with obfuscated assemblies.
 - Cross-platform compatibility, even if the game uses another engine (f.e. XNA vs FNA in Celeste).
 - Use language features which otherwise wouldn't be supported (f.e. C# 7 in Unity 4.3).
-- The patching process can happen on the player's machine with a mod installer. No need to pre-patch and share patched assemblies, which you probably aren't allowed to redistribute anyway.
+- Patch on the player's machine with a basic mod installer. No need to pre-patch, no redistribution of game data, no copyright violations.
 - With HookGen, runtime hooks are as simple as `On.Namespace.Type.Method += (orig, self, a, b, c) => { /* ... */ }`
+- Modularity allows you to mix and match. Use only what you need!
 
 ----
 
@@ -51,7 +54,7 @@ Drop `MonoMod.exe`, all dependencies (Utils, cecil) and your patches into the ga
 
 MonoMod scans the directory for files named `[Assembly].*.mm.dll` and generates `MONOMODDED_[Assembly].exe`, which is the patched version of the assembly.
 
-### Example
+### Example Patch
 
 You've got `Celeste.exe` and want to patch the method `public override void Celeste.Player.Added(Scene scene)`.
 
@@ -90,7 +93,7 @@ To make patching easy, yet flexible, the MonoMod patcher offers a few extra feat
 
 - `MonoMod.MonoModRules` will be executed at patch time. Your rules can define relink maps (relinking methods, fields or complete assemblies), change the patch behavior per platform or [define custom modifiers](MonoMod/Modifiers/MonoModCustomAttribute.cs) to f.e. [modify a method on IL-level using cecil.](https://github.com/0x0ade/MonoMod/issues/15#issuecomment-344570625)
 - For types and methods, to be ignored by MonoMod (because of a superclass that is defined in another assembly and thus shouldn't be patched), use the `MonoModIgnore` attribute.
-- [Check the full list of standard modifiers with their descriptions](MonoMod/Modifiers), including "patch-time hooks", proxies via `[MonoModLinkTo]`, conditinal patching via `[MonoModIfFlag]` + MonoModRules, and a few more. 
+- [Check the full list of standard modifiers with their descriptions](MonoMod/Modifiers), including "patch-time hooks", proxies via `[MonoModLinkTo]` and `[MonoModLinkFrom]`, conditinal patching via `[MonoModIfFlag]` + MonoModRules, and a few more. 
 
 ----
 
