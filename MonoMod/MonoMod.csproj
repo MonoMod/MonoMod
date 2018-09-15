@@ -32,7 +32,7 @@
     <Externalconsole>true</Externalconsole>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DefineConstants>TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;TRACE</DefineConstants>
+    <DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
