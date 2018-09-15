@@ -70,7 +70,7 @@ namespace Celeste {
 
     // Visibility defaults to "internal", which hides your patch from runtime mods.
     // If you want to "expose" new members to runtime mods, create extension methods in a public static class PlayerExt
-    static class patch_Player {
+    class patch_Player : Player { // : Player lets us reuse any of its visible members without redefining them.
         // MonoMod creates a copy of the original method, called orig_Added.
         public extern void orig_Added(Scene scene);
         public override void Added(Scene scene) {
