@@ -85,13 +85,14 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (callback == null)
                 return;
 
-            ILList.Add(callback);
             MethodDefinition def = DMD.Definition;
             callback.DynamicInvoke(def.Body, def.Body.GetILProcessor());
 
             DMD.Definition.RecalculateILOffsets();
             DMD.Definition.ConvertShortLongOps();
             DetourILDetourTarget();
+
+            ILList.Add(callback);
         }
 
         public void Unmodify(Delegate callback) {
