@@ -49,7 +49,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool GotoNext(this ILProcessor il, ref int index, Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
             Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
             try {
-                for (int i = il.ClampWrapIndex(index); i < instrs.Count; i++) {
+                for (int i = il.ClampWrapIndex(index + 1); i < instrs.Count; i++) {
                     if (predicate(instrs, i)) {
                         index = i;
                         return true;
@@ -63,7 +63,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool GotoPrev(this ILProcessor il, ref int index, Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
             Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
-            for (int i = il.ClampWrapIndex(index); i < instrs.Count; i--) {
+            for (int i = il.ClampWrapIndex(index - 1); i < instrs.Count; i--) {
                 if (predicate(instrs, i)) {
                     index = i;
                     return true;
