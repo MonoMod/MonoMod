@@ -98,7 +98,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (callback == null)
                 return;
 
-            ILList.Remove(callback);
+            int index = ILList.LastIndexOf(callback);
+            if (index == -1)
+                return;
+            ILList.RemoveAt(index);
+
             DMD.Reload(null, true);
             MethodDefinition def = DMD.Definition;
             foreach (Delegate cb in ILList)

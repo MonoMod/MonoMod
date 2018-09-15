@@ -24,8 +24,9 @@ namespace MonoMod.BaseLoader {
                     if (IsPortablePdb(symbolStream))
                         return new PortablePdbReaderProvider().GetSymbolReader(module, symbolStream);
                     return new NativePdbReaderProvider().GetSymbolReader(module, symbolStream);
-#endif
+#else
                     return new PdbReaderProvider().GetSymbolReader(module, symbolStream);
+#endif
 
                 default:
                     return null;
