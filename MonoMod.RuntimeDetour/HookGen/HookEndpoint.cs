@@ -37,6 +37,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         internal void DetourILDetourTarget() {
             ILProxyDetour?.Dispose();
+            ILProxyDetour = null;
             if (ILList.Count == 0)
                 return;
             try {
