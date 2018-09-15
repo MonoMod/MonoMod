@@ -20,7 +20,7 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 ----
 
 ## Introduction
-MonoMod is a modding "basework" (base tools / framework). It already makes modding the following games possible:
+MonoMod is a modding "basework" (base tools / framework). Mods for the following games are already using it:
 - Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding),
 - Celeste: [Everest](https://everestapi.github.io/)
 - Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding)
@@ -31,18 +31,19 @@ MonoMod is a modding "basework" (base tools / framework). It already makes moddi
 
 It consists of the following **modular components**:
 - **MonoMod:** The core MonoMod IL patcher and relinker.
-- **MonoMod.Utils:** Utilities and helpers that not only benefit MonoMod, but also mods in general. It contains classes such as `FastReflectionHelper`, `LimitedStream`, `DynamicMethodHelper` and the `ModInterop` namespace.
+- **MonoMod.Utils:** Utilities and helpers that not only benefit MonoMod, but also mods in general. It contains classes such as `FastReflectionHelper`, `LimitedStream`, `DynamicMethodHelper`, `DynamicMethodDefinition` and the `ModInterop` namespace.
 - **MonoMod.DebugIL:** Enable IL-level debugging of third-party assemblies in Visual Studio.
 - **MonoMod.BaseLoader:** A base on which a C# mod loader can be built upon, including a basic engine-agnostic mod content manager and mod relinker.
-- **MonoMod.RuntimeDetour:** A flexible and easily extensible runtime detouring library, which doesn't require cecil.
+- **MonoMod.RuntimeDetour:** A flexible and easily extensible runtime detouring library. Doesn't require cecil in itself.
 - **HookGen:** Shortened "HookGen", it's an utiltiy generating a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events.
 
 ### Why?
 - Cross-version compatibility, even with obfuscated assemblies.
-- Cross-platform compatibility, even if the game uses another engine (f.e. XNA vs FNA in Celeste).
+- Cross-platform compatibility, even if the game uses another engine (f.e. Celeste uses XNA on Windows, FNA on macOS and Linux).
 - Use language features which otherwise wouldn't be supported (f.e. C# 7 in Unity 4.3).
 - Patch on the player's machine with a basic mod installer. No need to pre-patch, no redistribution of game data, no copyright violations.
-- With HookGen, runtime hooks are as simple as `On.Namespace.Type.Method += (orig, self, a, b, c) => { /* ... */ }`
+- With HookGen, runtime hooks are as simple as `On.Namespace.Type.Method += (orig, a, b, c) => { /* ... */ }`
+- With HookGen IL, you can manipulate IL at runtime and even inline C# delegate calls between instructions.
 - Modularity allows you to mix and match. Use only what you need!
 
 ----
@@ -128,5 +129,5 @@ This depends on the licensing situation of the input assemblies. If you're not s
 ### Is it possible to use multiple patches?
 Yes, as long as the patches don't affect the same regions of code.
 
-While technically possible, its behaviour is not strictly defined and depends on the patching order.  
+While possible, its behaviour is not strictly defined and depends on the patching order.  
 Instead, please use runtime detours / hooks instead, as those were built with "multiple mod support" in mind.
