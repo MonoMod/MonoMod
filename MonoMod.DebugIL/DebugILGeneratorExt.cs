@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿#if !LEGACY
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
@@ -104,3 +105,4 @@ namespace MonoMod.DebugIL {
 
     }
 }
+#endif

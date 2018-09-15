@@ -158,8 +158,12 @@ namespace MonoMod {
                     }
                     _writerParameters = new WriterParameters() {
                         WriteSymbols = true,
-                        SymbolWriterProvider = 
+                        SymbolWriterProvider =
+#if !LEGACY
                             pdb ? new NativePdbWriterProvider() :
+#else
+                            pdb ? new PdbWriterProvider() :
+#endif
                             mdb ? new MdbWriterProvider() :
                             (ISymbolWriterProvider) null
                     };
@@ -252,8 +256,10 @@ namespace MonoMod {
 
         public virtual void ClearCaches(bool all = false, bool shareable = false, bool moduleSpecific = false) {
             if (all || shareable) {
+#if !LEGACY
                 foreach (KeyValuePair<string, ModuleDefinition> dep in DependencyCache)
                     dep.Value.Dispose();
+#endif
                 DependencyCache.Clear();
             }
 
@@ -266,18 +272,24 @@ namespace MonoMod {
         public virtual void Dispose() {
             ClearCaches(all: true);
 
+#if !LEGACY
             Module?.Dispose();
+#endif
             Module = null;
 
+#if !LEGACY
             AssemblyResolver?.Dispose();
+#endif
             AssemblyResolver = null;
 
+#if !LEGACY
             foreach (ModuleDefinition mod in Mods)
                 mod?.Dispose();
 
             foreach (List<ModuleDefinition> dependencies in DependencyMap.Values)
                 foreach (ModuleDefinition dep in dependencies)
                     dep?.Dispose();
+#endif
             DependencyMap.Clear();
 
             Input?.Dispose();
@@ -389,7 +401,11 @@ namespace MonoMod {
                     dep = AssemblyResolver.Resolve(depRef)?.MainModule;
                 } catch { }
                 if (dep != null)
+#if !LEGACY
                     path = dep.FileName;
+#else
+                    path = dep.FullyQualifiedName;
+#endif
             }
 
             // Manually check in GAC
@@ -430,7 +446,11 @@ namespace MonoMod {
                     dep = AssemblyResolver.Resolve(new AssemblyNameReference(fullName ?? name, new Version(0, 0, 0, 0)))?.MainModule;
                 } catch { }
                 if (dep != null)
+#if !LEGACY
                     path = dep.FileName;
+#else
+                    path = dep.FullyQualifiedName;
+#endif
             }
 
             // Check if available in GAC
@@ -496,8 +516,10 @@ namespace MonoMod {
             ReaderParameters rp = new ReaderParameters(_rp.ReadingMode);
             rp.AssemblyResolver = _rp.AssemblyResolver;
             rp.MetadataResolver = _rp.MetadataResolver;
+#if !LEGACY
             rp.MetadataImporterProvider = _rp.MetadataImporterProvider;
             rp.ReflectionImporterProvider = _rp.ReflectionImporterProvider;
+#endif
             rp.SymbolStream = _rp.SymbolStream;
             rp.SymbolReaderProvider = _rp.SymbolReaderProvider;
             rp.ReadSymbols = _rp.ReadSymbols;
@@ -906,7 +928,7 @@ namespace MonoMod {
             return null;
         }
 
-        #region Pre-Patch Pass
+#region Pre-Patch Pass
         /// <summary>
         /// Pre-Patches the module (adds new types, module references, resources, ...).
         /// </summary>
@@ -969,7 +991,7 @@ namespace MonoMod {
             foreach (GenericParameter genParam in type.GenericParameters)
                 newType.GenericParameters.Add(genParam.Clone());
 
-            foreach (InterfaceImplementation interf in type.Interfaces)
+            foreach (var interf in type.Interfaces)
                 newType.Interfaces.Add(interf);
 
             newType.ClassSize = type.ClassSize;
@@ -996,9 +1018,9 @@ namespace MonoMod {
                 PrePatchType(type.NestedTypes[i]);
             }
         }
-        #endregion
+#endregion
 
-        #region Patch Pass
+#region Patch Pass
         /// <summary>
         /// Patches the module (adds new type members).
         /// </summary>
@@ -1467,9 +1489,9 @@ namespace MonoMod {
 
             return method;
         }
-        #endregion
+#endregion
 
-        #region PatchRefs Pass
+#region PatchRefs Pass
         public virtual void PatchRefs() {
             if (Environment.GetEnvironmentVariable("MONOMOD_LEGACY_RELINKMAP") != "0") {
                 // TODO: Make this "opt-in" in the future.
@@ -1535,7 +1557,13 @@ namespace MonoMod {
             Log("[UpgradeSplit] THIS STEP WILL BE REMOVED IN A FUTURE RELEASE.");
             Log("[UpgradeSplit] It is only meant to preserve compatibility with mods during the transition to a \"split\" MonoMod.");
 
-            string root = Path.GetDirectoryName(DependencyCache["MonoMod"].FileName);
+            string root = Path.GetDirectoryName(DependencyCache["MonoMod"]
+#if !LEGACY
+                .FileName
+#else
+                .FullyQualifiedName
+#endif
+            );
 
             bool found = false;
             // Don't compact this, otherwise it'll only run until the first "true" upgrade.
@@ -1611,11 +1639,17 @@ namespace MonoMod {
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < type.Interfaces.Count; i++) {
+#if !LEGACY
                 InterfaceImplementation interf = type.Interfaces[i];
                 InterfaceImplementation newInterf = new InterfaceImplementation(interf.InterfaceType.Relink(Relinker, type));
                 foreach (CustomAttribute attrib in interf.CustomAttributes)
                     newInterf.CustomAttributes.Add(attrib.Relink(Relinker, type));
                 type.Interfaces[i] = newInterf;
+#else
+                TypeReference interf = type.Interfaces[i];
+                TypeReference newInterf = interf.Relink(Relinker, type);
+                type.Interfaces[i] = newInterf;
+#endif
             }
 
             // Don't foreach when modifying the collection
@@ -1799,9 +1833,9 @@ namespace MonoMod {
             }
         }
 
-        #endregion
+#endregion
 
-        #region Cleanup Pass
+#region Cleanup Pass
         public virtual void Cleanup(bool all = false) {
             for (int i = 0; i < Module.Types.Count; i++) {
                 TypeDefinition type = Module.Types[i];
@@ -1855,9 +1889,9 @@ namespace MonoMod {
             }
         }
 
-        #endregion
+#endregion
 
-        #region Default PostProcessor Pass
+#region Default PostProcessor Pass
         public virtual void DefaultPostProcessor(MonoModder modder) {
             foreach (TypeDefinition type in Module.Types)
                 DefaultPostProcessType(type);
@@ -1903,7 +1937,7 @@ namespace MonoMod {
                 if (PreventInline && method.HasBody) {
                     method.NoInlining = true;
                     // Remove AggressiveInlining
-                    method.ImplAttributes &= ~MethodImplAttributes.AggressiveInlining;
+                    method.ImplAttributes &= (MethodImplAttributes) 0x0100;
                 }
 
                 method.RecalculateILOffsets();
@@ -1923,9 +1957,9 @@ namespace MonoMod {
             foreach (TypeDefinition nested in type.NestedTypes)
                 DefaultPostProcessType(nested);
         }
-        #endregion
+#endregion
 
-        #region MonoMod injected types
+#region MonoMod injected types
         public virtual TypeDefinition PatchWasHere() {
             for (int ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "WasHere") {
@@ -2102,10 +2136,10 @@ namespace MonoMod {
             Module.Types.Add(attrType);
             return _mmPatchCtor;
         }
-        #endregion
+#endregion
 
 
-        #region Helper methods
+#region Helper methods
         /// <summary>
         /// Creates a new non-conflicting MetadataToken.
         /// </summary>
@@ -2155,7 +2189,7 @@ namespace MonoMod {
 
             return !method.IsRuntimeSpecialName; // Formerly SpecialName. If something breaks, blame UnderRail.
         }
-        #endregion
+#endregion
 
     }
 }

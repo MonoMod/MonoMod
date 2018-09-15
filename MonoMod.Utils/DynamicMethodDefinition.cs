@@ -79,18 +79,22 @@ namespace MonoMod.Utils {
                     if (_Module != null && !force) {
                         module = _Module;
                     } else {
+#if !LEGACY
                         _Module?.Dispose();
+#endif
                         module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.Assembly.Location);
                     }
                 }
                 _Module = module;
                 _ModuleRef++;
-            } catch when (_Dispose()) {
+            } catch when (_DisposeEarly()) {
             }
 
-            bool _Dispose() {
+            bool _DisposeEarly() {
                 if (moduleTmp != null) {
+#if !LEGACY
                     moduleTmp.Dispose();
+#endif
                     _Module = null;
                     _ModuleRef = 0;
                 }
@@ -217,7 +221,20 @@ namespace MonoMod.Utils {
         }
 
         private static MemberInfo ResolveMember(MemberReference mref, Type[] genericTypeArguments, Type[] genericMethodArguments, Module module = null) {
+#if !LEGACY
             MemberReference mdef = mref.Resolve() as MemberReference;
+#else
+            MemberReference mdef;
+            switch (mref) {
+                case IMemberDefinition cast: mdef = cast as MemberReference; break;
+                case MethodReference cast: mdef = cast.Resolve(); break;
+                case FieldReference cast: mdef = cast.Resolve(); break;
+                case TypeReference cast: mdef = cast.Resolve(); break;
+                case PropertyReference cast: mdef = cast.Resolve(); break;
+                case EventReference cast: mdef = cast.Resolve(); break;
+                default: throw new NotSupportedException();
+            }
+#endif
             int token = mdef.MetadataToken.ToInt32();
 
             if (module == null) {
@@ -264,7 +281,9 @@ namespace MonoMod.Utils {
 
         public void Dispose() {
             if (_Module != null && (--_ModuleRef) == 0) {
+#if !LEGACY
                 _Module.Dispose();
+#endif
                 _Module = null;
             }
         }

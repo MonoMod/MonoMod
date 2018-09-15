@@ -207,7 +207,9 @@ namespace MonoMod.BaseLoader {
                 return null;
             } finally {
                 Modder.ClearCaches(moduleSpecific: true);
+#if !LEGACY
                 Modder.Module.Dispose();
+#endif
                 Modder.Module = null;
                 Modder.ReaderParameters.SymbolStream?.Dispose();
             }

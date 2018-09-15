@@ -24,9 +24,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public static void SetModule(Assembly asm, ModuleDefinition module) {
+#if !LEGACY
             if (ModuleManagedMap.TryGetValue(asm, out bool isManaged) && isManaged) {
                 ModuleMap[asm].Dispose();
             }
+#endif
             ModuleMap[asm] = module;
             ModuleManagedMap[asm] = false;
         }

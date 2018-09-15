@@ -8,6 +8,9 @@ namespace MonoMod.DebugIL {
     class Program {
 
         public static void Main(string[] args) {
+#if LEGACY
+            throw new NotSupportedException();
+#else
             Console.WriteLine("MonoMod.DebugIL " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
 
             if (args.Length == 0) {
@@ -60,7 +63,7 @@ namespace MonoMod.DebugIL {
 
             if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                 Console.ReadKey();
-            return;
+#endif
         }
 
     }

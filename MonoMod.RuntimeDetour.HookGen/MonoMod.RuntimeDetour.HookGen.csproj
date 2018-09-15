@@ -12,44 +12,33 @@
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' Or '$(Configuration)|$(Platform)' == 'DebugLegacy|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
+	<DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' Or '$(Configuration)|$(Platform)' == 'ReleaseLegacy|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
+	<DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy' ">
+    <CecilLegacy>Legacy</CecilLegacy>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Mono.Cecil, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
-      <HintPath>$(SolutionDir)\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Mono.Cecil.Mdb, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
-      <HintPath>$(SolutionDir)\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.Mdb.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Mono.Cecil.Pdb, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
-      <HintPath>$(SolutionDir)\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.Pdb.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Mono.Cecil.Rocks, Version=0.10.0.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
-      <HintPath>$(SolutionDir)\packages\Mono.Cecil.0.10.0\lib\net35\Mono.Cecil.Rocks.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
@@ -75,7 +64,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <PackageReference Include="Mono.Cecil">
+      <Version Condition="'$(CecilLegacy)' == ''">0.10.0</Version>
+      <Version Condition="'$(CecilLegacy)' == 'Legacy'">0.9.6</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -82,7 +82,13 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
                 mm.Log("[HookGen] Starting HookGenerator");
                 HookGenerator gen = new HookGenerator(mm, Path.GetFileName(pathOut));
+#if !LEGACY
                 using (ModuleDefinition mOut = gen.OutputModule) {
+#else
+                ModuleDefinition mOut = gen.OutputModule;
+                {
+#endif
+
                     gen.Generate();
                     mOut.Write(pathOut);
                 }
