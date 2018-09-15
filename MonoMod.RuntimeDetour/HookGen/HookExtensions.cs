@@ -85,19 +85,26 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         #region Base Create / Emit Helpers
 
+        public static FieldReference Import(this ILProcessor il, FieldInfo field)
+            => il.Body.Method.Module.ImportReference(field);
+        public static MethodReference Import(this ILProcessor il, MethodBase method)
+            => il.Body.Method.Module.ImportReference(method);
+        public static TypeReference Import(this ILProcessor il, Type type)
+            => il.Body.Method.Module.ImportReference(type);
+
         public static Instruction Create(this ILProcessor il, OpCode opcode, FieldInfo field)
-            => il.Create(opcode, il.Body.Method.Module.ImportReference(field));
+            => il.Create(opcode, il.Import(field));
         public static Instruction Create(this ILProcessor il, OpCode opcode, MethodBase method)
-            => il.Create(opcode, il.Body.Method.Module.ImportReference(method));
+            => il.Create(opcode, il.Import(method));
         public static Instruction Create(this ILProcessor il, OpCode opcode, Type type)
-            => il.Create(opcode, il.Body.Method.Module.ImportReference(type));
+            => il.Create(opcode, il.Import(type));
 
         public static void Emit(this ILProcessor il, OpCode opcode, FieldInfo field)
-            => il.Emit(opcode, il.Body.Method.Module.ImportReference(field));
+            => il.Emit(opcode, il.Import(field));
         public static void Emit(this ILProcessor il, OpCode opcode, MethodBase method)
-            => il.Emit(opcode, il.Body.Method.Module.ImportReference(method));
+            => il.Emit(opcode, il.Import(method));
         public static void Emit(this ILProcessor il, OpCode opcode, Type type)
-            => il.Emit(opcode, il.Body.Method.Module.ImportReference(type));
+            => il.Emit(opcode, il.Import(type));
 
         public static void Emit(this ILProcessor il, ref int index, OpCode opcode, ParameterDefinition parameter)
             => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, parameter));

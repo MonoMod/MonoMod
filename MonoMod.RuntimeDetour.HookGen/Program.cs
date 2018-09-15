@@ -49,6 +49,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
             }
 
+            string missingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW");
+            if (string.IsNullOrEmpty(missingDependencyThrow))
+                Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "0");
+
+
             if (pathInI >= args.Length) {
                 Console.WriteLine("No assembly path passed.");
                 if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
@@ -63,7 +68,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             using (MonoModder mm = new MonoModder() {
                 InputPath = pathIn,
-                OutputPath = pathOut
+                OutputPath = pathOut,
+                ReadingMode = ReadingMode.Deferred
             }) {
                 mm.Read();
 
