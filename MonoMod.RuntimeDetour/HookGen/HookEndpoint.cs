@@ -35,10 +35,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
             }
         }
 
-        internal void DetourILDetourTarget() {
+        internal void DetourILDetourTarget(bool force = false) {
             ILProxyDetour?.Dispose();
             ILProxyDetour = null;
-            if (ILList.Count == 0)
+            if (!force && ILList.Count == 0)
                 return;
             try {
                 ILProxyDetour = new NativeDetour(ILCopy, DMD.Generate());
@@ -91,7 +91,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             DMD.Definition.RecalculateILOffsets();
             DMD.Definition.ConvertShortLongOps();
-            DetourILDetourTarget();
+            DetourILDetourTarget(true);
 
             ILList.Add(callback);
         }
