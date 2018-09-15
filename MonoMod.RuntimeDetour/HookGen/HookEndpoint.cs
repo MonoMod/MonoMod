@@ -26,7 +26,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             try {
                 // Add a "transparent" detour for IL manipulation.
-                DMD = new DynamicMethodDefinition(method, HookEndpointManager.GetModule(method.DeclaringType.Assembly));
+                DMD = new DynamicMethodDefinition(method, HookEndpointManager.GenerateCecilModule);
                 ILCopy = method.CreateILCopy();
                 ILDetour = new Detour(method, ILCopy);
                 DetourILDetourTarget();

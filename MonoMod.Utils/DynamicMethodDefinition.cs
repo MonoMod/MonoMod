@@ -44,6 +44,7 @@ namespace MonoMod.Utils {
 
         private readonly static Dictionary<Module, ModuleDefinition> _Modules = new Dictionary<Module, ModuleDefinition>();
         private readonly static Dictionary<Module, int> _ModuleRefs = new Dictionary<Module, int>();
+        private Func<AssemblyName, ModuleDefinition> _ModuleGen;
         private ModuleDefinition _Module {
             get {
                 if (_Modules.TryGetValue(Method.Module, out ModuleDefinition module))
@@ -66,15 +67,19 @@ namespace MonoMod.Utils {
             (_Module.LookupToken(Method.MetadataToken) as MethodReference)?.Resolve() ??
             throw new InvalidOperationException("Method definition not found");
 
-        public DynamicMethodDefinition(MethodBase method, ModuleDefinition module = null) {
+        public DynamicMethodDefinition(MethodBase method, Func<AssemblyName, ModuleDefinition> moduleGen = null) {
             Method = method ?? throw new ArgumentNullException(nameof(method));
-            Reload(module, false);
+            Reload(moduleGen, false);
         }
 
-        public void Reload(ModuleDefinition module = null, bool force = false) {
+        public void Reload(Func<AssemblyName, ModuleDefinition> moduleGen = null, bool force = false) {
             ModuleDefinition moduleTmp = null;
 
+            if (moduleGen != null)
+                _ModuleGen = moduleGen;
+
             try {
+                ModuleDefinition module = (moduleGen ?? _ModuleGen)?.Invoke(Method.Module.Assembly.GetName());
                 if (module == null) {
                     if (_Module != null && !force) {
                         module = _Module;
@@ -82,7 +87,11 @@ namespace MonoMod.Utils {
 #if !LEGACY
                         _Module?.Dispose();
 #endif
-                        module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.Assembly.Location);
+                        _Module = null;
+                        ReaderParameters rp = new ReaderParameters();
+                        if (_ModuleGen != null)
+                            rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
+                        module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.Assembly.Location, rp);
                     }
                 }
                 _Module = module;
@@ -286,6 +295,28 @@ namespace MonoMod.Utils {
 #endif
                 _Module = null;
             }
+        }
+
+        class AssemblyCecilDefinitionResolver : IAssemblyResolver {
+            private readonly Func<AssemblyName, ModuleDefinition> Gen;
+            private readonly IAssemblyResolver Fallback;
+
+            public AssemblyCecilDefinitionResolver(Func<AssemblyName, ModuleDefinition> moduleGen, IAssemblyResolver fallback) {
+                Gen = moduleGen;
+                Fallback = fallback;
+            }
+
+            public AssemblyDefinition Resolve(AssemblyNameReference name)
+                => Gen(new AssemblyName(name.FullName))?.Assembly ?? Fallback.Resolve(name);
+
+            public AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
+                => Gen(new AssemblyName(name.FullName)).Assembly ?? Fallback.Resolve(name, parameters);
+
+            public AssemblyDefinition Resolve(string fullName)
+                => Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName);
+
+            public AssemblyDefinition Resolve(string fullName, ReaderParameters parameters)
+                => Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName, parameters);
         }
 
     }
