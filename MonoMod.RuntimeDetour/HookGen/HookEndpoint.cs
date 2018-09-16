@@ -9,7 +9,7 @@ using System.Text;
 using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    internal sealed class HookEndpoint<T> where T : Delegate {
+    internal sealed class HookEndpoint {
 
         internal readonly MethodBase Method;
 
