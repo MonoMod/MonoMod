@@ -300,23 +300,48 @@ namespace MonoMod.Utils {
         class AssemblyCecilDefinitionResolver : IAssemblyResolver {
             private readonly Func<AssemblyName, ModuleDefinition> Gen;
             private readonly IAssemblyResolver Fallback;
+            private readonly Dictionary<string, AssemblyDefinition> Cache = new Dictionary<string, AssemblyDefinition>();
 
             public AssemblyCecilDefinitionResolver(Func<AssemblyName, ModuleDefinition> moduleGen, IAssemblyResolver fallback) {
                 Gen = moduleGen;
                 Fallback = fallback;
             }
 
-            public AssemblyDefinition Resolve(AssemblyNameReference name)
-                => Gen(new AssemblyName(name.FullName))?.Assembly ?? Fallback.Resolve(name);
+            public AssemblyDefinition Resolve(AssemblyNameReference name) {
+                if (Cache.TryGetValue(name.FullName, out AssemblyDefinition asm))
+                    return asm;
+                return Cache[name.FullName] = Gen(new AssemblyName(name.FullName))?.Assembly ?? Fallback.Resolve(name);
+            }
 
-            public AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
-                => Gen(new AssemblyName(name.FullName)).Assembly ?? Fallback.Resolve(name, parameters);
+            public AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters) {
+                if (Cache.TryGetValue(name.FullName, out AssemblyDefinition asm))
+                    return asm;
+                return Cache[name.FullName] = Gen(new AssemblyName(name.FullName)).Assembly ?? Fallback.Resolve(name, parameters);
+            }
 
-            public AssemblyDefinition Resolve(string fullName)
-                => Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName);
+#if LEGACY
 
-            public AssemblyDefinition Resolve(string fullName, ReaderParameters parameters)
-                => Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName, parameters);
+            public AssemblyDefinition Resolve(string fullName) {
+                if (Cache.TryGetValue(fullName, out AssemblyDefinition asm))
+                    return asm;
+                return Cache[fullName] = Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName);
+            }
+
+            public AssemblyDefinition Resolve(string fullName, ReaderParameters parameters) {
+                if (Cache.TryGetValue(fullName, out AssemblyDefinition asm))
+                    return asm;
+                return Cache[fullName] = Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName, parameters);
+            }
+
+#else
+
+            public void Dispose() {
+                foreach (AssemblyDefinition asm in Cache.Values)
+                    asm.Dispose();
+                Cache.Clear();
+            }
+
+#endif
         }
 
     }
