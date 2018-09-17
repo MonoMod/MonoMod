@@ -118,7 +118,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 for (int i = instrs.IndexOf(instr) + 1; i + predicates.Length - 1 < instrs.Count; i++) {
                     bool match = true;
                     for (int j = 0; j < predicates.Length; j++) {
-                        if (!(predicates[j]?.Invoke(instrs[i]) ?? true)) {
+                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true)) {
                             match = false;
                             break;
                         }
@@ -144,7 +144,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 for (; i > -1; i--) {
                     bool match = true;
                     for (int j = 0; j < predicates.Length; j++) {
-                        if (!(predicates[j]?.Invoke(instrs[i]) ?? true)) {
+                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true)) {
                             match = false;
                             break;
                         }
@@ -160,9 +160,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         }
 
-        public static void UpdateBranches(this ILProcessor il, Instruction from, Instruction to) {
+        public static void ReplaceOperands(this ILProcessor il, object from, object to) {
             foreach (Instruction instr in il.Body.Instructions)
-                if (instr.Operand == from)
+                if (instr.Operand?.Equals(from) ?? from == null)
                     instr.Operand = to;
         }
 
@@ -183,6 +183,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => il.Create(opcode, il.Import(method));
         public static Instruction Create(this ILProcessor il, OpCode opcode, Type type)
             => il.Create(opcode, il.Import(type));
+        public static Instruction Create(this ILProcessor il, OpCode opcode, object operand) {
+            Instruction instr = il.Create(opcode);
+            instr.Operand = operand;
+            return instr;
+        }
 
         public static void Emit(this ILProcessor il, OpCode opcode, FieldInfo field)
             => il.Emit(opcode, il.Import(field));
@@ -190,6 +195,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => il.Emit(opcode, il.Import(method));
         public static void Emit(this ILProcessor il, OpCode opcode, Type type)
             => il.Emit(opcode, il.Import(type));
+        public static void Emit(this ILProcessor il, OpCode opcode, object operand)
+            => il.Append(il.Create(opcode, operand));
 
         public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, ParameterDefinition parameter)
             => il._Insert(before, il.Create(opcode, parameter));
@@ -229,6 +236,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => il._Insert(before, il.Create(opcode, method));
         public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, Type type)
             => il._Insert(before, il.Create(opcode, type));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, object operand)
+            => il._Insert(before, il.Create(opcode, operand));
 
         #endregion
 
