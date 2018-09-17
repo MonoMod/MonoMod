@@ -184,7 +184,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static Instruction Create(this ILProcessor il, OpCode opcode, Type type)
             => il.Create(opcode, il.Import(type));
         public static Instruction Create(this ILProcessor il, OpCode opcode, object operand) {
-            Instruction instr = il.Create(opcode);
+            Instruction instr = il.Create(OpCodes.Nop);
+            instr.OpCode = opcode;
             instr.Operand = operand;
             return instr;
         }
