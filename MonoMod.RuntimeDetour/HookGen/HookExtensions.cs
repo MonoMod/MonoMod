@@ -29,29 +29,65 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         private readonly static MethodInfo _GetReference = typeof(HookExtensions).GetMethod("GetReference");
 
-        private static int _Step(this ILProcessor il, ref int index) {
-            int tmp = il.ClampWrapIndex(index);
-            index = tmp + 1;
-            return tmp;
+        private static void _Insert(this ILProcessor il, Instruction at, Instruction instr) {
+            Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
+            int index = instrs.IndexOf(at);
+            if (index == -1)
+                index = instrs.Count;
+            instrs.Insert(index, instr);
         }
 
         #region Misc Helpers
 
-        public static int ClampWrapIndex(this ILProcessor il, int index) {
-            int count = il.Body.Instructions.Count;
-            if (index < 0)
-                return count + index;
-            if (index > count)
-                return count;
-            return index;
+        public static bool Is(this MemberReference member, string typeFullName, string name) {
+            if (member == null)
+                return false;
+            return member.DeclaringType.FullName == typeFullName && member.Name == name;
         }
 
-        public static bool GotoNext(this ILProcessor il, ref int index, Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
+        public static bool Is(this MemberReference member, Type type, string name) {
+            if (member == null)
+                return false;
+            return member.DeclaringType.FullName == type.FullName && member.Name == name;
+        }
+
+        public static bool Is(this MemberReference member, MemberInfo other) {
+            if (member == null)
+                return false;
+
+            if (member.DeclaringType.FullName != other.DeclaringType.FullName)
+                return false;
+            if (member.Name != other.Name)
+                return false;
+
+            if (member is MethodReference mref) {
+                if (!(other is MethodBase minf))
+                    return false;
+
+                Mono.Collections.Generic.Collection<ParameterDefinition> paramRefs = mref.Parameters;
+                ParameterInfo[] paramInfos = minf.GetParameters();
+                if (paramRefs.Count != paramInfos.Length)
+                    return false;
+
+                for (int i = 0; i < paramRefs.Count; i++) {
+                    if (!paramRefs[i].ParameterType.Is(paramInfos[i].ParameterType))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        #endregion
+
+        #region Misc IL Helpers
+
+        public static bool GotoNext(this ILProcessor il, ref Instruction instr, Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
             Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
             try {
-                for (int i = il.ClampWrapIndex(index + 1); i < instrs.Count; i++) {
+                for (int i = instrs.IndexOf(instr) + 1; i < instrs.Count; i++) {
                     if (predicate(instrs, i)) {
-                        index = i;
+                        instr = instrs[i];
                         return true;
                     }
                 }
@@ -61,24 +97,73 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         }
 
-        public static bool GotoPrev(this ILProcessor il, ref int index, Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
+        public static bool GotoPrev(this ILProcessor il, ref Instruction instr, Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
             Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
-            for (int i = il.ClampWrapIndex(index - 1); i > -1; i--) {
-                if (predicate(instrs, i)) {
-                    index = i;
-                    return true;
+            try {
+                for (int i = instrs.IndexOf(instr) - 1; i > -1; i--) {
+                    if (predicate(instrs, i)) {
+                        instr = instrs[i];
+                        return true;
+                    }
                 }
+            } catch {
+                // Fail silently.
             }
             return false;
         }
 
-        public static void UpdateBranches(this ILProcessor il, int indexFrom, int indexTo) {
+        public static bool GotoNext(this ILProcessor il, ref Instruction instr, params Func<Instruction, bool>[] predicates) {
             Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
-            Instruction instrFrom = instrs[indexFrom];
-            Instruction instrTo = instrs[indexTo];
-            foreach (Instruction instr in instrs)
-                if (instr.Operand == instrFrom)
-                    instr.Operand = instrTo;
+            try {
+                for (int i = instrs.IndexOf(instr) + 1; i + predicates.Length - 1 < instrs.Count; i++) {
+                    bool match = true;
+                    for (int j = 0; j < predicates.Length; j++) {
+                        if (!(predicates[j]?.Invoke(instrs[i]) ?? true)) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        instr = instrs[i];
+                        return true;
+                    }
+                }
+            } catch {
+                // Fail silently.
+            }
+            return false;
+        }
+
+        public static bool GotoPrev(this ILProcessor il, ref Instruction instr, params Func<Instruction, bool>[] predicates) {
+            Mono.Collections.Generic.Collection<Instruction> instrs = il.Body.Instructions;
+            try {
+                int i = instrs.IndexOf(instr) - 1;
+                int overhang = i + predicates.Length - 1 - instrs.Count;
+                if (overhang > 0)
+                    i -= overhang;
+                for (; i > -1; i--) {
+                    bool match = true;
+                    for (int j = 0; j < predicates.Length; j++) {
+                        if (!(predicates[j]?.Invoke(instrs[i]) ?? true)) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        instr = instrs[i];
+                        return true;
+                    }
+                }
+            } catch {
+                // Fail silently.
+            }
+            return false;
+        }
+
+        public static void UpdateBranches(this ILProcessor il, Instruction from, Instruction to) {
+            foreach (Instruction instr in il.Body.Instructions)
+                if (instr.Operand == from)
+                    instr.Operand = to;
         }
 
         #endregion
@@ -106,69 +191,67 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static void Emit(this ILProcessor il, OpCode opcode, Type type)
             => il.Emit(opcode, il.Import(type));
 
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, ParameterDefinition parameter)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, parameter));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, VariableDefinition variable)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, variable));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, Instruction[] targets)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, targets));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, Instruction target)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, target));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, double value)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, value));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, float value)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, value));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, long value)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, value));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, sbyte value)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, value));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, byte value)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, value));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, string value)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, value));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, FieldReference field)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, field));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, CallSite site)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, site));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, TypeReference type)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, type));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, int value)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, value));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, MethodReference method)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, method));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, FieldInfo field)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, field));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, MethodBase method)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, method));
-        public static void Emit(this ILProcessor il, ref int index, OpCode opcode, Type type)
-            => il.Body.Instructions.Insert(il._Step(ref index), il.Create(opcode, type));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, ParameterDefinition parameter)
+            => il._Insert(before, il.Create(opcode, parameter));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, VariableDefinition variable)
+            => il._Insert(before, il.Create(opcode, variable));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, Instruction[] targets)
+            => il._Insert(before, il.Create(opcode, targets));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, Instruction target)
+            => il._Insert(before, il.Create(opcode, target));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, double value)
+            => il._Insert(before, il.Create(opcode, value));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, float value)
+            => il._Insert(before, il.Create(opcode, value));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, long value)
+            => il._Insert(before, il.Create(opcode, value));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, sbyte value)
+            => il._Insert(before, il.Create(opcode, value));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, byte value)
+            => il._Insert(before, il.Create(opcode, value));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, string value)
+            => il._Insert(before, il.Create(opcode, value));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, FieldReference field)
+            => il._Insert(before, il.Create(opcode, field));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, CallSite site)
+            => il._Insert(before, il.Create(opcode, site));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, TypeReference type)
+            => il._Insert(before, il.Create(opcode, type));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode)
+            => il._Insert(before, il.Create(opcode));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, int value)
+            => il._Insert(before, il.Create(opcode, value));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, MethodReference method)
+            => il._Insert(before, il.Create(opcode, method));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, FieldInfo field)
+            => il._Insert(before, il.Create(opcode, field));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, MethodBase method)
+            => il._Insert(before, il.Create(opcode, method));
+        public static void Emit(this ILProcessor il, Instruction before, OpCode opcode, Type type)
+            => il._Insert(before, il.Create(opcode, type));
 
         #endregion
 
-        #region Reference-based Emit Helpers
+        #region Reference-oriented Emit Helpers
 
         /// <summary>
         /// Emit a reference to an arbitrary object. Note that the references "leak."
         /// </summary>
         public static int EmitReference<T>(this ILProcessor il, T obj) {
-            int index = int.MaxValue;
-            return il.EmitReference(ref index, obj);
+            return il.EmitReference(null, obj);
         }
         /// <summary>
         /// Emit a reference to an arbitrary object. Note that the references "leak."
         /// </summary>
-        public static int EmitReference<T>(this ILProcessor il, ref int index, T obj) {
+        public static int EmitReference<T>(this ILProcessor il, Instruction before, T obj) {
             MethodBody body = il.Body;
-            index = il.ClampWrapIndex(index);
 
             Type t = typeof(T);
             int id = AddReference(obj);
-            il.Emit(ref index, OpCodes.Ldc_I4, id);
-            il.Emit(ref index, OpCodes.Call, _GetReference);
+            il.Emit(before, OpCodes.Ldc_I4, id);
+            il.Emit(before, OpCodes.Call, _GetReference);
             if (t.IsValueType)
-                il.Emit(ref index, OpCodes.Unbox_Any, t);
+                il.Emit(before, OpCodes.Unbox_Any, t);
             return id;
         }
 
@@ -176,15 +259,14 @@ namespace MonoMod.RuntimeDetour.HookGen {
         /// Emit an inline delegate reference and invocation.
         /// </summary>
         public static int EmitDelegateCall(this ILProcessor il, Action cb) {
-            int index = int.MaxValue;
-            return il.EmitDelegateCall(ref index, cb);
+            return il.EmitDelegateCall(null, cb);
         }
         /// <summary>
         /// Emit an inline delegate reference and invocation.
         /// </summary>
-        public static int EmitDelegateCall(this ILProcessor il, ref int index, Action cb) {
-            int id = il.EmitDelegatePush(ref index, cb);
-            il.EmitDelegateInvoke(ref index, id);
+        public static int EmitDelegateCall(this ILProcessor il, Instruction before, Action cb) {
+            int id = il.EmitDelegatePush(before, cb);
+            il.EmitDelegateInvoke(before, id);
             return id;
         }
 
@@ -192,30 +274,25 @@ namespace MonoMod.RuntimeDetour.HookGen {
         /// Emit an inline delegate reference.
         /// </summary>
         public static int EmitDelegatePush<T>(this ILProcessor il, T cb) where T : Delegate {
-            int index = int.MaxValue;
-            return il.EmitDelegatePush(ref index, cb);
+            return il.EmitDelegatePush(null, cb);
         }
         /// <summary>
         /// Emit an inline delegate reference.
         /// </summary>
-        public static int EmitDelegatePush<T>(this ILProcessor il, ref int index, T cb) where T : Delegate
-            => il.EmitReference(ref index, cb);
+        public static int EmitDelegatePush<T>(this ILProcessor il, Instruction before, T cb) where T : Delegate
+            => il.EmitReference(before, cb);
 
         /// <summary>
         /// Emit a delegate invocation.
         /// </summary>
         public static int EmitDelegateInvoke(this ILProcessor il, int id) {
-            int index = int.MaxValue;
-            return il.EmitDelegateInvoke(ref index, id);
+            return il.EmitDelegateInvoke(null, id);
         }
         /// <summary>
         /// Emit a delegate invocation.
         /// </summary>
-        public static int EmitDelegateInvoke(this ILProcessor il, ref int index, int id) {
-            index = il.ClampWrapIndex(index);
-
-            il.Emit(ref index, OpCodes.Callvirt, References[id].GetType().GetMethod("Invoke"));
-
+        public static int EmitDelegateInvoke(this ILProcessor il, Instruction before, int id) {
+            il.Emit(before, OpCodes.Callvirt, References[id].GetType().GetMethod("Invoke"));
             return id;
         }
 
