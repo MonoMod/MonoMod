@@ -25,7 +25,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
             int pathInI = 0;
 
             for (int i = 0; i < args.Length; i++) {
-                if (args[i] == "--namespace" && i + 2 < args.Length) {
+                if (args[i] == "--rdref-hide") {
+                    Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_RDREF_HIDE", "1");
+
+                } else if (args[i] == "--namespace" && i + 2 < args.Length) {
                     i++;
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE", args[i]);
 

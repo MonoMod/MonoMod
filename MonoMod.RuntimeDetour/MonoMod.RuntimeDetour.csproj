@@ -20,7 +20,7 @@
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
-	<DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE</DefineConstants>
+    <DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -31,7 +31,7 @@
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
-	<DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
+    <DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -52,7 +52,9 @@
     <Compile Include="DetourNativePlatforms.cs" />
     <Compile Include="DetourRuntimePlatforms.cs" />
     <Compile Include="Hook.cs" />
+    <Compile Include="HookGen\HookIL.cs" />
     <Compile Include="HookGen\HookExtensions.cs" />
+    <Compile Include="HookGen\HookILCursor.cs" />
     <Compile Include="IDetour.cs" />
     <Compile Include="ILCopying\ILInstruction.cs" />
     <Compile Include="ILCopying\MethodCopier.cs" />
