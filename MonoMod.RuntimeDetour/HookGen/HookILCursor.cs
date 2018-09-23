@@ -16,8 +16,8 @@ using OpCode = Mono.Cecil.Cil.OpCode;
 namespace MonoMod.RuntimeDetour.HookGen {
     public class HookILCursor {
 
-        private static List<object> References = new List<object>();
-        private static Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
+        private readonly static List<object> References = new List<object>();
+        private readonly static Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
         public static object GetReference(int id) => References[id];
         public static void SetReference(int id, object obj) => References[id] = obj;
         private static int AddReference(object obj) {
@@ -26,7 +26,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return References.Count - 1;
             }
         }
-        public static void FreeReference(int id) => References[id] = null;
+        public static void FreeReference(int id) {
+            References[id] = null;
+            if (DelegateInvokers.ContainsKey(id))
+                DelegateInvokers.Remove(id);
+        }
 
         private readonly static MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
 
