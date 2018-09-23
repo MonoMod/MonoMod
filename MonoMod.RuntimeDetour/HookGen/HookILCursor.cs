@@ -229,7 +229,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         #region Reference-oriented Emit Helpers
 
         /// <summary>
-        /// Emit a reference to an arbitrary object. Note that the references "leak."
+        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use HookILCursor.FreeReference(id).
         /// </summary>
         public int EmitReference<T>(T obj) {
             Type t = typeof(T);
@@ -242,15 +242,15 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         /// <summary>
-        /// Emit an inline delegate reference and invocation.
+        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
         /// </summary>
-        public int EmitDelegateCall(Action cb)
+        public int EmitDelegate(Action cb)
             => EmitDelegateInvoke(EmitDelegatePush(cb));
 
         /// <summary>
-        /// Emit an inline delegate reference and invocation.
+        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
         /// </summary>
-        public int EmitDelegateCall<T>(T cb) where T : Delegate {
+        public int EmitDelegate<T>(T cb) where T : Delegate {
             Instruction instrPrev = Instr;
             int id = EmitDelegatePush(cb);
 
@@ -291,7 +291,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         /// <summary>
-        /// Emit an inline delegate reference.
+        /// Emit an inline delegate reference. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegatePush<T>(T cb) where T : Delegate
             => EmitReference(cb);
