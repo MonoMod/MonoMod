@@ -75,6 +75,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Index = index;
         }
 
+        public void MarkLabel(HookILLabel label) {
+            label.Instr = Instr;
+        }
+
         #region Misc IL Helpers
 
         public bool GotoNext(Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {

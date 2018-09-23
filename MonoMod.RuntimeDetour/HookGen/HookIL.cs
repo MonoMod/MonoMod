@@ -22,9 +22,17 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public ModuleDefinition Module => Body.Method.Module;
         public Mono.Collections.Generic.Collection<Instruction> Instrs => Body.Instructions;
 
+        public List<HookILLabel> Labels { get; } = new List<HookILLabel>();
+
         internal HookIL(MethodBody body) {
             Body = body;
             IL = body.GetILProcessor();
+        }
+
+        internal void Invoke(ILManipulator manip) {
+            manip(this);
+            foreach (HookILLabel label in Labels)
+                IL.ReplaceOperands(label, label.Instr);
         }
 
         public Instruction this[int index] {
@@ -48,6 +56,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => Module.ImportReference(method);
         public TypeReference Import(Type type)
             => Module.ImportReference(type);
+
+        public HookILLabel DefineLabel() {
+            HookILLabel label = new HookILLabel();
+            Labels.Add(label);
+            return label;
+        }
 
     }
 }
