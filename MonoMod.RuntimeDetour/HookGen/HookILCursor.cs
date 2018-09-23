@@ -6,11 +6,29 @@ using System.Collections.Generic;
 using Mono.Cecil;
 using System.ComponentModel;
 using Mono.Cecil.Cil;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
+using System.Reflection.Emit;
+using SREmit = System.Reflection.Emit;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
+using OpCodes = Mono.Cecil.Cil.OpCodes;
+using OpCode = Mono.Cecil.Cil.OpCode;
 
 namespace MonoMod.RuntimeDetour.HookGen {
     public class HookILCursor {
+
+        private static List<object> References = new List<object>();
+        private static Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
+        public static object GetReference(int id) => References[id];
+        public static void SetReference(int id, object obj) => References[id] = obj;
+        private static int AddReference(object obj) {
+            lock (References) {
+                References.Add(obj);
+                return References.Count - 1;
+            }
+        }
+        public static void FreeReference(int id) => References[id] = null;
+
+        private readonly static MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
 
         public HookIL HookIL { get; private set; }
         public Instruction Instr { get; set; }
@@ -30,7 +48,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return index;
             }
             set {
-                Instr = Instrs[value];
+                Instr = value == Instrs.Count ? null : Instrs[value];
             }
         }
 
@@ -46,6 +64,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public HookILCursor Clone()
             => new HookILCursor(this);
+
+        public void Remove() {
+            int index = Index;
+            IL.Remove(Instr);
+            Index = index;
+        }
 
         #region Misc IL Helpers
 
@@ -205,9 +229,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         /// </summary>
         public int EmitReference<T>(T obj) {
             Type t = typeof(T);
-            int id = HookExtensions.AddReference(obj);
+            int id = AddReference(obj);
             Emit(OpCodes.Ldc_I4, id);
-            Emit(OpCodes.Call, HookExtensions._GetReference);
+            Emit(OpCodes.Call, _GetReference);
             if (t.IsValueType)
                 Emit(OpCodes.Unbox_Any, t);
             return id;
@@ -220,6 +244,49 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => EmitDelegateInvoke(EmitDelegatePush(cb));
 
         /// <summary>
+        /// Emit an inline delegate reference and invocation.
+        /// </summary>
+        public int EmitDelegateCall<T>(T cb) where T : Delegate {
+            Instruction instrPrev = Instr;
+            int id = EmitDelegatePush(cb);
+
+            // Create a DynamicMethod that shifts the stack around a little.
+
+            Type delType = References[id].GetType();
+            MethodInfo delInvokeOrig = delType.GetMethod("Invoke");
+
+            ParameterInfo[] args = delInvokeOrig.GetParameters();
+            Type[] argTypes = new Type[args.Length + 1];
+            for (int i = 0; i < args.Length; i++)
+                argTypes[i] = args[i].ParameterType;
+            argTypes[args.Length] = delType;
+
+            DynamicMethod dmInvoke = new DynamicMethod(
+                "HookIL:Invoke:" + delInvokeOrig.DeclaringType.FullName,
+                delInvokeOrig.ReturnType, argTypes,
+                true // If any random errors pop up, try setting this to false first.
+            );
+            ILGenerator il = dmInvoke.GetILGenerator();
+
+            // Load the delegate reference first.
+            il.Emit(SREmit.OpCodes.Ldarg, args.Length);
+            // Load any other arguments on top of that.
+            for (int i = 0; i < args.Length; i++) 
+                il.Emit(SREmit.OpCodes.Ldarg, i);
+            // Invoke the delegate and return its result.
+            il.Emit(SREmit.OpCodes.Callvirt, delInvokeOrig);
+            il.Emit(SREmit.OpCodes.Ret);
+
+            dmInvoke = dmInvoke.Pin();
+
+            // Invoke the DynamicMethod.
+            DelegateInvokers[id] = dmInvoke;
+            Emit(OpCodes.Call, dmInvoke); // DynamicMethodDefinition should pass it through.
+
+            return id;
+        }
+
+        /// <summary>
         /// Emit an inline delegate reference.
         /// </summary>
         public int EmitDelegatePush<T>(T cb) where T : Delegate
@@ -229,7 +296,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         /// Emit a delegate invocation.
         /// </summary>
         public int EmitDelegateInvoke(int id) {
-            Emit(OpCodes.Callvirt, HookExtensions.References[id].GetType().GetMethod("Invoke"));
+            Emit(OpCodes.Callvirt, References[id].GetType().GetMethod("Invoke"));
             return id;
         }
 

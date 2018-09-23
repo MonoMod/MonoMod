@@ -17,20 +17,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         // This delegate will be cloned into the wrapper inside of the generated assembly.
         public delegate void ILManipulatorMini(MethodBody body, ILProcessor il);
 
-        // Used in HookILCursor.EmitReference.
-        internal static List<object> References = new List<object>();
-        public static object GetReference(int id) => References[id];
-        public static void SetReference(int id, object obj) => References[id] = obj;
-        internal static int AddReference(object obj) {
-            lock (References) {
-                References.Add(obj);
-                return References.Count - 1;
-            }
-        }
-        public static void FreeReference(int id) => References[id] = null;
-
-        internal readonly static MethodInfo _GetReference = typeof(HookExtensions).GetMethod("GetReference");
-
         #region Misc Helpers
 
         public static bool Is(this MemberReference member, string typeFullName, string name) {
@@ -95,8 +81,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static Instruction Create(this ILProcessor il, OpCode opcode, FieldInfo field)
             => il.Create(opcode, il.Import(field));
-        public static Instruction Create(this ILProcessor il, OpCode opcode, MethodBase method)
-            => il.Create(opcode, il.Import(method));
+        public static Instruction Create(this ILProcessor il, OpCode opcode, MethodBase method) {
+            if (method is System.Reflection.Emit.DynamicMethod)
+                return il.Create(opcode, (object) method);
+            return il.Create(opcode, il.Import(method));
+        }
         public static Instruction Create(this ILProcessor il, OpCode opcode, Type type)
             => il.Create(opcode, il.Import(type));
         public static Instruction Create(this ILProcessor il, OpCode opcode, object operand) {
