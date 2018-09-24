@@ -12,12 +12,18 @@ using System.Linq;
 namespace MonoMod.RuntimeDetour.HookGen {
     // This delegate will be used when the HookGen-erated assembly "exposes" RuntimeDetour references.
     public delegate void ILManipulator(HookIL il);
-    public static class HookExtensions {
+    public static partial class HookExtensions {
 
         // This delegate will be cloned into the wrapper inside of the generated assembly.
         public delegate void ILManipulatorMini(MethodBody body, ILProcessor il);
 
         #region Misc Helpers
+
+        public static bool Is(this MemberReference member, string fullName) {
+            if (member == null)
+                return false;
+            return member.FullName == fullName;
+        }
 
         public static bool Is(this MemberReference member, string typeFullName, string name) {
             if (member == null)

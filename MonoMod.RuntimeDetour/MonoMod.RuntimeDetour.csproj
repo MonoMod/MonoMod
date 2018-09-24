@@ -52,6 +52,7 @@
     <Compile Include="DetourNativePlatforms.cs" />
     <Compile Include="DetourRuntimePlatforms.cs" />
     <Compile Include="Hook.cs" />
+    <Compile Include="HookGen\HookExtensions.PatternMatching.cs" />
     <Compile Include="HookGen\HookILLabel.cs" />
     <Compile Include="HookGen\HookIL.cs" />
     <Compile Include="HookGen\HookExtensions.cs" />
