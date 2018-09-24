@@ -81,51 +81,19 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         #region Misc IL Helpers
 
-        public bool GotoNext(Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
-            Mono.Collections.Generic.Collection<Instruction> instrs = Instrs;
-            try {
-                for (int i = Index + 1; i < instrs.Count; i++) {
-                    if (predicate(instrs, i)) {
-                        Index = i;
-                        return true;
-                    }
-                }
-            } catch {
-                // Fail silently.
-            }
-            return false;
-        }
-
-        public bool GotoPrev(Func<Mono.Collections.Generic.Collection<Instruction>, int, bool> predicate) {
-            Mono.Collections.Generic.Collection<Instruction> instrs = Instrs;
-            try {
-                for (int i = Index - 1; i > -1; i--) {
-                    if (predicate(instrs, i)) {
-                        Index = i;
-                        return true;
-                    }
-                }
-            } catch {
-                // Fail silently.
-            }
-            return false;
-        }
-
         public bool GotoNext(params Func<Instruction, bool>[] predicates) {
             Mono.Collections.Generic.Collection<Instruction> instrs = Instrs;
             try {
                 for (int i = Index + 1; i + predicates.Length - 1 < instrs.Count; i++) {
-                    bool match = true;
-                    for (int j = 0; j < predicates.Length; j++) {
-                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true)) {
-                            match = false;
-                            break;
-                        }
-                    }
-                    if (match) {
-                        Index = i;
-                        return true;
-                    }
+                    for (int j = 0; j < predicates.Length; j++)
+                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
+                            goto Next;
+
+                    Index = i;
+                    return true;
+
+                    Next:
+                    continue;
                 }
             } catch {
                 // Fail silently.
@@ -140,22 +108,77 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 int overhang = i + predicates.Length - 1 - instrs.Count;
                 if (overhang > 0)
                     i -= overhang;
+
                 for (; i > -1; i--) {
-                    bool match = true;
-                    for (int j = 0; j < predicates.Length; j++) {
-                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true)) {
-                            match = false;
-                            break;
-                        }
-                    }
-                    if (match) {
-                        Index = i;
-                        return true;
-                    }
+                    for (int j = 0; j < predicates.Length; j++)
+                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
+                            goto Next;
+
+                    Index = i;
+                    return true;
+
+                    Next:
+                    continue;
                 }
             } catch {
                 // Fail silently.
             }
+            return false;
+        }
+
+        public bool FindNext(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new HookILCursor[predicates.Length];
+            Instruction instrOrig = Instr;
+            try {
+                Func<Instruction, bool> first = predicates[0];
+                while (GotoNext(first)) {
+                    cursors[0] = Clone();
+                    Instruction instrFirst = Instr;
+                    for (int i = 1; i < predicates.Length; i++) {
+                        if (!GotoNext(predicates[i]))
+                            goto Skip;
+                        cursors[i] = Clone();
+                    }
+
+                    Instr = instrFirst;
+                    return true;
+
+                    Skip:
+                    Instr = instrFirst;
+                    continue;
+                }
+            } catch {
+                // Fail silently.
+            }
+            Instr = instrOrig;
+            return false;
+        }
+
+        public bool FindPrev(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new HookILCursor[predicates.Length];
+            Instruction instrOrig = Instr;
+            try {
+                Func<Instruction, bool> last = predicates[predicates.Length - 1];
+                while (GotoPrev(last)) {
+                    cursors[predicates.Length - 1] = Clone();
+                    Instruction instrLast = Instr;
+                    for (int i = predicates.Length - 2; i > -1; i--) {
+                        if (!GotoPrev(predicates[i]))
+                            goto Skip;
+                        cursors[i] = Clone();
+                    }
+
+                    Instr = instrLast;
+                    return true;
+
+                    Skip:
+                    Instr = instrLast;
+                    continue;
+                }
+            } catch {
+                // Fail silently.
+            }
+            Instr = instrOrig;
             return false;
         }
 
