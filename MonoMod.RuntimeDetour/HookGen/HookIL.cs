@@ -37,6 +37,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public Instruction this[int index] {
             get {
+                if (index == -1 || index == Instrs.Count)
+                    return null;
                 return Instrs[index];
             }
         }

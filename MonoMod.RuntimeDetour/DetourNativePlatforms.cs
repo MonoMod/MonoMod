@@ -125,36 +125,83 @@ namespace MonoMod.RuntimeDetour {
     }
 
     public unsafe sealed class DetourNativeARMPlatform : IDetourNativePlatform {
-        public void Apply(NativeDetourData detour) {
-            throw new NotImplementedException();
-        }
-
-        public void Copy(IntPtr src, IntPtr dst, int size) {
-            throw new NotImplementedException();
+        private enum DetourSize : int {
+            Arm32 = 4 + 4,
+            Arm64 = 4 + 8
         }
 
         public NativeDetourData Create(IntPtr from, IntPtr to) {
-            throw new NotImplementedException();
+            NativeDetourData detour = new NativeDetourData {
+                Method = from,
+                Target = to
+            };
+            detour.Size = (int) (IntPtr.Size == 4 ? DetourSize.Arm32 : DetourSize.Arm64);
+            return detour;
         }
 
         public void Free(NativeDetourData detour) {
-            throw new NotImplementedException();
+            // No extra data.
         }
 
-        public void MakeExecutable(NativeDetourData detour) {
-            throw new NotImplementedException();
+        public void Apply(NativeDetourData detour) {
+            int offs = 0;
+            
+            // TODO: Find possibly better ARM detours.
+            switch ((DetourSize) detour.Size) {
+                case DetourSize.Arm32:
+                    // LDR PC, [PC, #-4]
+                    detour.Method.Write(ref offs, (byte) 0x04);
+                    detour.Method.Write(ref offs, (byte) 0xF0);
+                    detour.Method.Write(ref offs, (byte) 0x1F);
+                    detour.Method.Write(ref offs, (byte) 0xE5);
+                    detour.Method.Write(ref offs, (uint) detour.Target);
+                    break;
+
+                case DetourSize.Arm64:
+                    // LDR PC, [PC, #-4]
+                    detour.Method.Write(ref offs, (byte) 0x04);
+                    detour.Method.Write(ref offs, (byte) 0xF0);
+                    detour.Method.Write(ref offs, (byte) 0x1F);
+                    detour.Method.Write(ref offs, (byte) 0xE5);
+                    detour.Method.Write(ref offs, (ulong) detour.Target);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"Unknown ARM detour size {detour.Size}");
+            }
+        }
+
+        public void Copy(IntPtr src, IntPtr dst, int size) {
+            switch ((DetourSize) size) {
+                case DetourSize.Arm32:
+                    *((uint*) ((ulong) dst)) = *((uint*) ((ulong) src));
+                    *((uint*) ((ulong) dst + 4)) = *((uint*) ((ulong) src) + 4);
+                    break;
+
+                case DetourSize.Arm64:
+                    *((uint*) ((ulong) dst)) = *((uint*) ((ulong) src));
+                    *((ulong*) ((ulong) dst + 4)) = *((ulong*) ((ulong) src) + 4);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"Unknown ARM detour size {size}");
+            }
         }
 
         public void MakeWritable(NativeDetourData detour) {
-            throw new NotImplementedException();
+            // no-op.
+        }
+
+        public void MakeExecutable(NativeDetourData detour) {
+            // no-op.
         }
 
         public IntPtr MemAlloc(int size) {
-            throw new NotImplementedException();
+            return Marshal.AllocHGlobal(size);
         }
 
         public void MemFree(IntPtr ptr) {
-            throw new NotImplementedException();
+            Marshal.FreeHGlobal(ptr);
         }
     }
 

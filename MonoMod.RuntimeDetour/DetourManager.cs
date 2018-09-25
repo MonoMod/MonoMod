@@ -18,8 +18,14 @@ namespace MonoMod.RuntimeDetour {
                 Runtime = new DetourRuntimeNETPlatform();
             }
 
-            // TODO: Detect X86 vs ARM, implement NativeARMPlatform
-            Native = new DetourNativeX86Platform();
+            // Detect X86 vs ARM and use the proper platform.
+            typeof(object).Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
+            if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET 4.5 */) {
+                Native = new DetourNativeARMPlatform();
+            } else {
+                Native = new DetourNativeX86Platform();
+            }
+
             if ((PlatformHelper.Current & Platform.Windows) == Platform.Windows) {
                 Native = new DetourNativeWindowsPlatform(Native);
             }
