@@ -366,6 +366,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchJmp(this Instruction instr, string typeFullName, string name)
             => instr.MatchJmp(out var v) && v.Is(typeFullName, name);
+        public static bool MatchJmp<T>(this Instruction instr, string name)
+            => instr.MatchJmp(out var v) && v.Is(typeof(T), name);
         public static bool MatchJmp(this Instruction instr, Type type, string name)
             => instr.MatchJmp(out var v) && v.Is(type, name);
         public static bool MatchJmp(this Instruction instr, MethodBase value)
@@ -383,6 +385,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchCall(this Instruction instr, string typeFullName, string name)
             => instr.MatchCall(out var v) && v.Is(typeFullName, name);
+        public static bool MatchCall<T>(this Instruction instr, string name)
+            => instr.MatchCall(out var v) && v.Is(typeof(T), name);
         public static bool MatchCall(this Instruction instr, Type type, string name)
             => instr.MatchCall(out var v) && v.Is(type, name);
         public static bool MatchCall(this Instruction instr, MethodBase value)
@@ -1018,6 +1022,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchCallvirt(this Instruction instr, string typeFullName, string name)
             => instr.MatchCallvirt(out var v) && v.Is(typeFullName, name);
+        public static bool MatchCallvirt<T>(this Instruction instr, string name)
+            => instr.MatchCallvirt(out var v) && v.Is(typeof(T), name);
         public static bool MatchCallvirt(this Instruction instr, Type type, string name)
             => instr.MatchCallvirt(out var v) && v.Is(type, name);
         public static bool MatchCallvirt(this Instruction instr, MethodBase value)
@@ -1074,10 +1080,22 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineString
 
+        // Start special cases for Newobj
+        public static bool MatchNewobj(this Instruction instr, string typeFullName)
+            => instr.MatchNewobj(out var v) && v.DeclaringType.Is(typeFullName);
+        public static bool MatchNewobj<T>(this Instruction instr)
+            => instr.MatchNewobj(out var v) && v.DeclaringType.Is(typeof(T));
+        public static bool MatchNewobj(this Instruction instr, Type type)
+            => instr.MatchNewobj(out var v) && v.DeclaringType.Is(type);
+        /*
         public static bool MatchNewobj(this Instruction instr, string typeFullName, string name)
             => instr.MatchNewobj(out var v) && v.Is(typeFullName, name);
+        public static bool MatchNewobj<T>(this Instruction instr, string name)
+            => instr.MatchNewobj(out var v) && v.Is(typeof(T), name);
         public static bool MatchNewobj(this Instruction instr, Type type, string name)
             => instr.MatchNewobj(out var v) && v.Is(type, name);
+        */
+        // End special cases for Newobj
         public static bool MatchNewobj(this Instruction instr, MethodBase value)
             => instr.MatchNewobj(out var v) && v.Is(value);
         public static bool MatchNewobj(this Instruction instr, MethodReference value)
@@ -1152,6 +1170,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchLdfld(this Instruction instr, string typeFullName, string name)
             => instr.MatchLdfld(out var v) && v.Is(typeFullName, name);
+        public static bool MatchLdfld<T>(this Instruction instr, string name)
+            => instr.MatchLdfld(out var v) && v.Is(typeof(T), name);
         public static bool MatchLdfld(this Instruction instr, Type type, string name)
             => instr.MatchLdfld(out var v) && v.Is(type, name);
         public static bool MatchLdfld(this Instruction instr, FieldInfo value)
@@ -1169,6 +1189,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchLdflda(this Instruction instr, string typeFullName, string name)
             => instr.MatchLdflda(out var v) && v.Is(typeFullName, name);
+        public static bool MatchLdflda<T>(this Instruction instr, string name)
+            => instr.MatchLdflda(out var v) && v.Is(typeof(T), name);
         public static bool MatchLdflda(this Instruction instr, Type type, string name)
             => instr.MatchLdflda(out var v) && v.Is(type, name);
         public static bool MatchLdflda(this Instruction instr, FieldInfo value)
@@ -1186,6 +1208,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchStfld(this Instruction instr, string typeFullName, string name)
             => instr.MatchStfld(out var v) && v.Is(typeFullName, name);
+        public static bool MatchStfld<T>(this Instruction instr, string name)
+            => instr.MatchStfld(out var v) && v.Is(typeof(T), name);
         public static bool MatchStfld(this Instruction instr, Type type, string name)
             => instr.MatchStfld(out var v) && v.Is(type, name);
         public static bool MatchStfld(this Instruction instr, FieldInfo value)
@@ -1203,6 +1227,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchLdsfld(this Instruction instr, string typeFullName, string name)
             => instr.MatchLdsfld(out var v) && v.Is(typeFullName, name);
+        public static bool MatchLdsfld<T>(this Instruction instr, string name)
+            => instr.MatchLdsfld(out var v) && v.Is(typeof(T), name);
         public static bool MatchLdsfld(this Instruction instr, Type type, string name)
             => instr.MatchLdsfld(out var v) && v.Is(type, name);
         public static bool MatchLdsfld(this Instruction instr, FieldInfo value)
@@ -1220,6 +1246,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchLdsflda(this Instruction instr, string typeFullName, string name)
             => instr.MatchLdsflda(out var v) && v.Is(typeFullName, name);
+        public static bool MatchLdsflda<T>(this Instruction instr, string name)
+            => instr.MatchLdsflda(out var v) && v.Is(typeof(T), name);
         public static bool MatchLdsflda(this Instruction instr, Type type, string name)
             => instr.MatchLdsflda(out var v) && v.Is(type, name);
         public static bool MatchLdsflda(this Instruction instr, FieldInfo value)
@@ -1237,6 +1265,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchStsfld(this Instruction instr, string typeFullName, string name)
             => instr.MatchStsfld(out var v) && v.Is(typeFullName, name);
+        public static bool MatchStsfld<T>(this Instruction instr, string name)
+            => instr.MatchStsfld(out var v) && v.Is(typeof(T), name);
         public static bool MatchStsfld(this Instruction instr, Type type, string name)
             => instr.MatchStsfld(out var v) && v.Is(type, name);
         public static bool MatchStsfld(this Instruction instr, FieldInfo value)
@@ -1835,6 +1865,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchLdftn(this Instruction instr, string typeFullName, string name)
             => instr.MatchLdftn(out var v) && v.Is(typeFullName, name);
+        public static bool MatchLdftn<T>(this Instruction instr, string name)
+            => instr.MatchLdftn(out var v) && v.Is(typeof(T), name);
         public static bool MatchLdftn(this Instruction instr, Type type, string name)
             => instr.MatchLdftn(out var v) && v.Is(type, name);
         public static bool MatchLdftn(this Instruction instr, MethodBase value)
@@ -1852,6 +1884,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public static bool MatchLdvirtftn(this Instruction instr, string typeFullName, string name)
             => instr.MatchLdvirtftn(out var v) && v.Is(typeFullName, name);
+        public static bool MatchLdvirtftn<T>(this Instruction instr, string name)
+            => instr.MatchLdvirtftn(out var v) && v.Is(typeof(T), name);
         public static bool MatchLdvirtftn(this Instruction instr, Type type, string name)
             => instr.MatchLdvirtftn(out var v) && v.Is(type, name);
         public static bool MatchLdvirtftn(this Instruction instr, MethodBase value)
