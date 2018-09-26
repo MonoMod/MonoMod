@@ -23,15 +23,22 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         internal HookEndpoint(MethodBase method) {
             Method = method;
+            
+            // Add a "transparent" detour for IL manipulation.
 
+            bool hasMethodBody;
             try {
-                // Add a "transparent" detour for IL manipulation.
+                hasMethodBody = (method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0) != 0;
+            } catch {
+                hasMethodBody = false;
+            }
+
+            if (hasMethodBody) {
+                // Note: This can but shouldn't fail, mainly if the user hasn't provided a Cecil ModuleDefinition generator.
                 DMD = new DynamicMethodDefinition(method, HookEndpointManager.GenerateCecilModule);
                 ILCopy = method.CreateILCopy();
                 ILDetour = new Detour(method, ILCopy);
                 DetourILDetourTarget();
-            } catch {
-                // Fail silently.
             }
         }
 

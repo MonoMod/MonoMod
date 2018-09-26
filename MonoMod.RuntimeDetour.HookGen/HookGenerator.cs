@@ -330,6 +330,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public bool GenerateFor(TypeDefinition hookType, TypeDefinition hookILType, MethodDefinition method) {
             if (method.HasGenericParameters ||
+                method.IsAbstract ||
                 (method.IsSpecialName && !method.IsConstructor))
                 return false;
 
