@@ -51,6 +51,7 @@ namespace MonoMod.UnitTest {
         public static int Counter;
 
         public static Tuple<string, int> ExampleMethod(int i) {
+            TestObjectGeneric<string> test = new TestObjectGeneric<string>();
             try {
                 Console.WriteLine(StringOriginal);
                 Counter += i;

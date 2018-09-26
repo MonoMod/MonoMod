@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    public class DetourExample {
+    public class TestObject {
         public static int VoidResult;
 
         // Prevent JIT from inlining the method call.
@@ -31,7 +31,7 @@ namespace MonoMod.UnitTest {
         }
 
         public static void TestStep(int instanceExpected, int staticExpected, int voidExpected) {
-            DetourExample instance = new DetourExample();
+            TestObject instance = new TestObject();
             int instanceResult = instance.TestMethod(2, 3);
             Console.WriteLine($"instance.TestMethod(2, 3): {instanceResult}");
             Assert.AreEqual(instanceExpected, instanceResult);
@@ -45,5 +45,8 @@ namespace MonoMod.UnitTest {
             TestVoidMethod(2, 3);
             Assert.AreEqual(voidExpected, VoidResult);
         }
+    }
+
+    public class TestObjectGeneric<T> {
     }
 }

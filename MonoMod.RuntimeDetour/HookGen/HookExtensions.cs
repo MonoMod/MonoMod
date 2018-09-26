@@ -22,47 +22,23 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool Is(this MemberReference member, string fullName) {
             if (member == null)
                 return false;
-            return member.FullName == fullName;
+            return member.FullName.Replace("+", "/") == fullName.Replace("+", "/");
         }
 
         public static bool Is(this MemberReference member, string typeFullName, string name) {
             if (member == null)
                 return false;
-            return member.DeclaringType.FullName == typeFullName && member.Name == name;
+            return member.DeclaringType.FullName.Replace("+", "/") == typeFullName.Replace("+", "/") && member.Name == name;
         }
 
         public static bool Is(this MemberReference member, Type type, string name) {
             if (member == null)
                 return false;
-            return member.DeclaringType.FullName == type.FullName && member.Name == name;
+            return member.DeclaringType.FullName.Replace("+", "/") == type.FullName.Replace("+", "/") && member.Name == name;
         }
 
-        public static bool Is(this MemberReference member, MemberInfo other) {
-            if (member == null)
-                return false;
-
-            if (member.DeclaringType.FullName != other.DeclaringType.FullName)
-                return false;
-            if (member.Name != other.Name)
-                return false;
-
-            if (member is MethodReference mref) {
-                if (!(other is MethodBase minf))
-                    return false;
-
-                Mono.Collections.Generic.Collection<ParameterDefinition> paramRefs = mref.Parameters;
-                ParameterInfo[] paramInfos = minf.GetParameters();
-                if (paramRefs.Count != paramInfos.Length)
-                    return false;
-
-                for (int i = 0; i < paramRefs.Count; i++) {
-                    if (!paramRefs[i].ParameterType.Is(paramInfos[i].ParameterType))
-                        return false;
-                }
-            }
-
-            return true;
-        }
+        public static bool Is(this MemberReference member, MemberInfo other)
+            => MonoModExt.Is(member, other);
 
         #endregion
 

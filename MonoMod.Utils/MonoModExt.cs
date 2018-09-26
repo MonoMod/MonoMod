@@ -306,6 +306,88 @@ namespace MonoMod.Utils {
             return builder.ToString();
         }
 
+        public static bool Is(this System.Reflection.MemberInfo minfo, MemberReference mref)
+            => mref.Is(minfo);
+        public static bool Is(this MemberReference mref, System.Reflection.MemberInfo minfo) {
+            if (mref == null)
+                return false;
+
+            if (mref is GenericParameter genParamRef) {
+                if (!(minfo is Type genParamInfo) || !genParamInfo.IsGenericParameter)
+                    return false;
+                // Don't check owner as it introduces a circular check.
+                /*
+                if (!(genParamRef.Owner as MemberReference).Is(genParamInfo.DeclaringMethod ?? (System.Reflection.MemberInfo) genParamInfo.DeclaringType))
+                    return false;
+                */
+                return genParamRef.Position == genParamInfo.GenericParameterPosition;
+            }
+
+            if (!(mref.DeclaringType?.Is(minfo.DeclaringType) ?? minfo.DeclaringType == null))
+                return false;
+            if (mref.Name != minfo.Name)
+                return false;
+
+            if (mref is TypeReference) {
+                if (!(minfo is Type typeInfo))
+                    return false;
+
+                if (mref is GenericInstanceType genTypeRef) {
+                    // GenericInstanceType full names differ greatly from their Reflection counterpart,
+                    // compared to most other TypeSpecifications.
+                    if (!typeInfo.IsGenericType)
+                        return false;
+
+                    Collection<TypeReference> paramRefs = genTypeRef.GenericArguments;
+                    Type[] paramInfos = typeInfo.GetGenericArguments();
+                    if (paramRefs.Count != paramInfos.Length)
+                        return false;
+
+                    for (int i = 0; i < paramRefs.Count; i++) {
+                        if (!paramRefs[i].Is(paramInfos[i]))
+                            return false;
+                    }
+
+                    return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition());
+                }
+
+                // DeclaringType was already checked before.
+                // Avoid converting nested type separators between + (.NET) and / (cecil)
+                if (mref.DeclaringType != null)
+                    return mref.Name == typeInfo.Name;
+                return mref.FullName == typeInfo.FullName;
+            }
+
+            if (mref is MethodReference methodRef) {
+                if (!(minfo is System.Reflection.MethodBase methodInfo))
+                    return false;
+
+                Collection<ParameterDefinition> paramRefs = methodRef.Parameters;
+                System.Reflection.ParameterInfo[] paramInfos = methodInfo.GetParameters();
+                if (paramRefs.Count != paramInfos.Length)
+                    return false;
+
+                for (int i = 0; i < paramRefs.Count; i++) {
+                    TypeReference paramTypeRef = paramRefs[i].ParameterType;
+                    if (paramTypeRef is GenericParameter genParamParamRef) {
+                        if (genParamParamRef.Owner is MethodReference && methodRef is GenericInstanceMethod genMethodRef) {
+                            paramTypeRef = genMethodRef.GenericArguments[genParamParamRef.Position];
+                        } else if (genParamParamRef.Owner is TypeReference && methodRef.DeclaringType is GenericInstanceType genTypeRef) {
+                            paramTypeRef = genTypeRef.GenericArguments[genParamParamRef.Position];
+                        } else {
+                            throw new NotSupportedException("\"Deep\" generic argument parameter type resolving currently not supported");
+                        }
+                    }
+                    if (!paramTypeRef.Is(paramInfos[i].ParameterType))
+                        return false;
+                }
+
+                return true;
+            }
+
+            return true;
+        }
+
         public static void UpdateOffsets(this MethodBody body, int instri, int delta) {
             for (int offsi = body.Instructions.Count - 1; instri <= offsi; offsi--)
                 body.Instructions[offsi].Offset += delta;

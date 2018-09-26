@@ -204,14 +204,14 @@ namespace MonoMod.Utils {
                     }
 
                     if (operand == null)
-                        throw new NullReferenceException($"Unexpected null @ {def} @ {instr}");
+                        throw new NullReferenceException($"Unexpected null in {def} @ {instr}");
 
                     Type operandType = operand.GetType();
                     MethodInfo emit;
                     if (!_Emitters.TryGetValue(operandType, out emit))
                         emit = _Emitters.FirstOrDefault(kvp => kvp.Key.IsAssignableFrom(operandType)).Value;
                     if (emit == null)
-                        throw new InvalidOperationException($"Unexpected unemittable {operand.GetType().FullName} @ {def} @ {instr}");
+                        throw new InvalidOperationException($"Unexpected unemittable {operand.GetType().FullName} in {def} @ {instr}");
 
                     emitArgs[0] = _ReflOpCodes[instr.OpCode.Value];
                     emitArgs[1] = operand;
@@ -231,55 +231,59 @@ namespace MonoMod.Utils {
         }
 
         private static MemberInfo ResolveMember(MemberReference mref, Type[] genericTypeArguments, Type[] genericMethodArguments, Module module = null) {
-            if (_ResolveCache.TryGetValue(mref, out MemberInfo cached))
+            if (_ResolveCache.TryGetValue(mref, out MemberInfo cached) && cached != null)
                 return cached;
 
             Type type;
 
-#if !LEGACY
-            MemberReference mdef = mref.Resolve() as MemberReference;
-#else
-            MemberReference mdef;
-            switch (mref) {
-                case MethodReference cast: mdef = cast.Resolve(); break;
-                case FieldReference cast: mdef = cast.Resolve(); break;
-                case TypeReference cast: mdef = cast.Resolve(); break;
-                case PropertyReference cast: mdef = cast.Resolve(); break;
-                case EventReference cast: mdef = cast.Resolve(); break;
-                default: throw new NotSupportedException();
-            }
-#endif
+            // Special cases, f.e. multi-dimensional array type methods.
+            if (mref is MethodReference method && mref.DeclaringType is ArrayType) {
+                // ArrayType holds special methods.
+                type = ResolveMember(mref.DeclaringType, genericTypeArguments, genericMethodArguments, module) as Type;
+                // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
-            if (mdef == null) {
-                // Special cases, f.e. multi-dimensional array type methods.
-                if (mref is MethodReference method && mref.DeclaringType is ArrayType) {
-                    // ArrayType holds special methods.
-                    type = ResolveMember(mref.DeclaringType, genericTypeArguments, genericMethodArguments, module) as Type;
-                    // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
-
-                    string methodID = method.GetFindableID(withType: false);
-                    MethodInfo found = type.GetMethods().First(m => m.GetFindableID(withType: false) == methodID);
-                    if (found != null)
-                        return _ResolveCache[mref] = found;
-                }
-
-                throw new NotSupportedException($"Unsupported unresolvable member reference {mref}");
+                string methodID = method.GetFindableID(withType: false);
+                MethodInfo found = type.GetMethods().First(m => m.GetFindableID(withType: false) == methodID);
+                if (found != null)
+                    return _ResolveCache[mref] = found;
             }
 
-            int token = mdef.MetadataToken.ToInt32();
+            TypeReference tscope =
+                mref.DeclaringType ??
+                mref as TypeReference ??
+                throw new NotSupportedException("MemberReference hasn't got a DeclaringType / isn't a TypeReference in itself");
 
             if (module == null) {
-                string asmName = mdef.Module.Assembly.Name.FullName;
-                Assembly asm;
-                if (!_AssemblyCache.TryGetValue(asmName, out asm))
+                string asmName;
+                string moduleName;
+
+                switch (tscope.Scope) {
+                    case AssemblyNameReference asmNameRef:
+                        asmName = asmNameRef.FullName;
+                        moduleName = null;
+                        break;
+
+                    case ModuleDefinition moduleDef:
+                        asmName = moduleDef.Assembly.FullName;
+                        moduleName = moduleDef.Name;
+                        break;
+
+                    case ModuleReference moduleRef:
+                        // TODO: Is this correct? It's what cecil itself is doing...
+                        asmName = tscope.Module.Assembly.FullName;
+                        moduleName = tscope.Module.Name;
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
+                }
+
+                if (!_AssemblyCache.TryGetValue(asmName, out Assembly asm))
                     _AssemblyCache[asmName] = asm = Assembly.Load(asmName);
-                module = asm.GetModule(mdef.Module.Name);
+                module = string.IsNullOrEmpty(moduleName) ? asm.GetModules()[0] : asm.GetModule(moduleName);
             }
 
-
-            if (mref is TypeReference) {
-                type = module.ResolveType(token, genericTypeArguments, genericMethodArguments);
-
+            if (mref is TypeReference tref) {
                 if (mref is TypeSpecification ts) {
                     type = ResolveMember(ts.ElementType, genericTypeArguments, genericMethodArguments, module) as Type;
 
@@ -294,6 +298,9 @@ namespace MonoMod.Utils {
 
                     if (ts.IsGenericInstance)
                         return _ResolveCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+
+                } else {
+                    type = module.GetType(mref.FullName.Replace("/", "+"));
                 }
 
                 return _ResolveCache[mref] = type;
@@ -301,10 +308,15 @@ namespace MonoMod.Utils {
 
             type = ResolveMember(mref.DeclaringType, genericTypeArguments, genericMethodArguments, module) as Type;
 
-            MemberInfo member = type.GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => m.MetadataToken == token);
+            MemberInfo member;
 
-            if (mref is GenericInstanceMethod mrefGenMethod)
-                return _ResolveCache[mref] = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+            if (mref is GenericInstanceMethod mrefGenMethod) {
+                member = ResolveMember(mrefGenMethod.ElementMethod, genericTypeArguments, genericMethodArguments, module);
+                member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+
+            } else {
+                member = type.GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));
+            }
 
             return _ResolveCache[mref] = member;
         }

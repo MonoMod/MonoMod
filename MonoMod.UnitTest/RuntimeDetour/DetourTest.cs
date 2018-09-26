@@ -12,7 +12,7 @@ namespace MonoMod.UnitTest {
         [TestMethod]
         public void TestDetours() {
             Console.WriteLine("Detours: none");
-            DetourExample.TestStep(5, 6, 8);
+            TestObject.TestStep(5, 6, 8);
             Console.WriteLine();
 
             // Three examples of using Detour.
@@ -20,39 +20,39 @@ namespace MonoMod.UnitTest {
             // This is also why the variable type is IDetour.
             // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
             IDetour detourTestMethodA = new Detour(
-                () => default(DetourExample).TestMethod(default(int), default(int)),
-                () => TestMethod_A(default(DetourExample), default(int), default(int))
+                () => default(TestObject).TestMethod(default(int), default(int)),
+                () => TestMethod_A(default(TestObject), default(int), default(int))
             );
             // Method references as delegates.
             IDetour detourTestStaticMethodA = new Detour<Func<int, int, int>>(
-                DetourExample.TestStaticMethod,
+                TestObject.TestStaticMethod,
                 TestStaticMethod_A
             );
             // MethodBase, old syntax.
             IDetour detourTestVoidMethodA = new Detour(
-                typeof(DetourExample).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
+                typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                 typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
             );
             Console.WriteLine("Detours: A");
-            DetourExample.TestStep(42, 12, 1);
+            TestObject.TestStep(42, 12, 1);
             Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
             detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
             Console.WriteLine();
 
             IDetour detourTestMethodB = new Detour(
-                () => default(DetourExample).TestMethod(default(int), default(int)),
-                () => TestMethod_B(default(DetourExample), default(int), default(int))
+                () => default(TestObject).TestMethod(default(int), default(int)),
+                () => TestMethod_B(default(TestObject), default(int), default(int))
             );
             IDetour detourTestStaticMethodB = new Detour(
-                 () => DetourExample.TestStaticMethod(default(int), default(int)),
+                 () => TestObject.TestStaticMethod(default(int), default(int)),
                  () => TestStaticMethod_B(default(int), default(int))
             );
             IDetour detourTestVoidMethodB = new Detour(
-                 () => DetourExample.TestVoidMethod(default(int), default(int)),
+                 () => TestObject.TestVoidMethod(default(int), default(int)),
                  () => TestVoidMethod_B(default(int), default(int))
             );
             Console.WriteLine("Detours: A + B");
-            DetourExample.TestStep(120, 8, 2);
+            TestObject.TestStep(120, 8, 2);
             Console.WriteLine("Testing trampoline, should invoke hook A, TestVoidMethod(2, 3)");
             Action<int, int> trampolineTestVoidMethodB = detourTestVoidMethodB.GenerateTrampoline<Action<int, int>>();
             trampolineTestVoidMethodB(2, 3);
@@ -62,7 +62,7 @@ namespace MonoMod.UnitTest {
             detourTestStaticMethodA.Undo();
             detourTestVoidMethodA.Undo();
             Console.WriteLine("Detours: B");
-            DetourExample.TestStep(120, 8, 2);
+            TestObject.TestStep(120, 8, 2);
             Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
             trampolineTestVoidMethodB(2, 3);
             Console.WriteLine();
@@ -71,11 +71,11 @@ namespace MonoMod.UnitTest {
             detourTestStaticMethodB.Undo();
             detourTestVoidMethodB.Undo();
             Console.WriteLine("Detours: none");
-            DetourExample.TestStep(5, 6, 8);
+            TestObject.TestStep(5, 6, 8);
             Console.WriteLine();
         }
 
-        public static int TestMethod_A(DetourExample self, int a, int b) {
+        public static int TestMethod_A(TestObject self, int a, int b) {
             return 42;
         }
 
@@ -85,10 +85,10 @@ namespace MonoMod.UnitTest {
 
         public static void TestVoidMethod_A(int a, int b) {
             Console.WriteLine("Detour A");
-            DetourExample.VoidResult += 1;
+            TestObject.VoidResult += 1;
         }
 
-        public static int TestMethod_B(DetourExample self, int a, int b) {
+        public static int TestMethod_B(TestObject self, int a, int b) {
             return 120;
         }
 
@@ -98,7 +98,7 @@ namespace MonoMod.UnitTest {
 
         public static void TestVoidMethod_B(int a, int b) {
             Console.WriteLine("Detour B");
-            DetourExample.VoidResult += 2;
+            TestObject.VoidResult += 2;
         }
     }
 }
