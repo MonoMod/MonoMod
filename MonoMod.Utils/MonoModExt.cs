@@ -375,7 +375,8 @@ namespace MonoMod.Utils {
                         } else if (genParamParamRef.Owner is TypeReference && methodRef.DeclaringType is GenericInstanceType genTypeRef) {
                             paramTypeRef = genTypeRef.GenericArguments[genParamParamRef.Position];
                         } else {
-                            throw new NotSupportedException("\"Deep\" generic argument parameter type resolving currently not supported");
+                            // throw new NotSupportedException("\"Deep\" generic argument parameter type resolving currently not supported");
+                            // ... or we're comparing generic params against generic params.
                         }
                     }
                     if (!paramTypeRef.Is(paramInfos[i].ParameterType))
