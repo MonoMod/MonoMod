@@ -16,7 +16,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         const string ObsoleteMessageBackCompat = "This method only exists for backwards-compatibility purposes.";
 
-        readonly static Regex NameVerifyRegex = new Regex("[^a-zA-Z]", RegexOptions.Compiled);
+        static readonly Regex NameVerifyRegex = new Regex("[^a-zA-Z]"); // Don't set RegexOptions.Compiled as old versions of mono hate it.
 
         public MonoModder Modder;
 
