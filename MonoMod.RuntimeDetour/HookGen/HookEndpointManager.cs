@@ -62,7 +62,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public static void RemoveAllOwnedBy(object owner) {
-            if (!OwnedHookLists.TryGetValue(owner, out List<HookEntry> list))
+            if (owner == null || !OwnedHookLists.TryGetValue(owner, out List<HookEntry> list) || list == null)
                 return;
             OwnedHookLists.Remove(owner);
 
