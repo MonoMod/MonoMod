@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    class HookGenerator {
+    public class HookGenerator {
 
         const string ObsoleteMessageBackCompat = "This method only exists for backwards-compatibility purposes.";
 
