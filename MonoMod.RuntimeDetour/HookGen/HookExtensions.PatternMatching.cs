@@ -39,6 +39,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdarg instead.", true)]
         public static bool MatchLdarg0(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldarg_0) {
                 return true;
@@ -46,6 +48,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdarg instead.", true)]
         public static bool MatchLdarg1(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldarg_1) {
                 return true;
@@ -53,6 +57,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdarg instead.", true)]
         public static bool MatchLdarg2(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldarg_2) {
                 return true;
@@ -60,6 +66,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdarg instead.", true)]
         public static bool MatchLdarg3(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldarg_3) {
                 return true;
@@ -67,6 +75,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdloc instead.", true)]
         public static bool MatchLdloc0(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldloc_0) {
                 return true;
@@ -74,6 +84,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdloc instead.", true)]
         public static bool MatchLdloc1(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldloc_1) {
                 return true;
@@ -81,6 +93,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdloc instead.", true)]
         public static bool MatchLdloc2(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldloc_2) {
                 return true;
@@ -88,6 +102,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchLdloc instead.", true)]
         public static bool MatchLdloc3(this Instruction instr) {
             if (instr.OpCode == OpCodes.Ldloc_3) {
                 return true;
@@ -95,6 +111,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchStloc instead.", true)]
         public static bool MatchStloc0(this Instruction instr) {
             if (instr.OpCode == OpCodes.Stloc_0) {
                 return true;
@@ -102,6 +120,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchStloc instead.", true)]
         public static bool MatchStloc1(this Instruction instr) {
             if (instr.OpCode == OpCodes.Stloc_1) {
                 return true;
@@ -109,6 +129,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchStloc instead.", true)]
         public static bool MatchStloc2(this Instruction instr) {
             if (instr.OpCode == OpCodes.Stloc_2) {
                 return true;
@@ -116,6 +138,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("Use MatchStloc instead.", true)]
         public static bool MatchStloc3(this Instruction instr) {
             if (instr.OpCode == OpCodes.Stloc_3) {
                 return true;
@@ -1929,74 +1953,86 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineMethod
 
-        public static bool MatchLdarg(this Instruction instr, ParameterReference value)
+        public static bool MatchLdarg(this Instruction instr, int value)
             => instr.MatchLdarg(out var v) && v == value;
-        public static bool MatchLdarg(this Instruction instr, out ParameterReference value) {
+        public static bool MatchLdarg(this Instruction instr, out int value) {
             if (instr.OpCode == OpCodes.Ldarg ||
                 instr.OpCode == OpCodes.Ldarg_S) {
-                value = (ParameterReference) instr.Operand;
+                value = ((ParameterReference) instr.Operand).Index;
                 return true;
             }
+            if (instr.OpCode == OpCodes.Ldarg_0) { value = 0; return true; }
+            if (instr.OpCode == OpCodes.Ldarg_1) { value = 1; return true; }
+            if (instr.OpCode == OpCodes.Ldarg_2) { value = 2; return true; }
+            if (instr.OpCode == OpCodes.Ldarg_3) { value = 3; return true; }
             value = default;
             return false;
         } // OperandType.InlineArg
 
-        public static bool MatchLdarga(this Instruction instr, ParameterReference value)
+        public static bool MatchLdarga(this Instruction instr, int value)
             => instr.MatchLdarga(out var v) && v == value;
-        public static bool MatchLdarga(this Instruction instr, out ParameterReference value) {
+        public static bool MatchLdarga(this Instruction instr, out int value) {
             if (instr.OpCode == OpCodes.Ldarga ||
                 instr.OpCode == OpCodes.Ldarga_S) {
-                value = (ParameterReference) instr.Operand;
+                value = ((ParameterReference) instr.Operand).Index;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineArg
 
-        public static bool MatchStarg(this Instruction instr, ParameterReference value)
+        public static bool MatchStarg(this Instruction instr, int value)
             => instr.MatchStarg(out var v) && v == value;
-        public static bool MatchStarg(this Instruction instr, out ParameterReference value) {
+        public static bool MatchStarg(this Instruction instr, out int value) {
             if (instr.OpCode == OpCodes.Starg ||
                 instr.OpCode == OpCodes.Starg_S) {
-                value = (ParameterReference) instr.Operand;
+                value = ((ParameterReference) instr.Operand).Index;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineArg
 
-        public static bool MatchLdloc(this Instruction instr, VariableReference value)
+        public static bool MatchLdloc(this Instruction instr, int value)
             => instr.MatchLdloc(out var v) && v == value;
-        public static bool MatchLdloc(this Instruction instr, out VariableReference value) {
+        public static bool MatchLdloc(this Instruction instr, out int value) {
             if (instr.OpCode == OpCodes.Ldloc ||
                 instr.OpCode == OpCodes.Ldloc_S) {
-                value = (VariableReference) instr.Operand;
+                value = ((VariableReference) instr.Operand).Index;
                 return true;
             }
+            if (instr.OpCode == OpCodes.Ldloc_0) { value = 0; return true; }
+            if (instr.OpCode == OpCodes.Ldloc_1) { value = 1; return true; }
+            if (instr.OpCode == OpCodes.Ldloc_2) { value = 2; return true; }
+            if (instr.OpCode == OpCodes.Ldloc_3) { value = 3; return true; }
             value = default;
             return false;
         } // OperandType.InlineVar
 
-        public static bool MatchLdloca(this Instruction instr, VariableReference value)
+        public static bool MatchLdloca(this Instruction instr, int value)
             => instr.MatchLdloca(out var v) && v == value;
-        public static bool MatchLdloca(this Instruction instr, out VariableReference value) {
+        public static bool MatchLdloca(this Instruction instr, out int value) {
             if (instr.OpCode == OpCodes.Ldloca ||
                 instr.OpCode == OpCodes.Ldloca_S) {
-                value = (VariableReference) instr.Operand;
+                value = ((VariableReference) instr.Operand).Index;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineVar
 
-        public static bool MatchStloc(this Instruction instr, VariableReference value)
+        public static bool MatchStloc(this Instruction instr, int value)
             => instr.MatchStloc(out var v) && v == value;
-        public static bool MatchStloc(this Instruction instr, out VariableReference value) {
+        public static bool MatchStloc(this Instruction instr, out int value) {
             if (instr.OpCode == OpCodes.Stloc ||
                 instr.OpCode == OpCodes.Stloc_S) {
-                value = (VariableReference) instr.Operand;
+                value = ((VariableReference) instr.Operand).Index;
                 return true;
             }
+            if (instr.OpCode == OpCodes.Stloc_0) { value = 0; return true; }
+            if (instr.OpCode == OpCodes.Stloc_1) { value = 1; return true; }
+            if (instr.OpCode == OpCodes.Stloc_2) { value = 2; return true; }
+            if (instr.OpCode == OpCodes.Stloc_3) { value = 3; return true; }
             value = default;
             return false;
         } // OperandType.InlineVar
