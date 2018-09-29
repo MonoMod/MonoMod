@@ -23,7 +23,9 @@ namespace MonoMod.RuntimeDetour {
             Method = from;
             _Hook = to;
 
-            if (_Hook.ReturnType != ((from as MethodInfo)?.ReturnType ?? typeof(void)))
+            // Check if hook ret -> method ret is valid. Don't check for method ret -> hook ret, as that's too strict.
+            Type returnType = (from as MethodInfo)?.ReturnType ?? typeof(void);
+            if (_Hook.ReturnType.IsAssignableFrom(returnType) && _Hook.ReturnType != returnType)
                 throw new InvalidOperationException($"Return type of hook for {from} doesn't match, must be {((from as MethodInfo)?.ReturnType ?? typeof(void)).FullName}");
 
             if (target == null && !to.IsStatic) {
