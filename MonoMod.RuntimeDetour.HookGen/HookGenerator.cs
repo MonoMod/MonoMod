@@ -506,7 +506,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 HasThis = true
             };
             if (!method.IsStatic)
-                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, OutputModule.ImportReference(method.DeclaringType)));
+                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, ImportVisible(method.DeclaringType)));
             foreach (ParameterDefinition param in method.Parameters)
                 invoke.Parameters.Add(new ParameterDefinition(
                     param.Name,
