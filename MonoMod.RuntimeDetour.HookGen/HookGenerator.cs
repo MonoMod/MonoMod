@@ -500,7 +500,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             MethodDefinition invoke = new MethodDefinition(
                 "Invoke",
                 MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig | MethodAttributes.NewSlot,
-                OutputModule.ImportReference(method.ReturnType)
+                ImportVisible(method.ReturnType)
             ) {
                 ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
                 HasThis = true
@@ -511,36 +511,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 invoke.Parameters.Add(new ParameterDefinition(
                     param.Name,
                     param.Attributes & ~ParameterAttributes.Optional & ~ParameterAttributes.HasDefault,
-                    OutputModule.ImportReference(param.ParameterType)
+                    ImportVisible(param.ParameterType)
                 ));
-            foreach (ParameterDefinition param in method.Parameters) {
-                // Check if the declaring type is accessible.
-                // If not, use its base type instead.
-                // Note: This will break down with type specifications!
-                TypeDefinition paramType = param.ParameterType?.SafeResolve();
-                TypeReference paramTypeRef = null;
-                Retry:
-                if (paramType == null)
-                    continue;
-
-                for (TypeDefinition parent = paramType; parent != null; parent = parent.DeclaringType) {
-                    if (parent.IsNestedPublic || parent.IsPublic)
-                        continue;
-
-                    if (paramType.IsEnum) {
-                        paramTypeRef = paramType.FindField("value__").FieldType;
-                        break;
-                    }
-
-                    paramTypeRef = paramType.BaseType;
-                    paramType = paramType.BaseType?.SafeResolve();
-                    goto Retry;
-                }
-
-                // If paramTypeRef is null because the type is accessible, don't change it.
-                if (paramTypeRef != null)
-                    param.ParameterType = OutputModule.ImportReference(paramTypeRef);
-            }
             invoke.Body = new MethodBody(invoke);
             del.Methods.Add(invoke);
 
@@ -572,6 +544,34 @@ namespace MonoMod.RuntimeDetour.HookGen {
             del.Methods.Add(invokeEnd);
 
             return del;
+        }
+
+        TypeReference ImportVisible(TypeReference typeRef) {
+            // Check if the declaring type is accessible.
+            // If not, use its base type instead.
+            // Note: This will break down with type specifications!
+            Retry:
+            TypeDefinition type = typeRef?.SafeResolve();
+            if (type == null) // Unresolvable - probably private anyway.
+                return OutputModule.TypeSystem.Object;
+
+            for (TypeDefinition parent = type; parent != null; parent = parent.DeclaringType) {
+                if (parent.IsNestedPublic || parent.IsPublic)
+                    continue;
+
+                if (type.IsEnum) {
+                    typeRef = type.FindField("value__").FieldType;
+                    break;
+                }
+
+                typeRef = type.BaseType;
+                goto Retry;
+            }
+
+            // If typeRef is null because the type is accessible, don't change it.
+            if (typeRef != null)
+                return OutputModule.ImportReference(typeRef);
+            return OutputModule.ImportReference(type);
         }
 
         CustomAttribute GenerateObsolete(string message, bool error) {
