@@ -555,23 +555,24 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (type == null) // Unresolvable - probably private anyway.
                 return OutputModule.TypeSystem.Object;
 
+            // Check if the type and all of its parents are public.
             for (TypeDefinition parent = type; parent != null; parent = parent.DeclaringType) {
-                if (parent.IsNestedPublic || parent.IsPublic)
+                if ((parent.IsNestedPublic || parent.IsPublic) && !parent.IsNotPublic)
                     continue;
-
+                // If it isn't public, ...
+                
                 if (type.IsEnum) {
+                    // ... try the enum's underlying type.
                     typeRef = type.FindField("value__").FieldType;
                     break;
                 }
 
+                // ... try the base type.
                 typeRef = type.BaseType;
                 goto Retry;
             }
 
-            // If typeRef is null because the type is accessible, don't change it.
-            if (typeRef != null)
-                return OutputModule.ImportReference(typeRef);
-            return OutputModule.ImportReference(type);
+            return OutputModule.ImportReference(typeRef);
         }
 
         CustomAttribute GenerateObsolete(string message, bool error) {
