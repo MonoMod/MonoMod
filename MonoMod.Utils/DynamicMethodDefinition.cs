@@ -199,6 +199,8 @@ namespace MonoMod.Utils {
                         operand = labelMap[target.Offset];
                     } else if (operand is VariableDefinition var) {
                         operand = locals[var.Index];
+                    } else if (operand is ParameterDefinition param) {
+                        operand = param.Index;
                     } else if (operand is MemberReference mref) {
                         operand = ResolveMember(mref, genericArgsType, genericArgsMethod);
                     }
