@@ -14,9 +14,9 @@ namespace MonoMod.Utils {
         private readonly static Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
         private readonly static Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
         private readonly static Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
-        private readonly static Dictionary<MemberReference, MemberInfo> _ResolveCache = new Dictionary<MemberReference, MemberInfo>();
 
-        private static Dictionary<string, Assembly> _AssemblyCache = new Dictionary<string, Assembly>();
+        public readonly static Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
+        public readonly static Dictionary<MemberReference, MemberInfo> ResolveCache = new Dictionary<MemberReference, MemberInfo>();
 
         static DynamicMethodDefinition() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
@@ -233,7 +233,7 @@ namespace MonoMod.Utils {
         }
 
         private static MemberInfo ResolveMember(MemberReference mref, Type[] genericTypeArguments, Type[] genericMethodArguments, Module module = null) {
-            if (_ResolveCache.TryGetValue(mref, out MemberInfo cached) && cached != null)
+            if (ResolveCache.TryGetValue(mref, out MemberInfo cached) && cached != null)
                 return cached;
 
             Type type;
@@ -247,7 +247,7 @@ namespace MonoMod.Utils {
                 string methodID = method.GetFindableID(withType: false);
                 MethodInfo found = type.GetMethods().First(m => m.GetFindableID(withType: false) == methodID);
                 if (found != null)
-                    return _ResolveCache[mref] = found;
+                    return ResolveCache[mref] = found;
             }
 
             TypeReference tscope =
@@ -280,8 +280,8 @@ namespace MonoMod.Utils {
                         throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
                 }
 
-                if (!_AssemblyCache.TryGetValue(asmName, out Assembly asm))
-                    _AssemblyCache[asmName] = asm = Assembly.Load(asmName);
+                if (!AssemblyCache.TryGetValue(asmName, out Assembly asm))
+                    AssemblyCache[asmName] = asm = Assembly.Load(asmName);
                 module = string.IsNullOrEmpty(moduleName) ? asm.GetModules()[0] : asm.GetModule(moduleName);
             }
 
@@ -290,22 +290,22 @@ namespace MonoMod.Utils {
                     type = ResolveMember(ts.ElementType, genericTypeArguments, genericMethodArguments, module) as Type;
 
                     if (ts.IsByReference)
-                        return _ResolveCache[mref] = type.MakeByRefType();
+                        return ResolveCache[mref] = type.MakeByRefType();
 
                     if (ts.IsPointer)
-                        return _ResolveCache[mref] = type.MakePointerType();
+                        return ResolveCache[mref] = type.MakePointerType();
 
                     if (ts.IsArray)
-                        return _ResolveCache[mref] = type.MakeArrayType((ts as ArrayType).Dimensions.Count);
+                        return ResolveCache[mref] = type.MakeArrayType((ts as ArrayType).Dimensions.Count);
 
                     if (ts.IsGenericInstance)
-                        return _ResolveCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
+                        return ResolveCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => ResolveMember(arg, genericTypeArguments, genericMethodArguments) as Type).ToArray());
 
                 } else {
                     type = module.GetType(mref.FullName.Replace("/", "+"));
                 }
 
-                return _ResolveCache[mref] = type;
+                return ResolveCache[mref] = type;
             }
 
             type = ResolveMember(mref.DeclaringType, genericTypeArguments, genericMethodArguments, module) as Type;
@@ -320,7 +320,7 @@ namespace MonoMod.Utils {
                 member = type.GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));
             }
 
-            return _ResolveCache[mref] = member;
+            return ResolveCache[mref] = member;
         }
 
         public void Dispose() {
