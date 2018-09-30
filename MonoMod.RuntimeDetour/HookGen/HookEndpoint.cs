@@ -98,10 +98,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 new HookIL(def).Invoke(manip);
             } else {
                 callback.DynamicInvoke(def.Body, def.Body.GetILProcessor());
+                DMD.Definition.RecalculateILOffsets();
+                DMD.Definition.ConvertShortLongOps();
             }
 
-            DMD.Definition.RecalculateILOffsets();
-            DMD.Definition.ConvertShortLongOps();
             DetourILDetourTarget(true);
 
             ILList.Add(callback);
@@ -123,6 +123,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     new HookIL(def).Invoke(manip);
                 } else {
                     cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
+                    DMD.Definition.RecalculateILOffsets();
+                    DMD.Definition.ConvertShortLongOps();
                 }
             }
 

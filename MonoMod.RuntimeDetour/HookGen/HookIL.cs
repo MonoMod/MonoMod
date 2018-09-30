@@ -33,6 +33,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             manip(this);
             foreach (HookILLabel label in Labels)
                 IL.ReplaceOperands(label, label.Instr);
+            Method.RecalculateILOffsets();
+            Method.ConvertShortLongOps();
         }
 
         public Instruction this[int index] {

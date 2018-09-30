@@ -161,6 +161,24 @@ namespace Harmony.ILCopying {
             }
         }
 
+        // used in FinalizeILCodes to convert short jumps to long ones
+        static Dictionary<short, OpCode> shortJumps = new Dictionary<short, OpCode>() {
+            { OpCodes.Leave_S.Value, OpCodes.Leave },
+            { OpCodes.Brfalse_S.Value, OpCodes.Brfalse },
+            { OpCodes.Brtrue_S.Value, OpCodes.Brtrue },
+            { OpCodes.Beq_S.Value, OpCodes.Beq },
+            { OpCodes.Bge_S.Value, OpCodes.Bge },
+            { OpCodes.Bgt_S.Value, OpCodes.Bgt },
+            { OpCodes.Ble_S.Value, OpCodes.Ble },
+            { OpCodes.Blt_S.Value, OpCodes.Blt },
+            { OpCodes.Bne_Un_S.Value, OpCodes.Bne_Un },
+            { OpCodes.Bge_Un_S.Value, OpCodes.Bge_Un },
+            { OpCodes.Bgt_Un_S.Value, OpCodes.Bgt_Un },
+            { OpCodes.Ble_Un_S.Value, OpCodes.Ble_Un },
+            { OpCodes.Br_S.Value, OpCodes.Br },
+            { OpCodes.Blt_Un_S.Value, OpCodes.Blt_Un }
+        };
+
         // use parsed IL codes and emit them to a generator
         //
         public void Copy() {
@@ -235,6 +253,10 @@ namespace Harmony.ILCopying {
 
                 var code = instr.opcode;
                 var operand = instr.argument;
+
+                // replace short jumps with long ones (can be optimized but requires byte counting, not instruction counting)
+                if (shortJumps.TryGetValue(code.Value, out var longJump))
+                    code = longJump;
 
                 if (code.OperandType == OperandType.InlineNone)
                     generator.Emit(code);
