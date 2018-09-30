@@ -95,7 +95,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             MethodDefinition def = DMD.Definition;
             if (callback is ILManipulator manip) {
-                new HookIL(def.Body).Invoke(manip);
+                new HookIL(def).Invoke(manip);
             } else {
                 callback.DynamicInvoke(def.Body, def.Body.GetILProcessor());
             }
@@ -120,7 +120,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             MethodDefinition def = DMD.Definition;
             foreach (Delegate cb in ILList) {
                 if (cb is ILManipulator manip) {
-                    new HookIL(def.Body).Invoke(manip);
+                    new HookIL(def).Invoke(manip);
                 } else {
                     cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
                 }

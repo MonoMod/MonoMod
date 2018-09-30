@@ -15,21 +15,21 @@ namespace MonoMod.RuntimeDetour.HookGen {
     /// </summary>
     public class HookIL {
 
-        public MethodBody Body { get; private set; }
+        public MethodDefinition Method { get; private set; }
         public ILProcessor IL { get; private set; }
 
-        public MethodDefinition Method => Body.Method;
-        public ModuleDefinition Module => Body.Method.Module;
+        public MethodBody Body => Method.Body;
+        public ModuleDefinition Module => Method.Module;
         public Mono.Collections.Generic.Collection<Instruction> Instrs => Body.Instructions;
 
         public List<HookILLabel> Labels { get; } = new List<HookILLabel>();
 
-        internal HookIL(MethodBody body) {
-            Body = body;
-            IL = body.GetILProcessor();
+        public HookIL(MethodDefinition method) {
+            Method = method;
+            IL = method.Body.GetILProcessor();
         }
 
-        internal void Invoke(ILManipulator manip) {
+        public void Invoke(ILManipulator manip) {
             manip(this);
             foreach (HookILLabel label in Labels)
                 IL.ReplaceOperands(label, label.Instr);

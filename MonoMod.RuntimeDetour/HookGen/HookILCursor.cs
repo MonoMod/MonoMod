@@ -37,10 +37,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public HookIL HookIL { get; private set; }
         public Instruction Instr { get; set; }
 
-        public MethodBody Body => HookIL.Body;
+        public MethodDefinition Method => HookIL.Method;
         public ILProcessor IL => HookIL.IL;
 
-        public MethodDefinition Method => HookIL.Method;
+        public MethodBody Body => HookIL.Body;
         public ModuleDefinition Module => HookIL.Module;
         public Mono.Collections.Generic.Collection<Instruction> Instrs => HookIL.Instrs;
 
