@@ -13,7 +13,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly static Dictionary<object, List<HookEntry>> OwnedHookLists = new Dictionary<object, List<HookEntry>>();
 
         public static event Func<AssemblyName, ModuleDefinition> OnGenerateCecilModule;
-        internal static ModuleDefinition GenerateCecilModule(AssemblyName name)
+        public static ModuleDefinition GenerateCecilModule(AssemblyName name)
             => OnGenerateCecilModule?.InvokeWhileNull<ModuleDefinition>(name);
 
         public static event Func<Delegate, object> OnGetOwner;
