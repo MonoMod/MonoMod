@@ -78,23 +78,43 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
         }
 
-        // These must stay generic for backwards-compatibility.
-        public static void Add<T>(MethodBase method, Delegate hookDelegate) where T : Delegate {
+        // Both generic and non-generic variants must stay for backwards-compatibility.
+        public static event Func<MethodBase, Delegate, bool> OnAdd;
+        public static void Add<T>(MethodBase method, Delegate hookDelegate) where T : Delegate
+            => Add(method, hookDelegate);
+        public static void Add(MethodBase method, Delegate hookDelegate) {
+            if (!(OnAdd?.InvokeWhileTrue(method, hookDelegate) ?? true))
+                return;
             GetEndpoint(method).Add(hookDelegate);
             AddEntry(HookEntryType.Hook, method, hookDelegate);
         }
 
-        public static void Remove<T>(MethodBase method, Delegate hookDelegate) where T : Delegate {
+        public static event Func<MethodBase, Delegate, bool> OnRemove;
+        public static void Remove<T>(MethodBase method, Delegate hookDelegate) where T : Delegate
+            => Remove(method, hookDelegate);
+        public static void Remove(MethodBase method, Delegate hookDelegate) {
+            if (!(OnRemove?.InvokeWhileTrue(method, hookDelegate) ?? true))
+                return;
             GetEndpoint(method).Remove(hookDelegate);
             RemoveEntry(HookEntryType.Hook, method, hookDelegate);
         }
 
-        public static void Modify<T>(MethodBase method, Delegate callback) where T : Delegate {
+        public static event Func<MethodBase, Delegate, bool> OnModify;
+        public static void Modify<T>(MethodBase method, Delegate callback) where T : Delegate
+            => Modify(method, callback);
+        public static void Modify(MethodBase method, Delegate callback) {
+            if (!(OnModify?.InvokeWhileTrue(method, callback) ?? true))
+                return;
             GetEndpoint(method).Modify(callback);
             AddEntry(HookEntryType.Modification, method, callback);
         }
 
-        public static void Unmodify<T>(MethodBase method, Delegate callback) where T : Delegate {
+        public static event Func<MethodBase, Delegate, bool> OnUnmodify;
+        public static void Unmodify<T>(MethodBase method, Delegate callback)
+            => Unmodify(method, callback);
+        public static void Unmodify(MethodBase method, Delegate callback) {
+            if (!(OnUnmodify?.InvokeWhileTrue(method, callback) ?? true))
+                return;
             GetEndpoint(method).Unmodify(callback);
             RemoveEntry(HookEntryType.Modification, method, callback);
         }
