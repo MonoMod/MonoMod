@@ -16,6 +16,10 @@ namespace MonoMod.RuntimeDetour {
         private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
         private static Dictionary<MethodBase, DynamicMethod> _BackupMethods = new Dictionary<MethodBase, DynamicMethod>();
 
+        public static Func<object, MethodBase, MethodBase, bool> OnDetour;
+        public static Func<object, bool> OnUndo;
+        public static Func<object, MethodBase, MethodBase> OnGenerateTrampoline;
+
         public bool IsValid => _DetourMap[Method].Contains(this);
 
         public int Index {
@@ -63,6 +67,9 @@ namespace MonoMod.RuntimeDetour {
         public Detour(MethodBase from, MethodBase to) {
             Method = from;
             Target = to;
+
+            if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
+                return;
 
             // TODO: Check target method arguments.
 
@@ -168,6 +175,9 @@ namespace MonoMod.RuntimeDetour {
             if (!IsValid)
                 throw new InvalidOperationException("This detour has been undone.");
 
+            if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
+                return;
+
             List<Detour> detours = _DetourMap[Method];
             lock (detours) {
                 detours.Remove(this);
@@ -201,6 +211,10 @@ namespace MonoMod.RuntimeDetour {
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
+            MethodBase remoteTrampoline = OnGenerateTrampoline?.InvokeWhileNull<MethodBase>(this, signature);
+            if (remoteTrampoline != null)
+                return remoteTrampoline;
+
             if (signature == null)
                 signature = Target;
 
