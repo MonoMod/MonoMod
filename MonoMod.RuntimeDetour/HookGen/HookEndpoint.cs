@@ -93,14 +93,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (callback == null)
                 return;
 
-            MethodDefinition def = DMD.Definition;
-            if (callback is ILManipulator manip) {
-                new HookIL(def).Invoke(manip);
-            } else {
-                callback.DynamicInvoke(def.Body, def.Body.GetILProcessor());
-                DMD.Definition.RecalculateILOffsets();
-                DMD.Definition.ConvertShortLongOps();
-            }
+            InvokeManipulator(DMD.Definition, callback);
 
             DetourILDetourTarget(true);
 
@@ -118,19 +111,35 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             DMD.Reload(null, true);
             MethodDefinition def = DMD.Definition;
-            foreach (Delegate cb in ILList) {
-                if (cb is ILManipulator manip) {
-                    new HookIL(def).Invoke(manip);
-                } else {
-                    cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
-                    DMD.Definition.RecalculateILOffsets();
-                    DMD.Definition.ConvertShortLongOps();
-                }
-            }
+            foreach (Delegate cb in ILList)
+                InvokeManipulator(def, cb);
 
             DMD.Definition.RecalculateILOffsets();
             DMD.Definition.ConvertShortLongOps();
             DetourILDetourTarget();
+        }
+
+        private static void InvokeManipulator(MethodDefinition def, Delegate cb) {
+            if (cb.TryCastDelegate(out ILManipulator manip)) {
+                // The callback is an ILManipulator, or compatible to it out of the box.
+                new HookIL(def).Invoke(manip);
+                return;
+            }
+
+
+            // Check if the method accepts a HookIL from another assembly.
+            ParameterInfo[] args = cb.Method.GetParameters();
+            if (args.Length == 1 && args[0].ParameterType.FullName == typeof(HookIL).FullName) {
+                // Instantiate it. We should rather pass a "proxy" of some sorts, but eh.
+                object hookil = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
+                hookil.GetType().GetMethod("Invoke").Invoke(hookil, new object[] { cb });
+                return;
+            }
+
+            // Fallback - body and IL processor.
+            cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
+            def.RecalculateILOffsets();
+            def.ConvertShortLongOps();
         }
 
     }

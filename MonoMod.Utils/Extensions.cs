@@ -147,13 +147,49 @@ namespace MonoMod.Utils {
         public static Delegate CastDelegate(this Delegate source, Type type) {
             if (source == null)
                 return null;
+
             Delegate[] delegates = source.GetInvocationList();
             if (delegates.Length == 1)
                 return Delegate.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
+
             Delegate[] delegatesDest = new Delegate[delegates.Length];
             for (int i = 0; i < delegates.Length; i++)
                 delegatesDest[i] = delegates[i].CastDelegate(type);
             return Delegate.Combine(delegatesDest);
+        }
+
+        public static bool TryCastDelegate<T>(this Delegate source, out T result) where T : class {
+            if (source is T cast) {
+                result = cast;
+                return true;
+            }
+
+            bool rv = source.TryCastDelegate(typeof(T), out Delegate resultDel);
+            result = resultDel as T;
+            return rv;
+        }
+
+        public static bool TryCastDelegate(this Delegate source, Type type, out Delegate result) {
+            result = null;
+            if (source == null)
+                return false;
+
+            try {
+                Delegate[] delegates = source.GetInvocationList();
+                if (delegates.Length == 1) {
+                    result = Delegate.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
+                    return true;
+                }
+
+                Delegate[] delegatesDest = new Delegate[delegates.Length];
+                for (int i = 0; i < delegates.Length; i++)
+                    delegatesDest[i] = delegates[i].CastDelegate(type);
+                result = Delegate.Combine(delegatesDest);
+                return true;
+
+            } catch {
+                return false;
+            }
         }
 
         /// <summary>
