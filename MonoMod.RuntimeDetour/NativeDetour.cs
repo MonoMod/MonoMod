@@ -37,7 +37,7 @@ namespace MonoMod.RuntimeDetour {
     /// </summary>
     public class NativeDetour : IDetour {
 
-        public static Func<object, MethodBase, MethodBase, bool> OnDetour;
+        public static Func<object, IntPtr, IntPtr, bool> OnDetour;
         public static Func<object, bool> OnUndo;
         public static Func<object, MethodBase, MethodBase> OnGenerateTrampoline;
 
