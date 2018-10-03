@@ -37,6 +37,10 @@ namespace MonoMod.RuntimeDetour {
     /// </summary>
     public class NativeDetour : IDetour {
 
+        public static Func<object, MethodBase, MethodBase, bool> OnDetour;
+        public static Func<object, bool> OnUndo;
+        public static Func<object, MethodBase, MethodBase> OnGenerateTrampoline;
+
         public bool IsValid => !_IsFree;
 
         public readonly NativeDetourData Data;
@@ -48,6 +52,9 @@ namespace MonoMod.RuntimeDetour {
         private bool _IsFree;
 
         public NativeDetour(MethodBase method, IntPtr from, IntPtr to) {
+            if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
+                return;
+
             Data = DetourManager.Native.Create(from, to);
             Method = method;
 
@@ -108,6 +115,9 @@ namespace MonoMod.RuntimeDetour {
         /// Undo the native detour. Doesn't free the detour native data, allowing you to reapply it later.
         /// </summary>
         public void Undo() {
+            if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
+                return;
+
             if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
@@ -140,6 +150,10 @@ namespace MonoMod.RuntimeDetour {
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
         /// </summary>
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
+            MethodBase remoteTrampoline = OnGenerateTrampoline?.InvokeWhileNull<MethodBase>(this, signature);
+            if (remoteTrampoline != null)
+                return remoteTrampoline;
+
             if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
@@ -230,8 +244,6 @@ namespace MonoMod.RuntimeDetour {
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
-            if (_IsFree)
-                throw new InvalidOperationException("Free() has been called on this detour.");
             if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 

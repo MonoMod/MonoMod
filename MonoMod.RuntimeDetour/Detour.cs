@@ -172,11 +172,11 @@ namespace MonoMod.RuntimeDetour {
         /// Permanently undo the detour, while also freeing any related unmanaged resources. This makes any further operations on this detour invalid.
         /// </summary>
         public void Undo() {
-            if (!IsValid)
-                throw new InvalidOperationException("This detour has been undone.");
-
             if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
                 return;
+
+            if (!IsValid)
+                throw new InvalidOperationException("This detour has been undone.");
 
             List<Detour> detours = _DetourMap[Method];
             lock (detours) {
@@ -254,8 +254,6 @@ namespace MonoMod.RuntimeDetour {
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
-            if (!IsValid)
-                throw new InvalidOperationException("This detour has been undone.");
             if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 

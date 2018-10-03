@@ -134,16 +134,10 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public void Apply() {
-            if (!IsValid)
-                throw new InvalidOperationException("This hook has been undone.");
-
             _Detour.Apply();
         }
 
         public void Undo() {
-            if (!IsValid)
-                throw new InvalidOperationException("This hook has been undone.");
-
             _Detour.Undo();
             if (!IsValid)
                 _Free();
@@ -170,9 +164,6 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
-            if (!IsValid)
-                throw new InvalidOperationException("This hook has been undone.");
-
             return _Detour.GenerateTrampoline(signature);
         }
 
@@ -180,9 +171,6 @@ namespace MonoMod.RuntimeDetour {
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
-            if (!IsValid)
-                throw new InvalidOperationException("This hook has been undone.");
-
             return _Detour.GenerateTrampoline<T>();
         }
     }
