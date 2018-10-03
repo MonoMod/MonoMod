@@ -37,7 +37,7 @@ namespace MonoMod.RuntimeDetour {
     /// </summary>
     public class NativeDetour : IDetour {
 
-        public static Func<object, IntPtr, IntPtr, bool> OnDetour;
+        public static Func<object, MethodBase, IntPtr, IntPtr, bool> OnDetour;
         public static Func<object, bool> OnUndo;
         public static Func<object, MethodBase, MethodBase> OnGenerateTrampoline;
 
@@ -52,7 +52,7 @@ namespace MonoMod.RuntimeDetour {
         private bool _IsFree;
 
         public NativeDetour(MethodBase method, IntPtr from, IntPtr to) {
-            if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
+            if (!(OnDetour?.InvokeWhileTrue(this, method, from, to) ?? true))
                 return;
 
             Data = DetourManager.Native.Create(from, to);
