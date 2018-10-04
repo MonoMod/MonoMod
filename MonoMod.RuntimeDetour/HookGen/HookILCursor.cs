@@ -109,6 +109,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
             _LastEmitted = null;
         }
 
+        public void MoveAfterLabel() {
+            _LastLabel = LabelNext;
+        }
+
         #region Misc IL Helpers
 
         public void GotoNext(params Func<Instruction, bool>[] predicates) {
