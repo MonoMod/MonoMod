@@ -400,7 +400,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => instr.MatchJmp(out var v) && v == value;
         public static bool MatchJmp(this Instruction instr, out MethodReference value) {
             if (instr.OpCode == OpCodes.Jmp) {
-                value = (MethodReference) instr.Operand;
+                value = instr.Operand as MethodReference;
                 return true;
             }
             value = default;
@@ -419,7 +419,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => instr.MatchCall(out var v) && v == value;
         public static bool MatchCall(this Instruction instr, out MethodReference value) {
             if (instr.OpCode == OpCodes.Call) {
-                value = (MethodReference) instr.Operand;
+                value = instr.Operand as MethodReference;
                 return true;
             }
             value = default;
@@ -1056,7 +1056,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => instr.MatchCallvirt(out var v) && v == value;
         public static bool MatchCallvirt(this Instruction instr, out MethodReference value) {
             if (instr.OpCode == OpCodes.Callvirt) {
-                value = (MethodReference) instr.Operand;
+                value = instr.Operand as MethodReference;
                 return true;
             }
             value = default;
@@ -1130,7 +1130,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => instr.MatchNewobj(out var v) && v == value;
         public static bool MatchNewobj(this Instruction instr, out MethodReference value) {
             if (instr.OpCode == OpCodes.Newobj) {
-                value = (MethodReference) instr.Operand;
+                value = instr.Operand as MethodReference;
                 return true;
             }
             value = default;
@@ -1927,7 +1927,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => instr.MatchLdftn(out var v) && v == value;
         public static bool MatchLdftn(this Instruction instr, out MethodReference value) {
             if (instr.OpCode == OpCodes.Ldftn) {
-                value = (MethodReference) instr.Operand;
+                value = instr.Operand as MethodReference;
                 return true;
             }
             value = default;
@@ -1946,7 +1946,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => instr.MatchLdvirtftn(out var v) && v == value;
         public static bool MatchLdvirtftn(this Instruction instr, out MethodReference value) {
             if (instr.OpCode == OpCodes.Ldvirtftn) {
-                value = (MethodReference) instr.Operand;
+                value = instr.Operand as MethodReference;
                 return true;
             }
             value = default;

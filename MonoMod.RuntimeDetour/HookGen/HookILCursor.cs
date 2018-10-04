@@ -14,7 +14,7 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    public class HookILCursor {
+    public class HookILCursor : IDisposable {
 
         private readonly static List<object> References = new List<object>();
         private readonly static Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
@@ -35,7 +35,14 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly static MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
 
         public HookIL HookIL { get; private set; }
-        public Instruction Instr { get; set; }
+        public Instruction Next { get; set; }
+        public Instruction Previous {
+            get => Next?.Previous ?? Instrs[Instrs.Count - 1];
+            set => Next = value?.Next ?? Instrs[0];
+        }
+
+        public HookILLabel LabelPrevious => new HookILLabel(HookIL, Previous);
+        public HookILLabel LabelNext => new HookILLabel(HookIL, Next);
 
         public MethodDefinition Method => HookIL.Method;
         public ILProcessor IL => HookIL.IL;
@@ -44,26 +51,30 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public ModuleDefinition Module => HookIL.Module;
         public Mono.Collections.Generic.Collection<Instruction> Instrs => HookIL.Instrs;
 
+        private HookILLabel _LastLabel;
+        private Instruction _LastEmitted;
+
         public int Index {
             get {
-                int index = Instrs.IndexOf(Instr);
+                int index = Instrs.IndexOf(Next);
                 if (index == -1)
                     index = Instrs.Count;
                 return index;
             }
             set {
-                Instr = value == Instrs.Count ? null : Instrs[value];
+                End();
+                Next = value == Instrs.Count ? null : Instrs[value];
             }
         }
 
         internal HookILCursor(HookIL hookil, Instruction instr) {
             HookIL = hookil;
-            Instr = instr;
+            Next = instr;
         }
 
         public HookILCursor(HookILCursor old) {
             HookIL = old.HookIL;
-            Instr = old.Instr;
+            Next = old.Next;
         }
 
         public HookILCursor Clone()
@@ -71,184 +82,196 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public void Remove() {
             int index = Index;
-            IL.Remove(Instr);
+            IL.Remove(Next);
             Index = index;
         }
 
+        public void End() {
+            _LastLabel = null;
+            _LastEmitted = null;
+        }
+
         public void MarkLabel(HookILLabel label) {
-            label.Instr = Instr;
+            _LastLabel = label;
+            label.Target = _LastEmitted ?? Next;
+            _LastEmitted = null;
         }
 
         #region Misc IL Helpers
 
-        public bool GotoNext(params Func<Instruction, bool>[] predicates) {
+        public void GotoNext(params Func<Instruction, bool>[] predicates) {
+            if (!TryGotoNext(predicates))
+                throw new KeyNotFoundException();
+        }
+        public bool TryGotoNext(params Func<Instruction, bool>[] predicates) {
+            End();
             Mono.Collections.Generic.Collection<Instruction> instrs = Instrs;
-            try {
-                for (int i = Index + 1; i + predicates.Length - 1 < instrs.Count; i++) {
-                    for (int j = 0; j < predicates.Length; j++)
-                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
-                            goto Next;
+            for (int i = Index + 1; i + predicates.Length - 1 < instrs.Count; i++) {
+                for (int j = 0; j < predicates.Length; j++)
+                    if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
+                        goto Next;
 
-                    Index = i;
-                    return true;
+                Index = i;
+                return true;
 
-                    Next:
-                    continue;
-                }
-            } catch {
-                // Fail silently.
+                Next:
+                continue;
             }
             return false;
         }
 
-        public bool GotoPrev(params Func<Instruction, bool>[] predicates) {
+        public void GotoPrev(params Func<Instruction, bool>[] predicates) {
+            if (!TryGotoPrev(predicates))
+                throw new KeyNotFoundException();
+        }
+        public bool TryGotoPrev(params Func<Instruction, bool>[] predicates) {
+            End();
             Mono.Collections.Generic.Collection<Instruction> instrs = Instrs;
-            try {
-                int i = Index - 1;
-                int overhang = i + predicates.Length - 1 - instrs.Count;
-                if (overhang > 0)
-                    i -= overhang;
+            int i = Index - 1;
+            int overhang = i + predicates.Length - 1 - instrs.Count;
+            if (overhang > 0)
+                i -= overhang;
 
-                for (; i > -1; i--) {
-                    for (int j = 0; j < predicates.Length; j++)
-                        if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
-                            goto Next;
+            for (; i > -1; i--) {
+                for (int j = 0; j < predicates.Length; j++)
+                    if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
+                        goto Next;
 
-                    Index = i;
-                    return true;
+                Index = i;
+                return true;
 
-                    Next:
-                    continue;
-                }
-            } catch {
-                // Fail silently.
+                Next:
+                continue;
             }
             return false;
         }
 
-        public bool FindNext(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindNext(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            if (!TryFindNext(out cursors, predicates))
+                throw new KeyNotFoundException();
+        }
+        public bool TryFindNext(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            End();
             cursors = new HookILCursor[predicates.Length];
-            Instruction instrOrig = Instr;
-            try {
-                Func<Instruction, bool> first = predicates[0];
-                while (GotoNext(first)) {
-                    cursors[0] = Clone();
-                    Instruction instrFirst = Instr;
-                    for (int i = 1; i < predicates.Length; i++) {
-                        if (!GotoNext(predicates[i]))
-                            goto Skip;
-                        cursors[i] = Clone();
-                    }
-
-                    Instr = instrFirst;
-                    return true;
-
-                    Skip:
-                    Instr = instrFirst;
-                    continue;
+            Instruction instrOrig = Next;
+            Func<Instruction, bool> first = predicates[0];
+            while (TryGotoNext(first)) {
+                cursors[0] = Clone();
+                Instruction instrFirst = Next;
+                for (int i = 1; i < predicates.Length; i++) {
+                    if (!TryGotoNext(predicates[i]))
+                        goto Skip;
+                    cursors[i] = Clone();
                 }
-            } catch {
-                // Fail silently.
+
+                Next = instrFirst;
+                return true;
+
+                Skip:
+                Next = instrFirst;
+                continue;
             }
-            Instr = instrOrig;
+            Next = instrOrig;
             return false;
         }
 
-        public bool FindPrev(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindPrev(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            if (!TryFindPrev(out cursors, predicates))
+                throw new KeyNotFoundException();
+        }
+        public bool TryFindPrev(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            End();
             cursors = new HookILCursor[predicates.Length];
-            Instruction instrOrig = Instr;
-            try {
-                Func<Instruction, bool> last = predicates[predicates.Length - 1];
-                while (GotoPrev(last)) {
-                    cursors[predicates.Length - 1] = Clone();
-                    Instruction instrLast = Instr;
-                    for (int i = predicates.Length - 2; i > -1; i--) {
-                        if (!GotoPrev(predicates[i]))
-                            goto Skip;
-                        cursors[i] = Clone();
-                    }
-
-                    Instr = instrLast;
-                    return true;
-
-                    Skip:
-                    Instr = instrLast;
-                    continue;
+            Instruction instrOrig = Next;
+            Func<Instruction, bool> last = predicates[predicates.Length - 1];
+            while (TryGotoPrev(last)) {
+                cursors[predicates.Length - 1] = Clone();
+                Instruction instrLast = Next;
+                for (int i = predicates.Length - 2; i > -1; i--) {
+                    if (!TryGotoPrev(predicates[i]))
+                        goto Skip;
+                    cursors[i] = Clone();
                 }
-            } catch {
-                // Fail silently.
+
+                Next = instrLast;
+                return true;
+
+                Skip:
+                Next = instrLast;
+                continue;
             }
-            Instr = instrOrig;
+            Next = instrOrig;
             return false;
         }
 
         public bool IsBefore(Instruction instr) {
+            End();
             int indexOther = Instrs.IndexOf(instr);
             if (indexOther == -1)
                 indexOther = Instrs.Count;
-            return Index < indexOther;
+            return Index <= indexOther;
         }
 
         public bool IsAfter(Instruction instr) {
+            End();
             int indexOther = Instrs.IndexOf(instr);
             if (indexOther == -1)
                 indexOther = Instrs.Count;
             return indexOther < Index;
         }
 
-        public void ReplaceOperands(object from, object to) {
-            foreach (Instruction instr in Instrs)
-                if (instr.Operand?.Equals(from) ?? from == null)
-                    instr.Operand = to;
-        }
-
         #endregion
 
         #region Base Create / Emit Helpers
 
-        private void _Insert(Instruction instr) {
+        private HookILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
+            if (_LastLabel != null)
+                _LastLabel.Target = Instrs[Index];
+            _LastLabel = null;
+            _LastEmitted = instr;
+            return new HookILCursor(HookIL, instr);
         }
 
-        public void Emit(OpCode opcode, ParameterDefinition parameter)
+        public HookILCursor Emit(OpCode opcode, ParameterDefinition parameter)
             => _Insert(IL.Create(opcode, parameter));
-        public void Emit(OpCode opcode, VariableDefinition variable)
+        public HookILCursor Emit(OpCode opcode, VariableDefinition variable)
             => _Insert(IL.Create(opcode, variable));
-        public void Emit(OpCode opcode, Instruction[] targets)
+        public HookILCursor Emit(OpCode opcode, Instruction[] targets)
             => _Insert(IL.Create(opcode, targets));
-        public void Emit(OpCode opcode, Instruction target)
+        public HookILCursor Emit(OpCode opcode, Instruction target)
             => _Insert(IL.Create(opcode, target));
-        public void Emit(OpCode opcode, double value)
+        public HookILCursor Emit(OpCode opcode, double value)
             => _Insert(IL.Create(opcode, value));
-        public void Emit(OpCode opcode, float value)
+        public HookILCursor Emit(OpCode opcode, float value)
             => _Insert(IL.Create(opcode, value));
-        public void Emit(OpCode opcode, long value)
+        public HookILCursor Emit(OpCode opcode, long value)
             => _Insert(IL.Create(opcode, value));
-        public void Emit(OpCode opcode, sbyte value)
+        public HookILCursor Emit(OpCode opcode, sbyte value)
             => _Insert(IL.Create(opcode, value));
-        public void Emit(OpCode opcode, byte value)
+        public HookILCursor Emit(OpCode opcode, byte value)
             => _Insert(IL.Create(opcode, value));
-        public void Emit(OpCode opcode, string value)
+        public HookILCursor Emit(OpCode opcode, string value)
             => _Insert(IL.Create(opcode, value));
-        public void Emit(OpCode opcode, FieldReference field)
+        public HookILCursor Emit(OpCode opcode, FieldReference field)
             => _Insert(IL.Create(opcode, field));
-        public void Emit(OpCode opcode, CallSite site)
+        public HookILCursor Emit(OpCode opcode, CallSite site)
             => _Insert(IL.Create(opcode, site));
-        public void Emit(OpCode opcode, TypeReference type)
+        public HookILCursor Emit(OpCode opcode, TypeReference type)
             => _Insert(IL.Create(opcode, type));
-        public void Emit(OpCode opcode)
+        public HookILCursor Emit(OpCode opcode)
             => _Insert(IL.Create(opcode));
-        public void Emit(OpCode opcode, int value)
+        public HookILCursor Emit(OpCode opcode, int value)
             => _Insert(IL.Create(opcode, value));
-        public void Emit(OpCode opcode, MethodReference method)
+        public HookILCursor Emit(OpCode opcode, MethodReference method)
             => _Insert(IL.Create(opcode, method));
-        public void Emit(OpCode opcode, FieldInfo field)
+        public HookILCursor Emit(OpCode opcode, FieldInfo field)
             => _Insert(IL.Create(opcode, field));
-        public void Emit(OpCode opcode, MethodBase method)
+        public HookILCursor Emit(OpCode opcode, MethodBase method)
             => _Insert(IL.Create(opcode, method));
-        public void Emit(OpCode opcode, Type type)
+        public HookILCursor Emit(OpCode opcode, Type type)
             => _Insert(IL.Create(opcode, type));
-        public void Emit(OpCode opcode, object operand)
+        public HookILCursor Emit(OpCode opcode, object operand)
             => _Insert(IL.Create(opcode, operand));
 
         #endregion
@@ -278,7 +301,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegate<T>(T cb) where T : Delegate {
-            Instruction instrPrev = Instr;
+            Instruction instrPrev = Next;
             int id = EmitDelegatePush(cb);
 
             // Create a DynamicMethod that shifts the stack around a little.
@@ -329,6 +352,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public int EmitDelegateInvoke(int id) {
             Emit(OpCodes.Callvirt, References[id].GetType().GetMethod("Invoke"));
             return id;
+        }
+
+        public void Dispose() {
+            End();
         }
 
         #endregion

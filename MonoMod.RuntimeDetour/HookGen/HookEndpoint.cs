@@ -93,7 +93,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (callback == null)
                 return;
 
-            InvokeManipulator(DMD.Definition, callback);
+            try {
+                InvokeManipulator(DMD.Definition, callback);
+            } catch when (_ManipulatorFailure()) {
+                throw;
+            }
 
             DetourILDetourTarget(true);
 
@@ -111,12 +115,21 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             DMD.Reload(null, true);
             MethodDefinition def = DMD.Definition;
-            foreach (Delegate cb in ILList)
-                InvokeManipulator(def, cb);
+            try {
+                foreach (Delegate cb in ILList)
+                    InvokeManipulator(def, cb);
+            } catch when(_ManipulatorFailure()) {
+                throw;
+            }
 
             DMD.Definition.RecalculateILOffsets();
             DMD.Definition.ConvertShortLongOps();
             DetourILDetourTarget();
+        }
+
+        private bool _ManipulatorFailure() {
+            DMD.Reload(null, true);
+            return false;
         }
 
         private static void InvokeManipulator(MethodDefinition def, Delegate cb) {

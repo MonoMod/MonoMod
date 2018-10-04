@@ -17,7 +17,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             => OnGenerateCecilModule?.InvokeWhileNull<ModuleDefinition>(name);
 
         public static event Func<Delegate, object> OnGetOwner;
-        private static object GetOwner(Delegate hook)
+        public static object GetOwner(Delegate hook)
             => (OnGetOwner ?? DefaultOnGetOwner).InvokeWhileNull<object>(hook);
         private static object DefaultOnGetOwner(Delegate hook)
             => hook.Method.DeclaringType.Assembly;
