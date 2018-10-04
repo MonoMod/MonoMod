@@ -52,8 +52,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
             set => Prev = value;
         }
 
-        public HookILLabel LabelPrevious => new HookILLabel(HookIL, Prev);
         public HookILLabel LabelNext => new HookILLabel(HookIL, Next);
+        public HookILLabel LabelPrevious => new HookILLabel(HookIL, Prev);
+        public HookILLabel LabelPrev => new HookILLabel(HookIL, Prev);
 
         public MethodDefinition Method => HookIL.Method;
         public ILProcessor IL => HookIL.IL;
