@@ -35,13 +35,24 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly static MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
 
         public HookIL HookIL { get; private set; }
-        public Instruction Next { get; set; }
-        public Instruction Previous {
+        private Instruction _Next;
+        public Instruction Next {
+            get => _Next;
+            set {
+                End();
+                _Next = value;
+            }
+        }
+        public Instruction Prev {
             get => Next?.Previous ?? Instrs[Instrs.Count - 1];
             set => Next = value?.Next ?? Instrs[0];
         }
+        public Instruction Previous {
+            get => Prev;
+            set => Prev = value;
+        }
 
-        public HookILLabel LabelPrevious => new HookILLabel(HookIL, Previous);
+        public HookILLabel LabelPrevious => new HookILLabel(HookIL, Prev);
         public HookILLabel LabelNext => new HookILLabel(HookIL, Next);
 
         public MethodDefinition Method => HookIL.Method;
