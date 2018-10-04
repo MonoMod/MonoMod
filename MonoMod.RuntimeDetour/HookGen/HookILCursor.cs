@@ -104,7 +104,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public void MarkLabel(HookILLabel label) {
-            _LastLabel = label;
             label.Target = _LastEmitted ?? Next;
             _LastEmitted = null;
         }
@@ -243,7 +242,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private HookILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
             if (_LastLabel != null)
-                _LastLabel.Target = Instrs[Index];
+                _LastLabel.Target = instr;
             _LastLabel = null;
             _LastEmitted = instr;
             return new HookILCursor(HookIL, instr);
