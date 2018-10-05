@@ -176,7 +176,7 @@ namespace MonoMod.RuntimeDetour {
                 return;
 
             if (!IsValid)
-                throw new InvalidOperationException("This detour has been undone.");
+                return;
 
             List<Detour> detours = _DetourMap[Method];
             lock (detours) {

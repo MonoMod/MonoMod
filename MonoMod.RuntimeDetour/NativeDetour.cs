@@ -119,7 +119,7 @@ namespace MonoMod.RuntimeDetour {
                 return;
 
             if (_IsFree)
-                throw new InvalidOperationException("Free() has been called on this detour.");
+                return;
 
             DetourManager.Native.Copy(_BackupNative, Data.Method, Data.Size);
         }
@@ -129,7 +129,7 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         public void Free() {
             if (_IsFree)
-                throw new InvalidOperationException("Free() has been called on this detour.");
+                return;
             _IsFree = true;
 
             DetourManager.Native.MemFree(_BackupNative);

@@ -104,7 +104,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public void MarkLabel(HookILLabel label) {
-            label.Target = _LastEmitted ?? Next;
+            _LastLabel = label;
+            label.Target = _LastEmitted.Next ?? Next;
             _LastEmitted = null;
         }
 
