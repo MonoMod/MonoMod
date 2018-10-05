@@ -64,7 +64,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public Mono.Collections.Generic.Collection<Instruction> Instrs => HookIL.Instrs;
 
         private HookILLabel _LastLabel;
-        private Instruction _LastEmitted;
 
         public int Index {
             get {
@@ -100,13 +99,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public void End() {
             _LastLabel = null;
-            _LastEmitted = null;
         }
 
         public void MarkLabel(HookILLabel label) {
             _LastLabel = label;
-            label.Target = _LastEmitted.Next ?? Next;
-            _LastEmitted = null;
+            label.Target = Next;
         }
 
         public void MoveAfterLabel() {
@@ -245,7 +242,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (_LastLabel != null)
                 _LastLabel.Target = instr;
             _LastLabel = null;
-            _LastEmitted = instr;
             return new HookILCursor(HookIL, instr);
         }
 
