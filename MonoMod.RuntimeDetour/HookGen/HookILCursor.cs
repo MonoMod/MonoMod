@@ -105,6 +105,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
             _insertAfterLabels = null;
         }
 
+        public IEnumerable<HookILLabel> GetIncomingLabels()
+            => HookIL.GetIncomingLabels(Next);
+
         #region Misc IL Helpers
 
         public void GotoNext(params Func<Instruction, bool>[] predicates) {
