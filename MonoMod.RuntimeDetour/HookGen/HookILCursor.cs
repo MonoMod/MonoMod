@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Reflection;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
-using System.ComponentModel;
 using Mono.Cecil.Cil;
 using System.Linq;
 using System.Reflection.Emit;
@@ -14,7 +11,7 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    public class HookILCursor : IDisposable {
+    public class HookILCursor {
 
         private readonly static List<object> References = new List<object>();
         private readonly static Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
@@ -34,13 +31,16 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         private readonly static MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
 
-        public HookIL HookIL { get; private set; }
-        private Instruction _Next;
+		public HookIL HookIL { get; }
+
+		private Instruction _Next;
         public Instruction Next {
             get => _Next;
             set {
-                End();
-                _Next = value;
+				if (value != _Next) {
+					_insertAfterLabels = null;
+					_Next = value;
+				}
             }
         }
         public Instruction Prev {
@@ -52,10 +52,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
             set => Prev = value;
         }
 
-        public HookILLabel LabelNext => new HookILLabel(HookIL, Next);
-        public HookILLabel LabelPrevious => new HookILLabel(HookIL, Prev);
-        public HookILLabel LabelPrev => new HookILLabel(HookIL, Prev);
-
         public MethodDefinition Method => HookIL.Method;
         public ILProcessor IL => HookIL.IL;
 
@@ -63,7 +59,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public ModuleDefinition Module => HookIL.Module;
         public Mono.Collections.Generic.Collection<Instruction> Instrs => HookIL.Instrs;
 
-        private HookILLabel _LastLabel;
+        private HookILLabel[] _insertAfterLabels;
 
         public int Index {
             get {
@@ -73,7 +69,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return index;
             }
             set {
-                End();
                 Next = value == Instrs.Count ? null : Instrs[value];
             }
         }
@@ -97,17 +92,17 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Index = index;
         }
 
-        public void End() {
-            _LastLabel = null;
-        }
-
         public void MarkLabel(HookILLabel label) {
-            _LastLabel = label;
             label.Target = Next;
+            _insertAfterLabels = new [] { label };
         }
 
         public void MoveAfterLabel() {
-            _LastLabel = LabelNext;
+			_insertAfterLabels = HookIL._Labels.Where(l => l.Target == Next).ToArray();
+        }
+
+        public void MoveBeforeLabel() {
+            _insertAfterLabels = null;
         }
 
         #region Misc IL Helpers
@@ -117,7 +112,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 throw new KeyNotFoundException();
         }
         public bool TryGotoNext(params Func<Instruction, bool>[] predicates) {
-            End();
             Mono.Collections.Generic.Collection<Instruction> instrs = Instrs;
             for (int i = Index + 1; i + predicates.Length - 1 < instrs.Count; i++) {
                 for (int j = 0; j < predicates.Length; j++)
@@ -138,7 +132,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 throw new KeyNotFoundException();
         }
         public bool TryGotoPrev(params Func<Instruction, bool>[] predicates) {
-            End();
             Mono.Collections.Generic.Collection<Instruction> instrs = Instrs;
             int i = Index - 1;
             int overhang = i + predicates.Length - 1 - instrs.Count;
@@ -164,7 +157,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 throw new KeyNotFoundException();
         }
         public bool TryFindNext(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            End();
             cursors = new HookILCursor[predicates.Length];
             Instruction instrOrig = Next;
             Func<Instruction, bool> first = predicates[0];
@@ -193,7 +185,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 throw new KeyNotFoundException();
         }
         public bool TryFindPrev(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            End();
             cursors = new HookILCursor[predicates.Length];
             Instruction instrOrig = Next;
             Func<Instruction, bool> last = predicates[predicates.Length - 1];
@@ -218,7 +209,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public bool IsBefore(Instruction instr) {
-            End();
             int indexOther = Instrs.IndexOf(instr);
             if (indexOther == -1)
                 indexOther = Instrs.Count;
@@ -226,7 +216,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public bool IsAfter(Instruction instr) {
-            End();
             int indexOther = Instrs.IndexOf(instr);
             if (indexOther == -1)
                 indexOther = Instrs.Count;
@@ -239,9 +228,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         private HookILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
-            if (_LastLabel != null)
-                _LastLabel.Target = instr;
-            _LastLabel = null;
+            if (_insertAfterLabels != null) {
+				foreach (var label in _insertAfterLabels)
+					label.Target = instr;
+
+				_insertAfterLabels = null;
+			}
             return new HookILCursor(HookIL, instr);
         }
 
@@ -364,10 +356,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public int EmitDelegateInvoke(int id) {
             Emit(OpCodes.Callvirt, References[id].GetType().GetMethod("Invoke"));
             return id;
-        }
-
-        public void Dispose() {
-            End();
         }
 
         #endregion
