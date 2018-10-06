@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Reflection;
-using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
-using System.ComponentModel;
 using Mono.Cecil.Cil;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
@@ -25,10 +23,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         internal List<HookILLabel> _Labels = new List<HookILLabel>();
         public ReadOnlyCollection<HookILLabel> Labels => _Labels.AsReadOnly();
-
-        internal int _LabelID;
-        internal Dictionary<int, Instruction> _LabelMapIDTarget = new Dictionary<int, Instruction>();
-        internal Dictionary<Instruction, int> _LabelMapTargetID = new Dictionary<Instruction, int>();
 
         public HookIL(MethodDefinition method) {
             Method = method;
@@ -85,5 +79,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     instr.Operand = to;
         }
 
+        public IEnumerable<HookILLabel> GetIncomingLabels(Instruction instr)
+            => _Labels.Where(l => l.Target == instr);
     }
 }
