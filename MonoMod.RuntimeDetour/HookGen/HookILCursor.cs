@@ -31,16 +31,16 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         private readonly static MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
 
-		public HookIL HookIL { get; }
+        public HookIL HookIL { get; }
 
-		private Instruction _Next;
+        private Instruction _Next;
         public Instruction Next {
             get => _Next;
             set {
-				if (value != _Next) {
-					_insertAfterLabels = null;
-					_Next = value;
-				}
+                if (value != _Next) {
+                    _insertAfterLabels = null;
+                    _Next = value;
+                }
             }
         }
         public Instruction Prev {
@@ -98,7 +98,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public void MoveAfterLabel() {
-			_insertAfterLabels = HookIL._Labels.Where(l => l.Target == Next).ToArray();
+            _insertAfterLabels = HookIL._Labels.Where(l => l.Target == Next).ToArray();
         }
 
         public void MoveBeforeLabel() {
@@ -229,11 +229,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private HookILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
             if (_insertAfterLabels != null) {
-				foreach (var label in _insertAfterLabels)
-					label.Target = instr;
+                foreach (var label in _insertAfterLabels)
+                    label.Target = instr;
 
-				_insertAfterLabels = null;
-			}
+                _insertAfterLabels = null;
+            }
             return new HookILCursor(HookIL, instr);
         }
 
