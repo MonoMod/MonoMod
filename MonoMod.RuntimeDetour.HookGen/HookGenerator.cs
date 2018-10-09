@@ -339,14 +339,27 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (!HookPrivate && method.IsPrivate)
                 return false;
 
-            int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name).ToList().IndexOf(method);
-            string suffix = "";
-            if (index != 0) {
-                suffix = index.ToString();
-                do {
-                    suffix = "_" + suffix;
-                } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && other.Name == (method.Name + suffix)));
+            string suffix = null;
+            if (method.Parameters.Count == 0) {
+                suffix = "";
+            } else {
+                suffix = GenerateSuffix(method, method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name));
             }
+
+            if (suffix == null) {
+                // No matching type name suffix found - use a numeric suffix.
+                IEnumerable<MethodDefinition> overloads = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name);
+                overloads = overloads.Where(other => GenerateSuffix(other, overloads) == null).ToList();
+                int index = overloads.OrderBy(other => other.Parameters.Count).ToList().IndexOf(method);
+                suffix = "";
+                if (index > 0) {
+                    suffix = index.ToString();
+                    do {
+                        suffix = "_" + suffix;
+                    } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && other.Name == (method.Name + suffix)));
+                }
+            }
+
             string name = method.Name;
             if (name.StartsWith("."))
                 name = name.Substring(1);
@@ -573,6 +586,28 @@ namespace MonoMod.RuntimeDetour.HookGen {
             }
 
             return OutputModule.ImportReference(typeRef);
+        }
+
+        string GenerateSuffix(MethodDefinition method, IEnumerable<MethodDefinition> overloads) {
+            overloads = overloads.Where(other => other != method);
+
+            if (overloads.Count() == 0)
+                return "";
+
+            string suffix = null;
+            foreach (ParameterDefinition param in method.Parameters) {
+                if (overloads.Any(other => other.Parameters.Any(otherParam =>
+                        otherParam.ParameterType.FullName == param.ParameterType.FullName ||
+                        (!string.IsNullOrEmpty(otherParam.Name) && otherParam.Name == param.Name)
+                    )))
+                    continue;
+
+                if (!string.IsNullOrEmpty(param.Name))
+                    suffix = "_" + param.Name;
+                else
+                    suffix = "_" + param.ParameterType.Name;
+            }
+            return suffix;
         }
 
         CustomAttribute GenerateObsolete(string message, bool error) {
