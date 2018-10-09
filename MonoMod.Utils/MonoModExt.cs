@@ -1144,15 +1144,24 @@ namespace MonoMod.Utils {
         public static void ConvertShortLongOps(this MethodDefinition method) {
             if (!method.HasBody)
                 return;
+
+            // Convert short to long ops.
+            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                Instruction instr = method.Body.Instructions[i];
+                if (instr.Operand is Instruction) {
+                    instr.OpCode = instr.OpCode.ShortToLongOp();
+                }
+            }
+
+            method.RecalculateILOffsets();
+
+            // Optimize long to short ops.
             for (int i = 0; i < method.Body.Instructions.Count; i++) {
                 Instruction instr = method.Body.Instructions[i];
                 // Change short <-> long operations as the method grows / shrinks.
                 if (instr.Operand is Instruction) {
                     int offs = ((Instruction) instr.Operand).Offset - instr.Offset;
-                    // sbyte.MinValue is -128, but -127 is the first "long" value.
-                    if (offs <= -127 || offs >= 127)
-                        instr.OpCode = instr.OpCode.ShortToLongOp();
-                    else
+                    if (offs == (sbyte) offs)
                         instr.OpCode = instr.OpCode.LongToShortOp();
                 }
             }
