@@ -40,6 +40,8 @@ namespace MonoMod.RuntimeDetour {
                 body = method.GetMethodBody();
             } catch (InvalidOperationException) {
                 body = null;
+            } catch (NotSupportedException) {
+                body = null;
             }
             if (body == null) {
                 throw new InvalidOperationException("P/Invoke methods cannot be copied!");

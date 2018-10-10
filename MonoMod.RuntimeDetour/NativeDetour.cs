@@ -64,6 +64,8 @@ namespace MonoMod.RuntimeDetour {
                 body = Method?.GetMethodBody();
             } catch (InvalidOperationException) {
                 body = null;
+            } catch (NotSupportedException) {
+                body = null;
             }
             if (body != null)
                 _BackupMethod = method.CreateILCopy();
