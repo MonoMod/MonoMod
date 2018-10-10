@@ -18,6 +18,31 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         static readonly Regex NameVerifyRegex = new Regex("[^a-zA-Z]"); // Don't set RegexOptions.Compiled as old versions of mono hate it.
 
+        static readonly Dictionary<Type, string> ReflTypeNameMap = new Dictionary<Type, string> () {
+            { typeof(string), "string" },
+            { typeof(object), "object" },
+            { typeof(bool), "bool" },
+            { typeof(byte), "byte" },
+            { typeof(char), "char" },
+            { typeof(decimal), "decimal" },
+            { typeof(double), "double" },
+            { typeof(short), "short" },
+            { typeof(int), "int" },
+            { typeof(long), "long" },
+            { typeof(sbyte), "sbyte" },
+            { typeof(float), "float" },
+            { typeof(ushort), "ushort" },
+            { typeof(uint), "uint" },
+            { typeof(ulong), "ulong" },
+            { typeof(void), "void" }
+        };
+        static readonly Dictionary<string, string> TypeNameMap = new Dictionary<string, string>();
+
+        static HookGenerator() {
+            foreach (KeyValuePair<Type, string> pair in ReflTypeNameMap)
+                TypeNameMap[pair.Key.FullName] = pair.Value;
+        }
+
         public MonoModder Modder;
 
         public ModuleDefinition OutputModule;
@@ -342,22 +367,41 @@ namespace MonoMod.RuntimeDetour.HookGen {
             string suffix = null;
             if (method.Parameters.Count == 0) {
                 suffix = "";
-            } else {
-                suffix = GenerateSuffix(method, method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name));
+            }
+
+            IEnumerable<MethodDefinition> overloads = null;
+            if (suffix == null) {
+                overloads = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name && other != method);
+                if (overloads.Count() == 0) {
+                    suffix = "";
+                }
             }
 
             if (suffix == null) {
-                // No matching type name suffix found - use a numeric suffix.
-                IEnumerable<MethodDefinition> overloads = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name);
-                overloads = overloads.Where(other => GenerateSuffix(other, overloads) == null).ToList();
-                int index = overloads.OrderBy(other => other.Parameters.Count).ToList().IndexOf(method);
-                suffix = "";
-                if (index > 0) {
-                    suffix = index.ToString();
-                    do {
-                        suffix = "_" + suffix;
-                    } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && other.Name == (method.Name + suffix)));
+                StringBuilder builder = new StringBuilder();
+                for (int parami = 0; parami < method.Parameters.Count; parami++) {
+                    ParameterDefinition param = method.Parameters[parami];
+                    if (!TypeNameMap.TryGetValue(param.ParameterType.FullName, out string typeName))
+                        typeName = param.ParameterType.Name;
+
+                    if (overloads.Any(other => {
+                        ParameterDefinition otherParam = other.Parameters.ElementAtOrDefault(parami);
+                        return
+                            otherParam != null &&
+                            otherParam.ParameterType.Name == param.ParameterType.Name &&
+                            otherParam.ParameterType.Namespace != param.ParameterType.Namespace;
+                    }))
+                        typeName = param.ParameterType.FullName;
+
+                    typeName = typeName.Replace(".", "");
+                    int indexOfGeneric = typeName.IndexOf('`');
+                    if (indexOfGeneric != -1)
+                        typeName = typeName.Substring(0, indexOfGeneric);
+
+                    builder.Append("_");
+                    builder.Append(typeName);
                 }
+                suffix = builder.ToString();
             }
 
             string name = method.Name;
@@ -586,28 +630,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
             }
 
             return OutputModule.ImportReference(typeRef);
-        }
-
-        string GenerateSuffix(MethodDefinition method, IEnumerable<MethodDefinition> overloads) {
-            overloads = overloads.Where(other => other != method);
-
-            if (overloads.Count() == 0)
-                return "";
-
-            string suffix = null;
-            foreach (ParameterDefinition param in method.Parameters) {
-                if (overloads.Any(other => other.Parameters.Any(otherParam =>
-                        otherParam.ParameterType.FullName == param.ParameterType.FullName ||
-                        (!string.IsNullOrEmpty(otherParam.Name) && otherParam.Name == param.Name)
-                    )))
-                    continue;
-
-                if (!string.IsNullOrEmpty(param.Name))
-                    suffix = "_" + param.Name;
-                else
-                    suffix = "_" + param.ParameterType.Name;
-            }
-            return suffix;
         }
 
         CustomAttribute GenerateObsolete(string message, bool error) {
