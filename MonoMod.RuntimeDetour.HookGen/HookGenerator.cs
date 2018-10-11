@@ -382,24 +382,19 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 for (int parami = 0; parami < method.Parameters.Count; parami++) {
                     ParameterDefinition param = method.Parameters[parami];
                     if (!TypeNameMap.TryGetValue(param.ParameterType.FullName, out string typeName))
-                        typeName = param.ParameterType.Name;
+                        typeName = GetFriendlyName(param.ParameterType, false);
 
                     if (overloads.Any(other => {
                         ParameterDefinition otherParam = other.Parameters.ElementAtOrDefault(parami);
                         return
                             otherParam != null &&
-                            otherParam.ParameterType.Name == param.ParameterType.Name &&
+                            GetFriendlyName(otherParam.ParameterType, false) == typeName &&
                             otherParam.ParameterType.Namespace != param.ParameterType.Namespace;
                     }))
-                        typeName = param.ParameterType.FullName;
-
-                    typeName = typeName.Replace(".", "");
-                    int indexOfGeneric = typeName.IndexOf('`');
-                    if (indexOfGeneric != -1)
-                        typeName = typeName.Substring(0, indexOfGeneric);
+                        typeName = GetFriendlyName(param.ParameterType, true);
 
                     builder.Append("_");
-                    builder.Append(typeName);
+                    builder.Append(typeName.Replace(".", "").Replace("`", ""));
                 }
                 suffix = builder.ToString();
             }
@@ -408,6 +403,16 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (name.StartsWith("."))
                 name = name.Substring(1);
             name = name + suffix;
+
+            if (hookType.FindEvent(name) != null) {
+                string nameTmp;
+                for (
+                    int i = 1;
+                    hookType.FindEvent(nameTmp = name + "_" + i) != null;
+                    i++
+                );
+                name = nameTmp;
+            }
 
             // TODO: Fix possible conflict when other members with the same names exist.
 
@@ -601,6 +606,34 @@ namespace MonoMod.RuntimeDetour.HookGen {
             del.Methods.Add(invokeEnd);
 
             return del;
+        }
+
+        string GetFriendlyName(TypeReference type, bool full) {
+            if (type is TypeSpecification) {
+                StringBuilder builder = new StringBuilder();
+                BuildFriendlyName(builder, type, full);
+                return builder.ToString();
+            }
+
+            return full ? type.FullName : type.Name;
+        }
+        void BuildFriendlyName(StringBuilder builder, TypeReference type, bool full) {
+            if (!(type is TypeSpecification)) {
+                builder.Append((full ? type.FullName : type.Name).Replace("_", ""));
+                return;
+            }
+
+            if (type.IsByReference) {
+                builder.Append("ref");
+            } else if (type.IsPointer) {
+                builder.Append("ptr");
+            }
+
+            BuildFriendlyName(builder, ((TypeSpecification) type).ElementType, full);
+
+            if (type.IsArray) {
+                builder.Append("Array");
+            }
         }
 
         TypeReference ImportVisible(TypeReference typeRef) {
