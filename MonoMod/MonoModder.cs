@@ -1498,26 +1498,39 @@ namespace MonoMod {
                 _SplitUpgrade();
             }
 
-            // Attempt to remap and remove redundant mscorlib references.
-            // Subpass 1: Find newest referred version.
-            List<AssemblyNameReference> mscorlibDeps = new List<AssemblyNameReference>();
-            for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
-                AssemblyNameReference dep = Module.AssemblyReferences[i];
-                if (dep.Name == "mscorlib") {
-                    mscorlibDeps.Add(dep);
-                }
+            string mscorlibUpgradeStr = Environment.GetEnvironmentVariable("MONOMOD_MSCORLIB_UPGRADE");
+            bool mscorlibUpdate;
+            if (!string.IsNullOrEmpty(mscorlibUpgradeStr)) {
+                mscorlibUpdate = mscorlibUpgradeStr == "1";
+            } else {
+                // Check if the assembly depends on mscorlib 2.0.5.0, possibly Unity.
+                // If so, upgrade to that version (or away to an even higher version).
+                Version fckUnity = new Version(2, 0, 5, 0);
+                mscorlibUpdate = Module.AssemblyReferences.Any(x => x.Version == fckUnity);
             }
-            if (mscorlibDeps.Count > 1) {
-                // Subpass 2: Apply changes if found.
-                AssemblyNameReference maxmscorlib = mscorlibDeps.OrderByDescending(x => x.Version).First();
-                if (DependencyCache.TryGetValue(maxmscorlib.FullName, out ModuleDefinition mscorlib)) {
-                    for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
-                        AssemblyNameReference dep = Module.AssemblyReferences[i];
-                        if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version) {
-                            LogVerbose("[PatchRefs] Removing and relinking duplicate mscorlib: " + dep.Version);
-                            RelinkModuleMap[dep.FullName] = mscorlib;
-                            Module.AssemblyReferences.RemoveAt(i);
-                            --i;
+
+            if (mscorlibUpdate) {
+                // Attempt to remap and remove redundant mscorlib references.
+                // Subpass 1: Find newest referred version.
+                List<AssemblyNameReference> mscorlibDeps = new List<AssemblyNameReference>();
+                for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
+                    AssemblyNameReference dep = Module.AssemblyReferences[i];
+                    if (dep.Name == "mscorlib") {
+                        mscorlibDeps.Add(dep);
+                    }
+                }
+                if (mscorlibDeps.Count > 1) {
+                    // Subpass 2: Apply changes if found.
+                    AssemblyNameReference maxmscorlib = mscorlibDeps.OrderByDescending(x => x.Version).First();
+                    if (DependencyCache.TryGetValue(maxmscorlib.FullName, out ModuleDefinition mscorlib)) {
+                        for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
+                            AssemblyNameReference dep = Module.AssemblyReferences[i];
+                            if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version) {
+                                LogVerbose("[PatchRefs] Removing and relinking duplicate mscorlib: " + dep.Version);
+                                RelinkModuleMap[dep.FullName] = mscorlib;
+                                Module.AssemblyReferences.RemoveAt(i);
+                                --i;
+                            }
                         }
                     }
                 }
