@@ -18,6 +18,7 @@ namespace MonoMod.RuntimeDetour {
 
         private int? _RefTarget;
         private int? _RefTrampoline;
+        private int? _RefTrampolineTmp;
 
         public Hook(MethodBase from, MethodInfo to, object target) {
             Method = from;
@@ -95,10 +96,47 @@ namespace MonoMod.RuntimeDetour {
 
             Target = dm.Pin();
 
+            // Temporarily provide a trampoline that waits for the proper trampoline.
+            if (origType != null) {
+                ParameterInfo[] origArgs = origInvoke.GetParameters();
+                Type[] origArgTypes = new Type[origArgs.Length];
+                for (int i = 0; i < origArgs.Length; i++)
+                    origArgTypes[i] = origArgs[i].ParameterType;
+
+                dm = new DynamicMethod(
+                    $"tmpchain_{Method.Name}_{GetHashCode()}",
+                    (origInvoke as MethodInfo)?.ReturnType ?? typeof(void), origArgTypes,
+                    Method.DeclaringType,
+                    true
+                );
+                il = dm.GetILGenerator();
+
+                // while (ref == null) { }
+                Label lblStart = il.DefineLabel();
+                il.MarkLabel(lblStart);
+                _RefTrampolineTmp = il.EmitReference<Delegate>(null);
+                il.Emit(OpCodes.Brfalse, lblStart);
+
+                // Invoke the generated delegate.
+                il.EmitGetReference<Delegate>(_RefTrampolineTmp.Value);
+
+                // TODO: Use specialized Ldarg.* if possible; What about ref types?
+                for (int i = 0; i < argTypes.Length; i++)
+                    il.Emit(OpCodes.Ldarg, i);
+
+                il.Emit(OpCodes.Callvirt, origInvoke);
+
+                il.Emit(OpCodes.Ret);
+
+                DynamicMethodHelper.SetReference(_RefTrampoline.Value, dm.CreateDelegate(origType));
+            }
+
             _Detour = new Detour(Method, Target);
             
             if (origType != null) {
-                DynamicMethodHelper.SetReference(_RefTrampoline.Value, GenerateTrampoline(origInvoke).CreateDelegate(origType));
+                Delegate orig = GenerateTrampoline(origInvoke).CreateDelegate(origType);
+                DynamicMethodHelper.SetReference(_RefTrampoline.Value, orig);
+                DynamicMethodHelper.SetReference(_RefTrampolineTmp.Value, orig);
             }
         }
         public Hook(MethodBase from, MethodInfo to)
@@ -161,6 +199,8 @@ namespace MonoMod.RuntimeDetour {
                 DynamicMethodHelper.FreeReference(_RefTarget.Value);
             if (_RefTrampoline != null)
                 DynamicMethodHelper.FreeReference(_RefTrampoline.Value);
+            if (_RefTrampolineTmp != null)
+                DynamicMethodHelper.FreeReference(_RefTrampolineTmp.Value);
         }
 
         public MethodBase GenerateTrampoline(MethodBase signature = null) {

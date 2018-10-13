@@ -69,5 +69,17 @@ namespace MonoMod.Utils {
             return id;
         }
 
+        /// <summary>
+        /// Emit a reference to an arbitrary object. Note that the references "leak."
+        /// </summary>
+        public static int EmitGetReference<T>(this ILGenerator il, int id) {
+            Type t = typeof(T);
+            il.Emit(OpCodes.Ldc_I4, id);
+            il.Emit(OpCodes.Call, _GetReference);
+            if (t.IsValueType)
+                il.Emit(OpCodes.Unbox_Any, t);
+            return id;
+        }
+
     }
 }

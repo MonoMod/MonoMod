@@ -299,6 +299,17 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         /// <summary>
+        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use HookILCursor.FreeReference(id).
+        /// </summary>
+        public void EmitGetReference<T>(int id) {
+            Type t = typeof(T);
+            Emit(OpCodes.Ldc_I4, id);
+            Emit(OpCodes.Call, _GetReference);
+            if (t.IsValueType)
+                Emit(OpCodes.Unbox_Any, t);
+        }
+
+        /// <summary>
         /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegate(Action cb)
