@@ -144,7 +144,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public Hook(MethodBase method, IntPtr to)
-            : this(method, DetourManager.GenerateNativeProxy(to, method), null) {
+            : this(method, DetourHelper.GenerateNativeProxy(to, method), null) {
         }
         public Hook(MethodBase method, Delegate to)
             : this(method, to.Method, to.Target) {

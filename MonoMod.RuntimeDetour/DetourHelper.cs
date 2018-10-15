@@ -6,12 +6,12 @@ using MonoMod.Utils;
 using System.Collections.Generic;
 
 namespace MonoMod.RuntimeDetour {
-    public static class DetourManager {
+    public static class DetourHelper {
 
         public static IDetourRuntimePlatform Runtime;
         public static IDetourNativePlatform Native;
 
-        static DetourManager() {
+        static DetourHelper() {
             if (Type.GetType("Mono.Runtime") != null) {
                 Runtime = new DetourRuntimeMonoPlatform();
             } else {
@@ -129,8 +129,8 @@ namespace MonoMod.RuntimeDetour {
                 Extra = extra
             };
 
-        private readonly static FieldInfo _Native = typeof(DetourManager).GetField("Native");
-        private readonly static MethodInfo _ToNativeDetourData = typeof(DetourManager).GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
+        private readonly static FieldInfo _Native = typeof(DetourHelper).GetField("Native");
+        private readonly static MethodInfo _ToNativeDetourData = typeof(DetourHelper).GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
         private readonly static MethodInfo _Copy = typeof(IDetourNativePlatform).GetMethod("Copy");
         private readonly static MethodInfo _Apply = typeof(IDetourNativePlatform).GetMethod("Apply");
         private readonly static ConstructorInfo _ctor_Exception = typeof(Exception).GetConstructor(new Type[] { typeof(string) });

@@ -48,7 +48,7 @@
       <Link>AssemblyInfo.Common.cs</Link>
     </Compile>
     <Compile Include="Detour.cs" />
-    <Compile Include="DetourManager.cs" />
+    <Compile Include="DetourHelper.cs" />
     <Compile Include="DetourNativePlatforms.cs" />
     <Compile Include="DetourRuntimePlatforms.cs" />
     <Compile Include="Hook.cs" />
@@ -64,6 +64,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HookGen\HookEndpoint.cs" />
     <Compile Include="HookGen\HookEndpointManager.cs" />
+    <Compile Include="DetourModManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ILCopying\README.md" />

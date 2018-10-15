@@ -113,28 +113,28 @@ namespace MonoMod.RuntimeDetour {
                 NativeDetourData link;
                 if (detours.Count > 0) {
                     // If a previous Detour exists in the chain, detour our "chained trampoline" to it,
-                    link = DetourManager.Native.Create(
+                    link = DetourHelper.Native.Create(
                         _ChainedTrampoline.GetNativeStart(),
                         detours[detours.Count - 1].Target.GetNativeStart()
                     );
                 } else {
                     // If this is the first Detour in the chain, detour our "chained trampoline" to the original method.
-                    link = DetourManager.Native.Create(
+                    link = DetourHelper.Native.Create(
                         _ChainedTrampoline.GetNativeStart(),
                         _BackupMethods[Method].GetNativeStart()
                     );
                 }
-                DetourManager.Native.MakeWritable(link);
-                DetourManager.Native.Apply(link);
-                DetourManager.Native.MakeExecutable(link);
-                DetourManager.Native.Free(link);
+                DetourHelper.Native.MakeWritable(link);
+                DetourHelper.Native.Apply(link);
+                DetourHelper.Native.MakeExecutable(link);
+                DetourHelper.Native.Free(link);
 
                 detours.Add(this);
             }
         }
 
         public Detour(MethodBase method, IntPtr to)
-            : this(method, DetourManager.GenerateNativeProxy(to, method)) {
+            : this(method, DetourHelper.GenerateNativeProxy(to, method)) {
         }
 
         public Detour(Delegate from, IntPtr to)
@@ -285,24 +285,24 @@ namespace MonoMod.RuntimeDetour {
                 NativeDetourData link;
 
                 for (int i = 1; i < detours.Count; i++) {
-                    link = DetourManager.Native.Create(
+                    link = DetourHelper.Native.Create(
                         detours[i]._ChainedTrampoline.GetNativeStart(),
                         detours[i - 1].Target.GetNativeStart()
                     );
-                    DetourManager.Native.MakeWritable(link);
-                    DetourManager.Native.Apply(link);
-                    DetourManager.Native.MakeExecutable(link);
-                    DetourManager.Native.Free(link);
+                    DetourHelper.Native.MakeWritable(link);
+                    DetourHelper.Native.Apply(link);
+                    DetourHelper.Native.MakeExecutable(link);
+                    DetourHelper.Native.Free(link);
                 }
 
-                link = DetourManager.Native.Create(
+                link = DetourHelper.Native.Create(
                     detours[0]._ChainedTrampoline.GetNativeStart(),
                     _BackupMethods[method].GetNativeStart()
                 );
-                DetourManager.Native.MakeWritable(link);
-                DetourManager.Native.Apply(link);
-                DetourManager.Native.MakeExecutable(link);
-                DetourManager.Native.Free(link);
+                DetourHelper.Native.MakeWritable(link);
+                DetourHelper.Native.Apply(link);
+                DetourHelper.Native.MakeExecutable(link);
+                DetourHelper.Native.Free(link);
             }
         }
     }

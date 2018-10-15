@@ -55,7 +55,7 @@ namespace MonoMod.RuntimeDetour {
             if (!(OnDetour?.InvokeWhileTrue(this, method, from, to) ?? true))
                 return;
 
-            Data = DetourManager.Native.Create(from, to);
+            Data = DetourHelper.Native.Create(from, to);
             Method = method;
 
             // Backing up the original function only needs to happen once.
@@ -71,8 +71,8 @@ namespace MonoMod.RuntimeDetour {
                 _BackupMethod = method.CreateILCopy();
 
             // BackupNative is required even if BackupMethod is present to undo the detour.
-            _BackupNative = DetourManager.Native.MemAlloc(Data.Size);
-            DetourManager.Native.Copy(Data.Method, _BackupNative, Data.Size);
+            _BackupNative = DetourHelper.Native.MemAlloc(Data.Size);
+            DetourHelper.Native.Copy(Data.Method, _BackupNative, Data.Size);
 
             Apply();
         }
@@ -108,9 +108,9 @@ namespace MonoMod.RuntimeDetour {
             if (_IsFree)
                 throw new InvalidOperationException("Free() has been called on this detour.");
 
-            DetourManager.Native.MakeWritable(Data);
-            DetourManager.Native.Apply(Data);
-            DetourManager.Native.MakeExecutable(Data);
+            DetourHelper.Native.MakeWritable(Data);
+            DetourHelper.Native.Apply(Data);
+            DetourHelper.Native.MakeExecutable(Data);
         }
 
         /// <summary>
@@ -123,7 +123,7 @@ namespace MonoMod.RuntimeDetour {
             if (_IsFree)
                 return;
 
-            DetourManager.Native.Copy(_BackupNative, Data.Method, Data.Size);
+            DetourHelper.Native.Copy(_BackupNative, Data.Method, Data.Size);
         }
 
         /// <summary>
@@ -134,8 +134,8 @@ namespace MonoMod.RuntimeDetour {
                 return;
             _IsFree = true;
 
-            DetourManager.Native.MemFree(_BackupNative);
-            DetourManager.Native.Free(Data);
+            DetourHelper.Native.MemFree(_BackupNative);
+            DetourHelper.Native.Free(Data);
         }
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace MonoMod.RuntimeDetour {
 
             MethodBase methodCallable = Method;
             if (methodCallable == null) {
-                methodCallable = DetourManager.GenerateNativeProxy(Data.Method, signature);
+                methodCallable = DetourHelper.GenerateNativeProxy(Data.Method, signature);
             }
 
             Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
