@@ -16,7 +16,18 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly Dictionary<Delegate, Stack<Hook>> HookMap = new Dictionary<Delegate, Stack<Hook>>();
         private readonly List<Delegate> ILList = new List<Delegate>();
 
-        private DynamicMethodDefinition DMD;
+        private DynamicMethodDefinition _DMD;
+        private DynamicMethodDefinition DMD {
+            get {
+                lock (HookMap) {
+                    if (_DMD != null)
+                        return _DMD;
+
+                    // Note: This can but shouldn't fail, mainly if the user hasn't provided a Cecil ModuleDefinition generator.
+                    return _DMD = new DynamicMethodDefinition(Method, HookEndpointManager.GenerateCecilModule);
+                }
+            }
+        }
         private DynamicMethod ILCopy;
         private NativeDetour ILProxyDetour;
         private Detour ILDetour;
@@ -34,8 +45,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
             }
 
             if (hasMethodBody) {
-                // Note: This can but shouldn't fail, mainly if the user hasn't provided a Cecil ModuleDefinition generator.
-                DMD = new DynamicMethodDefinition(method, HookEndpointManager.GenerateCecilModule);
                 ILCopy = method.CreateILCopy();
                 ILDetour = new Detour(method, ILCopy);
                 DetourILDetourTarget();
