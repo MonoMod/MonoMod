@@ -103,7 +103,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return;
 
             try {
-                InvokeManipulator(DMD.Definition, callback);
+                if (!InvokeManipulator(DMD.Definition, callback))
+                    return;
             } catch when (_ManipulatorFailure()) {
                 throw;
             }
@@ -141,27 +142,30 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         }
 
-        private static void InvokeManipulator(MethodDefinition def, Delegate cb) {
+        private static bool InvokeManipulator(MethodDefinition def, Delegate cb) {
             if (cb.TryCastDelegate(out ILManipulator manip)) {
                 // The callback is an ILManipulator, or compatible to it out of the box.
-                new HookIL(def).Invoke(manip);
-                return;
+                HookIL hookIL = new HookIL(def);
+                hookIL.Invoke(manip);
+                return !hookIL.ReadOnly;
             }
-
 
             // Check if the method accepts a HookIL from another assembly.
             ParameterInfo[] args = cb.Method.GetParameters();
             if (args.Length == 1 && args[0].ParameterType.FullName == typeof(HookIL).FullName) {
                 // Instantiate it. We should rather pass a "proxy" of some sorts, but eh.
-                object hookil = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
-                hookil.GetType().GetMethod("Invoke").Invoke(hookil, new object[] { cb });
-                return;
+                object hookIL = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
+                Type t_hookIL = hookIL.GetType();
+                t_hookIL.GetMethod("Invoke").Invoke(hookIL, new object[] { cb });
+                return !(t_hookIL.GetField("ReadOnly")?.GetValue(hookIL) as bool? ?? false);
             }
 
             // Fallback - body and IL processor.
             cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
             def.RecalculateILOffsets();
             def.ConvertShortLongOps();
+
+            return true;
         }
 
     }

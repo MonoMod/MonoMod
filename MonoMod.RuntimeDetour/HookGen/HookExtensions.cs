@@ -10,7 +10,6 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    // This delegate will be used when the HookGen-erated assembly "exposes" RuntimeDetour references.
     public delegate void ILManipulator(HookIL il);
     public static partial class HookExtensions {
 

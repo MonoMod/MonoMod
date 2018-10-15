@@ -24,24 +24,52 @@ namespace MonoMod.RuntimeDetour.HookGen {
         internal List<HookILLabel> _Labels = new List<HookILLabel>();
         public ReadOnlyCollection<HookILLabel> Labels => _Labels.AsReadOnly();
 
+        public bool ReadOnly = false;
+
         public HookIL(MethodDefinition method) {
             Method = method;
             IL = method.Body.GetILProcessor();
         }
 
         public void Invoke(ILManipulator manip) {
-            foreach (Instruction instr in Instrs)
+            // TODO: The verification here is very primitive. Good luck improving it while keeping it backwards-compatible...
+            int countPre = 0;
+            int hashPre = 0;
+            int countPost = 0;
+            int hashPost = 0;
+
+            foreach (Instruction instr in Instrs) {
+                countPre++;
+                hashPre ^= instr.GetHashCode();
+                if (instr.Operand != null) {
+                    countPre++;
+                    hashPre ^= instr.Operand.GetHashCode();
+                }
+
                 if (instr.Operand is Instruction target)
                     instr.Operand = new HookILLabel(this, target);
+            }
 
             manip(this);
 
-            foreach (Instruction instr in Instrs)
+            foreach (Instruction instr in Instrs) {
                 if (instr.Operand is HookILLabel label)
                     instr.Operand = label.Target;
 
-            Method.RecalculateILOffsets();
-            Method.ConvertShortLongOps();
+                countPost++;
+                hashPost ^= instr.GetHashCode();
+                if (instr.Operand != null) {
+                    countPost++;
+                    hashPost ^= instr.Operand.GetHashCode();
+                }
+            }
+
+            if (!ReadOnly) {
+                Method.RecalculateILOffsets();
+                Method.ConvertShortLongOps();
+            } else if (countPre != countPost || hashPre != hashPost) {
+                throw new InvalidOperationException("ReadOnly set to true but method manipulated!");
+            }
         }
 
         public Instruction this[int index] {
@@ -81,5 +109,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public IEnumerable<HookILLabel> GetIncomingLabels(Instruction instr)
             => _Labels.Where(l => l.Target == instr);
+
     }
 }
