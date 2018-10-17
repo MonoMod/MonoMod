@@ -20,15 +20,19 @@ namespace MonoMod.RuntimeDetour {
             Abs64 = 1 + 1 + 4 + 8
         }
 
-        private static bool Is64Bit(long to)
+        private static bool Is32Bit(long to)
             => (((ulong) to) & 0x00000000FFFFFFFF) != ((ulong) to);
 
         private static DetourSize GetDetourSize(IntPtr from, IntPtr to) {
             long rel = (long) to - ((long) from + 5);
-            if (!Is64Bit(rel))
+            /* Note: Check -rel as well, as FFFFFFFFF58545C0 -> FFFFFFFFF5827030 ends up with rel = FFFFFFFFFFFD2A6B
+             * This is critical for some x86 environments, as in that case, an Abs64 detour gets emitted on x86 instead!
+             * Checking for -rel ensures that backwards jumps are handled properly as well, using Rel32 detours.
+             */
+            if (Is32Bit(rel) || Is32Bit(-rel))
                 return DetourSize.Rel32;
 
-            if (!Is64Bit((long) to))
+            if (Is32Bit((long) to))
                 return DetourSize.Abs32;
 
             return DetourSize.Abs64;
