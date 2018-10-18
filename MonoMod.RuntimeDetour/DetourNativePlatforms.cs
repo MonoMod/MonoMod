@@ -21,12 +21,12 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private static bool Is32Bit(long to)
-            => (((ulong) to) & 0x00000000FFFFFFFF) != ((ulong) to);
+            => (((ulong) to) & 0x00000000FFFFFFFF) == ((ulong) to);
 
         private static DetourSize GetDetourSize(IntPtr from, IntPtr to) {
             long rel = (long) to - ((long) from + 5);
-            /* Note: Check -rel as well, as FFFFFFFFF58545C0 -> FFFFFFFFF5827030 ends up with rel = FFFFFFFFFFFD2A6B
-             * This is critical for some x86 environments, as in that case, an Abs64 detour gets emitted on x86 instead!
+            /* Note: Check -rel as well, as f.e. FFFFFFFFF58545C0 -> FFFFFFFFF5827030 ends up with rel = FFFFFFFFFFFD2A6B
+             * This is critical for some 32-bit environments, as in that case, an Abs64 detour gets emitted on x86 instead!
              * Checking for -rel ensures that backwards jumps are handled properly as well, using Rel32 detours.
              */
             if (Is32Bit(rel) || Is32Bit(-rel))
@@ -54,6 +54,7 @@ namespace MonoMod.RuntimeDetour {
         public void Apply(NativeDetourData detour) {
             int offs = 0;
 
+            // Console.WriteLine($"Detour {((ulong) detour.Method):X16} -> {((ulong) detour.Target):X16}, {((DetourSize) detour.Size)}");
             switch ((DetourSize) detour.Size) {
                 case DetourSize.Rel32:
                     // JMP DeltaNextInstr

@@ -14,6 +14,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         internal readonly MethodBase Method;
 
         private readonly Dictionary<Delegate, Stack<Hook>> HookMap = new Dictionary<Delegate, Stack<Hook>>();
+        private readonly List<Hook> HookList = new List<Hook>();
         private readonly List<Delegate> ILList = new List<Delegate>();
 
         private DynamicMethodDefinition _DMD;
@@ -28,47 +29,20 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
             }
         }
-        private DynamicMethod ILCopy;
-        private NativeDetour ILProxyDetour;
-        private Detour ILDetour;
+        private DynamicMethod ILManipulated;
 
         internal HookEndpoint(MethodBase method) {
             Method = method;
-            
-            // Add a "transparent" detour for IL manipulation.
-
-            bool hasMethodBody;
-            try {
-                hasMethodBody = (method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0) != 0;
-            } catch {
-                hasMethodBody = false;
-            }
-
-            if (hasMethodBody) {
-                ILCopy = method.CreateILCopy();
-                ILDetour = new Detour(method, ILCopy);
-                DetourILDetourTarget();
-            }
         }
 
-        internal void DetourILDetourTarget(bool force = false) {
-            ILProxyDetour?.Dispose();
-            ILProxyDetour = null;
-            if (!force && ILList.Count == 0)
-                return;
-            try {
-                ILProxyDetour = new NativeDetour(ILCopy, DMD.Generate());
-            } catch (Exception e) {
-                StringBuilder builder = new StringBuilder();
-                if (DMD.Definition?.Body?.Instructions != null) {
-                    builder.AppendLine("IL hook failed for:");
-                    foreach (Instruction i in DMD.Definition.Body.Instructions)
-                        builder.AppendLine(i?.ToString() ?? "NULL!");
-                } else {
-                    builder.AppendLine("IL hook failed, no instructions found");
-                }
-                throw new InvalidProgramException(builder.ToString(), e);
-            }
+        internal void UpdateILManipulated(bool force = false) {
+            if (force || ILList.Count != 0)
+                ILManipulated = DMD.Generate();
+            else
+                ILManipulated = null;
+
+            if (HookList.Count != 0)
+                HookList[0].UpdateOrig(ILManipulated);
         }
 
         public void Add(Delegate hookDelegate) {
@@ -79,7 +53,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (!HookMap.TryGetValue(hookDelegate, out hooks))
                 HookMap[hookDelegate] = hooks = new Stack<Hook>();
 
-            hooks.Push(new Hook(Method, hookDelegate));
+            Hook hook = new Hook(Method, hookDelegate);
+            hooks.Push(hook);
+            if (HookList.Count == 0)
+                hook.UpdateOrig(ILManipulated);
+            HookList.Add(hook);
         }
 
         public void Remove(Delegate hookDelegate) {
@@ -92,10 +70,16 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (!HookMap.TryGetValue(hookDelegate, out hooks))
                 return;
 
-            hooks.Pop().Dispose();
+            Hook hook = hooks.Pop();
+            hook.Dispose();
 
             if (hooks.Count == 0)
                 HookMap.Remove(hookDelegate);
+
+            int index = HookList.IndexOf(hook);
+            HookList.RemoveAt(index);
+            if (index == 0 && HookList.Count != 0)
+                HookList[0].UpdateOrig(ILManipulated);
         }
 
         public void Modify(Delegate callback) {
@@ -109,7 +93,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 throw;
             }
 
-            DetourILDetourTarget(true);
+            UpdateILManipulated(true);
 
             ILList.Add(callback);
         }
@@ -132,9 +116,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 throw;
             }
 
-            DMD.Definition.RecalculateILOffsets();
-            DMD.Definition.ConvertShortLongOps();
-            DetourILDetourTarget();
+            UpdateILManipulated();
         }
 
         private bool _ManipulatorFailure() {

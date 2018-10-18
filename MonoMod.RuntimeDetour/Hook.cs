@@ -16,6 +16,9 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _Hook;
         private Detour _Detour;
 
+        private Type _OrigDelegateType;
+        private MethodInfo _OrigDelegateInvoke;
+
         private int? _RefTarget;
         private int? _RefTrampoline;
         private int? _RefTrampolineTmp;
@@ -52,7 +55,7 @@ namespace MonoMod.RuntimeDetour {
 
             Type origType = null;
             if (hookArgs.Length == argTypes.Length + 1 && typeof(Delegate).IsAssignableFrom(hookArgs[0].ParameterType))
-                origType = hookArgs[0].ParameterType;
+                _OrigDelegateType = origType = hookArgs[0].ParameterType;
             else if (hookArgs.Length != argTypes.Length)
                 throw new InvalidOperationException($"Parameter count of hook for {from} doesn't match, must be {argTypes.Length}");
 
@@ -64,7 +67,7 @@ namespace MonoMod.RuntimeDetour {
                     throw new InvalidOperationException($"Parameter #{i} of hook for {from} doesn't match, must be {argMethod.FullName} or related");
             }
 
-            MethodInfo origInvoke = origType?.GetMethod("Invoke");
+            MethodInfo origInvoke = _OrigDelegateInvoke = origType?.GetMethod("Invoke");
             // TODO: Check origType Invoke arguments.
 
             DynamicMethod dm;
@@ -132,12 +135,8 @@ namespace MonoMod.RuntimeDetour {
             }
 
             _Detour = new Detour(Method, Target);
-            
-            if (origType != null) {
-                Delegate orig = GenerateTrampoline(origInvoke).CreateDelegate(origType);
-                DynamicMethodHelper.SetReference(_RefTrampoline.Value, orig);
-                DynamicMethodHelper.SetReference(_RefTrampolineTmp.Value, orig);
-            }
+
+            UpdateOrig(null);
         }
         public Hook(MethodBase from, MethodInfo to)
             : this(from, to, null) {
@@ -212,6 +211,15 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
             return _Detour.GenerateTrampoline<T>();
+        }
+
+        // Used by HookEndpoint for the low level IL manip.
+        internal void UpdateOrig(MethodBase invoke) {
+            if (_OrigDelegateType == null)
+                return;
+            Delegate orig = (invoke ?? GenerateTrampoline(_OrigDelegateInvoke)).CreateDelegate(_OrigDelegateType);
+            DynamicMethodHelper.SetReference(_RefTrampoline.Value, orig);
+            DynamicMethodHelper.SetReference(_RefTrampolineTmp.Value, orig);
         }
     }
 
