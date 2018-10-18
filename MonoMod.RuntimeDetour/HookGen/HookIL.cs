@@ -24,7 +24,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         internal List<HookILLabel> _Labels = new List<HookILLabel>();
         public ReadOnlyCollection<HookILLabel> Labels => _Labels.AsReadOnly();
 
-        public bool ReadOnly = false;
+        internal bool _ReadOnly = false;
 
         public HookIL(MethodDefinition method) {
             Method = method;
@@ -32,20 +32,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public void Invoke(ILManipulator manip) {
-            // TODO: The verification here is very primitive. Good luck improving it while keeping it backwards-compatible...
-            int countPre = 0;
-            int hashPre = 0;
-            int countPost = 0;
-            int hashPost = 0;
-
             foreach (Instruction instr in Instrs) {
-                countPre++;
-                hashPre ^= instr.GetHashCode();
-                if (instr.Operand != null) {
-                    countPre++;
-                    hashPre ^= instr.Operand.GetHashCode();
-                }
-
                 if (instr.Operand is Instruction target)
                     instr.Operand = new HookILLabel(this, target);
             }
@@ -55,22 +42,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             foreach (Instruction instr in Instrs) {
                 if (instr.Operand is HookILLabel label)
                     instr.Operand = label.Target;
-
-                countPost++;
-                hashPost ^= instr.GetHashCode();
-                if (instr.Operand != null) {
-                    countPost++;
-                    hashPost ^= instr.Operand.GetHashCode();
-                }
-            }
-
-            if (!ReadOnly) {
-                Method.RecalculateILOffsets();
-                Method.ConvertShortLongOps();
-            } else if (countPre != countPost || hashPre != hashPost) {
-                throw new InvalidOperationException("ReadOnly set to true but method manipulated!");
             }
         }
+
+        public bool MakeReadOnly()
+            => _ReadOnly = true;
 
         public Instruction this[int index] {
             get {
@@ -83,6 +59,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public HookILCursor this[Instruction instr] {
             get {
                 return new HookILCursor(this, instr);
+            }
+        }
+
+        public HookILCursor this[HookILLabel label] {
+            get {
+                return new HookILCursor(this, label.Target);
             }
         }
 

@@ -129,7 +129,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 // The callback is an ILManipulator, or compatible to it out of the box.
                 HookIL hookIL = new HookIL(def);
                 hookIL.Invoke(manip);
-                return !hookIL.ReadOnly;
+                return !hookIL._ReadOnly;
             }
 
             // Check if the method accepts a HookIL from another assembly.
