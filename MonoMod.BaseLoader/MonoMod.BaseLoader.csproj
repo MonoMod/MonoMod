@@ -18,7 +18,7 @@
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
-	<DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE;</DefineConstants>
+    <DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <LangVersion>7.3</LangVersion>
@@ -28,7 +28,7 @@
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
-	<DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
+    <DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <LangVersion>7.3</LangVersion>
@@ -86,7 +86,7 @@
       <Version Condition="'$(CecilLegacy)' == 'Legacy'">0.9.6</Version>
     </PackageReference>
     <PackageReference Include="YamlDotNet">
-      <Version>4.3.1</Version>
+      <Version>5.2.1</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
