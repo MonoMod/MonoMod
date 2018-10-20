@@ -30,6 +30,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             }
         }
         private DynamicMethod ILManipulated;
+        private Detour ILDetour;
 
         internal HookEndpoint(MethodBase method) {
             Method = method;
@@ -43,6 +44,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             if (HookList.Count != 0)
                 HookList[0].UpdateOrig(ILManipulated);
+            else {
+                ILDetour?.Dispose();
+                if (ILManipulated != null)
+                    ILDetour = new Detour(Method, ILManipulated);
+            }
         }
 
         public void Add(Delegate hookDelegate) {
@@ -52,6 +58,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Stack<Hook> hooks;
             if (!HookMap.TryGetValue(hookDelegate, out hooks))
                 HookMap[hookDelegate] = hooks = new Stack<Hook>();
+
+            if (HookList.Count == 0) {
+                ILDetour?.Dispose();
+                ILDetour = null;
+            }
 
             Hook hook = new Hook(Method, hookDelegate);
             hooks.Push(hook);
@@ -78,8 +89,13 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             int index = HookList.IndexOf(hook);
             HookList.RemoveAt(index);
-            if (index == 0 && HookList.Count != 0)
-                HookList[0].UpdateOrig(ILManipulated);
+            if (index == 0) {
+                if (HookList.Count != 0) {
+                    HookList[0].UpdateOrig(ILManipulated);
+                } else if (ILManipulated != null) {
+                    ILDetour = new Detour(Method, ILManipulated);
+                }
+            }
         }
 
         public void Modify(Delegate callback) {
