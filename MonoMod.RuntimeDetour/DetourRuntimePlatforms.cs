@@ -83,14 +83,15 @@ namespace MonoMod.RuntimeDetour {
         private readonly static FieldInfo f_DynamicMethod_m_method =
             typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private readonly static MethodInfo m_DynamicMethod_GetMethodDescriptor =
-            typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance);
-        private readonly static FastReflectionDelegate dmd_DynamicMethod_GetMethodDescriptor =
-            m_DynamicMethod_GetMethodDescriptor?.CreateFastDelegate();
+        private readonly static FastReflectionDelegate _DynamicMethod_GetMethodDescriptor =
+            typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?.CreateFastDelegate();
+        private readonly static FieldInfo f_RuntimeMethodHandle_m_value =
+            typeof(RuntimeMethodHandle).GetField("m_value", BindingFlags.NonPublic | BindingFlags.Instance);
 
         private readonly static MethodInfo m_RuntimeHelpers__CompileMethod =
             typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
-        private readonly static FastReflectionDelegate dmd_RuntimeHelpers__CompileMethod =
+        private readonly static FastReflectionDelegate _RuntimeHelpers__CompileMethod =
             m_RuntimeHelpers__CompileMethod?.CreateFastDelegate();
         private readonly static bool m_RuntimeHelpers__CompileMethod_TakesIntPtr =
             m_RuntimeHelpers__CompileMethod != null &&
@@ -99,34 +100,32 @@ namespace MonoMod.RuntimeDetour {
             m_RuntimeHelpers__CompileMethod != null &&
             m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
 
-        private readonly static MethodInfo m_RuntimeMethodHandle_GetMethodInfo =
-            typeof(RuntimeMethodHandle).GetMethod("GetMethodInfo", BindingFlags.NonPublic | BindingFlags.Instance);
-        private readonly static FastReflectionDelegate dmd_RuntimeMethodHandle_GetMethodInfo =
-            m_RuntimeMethodHandle_GetMethodInfo?.CreateFastDelegate();
-
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             if (method is DynamicMethod) {
                 // Compile the method handle before getting our hands on the final method handle.
                 DynamicMethod dm = (DynamicMethod) method;
-                // This likes to die.
-                /*
                 if (m_RuntimeHelpers__CompileMethod_TakesIntPtr) {
-                    dmd_RuntimeHelpers__CompileMethod(null, ((RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(dm)).Value);
+                    // mscorlib 2.0.0.0
+                    _RuntimeHelpers__CompileMethod(null, ((RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor(dm)).Value);
+
                 } else if (m_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
-                    dmd_RuntimeHelpers__CompileMethod(null, dmd_RuntimeMethodHandle_GetMethodInfo((RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(dm)));
-                }
-                */
-                // This should work just fine.
-                // It abuses the fact that CreateDelegate first compiles the DynamicMethod, before creating the delegate and failing.
-                try {
-                    dm.CreateDelegate(typeof(MulticastDelegate));
-                } catch {
+                    // mscorlib 4.0.0.0
+                    _RuntimeHelpers__CompileMethod(null, f_RuntimeMethodHandle_m_value.GetValue(((RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor(dm))));
+
+                } else {
+                    // This should work just fine.
+                    // It abuses the fact that CreateDelegate first compiles the DynamicMethod, before creating the delegate and failing.
+                    // Only side effect: It introduces a possible deadlock in f.e. tModLoader, which adds a FirstChanceException handler.
+                    try {
+                        dm.CreateDelegate(typeof(MulticastDelegate));
+                    } catch {
+                    }
                 }
 
                 if (f_DynamicMethod_m_method != null)
                     return (RuntimeMethodHandle) f_DynamicMethod_m_method.GetValue(method);
-                if (dmd_DynamicMethod_GetMethodDescriptor != null)
-                    return (RuntimeMethodHandle) dmd_DynamicMethod_GetMethodDescriptor(method);
+                if (_DynamicMethod_GetMethodDescriptor != null)
+                    return (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor(method);
             }
 
             return method.MethodHandle;
