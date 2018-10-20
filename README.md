@@ -33,11 +33,11 @@ Mods / mod loaders for the following games are already using it in one way or an
 
 It consists of the following **modular components**:
 - **MonoMod:** The core MonoMod IL patcher and relinker.
-- **MonoMod.Utils:** Utilities and helpers that not only benefit MonoMod, but also mods in general. It contains classes such as `FastReflectionHelper`, `LimitedStream`, `DynamicMethodHelper`, `DynamicMethodDefinition` and the `ModInterop` namespace.
-- **MonoMod.DebugIL:** Enable IL-level debugging of third-party assemblies in Visual Studio.
+- **MonoMod.Utils:** Utilities and helpers that not only benefit MonoMod, but also mods in general. It contains classes such as `FastReflectionHelper`, `LimitedStream`, `DynamicMethodHelper`, `DynamicMethodDefinition`, `DynDll` and the `ModInterop` namespace.
+- **MonoMod.DebugIL:** Enable IL-level debugging of third-party assemblies in Visual Studio / MonoDevelop.
 - **MonoMod.BaseLoader:** A base on which a C# mod loader can be built upon, including a basic engine-agnostic mod content manager and mod relinker.
 - **MonoMod.RuntimeDetour:** A flexible and easily extensible runtime detouring library. Doesn't require cecil in itself.
-- **HookGen:** Shortened "HookGen", it's an utiltiy generating a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events.
+- **HookGen:** An utiltiy generating a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events. Builds on top of RuntimeDetour.
 
 ### Why?
 - Cross-version compatibility, even with obfuscated assemblies.
