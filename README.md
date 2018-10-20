@@ -20,13 +20,15 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 ----
 
 ## Introduction
-MonoMod is a modding "basework" (base tools / framework). Mods for the following games are already using it:
-- Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding),
+MonoMod is a modding "basework" (base tools + framework).  
+Mods / mod loaders for the following games are already using it in one way or another:
+- Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding/),
 - Celeste: [Everest](https://everestapi.github.io/)
-- Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding)
+- Terraria: [tModLoader](https://github.com/blushiemagic/tModLoader/)
+- Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding/)
 - Rain World: [via Partiality wrapper](http://www.raindb.net/)
 - Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
-- FEZ: [FEZMod (defunct)](https://github.com/0x0ade/FEZMod-Legacy)
+- FEZ: [FEZMod (defunct)](https://github.com/0x0ade/FEZMod-Legacy/)
 - And many more! *Ping me on Discord if your mod uses MonoMod!*
 
 It consists of the following **modular components**:
