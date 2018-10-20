@@ -43,6 +43,18 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy' ">
     <CecilLegacy>Legacy</CecilLegacy>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugLegacy|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseLegacy|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -50,6 +62,7 @@
   <ItemGroup>
     <Compile Include="DynamicMethodDefinitionTest.cs" />
     <Compile Include="ModInteropTest.cs" />
+    <Compile Include="RuntimeDetour\StructMagicTest.cs" />
     <Compile Include="TestObject.cs" />
     <Compile Include="RuntimeDetour\DetourTest.cs" />
     <Compile Include="RuntimeDetour\HookTest.cs" />
