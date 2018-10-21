@@ -1,3 +1,16 @@
+# Using RuntimeDetour
+Using RuntimeDetour boils down to the following most of the time:
+```cs
+// Create a Detour (or a Hook).
+Detour d = new Detour(methodInfoFrom, methodInfoTo);
+
+// When you want to undo and free it, dispose it.
+d.Dispose();
+```
+
+Take a look at the [DetourTest](https://github.com/0x0ade/MonoMod/blob/master/MonoMod.UnitTest/RuntimeDetour/DetourTest.cs) and [HookTest](https://github.com/0x0ade/MonoMod/blob/master/MonoMod.UnitTest/RuntimeDetour/HookTest.cs) classes for more usage details.  
+If you want to know more about how it works, take a look at the technical details further down below.
+
 # Using HookGen
 HookGen makes runtime detouring easy to use and flexible.
 
@@ -24,21 +37,21 @@ On.Celeste.Player.GetTrailColor += (orig, player, wasDashB) => {
 
 // Or...
 
-IL.Celeste.Player.GetTrailColor += (body, il) => {
-    int index = 0;
+IL.Celeste.Player.GetTrailColor += (il) => {
+    HookILCursor c = il.At(0);
 
     // Insert Console.WriteLine(...) at the beginning.
-    il.Emit(ref index, OpCodes.Ldstr, "2 - Hello, IL manipulation!");
-    il.Emit(ref index, OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) }));
+    c.Emit(OpCodes.Ldstr, "2 - Hello, IL manipulation!");
+    c.Emit(OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) }));
 
     // After that, emit an inline delegate call.
-    il.EmitDelegateCall(ref index, () => {
+    c.EmitDelegate(() => {
         Console.WriteLine("3 - Hello, C# code in IL!");
     });
     
     // There are also many other helpers to f.e. quickly advance to a region or
     // push + invoke any arbitrary delegate accepting any arguments, returning anything.
-    // Take a look at the il. autocomplete recommendations.
+    // Take a look at the il. and c. autocomplete recommendations.
 
     // Leave the rest of the method unmodified.
 };
@@ -62,10 +75,10 @@ On.Celeste.PlayerHair.GetHairColor += OnGetHairColor;
 On.Celeste.PlayerHair.GetHairColor -= OnGetHairColor;
 ```
 
-## Technical details - RuntimeDetour is an onion
+# Technical details - RuntimeDetour is an onion
 The RuntimeDetour namespace is split up into the following "layers", bottom to top:
 
-### IDetour*Platforms:
+## IDetour*Platforms:
 
 The "platform layer" is an abstraction layer that makes porting RuntimeDetour to new native platforms (ARM) and new runtime platforms (.NET Core) much easier. The performance penalty of using an abstraction layer only applies during the detour creation / application process.
 
@@ -75,7 +88,7 @@ This allows maintaining the x86 / x86-64 native code separately from the ARM nat
 - **IDetourRuntimePlatform** is responsible for pinning methods, creating IL-copies at runtime and getting the starting address of the JIT's resulting native code.  
 The Mono and .NET Framework detour platforms inherit from the shared DetourRuntimeILPlatform, with the only differences being the way how the RuntimeMethodHandle is obtained and how DynamicMethods are JITed.
 
-### IDetour classes:
+## IDetour classes:
 
 The following classes implement this interface and allow you to create detours by just instantiating them. The instances are also the way how you generate trampolines and how you undo detours.
 
