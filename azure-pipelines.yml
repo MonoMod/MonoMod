@@ -28,3 +28,19 @@ steps:
   inputs:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
+
+# Added manually: Copy files and publish artifact.
+- task: CopyFiles@2
+  inputs:
+    sourceFolder: '$(Agent.BuildDirectory)'
+    contents: '**\bin\**\!(*.pdb|*.config)'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+    cleanTargetFolder: true
+    overWrite: true
+    flattenFolders: true
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    artifactName: 'main'
+    publishLocation: 'Container'
