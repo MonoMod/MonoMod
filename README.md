@@ -37,7 +37,7 @@ It consists of the following **modular components**:
 - **MonoMod.DebugIL:** Enable IL-level debugging of third-party assemblies in Visual Studio / MonoDevelop.
 - **MonoMod.BaseLoader:** A base on which a C# mod loader can be built upon, including a basic engine-agnostic mod content manager and mod relinker.
 - **MonoMod.RuntimeDetour:** A flexible and easily extensible runtime detouring library. Doesn't require cecil in itself.
-- **HookGen:** An utiltiy generating a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events. Builds on top of RuntimeDetour.
+- **HookGen:** A utility to generate a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events. Built with MonoMod and RuntimeDetour.
 
 ### Why?
 - Cross-version compatibility, even with obfuscated assemblies.
