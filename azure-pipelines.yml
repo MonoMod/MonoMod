@@ -33,7 +33,8 @@ steps:
 - task: CopyFiles@2
   inputs:
     sourceFolder: '$(Agent.BuildDirectory)'
-    contents: '**\bin\**\!(*.pdb|*.config)'
+    contents: |
+      **\bin\**\!(Microsoft.*|*.Tests.dll|*.pdb|*.config)
     targetFolder: '$(Build.ArtifactStagingDirectory)'
     cleanTargetFolder: true
     overWrite: true
