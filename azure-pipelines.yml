@@ -22,7 +22,7 @@ steps:
 
 - task: PowerShell@2
   inputs:
-    filePath: 'azure-pipelines-pre.ps1'
+    filePath: 'azure-pipelines-prebuild.ps1'
 
 - task: VSBuild@1
   inputs:
