@@ -14,12 +14,6 @@ namespace MonoMod.InlineRT {
 
         public static void RelinkModule(string from, string toName) {
             MonoModder self = Modder;
-#if DEBUG
-            Console.WriteLine("Hey!");
-#endif
-#if LEGACY
-            Console.WriteLine("Ho!");
-#endif
 
             from = from.Inject(MonoModExt.SharedData);
             toName = toName.Inject(MonoModExt.SharedData);
