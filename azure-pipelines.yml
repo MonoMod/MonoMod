@@ -31,19 +31,31 @@ steps:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
-# Added manually: Copy files and publish artifact.
+# Create and "publish" main artifact.
 - task: CopyFiles@2
   inputs:
     sourceFolder: '$(Agent.BuildDirectory)'
-    contents: |
-      **\bin\**\!(Microsoft.*|*.Tests.dll|*.pdb|*.config)
-    targetFolder: '$(Build.ArtifactStagingDirectory)'
+    contents: '**/bin/**/!(Microsoft.*|*.Tests.dll|*.pdb|*.config)'
+    targetFolder: '$(Build.ArtifactStagingDirectory)/main'
     cleanTargetFolder: true
     overWrite: true
     flattenFolders: true
 
 - task: PublishBuildArtifacts@1
   inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)/main'
     artifactName: 'main'
+    publishLocation: 'Container'
+
+# Create and "publish" nupkg artifacts.
+- task: NuGetCommand@2
+  inputs:
+    command: pack
+    packagesToPack: '**/*.nuspec'
+    packDestination: '$(Build.ArtifactStagingDirectory)/nupkg'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkg'
+    artifactName: 'nupkg'
     publishLocation: 'Container'

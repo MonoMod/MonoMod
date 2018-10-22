@@ -109,7 +109,7 @@ To make patching easy, yet flexible, the MonoMod patcher offers a few extra feat
 - Finally, all relink mappings get applied and all references get fixed (method calls, field get / set operations, ...).
 
 
-### How can I check my assembly has been modded?
+### How can I check if my assembly has been modded?
 MonoMod creates a type called "WasHere" in the namespace "MonoMod" in your assembly:
 
 ```cs
@@ -120,7 +120,7 @@ if (Assembly.GetExecutingAssembly().GetType("MonoMod.WasHere") != null) {
 }
 ```
 
-*Note:* This can be easily bypassed by modifying MonoMod. It also doesn't detect changes made using other tools like dnSpy.  
+*Note:* This can be easily bypassed. More importantly, it doesn't detect changes made using other tools like dnSpy.  
 If you're a gamedev worried about cheating: Please don't fight against the modding community. Cheaters will find another way to cheat, and modders love to work together with gamedevs.
 
 
