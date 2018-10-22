@@ -20,6 +20,10 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
 
+- task: PowerShell@2
+  inputs:
+    filePath: 'azure-pipelines-pre.ps1'
+
 - task: VSBuild@1
   inputs:
     solution: '$(solution)'
@@ -52,10 +56,10 @@ steps:
   inputs:
     command: pack
     packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
-    packDestination: '$(Build.ArtifactStagingDirectory)/nupkg'
+    packDestination: '$(Build.ArtifactStagingDirectory)/nupkgs'
 
 - task: PublishBuildArtifacts@1
   inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkg'
-    artifactName: 'nupkg'
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
+    artifactName: 'nupkgs'
     publishLocation: 'Container'
