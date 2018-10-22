@@ -51,7 +51,7 @@ steps:
 - task: NuGetCommand@2
   inputs:
     command: pack
-    packagesToPack: '**/*.nuspec'
+    packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
     packDestination: '$(Build.ArtifactStagingDirectory)/nupkg'
 
 - task: PublishBuildArtifacts@1
