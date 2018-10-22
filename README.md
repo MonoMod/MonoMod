@@ -3,7 +3,7 @@
 A general purpose .NET assembly modding "basework", powered by [cecil](https://github.com/jbevain/cecil/).  
 *MIT-licensed.*
 
-[![Build Status](https://0x0ade.visualstudio.com/MonoMod/_apis/build/status/0x0ade.MonoMod)](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1)
+[![Build Status](https://0x0ade.visualstudio.com/MonoMod/_apis/build/status/0x0ade.MonoMod)](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1) [![Deployment Status](https://0x0ade.vsrm.visualstudio.com/_apis/public/Release/badge/e07cb5e7-fa7f-457d-982b-3323979ed1b7/1/1)](https://0x0ade.visualstudio.com/MonoMod/_releases2?view=mine&definitionId=1)
 
 ## Sections
 - [Introduction](#introduction)
