@@ -61,6 +61,7 @@
     <Compile Include="RelinkTargetNotFoundException.cs" />
     <Compile Include="StringInjectExtension.cs" />
     <Compile Include="ModInterop\ModInteropManager.cs" />
+    <Compile Include="_Data_.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil">
