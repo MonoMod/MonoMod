@@ -28,6 +28,7 @@ Mods / mod loaders for the following games are already using it in one way or an
 - Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding)
 - Rain World: [via Partiality wrapper](http://www.raindb.net/)
 - Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
+- Nimbatus: [Nimbatus-Mods / OmegaMod](https://github.com/OmegaRogue/Nimbatus-Mods)
 - FEZ: [FEZMod (defunct)](https://github.com/0x0ade/FEZMod-Legacy)
 - And many more! *Ping me on Discord if your mod uses MonoMod!*
 
