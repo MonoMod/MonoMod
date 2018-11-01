@@ -1,6 +1,6 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
@@ -34,16 +34,16 @@ namespace MonoMod.UnitTest {
             TestObject instance = new TestObject();
             int instanceResult = instance.TestMethod(2, 3);
             Console.WriteLine($"instance.TestMethod(2, 3): {instanceResult}");
-            Assert.AreEqual(instanceExpected, instanceResult);
+            Assert.Equal(instanceExpected, instanceResult);
 
             int staticResult = TestStaticMethod(2, 3);
             Console.WriteLine($"TestStaticMethod(2, 3): {staticResult}");
-            Assert.AreEqual(staticExpected, staticResult);
+            Assert.Equal(staticExpected, staticResult);
 
             Console.WriteLine("TestVoidMethod(2, 3):");
             VoidResult = 0;
             TestVoidMethod(2, 3);
-            Assert.AreEqual(voidExpected, VoidResult);
+            Assert.Equal(voidExpected, VoidResult);
         }
     }
 

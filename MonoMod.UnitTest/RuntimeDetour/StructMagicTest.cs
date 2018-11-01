@@ -1,39 +1,82 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    [TestClass]
     public unsafe class StructMagicTest {
 
-        public static bool IsFast = false;
+        public static bool IsHook = false;
 
-        [TestMethod]
+        [Fact]
         public void TestPtrRefMagic() {
             Color c = new Color();
 
-            IsFast = false;
+            IsHook = false;
             ManipColor(ref c, 0x0A, 0xDE, 0xEE, 0x80);
             CheckColor(c, 0x0A, 0xDE, 0xEE, 0x80);
 
-            using (Detour detour = new Detour(
+            using (new Detour(
                 typeof(StructMagicTest).GetMethod("ManipColor"),
-                typeof(StructMagicTest).GetMethod("ManipColorFast")
+                typeof(StructMagicTest).GetMethod("ManipColorHook")
             )) {
-                IsFast = true;
+                IsHook = true;
                 ManipColor(ref c, 0x12, 0x34, 0x56, 0x78);
                 CheckColor(c, 0x12, 0x34, 0x56, 0x78);
             }
         }
 
+        [Fact(Skip = "Fix for struct-returning instance methods not yet implemented. Unskip once it's supported.")]
+        public void TestReturnStruct() {
+            IsHook = false;
+            CheckSize(GetSize(), 1D, 2D);
+
+            using (new Hook(
+                typeof(StructMagicTest).GetMethod("GetSize"),
+                typeof(StructMagicTest).GetMethod("GetSizeHook")
+            )) {
+                IsHook = true;
+                Size s = GetSize();
+                CheckSize(s, 10D, 20D);
+            }
+        }
+
+        public static void CheckColor(Color c, byte r, byte g, byte b, byte a) {
+            Assert.Equal(r, c.R);
+            Assert.Equal(g, c.G);
+            Assert.Equal(b, c.B);
+            Assert.Equal(a, c.A);
+        }
+
+        public static void CheckSize(Size s, double width, double height) {
+            Assert.Equal(width, s.Width);
+            Assert.Equal(height, s.Height);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public Size GetSize() {
+            Assert.False(IsHook);
+            return new Size(1D, 2D);
+        }
+
+        public static Size GetSizeHook(Func<StructMagicTest, Size> orig, StructMagicTest self) {
+            Assert.True(IsHook);
+            IsHook = false;
+            Size s = orig(self);
+            IsHook = true;
+
+            s.Width *= 10D;
+            s.Height *= 10D;
+            return s;
+        }
+
         // Prevent JIT from inlining the method call.
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ManipColor(ref Color c, byte r, byte g, byte b, byte a) {
-            Assert.IsFalse(IsFast);
+            Assert.False(IsHook);
             c.R = r;
             c.G = g;
             c.B = b;
@@ -42,19 +85,12 @@ namespace MonoMod.UnitTest {
 
         // Prevent JIT from inlining the method call.
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void ManipColorFast(ColorRGBA* cRGBA, byte r, byte g, byte b, byte a) {
-            Assert.IsTrue(IsFast);
+        public static void ManipColorHook(ColorRGBA* cRGBA, byte r, byte g, byte b, byte a) {
+            Assert.True(IsHook);
             cRGBA->R = r;
             cRGBA->G = g;
             cRGBA->B = b;
             cRGBA->A = a;
-        }
-
-        public static void CheckColor(Color c, byte r, byte g, byte b, byte a) {
-            Assert.AreEqual(r, c.R);
-            Assert.AreEqual(g, c.G);
-            Assert.AreEqual(b, c.B);
-            Assert.AreEqual(a, c.A);
         }
 
         public struct Color {
@@ -116,6 +152,16 @@ namespace MonoMod.UnitTest {
 
         public struct ColorRGBA {
             public byte R, G, B, A;
+        }
+
+        public struct Size {
+            public double Width { get; set; }
+            public double Height { get; set; }
+
+            public Size(double width, double height) {
+                Width = width;
+                Height = height;
+            }
         }
 
     }

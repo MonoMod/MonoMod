@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.ModInterop;
@@ -10,14 +10,13 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    [TestClass]
     public class DynamicMethodDefinitionTest {
-        [TestMethod]
+        [Fact]
         public void TestDMD() {
             Counter = 0;
 
             // Run the original method.
-            Assert.AreEqual(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
+            Assert.Equal(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
             MethodInfo original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
             DynamicMethod patched;
@@ -33,16 +32,16 @@ namespace MonoMod.UnitTest {
             }
 
             // Run the DynamicMethod.
-            Assert.AreEqual(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 2 }));
+            Assert.Equal(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 2 }));
 
             // Detour the original method to the patched DynamicMethod, then run the patched method.
             using (new Detour(original, patched)) {
                 // The detour is only active in this block.
-                Assert.AreEqual(Tuple.Create(StringPatched, 6), ExampleMethod(3));
+                Assert.Equal(Tuple.Create(StringPatched, 6), ExampleMethod(3));
             }
 
             // Run the original method again.
-            Assert.AreEqual(Tuple.Create(StringOriginal, 10), ExampleMethod(4));
+            Assert.Equal(Tuple.Create(StringOriginal, 10), ExampleMethod(4));
         }
 
         public const string StringOriginal = "Hello from ExampleMethod!";

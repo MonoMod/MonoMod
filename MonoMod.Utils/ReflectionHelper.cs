@@ -95,7 +95,7 @@ namespace MonoMod.Utils {
                         return ResolveReflectionCache[mref] = type.MakeArrayType((ts as ArrayType).Dimensions.Count);
 
                     if (ts.IsGenericInstance)
-                        return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _ResolveReflection(arg, module) as Type).ToArray());
+                        return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
 
                 } else {
                     type = module.GetType(mref.FullName.Replace("/", "+"));
@@ -110,7 +110,7 @@ namespace MonoMod.Utils {
 
             if (mref is GenericInstanceMethod mrefGenMethod) {
                 member = _ResolveReflection(mrefGenMethod.ElementMethod, module);
-                member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _ResolveReflection(arg, module) as Type).ToArray());
+                member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
 
             } else {
                 member = type.GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));

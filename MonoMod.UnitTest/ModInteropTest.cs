@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using MonoMod.ModInterop;
 using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
@@ -7,23 +7,22 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
-    [TestClass]
     public class ModInteropTest {
-        [TestMethod]
+        [Fact]
         public void TestModInterop() {
             typeof(UtilsC).ModInterop();
             typeof(UtilsD).ModInterop();
 
             typeof(UtilsA).ModInterop();
-            Assert.AreEqual(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
-            Assert.AreEqual(UtilsA.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
+            Assert.Equal(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
+            Assert.Equal(UtilsA.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
 
             typeof(UtilsB).ModInterop();
-            Assert.AreEqual(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
-            Assert.AreEqual(UtilsB.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
+            Assert.Equal(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
+            Assert.Equal(UtilsB.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
 
-            Assert.AreEqual(UtilsB.Something(2, 3),     UtilsD.Something(2, 3));
-            Assert.AreEqual(UtilsB.AnotherThing(2, 3),  UtilsD.AnotherThing(2, 3));
+            Assert.Equal(UtilsB.Something(2, 3),     UtilsD.Something(2, 3));
+            Assert.Equal(UtilsB.AnotherThing(2, 3),  UtilsD.AnotherThing(2, 3));
         }
 
         [ModExportName("ModA")]
