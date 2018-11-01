@@ -14,6 +14,7 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 
 ### Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
 - [Chad Yates](https://twitter.com/ChadCYates)
+- [KyleTheScientist](https://www.twitch.tv/kylethescientist)
 - [Renaud Bédard](https://twitter.com/renaudbedard)
 - [Artus Elias Meyer-Toms](https://twitter.com/artuselias)
 
