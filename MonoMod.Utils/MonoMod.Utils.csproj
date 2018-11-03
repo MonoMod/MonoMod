@@ -1,67 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MonoMod.Utils</RootNamespace>
     <AssemblyName>MonoMod.Utils</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <TargetFramework>net35</TargetFramework>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' Or '$(Configuration)|$(Platform)' == 'DebugLegacy|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' Or '$(Configuration)|$(Platform)' == 'ReleaseLegacy|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy' ">
-    <CecilLegacy>Legacy</CecilLegacy>
-  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.csproj" />
+
   <ItemGroup>
     <Reference Include="System" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\MonoMod\Properties\AssemblyInfo.Common.cs">
-      <Link>AssemblyInfo.Common.cs</Link>
-    </Compile>
-    <Compile Include="ReflectionHelper.cs" />
-    <Compile Include="DynamicMethodDefinition.cs" />
-    <Compile Include="DynamicMethodHelper.cs" />
-    <Compile Include="DynDll.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="LimitedStream.cs" />
-    <Compile Include="ModInterop\ModExportName.cs" />
-    <Compile Include="ModInterop\ModImportName.cs" />
-    <Compile Include="MonoMod__OldName__.cs" />
-    <Compile Include="MonoModExt.cs" />
-    <Compile Include="Platform.cs" />
-    <Compile Include="PlatformHelper.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="FastReflectionHelper.cs" />
-    <Compile Include="RelinkFailedException.cs" />
-    <Compile Include="RelinkTargetNotFoundException.cs" />
-    <Compile Include="StringInjectExtension.cs" />
-    <Compile Include="ModInterop\ModInteropManager.cs" />
-    <Compile Include="_Data_.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil">
@@ -69,12 +18,4 @@
       <Version Condition="'$(CecilLegacy)' == 'Legacy'">0.9.6</Version>
     </PackageReference>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

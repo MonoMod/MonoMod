@@ -1,84 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MonoMod.BaseLoader</RootNamespace>
     <AssemblyName>MonoMod.BaseLoader</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <TargetFramework>net35</TargetFramework>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' Or '$(Configuration)|$(Platform)' == 'DebugLegacy|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE;</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' Or '$(Configuration)|$(Platform)' == 'ReleaseLegacy|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy' ">
-    <CecilLegacy>Legacy</CecilLegacy>
-  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.csproj" />
+
   <ItemGroup>
     <Reference Include="System" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\MonoMod\Properties\AssemblyInfo.Common.cs">
-      <Link>AssemblyInfo.Common.cs</Link>
-    </Compile>
-    <Compile Include="ModSettings.cs" />
-    <Compile Include="ModBase.cs" />
-    <Compile Include="ModContent.cs" />
-    <Compile Include="ModManager.cs" />
-    <Compile Include="ModLoader.cs" />
-    <Compile Include="ModMetadata.cs" />
-    <Compile Include="ModRelinker.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="Logger.cs" />
-    <Compile Include="LogWriter.cs" />
-    <Compile Include="ModAsset.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RelinkerSymbolReaderProvider.cs" />
-    <Compile Include="YamlHelper.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.DebugIL\MonoMod.DebugIL.csproj">
-      <Project>{68e38462-2db9-4692-ad91-077a8fbe8ae9}</Project>
-      <Name>MonoMod.DebugIL</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj">
-      <Project>{032b42a5-c409-4b69-b8e6-ec468eedfec1}</Project>
-      <Name>MonoMod.RuntimeDetour.HookGen</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj">
-      <Project>{d0c584c0-81d7-486e-b70e-d7f9256e0909}</Project>
-      <Name>MonoMod.RuntimeDetour</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj">
-      <Project>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</Project>
-      <Name>MonoMod.Utils</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MonoMod\MonoMod.csproj">
-      <Project>{8a17c958-5c33-4035-af76-f94a3aa2dc4f}</Project>
-      <Name>MonoMod</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil">
@@ -89,12 +21,12 @@
       <Version>5.2.1</Version>
     </PackageReference>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.DebugIL\MonoMod.DebugIL.csproj" />
+    <ProjectReference Include="..\MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj" />
+    <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />
+    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
+    <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
+  </ItemGroup>
 </Project>

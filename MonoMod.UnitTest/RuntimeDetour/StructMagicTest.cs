@@ -29,7 +29,14 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        [Fact(Skip = "Fix for struct-returning instance methods not yet implemented. Unskip once it's supported.")]
+        /* This test currently only works with Mono.
+         * The .NET Framework's runtime / JIT calls GetSize differently
+         * than other instance methods. Based on a completely unrelated
+         * comment by Tanner Gooding in the C# Discord server, it's
+         * possibly caused by "whether RCX contains the this pointer or
+         * the return buffer pointer (when returning a struct by value)"
+         */
+        [Fact(Skip = "This usecase is currently only supported with Mono.")]
         public void TestReturnStruct() {
             IsHook = false;
             CheckSize(GetSize(), 1D, 2D);

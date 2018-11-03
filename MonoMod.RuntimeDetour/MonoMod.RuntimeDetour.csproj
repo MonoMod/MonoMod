@@ -1,79 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{D0C584C0-81D7-486E-B70E-D7F9256E0909}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MonoMod.RuntimeDetour</RootNamespace>
     <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
+    <TargetFramework>net35</TargetFramework>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' Or '$(Configuration)|$(Platform)' == 'DebugLegacy|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' Or '$(Configuration)|$(Platform)' == 'ReleaseLegacy|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy' ">
-    <CecilLegacy>Legacy</CecilLegacy>
-  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.csproj" />
+
   <ItemGroup>
     <Reference Include="System" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\MonoMod\Properties\AssemblyInfo.Common.cs">
-      <Link>AssemblyInfo.Common.cs</Link>
-    </Compile>
-    <Compile Include="Detour.cs" />
-    <Compile Include="DetourHelper.cs" />
-    <Compile Include="DetourNativePlatforms.cs" />
-    <Compile Include="DetourRuntimePlatforms.cs" />
-    <Compile Include="Hook.cs" />
-    <Compile Include="HookGen\HookExtensions.PatternMatching.cs" />
-    <Compile Include="HookGen\HookILLabel.cs" />
-    <Compile Include="HookGen\HookIL.cs" />
-    <Compile Include="HookGen\HookExtensions.cs" />
-    <Compile Include="HookGen\HookILCursor.cs" />
-    <Compile Include="IDetour.cs" />
-    <Compile Include="ILCopying\ILInstruction.cs" />
-    <Compile Include="ILCopying\MethodCopier.cs" />
-    <Compile Include="NativeDetour.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="HookGen\HookEndpoint.cs" />
-    <Compile Include="HookGen\HookEndpointManager.cs" />
-    <Compile Include="DetourModManager.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="ILCopying\README.md" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj">
-      <Project>{1839cfe2-3db0-45a8-b03d-9aa797479a3a}</Project>
-      <Name>MonoMod.Utils</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil">
@@ -81,12 +18,8 @@
       <Version Condition="'$(CecilLegacy)' == 'Legacy'">0.9.6</Version>
     </PackageReference>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
+  </ItemGroup>
 </Project>

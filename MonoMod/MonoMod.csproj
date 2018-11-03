@@ -1,84 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>MonoMod</RootNamespace>
     <AssemblyName>MonoMod</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+	<TargetFramework>net35</TargetFramework>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU' Or '$(Configuration)|$(Platform)' == 'DebugLegacy|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'DebugLegacy' ">LEGACY;DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Externalconsole>true</Externalconsole>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU' Or '$(Configuration)|$(Platform)' == 'ReleaseLegacy|AnyCPU'">
-    <DebugType>full</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release</OutputPath>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Externalconsole>true</Externalconsole>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DefineConstants>TRACE</DefineConstants>
-    <DefineConstants Condition=" '$(Configuration)' == 'ReleaseLegacy' ">LEGACY;TRACE</DefineConstants>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>7.3</LangVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy' ">
-    <CecilLegacy>Legacy</CecilLegacy>
-  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.csproj" />
+
   <ItemGroup>
     <Reference Include="System" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="InlineRT\MonoModRulesModder.cs" />
-    <Compile Include="MMIL\Inject.cs" />
-    <Compile Include="Modifiers\MonoModForceCallvirt.cs" />
-    <Compile Include="Modifiers\MonoModForceCall.cs" />
-    <Compile Include="Modifiers\MonoModLinkFrom.cs" />
-    <Compile Include="Modifiers\MonoMod__WasIDictionary__.cs" />
-    <Compile Include="Modifiers\MonoMod__SafeToCopy__.cs" />
-    <Compile Include="InlineRT\MonoModRulesManager.cs" />
-    <Compile Include="InlineRT\MonoModRule.cs" />
-    <Compile Include="Modifiers\MonoModCustomAttribute.cs" />
-    <Compile Include="Modifiers\MonoModHook.cs" />
-    <Compile Include="Modifiers\MonoModIfFlag.cs" />
-    <Compile Include="Modifiers\MonoModNoNew.cs" />
-    <Compile Include="Modifiers\MonoModOnPlatform.cs" />
-    <Compile Include="Modifiers\MonoModAdded.cs" />
-    <Compile Include="Modifiers\MonoModOriginal.cs" />
-    <Compile Include="Modifiers\MonoModOriginalName.cs" />
-    <Compile Include="Modifiers\MonoModTargetModule.cs" />
-    <Compile Include="Modifiers\MonoModPublic.cs" />
-    <Compile Include="Modifiers\MonoModPatch.cs" />
-    <Compile Include="MonoModder.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Modifiers\MonoModIgnore.cs" />
-    <Compile Include="Modifiers\MonoModRemove.cs" />
-    <Compile Include="Modifiers\MonoModReplace.cs" />
-    <Compile Include="Modifiers\MonoModConstructor.cs" />
-    <Compile Include="Modifiers\MonoModLinkTo.cs" />
-    <Compile Include="Modifiers\MonoModEnumReplace.cs" />
-    <Compile Include="Properties\AssemblyInfo.Common.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj">
-      <Project>{1839cfe2-3db0-45a8-b03d-9aa797479a3a}</Project>
-      <Name>MonoMod.Utils</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil">
@@ -86,5 +18,8 @@
       <Version Condition="'$(CecilLegacy)' == 'Legacy'">0.9.6</Version>
     </PackageReference>
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
+  </ItemGroup>
 </Project>
