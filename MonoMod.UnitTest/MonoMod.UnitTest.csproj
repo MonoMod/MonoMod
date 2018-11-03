@@ -17,7 +17,6 @@
   <Import Project="..\MonoMod.Common.csproj" />
 
   <ItemGroup>
-    <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Net.Http" />
@@ -34,10 +33,6 @@
     </When>
   </Choose>
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil">
-      <Version Condition="'$(CecilLegacy)' == ''">0.10.0</Version>
-      <Version Condition="'$(CecilLegacy)' == 'Legacy'">0.9.6</Version>
-    </PackageReference>
     <PackageReference Include="NETStandard.Library">
       <Version>1.6.1</Version>
     </PackageReference>
