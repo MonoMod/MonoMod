@@ -15,6 +15,8 @@ name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
 steps:
 - task: NuGetToolInstaller@0
+  inputs:
+    versionSpec: '4.7.1' 
 
 - task: NuGetCommand@2
   inputs:
@@ -39,7 +41,7 @@ steps:
 - task: CopyFiles@2
   inputs:
     sourceFolder: '$(Agent.BuildDirectory)'
-    contents: '**/bin/**/!(Microsoft.*|*.Tests.dll|*.pdb|*.config)'
+    contents: '**/bin/**/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb|*.config)'
     targetFolder: '$(Build.ArtifactStagingDirectory)/main'
     cleanTargetFolder: true
     overWrite: true
@@ -52,14 +54,15 @@ steps:
     publishLocation: 'Container'
 
 # Create and "publish" nupkg artifacts.
-- task: NuGetCommand@2
-  inputs:
-    command: pack
-    packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
-    packDestination: '$(Build.ArtifactStagingDirectory)/nupkgs'
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
-    artifactName: 'nupkgs'
-    publishLocation: 'Container'
+# Temporarily disabled.
+# - task: NuGetCommand@2
+#   inputs:
+#     command: pack
+#     packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
+#     packDestination: '$(Build.ArtifactStagingDirectory)/nupkgs'
+#
+# - task: PublishBuildArtifacts@1
+#   inputs:
+#     pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
+#     artifactName: 'nupkgs'
+#     publishLocation: 'Container'
