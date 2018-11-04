@@ -15,26 +15,31 @@ name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
 steps:
 - task: DotNetCoreInstaller@0
+  displayName: 'Install: .NET Core SDK'
   inputs:
     packageType: 'sdk'
     version: '2.0.0'
 
 - task: DotNetCoreCLI@2
+  displayName: 'dotnet: Restore'
   inputs:
     command: 'restore'
     projects: 'MonoMod*/*.csproj'
 
 - task: PowerShell@2
+  displayName: 'Run: PowerShell: azure-pipelines-prebuild.ps1'
   inputs:
     filePath: 'azure-pipelines-prebuild.ps1'
 
 - task: DotNetCoreCLI@2
+  displayName: 'dotnet: Build'
   inputs:
     command: 'build'
     projects: 'MonoMod*/*.csproj'
     configuration: '$(buildConfiguration)'
 
 - task: VSTest@2
+  displayName: 'Run: Tests'
   continueOnError: true
   inputs:
     platform: '$(buildPlatform)'
@@ -44,17 +49,16 @@ steps:
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'net35'
-
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'netstandard16'
-
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'netstandard20'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
+  displayName: 'Artifacts: Pack: nupkgs'
   inputs:
     command: 'pack'
     configuration: 'Release'
@@ -62,6 +66,7 @@ steps:
     packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
 - task: PublishBuildArtifacts@1
+  displayName: 'Artifacts: Publish: nupkgs'
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
     artifactName: 'nupkgs'
