@@ -13,6 +13,7 @@ variables:
 
 name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
+steps:
 - task: DotNetCoreInstaller@0
   inputs:
     packageType: 'sdk'
