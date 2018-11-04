@@ -38,6 +38,14 @@ steps:
     projects: 'MonoMod*/*.csproj'
     configuration: '$(buildConfiguration)'
 
+- task: DotNetCoreCLI@2
+  displayName: 'dotnet: Test'
+  inputs:
+    command: 'test'
+    nobuild: true
+    projects: 'MonoMod.UnitTest/*.csproj'
+    configuration: '$(buildConfiguration)'
+
 - task: VSTest@2
   displayName: 'Run: Tests'
   continueOnError: true
@@ -61,7 +69,8 @@ steps:
   displayName: 'Artifacts: Pack: nupkgs'
   inputs:
     command: 'pack'
-    configuration: 'Release'
+    nobuild: true
+    configuration: '$(buildConfiguration)'
     versioningScheme: 'byBuildNumber'
     packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'

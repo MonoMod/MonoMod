@@ -27,6 +27,10 @@
     <CecilLegacy>false</CecilLegacy>
 
     <ILGen Condition="'$(ILGen)' == ''">false</ILGen>
+
+    <NETFramework>false</NETFramework>
+    <NETStandard>false</NETStandard>
+    <NETStandard1X>false</NETStandard1X>
   </PropertyGroup>
 
   <!-- dotnet pack -->
@@ -64,25 +68,13 @@
 
   <!-- Common references. -->
   <Choose>
-    <When Condition="!$(TargetFramework.StartsWith('netstandard'))">
-      <!-- .NET Framework -->
-      <PropertyGroup>
-        <NETStandard>false</NETStandard>
-        <NETStandard1X>false</NETStandard1X>
-        <DefineConstants>NETFRAMEWORK</DefineConstants>
-      </PropertyGroup>
-      <ItemGroup>
-        <!-- <Reference Include="mscorlib" /> -->
-        <Reference Include="System" />
-      </ItemGroup>
-    </When>
-    <Otherwise>
+    <When Condition="$(TargetFramework.StartsWith('netstandard')) Or $(TargetFramework.StartsWith('netcoreapp'))">
       <!-- .NET Standard -->
       <PropertyGroup>
         <NETStandard>true</NETStandard>
-        <NETStandard1X>$(TargetFramework.StartsWith('netstandard1'))</NETStandard1X>
-        <DefineConstants>NETSTANDARD</DefineConstants>
-        <DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X</DefineConstants>
+        <NETStandard1X Condition="$(TargetFramework.StartsWith('netstandard1')) Or $(TargetFramework.StartsWith('netcoreapp1'))">true</NETStandard1X>
+        <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
+        <DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X;$(DefineConstants)</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
         <PackageReference Include="System.Collections.NonGeneric" Version="4.3.0" />
@@ -91,6 +83,17 @@
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
         <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="4.3.0" />
         <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <!-- .NET Framework -->
+      <PropertyGroup>
+        <NETFramework>true</NETFramework>
+        <DefineConstants>NETFRAMEWORK;$(DefineConstants)</DefineConstants>
+      </PropertyGroup>
+      <ItemGroup>
+        <!-- <Reference Include="mscorlib" /> -->
+        <Reference Include="System" />
       </ItemGroup>
     </Otherwise>
   </Choose>

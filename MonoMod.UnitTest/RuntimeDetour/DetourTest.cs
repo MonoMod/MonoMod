@@ -30,9 +30,10 @@ namespace MonoMod.UnitTest {
                 TestStaticMethod_A
             );
             // MethodBase, old syntax.
+            // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
             IDetour detourTestVoidMethodA = new Detour(
-                typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
+                typeof(TestObject).GetTypeInfo().GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
+                typeof(DetourTest).GetTypeInfo().GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
             );
             Console.WriteLine("Detours: A");
             TestObject.TestStep(42, 12, 1);

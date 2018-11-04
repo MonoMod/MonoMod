@@ -4,13 +4,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using MonoMod.Utils;
+using System.Reflection;
 
 namespace MonoMod.RuntimeDetour.HookGen {
     class Program {
         static void Main(string[] args) {
-            Console.WriteLine("MonoMod.RuntimeDetour.HookGen " + typeof(Program).Assembly.GetName().Version);
-            Console.WriteLine("using MonoMod " + typeof(MonoModder).Assembly.GetName().Version);
-            Console.WriteLine("using MonoMod.RuntimeDetour " + typeof(Detour).Assembly.GetName().Version);
+            Console.WriteLine("MonoMod.RuntimeDetour.HookGen " + typeof(Program).GetTypeInfo().Assembly.GetName().Version);
+            Console.WriteLine("using MonoMod " + typeof(MonoModder).GetTypeInfo().Assembly.GetName().Version);
+            Console.WriteLine("using MonoMod.RuntimeDetour " + typeof(Detour).GetTypeInfo().Assembly.GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");

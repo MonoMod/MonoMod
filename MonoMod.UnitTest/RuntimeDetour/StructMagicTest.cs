@@ -21,8 +21,8 @@ namespace MonoMod.UnitTest {
             CheckColor(c, 0x0A, 0xDE, 0xEE, 0x80);
 
             using (new Detour(
-                typeof(StructMagicTest).GetMethod("ManipColor"),
-                typeof(StructMagicTest).GetMethod("ManipColorHook")
+                typeof(StructMagicTest).GetTypeInfo().GetMethod("ManipColor"),
+                typeof(StructMagicTest).GetTypeInfo().GetMethod("ManipColorHook")
             )) {
                 IsHook = true;
                 ManipColor(ref c, 0x12, 0x34, 0x56, 0x78);
@@ -44,8 +44,8 @@ namespace MonoMod.UnitTest {
             CheckSize(GetSize(), 1D, 2D);
 
             using (new Hook(
-                typeof(StructMagicTest).GetMethod("GetSize"),
-                typeof(StructMagicTest).GetMethod("GetSizeHook")
+                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetSize"),
+                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetSizeHook")
             )) {
                 IsHook = true;
                 Size s = GetSize();

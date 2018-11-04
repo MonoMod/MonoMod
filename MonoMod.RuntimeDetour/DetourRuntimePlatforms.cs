@@ -19,42 +19,16 @@ namespace MonoMod.RuntimeDetour {
         // Prevent the GC from collecting those.
         protected HashSet<DynamicMethod> PinnedDynamicMethods = new HashSet<DynamicMethod>();
 
-        // MethodInfo.get_MethodHandle, RuntimeMethodHandle.GetFunctionPointer and RuntimeHelpers.PrepareMethod are present in coreclr's mscorlib 1.0.0
-        // Weirdly enough, they're not exposed in .NET Standard until 2.0
+        protected virtual IntPtr GetFunctionPointer(RuntimeMethodHandle handle)
 #if NETSTANDARD1_X
-        // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/Reflection/MethodInfo.cs#L613
-        private static readonly FastReflectionDelegate _MethodInfo_get_MethodHandle =
-            typeof(MethodInfo).GetTypeInfo().GetProperty("MethodHandle", BindingFlags.Public | BindingFlags.Instance).GetGetMethod()
-            ?.CreateFastDelegate();
-
-        // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/RuntimeHandles.cs#L1045
-        private static readonly FastReflectionDelegate _RuntimeMethodHandle_GetFunctionPointer =
-            typeof(RuntimeMethodHandle).GetTypeInfo().GetMethod("GetFunctionPointer", BindingFlags.Public | BindingFlags.Instance)
-            ?.CreateFastDelegate();
-
-        // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/Runtime/CompilerServices/RuntimeHelpers.cs#L102
-        private static readonly FastReflectionDelegate _RuntimeHelpers_PrepareMethod =
-            typeof(RuntimeHelpers).GetTypeInfo().GetMethod("PrepareMethod", BindingFlags.Public | BindingFlags.Static)
-            ?.CreateFastDelegate();
-#endif
-
-        protected RuntimeMethodHandle GetMethodHandleDirect(MethodBase method)
-#if NETSTANDARD1_X
-            => (RuntimeMethodHandle) _MethodInfo_get_MethodHandle(method);
-#else
-            => method.MethodHandle;
-#endif
-
-        protected IntPtr GetFunctionPointer(RuntimeMethodHandle handle)
-#if NETSTANDARD1_X
-            => (IntPtr) _RuntimeMethodHandle_GetFunctionPointer(handle);
+            => throw new NotSupportedException();
 #else
             => handle.GetFunctionPointer();
 #endif
 
-        protected void PrepareMethod(RuntimeMethodHandle handle)
+        protected virtual void PrepareMethod(RuntimeMethodHandle handle)
 #if NETSTANDARD1_X
-            => _RuntimeHelpers_PrepareMethod(handle);
+            => throw new NotSupportedException();
 #else
             => RuntimeHelpers.PrepareMethod(handle);
 #endif
@@ -143,6 +117,29 @@ namespace MonoMod.RuntimeDetour {
             m_RuntimeHelpers__CompileMethod != null &&
             m_RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
 
+#if NETSTANDARD1_X
+        private static readonly FastReflectionDelegate _MethodBase_get_MethodHandle =
+            typeof(MethodBase).GetTypeInfo().GetMethod("get_MethodHandle", BindingFlags.Public | BindingFlags.Instance)
+            ?.CreateFastDelegate();
+
+        private static readonly FastReflectionDelegate _IRuntimeMethodInfo_get_Value =
+            typeof(RuntimeMethodHandle).GetTypeInfo().Assembly
+            .GetType("System.IRuntimeMethodInfo").GetTypeInfo().GetMethod("get_Value", BindingFlags.Public | BindingFlags.Instance)
+            ?.CreateFastDelegate();
+        private static readonly FastReflectionDelegate _RuntimeMethodHandle_GetFunctionPointer =
+            typeof(RuntimeMethodHandle).GetTypeInfo().GetMethod("GetFunctionPointer", BindingFlags.NonPublic | BindingFlags.Static)
+            ?.CreateFastDelegate();
+
+        // .NET Core 1.0.0 should have GetFunctionPointer, but it only has got its internal static counterpart.
+        protected override IntPtr GetFunctionPointer(RuntimeMethodHandle handle)
+            => (IntPtr) _RuntimeMethodHandle_GetFunctionPointer(null, _IRuntimeMethodInfo_get_Value(f_RuntimeMethodHandle_m_value.GetValue(handle)));
+
+        // .NET Core 1.0.0 should have PrepareMethod, but it has only got _CompileMethod.
+        // Let's hope that it works as well.
+        protected override void PrepareMethod(RuntimeMethodHandle handle)
+            => _RuntimeHelpers__CompileMethod(null, f_RuntimeMethodHandle_m_value.GetValue(handle));
+#endif
+
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             if (method is DynamicMethod) {
                 // Compile the method handle before getting our hands on the final method handle.
@@ -174,7 +171,11 @@ namespace MonoMod.RuntimeDetour {
                     return (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor(method);
             }
 
-            return GetMethodHandleDirect(method);
+#if NETSTANDARD1_X
+            return (RuntimeMethodHandle) _MethodBase_get_MethodHandle(method);
+#else
+            return method.MethodHandle;
+#endif
         }
     }
 
@@ -187,6 +188,30 @@ namespace MonoMod.RuntimeDetour {
         private static readonly FieldInfo f_DynamicMethod_mhandle =
             typeof(DynamicMethod).GetTypeInfo().GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        // Let's just hope that those are present in Mono's implementation of .NET Standard 1.X
+#if NETSTANDARD1_X
+        // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/Reflection/MethodInfo.cs#L613
+        private static readonly FastReflectionDelegate _MethodBase_get_MethodHandle =
+            typeof(MethodBase).GetTypeInfo().GetMethod("get_MethodHandle", BindingFlags.Public | BindingFlags.Instance)
+            ?.CreateFastDelegate();
+
+        // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/RuntimeHandles.cs#L1045
+        private static readonly FastReflectionDelegate _RuntimeMethodHandle_GetFunctionPointer =
+            typeof(RuntimeMethodHandle).GetTypeInfo().GetMethod("GetFunctionPointer", BindingFlags.Public | BindingFlags.Instance)
+            ?.CreateFastDelegate();
+
+        // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/Runtime/CompilerServices/RuntimeHelpers.cs#L102
+        private static readonly FastReflectionDelegate _RuntimeHelpers_PrepareMethod =
+            typeof(RuntimeHelpers).GetTypeInfo().GetMethod("PrepareMethod", new Type[] { typeof(RuntimeMethodHandle) })
+            ?.CreateFastDelegate();
+
+        protected override IntPtr GetFunctionPointer(RuntimeMethodHandle handle)
+            => (IntPtr) _RuntimeMethodHandle_GetFunctionPointer(handle);
+
+        protected override void PrepareMethod(RuntimeMethodHandle handle)
+            => _RuntimeHelpers_PrepareMethod(null, handle);
+#endif
+
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             if (method is DynamicMethod) {
                 // Compile the method handle before getting our hands on the final method handle.
@@ -195,7 +220,11 @@ namespace MonoMod.RuntimeDetour {
                     return (RuntimeMethodHandle) f_DynamicMethod_mhandle.GetValue(method);
             }
 
-            return GetMethodHandleDirect(method);
+#if NETSTANDARD1_X
+            return (RuntimeMethodHandle) _MethodBase_get_MethodHandle(method);
+#else
+            return method.MethodHandle;
+#endif
         }
     }
 

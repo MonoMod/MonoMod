@@ -16,34 +16,36 @@ namespace MonoMod.UnitTest {
             TestObject.TestStep(5, 6, 8);
             Console.WriteLine();
 
+            // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
+
             IDetour hookTestMethodA = new Hook(
-                typeof(TestObject).GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
-                typeof(HookTest).GetMethod("TestMethod_A", BindingFlags.Static | BindingFlags.Public)
+                typeof(TestObject).GetTypeInfo().GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
+                typeof(HookTest).GetTypeInfo().GetMethod("TestMethod_A", BindingFlags.Static | BindingFlags.Public)
             );
             IDetour hookTestStaticMethodA = new Hook(
-                typeof(TestObject).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
-                typeof(HookTest).GetMethod("TestStaticMethod_A", BindingFlags.Static | BindingFlags.Public)
+                typeof(TestObject).GetTypeInfo().GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
+                typeof(HookTest).GetTypeInfo().GetMethod("TestStaticMethod_A", BindingFlags.Static | BindingFlags.Public)
             );
             IDetour hookTestVoidMethodA = new Hook(
-                typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                typeof(HookTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
+                typeof(TestObject).GetTypeInfo().GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
+                typeof(HookTest).GetTypeInfo().GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
             );
             Console.WriteLine("Hooks: A");
             TestObject.TestStep(42, 12, 1);
             Console.WriteLine();
 
             IDetour hookTestMethodB = new Hook(
-                typeof(TestObject).GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
-                typeof(HookTest).GetMethod("TestMethod_B", BindingFlags.Static | BindingFlags.Public)
+                typeof(TestObject).GetTypeInfo().GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
+                typeof(HookTest).GetTypeInfo().GetMethod("TestMethod_B", BindingFlags.Static | BindingFlags.Public)
             );
             IDetour hookTestStaticMethodB = new Hook(
-                typeof(TestObject).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
+                typeof(TestObject).GetTypeInfo().GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
                 new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
                     return orig(a, b) + 2;
                 })
             );
             IDetour hookTestVoidMethodB = new Hook(
-                typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
+                typeof(TestObject).GetTypeInfo().GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                 new Action<Action<int, int>, int, int>((orig, a, b) => {
                     Console.WriteLine("Hook B");
                     TestObject.VoidResult += 2;

@@ -49,7 +49,11 @@ namespace MonoMod.Utils {
                     return module;
                 return null;
             }
-            set => _Modules[Method.Module] = value;
+            set {
+                lock (_Modules) {
+                    _Modules[Method.Module] = value;
+                }
+            }
         }
         private int _ModuleRef {
             get {
@@ -57,7 +61,11 @@ namespace MonoMod.Utils {
                     return refs;
                 return 0;
             }
-            set => _ModuleRefs[Method.Module] = value;
+            set {
+                lock (_ModuleRefs) {
+                    _ModuleRefs[Method.Module] = value;
+                }
+            }
         }
 
         public MethodBase Method { get; private set; }
