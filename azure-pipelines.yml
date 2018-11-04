@@ -17,12 +17,11 @@ steps:
 - task: DotNetCoreInstaller@0
   inputs:
     packageType: 'sdk'
-    version: '2.0.0'
 
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
-    projects: '**/*.csproj'
+    projects: 'MonoMod*/*.csproj'
 
 - task: PowerShell@2
   inputs:
@@ -31,7 +30,7 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
-    projects: '**/*.csproj'
+    projects: 'MonoMod*/*.csproj'
     configuration: '$(buildConfiguration)'
 
 - task: VSTest@2
