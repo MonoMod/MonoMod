@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using MonoMod.Utils;
+using System.Reflection;
 
 namespace MonoMod.DebugIL {
     class Program {
@@ -11,7 +13,7 @@ namespace MonoMod.DebugIL {
 #if LEGACY
             throw new NotSupportedException();
 #else
-            Console.WriteLine("MonoMod.DebugIL " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
+            Console.WriteLine("MonoMod.DebugIL " + typeof(Program).GetTypeInfo().Assembly.GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");

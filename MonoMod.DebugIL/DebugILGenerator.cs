@@ -11,13 +11,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
+#if NETSTANDARD
+using static System.Reflection.IntrospectionExtensions;
+#endif
+
 namespace MonoMod.DebugIL {
     public class DebugILGenerator {
 
         public readonly static Regex PathVerifyRegex =
             new Regex("[" + Regex.Escape(new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars())) + "]", RegexOptions.Compiled);
         public readonly static System.Reflection.ConstructorInfo m_DebuggableAttribute_ctor =
-            typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
+            typeof(DebuggableAttribute).GetTypeInfo().GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
 
         public MonoModder Modder;
 
@@ -62,7 +66,9 @@ namespace MonoMod.DebugIL {
                 File.Delete(file);
 
             Directory.Delete(path);
+#if !NETSTANDARD1_X
             Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
+#endif
         }
 
         public static void Generate(MonoModder modder)
@@ -75,7 +81,9 @@ namespace MonoMod.DebugIL {
             }
 
             Directory.CreateDirectory(FullPath);
+#if !NETSTANDARD1_X
             Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
+#endif
 
             CustomAttribute debuggable = Modder.Module.Assembly.GetCustomAttribute("System.Diagnostics.DebuggableAttribute");
             if (debuggable != null)
@@ -97,7 +105,8 @@ namespace MonoMod.DebugIL {
 
         public void GenerateMetadata() {
             CurrentPath.Push("AssemblyInfo.il");
-            using (StreamWriter writer = new StreamWriter(FullPath)) {
+            using (Stream stream = File.OpenWrite(FullPath))
+            using (StreamWriter writer = new StreamWriter(stream)) {
                 writer.WriteLine("// MonoMod DebugILGenerator");
                 writer.Write("// MonoMod Version: ");
                 writer.WriteLine(MonoModder.Version);
@@ -137,7 +146,8 @@ namespace MonoMod.DebugIL {
             Modder.Log($"[DbgIlGen] Generating for type {type.FullName}");
 
             CurrentPath.Push("TypeInfo.il");
-            using (StreamWriter writer = new StreamWriter(FullPath)) {
+            using (Stream stream = File.OpenWrite(FullPath))
+            using (StreamWriter writer = new StreamWriter(stream)) {
                 writer.WriteLine("// MonoMod DebugILGenerator");
                 writer.Write("// Type: (");
                 writer.Write(type.Attributes);
@@ -185,7 +195,8 @@ namespace MonoMod.DebugIL {
             method.NoInlining = true;
             method.NoOptimization = true;
 
-            using (StreamWriter writer = new StreamWriter(FullPath)) {
+            using (Stream stream = File.OpenWrite(FullPath))
+            using (StreamWriter writer = new StreamWriter(stream)) {
                 Line = 1;
                 writer.WriteLine("// MonoMod DebugILGenerator"); Line++;
                 writer.Write("// Method: (");

@@ -147,6 +147,7 @@ namespace MonoMod.Utils {
             _Position += count;
         }
 
+#if !NETSTANDARD
         public override byte[] GetBuffer() {
             if (CachedBuffer != null && CachedOffset == LimitOffset && CachedLength == LimitLength) {
                 return CachedBuffer;
@@ -160,6 +161,7 @@ namespace MonoMod.Utils {
             CachedLength = LimitLength;
             return CachedBuffer = ToArray();
         }
+#endif
 
         private readonly byte[] _ToArrayReadBuffer = new byte[2048];
         public override byte[] ToArray() {
@@ -176,15 +178,14 @@ namespace MonoMod.Utils {
             if (length == 0) {
                 // most performant way would be to use the base MemoryStream, but
                 // System.NotSupportedException: Stream does not support writing.
-                MemoryStream ms = new MemoryStream();
+                using (MemoryStream ms = new MemoryStream()) {
+                    while (0 < (read = LimitStream.Read(_ToArrayReadBuffer, 0, _ToArrayReadBuffer.Length))) {
+                        base.Write(_ToArrayReadBuffer, 0, read);
+                    }
 
-                while (0 < (read = LimitStream.Read(_ToArrayReadBuffer, 0, _ToArrayReadBuffer.Length))) {
-                    base.Write(_ToArrayReadBuffer, 0, read);
+                    LimitStream.Seek(origPosition, SeekOrigin.Begin);
+                    buffer = base.ToArray();
                 }
-
-                LimitStream.Seek(origPosition, SeekOrigin.Begin);
-                buffer = base.ToArray();
-                ms.Close();
                 return buffer;
             }
 
@@ -200,17 +201,18 @@ namespace MonoMod.Utils {
             return buffer;
         }
 
+#if !NETSTANDARD
         public override void Close() {
             base.Close();
             if (!LimitStreamShared) {
                 LimitStream.Close();
             }
         }
+#endif
 
         protected override void Dispose(bool disposing) {
             if (!LimitStreamShared) {
                 LimitStream.Dispose();
-                LimitStream.Close();
             }
             base.Dispose(disposing);
         }

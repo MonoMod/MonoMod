@@ -17,18 +17,18 @@ namespace MonoMod.ModInterop {
                 return;
             Registered.Add(type);
 
-            string prefix = type.Assembly.GetName().Name;
-            foreach (ModExportNameAttribute attrib in type.GetCustomAttributes(typeof(ModExportNameAttribute), false)) {
+            string prefix = type.GetTypeInfo().Assembly.GetName().Name;
+            foreach (ModExportNameAttribute attrib in type.GetTypeInfo().GetCustomAttributes(typeof(ModExportNameAttribute), false)) {
                 prefix = attrib.Name;
             }
 
             // Collect fields and methods in the type.
-            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                if (!typeof(Delegate).IsAssignableFrom(field.FieldType))
+            foreach (FieldInfo field in type.GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.Static)) {
+                if (!typeof(Delegate).GetTypeInfo().IsAssignableFrom(field.FieldType))
                     continue;
                 Fields.Add(field);
             }
-            foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (MethodInfo method in type.GetTypeInfo().GetMethods(BindingFlags.Public | BindingFlags.Static)) {
                 method.RegisterModExport();
                 method.RegisterModExport(prefix);
             }
@@ -44,7 +44,7 @@ namespace MonoMod.ModInterop {
                 bool matched = false;
                 foreach (MethodInfo method in methods) {
                     try {
-                        field.SetValue(null, Delegate.CreateDelegate(field.FieldType, method));
+                        field.SetValue(null, NETStandardShims.CreateDelegate(field.FieldType, null, method));
                         matched = true;
                         break;
                     } catch {
@@ -76,7 +76,7 @@ namespace MonoMod.ModInterop {
                 return attrib.Name;
             }
 
-            foreach (ModImportNameAttribute attrib in field.DeclaringType.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
+            foreach (ModImportNameAttribute attrib in field.DeclaringType.GetTypeInfo().GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
                 return attrib.Name + "." + field.Name;
             }
 

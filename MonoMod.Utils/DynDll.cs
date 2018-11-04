@@ -54,7 +54,7 @@ namespace MonoMod.Utils {
 
             IntPtr lib;
 
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT) {
+            if (PlatformHelper.Is(Platform.Windows)) {
                 lib = GetModuleHandle(name);
                 if (lib == IntPtr.Zero) {
                     lib = LoadLibrary(name);
@@ -91,7 +91,7 @@ namespace MonoMod.Utils {
             if (lib == IntPtr.Zero)
                 return IntPtr.Zero;
 
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            if (PlatformHelper.Is(Platform.Windows))
                 return GetProcAddress(lib, name);
 
             IntPtr s, e;
@@ -109,7 +109,9 @@ namespace MonoMod.Utils {
         /// Extension method wrapping Marshal.GetDelegateForFunctionPointer
         /// </summary>
         public static T AsDelegate<T>(this IntPtr s) where T : class {
+#pragma warning disable CS0618 // Type or member is obsolete
             return Marshal.GetDelegateForFunctionPointer(s, typeof(T)) as T;
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>
@@ -118,7 +120,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="type">The type containing the DynDllImport delegate fields.</param>
         public static void ResolveDynDllImports(this Type type) {
-            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)) {
+            foreach (FieldInfo field in type.GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)) {
                 bool found = true;
                 foreach (DynDllImportAttribute attrib in field.GetCustomAttributes(typeof(DynDllImportAttribute), true)) {
                     found = false;
@@ -130,7 +132,9 @@ namespace MonoMod.Utils {
                         IntPtr func = asm.GetFunction(ep);
                         if (func == IntPtr.Zero)
                             continue;
+#pragma warning disable CS0618 // Type or member is obsolete
                         field.SetValue(null, Marshal.GetDelegateForFunctionPointer(func, field.FieldType));
+#pragma warning restore CS0618 // Type or member is obsolete
                         found = true;
                         break;
                     }
@@ -139,7 +143,13 @@ namespace MonoMod.Utils {
                         break;
                 }
                 if (!found)
-                    throw new EntryPointNotFoundException($"No matching entry point found for {field.Name} in {field.DeclaringType.FullName}");
+                    throw new
+#if NETSTANDARD1_X
+                        Exception
+#else
+                        EntryPointNotFoundException
+#endif
+                        ($"No matching entry point found for {field.Name} in {field.DeclaringType.FullName}");
             }
         }
 

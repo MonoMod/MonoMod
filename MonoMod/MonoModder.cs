@@ -13,6 +13,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.Utils;
 
+#if NETSTANDARD
+using static System.Reflection.IntrospectionExtensions;
+#endif
+
 namespace MonoMod {
 
     public delegate bool MethodParser(MonoModder modder, MethodBody body, Instruction instr, ref int instri);
@@ -44,7 +48,7 @@ namespace MonoMod {
 
         public readonly static bool IsMono = Type.GetType("Mono.Runtime") != null;
 
-        public readonly static Version Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        public readonly static Version Version = typeof(MonoModder).GetTypeInfo().Assembly.GetName().Version;
 
         // WasIDictionary and the _ IDictionaries are used when upgrading mods.
 
@@ -195,7 +199,7 @@ namespace MonoMod {
                     List<string> paths = new List<string>();
                     string gac = Path.Combine(
                         Path.GetDirectoryName(
-                            Path.GetDirectoryName(typeof(object).Module.FullyQualifiedName)
+                            Path.GetDirectoryName(typeof(object).GetTypeInfo().Module.FullyQualifiedName)
                         ),
                         "gac"
                     );
@@ -453,6 +457,7 @@ namespace MonoMod {
 #endif
             }
 
+#if !NETSTANDARD
             // Check if available in GAC
             // Note: This is a fallback as MonoMod depends on a low version of the .NET Framework.
             // This unfortunately breaks ReflectionOnlyLoad on targets higher than the MonoMod target.
@@ -463,6 +468,7 @@ namespace MonoMod {
                 } catch { }
                 path = asm?.Location;
             }
+#endif
 
             if (dep == null) {
                 if (path != null && File.Exists(path)) {
@@ -589,11 +595,11 @@ namespace MonoMod {
 
             caHandler = type.GetMMAttribute("CustomAttributeAttribute");
             if (caHandler != null)
-                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
+                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetTypeInfo().GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
 
             caHandler = type.GetMMAttribute("CustomMethodAttributeAttribute");
             if (caHandler != null)
-                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
+                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetTypeInfo().GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
 
             CustomAttribute hook;
 
@@ -2020,7 +2026,7 @@ namespace MonoMod {
             _mmOriginalCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmOriginalCtor);
@@ -2061,7 +2067,7 @@ namespace MonoMod {
             _mmOriginalNameCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmOriginalNameCtor);
@@ -2101,7 +2107,7 @@ namespace MonoMod {
             _mmAddedCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmAddedCtor);
@@ -2142,7 +2148,7 @@ namespace MonoMod {
             _mmPatchCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmPatchCtor);

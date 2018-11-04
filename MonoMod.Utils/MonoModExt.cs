@@ -9,6 +9,13 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
+#if NETSTANDARD
+using TypeOrTypeInfo = System.Reflection.TypeInfo;
+using static System.Reflection.IntrospectionExtensions;
+#else
+using TypeOrTypeInfo = System.Type;
+#endif
+
 namespace MonoMod.Utils {
     [MonoMod__OldName__("MonoMod.Relinker")]
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
@@ -80,8 +87,8 @@ namespace MonoMod.Utils {
             return c;
         }
 
-        public readonly static System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        public readonly static System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public readonly static System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetTypeInfo().GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public readonly static System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetTypeInfo().GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         public static GenericParameter Update(this GenericParameter param, GenericParameter other)
             => param.Update(other.Position, other.Type);
         public static GenericParameter Update(this GenericParameter param, int position, GenericParameterType type) {
@@ -295,7 +302,7 @@ namespace MonoMod.Utils {
                 if (i > (proxyMethod ? 1 : 0))
                     builder.Append(",");
 
-                if (Attribute.IsDefined(parameter, t_ParamArrayAttribute))
+                if (parameter.HasCustomAttribute(t_ParamArrayAttribute))
                     builder.Append("...,");
 
                 builder.Append(parameter.ParameterType.FullName);
@@ -313,7 +320,7 @@ namespace MonoMod.Utils {
                 return false;
 
             if (mref is GenericParameter genParamRef) {
-                if (!(minfo is Type genParamInfo) || !genParamInfo.IsGenericParameter)
+                if (!(minfo is TypeOrTypeInfo genParamInfo) || !genParamInfo.IsGenericParameter)
                     return false;
                 // Don't check owner as it introduces a circular check.
                 /*
@@ -323,13 +330,13 @@ namespace MonoMod.Utils {
                 return genParamRef.Position == genParamInfo.GenericParameterPosition;
             }
 
-            if (!(mref.DeclaringType?.Is(minfo.DeclaringType) ?? minfo.DeclaringType == null))
+            if (!(mref.DeclaringType?.Is(minfo.DeclaringType?.GetTypeInfo()) ?? minfo.DeclaringType == null))
                 return false;
             if (mref.Name != minfo.Name)
                 return false;
 
             if (mref is TypeReference) {
-                if (!(minfo is Type typeInfo))
+                if (!(minfo is TypeOrTypeInfo typeInfo))
                     return false;
 
                 if (mref is GenericInstanceType genTypeRef) {
@@ -344,11 +351,11 @@ namespace MonoMod.Utils {
                         return false;
 
                     for (int i = 0; i < paramRefs.Count; i++) {
-                        if (!paramRefs[i].Is(paramInfos[i]))
+                        if (!paramRefs[i].Is(paramInfos[i]?.GetTypeInfo()))
                             return false;
                     }
 
-                    return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition());
+                    return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition()?.GetTypeInfo());
                 }
 
                 // DeclaringType was already checked before.
@@ -379,7 +386,7 @@ namespace MonoMod.Utils {
                             // ... or we're comparing generic params against generic params.
                         }
                     }
-                    if (!paramTypeRef.Is(paramInfos[i].ParameterType))
+                    if (!paramTypeRef.Is(paramInfos[i].ParameterType?.GetTypeInfo()))
                         return false;
                 }
 
@@ -733,7 +740,7 @@ namespace MonoMod.Utils {
             return null;
         }
         public static System.Reflection.MethodInfo FindMethod(this Type type, string findableID, bool simple = true) {
-            System.Reflection.MethodInfo[] methods = type.GetMethods(
+            System.Reflection.MethodInfo[] methods = type.GetTypeInfo().GetMethods(
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static |
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
             );
@@ -1169,12 +1176,12 @@ namespace MonoMod.Utils {
             }
         }
 
-        private readonly static Type t_Code = typeof(Code);
-        private readonly static Type t_OpCodes = typeof(OpCodes);
+        private readonly static TypeOrTypeInfo t_Code = typeof(Code).GetTypeInfo();
+        private readonly static TypeOrTypeInfo t_OpCodes = typeof(OpCodes).GetTypeInfo();
 
         private readonly static Dictionary<int, OpCode> _ShortToLongOp = new Dictionary<int, OpCode>();
         public static OpCode ShortToLongOp(this OpCode op) {
-            string name = Enum.GetName(t_Code, op.Code);
+            string name = Enum.GetName(t_Code.AsType(), op.Code);
             if (!name.EndsWith("_S"))
                 return op;
             if (_ShortToLongOp.TryGetValue((int) op.Code, out OpCode found))
@@ -1184,7 +1191,7 @@ namespace MonoMod.Utils {
 
         private readonly static Dictionary<int, OpCode> _LongToShortOp = new Dictionary<int, OpCode>();
         public static OpCode LongToShortOp(this OpCode op) {
-            string name = Enum.GetName(t_Code, op.Code);
+            string name = Enum.GetName(t_Code.AsType(), op.Code);
             if (name.EndsWith("_S"))
                 return op;
             if (_LongToShortOp.TryGetValue((int) op.Code, out OpCode found))

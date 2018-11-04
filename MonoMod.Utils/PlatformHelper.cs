@@ -1,15 +1,36 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace MonoMod.Utils {
     [MonoMod__OldName__("MonoMod.Helpers.PlatformHelper")]
     public static class PlatformHelper {
 
         static PlatformHelper() {
+            Current = Platform.Unknown;
+
+#if NETSTANDARD
+            // RuntimeInformation.IsOSPlatform is lying: https://github.com/dotnet/corefx/issues/3032
+            // Determine the platform based on the path.
+            string windir = Environment.GetEnvironmentVariable("windir");
+            if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\") && Directory.Exists(windir)) {
+                Current = Platform.Windows;
+
+            } else if (File.Exists("/proc/sys/kernel/ostype")) {
+                string osType = File.ReadAllText("/proc/sys/kernel/ostype");
+                if (osType.StartsWith("Linux", StringComparison.OrdinalIgnoreCase)) {
+                    Current = Platform.Linux;
+                }
+
+            } else if (File.Exists("/System/Library/CoreServices/SystemVersion.plist")) {
+                Current = Platform.MacOS;
+            }
+
+#else
             // For old Mono, get from a private property to accurately get the platform.
             // static extern PlatformID Platform
-            PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
+            PropertyInfo property_platform = typeof(Environment).GetTypeInfo().GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
             string platID;
             if (property_platform != null) {
                 platID = property_platform.GetValue(null, new object[0]).ToString();
@@ -19,7 +40,6 @@ namespace MonoMod.Utils {
             }
             platID = platID.ToLowerInvariant();
 
-            Current = Platform.Unknown;
             if (platID.Contains("win")) {
                 Current = Platform.Windows;
             } else if (platID.Contains("mac") || platID.Contains("osx")) {
@@ -27,6 +47,7 @@ namespace MonoMod.Utils {
             } else if (platID.Contains("lin") || platID.Contains("unix")) {
                 Current = Platform.Linux;
             }
+#endif
 
             if (Directory.Exists("/data") && File.Exists("/system/build.prop")) {
                 Current = Platform.Android;

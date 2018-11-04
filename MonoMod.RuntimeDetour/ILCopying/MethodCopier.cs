@@ -535,7 +535,6 @@ namespace Harmony.ILCopying {
 
         static readonly Dictionary<Type, MethodInfo> emitMethods;
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
         static MethodCopier() {
             one_byte_opcodes = new OpCode[0xe1];
             two_bytes_opcodes = new OpCode[0x1f];

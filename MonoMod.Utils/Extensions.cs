@@ -150,7 +150,7 @@ namespace MonoMod.Utils {
 
             Delegate[] delegates = source.GetInvocationList();
             if (delegates.Length == 1)
-                return Delegate.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
+                return NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].GetMethodInfo());
 
             Delegate[] delegatesDest = new Delegate[delegates.Length];
             for (int i = 0; i < delegates.Length; i++)
@@ -177,7 +177,7 @@ namespace MonoMod.Utils {
             try {
                 Delegate[] delegates = source.GetInvocationList();
                 if (delegates.Length == 1) {
-                    result = Delegate.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
+                    result = NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].GetMethodInfo());
                     return true;
                 }
 
@@ -254,18 +254,25 @@ namespace MonoMod.Utils {
         /// <param name="target">The object targeted by the delegate.</param>
         /// <returns>The delegate for this method.</returns>
         public static Delegate CreateDelegate(this MethodBase method, Type delegateType, object target) {
-            if (!typeof(Delegate).IsAssignableFrom(delegateType))
+            if (!typeof(Delegate).GetTypeInfo().IsAssignableFrom(delegateType))
                 throw new ArgumentException("Type argument must be a delegate type!");
             if (method is DynamicMethod)
                 return ((DynamicMethod) method).CreateDelegate(delegateType, target);
 
             // TODO: Check delegate Invoke parameters against method parameters.
 
+#if NETSTANDARD
+            throw new NotSupportedException();
+#else
             RuntimeMethodHandle handle = method.MethodHandle;
             RuntimeHelpers.PrepareMethod(handle);
             IntPtr ptr = handle.GetFunctionPointer();
             return (Delegate) Activator.CreateInstance(delegateType, target, ptr);
+#endif
         }
+
+        public static bool HasCustomAttribute(this ICustomAttributeProvider cap, Type t)
+            => cap.GetCustomAttributes(t, false)?.Length != 0;
 
     }
 }

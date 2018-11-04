@@ -4,13 +4,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using MonoMod.Utils;
+using System.Reflection;
 
 namespace MonoMod {
     class Program {
 
 #if !MONOMOD_NO_ENTRY
         public static int Main(string[] args) {
-            Console.WriteLine("MonoMod " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
+            Console.WriteLine("MonoMod " + typeof(Program).GetTypeInfo().Assembly.GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");

@@ -20,8 +20,8 @@ namespace MonoMod.Utils {
         }
         public static void FreeReference(int id) => References[id] = null;
 
-        private readonly static MethodInfo _GetMethodFromHandle = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
-        private readonly static MethodInfo _GetReference = typeof(DynamicMethodHelper).GetMethod("GetReference");
+        private readonly static MethodInfo _GetMethodFromHandle = typeof(MethodBase).GetTypeInfo().GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
+        private readonly static MethodInfo _GetReference = typeof(DynamicMethodHelper).GetTypeInfo().GetMethod("GetReference");
 
         /// <summary>
         /// Fill the DynamicMethod with a stub.
@@ -64,7 +64,7 @@ namespace MonoMod.Utils {
             int id = AddReference(obj);
             il.Emit(OpCodes.Ldc_I4, id);
             il.Emit(OpCodes.Call, _GetReference);
-            if (t.IsValueType)
+            if (t.GetTypeInfo().IsValueType)
                 il.Emit(OpCodes.Unbox_Any, t);
             return id;
         }
@@ -76,7 +76,7 @@ namespace MonoMod.Utils {
             Type t = typeof(T);
             il.Emit(OpCodes.Ldc_I4, id);
             il.Emit(OpCodes.Call, _GetReference);
-            if (t.IsValueType)
+            if (t.GetTypeInfo().IsValueType)
                 il.Emit(OpCodes.Unbox_Any, t);
             return id;
         }

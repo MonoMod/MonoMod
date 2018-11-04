@@ -5,7 +5,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>MonoMod.RuntimeDetour.HookGen</RootNamespace>
     <AssemblyName>MonoMod.RuntimeDetour.HookGen</AssemblyName>
-    <TargetFramework>net35</TargetFramework>
+    <TargetFrameworks>net35;netstandard20</TargetFrameworks>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />
 

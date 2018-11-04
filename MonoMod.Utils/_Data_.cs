@@ -15,7 +15,7 @@ namespace MonoMod.Utils {
         private readonly Dictionary<string, object> VarMap = new Dictionary<string, object>();
         
         static _Data_() {
-            _ExtraHelper_.Collected += () => {
+            _DataHelper_.Collected += () => {
                 HashSet<WeakReference> dead = new HashSet<WeakReference>();
 
                 foreach (WeakReference weak in ObjectMap.Keys)
@@ -27,13 +27,13 @@ namespace MonoMod.Utils {
             };
 
             // TODO: Use DynamicMethod to generate more performant getters and setters.
-            foreach (FieldInfo field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+            foreach (FieldInfo field in typeof(TTarget).GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                 string name = field.Name;
                 GetterMap[name] = (obj) => field.GetValue(obj);
                 SetterMap[name] = (obj, value) => field.SetValue(obj, value);
             }
 
-            foreach (PropertyInfo prop in typeof(TTarget).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+            foreach (PropertyInfo prop in typeof(TTarget).GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                 string name = prop.Name;
 
                 MethodInfo get = prop.GetGetMethod(true);
@@ -111,19 +111,11 @@ namespace MonoMod.Utils {
             ObjectMap.Add(weak, data);
             return data;
         }
-
-        private sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
-            public override bool Equals(WeakReference x, WeakReference y)
-                => ReferenceEquals(x.Target, y.Target) && x.IsAlive == y.IsAlive;
-
-            public override int GetHashCode(WeakReference obj)
-                => obj.Target?.GetHashCode() ?? 0;
-        }
     }
 
-    public static class _ExtraHelper_ {
+    internal static class _DataHelper_ {
         public static event Action Collected;
-        static _ExtraHelper_() {
+        static _DataHelper_() {
             new CollectionDummy();
         }
         private sealed class CollectionDummy {

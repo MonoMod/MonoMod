@@ -8,64 +8,91 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 
 namespace MonoMod.InlineRT {
     public static class MonoModRulesManager {
 
-        public static Dictionary<long, WeakReference> ModderMap = new Dictionary<long, WeakReference>();
-        public static ObjectIDGenerator ModderIdGen = new ObjectIDGenerator();
+        private static readonly Assembly MonoModAsm = typeof(MonoModRulesManager).GetTypeInfo().Assembly;
 
-        private static Assembly MonoModAsm = Assembly.GetExecutingAssembly();
+#if NETSTANDARD1_X
+        internal static readonly ThreadLocal<WeakReference> ModderLast = new ThreadLocal<WeakReference>();
+        internal static readonly ThreadLocal<Type> RuleTypeLast = new ThreadLocal<Type>();
+#else
+        private static long PrevID;
+        private static readonly Dictionary<long, WeakReference> ModderMap = new Dictionary<long, WeakReference>();
+        private static readonly Dictionary<WeakReference, long> IDMap = new Dictionary<WeakReference, long>(new WeakReferenceComparer());
+#endif
 
         public static MonoModder Modder {
             get {
+#if NETSTANDARD1_X
+                // StackTrace missing from .NET Standard before 2.0
+                return ModderLast.Value.Target as MonoModder;
+#else
                 StackTrace st = new StackTrace();
                 for (int i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
-                    Assembly asm = method.DeclaringType.Assembly;
+                    Assembly asm = method.DeclaringType.GetTypeInfo().Assembly;
                     if (asm == MonoModAsm)
                         continue;
-                    MonoModder modder = GetModder(method.DeclaringType.Assembly.GetName().Name);
+                    MonoModder modder = GetModder(method.DeclaringType.GetTypeInfo().Assembly.GetName().Name);
                     if (modder != null)
                         return modder;
                 }
                 return null;
+#endif
             }
         }
 
         public static Type RuleType {
             get {
+#if NETSTANDARD1_X
+                // StackTrace missing from .NET Standard before 2.0
+                return RuleTypeLast.Value;
+#else
                 StackTrace st = new StackTrace();
                 for (int i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
-                    Assembly asm = method.DeclaringType.Assembly;
+                    Assembly asm = method.DeclaringType.GetTypeInfo().Assembly;
                     if (asm != MonoModAsm)
                         return method.DeclaringType;
                 }
                 return null;
+#endif
             }
         }
 
         public static void Register(MonoModder self) {
-            bool firstTime;
-            ModderMap[ModderIdGen.GetId(self, out firstTime)] = new WeakReference(self);
-            if (!firstTime)
+            WeakReference weak = new WeakReference(self);
+#if NETSTANDARD1_X
+            ModderLast.Value = weak;
+#else
+            if (IDMap.ContainsKey(weak))
                 throw new InvalidOperationException("MonoModder instance already registered in MMILProxyManager");
+            long id = IDMap[weak] = PrevID++;
+            ModderMap[id] = weak;
+#endif
         }
 
         public static long GetId(MonoModder self) {
-            bool firstTime;
-            long id = ModderIdGen.GetId(self, out firstTime);
-            if (firstTime)
+            WeakReference weak = new WeakReference(self);
+#if NETSTANDARD1_X
+            return 0;
+#else
+            if (!IDMap.TryGetValue(weak, out long id))
                 throw new InvalidOperationException("MonoModder instance wasn't registered in MMILProxyManager");
             return id;
+#endif
         }
 
         public static MonoModder GetModder(string asmName) {
+#if NETSTANDARD1_X
+            return ModderLast.Value.Target as MonoModder;
+#else
             string idString = asmName;
             int idIndex = idString.IndexOf("[MMILRT, ID:");
             if (idIndex == -1)
@@ -79,6 +106,7 @@ namespace MonoMod.InlineRT {
             if (!ModderMap.TryGetValue(id, out modder) || !modder.IsAlive)
                 return null;
             return (MonoModder) modder.Target;
+#endif
         }
 
         public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
@@ -139,7 +167,13 @@ namespace MonoMod.InlineRT {
             Assembly asm;
             using (MemoryStream asmStream = new MemoryStream()) {
                 wrapperMod.Write(asmStream);
+                asmStream.Seek(0, SeekOrigin.Begin);
+#if NETSTANDARD
+                // TODO: This supposedly only works with .NET Core 2+
+                asm = System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
+#else
                 asm = Assembly.Load(asmStream.GetBuffer());
+#endif
             }
 
             /*/
@@ -151,6 +185,9 @@ namespace MonoMod.InlineRT {
             self.MissingDependencyThrow = missingDependencyThrow;
 
             Type rules = asm.GetType(orig.FullName);
+#if NETSTANDARD1_X
+            RuleTypeLast.Value = rules;
+#endif
             RuntimeHelpers.RunClassConstructor(rules.TypeHandle);
 
             return rules;

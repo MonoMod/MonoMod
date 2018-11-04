@@ -14,14 +14,14 @@ namespace MonoMod.Utils {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
         private static readonly IDictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new Dictionary<MethodInfo, FastReflectionDelegate>();
 
-        private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(object) });
-        private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
+        private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetTypeInfo().GetMethod("WriteLine", new Type[] { typeof(object) });
+        private static readonly MethodInfo m_object_GetType = typeof(object).GetTypeInfo().GetMethod("GetType");
 
         [Obsolete("Use CreateFastDelegate instead.")]
         public static FastReflectionDelegate CreateDelegate(MethodBase method, bool directBoxValueAccess = true)
             => CreateFastDelegate(method, directBoxValueAccess);
         public static FastReflectionDelegate CreateFastDelegate(this MethodBase method, bool directBoxValueAccess = true) {
-            DynamicMethod dynam = new DynamicMethod(string.Empty, typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).Module, true);
+            DynamicMethod dynam = new DynamicMethod(string.Empty, typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).GetTypeInfo().Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
             ParameterInfo[] args = method.GetParameters();
@@ -30,7 +30,7 @@ namespace MonoMod.Utils {
 
             if (!method.IsStatic) {
                 il.Emit(OpCodes.Ldarg_0);
-                if (method.DeclaringType.IsValueType) {
+                if (method.DeclaringType.GetTypeInfo().IsValueType) {
                     il.Emit(OpCodes.Unbox_Any, method.DeclaringType);
                 }
             }
@@ -40,7 +40,7 @@ namespace MonoMod.Utils {
                 bool argIsByRef = argType.IsByRef;
                 if (argIsByRef)
                     argType = argType.GetElementType();
-                bool argIsValueType = argType.IsValueType;
+                bool argIsValueType = argType.GetTypeInfo().IsValueType;
 
                 if (argIsByRef && argIsValueType && !directBoxValueAccess) {
                     // Used later when storing back the reference to the new box in the array.
@@ -97,7 +97,7 @@ namespace MonoMod.Utils {
 
             Type returnType = method.IsConstructor ? method.DeclaringType : (method as MethodInfo).ReturnType;
             if (returnType != typeof(void)) {
-                if (returnType.IsValueType) {
+                if (returnType.GetTypeInfo().IsValueType) {
                     il.Emit(OpCodes.Box, returnType);
                 }
             } else {
@@ -112,14 +112,14 @@ namespace MonoMod.Utils {
 
         public static T CreateJmpDelegate<T>(this MethodBase method) {
             Type t = typeof(T);
-            MethodInfo invoke = t.GetMethod("Invoke");
+            MethodInfo invoke = t.GetTypeInfo().GetMethod("Invoke");
 
             ParameterInfo[] args = invoke.GetParameters();
             Type[] argTypes = new Type[args.Length];
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dynam = new DynamicMethod(string.Empty, invoke.ReturnType, argTypes, typeof(FastReflectionHelper).Module, true);
+            DynamicMethod dynam = new DynamicMethod(string.Empty, invoke.ReturnType, argTypes, typeof(FastReflectionHelper).GetTypeInfo().Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
             il.Emit(OpCodes.Jmp, (MethodInfo) method);

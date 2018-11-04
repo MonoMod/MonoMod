@@ -8,6 +8,13 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Linq;
 
+#if NETSTANDARD
+using TypeOrTypeInfo = System.Reflection.TypeInfo;
+using static System.Reflection.IntrospectionExtensions;
+#else
+using TypeOrTypeInfo = System.Type;
+#endif
+
 namespace MonoMod.Utils {
     public static class ReflectionHelper {
 
@@ -15,7 +22,7 @@ namespace MonoMod.Utils {
         public readonly static Dictionary<MemberReference, MemberInfo> ResolveReflectionCache = new Dictionary<MemberReference, MemberInfo>();
 
         public static Type ResolveReflection(this TypeReference mref)
-            => _ResolveReflection(mref, null) as Type;
+            => (_ResolveReflection(mref, null) as TypeOrTypeInfo).AsType();
         public static MethodBase ResolveReflection(this MethodReference mref)
             => _ResolveReflection(mref, null) as MethodBase;
         public static FieldInfo ResolveReflection(this FieldReference mref)
@@ -32,12 +39,12 @@ namespace MonoMod.Utils {
             if (ResolveReflectionCache.TryGetValue(mref, out MemberInfo cached) && cached != null)
                 return cached;
 
-            Type type;
+            TypeOrTypeInfo type;
 
             // Special cases, f.e. multi-dimensional array type methods.
             if (mref is MethodReference method && mref.DeclaringType is ArrayType) {
                 // ArrayType holds special methods.
-                type = _ResolveReflection(mref.DeclaringType, module) as Type;
+                type = _ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo;
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
                 string methodID = method.GetFindableID(withType: false);
@@ -77,40 +84,40 @@ namespace MonoMod.Utils {
                 }
 
                 if (!AssemblyCache.TryGetValue(asmName, out Assembly asm))
-                    AssemblyCache[asmName] = asm = Assembly.Load(asmName);
+                    AssemblyCache[asmName] = asm = Assembly.Load(new AssemblyName(asmName));
                 module = string.IsNullOrEmpty(moduleName) ? asm.GetModules()[0] : asm.GetModule(moduleName);
             }
 
             if (mref is TypeReference tref) {
                 if (mref is TypeSpecification ts) {
-                    type = _ResolveReflection(ts.ElementType, module) as Type;
+                    type = _ResolveReflection(ts.ElementType, module) as TypeOrTypeInfo;
 
                     if (ts.IsByReference)
-                        return ResolveReflectionCache[mref] = type.MakeByRefType();
+                        return ResolveReflectionCache[mref] = type.MakeByRefType().GetTypeInfo();
 
                     if (ts.IsPointer)
-                        return ResolveReflectionCache[mref] = type.MakePointerType();
+                        return ResolveReflectionCache[mref] = type.MakePointerType().GetTypeInfo();
 
                     if (ts.IsArray)
-                        return ResolveReflectionCache[mref] = type.MakeArrayType((ts as ArrayType).Dimensions.Count);
+                        return ResolveReflectionCache[mref] = type.MakeArrayType((ts as ArrayType).Dimensions.Count).GetTypeInfo();
 
                     if (ts.IsGenericInstance)
-                        return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
+                        return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray()).GetTypeInfo();
 
                 } else {
-                    type = module.GetType(mref.FullName.Replace("/", "+"));
+                    type = module.GetType(mref.FullName.Replace("/", "+")).GetTypeInfo();
                 }
 
                 return ResolveReflectionCache[mref] = type;
             }
 
-            type = _ResolveReflection(mref.DeclaringType, module) as Type;
+            type = _ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo;
 
             MemberInfo member;
 
             if (mref is GenericInstanceMethod mrefGenMethod) {
                 member = _ResolveReflection(mrefGenMethod.ElementMethod, module);
-                member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
+                member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
 
             } else {
                 member = type.GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));

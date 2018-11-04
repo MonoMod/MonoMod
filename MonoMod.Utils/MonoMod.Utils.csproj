@@ -5,7 +5,8 @@
     <OutputType>Library</OutputType>
     <RootNamespace>MonoMod.Utils</RootNamespace>
     <AssemblyName>MonoMod.Utils</AssemblyName>
-    <TargetFramework>net35</TargetFramework>
+    <TargetFrameworks>net35;netstandard16;netstandard20</TargetFrameworks>
+	<ILGen>true</ILGen>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />
 </Project>

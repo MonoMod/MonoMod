@@ -5,12 +5,12 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>MonoMod</RootNamespace>
     <AssemblyName>MonoMod</AssemblyName>
-	<TargetFramework>net35</TargetFramework>
+	<TargetFrameworks>net35;netstandard16;netstandard20</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'Release' Or '$(Configuration)' == 'ReleaseLegacy'" />
   <Import Project="..\MonoMod.Common.csproj" />
 
   <ItemGroup>
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
+    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" AdditionalProperties="TargetFramework=$(TargetFramework)" />
   </ItemGroup>
 </Project>
