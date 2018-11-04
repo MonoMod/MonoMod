@@ -13,28 +13,24 @@ variables:
 
 name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
-steps:
-- task: NuGetToolInstaller@0
-  inputs:
-    versionSpec: '4.7.1'
-
 - task: DotNetCoreInstaller@0
   inputs:
     packageType: 'sdk'
     version: '2.0.0'
 
-- task: NuGetCommand@2
+- task: DotNetCoreCLI@2
   inputs:
-    restoreSolution: '$(solution)'
+    command: 'restore'
+    projects: '**/*.csproj'
 
 - task: PowerShell@2
   inputs:
     filePath: 'azure-pipelines-prebuild.ps1'
 
-- task: VSBuild@1
+- task: DotNetCoreCLI@2
   inputs:
-    solution: '$(solution)'
-    platform: '$(buildPlatform)'
+    command: 'build'
+    projects: '**/*.csproj'
     configuration: '$(buildConfiguration)'
 
 - task: VSTest@2
@@ -43,53 +39,17 @@ steps:
     configuration: '$(buildConfiguration)'
 
 # Create and "publish" main artifacts.
-# .NET Framework 3.5
-- task: CopyFiles@2
-  inputs:
-    sourceFolder: '$(Agent.BuildDirectory)'
-    contents: '**/bin/**/net35/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb|*.config|*.deps.json)'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/all_net35'
-    cleanTargetFolder: true
-    overWrite: true
-    flattenFolders: true
+- template: 'azure-pipelines-postbuild.yml'
+  parameters:
+    targetFramework: 'net35'
 
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/all_net35'
-    artifactName: 'all_net35'
-    publishLocation: 'Container'
+- template: 'azure-pipelines-postbuild.yml'
+  parameters:
+    targetFramework: 'netstandard16'
 
-# .NET Standard 1.6
-- task: CopyFiles@2
-  inputs:
-    sourceFolder: '$(Agent.BuildDirectory)'
-    contents: '**/bin/**/netstandard16/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb|*.config|*.deps.json)'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/all_netstandard16'
-    cleanTargetFolder: true
-    overWrite: true
-    flattenFolders: true
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/all_netstandard16'
-    artifactName: 'all_netstandard16'
-    publishLocation: 'Container'
-
-# .NET Standard 2.0
-- task: CopyFiles@2
-  inputs:
-    sourceFolder: '$(Agent.BuildDirectory)'
-    contents: '**/bin/**/netstandard20/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb|*.config|*.deps.json)'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/all_netstandard20'
-    cleanTargetFolder: true
-    overWrite: true
-    flattenFolders: true
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/all_netstandard20'
-    artifactName: 'all_netstandard20'
-    publishLocation: 'Container'
+- template: 'azure-pipelines-postbuild.yml'
+  parameters:
+    targetFramework: 'netstandard20'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
@@ -99,7 +59,6 @@ steps:
     versioningScheme: 'byBuildNumber'
     packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
-
 - task: PublishBuildArtifacts@1
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'

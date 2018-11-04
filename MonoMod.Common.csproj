@@ -69,7 +69,7 @@
       <PropertyGroup>
         <NETStandard>false</NETStandard>
         <NETStandard1X>false</NETStandard1X>
-		<DefineConstants>NETFRAMEWORK</DefineConstants>
+        <DefineConstants>NETFRAMEWORK</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
         <!-- <Reference Include="mscorlib" /> -->
@@ -81,7 +81,7 @@
       <PropertyGroup>
         <NETStandard>true</NETStandard>
         <NETStandard1X>$(TargetFramework.StartsWith('netstandard1'))</NETStandard1X>
-		<DefineConstants>NETSTANDARD</DefineConstants>
+        <DefineConstants>NETSTANDARD</DefineConstants>
 		<DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X</DefineConstants>
       </PropertyGroup>
       <ItemGroup>

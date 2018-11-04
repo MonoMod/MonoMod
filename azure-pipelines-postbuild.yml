@@ -1,0 +1,18 @@
+parameters:
+  targetFramework: ''
+
+steps:
+- task: CopyFiles@2
+  inputs:
+    sourceFolder: '$(Agent.BuildDirectory)'
+    contents: '**/bin/**/${{parameters.targetFramework}}/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb|*.config|*.deps.json)'
+    targetFolder: '$(Build.ArtifactStagingDirectory)/bin_${{parameters.targetFramework}}'
+    cleanTargetFolder: true
+    overWrite: true
+    flattenFolders: true
+    
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)/bin_${{parameters.targetFramework}}'
+    artifactName: 'bin_${{ parameters.targetFramework }}'
+    publishLocation: 'Container'
