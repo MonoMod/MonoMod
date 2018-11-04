@@ -73,8 +73,10 @@ namespace MonoMod.RuntimeDetour {
 
             // TODO: Check target method arguments.
 
-            if (!_BackupMethods.ContainsKey(Method))
-                _BackupMethods[Method] = Method.CreateILCopy();
+            lock (_BackupMethods) {
+                if (!_BackupMethods.ContainsKey(Method))
+                    _BackupMethods[Method] = Method.CreateILCopy();
+            }
 
             // Generate a "chained trampoline" DynamicMethod.
             ParameterInfo[] args = Method.GetParameters();
