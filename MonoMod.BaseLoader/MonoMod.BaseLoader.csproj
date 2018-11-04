@@ -2,10 +2,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <RootNamespace>MonoMod.BaseLoader</RootNamespace>
+
     <AssemblyName>MonoMod.BaseLoader</AssemblyName>
+
     <TargetFramework>net35</TargetFramework>
+    <OutputType>Library</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />
 

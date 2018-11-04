@@ -2,10 +2,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>MonoMod.RuntimeDetour.HookGen</RootNamespace>
+
     <AssemblyName>MonoMod.RuntimeDetour.HookGen</AssemblyName>
+
     <TargetFrameworks>net35;netstandard20</TargetFrameworks>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />
 

@@ -1,4 +1,5 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
+#pragma warning disable xUnit1013 // Public method should be marked as test
 
 using Xunit;
 using MonoMod.RuntimeDetour;
@@ -28,6 +29,7 @@ namespace MonoMod.UnitTest {
                 CheckColor(c, 0x12, 0x34, 0x56, 0x78);
             }
         }
+
 
         /* This test currently only works with Mono.
          * The .NET Framework's runtime / JIT calls GetSize differently

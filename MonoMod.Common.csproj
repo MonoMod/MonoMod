@@ -2,24 +2,46 @@
 <Project>
   <!-- Standard properties. -->
   <PropertyGroup>
+    <Version Condition="'$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version>
+
+    <OutputType Condition="'$(OutputType)' == ''">Library</OutputType>
+    <RootNamespace Condition="'$(RootNamespace)' == ''">$(AssemblyName)</RootNamespace>
+
+    <Configurations>Debug;Release;DebugLegacy;ReleaseLegacy</Configurations>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
-    <Configurations>Debug;Release;DebugLegacy;ReleaseLegacy</Configurations>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputPath>bin\$(Configuration)</OutputPath>
+
     <LangVersion>7.3</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Externalconsole>true</Externalconsole>
-    <OutputPath>bin\$(Configuration)</OutputPath>
+
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+
     <Cecil Condition="'$(Cecil)' == ''">true</Cecil>
-    <ILGen Condition="'$(ILGen)' == ''">false</ILGen>
     <CecilLegacy>false</CecilLegacy>
+
+    <ILGen Condition="'$(ILGen)' == ''">false</ILGen>
   </PropertyGroup>
 
-  <!-- Debug props. -->
+  <!-- dotnet pack -->
+  <PropertyGroup>
+	<Authors>0x0ade</Authors> <!-- Note: This previously said "Maik Macho and collaborators", but with dotnet pack, <Authors> is also the list of owners. -->
+    <Copyright>Copyright 2018 Maik Macho</Copyright>
+    <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
+    <PackageLicenseUrl>https://github.com/0x0ade/MonoMod/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/0x0ade/MonoMod</PackageProjectUrl>
+    <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
+    <!-- Fix dotnet pack not being able to find .NET Framework 3.5 -->
+    <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net35' And '$(OS)' == 'Windows_NT'">$(MSBuildProgramFiles32)\Reference Assemblies\Microsoft\Framework\.NETFramework\v3.5\Profile\Client</FrameworkPathOverride>
+  </PropertyGroup>
+
+  <!-- Debug -->
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'DebugLegacy'">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
@@ -27,20 +49,20 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
 
-  <!-- Release props. -->
+  <!-- Release -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release' Or '$(Configuration)' == 'ReleaseLegacy'">
-    <DebugType>full</DebugType>
+    <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
 
-  <!-- Legacy props. -->
+  <!-- Legacy -->
   <PropertyGroup Condition="'$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy'">
     <CecilLegacy>true</CecilLegacy>
     <DefineConstants>LEGACY</DefineConstants>
   </PropertyGroup>
 
-  <!-- Standard references. -->
+  <!-- Common references. -->
   <Choose>
     <When Condition="!$(TargetFramework.StartsWith('netstandard'))">
       <!-- .NET Framework -->
@@ -49,7 +71,7 @@
         <NETStandard1X>false</NETStandard1X>
       </PropertyGroup>
       <ItemGroup>
-        <Reference Include="mscorlib" />
+        <!-- <Reference Include="mscorlib" /> -->
         <Reference Include="System" />
       </ItemGroup>
     </When>

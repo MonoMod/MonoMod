@@ -2,10 +2,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{68E38462-2DB9-4692-AD91-077A8FBE8AE9}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>MonoMod.DebugIL</RootNamespace>
+
     <AssemblyName>MonoMod.DebugIL</AssemblyName>
+
     <TargetFrameworks>net35;netstandard16;netstandard20</TargetFrameworks>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />
 

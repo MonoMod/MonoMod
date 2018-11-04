@@ -2,11 +2,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <RootNamespace>MonoMod.Utils</RootNamespace>
+
     <AssemblyName>MonoMod.Utils</AssemblyName>
+    <Description>Utilities and smaller MonoMod "components" (f.e. ModInterop). Can be used for your own mods. Required by all other MonoMod components.</Description>
+
     <TargetFrameworks>net35;netstandard16;netstandard20</TargetFrameworks>
-	<ILGen>true</ILGen>
+    <ILGen>true</ILGen>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />
 </Project>

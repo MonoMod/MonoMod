@@ -2,10 +2,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{D0C584C0-81D7-486E-B70E-D7F9256E0909}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <RootNamespace>MonoMod.RuntimeDetour</RootNamespace>
+
     <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
+    <Description>RuntimeDetour is a flexible and easily extensible runtime detouring library. It also makes runtime IL manipulation possible using cecil.</Description>
+    <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
+
     <TargetFrameworks>net35;netstandard20</TargetFrameworks>
+    <OutputType>Library</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />
 

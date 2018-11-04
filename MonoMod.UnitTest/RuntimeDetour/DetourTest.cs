@@ -1,4 +1,5 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
+#pragma warning disable xUnit1013 // Public method should be marked as test
 
 using Xunit;
 using MonoMod.RuntimeDetour;
@@ -20,8 +21,8 @@ namespace MonoMod.UnitTest {
             // This is also why the variable type is IDetour.
             // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
             IDetour detourTestMethodA = new Detour(
-                () => default(TestObject).TestMethod(default(int), default(int)),
-                () => TestMethod_A(default(TestObject), default(int), default(int))
+                () => default(TestObject).TestMethod(default, default),
+                () => TestMethod_A(default, default, default)
             );
             // Method references as delegates.
             IDetour detourTestStaticMethodA = new Detour<Func<int, int, int>>(
@@ -40,16 +41,16 @@ namespace MonoMod.UnitTest {
             Console.WriteLine();
 
             IDetour detourTestMethodB = new Detour(
-                () => default(TestObject).TestMethod(default(int), default(int)),
-                () => TestMethod_B(default(TestObject), default(int), default(int))
+                () => default(TestObject).TestMethod(default, default),
+                () => TestMethod_B(default, default, default)
             );
             IDetour detourTestStaticMethodB = new Detour(
-                 () => TestObject.TestStaticMethod(default(int), default(int)),
-                 () => TestStaticMethod_B(default(int), default(int))
+                 () => TestObject.TestStaticMethod(default, default),
+                 () => TestStaticMethod_B(default, default)
             );
             IDetour detourTestVoidMethodB = new Detour(
-                 () => TestObject.TestVoidMethod(default(int), default(int)),
-                 () => TestVoidMethod_B(default(int), default(int))
+                 () => TestObject.TestVoidMethod(default, default),
+                 () => TestVoidMethod_B(default, default)
             );
             Console.WriteLine("Detours: A + B");
             TestObject.TestStep(120, 8, 2);
