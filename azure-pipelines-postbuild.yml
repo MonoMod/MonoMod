@@ -6,13 +6,13 @@ steps:
   inputs:
     sourceFolder: '$(Agent.BuildDirectory)'
     contents: '**/bin/**/${{parameters.targetFramework}}/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb|*.config|*.deps.json)'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/bin_${{parameters.targetFramework}}'
+    targetFolder: '$(Build.ArtifactStagingDirectory)/${{parameters.targetFramework}}'
     cleanTargetFolder: true
     overWrite: true
     flattenFolders: true
     
 - task: PublishBuildArtifacts@1
   inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/bin_${{parameters.targetFramework}}'
-    artifactName: 'bin_${{ parameters.targetFramework }}'
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)/${{parameters.targetFramework}}'
+    artifactName: '${{parameters.targetFramework}}'
     publishLocation: 'Container'
