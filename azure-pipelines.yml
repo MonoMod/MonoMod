@@ -59,14 +59,15 @@ steps:
     targetFramework: 'net35'
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
-    targetFramework: 'netstandard16'
+    targetFramework: 'netstandard1.6'
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
-    targetFramework: 'netstandard20'
+    targetFramework: 'netstandard2.0'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
   displayName: 'Artifacts: Pack: nupkgs'
+  continueOnError: true
   inputs:
     command: 'pack'
     nobuild: true
@@ -76,6 +77,7 @@ steps:
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
 - task: PublishBuildArtifacts@1
   displayName: 'Artifacts: Publish: nupkgs'
+  continueOnError: true
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
     artifactName: 'nupkgs'

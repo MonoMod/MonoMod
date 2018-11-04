@@ -4,6 +4,7 @@ parameters:
 steps:
 - task: CopyFiles@2
   displayName: 'Artifacts: Pack: ${{parameters.targetFramework}}'
+  continueOnError: true
   inputs:
     sourceFolder: '$(Agent.BuildDirectory)'
     contents: '**/bin/**/${{parameters.targetFramework}}/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb)'
@@ -13,6 +14,7 @@ steps:
     flattenFolders: true
 - task: PublishBuildArtifacts@1
   displayName: 'Artifacts: Publish: ${{parameters.targetFramework}}'
+  continueOnError: true
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)/${{parameters.targetFramework}}'
     artifactName: '${{parameters.targetFramework}}'
