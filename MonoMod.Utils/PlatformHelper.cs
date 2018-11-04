@@ -55,7 +55,22 @@ namespace MonoMod.Utils {
                 Current = Platform.iOS;
             }
 
-            Current |= (IntPtr.Size == 4 ? Platform.X86 : Platform.X64);
+            Current |= (IntPtr.Size == 4 ? Platform.Bits32 : Platform.Bits64);
+
+#if NETSTANDARD
+            // Detect ARM based on RuntimeInformation.
+            if (RuntimeInformation.ProcessArchitecture.HasFlag(Architecture.Arm) ||
+                RuntimeInformation.OSArchitecture.HasFlag(Architecture.Arm))
+                Current |= Platform.ARM;
+#else
+            // Detect ARM based on PE info.
+            typeof(object).GetTypeInfo().Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
+            if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET 4.5 */)
+                Current |= Platform.ARM;
+#endif
+
+
+
         }
 
         public static Platform Current { get; private set; }

@@ -18,9 +18,9 @@ using static System.Reflection.IntrospectionExtensions;
 namespace MonoMod.DebugIL {
     public class DebugILGenerator {
 
-        public readonly static Regex PathVerifyRegex =
+        public static readonly Regex PathVerifyRegex =
             new Regex("[" + Regex.Escape(new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars())) + "]", RegexOptions.Compiled);
-        public readonly static System.Reflection.ConstructorInfo m_DebuggableAttribute_ctor =
+        public static readonly System.Reflection.ConstructorInfo m_DebuggableAttribute_ctor =
             typeof(DebuggableAttribute).GetTypeInfo().GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
 
         public MonoModder Modder;

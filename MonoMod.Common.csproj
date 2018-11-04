@@ -31,7 +31,7 @@
 
   <!-- dotnet pack -->
   <PropertyGroup>
-	<Authors>0x0ade</Authors> <!-- Note: This previously said "Maik Macho and collaborators", but with dotnet pack, <Authors> is also the list of owners. -->
+    <Authors>0x0ade</Authors> <!-- Note: This previously said "Maik Macho and collaborators", but with dotnet pack, <Authors> is also the list of owners. -->
     <Copyright>Copyright 2018 Maik Macho</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
     <PackageLicenseUrl>https://github.com/0x0ade/MonoMod/blob/master/LICENSE</PackageLicenseUrl>
@@ -82,7 +82,7 @@
         <NETStandard>true</NETStandard>
         <NETStandard1X>$(TargetFramework.StartsWith('netstandard1'))</NETStandard1X>
         <DefineConstants>NETSTANDARD</DefineConstants>
-		<DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X</DefineConstants>
+        <DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
         <PackageReference Include="System.Collections.NonGeneric" Version="4.3.0" />

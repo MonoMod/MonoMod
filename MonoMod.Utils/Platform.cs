@@ -7,29 +7,21 @@ namespace MonoMod.Utils {
     [Flags]
     [MonoMod__OldName__("MonoMod.Helpers.Platform")]
     public enum Platform : int {
-        // Underlying platform categories
-        OS = 1,
+        OS = 1 << 0, // Applied to all OSes (Unknown, Windows, MacOS, ...)
 
-        X86 = 0,
-        X64 = 2,
+        Bits32 = 0,
+        Bits64 = 1 << 1,
 
-        NT = 4,
-        Unix = 8,
+        NT = 1 << 2,
+        Unix = 1 << 3,
 
-        // Operating systems (OSes are always "and-equal" to OS)
-        Unknown = OS | 16,
-        Windows = OS | NT | 32,
-        MacOS = OS | Unix | 64,
-        Linux = OS | Unix | 128,
-        Android = Linux | 256,
-        iOS = MacOS | 512, // Darwin shared across macOS and iOS
+        ARM = 1 << 16,
 
-        // AMD64 (64bit) variants (always "and-equal" to X64)
-        Unknown64 = Unknown | X64,
-        Windows64 = Windows | X64,
-        MacOS64 = MacOS | X64,
-        Linux64 = Linux | X64,
-        Android64 = Android | X64,
-        iOS64 = iOS | X64
+        Unknown = OS | (1 << 4),
+        Windows = OS | NT | (1 << 5),
+        MacOS = OS | Unix | (1 << 6),
+        Linux = OS | Unix | (1 << 7),
+        Android = Linux | (1 << 8),
+        iOS = MacOS | (1 << 9), // Darwin shared across macOS and iOS
     }
 }

@@ -99,20 +99,20 @@ namespace MonoMod.BaseLoader {
         /// <summary>
         /// List of all currently loaded content mods.
         /// </summary>
-        public readonly static List<ModContent> Mods = new List<ModContent>();
+        public static readonly List<ModContent> Mods = new List<ModContent>();
 
         /// <summary>
         /// Mod content mapping. Use Content.Add, Get, and TryGet where applicable instead.
         /// </summary>
-        public readonly static Dictionary<string, ModAsset> Map = new Dictionary<string, ModAsset>();
+        public static readonly Dictionary<string, ModAsset> Map = new Dictionary<string, ModAsset>();
         /// <summary>
         /// Mod content mapping, directories only. Use Content.Add, Get, and TryGet where applicable instead.
         /// </summary>
-        public readonly static Dictionary<string, ModAsset> MapDirs = new Dictionary<string, ModAsset>();
+        public static readonly Dictionary<string, ModAsset> MapDirs = new Dictionary<string, ModAsset>();
 
-        internal readonly static List<string> LoadedAssetPaths = new List<string>();
-        internal readonly static List<string> LoadedAssetFullPaths = new List<string>();
-        internal readonly static List<WeakReference> LoadedAssets = new List<WeakReference>();
+        internal static readonly List<string> LoadedAssetPaths = new List<string>();
+        internal static readonly List<string> LoadedAssetFullPaths = new List<string>();
+        internal static readonly List<WeakReference> LoadedAssets = new List<WeakReference>();
 
         /// <summary>
         /// Gets the ModAsset mapped to the given relative path.

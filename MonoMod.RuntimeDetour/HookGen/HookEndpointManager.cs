@@ -9,8 +9,8 @@ using Mono.Cecil;
 namespace MonoMod.RuntimeDetour.HookGen {
     public static class HookEndpointManager {
 
-        private readonly static Dictionary<MethodBase, object> HookEndpointMap = new Dictionary<MethodBase, object>();
-        private readonly static Dictionary<object, List<HookEntry>> OwnedHookLists = new Dictionary<object, List<HookEntry>>();
+        private static readonly Dictionary<MethodBase, object> HookEndpointMap = new Dictionary<MethodBase, object>();
+        private static readonly Dictionary<object, List<HookEntry>> OwnedHookLists = new Dictionary<object, List<HookEntry>>();
 
         public static event Func<AssemblyName, ModuleDefinition> OnGenerateCecilModule;
         public static ModuleDefinition GenerateCecilModule(AssemblyName name)
@@ -20,7 +20,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static object GetOwner(Delegate hook)
             => (OnGetOwner ?? DefaultOnGetOwner).InvokeWhileNull<object>(hook);
         private static object DefaultOnGetOwner(Delegate hook)
-            => hook.Method.DeclaringType.Assembly;
+            => hook.GetMethodInfo().DeclaringType.GetTypeInfo().Assembly;
 
         private static HookEndpoint GetEndpoint(MethodBase method) {
             HookEndpoint endpoint;

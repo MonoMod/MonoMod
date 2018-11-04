@@ -195,8 +195,8 @@ namespace MonoMod.BaseLoader {
         }
 
         // A shared object a day keeps the GC away!
-        public readonly static Type[] _EmptyTypeArray = new Type[0];
-        public readonly static object[] _EmptyObjectArray = new object[0];
+        public static readonly Type[] _EmptyTypeArray = new Type[0];
+        public static readonly object[] _EmptyObjectArray = new object[0];
 
         /// <summary>
         /// Invoke a method in all loaded ModBases.

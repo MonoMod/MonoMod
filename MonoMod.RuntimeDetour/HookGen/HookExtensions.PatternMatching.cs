@@ -1066,9 +1066,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchCpobj(this Instruction instr, string fullName)
             => instr.MatchCpobj(out var v) && v.Is(fullName);
         public static bool MatchCpobj<T>(this Instruction instr)
-            => instr.MatchCpobj(out var v) && v.Is(typeof(T));
+            => instr.MatchCpobj(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchCpobj(this Instruction instr, Type value)
-            => instr.MatchCpobj(out var v) && v.Is(value);
+            => instr.MatchCpobj(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchCpobj(this Instruction instr, TypeReference value)
             => instr.MatchCpobj(out var v) && v == value;
         public static bool MatchCpobj(this Instruction instr, out TypeReference value) {
@@ -1083,9 +1083,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchLdobj(this Instruction instr, string fullName)
             => instr.MatchLdobj(out var v) && v.Is(fullName);
         public static bool MatchLdobj<T>(this Instruction instr)
-            => instr.MatchLdobj(out var v) && v.Is(typeof(T));
+            => instr.MatchLdobj(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchLdobj(this Instruction instr, Type value)
-            => instr.MatchLdobj(out var v) && v.Is(value);
+            => instr.MatchLdobj(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchLdobj(this Instruction instr, TypeReference value)
             => instr.MatchLdobj(out var v) && v == value;
         public static bool MatchLdobj(this Instruction instr, out TypeReference value) {
@@ -1112,9 +1112,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchNewobj(this Instruction instr, string typeFullName)
             => instr.MatchNewobj(out var v) && v.DeclaringType.Is(typeFullName);
         public static bool MatchNewobj<T>(this Instruction instr)
-            => instr.MatchNewobj(out var v) && v.DeclaringType.Is(typeof(T));
+            => instr.MatchNewobj(out var v) && v.DeclaringType.Is(typeof(T).GetTypeInfo());
         public static bool MatchNewobj(this Instruction instr, Type type)
-            => instr.MatchNewobj(out var v) && v.DeclaringType.Is(type);
+            => instr.MatchNewobj(out var v) && v.DeclaringType.Is(type.GetTypeInfo());
         /*
         public static bool MatchNewobj(this Instruction instr, string typeFullName, string name)
             => instr.MatchNewobj(out var v) && v.Is(typeFullName, name);
@@ -1140,9 +1140,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchCastclass(this Instruction instr, string fullName)
             => instr.MatchCastclass(out var v) && v.Is(fullName);
         public static bool MatchCastclass<T>(this Instruction instr)
-            => instr.MatchCastclass(out var v) && v.Is(typeof(T));
+            => instr.MatchCastclass(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchCastclass(this Instruction instr, Type value)
-            => instr.MatchCastclass(out var v) && v.Is(value);
+            => instr.MatchCastclass(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchCastclass(this Instruction instr, TypeReference value)
             => instr.MatchCastclass(out var v) && v == value;
         public static bool MatchCastclass(this Instruction instr, out TypeReference value) {
@@ -1157,9 +1157,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchIsinst(this Instruction instr, string fullName)
             => instr.MatchIsinst(out var v) && v.Is(fullName);
         public static bool MatchIsinst<T>(this Instruction instr)
-            => instr.MatchIsinst(out var v) && v.Is(typeof(T));
+            => instr.MatchIsinst(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchIsinst(this Instruction instr, Type value)
-            => instr.MatchIsinst(out var v) && v.Is(value);
+            => instr.MatchIsinst(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchIsinst(this Instruction instr, TypeReference value)
             => instr.MatchIsinst(out var v) && v == value;
         public static bool MatchIsinst(this Instruction instr, out TypeReference value) {
@@ -1181,9 +1181,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchUnbox(this Instruction instr, string fullName)
             => instr.MatchUnbox(out var v) && v.Is(fullName);
         public static bool MatchUnbox<T>(this Instruction instr)
-            => instr.MatchUnbox(out var v) && v.Is(typeof(T));
+            => instr.MatchUnbox(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchUnbox(this Instruction instr, Type value)
-            => instr.MatchUnbox(out var v) && v.Is(value);
+            => instr.MatchUnbox(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchUnbox(this Instruction instr, TypeReference value)
             => instr.MatchUnbox(out var v) && v == value;
         public static bool MatchUnbox(this Instruction instr, out TypeReference value) {
@@ -1319,9 +1319,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchStobj(this Instruction instr, string fullName)
             => instr.MatchStobj(out var v) && v.Is(fullName);
         public static bool MatchStobj<T>(this Instruction instr)
-            => instr.MatchStobj(out var v) && v.Is(typeof(T));
+            => instr.MatchStobj(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchStobj(this Instruction instr, Type value)
-            => instr.MatchStobj(out var v) && v.Is(value);
+            => instr.MatchStobj(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchStobj(this Instruction instr, TypeReference value)
             => instr.MatchStobj(out var v) && v == value;
         public static bool MatchStobj(this Instruction instr, out TypeReference value) {
@@ -1406,9 +1406,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchBox(this Instruction instr, string fullName)
             => instr.MatchBox(out var v) && v.Is(fullName);
         public static bool MatchBox<T>(this Instruction instr)
-            => instr.MatchBox(out var v) && v.Is(typeof(T));
+            => instr.MatchBox(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchBox(this Instruction instr, Type value)
-            => instr.MatchBox(out var v) && v.Is(value);
+            => instr.MatchBox(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchBox(this Instruction instr, TypeReference value)
             => instr.MatchBox(out var v) && v == value;
         public static bool MatchBox(this Instruction instr, out TypeReference value) {
@@ -1423,9 +1423,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchNewarr(this Instruction instr, string fullName)
             => instr.MatchNewarr(out var v) && v.Is(fullName);
         public static bool MatchNewarr<T>(this Instruction instr)
-            => instr.MatchNewarr(out var v) && v.Is(typeof(T));
+            => instr.MatchNewarr(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchNewarr(this Instruction instr, Type value)
-            => instr.MatchNewarr(out var v) && v.Is(value);
+            => instr.MatchNewarr(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchNewarr(this Instruction instr, TypeReference value)
             => instr.MatchNewarr(out var v) && v == value;
         public static bool MatchNewarr(this Instruction instr, out TypeReference value) {
@@ -1447,9 +1447,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchLdelema(this Instruction instr, string fullName)
             => instr.MatchLdelema(out var v) && v.Is(fullName);
         public static bool MatchLdelema<T>(this Instruction instr)
-            => instr.MatchLdelema(out var v) && v.Is(typeof(T));
+            => instr.MatchLdelema(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchLdelema(this Instruction instr, Type value)
-            => instr.MatchLdelema(out var v) && v.Is(value);
+            => instr.MatchLdelema(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchLdelema(this Instruction instr, TypeReference value)
             => instr.MatchLdelema(out var v) && v == value;
         public static bool MatchLdelema(this Instruction instr, out TypeReference value) {
@@ -1597,9 +1597,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchLdelemAny(this Instruction instr, string fullName)
             => instr.MatchLdelemAny(out var v) && v.Is(fullName);
         public static bool MatchLdelemAny<T>(this Instruction instr)
-            => instr.MatchLdelemAny(out var v) && v.Is(typeof(T));
+            => instr.MatchLdelemAny(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchLdelemAny(this Instruction instr, Type value)
-            => instr.MatchLdelemAny(out var v) && v.Is(value);
+            => instr.MatchLdelemAny(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchLdelemAny(this Instruction instr, TypeReference value)
             => instr.MatchLdelemAny(out var v) && v == value;
         public static bool MatchLdelemAny(this Instruction instr, out TypeReference value) {
@@ -1614,9 +1614,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchStelemAny(this Instruction instr, string fullName)
             => instr.MatchStelemAny(out var v) && v.Is(fullName);
         public static bool MatchStelemAny<T>(this Instruction instr)
-            => instr.MatchStelemAny(out var v) && v.Is(typeof(T));
+            => instr.MatchStelemAny(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchStelemAny(this Instruction instr, Type value)
-            => instr.MatchStelemAny(out var v) && v.Is(value);
+            => instr.MatchStelemAny(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchStelemAny(this Instruction instr, TypeReference value)
             => instr.MatchStelemAny(out var v) && v == value;
         public static bool MatchStelemAny(this Instruction instr, out TypeReference value) {
@@ -1631,9 +1631,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchUnboxAny(this Instruction instr, string fullName)
             => instr.MatchUnboxAny(out var v) && v.Is(fullName);
         public static bool MatchUnboxAny<T>(this Instruction instr)
-            => instr.MatchUnboxAny(out var v) && v.Is(typeof(T));
+            => instr.MatchUnboxAny(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchUnboxAny(this Instruction instr, Type value)
-            => instr.MatchUnboxAny(out var v) && v.Is(value);
+            => instr.MatchUnboxAny(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchUnboxAny(this Instruction instr, TypeReference value)
             => instr.MatchUnboxAny(out var v) && v == value;
         public static bool MatchUnboxAny(this Instruction instr, out TypeReference value) {
@@ -1704,9 +1704,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchRefanyval(this Instruction instr, string fullName)
             => instr.MatchRefanyval(out var v) && v.Is(fullName);
         public static bool MatchRefanyval<T>(this Instruction instr)
-            => instr.MatchRefanyval(out var v) && v.Is(typeof(T));
+            => instr.MatchRefanyval(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchRefanyval(this Instruction instr, Type value)
-            => instr.MatchRefanyval(out var v) && v.Is(value);
+            => instr.MatchRefanyval(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchRefanyval(this Instruction instr, TypeReference value)
             => instr.MatchRefanyval(out var v) && v == value;
         public static bool MatchRefanyval(this Instruction instr, out TypeReference value) {
@@ -1728,9 +1728,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchMkrefany(this Instruction instr, string fullName)
             => instr.MatchMkrefany(out var v) && v.Is(fullName);
         public static bool MatchMkrefany<T>(this Instruction instr)
-            => instr.MatchMkrefany(out var v) && v.Is(typeof(T));
+            => instr.MatchMkrefany(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchMkrefany(this Instruction instr, Type value)
-            => instr.MatchMkrefany(out var v) && v.Is(value);
+            => instr.MatchMkrefany(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchMkrefany(this Instruction instr, TypeReference value)
             => instr.MatchMkrefany(out var v) && v == value;
         public static bool MatchMkrefany(this Instruction instr, out TypeReference value) {
@@ -2079,9 +2079,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchInitobj(this Instruction instr, string fullName)
             => instr.MatchInitobj(out var v) && v.Is(fullName);
         public static bool MatchInitobj<T>(this Instruction instr)
-            => instr.MatchInitobj(out var v) && v.Is(typeof(T));
+            => instr.MatchInitobj(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchInitobj(this Instruction instr, Type value)
-            => instr.MatchInitobj(out var v) && v.Is(value);
+            => instr.MatchInitobj(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchInitobj(this Instruction instr, TypeReference value)
             => instr.MatchInitobj(out var v) && v == value;
         public static bool MatchInitobj(this Instruction instr, out TypeReference value) {
@@ -2096,9 +2096,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchConstrained(this Instruction instr, string fullName)
             => instr.MatchConstrained(out var v) && v.Is(fullName);
         public static bool MatchConstrained<T>(this Instruction instr)
-            => instr.MatchConstrained(out var v) && v.Is(typeof(T));
+            => instr.MatchConstrained(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchConstrained(this Instruction instr, Type value)
-            => instr.MatchConstrained(out var v) && v.Is(value);
+            => instr.MatchConstrained(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchConstrained(this Instruction instr, TypeReference value)
             => instr.MatchConstrained(out var v) && v == value;
         public static bool MatchConstrained(this Instruction instr, out TypeReference value) {
@@ -2145,9 +2145,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static bool MatchSizeof(this Instruction instr, string fullName)
             => instr.MatchSizeof(out var v) && v.Is(fullName);
         public static bool MatchSizeof<T>(this Instruction instr)
-            => instr.MatchSizeof(out var v) && v.Is(typeof(T));
+            => instr.MatchSizeof(out var v) && v.Is(typeof(T).GetTypeInfo());
         public static bool MatchSizeof(this Instruction instr, Type value)
-            => instr.MatchSizeof(out var v) && v.Is(value);
+            => instr.MatchSizeof(out var v) && v.Is(value.GetTypeInfo());
         public static bool MatchSizeof(this Instruction instr, TypeReference value)
             => instr.MatchSizeof(out var v) && v == value;
         public static bool MatchSizeof(this Instruction instr, out TypeReference value) {

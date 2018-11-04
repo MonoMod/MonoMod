@@ -59,16 +59,7 @@ namespace MonoMod.RuntimeDetour {
             Method = method;
 
             // Backing up the original function only needs to happen once.
-            MethodBody body;
-            try {
-                body = Method?.GetMethodBody();
-            } catch (InvalidOperationException) {
-                body = null;
-            } catch (NotSupportedException) {
-                body = null;
-            }
-            if (body != null)
-                _BackupMethod = method.CreateILCopy();
+            method.TryCreateILCopy(out _BackupMethod);
 
             // BackupNative is required even if BackupMethod is present to undo the detour.
             _BackupNative = DetourHelper.Native.MemAlloc(Data.Size);
@@ -92,13 +83,13 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public NativeDetour(Delegate from, IntPtr to)
-            : this(from.Method, to) {
+            : this(from.GetMethodInfo(), to) {
         }
         public NativeDetour(IntPtr from, Delegate to)
-            : this(from, to.Method) {
+            : this(from, to.GetMethodInfo()) {
         }
         public NativeDetour(Delegate from, Delegate to)
-            : this(from.Method, to.Method) {
+            : this(from.GetMethodInfo(), to.GetMethodInfo()) {
         }
 
         /// <summary>
@@ -246,10 +237,10 @@ namespace MonoMod.RuntimeDetour {
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
-            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
+            if (!typeof(Delegate).GetTypeInfo().IsAssignableFrom(typeof(T)))
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
-            return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
+            return GenerateTrampoline(typeof(T).GetTypeInfo().GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
         }
     }
 }

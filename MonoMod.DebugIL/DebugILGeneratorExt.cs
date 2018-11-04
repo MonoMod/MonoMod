@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 namespace MonoMod.DebugIL {
     public static class DebugILGeneratorExt {
 
-        public readonly static Type t_MetadataType = typeof(MetadataType);
+        public static readonly Type t_MetadataType = typeof(MetadataType);
 
         public static ScopeDebugInformation GetOrAddScope(this MethodDebugInformation mdi) {
             if (mdi.Scope != null)

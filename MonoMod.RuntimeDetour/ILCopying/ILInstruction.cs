@@ -1,3 +1,4 @@
+#if !NETSTANDARD1_X
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
@@ -123,3 +124,4 @@ namespace Harmony.ILCopying {
         }
     }
 }
+#endif

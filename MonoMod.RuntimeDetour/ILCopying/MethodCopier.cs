@@ -1,3 +1,4 @@
+#if !NETSTANDARD1_X
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
@@ -576,3 +577,4 @@ namespace Harmony.ILCopying {
         }
     }
 }
+#endif

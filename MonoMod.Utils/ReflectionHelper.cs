@@ -18,8 +18,8 @@ using TypeOrTypeInfo = System.Type;
 namespace MonoMod.Utils {
     public static class ReflectionHelper {
 
-        public readonly static Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
-        public readonly static Dictionary<MemberReference, MemberInfo> ResolveReflectionCache = new Dictionary<MemberReference, MemberInfo>();
+        public static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
+        public static readonly Dictionary<MemberReference, MemberInfo> ResolveReflectionCache = new Dictionary<MemberReference, MemberInfo>();
 
         public static Type ResolveReflection(this TypeReference mref)
             => (_ResolveReflection(mref, null) as TypeOrTypeInfo).AsType();

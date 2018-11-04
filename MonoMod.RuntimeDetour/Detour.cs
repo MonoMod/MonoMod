@@ -138,10 +138,10 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public Detour(Delegate from, IntPtr to)
-            : this(from.Method, to) {
+            : this(from.GetMethodInfo(), to) {
         }
         public Detour(Delegate from, Delegate to)
-            : this(from.Method, to.Method) {
+            : this(from.GetMethodInfo(), to.GetMethodInfo()) {
         }
 
         public Detour(Expression from, IntPtr to)
@@ -254,10 +254,10 @@ namespace MonoMod.RuntimeDetour {
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
-            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
+            if (!typeof(Delegate).GetTypeInfo().IsAssignableFrom(typeof(T)))
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
-            return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
+            return GenerateTrampoline(typeof(T).GetTypeInfo().GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
         }
 
         private void _TopUndo() {

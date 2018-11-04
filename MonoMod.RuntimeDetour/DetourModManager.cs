@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿#if !NETSTANDARD1_X
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.RuntimeDetour;
 using MonoMod.RuntimeDetour.HookGen;
@@ -19,7 +20,7 @@ namespace MonoMod.RuntimeDetour {
         public HashSet<Assembly> Ignored = new HashSet<Assembly>();
 
         public DetourModManager() {
-            Ignored.Add(Assembly.GetExecutingAssembly());
+            Ignored.Add(typeof(DetourModManager).GetTypeInfo().Assembly);
 
             // Keep track of all NativeDetours, Detours and (indirectly) Hooks.
             Detour.OnDetour += RegisterDetour;
@@ -85,7 +86,7 @@ namespace MonoMod.RuntimeDetour {
                             caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.Hook") {
                             continue;
                         }
-                        owner = caller?.DeclaringType.Assembly;
+                        owner = caller?.DeclaringType.GetTypeInfo().Assembly;
                         break;
                 }
                 break;
@@ -130,3 +131,4 @@ namespace MonoMod.RuntimeDetour {
 
     }
 }
+#endif

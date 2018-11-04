@@ -11,9 +11,9 @@ using System.Linq;
 namespace MonoMod.Utils {
     public sealed class DynamicMethodDefinition : IDisposable {
 
-        private readonly static Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
-        private readonly static Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
-        private readonly static Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
+        private static readonly Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
+        private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
+        private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
 
         static DynamicMethodDefinition() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.Static)) {
@@ -40,8 +40,8 @@ namespace MonoMod.Utils {
             }
         }
 
-        private readonly static Dictionary<Module, ModuleDefinition> _Modules = new Dictionary<Module, ModuleDefinition>();
-        private readonly static Dictionary<Module, int> _ModuleRefs = new Dictionary<Module, int>();
+        private static readonly Dictionary<Module, ModuleDefinition> _Modules = new Dictionary<Module, ModuleDefinition>();
+        private static readonly Dictionary<Module, int> _ModuleRefs = new Dictionary<Module, int>();
         private Func<AssemblyName, ModuleDefinition> _ModuleGen;
         private ModuleDefinition _Module {
             get {

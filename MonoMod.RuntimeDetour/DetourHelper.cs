@@ -18,9 +18,7 @@ namespace MonoMod.RuntimeDetour {
                 Runtime = new DetourRuntimeNETPlatform();
             }
 
-            // Detect X86 vs ARM and use the proper platform.
-            typeof(object).Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
-            if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET 4.5 */) {
+            if (PlatformHelper.Is(Platform.ARM)) {
                 Native = new DetourNativeARMPlatform();
             } else {
                 Native = new DetourNativeX86Platform();
@@ -74,12 +72,14 @@ namespace MonoMod.RuntimeDetour {
         public static IntPtr GetNativeStart(this MethodBase method)
             => Runtime.GetNativeStart(method.Pin());
         public static IntPtr GetNativeStart(this Delegate method)
-            => method.Method.GetNativeStart();
+            => method.GetMethodInfo().GetNativeStart();
         public static IntPtr GetNativeStart(this Expression method)
             => ((MethodCallExpression) method).Method.GetNativeStart();
 
         public static DynamicMethod CreateILCopy(this MethodBase method)
             => Runtime.CreateCopy(method);
+        public static bool TryCreateILCopy(this MethodBase method, out DynamicMethod dm)
+            => Runtime.TryCreateCopy(method, out dm);
 
         public static T Pin<T>(this T method) where T : MethodBase {
             Runtime.Pin(method);
@@ -129,11 +129,11 @@ namespace MonoMod.RuntimeDetour {
                 Extra = extra
             };
 
-        private readonly static FieldInfo _Native = typeof(DetourHelper).GetField("Native");
-        private readonly static MethodInfo _ToNativeDetourData = typeof(DetourHelper).GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
-        private readonly static MethodInfo _Copy = typeof(IDetourNativePlatform).GetMethod("Copy");
-        private readonly static MethodInfo _Apply = typeof(IDetourNativePlatform).GetMethod("Apply");
-        private readonly static ConstructorInfo _ctor_Exception = typeof(Exception).GetConstructor(new Type[] { typeof(string) });
+        private static readonly FieldInfo _Native = typeof(DetourHelper).GetTypeInfo().GetField("Native");
+        private static readonly MethodInfo _ToNativeDetourData = typeof(DetourHelper).GetTypeInfo().GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
+        private static readonly MethodInfo _Copy = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Copy");
+        private static readonly MethodInfo _Apply = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Apply");
+        private static readonly ConstructorInfo _ctor_Exception = typeof(Exception).GetTypeInfo().GetConstructor(new Type[] { typeof(string) });
 
         /// <summary>
         /// Fill the DynamicMethod with a throw.

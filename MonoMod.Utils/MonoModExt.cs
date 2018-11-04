@@ -26,14 +26,7 @@ namespace MonoMod.Utils {
     [MonoMod__OldName__("MonoMod.MonoModExt")]
     public static class MonoModExt {
 
-        public static IDictionary<string, object> SharedData = new Dictionary<string, object>() {
-            { "Platform",           (PlatformHelper.Current & ~Platform.X64).ToString() },
-            { "PlatformPrefix",     (PlatformHelper.Current & ~Platform.X64).ToString().ToLowerInvariant() + "_" },
-            { "Arch",               (PlatformHelper.Current & Platform.X64).ToString() },
-            { "Architecture",       (PlatformHelper.Current & Platform.X64).ToString() },
-            { "ArchPrefix",         (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" },
-            { "ArchitecturePrefix", (PlatformHelper.Current & Platform.X64).ToString().ToLowerInvariant() + "_" }
-        };
+        public static IDictionary<string, object> SharedData = new Dictionary<string, object>();
 
         static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");
         static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
@@ -87,8 +80,8 @@ namespace MonoMod.Utils {
             return c;
         }
 
-        public readonly static System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetTypeInfo().GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        public readonly static System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetTypeInfo().GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public static readonly System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetTypeInfo().GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public static readonly System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetTypeInfo().GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         public static GenericParameter Update(this GenericParameter param, GenericParameter other)
             => param.Update(other.Position, other.Type);
         public static GenericParameter Update(this GenericParameter param, int position, GenericParameterType type) {
@@ -1176,10 +1169,10 @@ namespace MonoMod.Utils {
             }
         }
 
-        private readonly static TypeOrTypeInfo t_Code = typeof(Code).GetTypeInfo();
-        private readonly static TypeOrTypeInfo t_OpCodes = typeof(OpCodes).GetTypeInfo();
+        private static readonly TypeOrTypeInfo t_Code = typeof(Code).GetTypeInfo();
+        private static readonly TypeOrTypeInfo t_OpCodes = typeof(OpCodes).GetTypeInfo();
 
-        private readonly static Dictionary<int, OpCode> _ShortToLongOp = new Dictionary<int, OpCode>();
+        private static readonly Dictionary<int, OpCode> _ShortToLongOp = new Dictionary<int, OpCode>();
         public static OpCode ShortToLongOp(this OpCode op) {
             string name = Enum.GetName(t_Code.AsType(), op.Code);
             if (!name.EndsWith("_S"))
@@ -1189,7 +1182,7 @@ namespace MonoMod.Utils {
             return _ShortToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
         }
 
-        private readonly static Dictionary<int, OpCode> _LongToShortOp = new Dictionary<int, OpCode>();
+        private static readonly Dictionary<int, OpCode> _LongToShortOp = new Dictionary<int, OpCode>();
         public static OpCode LongToShortOp(this OpCode op) {
             string name = Enum.GetName(t_Code.AsType(), op.Code);
             if (name.EndsWith("_S"))

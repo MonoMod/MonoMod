@@ -13,8 +13,8 @@ using OpCode = Mono.Cecil.Cil.OpCode;
 namespace MonoMod.RuntimeDetour.HookGen {
     public class HookILCursor {
 
-        private readonly static List<object> References = new List<object>();
-        private readonly static Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
+        private static readonly List<object> References = new List<object>();
+        private static readonly Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
         public static object GetReference(int id) => References[id];
         public static void SetReference(int id, object obj) => References[id] = obj;
         private static int AddReference(object obj) {
@@ -29,7 +29,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 DelegateInvokers.Remove(id);
         }
 
-        private readonly static MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
+        private static readonly MethodInfo _GetReference = typeof(HookILCursor).GetTypeInfo().GetMethod("GetReference");
 
         public HookIL HookIL { get; }
 
@@ -293,7 +293,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             int id = AddReference(obj);
             Emit(OpCodes.Ldc_I4, id);
             Emit(OpCodes.Call, _GetReference);
-            if (t.IsValueType)
+            if (t.GetTypeInfo().IsValueType)
                 Emit(OpCodes.Unbox_Any, t);
             return id;
         }
@@ -305,7 +305,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Type t = typeof(T);
             Emit(OpCodes.Ldc_I4, id);
             Emit(OpCodes.Call, _GetReference);
-            if (t.IsValueType)
+            if (t.GetTypeInfo().IsValueType)
                 Emit(OpCodes.Unbox_Any, t);
         }
 
@@ -325,7 +325,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             // Create a DynamicMethod that shifts the stack around a little.
 
             Type delType = References[id].GetType();
-            MethodInfo delInvokeOrig = delType.GetMethod("Invoke");
+            MethodInfo delInvokeOrig = delType.GetTypeInfo().GetMethod("Invoke");
 
             ParameterInfo[] args = delInvokeOrig.GetParameters();
             Type[] argTypes = new Type[args.Length + 1];
@@ -368,7 +368,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         /// Emit a delegate invocation.
         /// </summary>
         public int EmitDelegateInvoke(int id) {
-            Emit(OpCodes.Callvirt, References[id].GetType().GetMethod("Invoke"));
+            Emit(OpCodes.Callvirt, References[id].GetType().GetTypeInfo().GetMethod("Invoke"));
             return id;
         }
 

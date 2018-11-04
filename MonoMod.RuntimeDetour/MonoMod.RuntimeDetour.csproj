@@ -7,7 +7,7 @@
     <Description>RuntimeDetour is a flexible and easily extensible runtime detouring library. It also makes runtime IL manipulation possible using cecil.</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
-    <TargetFrameworks>net35;netstandard20</TargetFrameworks>
+    <TargetFrameworks>net35;netstandard16;netstandard20</TargetFrameworks>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />

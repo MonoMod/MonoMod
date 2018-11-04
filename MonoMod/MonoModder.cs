@@ -46,9 +46,9 @@ namespace MonoMod {
 
     public class MonoModder : IDisposable {
 
-        public readonly static bool IsMono = Type.GetType("Mono.Runtime") != null;
+        public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
 
-        public readonly static Version Version = typeof(MonoModder).GetTypeInfo().Assembly.GetName().Version;
+        public static readonly Version Version = typeof(MonoModder).GetTypeInfo().Assembly.GetName().Version;
 
         // WasIDictionary and the _ IDictionaries are used when upgrading mods.
 

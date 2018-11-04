@@ -16,14 +16,14 @@ namespace MonoMod.BaseLoader {
         /// <summary>
         /// The hasher used by Relinker.
         /// </summary>
-        public readonly static HashAlgorithm ChecksumHasher = MD5.Create();
+        public static readonly HashAlgorithm ChecksumHasher = MD5.Create();
 
         /// <summary>
         /// The current entry assembly checksum.
         /// </summary>
         public static string GameChecksum { get; internal set; }
 
-        internal readonly static Dictionary<string, ModuleDefinition> StaticRelinkModuleCache;
+        internal static readonly Dictionary<string, ModuleDefinition> StaticRelinkModuleCache;
         internal static ModuleDefinition RuntimeRuleContainer;
 
         static Relinker() {
