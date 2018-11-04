@@ -14,43 +14,30 @@ variables:
 name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
 steps:
+# Install the .NET Core SDK.
 - task: DotNetCoreInstaller@0
   displayName: 'Install: .NET Core SDK'
   inputs:
     packageType: 'sdk'
     version: '2.0.0'
 
+# Run pre-build steps.
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Restore'
   inputs:
     command: 'restore'
     projects: 'MonoMod*/*.csproj'
-
 - task: PowerShell@2
   displayName: 'Run: PowerShell: azure-pipelines-prebuild.ps1'
   inputs:
     filePath: 'azure-pipelines-prebuild.ps1'
 
+# Build.
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Build'
   inputs:
     command: 'build'
     projects: 'MonoMod*/*.csproj'
-    configuration: '$(buildConfiguration)'
-
-- task: DotNetCoreCLI@2
-  displayName: 'dotnet: Test'
-  inputs:
-    command: 'test'
-    nobuild: true
-    projects: 'MonoMod.UnitTest/*.csproj'
-    configuration: '$(buildConfiguration)'
-
-- task: VSTest@2
-  displayName: 'Run: Tests'
-  continueOnError: true
-  inputs:
-    platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
 # Create and "publish" main artifacts.
@@ -82,3 +69,12 @@ steps:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
     artifactName: 'nupkgs'
     publishLocation: 'Container'
+
+# Run tests last.
+- task: DotNetCoreCLI@2
+  displayName: 'dotnet: Test'
+  inputs:
+    command: 'test'
+    nobuild: true
+    projects: 'MonoMod.UnitTest/*.csproj'
+    configuration: '$(buildConfiguration)'
