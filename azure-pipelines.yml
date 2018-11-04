@@ -39,6 +39,7 @@ steps:
     command: 'build'
     projects: 'MonoMod*/*.csproj'
     configuration: '$(buildConfiguration)'
+    arguments: '--configuration $(buildConfiguration)'
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
