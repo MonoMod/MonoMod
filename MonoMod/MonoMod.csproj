@@ -13,6 +13,6 @@
   <Import Project="..\MonoMod.Common.csproj" />
 
   <ItemGroup>
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" AdditionalProperties="TargetFramework=$(TargetFramework)" />
+    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
   </ItemGroup>
 </Project>
