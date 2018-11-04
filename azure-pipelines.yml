@@ -35,6 +35,7 @@ steps:
     configuration: '$(buildConfiguration)'
 
 - task: VSTest@2
+  continueOnError: true
   inputs:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'

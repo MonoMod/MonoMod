@@ -75,11 +75,11 @@ namespace MonoMod.RuntimeDetour {
 
         public DynamicMethod CreateCopy(MethodBase method) {
             if (!TryCreateCopy(method, out DynamicMethod dm))
-                throw new InvalidOperationException($"Uncopyable method: {method.ToString()}");
+                throw new InvalidOperationException($"Uncopyable method: {method?.ToString() ?? "NULL"}");
             return dm;
         }
         public bool TryCreateCopy(MethodBase method, out DynamicMethod dm) {
-            if ((method.GetMethodImplementationFlags() & (MethodImplAttributes.OPTIL | MethodImplAttributes.Native | MethodImplAttributes.Runtime)) != 0) {
+            if (method == null || (method.GetMethodImplementationFlags() & (MethodImplAttributes.OPTIL | MethodImplAttributes.Native | MethodImplAttributes.Runtime)) != 0) {
                 dm = null;
                 return false;
             }
