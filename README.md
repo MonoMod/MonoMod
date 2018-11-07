@@ -3,7 +3,13 @@
 A general purpose .NET assembly modding "basework", powered by [cecil](https://github.com/jbevain/cecil/).  
 *MIT-licensed.*
 
-[![Build Status](https://0x0ade.visualstudio.com/MonoMod/_apis/build/status/0x0ade.MonoMod)](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1) [![Deployment Status](https://0x0ade.vsrm.visualstudio.com/_apis/public/Release/badge/e07cb5e7-fa7f-457d-982b-3323979ed1b7/1/1)](https://0x0ade.visualstudio.com/MonoMod/_releases2?view=mine&definitionId=1)
+[![Build status](https://img.shields.io/azure-devops/build/0x0ade/MonoMod/1.svg?style=flat-square)](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1) ![Deployment status](https://img.shields.io/azure-devops/release/0x0ade/e07cb5e7-fa7f-457d-982b-3323979ed1b7/1/1.svg?style=flat-square)
+
+| GitHub: Full | NuGet: Core | NuGet: Utils | NuGet: RuntimeDetour |
+|------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [![GitHub releases](https://img.shields.io/github/downloads/0x0ade/MonoMod/total.svg?style=flat-square)](https://github.com/0x0ade/MonoMod/releases) | [![Core](https://img.shields.io/nuget/dt/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Utils](https://img.shields.io/nuget/dt/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![RuntimeDetour](https://img.shields.io/nuget/dt/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) |
+| [![Version](https://img.shields.io/github/release/0x0ade/MonoMod.svg?style=flat-square)](https://github.com/0x0ade/MonoMod/releases) | [![Version](https://img.shields.io/nuget/v/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Version](https://img.shields.io/nuget/v/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![Version](https://img.shields.io/nuget/v/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) |
+
 
 ## Sections
 - [Introduction](#introduction)
