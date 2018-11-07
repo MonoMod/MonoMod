@@ -123,7 +123,7 @@ namespace MonoMod.RuntimeDetour {
             Type[] argTypes;
             if (!method.IsStatic) {
                 argTypes = new Type[args.Length + 1];
-                argTypes[0] = method.DeclaringType;
+                argTypes[0] = method.GetThisParamType();
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i + 1] = args[i].ParameterType;
             } else {
@@ -167,7 +167,7 @@ namespace MonoMod.RuntimeDetour {
                 int size = fromInfo.ReturnType.GetManagedSize();
                 if (size == 3 || size == 5 || size == 6 || size == 7 || size >= 9) {
                     List<Type> argTypes = new List<Type>();
-                    argTypes.Add(from.DeclaringType); // this
+                    argTypes.Add(from.GetThisParamType()); // this
                     argTypes.Add(fromInfo.ReturnType.MakeByRefType()); // __ret - Refs are shiny pointers.
                     argTypes.AddRange(from.GetParameters().Select(p => p.ParameterType));
                     dm = new DynamicMethod(

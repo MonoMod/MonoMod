@@ -34,7 +34,7 @@ namespace MonoMod.UnitTest {
         }
 
         [Fact]
-        public void TestReturnStruct() {
+        public void TestInstanceMethodReturnStruct() {
             GetStructInstance = this;
 
             IsHook = false;
@@ -50,6 +50,27 @@ namespace MonoMod.UnitTest {
                 GetStructCounter = 600;
                 GetStruct((IntPtr) 100);
                 Assert.Equal(1100, GetStructCounter);
+            }
+        }
+
+        [Fact]
+        public void TestStructMethod() {
+            ColorRGBA c = new ColorRGBA();
+            c.A = 5;
+
+            IsHook = false;
+            Assert.False(c.IsTransparent);
+            Assert.Equal(c.A, c.R);
+
+            using (new Hook(
+                typeof(ColorRGBA).GetTypeInfo().GetMethod("get_IsTransparent"),
+                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetIsTransparentHook")
+            )) {
+                IsHook = true;
+                c.A = 10;
+                Assert.True(c.IsTransparent);
+                Assert.Equal(c.A, c.R);
+                Assert.Equal(c.A, c.G);
             }
         }
 
@@ -76,7 +97,6 @@ namespace MonoMod.UnitTest {
             return s;
         }
 
-        // Prevent JIT from inlining the method call.
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ManipColor(ref Color c, byte r, byte g, byte b, byte a) {
             Assert.False(IsHook);
@@ -86,7 +106,6 @@ namespace MonoMod.UnitTest {
             c.A = a;
         }
 
-        // Prevent JIT from inlining the method call.
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ManipColorHook(ColorRGBA* cRGBA, byte r, byte g, byte b, byte a) {
             Assert.True(IsHook);
@@ -94,6 +113,17 @@ namespace MonoMod.UnitTest {
             cRGBA->G = g;
             cRGBA->B = b;
             cRGBA->A = a;
+        }
+
+        public delegate bool d_GetIsTransparent(ref ColorRGBA self);
+        public static bool GetIsTransparentHook(d_GetIsTransparent orig, ref ColorRGBA self) {
+            Assert.True(IsHook);
+            IsHook = false;
+            bool rv = orig(ref self);
+            IsHook = true;
+
+            self.G = self.A;
+            return !rv;
         }
 
         public struct Color {
@@ -155,6 +185,15 @@ namespace MonoMod.UnitTest {
 
         public struct ColorRGBA {
             public byte R, G, B, A;
+
+            public bool IsTransparent {
+                [MethodImpl(MethodImplOptions.NoInlining)]
+                get {
+                    Assert.False(IsHook);
+                    R = A;
+                    return A == 0;
+                }
+            }
         }
 
         public struct SomeOtherStruct {

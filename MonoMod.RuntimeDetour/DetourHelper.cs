@@ -109,6 +109,13 @@ namespace MonoMod.RuntimeDetour {
             return method;
         }
 
+        public static Type GetThisParamType(this MethodBase method) {
+            Type type = method.DeclaringType;
+            if (type.GetTypeInfo().IsValueType)
+                type = type.MakeByRefType();
+            return type;
+        }
+
         #endregion
 
         #region DynamicMethod generation helpers
