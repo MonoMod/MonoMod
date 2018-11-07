@@ -127,7 +127,7 @@ namespace MonoMod.Utils {
             Type[] argTypes;
             if (!Method.IsStatic) {
                 argTypes = new Type[args.Length + 1];
-                argTypes[0] = Method.DeclaringType;
+                argTypes[0] = Method.GetThisParamType();
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i + 1] = args[i].ParameterType;
             } else {

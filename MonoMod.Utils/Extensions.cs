@@ -300,5 +300,12 @@ namespace MonoMod.Utils {
             }
         }
 
+        public static Type GetThisParamType(this MethodBase method) {
+            Type type = method.DeclaringType;
+            if (type.GetTypeInfo().IsValueType)
+                type = type.MakeByRefType();
+            return type;
+        }
+
     }
 }
