@@ -10,7 +10,10 @@ using System.Runtime.CompilerServices;
 namespace MonoMod.UnitTest {
     public unsafe class StructMagicTest {
 
-        public static bool IsHook = false;
+        public static bool IsHook;
+
+        public static StructMagicTest GetStructInstance;
+        public int GetStructCounter;
 
         [Fact]
         public void TestPtrRefMagic() {
@@ -30,26 +33,23 @@ namespace MonoMod.UnitTest {
             }
         }
 
-
-        /* This test currently only works with Mono.
-         * The .NET Framework's runtime / JIT calls GetSize differently
-         * than other instance methods. Based on a completely unrelated
-         * comment by Tanner Gooding in the C# Discord server, it's
-         * possibly caused by "whether RCX contains the this pointer or
-         * the return buffer pointer (when returning a struct by value)"
-         */
-        [Fact(Skip = "This usecase is currently only supported with Mono.")]
+        [Fact]
         public void TestReturnStruct() {
+            GetStructInstance = this;
+
             IsHook = false;
-            CheckSize(GetSize(), 1D, 2D);
+            GetStructCounter = 0;
+            GetStruct((IntPtr) 100);
+            Assert.Equal(100, GetStructCounter);
 
             using (new Hook(
-                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetSize"),
-                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetSizeHook")
+                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetStruct"),
+                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetStructHook")
             )) {
                 IsHook = true;
-                Size s = GetSize();
-                CheckSize(s, 10D, 20D);
+                GetStructCounter = 600;
+                GetStruct((IntPtr) 100);
+                Assert.Equal(1100, GetStructCounter);
             }
         }
 
@@ -60,25 +60,19 @@ namespace MonoMod.UnitTest {
             Assert.Equal(a, c.A);
         }
 
-        public static void CheckSize(Size s, double width, double height) {
-            Assert.Equal(width, s.Width);
-            Assert.Equal(height, s.Height);
-        }
-
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Size GetSize() {
-            Assert.False(IsHook);
-            return new Size(1D, 2D);
+        public SomeOtherStruct GetStruct(IntPtr x) {
+            GetStructCounter += (int) x;
+            return new SomeOtherStruct();
         }
 
-        public static Size GetSizeHook(Func<StructMagicTest, Size> orig, StructMagicTest self) {
+        public static SomeOtherStruct GetStructHook(Func<StructMagicTest, IntPtr, SomeOtherStruct> orig, StructMagicTest self, IntPtr x) {
             Assert.True(IsHook);
             IsHook = false;
-            Size s = orig(self);
+            SomeOtherStruct s = orig(self, x);
             IsHook = true;
 
-            s.Width *= 10D;
-            s.Height *= 10D;
+            self.GetStructCounter += 400;
             return s;
         }
 
@@ -163,14 +157,10 @@ namespace MonoMod.UnitTest {
             public byte R, G, B, A;
         }
 
-        public struct Size {
-            public double Width { get; set; }
-            public double Height { get; set; }
-
-            public Size(double width, double height) {
-                Width = width;
-                Height = height;
-            }
+        public struct SomeOtherStruct {
+            public byte A;
+            public byte B;
+            public byte C;
         }
 
     }

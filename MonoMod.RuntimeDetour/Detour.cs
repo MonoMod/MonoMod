@@ -57,6 +57,7 @@ namespace MonoMod.RuntimeDetour {
 
         public readonly MethodBase Method;
         public readonly MethodBase Target;
+        public readonly MethodBase TargetReal;
 
         // The active NativeDetour. Only present if the current Detour is on the top of the Detour chain.
         private NativeDetour _TopDetour;
@@ -67,6 +68,7 @@ namespace MonoMod.RuntimeDetour {
         public Detour(MethodBase from, MethodBase to) {
             Method = from;
             Target = to;
+            TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to);
 
             if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
                 return;
@@ -93,7 +95,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             _ChainedTrampoline = new DynamicMethod(
-                $"chain_{Method.Name}_{GetHashCode()}",
+                $"Chain<{Method.Name}>?{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 false // Otherwise just ret is invalid for whatever reason.
@@ -235,7 +237,7 @@ namespace MonoMod.RuntimeDetour {
             ILGenerator il;
 
             dm = new DynamicMethod(
-                $"trampoline_{Method.Name}_{GetHashCode()}",
+                $"Trampoline<{Method.Name}>?{GetHashCode()}",
                 returnType, argTypes,
                 Method.DeclaringType,
                 true
@@ -275,7 +277,7 @@ namespace MonoMod.RuntimeDetour {
                 return;
 
             // GetNativeStart to prevent managed backups.
-            _TopDetour = new NativeDetour(Method.GetNativeStart(), Target.GetNativeStart());
+            _TopDetour = new NativeDetour(Method.GetNativeStart(), TargetReal.GetNativeStart());
         }
 
         private static void _UpdateChainedTrampolines(MethodBase method) {

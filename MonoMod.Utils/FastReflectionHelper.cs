@@ -21,7 +21,7 @@ namespace MonoMod.Utils {
         public static FastReflectionDelegate CreateDelegate(MethodBase method, bool directBoxValueAccess = true)
             => CreateFastDelegate(method, directBoxValueAccess);
         public static FastReflectionDelegate CreateFastDelegate(this MethodBase method, bool directBoxValueAccess = true) {
-            DynamicMethod dynam = new DynamicMethod(string.Empty, typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).GetTypeInfo().Module, true);
+            DynamicMethod dynam = new DynamicMethod($"FastReflection<{method.Name}>", typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).GetTypeInfo().Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
             ParameterInfo[] args = method.GetParameters();

@@ -8,26 +8,49 @@ using System.Collections.Generic;
 namespace MonoMod.RuntimeDetour {
     public static class DetourHelper {
 
-        public static IDetourRuntimePlatform Runtime;
-        public static IDetourNativePlatform Native;
+        private static readonly object _RuntimeLock = new object();
+        private static IDetourRuntimePlatform _Runtime;
+        public static IDetourRuntimePlatform Runtime {
+            get {
+                lock (_RuntimeLock) {
+                    if (_Runtime != null)
+                        return _Runtime;
 
-        static DetourHelper() {
-            if (Type.GetType("Mono.Runtime") != null) {
-                Runtime = new DetourRuntimeMonoPlatform();
-            } else {
-                Runtime = new DetourRuntimeNETPlatform();
-            }
+                    if (Type.GetType("Mono.Runtime") != null) {
+                        _Runtime = new DetourRuntimeMonoPlatform();
+                    } else {
+                        _Runtime = new DetourRuntimeNETPlatform();
+                    }
 
-            if (PlatformHelper.Is(Platform.ARM)) {
-                Native = new DetourNativeARMPlatform();
-            } else {
-                Native = new DetourNativeX86Platform();
+                    return _Runtime;
+                }
             }
+            set => _Runtime = value;
+        }
 
-            if ((PlatformHelper.Current & Platform.Windows) == Platform.Windows) {
-                Native = new DetourNativeWindowsPlatform(Native);
+        private static readonly object _NativeLock = new object();
+        private static IDetourNativePlatform _Native;
+        public static IDetourNativePlatform Native {
+            get {
+                lock (_NativeLock) {
+                    if (_Native != null)
+                        return _Native;
+
+                    if (PlatformHelper.Is(Platform.ARM)) {
+                        _Native = new DetourNativeARMPlatform();
+                    } else {
+                        _Native = new DetourNativeX86Platform();
+                    }
+
+                    if ((PlatformHelper.Current & Platform.Windows) == Platform.Windows) {
+                        _Native = new DetourNativeWindowsPlatform(_Native);
+                    }
+                    // TODO: Do Linux, macOS and other systems require protection lifting?
+
+                    return _Native;
+                }
             }
-            // TODO: Do Linux, macOS and other systems require protection lifting?
+            set => _Native = value;
         }
 
         #region Native helpers
@@ -129,10 +152,10 @@ namespace MonoMod.RuntimeDetour {
                 Extra = extra
             };
 
-        private static readonly FieldInfo _Native = typeof(DetourHelper).GetTypeInfo().GetField("Native");
-        private static readonly MethodInfo _ToNativeDetourData = typeof(DetourHelper).GetTypeInfo().GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
-        private static readonly MethodInfo _Copy = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Copy");
-        private static readonly MethodInfo _Apply = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Apply");
+        private static readonly FieldInfo _f_Native = typeof(DetourHelper).GetTypeInfo().GetField("Native");
+        private static readonly MethodInfo _m_ToNativeDetourData = typeof(DetourHelper).GetTypeInfo().GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
+        private static readonly MethodInfo _m_Copy = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Copy");
+        private static readonly MethodInfo _m_Apply = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Apply");
         private static readonly ConstructorInfo _ctor_Exception = typeof(Exception).GetTypeInfo().GetConstructor(new Type[] { typeof(string) });
 
         /// <summary>
@@ -155,7 +178,7 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         public static void EmitDetourCopy(this ILGenerator il, IntPtr src, IntPtr dst, int size) {
             // Load NativePlatform instance.
-            il.Emit(OpCodes.Ldsfld, _Native);
+            il.Emit(OpCodes.Ldsfld, _f_Native);
 
             // Fill stack with src, dst, size
             il.Emit(OpCodes.Ldc_I8, (long) src);
@@ -165,7 +188,7 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Ldc_I4, size);
 
             // Copy.
-            il.Emit(OpCodes.Callvirt, _Copy);
+            il.Emit(OpCodes.Callvirt, _m_Copy);
         }
 
         /// <summary>
@@ -173,7 +196,7 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         public static void EmitDetourApply(this ILGenerator il, NativeDetourData data) {
             // Load NativePlatform instance.
-            il.Emit(OpCodes.Ldsfld, _Native);
+            il.Emit(OpCodes.Ldsfld, _f_Native);
 
             // Fill stack with data values.
             il.Emit(OpCodes.Ldc_I8, (long) data.Method);
@@ -185,10 +208,10 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Conv_I);
 
             // Put values in stack into NativeDetourData.
-            il.Emit(OpCodes.Call, _ToNativeDetourData);
+            il.Emit(OpCodes.Call, _m_ToNativeDetourData);
 
             // Apply.
-            il.Emit(OpCodes.Callvirt, _Apply);
+            il.Emit(OpCodes.Callvirt, _m_Apply);
         }
 
         #endregion

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -261,7 +262,7 @@ namespace MonoMod.Utils {
 
             // TODO: Check delegate Invoke parameters against method parameters.
 
-#if NETSTANDARD
+#if NETSTANDARD1_X
             throw new NotSupportedException();
 #else
             RuntimeMethodHandle handle = method.MethodHandle;
@@ -273,6 +274,31 @@ namespace MonoMod.Utils {
 
         public static bool HasCustomAttribute(this ICustomAttributeProvider cap, Type t)
             => cap.GetCustomAttributes(t, false)?.Length != 0;
+
+        private static readonly Dictionary<Type, int> _GetManagedSizeCache = new Dictionary<Type, int>() {
+            { typeof(void), 0 }
+        };
+        public static int GetManagedSize(this Type t) {
+            if (_GetManagedSizeCache.TryGetValue(t, out int size))
+                return size;
+
+            // Note: sizeof is more accurate for the "managed size" than Marshal.SizeOf (marshalled size)
+            // It also returns a value for types of which the size cannot be determined otherwise.
+
+            DynamicMethod dm = new DynamicMethod(
+                $"GetSize:{t.FullName}",
+                typeof(int), Type.EmptyTypes,
+                true
+            );
+
+            ILGenerator il = dm.GetILGenerator();
+            il.Emit(OpCodes.Sizeof, t);
+            il.Emit(OpCodes.Ret);
+
+            lock (_GetManagedSizeCache) {
+                return _GetManagedSizeCache[t] = (dm.CreateDelegate(typeof(Func<int>)) as Func<int>)();
+            }
+        }
 
     }
 }

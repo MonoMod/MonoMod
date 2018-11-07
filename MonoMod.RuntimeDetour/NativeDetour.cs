@@ -79,7 +79,7 @@ namespace MonoMod.RuntimeDetour {
             : this(from, to.GetNativeStart()) {
         }
         public NativeDetour(MethodBase from, MethodBase to)
-            : this(from, to.GetNativeStart()) {
+            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).GetNativeStart()) {
         }
 
         public NativeDetour(Delegate from, IntPtr to)
@@ -176,7 +176,7 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             DynamicMethod dm;
-            string name = $"trampoline_native_{Method?.Name.ToString() ?? ((long) Data.Method).ToString("X16")}_{GetHashCode()}";
+            string name = $"Trampoline:Native<{Method?.Name.ToString() ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}";
             if (Method != null) {
                 dm = new DynamicMethod(
                     name,
