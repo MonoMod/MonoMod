@@ -567,8 +567,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
                 HasThis = true
             };
-            if (!method.IsStatic)
-                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, ImportVisible(method.DeclaringType)));
+            if (!method.IsStatic) {
+                TypeReference selfType = ImportVisible(method.DeclaringType);
+                if (method.DeclaringType.IsValueType)
+                    selfType = new ByReferenceType(selfType);
+                invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, selfType));
+            }
             foreach (ParameterDefinition param in method.Parameters)
                 invoke.Parameters.Add(new ParameterDefinition(
                     param.Name,
