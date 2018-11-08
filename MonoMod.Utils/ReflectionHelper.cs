@@ -48,7 +48,7 @@ namespace MonoMod.Utils {
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
                 string methodID = method.GetFindableID(withType: false);
-                MethodInfo found = type.GetMethods().First(m => m.GetFindableID(withType: false) == methodID);
+                MethodInfo found = type.AsType().GetMethods().First(m => m.GetFindableID(withType: false) == methodID);
                 if (found != null)
                     return ResolveReflectionCache[mref] = found;
             }
@@ -105,7 +105,7 @@ namespace MonoMod.Utils {
                         return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray()).GetTypeInfo();
 
                 } else {
-                    type = module.GetType(mref.FullName.Replace("/", "+")).GetTypeInfo();
+                    type = module.GetType(mref.FullName.Replace("/", "+"), false, false).GetTypeInfo();
                 }
 
                 return ResolveReflectionCache[mref] = type;
@@ -120,7 +120,7 @@ namespace MonoMod.Utils {
                 member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
 
             } else {
-                member = type.GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));
+                member = type.AsType().GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));
             }
 
             return ResolveReflectionCache[mref] = member;

@@ -255,7 +255,7 @@ namespace MonoMod.Utils {
         /// <param name="target">The object targeted by the delegate.</param>
         /// <returns>The delegate for this method.</returns>
         public static Delegate CreateDelegate(this MethodBase method, Type delegateType, object target) {
-            if (!typeof(Delegate).GetTypeInfo().IsAssignableFrom(delegateType))
+            if (!typeof(Delegate).IsAssignableFrom(delegateType))
                 throw new ArgumentException("Type argument must be a delegate type!");
             if (method is DynamicMethod)
                 return ((DynamicMethod) method).CreateDelegate(delegateType, target);
@@ -271,9 +271,6 @@ namespace MonoMod.Utils {
             return (Delegate) Activator.CreateInstance(delegateType, target, ptr);
 #endif
         }
-
-        public static bool HasCustomAttribute(this ICustomAttributeProvider cap, Type t)
-            => cap.GetCustomAttributes(t, false)?.Length != 0;
 
         private static readonly Dictionary<Type, int> _GetManagedSizeCache = new Dictionary<Type, int>() {
             { typeof(void), 0 }

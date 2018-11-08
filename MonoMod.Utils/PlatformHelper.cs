@@ -30,7 +30,7 @@ namespace MonoMod.Utils {
 #else
             // For old Mono, get from a private property to accurately get the platform.
             // static extern PlatformID Platform
-            PropertyInfo property_platform = typeof(Environment).GetTypeInfo().GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
+            PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
             string platID;
             if (property_platform != null) {
                 platID = property_platform.GetValue(null, new object[0]).ToString();
@@ -64,7 +64,7 @@ namespace MonoMod.Utils {
                 Current |= Platform.ARM;
 #else
             // Detect ARM based on PE info.
-            typeof(object).GetTypeInfo().Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
+            typeof(object).Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
             if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET 4.5 */)
                 Current |= Platform.ARM;
 #endif

@@ -23,12 +23,12 @@ namespace MonoMod.ModInterop {
             }
 
             // Collect fields and methods in the type.
-            foreach (FieldInfo field in type.GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                if (!typeof(Delegate).GetTypeInfo().IsAssignableFrom(field.FieldType))
+            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Static)) {
+                if (!typeof(Delegate).IsAssignableFrom(field.FieldType))
                     continue;
                 Fields.Add(field);
             }
-            foreach (MethodInfo method in type.GetTypeInfo().GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
                 method.RegisterModExport();
                 method.RegisterModExport(prefix);
             }

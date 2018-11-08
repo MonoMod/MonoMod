@@ -13,6 +13,7 @@ using System.Threading;
 
 #if NETSTANDARD
 using static System.Reflection.IntrospectionExtensions;
+using static System.Reflection.TypeExtensions;
 #endif
 
 namespace MonoMod.DebugIL {
@@ -21,7 +22,7 @@ namespace MonoMod.DebugIL {
         public static readonly Regex PathVerifyRegex =
             new Regex("[" + Regex.Escape(new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars())) + "]", RegexOptions.Compiled);
         public static readonly System.Reflection.ConstructorInfo m_DebuggableAttribute_ctor =
-            typeof(DebuggableAttribute).GetTypeInfo().GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
+            typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
 
         public MonoModder Modder;
 

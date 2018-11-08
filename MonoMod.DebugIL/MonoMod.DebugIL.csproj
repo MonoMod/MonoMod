@@ -5,7 +5,7 @@
 
     <AssemblyName>MonoMod.DebugIL</AssemblyName>
 
-    <TargetFrameworks>net35;netstandard1.6;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />

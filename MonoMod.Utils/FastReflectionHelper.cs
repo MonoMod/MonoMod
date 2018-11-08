@@ -14,8 +14,8 @@ namespace MonoMod.Utils {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
         private static readonly IDictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new Dictionary<MethodInfo, FastReflectionDelegate>();
 
-        private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetTypeInfo().GetMethod("WriteLine", new Type[] { typeof(object) });
-        private static readonly MethodInfo m_object_GetType = typeof(object).GetTypeInfo().GetMethod("GetType");
+        private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(object) });
+        private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
 
         [Obsolete("Use CreateFastDelegate instead.")]
         public static FastReflectionDelegate CreateDelegate(MethodBase method, bool directBoxValueAccess = true)
@@ -112,7 +112,7 @@ namespace MonoMod.Utils {
 
         public static T CreateJmpDelegate<T>(this MethodBase method) {
             Type t = typeof(T);
-            MethodInfo invoke = t.GetTypeInfo().GetMethod("Invoke");
+            MethodInfo invoke = t.GetMethod("Invoke");
 
             ParameterInfo[] args = invoke.GetParameters();
             Type[] argTypes = new Type[args.Length];

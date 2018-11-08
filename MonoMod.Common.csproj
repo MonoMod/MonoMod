@@ -77,12 +77,13 @@
         <DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X;$(DefineConstants)</DefineConstants>
       </PropertyGroup>
       <ItemGroup>
+        <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil, which targets .NET Standard 1.0 -->
+        <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
         <PackageReference Include="System.Collections.NonGeneric" Version="4.3.0" />
         <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
         <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
         <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="4.3.0" />
-        <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
       </ItemGroup>
     </When>
     <Otherwise>

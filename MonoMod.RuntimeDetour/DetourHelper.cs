@@ -152,11 +152,11 @@ namespace MonoMod.RuntimeDetour {
                 Extra = extra
             };
 
-        private static readonly FieldInfo _f_Native = typeof(DetourHelper).GetTypeInfo().GetField("Native");
-        private static readonly MethodInfo _m_ToNativeDetourData = typeof(DetourHelper).GetTypeInfo().GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
-        private static readonly MethodInfo _m_Copy = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Copy");
-        private static readonly MethodInfo _m_Apply = typeof(IDetourNativePlatform).GetTypeInfo().GetMethod("Apply");
-        private static readonly ConstructorInfo _ctor_Exception = typeof(Exception).GetTypeInfo().GetConstructor(new Type[] { typeof(string) });
+        private static readonly FieldInfo _f_Native = typeof(DetourHelper).GetField("Native");
+        private static readonly MethodInfo _m_ToNativeDetourData = typeof(DetourHelper).GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
+        private static readonly MethodInfo _m_Copy = typeof(IDetourNativePlatform).GetMethod("Copy");
+        private static readonly MethodInfo _m_Apply = typeof(IDetourNativePlatform).GetMethod("Apply");
+        private static readonly ConstructorInfo _ctor_Exception = typeof(Exception).GetConstructor(new Type[] { typeof(string) });
 
         /// <summary>
         /// Fill the DynamicMethod with a throw.

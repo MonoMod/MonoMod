@@ -17,6 +17,15 @@ namespace MonoMod.InlineRT {
         private static readonly Assembly MonoModAsm = typeof(MonoModRulesManager).GetTypeInfo().Assembly;
 
 #if NETSTANDARD1_X
+        private static readonly Type t_AssemblyLoadContext =
+            typeof(Assembly).GetTypeInfo().Assembly
+            .GetType("System.Runtime.Loader.AssemblyLoadContext");
+        private static readonly object _AssemblyLoadContext_Default =
+            t_AssemblyLoadContext.GetProperty("Default").GetValue(null);
+        private static readonly FastReflectionDelegate _AssemblyLoadContext_LoadFromStream =
+            t_AssemblyLoadContext.GetMethod("LoadFromStream", new Type[] { typeof(Stream) })
+            .CreateFastDelegate();
+
         internal static readonly ThreadLocal<WeakReference> ModderLast = new ThreadLocal<WeakReference>();
         internal static readonly ThreadLocal<Type> RuleTypeLast = new ThreadLocal<Type>();
 #else
@@ -35,10 +44,10 @@ namespace MonoMod.InlineRT {
                 for (int i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
-                    Assembly asm = method.DeclaringType.GetTypeInfo().Assembly;
+                    Assembly asm = method.DeclaringType.Assembly;
                     if (asm == MonoModAsm)
                         continue;
-                    MonoModder modder = GetModder(method.DeclaringType.GetTypeInfo().Assembly.GetName().Name);
+                    MonoModder modder = GetModder(method.DeclaringType.Assembly.GetName().Name);
                     if (modder != null)
                         return modder;
                 }
@@ -57,7 +66,7 @@ namespace MonoMod.InlineRT {
                 for (int i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
-                    Assembly asm = method.DeclaringType.GetTypeInfo().Assembly;
+                    Assembly asm = method.DeclaringType.Assembly;
                     if (asm != MonoModAsm)
                         return method.DeclaringType;
                 }
@@ -99,11 +108,9 @@ namespace MonoMod.InlineRT {
                 return null;
             idString = idString.Substring(idIndex + 12);
             idString = idString.Substring(0, idString.IndexOf(']'));
-            long id;
-            if (!long.TryParse(idString, out id))
+            if (!long.TryParse(idString, out long id))
                 throw new InvalidOperationException($"Cannot get MonoModder ID from assembly name {asmName}");
-            WeakReference modder;
-            if (!ModderMap.TryGetValue(id, out modder) || !modder.IsAlive)
+            if (!ModderMap.TryGetValue(id, out WeakReference modder) || !modder.IsAlive)
                 return null;
             return (MonoModder) modder.Target;
 #endif
@@ -168,9 +175,9 @@ namespace MonoMod.InlineRT {
             using (MemoryStream asmStream = new MemoryStream()) {
                 wrapperMod.Write(asmStream);
                 asmStream.Seek(0, SeekOrigin.Begin);
-#if NETSTANDARD
-                // TODO: This supposedly only works with .NET Core 2+
-                asm = System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
+#if NETSTANDARD1_X
+                // System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
+                asm = (Assembly) _AssemblyLoadContext_LoadFromStream(_AssemblyLoadContext_Default, asmStream);
 #else
                 asm = Assembly.Load(asmStream.GetBuffer());
 #endif

@@ -120,7 +120,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="type">The type containing the DynDllImport delegate fields.</param>
         public static void ResolveDynDllImports(this Type type) {
-            foreach (FieldInfo field in type.GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)) {
+            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)) {
                 bool found = true;
                 foreach (DynDllImportAttribute attrib in field.GetCustomAttributes(typeof(DynDllImportAttribute), true)) {
                     found = false;

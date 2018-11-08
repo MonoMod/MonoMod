@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 #if NETSTANDARD
 using TypeOrTypeInfo = System.Reflection.TypeInfo;
 using static System.Reflection.IntrospectionExtensions;
+using static System.Reflection.TypeExtensions;
 #else
 using TypeOrTypeInfo = System.Type;
 #endif
@@ -26,7 +27,7 @@ namespace MonoMod.Utils {
     [MonoMod__OldName__("MonoMod.MonoModExt")]
     public static class MonoModExt {
 
-        public static IDictionary<string, object> SharedData = new Dictionary<string, object>();
+        public static Dictionary<string, object> SharedData = new Dictionary<string, object>();
 
         static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");
         static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
@@ -80,8 +81,8 @@ namespace MonoMod.Utils {
             return c;
         }
 
-        public static readonly System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetTypeInfo().GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        public static readonly System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetTypeInfo().GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public static readonly System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        public static readonly System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         public static GenericParameter Update(this GenericParameter param, GenericParameter other)
             => param.Update(other.Position, other.Type);
         public static GenericParameter Update(this GenericParameter param, int position, GenericParameterType type) {
@@ -295,7 +296,11 @@ namespace MonoMod.Utils {
                 if (i > (proxyMethod ? 1 : 0))
                     builder.Append(",");
 
-                if (parameter.HasCustomAttribute(t_ParamArrayAttribute))
+#if NETSTANDARD
+                if (System.Reflection.CustomAttributeExtensions.IsDefined(parameter, t_ParamArrayAttribute, false))
+#else
+                if (t_ParamArrayAttribute.GetCustomAttributes(t_ParamArrayAttribute, false).Length != 0)
+#endif
                     builder.Append("...,");
 
                 builder.Append(parameter.ParameterType.FullName);
@@ -323,7 +328,7 @@ namespace MonoMod.Utils {
                 return genParamRef.Position == genParamInfo.GenericParameterPosition;
             }
 
-            if (!(mref.DeclaringType?.Is(minfo.DeclaringType?.GetTypeInfo()) ?? minfo.DeclaringType == null))
+            if (!(mref.DeclaringType?.Is(minfo.DeclaringType.GetTypeInfo()) ?? minfo.DeclaringType == null))
                 return false;
             if (mref.Name != minfo.Name)
                 return false;
@@ -339,16 +344,16 @@ namespace MonoMod.Utils {
                         return false;
 
                     Collection<TypeReference> paramRefs = genTypeRef.GenericArguments;
-                    Type[] paramInfos = typeInfo.GetGenericArguments();
+                    Type[] paramInfos = typeInfo.AsType().GetGenericArguments();
                     if (paramRefs.Count != paramInfos.Length)
                         return false;
 
                     for (int i = 0; i < paramRefs.Count; i++) {
-                        if (!paramRefs[i].Is(paramInfos[i]?.GetTypeInfo()))
+                        if (!paramRefs[i].Is(paramInfos[i].GetTypeInfo()))
                             return false;
                     }
 
-                    return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition()?.GetTypeInfo());
+                    return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition().GetTypeInfo());
                 }
 
                 // DeclaringType was already checked before.
@@ -379,7 +384,7 @@ namespace MonoMod.Utils {
                             // ... or we're comparing generic params against generic params.
                         }
                     }
-                    if (!paramTypeRef.Is(paramInfos[i].ParameterType?.GetTypeInfo()))
+                    if (!paramTypeRef.Is(paramInfos[i].ParameterType.GetTypeInfo()))
                         return false;
                 }
 
@@ -733,7 +738,7 @@ namespace MonoMod.Utils {
             return null;
         }
         public static System.Reflection.MethodInfo FindMethod(this Type type, string findableID, bool simple = true) {
-            System.Reflection.MethodInfo[] methods = type.GetTypeInfo().GetMethods(
+            System.Reflection.MethodInfo[] methods = type.GetMethods(
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static |
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
             );
@@ -1169,12 +1174,12 @@ namespace MonoMod.Utils {
             }
         }
 
-        private static readonly TypeOrTypeInfo t_Code = typeof(Code).GetTypeInfo();
-        private static readonly TypeOrTypeInfo t_OpCodes = typeof(OpCodes).GetTypeInfo();
+        private static readonly Type t_Code = typeof(Code);
+        private static readonly Type t_OpCodes = typeof(OpCodes);
 
         private static readonly Dictionary<int, OpCode> _ShortToLongOp = new Dictionary<int, OpCode>();
         public static OpCode ShortToLongOp(this OpCode op) {
-            string name = Enum.GetName(t_Code.AsType(), op.Code);
+            string name = Enum.GetName(t_Code, op.Code);
             if (!name.EndsWith("_S"))
                 return op;
             if (_ShortToLongOp.TryGetValue((int) op.Code, out OpCode found))
@@ -1184,7 +1189,7 @@ namespace MonoMod.Utils {
 
         private static readonly Dictionary<int, OpCode> _LongToShortOp = new Dictionary<int, OpCode>();
         public static OpCode LongToShortOp(this OpCode op) {
-            string name = Enum.GetName(t_Code.AsType(), op.Code);
+            string name = Enum.GetName(t_Code, op.Code);
             if (name.EndsWith("_S"))
                 return op;
             if (_LongToShortOp.TryGetValue((int) op.Code, out OpCode found))

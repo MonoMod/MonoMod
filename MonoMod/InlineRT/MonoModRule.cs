@@ -4,6 +4,7 @@ using System;
 
 #if NETSTANDARD
 using static System.Reflection.IntrospectionExtensions;
+using static System.Reflection.TypeExtensions;
 #endif
 
 namespace MonoMod.InlineRT {
@@ -76,13 +77,13 @@ namespace MonoMod.InlineRT {
         public static void RegisterCustomAttribute(string attribName, string handlerName) {
             MonoModder self = Modder;
 
-            self.CustomAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetTypeInfo().GetMethod(handlerName).GetFastDelegate();
+            self.CustomAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetMethod(handlerName).GetFastDelegate();
         }
 
         public static void RegisterCustomMethodAttribute(string attribName, string handlerName) {
             MonoModder self = Modder;
 
-            self.CustomMethodAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetTypeInfo().GetMethod(handlerName).GetFastDelegate();
+            self.CustomMethodAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetMethod(handlerName).GetFastDelegate();
         }
 
         public static class Flag {

@@ -18,7 +18,7 @@ namespace MonoMod.UnitTest {
             // Run the original method.
             Assert.Equal(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
-            MethodInfo original = typeof(DynamicMethodDefinitionTest).GetTypeInfo().GetMethod(nameof(ExampleMethod));
+            MethodInfo original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
             DynamicMethod patched;
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(original)) {
                 // Modify the MethodDefinition.

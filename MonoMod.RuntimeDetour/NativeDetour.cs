@@ -237,10 +237,10 @@ namespace MonoMod.RuntimeDetour {
         /// If the NativeDetour holds a reference to a native function, an "undo-call-redo" trampoline with a matching signature is returned.
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
-            if (!typeof(Delegate).GetTypeInfo().IsAssignableFrom(typeof(T)))
+            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
                 throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
 
-            return GenerateTrampoline(typeof(T).GetTypeInfo().GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
+            return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
         }
     }
 }

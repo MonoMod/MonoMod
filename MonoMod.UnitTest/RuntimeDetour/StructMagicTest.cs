@@ -24,8 +24,8 @@ namespace MonoMod.UnitTest {
             CheckColor(c, 0x0A, 0xDE, 0xEE, 0x80);
 
             using (new Detour(
-                typeof(StructMagicTest).GetTypeInfo().GetMethod("ManipColor"),
-                typeof(StructMagicTest).GetTypeInfo().GetMethod("ManipColorHook")
+                typeof(StructMagicTest).GetMethod("ManipColor"),
+                typeof(StructMagicTest).GetMethod("ManipColorHook")
             )) {
                 IsHook = true;
                 ManipColor(ref c, 0x12, 0x34, 0x56, 0x78);
@@ -43,8 +43,8 @@ namespace MonoMod.UnitTest {
             Assert.Equal(100, GetStructCounter);
 
             using (new Hook(
-                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetStruct"),
-                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetStructHook")
+                typeof(StructMagicTest).GetMethod("GetStruct"),
+                typeof(StructMagicTest).GetMethod("GetStructHook")
             )) {
                 IsHook = true;
                 GetStructCounter = 600;
@@ -63,8 +63,8 @@ namespace MonoMod.UnitTest {
             Assert.Equal(c.A, c.R);
 
             using (new Hook(
-                typeof(ColorRGBA).GetTypeInfo().GetMethod("get_IsTransparent"),
-                typeof(StructMagicTest).GetTypeInfo().GetMethod("GetIsTransparentHook")
+                typeof(ColorRGBA).GetMethod("get_IsTransparent"),
+                typeof(StructMagicTest).GetMethod("GetIsTransparentHook")
             )) {
                 IsHook = true;
                 c.A = 10;

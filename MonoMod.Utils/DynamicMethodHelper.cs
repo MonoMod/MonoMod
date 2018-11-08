@@ -20,8 +20,8 @@ namespace MonoMod.Utils {
         }
         public static void FreeReference(int id) => References[id] = null;
 
-        private static readonly MethodInfo _GetMethodFromHandle = typeof(MethodBase).GetTypeInfo().GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
-        private static readonly MethodInfo _GetReference = typeof(DynamicMethodHelper).GetTypeInfo().GetMethod("GetReference");
+        private static readonly MethodInfo _GetMethodFromHandle = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
+        private static readonly MethodInfo _GetReference = typeof(DynamicMethodHelper).GetMethod("GetReference");
 
         /// <summary>
         /// Fill the DynamicMethod with a stub.

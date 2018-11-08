@@ -28,9 +28,9 @@ namespace MonoMod.RuntimeDetour {
             // This is documented behavior for coreclr, but can implicitly affect all other runtimes (including mono!) as well.
             // Specifically, this should affect all __thiscalls
 
-            MethodInfo selftest = typeof(DetourRuntimeILPlatform).GetTypeInfo().GetMethod("_SelftestGetStruct", BindingFlags.NonPublic | BindingFlags.Instance);
+            MethodInfo selftest = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetStruct", BindingFlags.NonPublic | BindingFlags.Instance);
             Pin(selftest);
-            MethodInfo selftestHook = typeof(DetourRuntimeILPlatform).GetTypeInfo().GetMethod("_SelftestGetStructHook", BindingFlags.NonPublic | BindingFlags.Static);
+            MethodInfo selftestHook = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetStructHook", BindingFlags.NonPublic | BindingFlags.Static);
             Pin(selftestHook);
             NativeDetourData detour = DetourHelper.Native.Create(
                 GetNativeStart(selftest),
@@ -201,16 +201,16 @@ namespace MonoMod.RuntimeDetour {
 
     public sealed class DetourRuntimeNETPlatform : DetourRuntimeILPlatform {
         private static readonly FieldInfo f_DynamicMethod_m_method =
-            typeof(DynamicMethod).GetTypeInfo().GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
 
         private static readonly FastReflectionDelegate _DynamicMethod_GetMethodDescriptor =
-            typeof(DynamicMethod).GetTypeInfo().GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance)
             ?.CreateFastDelegate();
         private static readonly FieldInfo f_RuntimeMethodHandle_m_value =
-            typeof(RuntimeMethodHandle).GetTypeInfo().GetField("m_value", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(RuntimeMethodHandle).GetField("m_value", BindingFlags.NonPublic | BindingFlags.Instance);
 
         private static readonly MethodInfo m_RuntimeHelpers__CompileMethod =
-            typeof(RuntimeHelpers).GetTypeInfo().GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
+            typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
         private static readonly FastReflectionDelegate _RuntimeHelpers__CompileMethod =
             m_RuntimeHelpers__CompileMethod?.CreateFastDelegate();
         private static readonly bool m_RuntimeHelpers__CompileMethod_TakesIntPtr =
@@ -222,15 +222,15 @@ namespace MonoMod.RuntimeDetour {
 
 #if NETSTANDARD1_X
         private static readonly FastReflectionDelegate _MethodBase_get_MethodHandle =
-            typeof(MethodBase).GetTypeInfo().GetMethod("get_MethodHandle", BindingFlags.Public | BindingFlags.Instance)
+            typeof(MethodBase).GetMethod("get_MethodHandle", BindingFlags.Public | BindingFlags.Instance)
             ?.CreateFastDelegate();
 
         private static readonly FastReflectionDelegate _IRuntimeMethodInfo_get_Value =
             typeof(RuntimeMethodHandle).GetTypeInfo().Assembly
-            .GetType("System.IRuntimeMethodInfo").GetTypeInfo().GetMethod("get_Value", BindingFlags.Public | BindingFlags.Instance)
+            .GetType("System.IRuntimeMethodInfo").GetMethod("get_Value", BindingFlags.Public | BindingFlags.Instance)
             ?.CreateFastDelegate();
         private static readonly FastReflectionDelegate _RuntimeMethodHandle_GetFunctionPointer =
-            typeof(RuntimeMethodHandle).GetTypeInfo().GetMethod("GetFunctionPointer", BindingFlags.NonPublic | BindingFlags.Static)
+            typeof(RuntimeMethodHandle).GetMethod("GetFunctionPointer", BindingFlags.NonPublic | BindingFlags.Static)
             ?.CreateFastDelegate();
 
         // .NET Core 1.0.0 should have GetFunctionPointer, but it only has got its internal static counterpart.
@@ -284,28 +284,28 @@ namespace MonoMod.RuntimeDetour {
 
     public sealed class DetourRuntimeMonoPlatform : DetourRuntimeILPlatform {
         private static readonly MethodInfo m_DynamicMethod_CreateDynMethod =
-            typeof(DynamicMethod).GetTypeInfo().GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(DynamicMethod).GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FastReflectionDelegate dmd_DynamicMethod_CreateDynMethod =
             m_DynamicMethod_CreateDynMethod?.CreateFastDelegate();
 
         private static readonly FieldInfo f_DynamicMethod_mhandle =
-            typeof(DynamicMethod).GetTypeInfo().GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Let's just hope that those are present in Mono's implementation of .NET Standard 1.X
 #if NETSTANDARD1_X
         // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/Reflection/MethodInfo.cs#L613
         private static readonly FastReflectionDelegate _MethodBase_get_MethodHandle =
-            typeof(MethodBase).GetTypeInfo().GetMethod("get_MethodHandle", BindingFlags.Public | BindingFlags.Instance)
+            typeof(MethodBase).GetMethod("get_MethodHandle", BindingFlags.Public | BindingFlags.Instance)
             ?.CreateFastDelegate();
 
         // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/RuntimeHandles.cs#L1045
         private static readonly FastReflectionDelegate _RuntimeMethodHandle_GetFunctionPointer =
-            typeof(RuntimeMethodHandle).GetTypeInfo().GetMethod("GetFunctionPointer", BindingFlags.Public | BindingFlags.Instance)
+            typeof(RuntimeMethodHandle).GetMethod("GetFunctionPointer", BindingFlags.Public | BindingFlags.Instance)
             ?.CreateFastDelegate();
 
         // https://github.com/dotnet/coreclr/blob/release/1.0.0/src/mscorlib/src/System/Runtime/CompilerServices/RuntimeHelpers.cs#L102
         private static readonly FastReflectionDelegate _RuntimeHelpers_PrepareMethod =
-            typeof(RuntimeHelpers).GetTypeInfo().GetMethod("PrepareMethod", new Type[] { typeof(RuntimeMethodHandle) })
+            typeof(RuntimeHelpers).GetMethod("PrepareMethod", new Type[] { typeof(RuntimeMethodHandle) })
             ?.CreateFastDelegate();
 
         protected override IntPtr GetFunctionPointer(RuntimeMethodHandle handle)

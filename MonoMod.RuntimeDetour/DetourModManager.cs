@@ -20,7 +20,7 @@ namespace MonoMod.RuntimeDetour {
         public HashSet<Assembly> Ignored = new HashSet<Assembly>();
 
         public DetourModManager() {
-            Ignored.Add(typeof(DetourModManager).GetTypeInfo().Assembly);
+            Ignored.Add(typeof(DetourModManager).Assembly);
 
             // Keep track of all NativeDetours, Detours and (indirectly) Hooks.
             Detour.OnDetour += RegisterDetour;
@@ -86,7 +86,7 @@ namespace MonoMod.RuntimeDetour {
                             caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.Hook") {
                             continue;
                         }
-                        owner = caller?.DeclaringType.GetTypeInfo().Assembly;
+                        owner = caller?.DeclaringType.Assembly;
                         break;
                 }
                 break;

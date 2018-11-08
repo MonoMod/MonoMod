@@ -16,17 +16,17 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
 
         static DynamicMethodDefinition() {
-            foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 System.Reflection.Emit.OpCode reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null);
                 _ReflOpCodes[reflOpCode.Value] = reflOpCode;
             }
 
-            foreach (FieldInfo field in typeof(Mono.Cecil.Cil.OpCodes).GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (FieldInfo field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 Mono.Cecil.Cil.OpCode cecilOpCode = (Mono.Cecil.Cil.OpCode) field.GetValue(null);
                 _CecilOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
 
-            foreach (MethodInfo method in typeof(ILGenerator).GetTypeInfo().GetMethods()) {
+            foreach (MethodInfo method in typeof(ILGenerator).GetMethods()) {
                 if (method.Name != "Emit")
                     continue;
 
@@ -70,7 +70,7 @@ namespace MonoMod.Utils {
 
         public MethodBase Method { get; private set; }
         public MethodDefinition Definition =>
-            (_Module.LookupToken(Method.MetadataToken) as MethodReference)?.Resolve() ??
+            (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve() ??
             throw new InvalidOperationException("Method definition not found");
 
         public DynamicMethodDefinition(MethodBase method, Func<AssemblyName, ModuleDefinition> moduleGen = null) {
@@ -97,7 +97,7 @@ namespace MonoMod.Utils {
                         ReaderParameters rp = new ReaderParameters();
                         if (_ModuleGen != null)
                             rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
-                        module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.GetTypeInfo().Assembly.Location, rp);
+                        module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.GetTypeInfo().Assembly.GetLocation(), rp);
                     }
                 }
                 _Module = module;
@@ -120,7 +120,7 @@ namespace MonoMod.Utils {
         public DynamicMethod Generate() {
             MethodDefinition def = Definition;
 
-            Type[] genericArgsType = Method.DeclaringType.GetTypeInfo().IsGenericType ? Method.DeclaringType.GetTypeInfo().GetGenericArguments() : null;
+            Type[] genericArgsType = Method.DeclaringType.GetTypeInfo().IsGenericType ? Method.DeclaringType.GetGenericArguments() : null;
             Type[] genericArgsMethod = Method.IsGenericMethod ? Method.GetGenericArguments() : null;
 
             ParameterInfo[] args = Method.GetParameters();
@@ -215,7 +215,7 @@ namespace MonoMod.Utils {
 
                     Type operandType = operand.GetType();
                     if (!_Emitters.TryGetValue(operandType, out MethodInfo emit))
-                        emit = _Emitters.FirstOrDefault(kvp => kvp.Key.GetTypeInfo().IsAssignableFrom(operandType)).Value;
+                        emit = _Emitters.FirstOrDefault(kvp => kvp.Key.IsAssignableFrom(operandType)).Value;
                     if (emit == null)
                         throw new InvalidOperationException($"Unexpected unemittable {operand.GetType().FullName} in {def} @ {instr}");
 

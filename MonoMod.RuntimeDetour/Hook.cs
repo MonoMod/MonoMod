@@ -29,7 +29,7 @@ namespace MonoMod.RuntimeDetour {
 
             // Check if hook ret -> method ret is valid. Don't check for method ret -> hook ret, as that's too strict.
             Type returnType = (from as MethodInfo)?.ReturnType ?? typeof(void);
-            if (_Hook.ReturnType != returnType && !_Hook.ReturnType.GetTypeInfo().IsAssignableFrom(returnType))
+            if (_Hook.ReturnType != returnType && !_Hook.ReturnType.IsAssignableFrom(returnType))
                 throw new InvalidOperationException($"Return type of hook for {from} doesn't match, must be {((from as MethodInfo)?.ReturnType ?? typeof(void)).FullName}");
 
             if (target == null && !to.IsStatic) {
@@ -54,7 +54,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             Type origType = null;
-            if (hookArgs.Length == argTypes.Length + 1 && typeof(Delegate).GetTypeInfo().IsAssignableFrom(hookArgs[0].ParameterType))
+            if (hookArgs.Length == argTypes.Length + 1 && typeof(Delegate).IsAssignableFrom(hookArgs[0].ParameterType))
                 _OrigDelegateType = origType = hookArgs[0].ParameterType;
             else if (hookArgs.Length != argTypes.Length)
                 throw new InvalidOperationException($"Parameter count of hook for {from} doesn't match, must be {argTypes.Length}");
@@ -62,12 +62,12 @@ namespace MonoMod.RuntimeDetour {
             for (int i = 0; i < argTypes.Length; i++) {
                 Type argMethod = argTypes[i];
                 Type argHook = hookArgs[i + (origType == null ? 0 : 1)].ParameterType;
-                if (!argMethod.GetTypeInfo().IsAssignableFrom(argHook) &&
-                    !argHook.GetTypeInfo().IsAssignableFrom(argMethod))
+                if (!argMethod.IsAssignableFrom(argHook) &&
+                    !argHook.IsAssignableFrom(argMethod))
                     throw new InvalidOperationException($"Parameter #{i} of hook for {from} doesn't match, must be {argMethod.FullName} or related");
             }
 
-            MethodInfo origInvoke = _OrigDelegateInvoke = origType?.GetTypeInfo().GetMethod("Invoke");
+            MethodInfo origInvoke = _OrigDelegateInvoke = origType?.GetMethod("Invoke");
             // TODO: Check origType Invoke arguments.
 
             DynamicMethod dm;

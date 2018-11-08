@@ -6,7 +6,7 @@
     <AssemblyName>MonoMod.Utils</AssemblyName>
     <Description>Utilities and smaller MonoMod "components" (f.e. ModInterop). Can be used for your own mods. Required by all other MonoMod components.</Description>
 
-    <TargetFrameworks>net35;netstandard1.6;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>
     <ILGen>true</ILGen>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.csproj" />

@@ -27,13 +27,13 @@ namespace MonoMod.Utils {
             };
 
             // TODO: Use DynamicMethod to generate more performant getters and setters.
-            foreach (FieldInfo field in typeof(TTarget).GetTypeInfo().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+            foreach (FieldInfo field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                 string name = field.Name;
                 GetterMap[name] = (obj) => field.GetValue(obj);
                 SetterMap[name] = (obj, value) => field.SetValue(obj, value);
             }
 
-            foreach (PropertyInfo prop in typeof(TTarget).GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+            foreach (PropertyInfo prop in typeof(TTarget).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                 string name = prop.Name;
 
                 MethodInfo get = prop.GetGetMethod(true);

@@ -152,10 +152,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
             ParameterInfo[] args = cb.GetMethodInfo().GetParameters();
             if (args.Length == 1 && args[0].ParameterType.FullName == typeof(HookIL).FullName) {
                 // Instantiate it. We should rather pass a "proxy" of some sorts, but eh.
-                object hookIL = args[0].ParameterType.GetTypeInfo().GetConstructors()[0].Invoke(new object[] { def });
+                object hookIL = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
                 Type t_hookIL = hookIL.GetType();
-                t_hookIL.GetTypeInfo().GetMethod("Invoke").Invoke(hookIL, new object[] { cb });
-                return !(t_hookIL.GetTypeInfo().GetField("ReadOnly")?.GetValue(hookIL) as bool? ?? false);
+                t_hookIL.GetMethod("Invoke").Invoke(hookIL, new object[] { cb });
+                return !(t_hookIL.GetField("ReadOnly")?.GetValue(hookIL) as bool? ?? false);
             }
 
             // Fallback - body and IL processor.

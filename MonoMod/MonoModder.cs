@@ -15,6 +15,7 @@ using MonoMod.Utils;
 
 #if NETSTANDARD
 using static System.Reflection.IntrospectionExtensions;
+using static System.Reflection.TypeExtensions;
 #endif
 
 namespace MonoMod {
@@ -595,11 +596,11 @@ namespace MonoMod {
 
             caHandler = type.GetMMAttribute("CustomAttributeAttribute");
             if (caHandler != null)
-                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetTypeInfo().GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
+                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
 
             caHandler = type.GetMMAttribute("CustomMethodAttributeAttribute");
             if (caHandler != null)
-                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetTypeInfo().GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
+                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
 
             CustomAttribute hook;
 
@@ -2026,7 +2027,7 @@ namespace MonoMod {
             _mmOriginalCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmOriginalCtor);
@@ -2067,7 +2068,7 @@ namespace MonoMod {
             _mmOriginalNameCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmOriginalNameCtor);
@@ -2107,7 +2108,7 @@ namespace MonoMod {
             _mmAddedCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmAddedCtor);
@@ -2148,7 +2149,7 @@ namespace MonoMod {
             _mmPatchCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetTypeInfo().GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
+                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
             )));
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmPatchCtor);
