@@ -8,6 +8,10 @@ using MonoMod.Utils;
 namespace MonoMod.RuntimeDetour {
     public class Hook : IDetour {
 
+        public static Func<object, MethodBase, MethodBase, object, bool> OnDetour;
+        public static Func<object, bool> OnUndo;
+        public static Func<object, MethodBase, MethodBase> OnGenerateTrampoline;
+
         public bool IsValid => _Detour.IsValid;
 
         public readonly MethodBase Method;
@@ -26,6 +30,9 @@ namespace MonoMod.RuntimeDetour {
         public Hook(MethodBase from, MethodInfo to, object target) {
             Method = from;
             _Hook = to;
+
+            if (!(OnDetour?.InvokeWhileTrue(this, from, to, target) ?? true))
+                return;
 
             // Check if hook ret -> method ret is valid. Don't check for method ret -> hook ret, as that's too strict.
             Type returnType = (from as MethodInfo)?.ReturnType ?? typeof(void);
@@ -175,6 +182,9 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public void Undo() {
+            if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
+                return;
+
             _Detour.Undo();
             if (!IsValid)
                 _Free();
@@ -203,6 +213,10 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
+            MethodBase remoteTrampoline = OnGenerateTrampoline?.InvokeWhileNull<MethodBase>(this, signature);
+            if (remoteTrampoline != null)
+                return remoteTrampoline;
+
             return _Detour.GenerateTrampoline(signature);
         }
 
@@ -210,7 +224,10 @@ namespace MonoMod.RuntimeDetour {
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
         public T GenerateTrampoline<T>() where T : Delegate {
-            return _Detour.GenerateTrampoline<T>();
+            if (!typeof(Delegate).IsAssignableFrom(typeof(T)))
+                throw new InvalidOperationException($"Type {typeof(T)} not a delegate type.");
+
+            return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
         }
 
         // Used by HookEndpoint for the low level IL manip.

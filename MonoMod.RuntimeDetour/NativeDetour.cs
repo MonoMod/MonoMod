@@ -52,11 +52,12 @@ namespace MonoMod.RuntimeDetour {
         private bool _IsFree;
 
         public NativeDetour(MethodBase method, IntPtr from, IntPtr to) {
+            Method = method;
+
             if (!(OnDetour?.InvokeWhileTrue(this, method, from, to) ?? true))
                 return;
 
             Data = DetourHelper.Native.Create(from, to);
-            Method = method;
 
             // Backing up the original function only needs to happen once.
             method?.TryCreateILCopy(out _BackupMethod);

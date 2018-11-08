@@ -112,6 +112,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             UpdateILManipulated(true);
 
             ILList.Add(callback);
+
+            HookEndpointManager.InvokeOnPostModify(Method, callback);
         }
 
         public void Unmodify(Delegate callback) {
