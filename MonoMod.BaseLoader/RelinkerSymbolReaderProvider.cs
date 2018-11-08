@@ -20,7 +20,7 @@ namespace MonoMod.BaseLoader {
                     return new MdbReaderProvider().GetSymbolReader(module, symbolStream);
 
                 case DebugSymbolFormat.PDB:
-#if !LEGACY
+#if !CECIL0_9
                     if (IsPortablePdb(symbolStream))
                         return new PortablePdbReaderProvider().GetSymbolReader(module, symbolStream);
                     return new NativePdbReaderProvider().GetSymbolReader(module, symbolStream);

@@ -1,4 +1,4 @@
-﻿#if !LEGACY
+﻿#if !CECIL0_9
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;

@@ -207,7 +207,7 @@ namespace MonoMod.BaseLoader {
                 return null;
             } finally {
                 Modder.ClearCaches(moduleSpecific: true);
-#if !LEGACY
+#if !CECIL0_9
                 Modder.Module.Dispose();
 #endif
                 Modder.Module = null;

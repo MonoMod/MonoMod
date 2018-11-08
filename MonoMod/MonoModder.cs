@@ -164,7 +164,7 @@ namespace MonoMod {
                     _writerParameters = new WriterParameters() {
                         WriteSymbols = true,
                         SymbolWriterProvider =
-#if !LEGACY
+#if !CECIL0_9
                             pdb ? new NativePdbWriterProvider() :
 #else
                             pdb ? new PdbWriterProvider() :
@@ -261,7 +261,7 @@ namespace MonoMod {
 
         public virtual void ClearCaches(bool all = false, bool shareable = false, bool moduleSpecific = false) {
             if (all || shareable) {
-#if !LEGACY
+#if !CECIL0_9
                 foreach (KeyValuePair<string, ModuleDefinition> dep in DependencyCache)
                     dep.Value.Dispose();
 #endif
@@ -277,17 +277,17 @@ namespace MonoMod {
         public virtual void Dispose() {
             ClearCaches(all: true);
 
-#if !LEGACY
+#if !CECIL0_9
             Module?.Dispose();
 #endif
             Module = null;
 
-#if !LEGACY
+#if !CECIL0_9
             AssemblyResolver?.Dispose();
 #endif
             AssemblyResolver = null;
 
-#if !LEGACY
+#if !CECIL0_9
             foreach (ModuleDefinition mod in Mods)
                 mod?.Dispose();
 
@@ -406,7 +406,7 @@ namespace MonoMod {
                     dep = AssemblyResolver.Resolve(depRef)?.MainModule;
                 } catch { }
                 if (dep != null)
-#if !LEGACY
+#if !CECIL0_9
                     path = dep.FileName;
 #else
                     path = dep.FullyQualifiedName;
@@ -451,7 +451,7 @@ namespace MonoMod {
                     dep = AssemblyResolver.Resolve(new AssemblyNameReference(fullName ?? name, new Version(0, 0, 0, 0)))?.MainModule;
                 } catch { }
                 if (dep != null)
-#if !LEGACY
+#if !CECIL0_9
                     path = dep.FileName;
 #else
                     path = dep.FullyQualifiedName;
@@ -523,7 +523,7 @@ namespace MonoMod {
             ReaderParameters rp = new ReaderParameters(_rp.ReadingMode);
             rp.AssemblyResolver = _rp.AssemblyResolver;
             rp.MetadataResolver = _rp.MetadataResolver;
-#if !LEGACY
+#if !CECIL0_9
             rp.MetadataImporterProvider = _rp.MetadataImporterProvider;
             rp.ReflectionImporterProvider = _rp.ReflectionImporterProvider;
 #endif
@@ -1500,8 +1500,7 @@ namespace MonoMod {
 
 #region PatchRefs Pass
         public virtual void PatchRefs() {
-            if (Environment.GetEnvironmentVariable("MONOMOD_LEGACY_RELINKMAP") != "0") {
-                // TODO: Make this "opt-in" in the future.
+            if (Environment.GetEnvironmentVariable("MONOMOD_LEGACY_RELINKMAP") == "1") {
                 _SplitUpgrade();
             }
 
@@ -1578,7 +1577,7 @@ namespace MonoMod {
             Log("[UpgradeSplit] It is only meant to preserve compatibility with mods during the transition to a \"split\" MonoMod.");
 
             string root = Path.GetDirectoryName(DependencyCache["MonoMod"]
-#if !LEGACY
+#if !CECIL0_9
                 .FileName
 #else
                 .FullyQualifiedName
@@ -1659,7 +1658,7 @@ namespace MonoMod {
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < type.Interfaces.Count; i++) {
-#if !LEGACY
+#if !CECIL0_9
                 InterfaceImplementation interf = type.Interfaces[i];
                 InterfaceImplementation newInterf = new InterfaceImplementation(interf.InterfaceType.Relink(Relinker, type));
                 foreach (CustomAttribute attrib in interf.CustomAttributes)

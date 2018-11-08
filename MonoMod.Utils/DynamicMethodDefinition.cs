@@ -90,7 +90,7 @@ namespace MonoMod.Utils {
                     if (_Module != null && !force) {
                         module = _Module;
                     } else {
-#if !LEGACY
+#if !CECIL0_9
                         _Module?.Dispose();
 #endif
                         _Module = null;
@@ -107,7 +107,7 @@ namespace MonoMod.Utils {
 
             bool _DisposeEarly() {
                 if (moduleTmp != null) {
-#if !LEGACY
+#if !CECIL0_9
                     moduleTmp.Dispose();
 #endif
                     _Module = null;
@@ -238,7 +238,7 @@ namespace MonoMod.Utils {
 
         public void Dispose() {
             if (_Module != null && (--_ModuleRef) == 0) {
-#if !LEGACY
+#if !CECIL0_9
                 _Module.Dispose();
 #endif
                 _Module = null;
@@ -267,7 +267,7 @@ namespace MonoMod.Utils {
                 return Cache[name.FullName] = Gen(new AssemblyName(name.FullName)).Assembly ?? Fallback.Resolve(name, parameters);
             }
 
-#if LEGACY
+#if CECIL0_9
 
             public AssemblyDefinition Resolve(string fullName) {
                 if (Cache.TryGetValue(fullName, out AssemblyDefinition asm))

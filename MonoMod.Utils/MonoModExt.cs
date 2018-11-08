@@ -73,7 +73,7 @@ namespace MonoMod.Utils {
             c.ExceptionHandlers.AddRange(o.ExceptionHandlers);
             c.Variables.AddRange(o.Variables);
 
-#if !LEGACY
+#if !CECIL0_9
             m.CustomDebugInformations.AddRange(o.Method.CustomDebugInformations);
             m.DebugInformation.SequencePoints.AddRange(o.Method.DebugInformation.SequencePoints);
 #endif
@@ -882,7 +882,7 @@ namespace MonoMod.Utils {
             return mtp;
         }
 
-#if LEGACY
+#if CECIL0_9
         public static TypeReference ImportReference(this ModuleDefinition mod, TypeReference type)
             => mod.Import(type);
         public static TypeReference ImportReference(this ModuleDefinition mod, Type type, IGenericParameterProvider context)

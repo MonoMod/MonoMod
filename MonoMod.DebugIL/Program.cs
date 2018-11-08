@@ -10,7 +10,7 @@ namespace MonoMod.DebugIL {
     class Program {
 
         public static void Main(string[] args) {
-#if LEGACY
+#if CECIL0_9
             throw new NotSupportedException();
 #else
             Console.WriteLine("MonoMod.DebugIL " + typeof(Program).GetTypeInfo().Assembly.GetName().Version);
