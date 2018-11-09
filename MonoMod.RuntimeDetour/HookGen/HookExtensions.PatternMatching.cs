@@ -746,11 +746,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchSwitch(this Instruction instr, Instruction[] value)
-            => instr.MatchSwitch(out var v) && v == value;
-        public static bool MatchSwitch(this Instruction instr, out Instruction[] value) {
+        public static bool MatchSwitch(this Instruction instr, HookILLabel[] value)
+            => instr.MatchSwitch(out var v) && v.SequenceEqual(value);
+        public static bool MatchSwitch(this Instruction instr, out HookILLabel[] value) {
             if (instr.OpCode == OpCodes.Switch) {
-                value = (Instruction[]) instr.Operand;
+                value = (HookILLabel[]) instr.Operand;
                 return true;
             }
             value = default;

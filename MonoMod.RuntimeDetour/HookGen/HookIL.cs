@@ -35,6 +35,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             foreach (Instruction instr in Instrs) {
                 if (instr.Operand is Instruction target)
                     instr.Operand = new HookILLabel(this, target);
+                else if (instr.Operand is Instruction[] targets)
+                    instr.Operand = targets.Select(t => new HookILLabel(this, t)).ToArray();
             }
 
             manip(this);
@@ -42,6 +44,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             foreach (Instruction instr in Instrs) {
                 if (instr.Operand is HookILLabel label)
                     instr.Operand = label.Target;
+                else if (instr.Operand is HookILLabel[] targets)
+                    instr.Operand = targets.Select(l => l.Target).ToArray();
             }
         }
 
