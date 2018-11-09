@@ -1165,10 +1165,11 @@ namespace MonoMod.Utils {
                 Instruction instr = method.Body.Instructions[i];
                 // Change short <-> long operations as the method grows / shrinks.
                 if (instr.Operand is Instruction) {
-                    int offs = ((Instruction) instr.Operand).Offset - instr.Offset;
-                    // sbyte.MinValue is -128, but -127 is the first safe lower "long" value.
-                    // sbyte.MaxValue is 127, and weirdly enough, it's the first safe upper "long" value.
-                    if (-127 < offs && offs < 127)
+                    // Thanks to Chicken Bones for helping out with this!
+                    int offsFrom = ((Instruction) instr.Operand).Offset;
+                    int offsTo = instr.Offset;
+                    int distance = offsTo > offsFrom ? offsTo - (offsFrom + 5) : (offsFrom + 2) - offsTo;
+                    if (distance == (sbyte) distance)
                         instr.OpCode = instr.OpCode.LongToShortOp();
                 }
             }
