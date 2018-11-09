@@ -1,7 +1,7 @@
 # MonoMod
 <a href="https://discord.gg/jm7GCZB"><img align="right" alt="MonoMod Discord" src="https://discordapp.com/api/guilds/295566538981769216/embed.png?style=banner2" /></a>
-A general purpose .NET assembly modding "basework", powered by [cecil](https://github.com/jbevain/cecil/).  
-*MIT-licensed.*
+General purpose .NET assembly modding "basework", powered by [cecil](https://github.com/jbevain/cecil/).  
+*<sup>MIT-licensed.</sup>*
 
 [![Build status](https://img.shields.io/azure-devops/build/0x0ade/MonoMod/1.svg?style=flat-square)](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1) ![Deployment status](https://img.shields.io/azure-devops/release/0x0ade/e07cb5e7-fa7f-457d-982b-3323979ed1b7/1/1.svg?style=flat-square)
 
@@ -10,6 +10,7 @@ A general purpose .NET assembly modding "basework", powered by [cecil](https://g
 | [![GitHub releases](https://img.shields.io/github/downloads/0x0ade/MonoMod/total.svg?style=flat-square)](https://github.com/0x0ade/MonoMod/releases) | [![Core](https://img.shields.io/nuget/dt/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Utils](https://img.shields.io/nuget/dt/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![RuntimeDetour](https://img.shields.io/nuget/dt/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) |
 | [![Version](https://img.shields.io/github/release/0x0ade/MonoMod.svg?style=flat-square)](https://github.com/0x0ade/MonoMod/releases) | [![Version](https://img.shields.io/nuget/v/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Version](https://img.shields.io/nuget/v/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![Version](https://img.shields.io/nuget/v/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) |
 
+<sup>[... or download build artifacts from the last commit.](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1)</sup>
 
 ## Sections
 - [Introduction](#introduction)
