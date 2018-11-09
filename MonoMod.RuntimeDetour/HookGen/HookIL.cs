@@ -47,6 +47,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 else if (instr.Operand is HookILLabel[] targets)
                     instr.Operand = targets.Select(l => l.Target).ToArray();
             }
+
+            Method.ConvertShortLongOps();
         }
 
         public bool MakeReadOnly()

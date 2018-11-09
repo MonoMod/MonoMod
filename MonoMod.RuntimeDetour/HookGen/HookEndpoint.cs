@@ -162,7 +162,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             // Fallback - body and IL processor.
             cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
-            def.RecalculateILOffsets();
             def.ConvertShortLongOps();
 
             return true;

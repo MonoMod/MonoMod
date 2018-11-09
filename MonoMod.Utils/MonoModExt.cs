@@ -1208,11 +1208,9 @@ namespace MonoMod.Utils {
             for (int i = 0; i < method.Body.Instructions.Count; i++) {
                 Instruction instr = method.Body.Instructions[i];
                 // Change short <-> long operations as the method grows / shrinks.
-                if (instr.Operand is Instruction) {
+                if (instr.Operand is Instruction target) {
                     // Thanks to Chicken Bones for helping out with this!
-                    int offsFrom = ((Instruction) instr.Operand).Offset;
-                    int offsTo = instr.Offset;
-                    int distance = offsTo > offsFrom ? offsTo - (offsFrom + 5) : (offsFrom + 2) - offsTo;
+                    int distance = target.Offset - (instr.Offset + instr.GetSize());
                     if (distance == (sbyte) distance)
                         instr.OpCode = instr.OpCode.LongToShortOp();
                 }
