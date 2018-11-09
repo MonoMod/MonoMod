@@ -356,6 +356,9 @@ namespace MonoMod.Utils {
                     return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition().GetTypeInfo());
                 }
 
+                if (mref is TypeSpecification typeSpecRef && typeInfo.HasElementType)
+                    return typeSpecRef.Is(typeInfo.GetElementType().GetTypeInfo());
+
                 // DeclaringType was already checked before.
                 // Avoid converting nested type separators between + (.NET) and / (cecil)
                 if (mref.DeclaringType != null)
