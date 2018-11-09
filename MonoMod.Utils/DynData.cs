@@ -8,8 +8,7 @@ namespace MonoMod.Utils {
         public static readonly HashSet<string> Disposable = new HashSet<string>();
         public static event Action<DynData<TTarget>, TTarget> OnInitialize;
 
-        private static readonly _Data_ _DataStatic;
-
+        private static readonly _Data_ _DataStatic = new _Data_();
         private static readonly Dictionary<WeakReference, _Data_> _DataMap = new Dictionary<WeakReference, _Data_>(new WeakReferenceComparer());
         private static readonly Dictionary<string, Func<TTarget, object>> _SpecialGetters = new Dictionary<string, Func<TTarget, object>>();
         private static readonly Dictionary<string, Action<TTarget, object>> _SpecialSetters = new Dictionary<string, Action<TTarget, object>>();
