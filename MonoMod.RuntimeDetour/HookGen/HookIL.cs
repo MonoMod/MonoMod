@@ -52,28 +52,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public bool MakeReadOnly()
             => _ReadOnly = true;
 
-        public Instruction this[int index] {
-            get {
-                if (index == -1 || index == Instrs.Count)
-                    return null;
-                return Instrs[index];
-            }
-        }
-
-        public HookILCursor this[Instruction instr] {
-            get {
-                return new HookILCursor(this, instr);
-            }
-        }
-
-        public HookILCursor this[HookILLabel label] {
-            get {
-                return new HookILCursor(this, label.Target);
-            }
-        }
-
         public HookILCursor At(int index)
-            => this[this[index]];
+            => At(index == -1 || index == Instrs.Count ? null : Instrs[index]);
+        public HookILCursor At(HookILLabel label)
+            => At(label.Target);
+        public HookILCursor At(Instruction instr)
+            => new HookILCursor(this, instr);
 
         public FieldReference Import(FieldInfo field)
             => Module.ImportReference(field);

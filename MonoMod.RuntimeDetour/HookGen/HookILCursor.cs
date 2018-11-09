@@ -92,6 +92,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Index = index;
         }
 
+        public void GotoLabel(HookILLabel label) {
+            Next = label.Target;
+        }
+
         public void MarkLabel(HookILLabel label) {
             label.Target = Next;
             _insertAfterLabels = new [] { label };
