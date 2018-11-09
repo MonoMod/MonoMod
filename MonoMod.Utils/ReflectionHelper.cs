@@ -91,6 +91,8 @@ namespace MonoMod.Utils {
             if (mref is TypeReference tref) {
                 if (mref is TypeSpecification ts) {
                     type = _ResolveReflection(ts.ElementType, module) as TypeOrTypeInfo;
+                    if (type == null)
+                        return null;
 
                     if (ts.IsByReference)
                         return ResolveReflectionCache[mref] = type.MakeByRefType().GetTypeInfo();
@@ -117,10 +119,14 @@ namespace MonoMod.Utils {
 
             if (mref is GenericInstanceMethod mrefGenMethod) {
                 member = _ResolveReflection(mrefGenMethod.ElementMethod, module);
+                if (member == null)
+                    return null;
                 member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
 
             } else {
                 member = type.AsType().GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));
+                if (member == null)
+                    return null;
             }
 
             return ResolveReflectionCache[mref] = member;
