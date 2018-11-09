@@ -10,7 +10,7 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 | [![GitHub releases](https://img.shields.io/github/downloads/0x0ade/MonoMod/total.svg?style=flat-square)](https://github.com/0x0ade/MonoMod/releases) | [![Core](https://img.shields.io/nuget/dt/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Utils](https://img.shields.io/nuget/dt/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![RuntimeDetour](https://img.shields.io/nuget/dt/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) |
 | [![Version](https://img.shields.io/github/release/0x0ade/MonoMod.svg?style=flat-square)](https://github.com/0x0ade/MonoMod/releases) | [![Version](https://img.shields.io/nuget/v/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Version](https://img.shields.io/nuget/v/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![Version](https://img.shields.io/nuget/v/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) |
 
-<sup>[... or download build artifacts from the last commit.](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1)</sup>
+<sup>[... or download fresh build artifacts for the last commit.](https://0x0ade.visualstudio.com/MonoMod/_build/latest?definitionId=1)</sup>
 
 ## Sections
 - [Introduction](#introduction)
@@ -34,9 +34,10 @@ Mods / mod loaders for the following games are already using it in one way or an
 - Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding)
 - Celeste: [Everest](https://everestapi.github.io/)
 - Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding)
-- Rain World: [via Partiality wrapper](http://www.raindb.net/)
 - Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
-- Nimbatus: [Nimbatus-Mods / OmegaMod](https://github.com/OmegaRogue/Nimbatus-Mods)
+- Rain World: [RainDB via Partiality](http://www.raindb.net/)
+- Nimbatus: [Nimbatus-Mods via Partiality](https://github.com/OmegaRogue/Nimbatus-Mods)
+- Dungeon of the Endless: [DungeonOfTheEndless-Mod via Partiality](https://github.com/sc2ad/DungeonOfTheEndless-Mod)
 - FEZ: [FEZMod (defunct)](https://github.com/0x0ade/FEZMod-Legacy)
 - And many more! *Ping me on Discord if your mod uses MonoMod!*
 
