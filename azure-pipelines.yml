@@ -43,15 +43,12 @@ steps:
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   parameters:
     targetFramework: 'net35'
 - template: 'azure-pipelines-postbuild.yml'
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   parameters:
     targetFramework: 'netstandard1.3'
 - template: 'azure-pipelines-postbuild.yml'
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   parameters:
     targetFramework: 'netstandard2.0'
 
