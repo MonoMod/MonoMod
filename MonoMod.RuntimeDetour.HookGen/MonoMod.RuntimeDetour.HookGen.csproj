@@ -4,6 +4,8 @@
     <ProjectGuid>{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}</ProjectGuid>
 
     <AssemblyName>MonoMod.RuntimeDetour.HookGen</AssemblyName>
+    <Description>HookGen tool - generate a "hook helper .dll" that makes using RuntimeDetour as easy as On.Namespace.Type.Method += YourHandlerHere;</Description>
+    <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>

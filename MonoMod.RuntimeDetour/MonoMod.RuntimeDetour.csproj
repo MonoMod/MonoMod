@@ -4,7 +4,7 @@
     <ProjectGuid>{D0C584C0-81D7-486E-B70E-D7F9256E0909}</ProjectGuid>
 
     <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
-    <Description>RuntimeDetour is a flexible and easily extensible runtime detouring library. It also makes runtime IL manipulation possible using cecil.</Description>
+    <Description>Flexible and easily extensible runtime detouring library. Wrap, replace and manipulate (Mono.Cecil) methods at runtime.</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>

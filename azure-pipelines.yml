@@ -43,17 +43,21 @@ steps:
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   parameters:
     targetFramework: 'net35'
 - template: 'azure-pipelines-postbuild.yml'
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   parameters:
     targetFramework: 'netstandard1.3'
 - template: 'azure-pipelines-postbuild.yml'
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   parameters:
     targetFramework: 'netstandard2.0'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   displayName: 'Artifacts: Pack: nupkgs'
   continueOnError: true
   inputs:
@@ -61,9 +65,10 @@ steps:
     nobuild: true
     configuration: '$(buildConfiguration)'
     versioningScheme: 'byBuildNumber'
-    packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour)/*.csproj'
+    packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour|.HookGen)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
 - task: PublishBuildArtifacts@1
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   displayName: 'Artifacts: Publish: nupkgs'
   continueOnError: true
   inputs:
