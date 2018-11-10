@@ -1,28 +1,32 @@
 ﻿#if !NETSTANDARD1_X
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using MonoMod.RuntimeDetour;
 using MonoMod.RuntimeDetour.HookGen;
-using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace MonoMod.RuntimeDetour {
     public sealed class DetourModManager : IDisposable {
 
+        private readonly Dictionary<IDetour, Assembly> DetourOwners = new Dictionary<IDetour, Assembly>();
         private readonly Dictionary<Assembly, List<IDetour>> OwnedDetourLists = new Dictionary<Assembly, List<IDetour>>();
 
         public HashSet<Assembly> Ignored = new HashSet<Assembly>();
+        
+        // events for tracking/logging/rejecting
+        public event Action<Assembly, MethodBase, MethodBase, object> OnHook;
+        public event Action<Assembly, MethodBase, MethodBase> OnDetour;
+        public event Action<Assembly, MethodBase, IntPtr, IntPtr> OnNativeDetour;
 
         public DetourModManager() {
             Ignored.Add(typeof(DetourModManager).Assembly);
 
-            // Keep track of all NativeDetours, Detours and (indirectly) Hooks.
+            // Keep track of all NativeDetours, Detours and Hooks.
+            // Hooks have a 1:1 correspondence to Detours, but tracking the 'top level' construct
+            // provides better future guarantees and logging
+            Hook.OnDetour += RegisterHook;
+            Hook.OnUndo += UnregisterDetour;
             Detour.OnDetour += RegisterDetour;
             Detour.OnUndo += UnregisterDetour;
             NativeDetour.OnDetour += RegisterNativeDetour;
@@ -36,7 +40,9 @@ namespace MonoMod.RuntimeDetour {
             Disposed = true;
 
             OwnedDetourLists.Clear();
-
+            
+            Hook.OnDetour -= RegisterHook;
+            Hook.OnUndo -= UnregisterDetour;
             Detour.OnDetour -= RegisterDetour;
             Detour.OnUndo -= UnregisterDetour;
             NativeDetour.OnDetour -= RegisterNativeDetour;
@@ -50,85 +56,103 @@ namespace MonoMod.RuntimeDetour {
             // Unload any HookGen hooks after unloading the mod.
             HookEndpointManager.RemoveAllOwnedBy(asm);
             if (OwnedDetourLists.TryGetValue(asm, out List<IDetour> list)) {
-                OwnedDetourLists.Remove(asm);
-                foreach (IDetour detour in list)
+                foreach (IDetour detour in list.ToArray())
                     detour.Dispose();
+
+                if (list.Count > 0)
+                    throw new Exception("Some detours failed to unregister in " + asm.FullName);
+
+                OwnedDetourLists.Remove(asm);
             }
         }
 
-        internal List<IDetour> GetOwnedDetourList(StackTrace stack = null, bool add = true) {
-            // I deserve to be murdered for this.
+        private static readonly string[] HookTypeNames = {
+            "MonoMod.RuntimeDetour.NativeDetour",
+            "MonoMod.RuntimeDetour.Detour",
+            "MonoMod.RuntimeDetour.Hook",
+        };
+        internal Assembly GetHookOwner(StackTrace stack = null) {
+            // Stack walking is not fast, but it's the only option
             if (stack == null)
                 stack = new StackTrace();
+
             Assembly owner = null;
             int frameCount = stack.FrameCount;
-            int state = 0;
+            string rootDetourTypeName = null;
             for (int i = 0; i < frameCount; i++) {
                 StackFrame frame = stack.GetFrame(i);
                 MethodBase caller = frame.GetMethod();
                 if (caller?.DeclaringType == null)
                     continue;
-                switch (state) {
-                    // Skip until we've reached a method in Detour or Hook.
-                    case 0:
-                        if (caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.NativeDetour" &&
-                            caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.Detour" &&
-                            caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.Hook") {
-                            continue;
-                        }
-                        state++;
+
+                var currentCallerTypeName = caller.DeclaringType.FullName;
+                if (rootDetourTypeName == null) {
+                    // Skip until we've reached a method in Detour/Hook/NativeDetour.
+                    if (!HookTypeNames.Contains(currentCallerTypeName))
                         continue;
 
-                    // Skip until we're out of Detour and / or Hook.
-                    case 1:
-                        if (caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.NativeDetour" ||
-                            caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.Detour" ||
-                            caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.Hook") {
-                            continue;
-                        }
-                        owner = caller?.DeclaringType.Assembly;
-                        break;
+                    rootDetourTypeName = caller.DeclaringType.FullName;
+                    continue;
                 }
+
+                // find the invoker of the Detour/Hook/NativeDetour
+                if (currentCallerTypeName == rootDetourTypeName)
+                    continue;
+                
+                owner = caller?.DeclaringType.Assembly;
                 break;
             }
-
-            if (owner == null)
+            if (Ignored.Contains(owner))
                 return null;
 
-            if (!OwnedDetourLists.TryGetValue(owner, out List<IDetour> list) && add)
+            return owner;
+        }
+
+        internal void TrackDetour(Assembly owner, IDetour detour) {
+            if (!OwnedDetourLists.TryGetValue(owner, out List<IDetour> list))
                 OwnedDetourLists[owner] = list = new List<IDetour>();
-            return list;
+
+            list.Add(detour);
+            DetourOwners[detour] = owner;
         }
 
-        internal bool RegisterDetour(object _detour, MethodBase from, MethodBase to) {
-            GetOwnedDetourList()?.Add(_detour as IDetour);
+        internal bool RegisterHook(Hook _detour, MethodBase from, MethodBase to, object target) {
+            var owner = GetHookOwner();
+            if (owner == null)
+                return true; // continue with default detour creation, we just don't track it
+
+            OnHook?.Invoke(owner, from, to, target);
+            TrackDetour(owner, _detour);
             return true;
         }
 
-        internal bool RegisterNativeDetour(object _detour, MethodBase method, IntPtr from, IntPtr to) {
-            StackTrace stack = new StackTrace();
+        internal bool RegisterDetour(Detour _detour, MethodBase from, MethodBase to) {
+            var owner = GetHookOwner();
+            if (owner == null)
+                return true; // continue with default detour creation, we just don't track it
 
-            // Don't register NativeDetours created by higher level Detours.
-            int frameCount = stack.FrameCount;
-            for (int i = 0; i < frameCount; i++) {
-                StackFrame frame = stack.GetFrame(i);
-                MethodBase caller = frame.GetMethod();
-                if (caller?.DeclaringType == null)
-                    continue;
-                if (caller.DeclaringType.FullName.StartsWith("MonoMod.RuntimeDetour.") &&
-                    caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.NativeDetour")
-                    return true;
+            OnDetour?.Invoke(owner, from, to);
+            TrackDetour(owner, _detour);
+            return true;
+        }
+
+        internal bool RegisterNativeDetour(NativeDetour _detour, MethodBase method, IntPtr from, IntPtr to) {
+            var owner = GetHookOwner();
+            if (owner == null)
+                return true; // continue with default detour creation, we just don't track it
+
+            OnNativeDetour?.Invoke(owner, method, from, to);
+            TrackDetour(owner, _detour);
+            return true;
+        }
+
+        internal bool UnregisterDetour(IDetour _detour) {
+            if (DetourOwners.TryGetValue(_detour, out var owner)) {
+                DetourOwners.Remove(_detour);
+                OwnedDetourLists[owner].Remove(_detour);
             }
-
-            GetOwnedDetourList(stack: stack)?.Add(_detour as IDetour);
             return true;
         }
-
-        internal bool UnregisterDetour(object _detour) {
-            GetOwnedDetourList(add: false)?.Remove(_detour as IDetour);
-            return true;
-        }
-
     }
 }
 #endif

@@ -8,9 +8,9 @@ using MonoMod.Utils;
 namespace MonoMod.RuntimeDetour {
     public class Hook : IDetour {
 
-        public static Func<object, MethodBase, MethodBase, object, bool> OnDetour;
-        public static Func<object, bool> OnUndo;
-        public static Func<object, MethodBase, MethodBase> OnGenerateTrampoline;
+        public static Func<Hook, MethodBase, MethodBase, object, bool> OnDetour;
+        public static Func<Hook, bool> OnUndo;
+        public static Func<Hook, MethodBase, MethodBase> OnGenerateTrampoline;
 
         public bool IsValid => _Detour.IsValid;
 

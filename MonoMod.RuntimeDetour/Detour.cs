@@ -16,9 +16,9 @@ namespace MonoMod.RuntimeDetour {
         private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
         private static Dictionary<MethodBase, DynamicMethod> _BackupMethods = new Dictionary<MethodBase, DynamicMethod>();
 
-        public static Func<object, MethodBase, MethodBase, bool> OnDetour;
-        public static Func<object, bool> OnUndo;
-        public static Func<object, MethodBase, MethodBase> OnGenerateTrampoline;
+        public static Func<Detour, MethodBase, MethodBase, bool> OnDetour;
+        public static Func<Detour, bool> OnUndo;
+        public static Func<Detour, MethodBase, MethodBase> OnGenerateTrampoline;
 
         public bool IsValid => _DetourMap[Method].Contains(this);
 
