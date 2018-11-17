@@ -24,9 +24,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         internal List<HookILLabel> _Labels = new List<HookILLabel>();
         public ReadOnlyCollection<HookILLabel> Labels => _Labels.AsReadOnly();
 
-		public event Action DisposeActions;
+        public event Action OnDispose;
 
-		internal bool _ReadOnly = false;
+        internal bool _ReadOnly = false;
 
         public HookIL(MethodDefinition method) {
             Method = method;
@@ -84,6 +84,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public IEnumerable<HookILLabel> GetIncomingLabels(Instruction instr)
             => _Labels.Where(l => l.Target == instr);
 
-		public void Dispose() => DisposeActions?.Invoke();
+        public void Dispose() {
+            OnDispose?.Invoke();
+            OnDispose = null;
+        }
+
     }
 }

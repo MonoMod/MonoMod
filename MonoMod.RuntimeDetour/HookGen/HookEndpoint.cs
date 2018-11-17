@@ -13,7 +13,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly Dictionary<Delegate, Stack<Hook>> HookMap = new Dictionary<Delegate, Stack<Hook>>();
         private readonly List<Hook> HookList = new List<Hook>();
         private readonly List<Delegate> ILList = new List<Delegate>();
-		private readonly List<IDisposable> ActiveHookILs = new List<IDisposable>();
+        private readonly List<IDisposable> ActiveHookILs = new List<IDisposable>();
 
         private DynamicMethodDefinition _DMD;
         private DynamicMethodDefinition DMD {
@@ -123,9 +123,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return;
             ILList.RemoveAt(index);
 
-			foreach (var h in ActiveHookILs)
-				h.Dispose();
-			ActiveHookILs.Clear();
+            foreach (HookIL h in ActiveHookILs)
+                h.Dispose();
+            ActiveHookILs.Clear();
 
             DMD.Reload(null, true);
             MethodDefinition def = DMD.Definition;
@@ -149,11 +149,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 // The callback is an ILManipulator, or compatible to it out of the box.
                 HookIL hookIL = new HookIL(def);
                 hookIL.Invoke(manip);
-				if (hookIL._ReadOnly)
-					return false;
-				
-				ActiveHookILs.Add(hookIL);
-				return true;
+                if (hookIL._ReadOnly)
+                    return false;
+
+                ActiveHookILs.Add(hookIL);
+                return true;
             }
 
             // Check if the method accepts a HookIL from another assembly.
@@ -163,13 +163,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 object hookIL = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
                 Type t_hookIL = hookIL.GetType();
                 t_hookIL.GetMethod("Invoke").Invoke(hookIL, new object[] { cb });
-                bool readOnly = t_hookIL.GetField("ReadOnly")?.GetValue(hookIL) as bool? ?? false;
-				if (readOnly)
-					return false;
-				
-				if (hookIL is IDisposable disp)
-					ActiveHookILs.Add(disp);
-				return true;
+                if (t_hookIL.GetField("_ReadOnly", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(hookIL) as bool? ?? false)
+                    return false;
+
+                if (hookIL is IDisposable disp)
+                    ActiveHookILs.Add(disp);
+                return true;
             }
 
             // Fallback - body and IL processor.

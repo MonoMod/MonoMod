@@ -18,15 +18,15 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static object GetReference(int id) => References[id];
         public static void SetReference(int id, object obj) => References[id] = obj;
 
-		private readonly List<int> ids = new List<int>();
+        private readonly List<int> ManagedReferenceIDs = new List<int>();
         public int AddReference(object obj) {
-			if (ids.Count == 0) {
-				HookIL.DisposeActions += () => {
-					foreach (var id in ids)
-						FreeReference(id);
-				};
-			}
-			ids.Add(References.Count);
+            if (ManagedReferenceIDs.Count == 0) {
+                HookIL.OnDispose += () => {
+                    foreach (int id in ManagedReferenceIDs)
+                        FreeReference(id);
+                };
+            }
+            ManagedReferenceIDs.Add(References.Count);
 
             lock (References) {
                 References.Add(obj);
