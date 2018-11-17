@@ -12,7 +12,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
     /// <summary>
     /// Wrapper class used by the ILManipulator in HookExtensions.
     /// </summary>
-    public class HookIL {
+    public class HookIL : IDisposable {
 
         public MethodDefinition Method { get; private set; }
         public ILProcessor IL { get; private set; }
@@ -24,7 +24,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
         internal List<HookILLabel> _Labels = new List<HookILLabel>();
         public ReadOnlyCollection<HookILLabel> Labels => _Labels.AsReadOnly();
 
-        internal bool _ReadOnly = false;
+		public event Action DisposeActions;
+
+		internal bool _ReadOnly = false;
 
         public HookIL(MethodDefinition method) {
             Method = method;
@@ -82,5 +84,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public IEnumerable<HookILLabel> GetIncomingLabels(Instruction instr)
             => _Labels.Where(l => l.Target == instr);
 
+		public void Dispose() => DisposeActions?.Invoke();
     }
 }
