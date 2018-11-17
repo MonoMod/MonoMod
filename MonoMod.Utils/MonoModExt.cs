@@ -254,6 +254,35 @@ namespace MonoMod.Utils {
 
             return builder.ToString();
         }
+
+        public static string GetFindableID(this CallSite method) {
+            StringBuilder builder = new StringBuilder();
+
+            builder
+                .Append(method.ReturnType.GetPatchFullName())
+                .Append(" ");
+
+            builder.Append("(");
+
+            if (method.HasParameters) {
+                Collection<ParameterDefinition> parameters = method.Parameters;
+                for (int i = 0; i < parameters.Count; i++) {
+                    ParameterDefinition parameter = parameters[i];
+                    if (i > 0)
+                        builder.Append(",");
+
+                    if (parameter.ParameterType.IsSentinel)
+                        builder.Append("...,");
+
+                    builder.Append(parameter.ParameterType.GetPatchFullName());
+                }
+            }
+
+            builder.Append(")");
+
+            return builder.ToString();
+        }
+
         public static string GetFindableID(this System.Reflection.MethodBase method, string name = null, string type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {
             while (method is System.Reflection.MethodInfo && method.IsGenericMethod && !method.IsGenericMethodDefinition)
                 method = ((System.Reflection.MethodInfo) method).GetGenericMethodDefinition();
@@ -572,8 +601,7 @@ namespace MonoMod.Utils {
             if (mtp is MethodReference) return ((MethodReference) mtp).Relink(relinker, context);
             if (mtp is FieldReference) return ((FieldReference) mtp).Relink(relinker, context);
             if (mtp is ParameterDefinition) return ((ParameterDefinition) mtp).Relink(relinker, context);
-            // TODO: relink EventDefinitions
-            // if (mtp is EventDefinition) return ((EventDefinition) mtp).Relink(relinker, context);
+            if (mtp is CallSite) return ((CallSite) mtp).Relink(relinker, context);
             throw new InvalidOperationException($"MonoMod can't handle metadata token providers of the type {mtp.GetType()}");
         }
 
@@ -675,6 +703,23 @@ namespace MonoMod.Utils {
             }
 
             return (MethodReference) relinker(relink, context);
+        }
+
+        public static CallSite Relink(this CallSite method, Relinker relinker, IGenericParameterProvider context) {
+            CallSite relink = new CallSite(method.ReturnType);
+
+            relink.CallingConvention = method.CallingConvention;
+            relink.ExplicitThis = method.ExplicitThis;
+            relink.HasThis = method.HasThis;
+
+            relink.ReturnType = relink.ReturnType?.Relink(relinker, context);
+
+            foreach (ParameterDefinition param in method.Parameters) {
+                param.ParameterType = param.ParameterType.Relink(relinker, context);
+                relink.Parameters.Add(param);
+            }
+
+            return (CallSite) relinker(relink, context);
         }
 
         public static IMetadataTokenProvider Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
