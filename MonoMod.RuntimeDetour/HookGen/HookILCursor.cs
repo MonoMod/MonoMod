@@ -17,12 +17,23 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private static readonly Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
         public static object GetReference(int id) => References[id];
         public static void SetReference(int id, object obj) => References[id] = obj;
-        private static int AddReference(object obj) {
+
+		private readonly List<int> ids = new List<int>();
+        public int AddReference(object obj) {
+			if (ids.Count == 0) {
+				HookIL.DisposeActions += () => {
+					foreach (var id in ids)
+						FreeReference(id);
+				};
+			}
+			ids.Add(References.Count);
+
             lock (References) {
                 References.Add(obj);
                 return References.Count - 1;
             }
         }
+
         public static void FreeReference(int id) {
             References[id] = null;
             if (DelegateInvokers.ContainsKey(id))
