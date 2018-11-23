@@ -115,38 +115,8 @@ namespace MonoMod.RuntimeDetour {
                 return false;
             }
 
-#if NETSTANDARD1_X
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(method))
                 dm = dmd.Generate();
-#else
-            ParameterInfo[] args = method.GetParameters();
-            Type[] argTypes;
-            if (!method.IsStatic) {
-                argTypes = new Type[args.Length + 1];
-                argTypes[0] = method.GetThisParamType();
-                for (int i = 0; i < args.Length; i++)
-                    argTypes[i + 1] = args[i].ParameterType;
-            } else {
-                argTypes = new Type[args.Length];
-                for (int i = 0; i < args.Length; i++)
-                    argTypes[i] = args[i].ParameterType;
-            }
-
-            dm = new DynamicMethod(
-                $"Copy<{method.Name}>",
-                // method.Attributes, method.CallingConvention, // DynamicMethod only supports public, static and standard
-                (method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                method.DeclaringType,
-                false
-            );
-
-            ILGenerator il = dm.GetILGenerator();
-
-            // TODO: Move away from using Harmony's ILCopying code in MonoMod...
-            using (Harmony.ILCopying.MethodCopier copier = new Harmony.ILCopying.MethodCopier(method, il)) {
-                copier.Copy();
-            }
-#endif
 
             dm.Pin();
             return true;

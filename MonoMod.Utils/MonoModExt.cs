@@ -1250,16 +1250,23 @@ namespace MonoMod.Utils {
             method.RecalculateILOffsets();
 
             // Optimize long to short ops.
-            for (int i = 0; i < method.Body.Instructions.Count; i++) {
-                Instruction instr = method.Body.Instructions[i];
-                // Change short <-> long operations as the method grows / shrinks.
-                if (instr.Operand is Instruction target) {
-                    // Thanks to Chicken Bones for helping out with this!
-                    int distance = target.Offset - (instr.Offset + instr.GetSize());
-                    if (distance == (sbyte) distance)
-                        instr.OpCode = instr.OpCode.LongToShortOp();
+            bool optimized;
+            do {
+                optimized = false;
+                for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                    Instruction instr = method.Body.Instructions[i];
+                    // Change short <-> long operations as the method grows / shrinks.
+                    if (instr.Operand is Instruction target) {
+                        // Thanks to Chicken Bones for helping out with this!
+                        int distance = target.Offset - (instr.Offset + instr.GetSize());
+                        if (distance == (sbyte) distance) {
+                            OpCode prev = instr.OpCode;
+                            instr.OpCode = instr.OpCode.LongToShortOp();
+                            optimized = prev != instr.OpCode;
+                        }
+                    }
                 }
-            }
+            } while (optimized);
         }
 
         private static readonly Type t_Code = typeof(Code);
