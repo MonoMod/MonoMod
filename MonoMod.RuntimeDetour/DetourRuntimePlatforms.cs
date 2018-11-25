@@ -253,10 +253,9 @@ namespace MonoMod.RuntimeDetour {
     }
 
     public sealed class DetourRuntimeMonoPlatform : DetourRuntimeILPlatform {
-        private static readonly MethodInfo m_DynamicMethod_CreateDynMethod =
-            typeof(DynamicMethod).GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FastReflectionDelegate dmd_DynamicMethod_CreateDynMethod =
-            m_DynamicMethod_CreateDynMethod?.CreateFastDelegate();
+            typeof(DynamicMethod).GetMethod("CreateDynMethod", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?.CreateFastDelegate();
 
         private static readonly FieldInfo f_DynamicMethod_mhandle =
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);

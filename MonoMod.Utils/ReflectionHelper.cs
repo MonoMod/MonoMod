@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 #if NETSTANDARD
 using TypeOrTypeInfo = System.Reflection.TypeInfo;
@@ -41,7 +42,12 @@ namespace MonoMod.Utils {
 
             TypeOrTypeInfo type;
 
-            // Special cases, f.e. multi-dimensional array type methods.
+            // Special cases.
+            if (mref is GenericParameter genParam) {
+                // TODO: Handle GenericParameter in ResolveReflection.
+                throw new NotSupportedException("ResolveReflection on GenericParameter currently not supported");
+            }
+
             if (mref is MethodReference method && mref.DeclaringType is ArrayType) {
                 // ArrayType holds special methods.
                 type = _ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo;
@@ -56,7 +62,7 @@ namespace MonoMod.Utils {
             TypeReference tscope =
                 mref.DeclaringType ??
                 mref as TypeReference ??
-                throw new NotSupportedException("MemberReference hasn't got a DeclaringType / isn't a TypeReference in itself");
+                throw new ArgumentException("MemberReference hasn't got a DeclaringType / isn't a TypeReference in itself");
 
             if (module == null) {
                 string asmName;
@@ -89,6 +95,9 @@ namespace MonoMod.Utils {
             }
 
             if (mref is TypeReference tref) {
+                if (tref.FullName == "<Module>")
+                    throw new ArgumentException("Type <Module> cannot be resolved to a runtime reflection type");
+
                 if (mref is TypeSpecification ts) {
                     type = _ResolveReflection(ts.ElementType, module) as TypeOrTypeInfo;
                     if (type == null)
@@ -113,7 +122,7 @@ namespace MonoMod.Utils {
                 return ResolveReflectionCache[mref] = type;
             }
 
-            type = _ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo;
+            bool typeless = mref.DeclaringType.FullName == "<Module>";
 
             MemberInfo member;
 
@@ -123,13 +132,101 @@ namespace MonoMod.Utils {
                     return null;
                 member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
 
+            } else if (typeless) {
+                if (mref is MethodReference)
+                    member = module.GetMethods((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
+                else if (mref is FieldReference)
+                    member = module.GetFields((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
+                else
+                    throw new NotSupportedException($"Unsupported <Module> member type {mref.GetType().FullName}");
+
             } else {
-                member = type.AsType().GetMembers((BindingFlags) int.MaxValue).FirstOrDefault(m => mref.Is(m));
-                if (member == null)
-                    return null;
+                member = (_ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo).AsType().GetMembers((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
             }
 
+            if (member == null)
+                return null;
             return ResolveReflectionCache[mref] = member;
+        }
+
+        public static SignatureHelper ResolveReflection(this CallSite csite, Module context) {
+            SignatureHelper shelper;
+            switch (csite.CallingConvention) {
+#if !NETSTANDARD
+                case MethodCallingConvention.C:
+                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.Cdecl, csite.ReturnType.ResolveReflection());
+                    break;
+
+                case MethodCallingConvention.StdCall:
+                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.StdCall, csite.ReturnType.ResolveReflection());
+                    break;
+
+                case MethodCallingConvention.ThisCall:
+                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.ThisCall, csite.ReturnType.ResolveReflection());
+                    break;
+
+                case MethodCallingConvention.FastCall:
+                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.FastCall, csite.ReturnType.ResolveReflection());
+                    break;
+
+                case MethodCallingConvention.VarArg:
+                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConventions.VarArgs, csite.ReturnType.ResolveReflection());
+                    break;
+
+#else
+                case MethodCallingConvention.C:
+                case MethodCallingConvention.StdCall:
+                case MethodCallingConvention.ThisCall:
+                case MethodCallingConvention.FastCall:
+                case MethodCallingConvention.VarArg:
+                    throw new NotSupportedException("Unmanaged calling conventions for callsites not supported");
+
+#endif
+
+                default:
+                    if (csite.ExplicitThis) {
+                        shelper = SignatureHelper.GetMethodSigHelper(context, CallingConventions.ExplicitThis, csite.ReturnType.ResolveReflection());
+                    } else {
+                        shelper = SignatureHelper.GetMethodSigHelper(context, CallingConventions.Standard, csite.ReturnType.ResolveReflection());
+                    }
+                    break;
+            }
+
+            List<Type> modReq = new List<Type>();
+            List<Type> modOpt = new List<Type>();
+
+            foreach (ParameterDefinition param in csite.Parameters) {
+                if (param.ParameterType.IsSentinel)
+                    shelper.AddSentinel();
+
+                if (param.ParameterType.IsPinned) {
+                    shelper.AddArgument(param.ParameterType.ResolveReflection(), true);
+                    continue;
+                }
+
+                modOpt.Clear();
+                modReq.Clear();
+
+                for (
+                    TypeReference paramTypeRef = param.ParameterType;
+                    paramTypeRef is TypeSpecification paramTypeSpec;
+                    paramTypeRef = paramTypeSpec.ElementType
+                ) {
+                    switch (paramTypeRef) {
+                        case RequiredModifierType paramTypeModReq:
+                            modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
+                            break;
+
+                        case OptionalModifierType paramTypeOptReq:
+                            modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
+                            break;
+                    }
+                }
+
+                shelper.AddArgument(param.ParameterType.ResolveReflection(), modReq.ToArray(), modOpt.ToArray());
+            }
+
+            return shelper;
         }
 
     }

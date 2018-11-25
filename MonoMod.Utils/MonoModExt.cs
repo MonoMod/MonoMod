@@ -346,6 +346,10 @@ namespace MonoMod.Utils {
             if (mref == null)
                 return false;
 
+            TypeReference mrefDecl = mref.DeclaringType;
+            if (mrefDecl?.FullName == "<Module>")
+                mrefDecl = null;
+
             if (mref is GenericParameter genParamRef) {
                 if (!(minfo is TypeOrTypeInfo genParamInfo) || !genParamInfo.IsGenericParameter)
                     return false;
@@ -357,9 +361,10 @@ namespace MonoMod.Utils {
                 return genParamRef.Position == genParamInfo.GenericParameterPosition;
             }
 
-            if (!(mref.DeclaringType?.Is(minfo.DeclaringType.GetTypeInfo()) ?? minfo.DeclaringType == null))
+            if (!(mrefDecl?.Is(minfo.DeclaringType?.GetTypeInfo()) ?? minfo.DeclaringType == null))
                 return false;
-            if (mref.Name != minfo.Name)
+            // Note: This doesn't work for TypeSpecification, as the reflection-side type.Name changes according to any modifiers (f.e. IsArray).
+            if (!(mref is TypeSpecification) && mref.Name != minfo.Name)
                 return false;
 
             if (mref is TypeReference) {
@@ -390,13 +395,13 @@ namespace MonoMod.Utils {
                     return arrayTypeRef.Dimensions.Count == typeInfo.GetArrayRank() && arrayTypeRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
                 }
 
-                if (mref is TypeSpecification typeSpecRef && typeInfo.HasElementType)
+                if (mref is TypeSpecification typeSpecRef)
                     // Note: There are TypeSpecifications which map to non-ElementType-y reflection Types.
-                    return typeSpecRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
+                    return typeSpecRef.ElementType.Is(typeInfo.HasElementType ? typeInfo.GetElementType().GetTypeInfo() : typeInfo);
 
                 // DeclaringType was already checked before.
                 // Avoid converting nested type separators between + (.NET) and / (cecil)
-                if (mref.DeclaringType != null)
+                if (mrefDecl != null)
                     return mref.Name == typeInfo.Name;
                 return mref.FullName == typeInfo.FullName;
             }
@@ -448,9 +453,9 @@ namespace MonoMod.Utils {
                         return arrayTypeRef.Dimensions.Count == typeInfo.GetArrayRank() && IsParamTypeRef(arrayTypeRef.ElementType, typeInfo.GetElementType().GetTypeInfo());
                     }
 
-                    if (typeRef is TypeSpecification typeSpecRef && typeInfo.HasElementType)
+                    if (typeRef is TypeSpecification typeSpecRef)
                         // Note: There are TypeSpecifications which map to non-ElementType-y reflection Types.
-                        return IsParamTypeRef(typeSpecRef.ElementType, typeInfo.GetElementType().GetTypeInfo());
+                        return IsParamTypeRef(typeSpecRef.ElementType, typeInfo.HasElementType ? typeInfo.GetElementType().GetTypeInfo() : typeInfo);
 
                     if (typeRef.DeclaringType != null && typeInfo.DeclaringType != null)
                         return typeRef.Name == typeInfo.Name && IsParamTypeRef(typeRef.DeclaringType, typeInfo.DeclaringType.GetTypeInfo());

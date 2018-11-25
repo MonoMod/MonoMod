@@ -11,6 +11,37 @@ using System.Linq;
 namespace MonoMod.Utils {
     public sealed class DynamicMethodDefinition : IDisposable {
 
+        /* Note:
+         * The following doesn't work with ancient versions of Mono before
+         * referencesource was used. If you really want to support those,
+         * even though they don't even support mixed mode assemblies anyway,
+         * ... good luck.
+         */
+
+        // ModuleBuilder has only got a single constructor in the reference source.
+        private static ConstructorInfo c_ModuleBuilder =
+            typeof(DynamicMethod).GetTypeInfo().Assembly
+            .GetType("System.Reflection.Emit.ModuleBuilder").GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
+        private static readonly FastReflectionDelegate dmd_DynamicMethod_GetDynamicMethodsModule =
+            typeof(DynamicMethod).GetMethod("GetDynamicMethodsModule", BindingFlags.NonPublic | BindingFlags.Static)
+            ?.CreateFastDelegate();
+#if NETSTANDARD
+        private static readonly FastReflectionDelegate dmd_AssemblyBuilder_DefineDynamicAssembly =
+            typeof(DynamicMethod).GetTypeInfo().Assembly
+            .GetType("System.Reflection.Emit.AssemblyBuilder").GetMethods().FirstOrDefault(
+                m => m.GetFindableID(withType: false) == "System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly(System.Reflection.AssemblyName,System.Reflection.Emit.AssemblyBuilderAccess)"
+            )
+            ?.CreateFastDelegate();
+#else
+        private static AssemblyBuilder dmd_AssemblyBuilder_DefineDynamicAssembly(object instance, AssemblyName name, int access)
+            => AppDomain.CurrentDomain.DefineDynamicAssembly(name, (AssemblyBuilderAccess) access);
+#endif
+        private static readonly Module _DynamicMethodModuleBuilder =
+            c_ModuleBuilder.Invoke(new object[] {
+                dmd_AssemblyBuilder_DefineDynamicAssembly(null, new AssemblyName("DynamicMethodDefinitionHelper"), 1 /* Run */),
+                dmd_DynamicMethod_GetDynamicMethodsModule(null)
+            }) as Module;
+
         private static readonly Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
         private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
@@ -136,13 +167,13 @@ namespace MonoMod.Utils {
                     argTypes[i] = args[i].ParameterType;
             }
 
-            DynamicMethod dynamic = new DynamicMethod(
+            DynamicMethod dm = new DynamicMethod(
                 "DynamicMethodDefinition:" + def.DeclaringType.FullName + "::" + def.Name,
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 true // If any random errors pop up, try setting this to false first.
             );
-            ILGenerator il = dynamic.GetILGenerator();
+            ILGenerator il = dm.GetILGenerator();
 
             LocalBuilder[] locals = def.Body.Variables.Select(
                 var => il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned)
@@ -208,6 +239,8 @@ namespace MonoMod.Utils {
                         operand = param.Index;
                     } else if (operand is MemberReference mref) {
                         operand = mref.ResolveReflection();
+                    } else if (operand is CallSite csite) {
+                        operand = csite.ResolveReflection(_DynamicMethodModuleBuilder);
                     }
 
                     if (operand == null)
@@ -233,7 +266,7 @@ namespace MonoMod.Utils {
 
             }
 
-            return dynamic;
+            return dm;
         }
 
         public void Dispose() {

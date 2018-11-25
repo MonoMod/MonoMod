@@ -65,6 +65,18 @@ static class NETStandardShims {
     public static int GetMetadataToken(this MemberInfo m)
         => (int) _MemberInfo_get_MetadataToken(m);
 
+    private static readonly FastReflectionDelegate _Module_GetMethods =
+        typeof(Module).GetMethod("GetMethods", new Type[] { typeof(BindingFlags) })
+        ?.CreateFastDelegate();
+    public static MethodInfo[] GetMethods(this Module m, BindingFlags bf)
+        => (MethodInfo[]) _Module_GetMethods(m, bf);
+
+    private static readonly FastReflectionDelegate _Module_GetFields =
+        typeof(Module).GetMethod("GetFields", new Type[] { typeof(BindingFlags) })
+        ?.CreateFastDelegate();
+    public static FieldInfo[] GetFields(this Module m, BindingFlags bf)
+        => (FieldInfo[]) _Module_GetFields(m, bf);
+
 #endif
 
     public static Delegate CreateDelegate(Type type, object target, MethodInfo method)
