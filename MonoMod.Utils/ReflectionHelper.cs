@@ -103,8 +103,9 @@ namespace MonoMod.Utils {
                         throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
                 }
 
+                Assembly asm;
                 lock (AssemblyCache) {
-                    if (!AssemblyCache.TryGetValue(asmName, out Assembly asm))
+                    if (!AssemblyCache.TryGetValue(asmName, out asm))
                         AssemblyCache[asmName] = asm = Assembly.Load(new AssemblyName(asmName));
                 }
                 module = string.IsNullOrEmpty(moduleName) ? asm.GetModules()[0] : asm.GetModule(moduleName);
