@@ -22,6 +22,15 @@ namespace MonoMod.Utils {
         public static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
         public static readonly Dictionary<MemberReference, MemberInfo> ResolveReflectionCache = new Dictionary<MemberReference, MemberInfo>();
 
+        private static MemberInfo _Cache(MemberReference key, MemberInfo value) {
+            if (key != null && value != null) {
+                lock (ResolveReflectionCache) {
+                    ResolveReflectionCache[key] = value;
+                }
+            }
+            return value;
+        }
+
         public static Type ResolveReflection(this TypeReference mref)
             => (_ResolveReflection(mref, null) as TypeOrTypeInfo).AsType();
         public static MethodBase ResolveReflection(this MethodReference mref)
@@ -37,8 +46,13 @@ namespace MonoMod.Utils {
             => _ResolveReflection(mref, null);
 
         private static MemberInfo _ResolveReflection(MemberReference mref, Module module) {
-            if (ResolveReflectionCache.TryGetValue(mref, out MemberInfo cached) && cached != null)
-                return cached;
+            if (mref == null)
+                return null;
+
+            lock (ResolveReflectionCache) {
+                if (ResolveReflectionCache.TryGetValue(mref, out MemberInfo cached) && cached != null)
+                    return cached;
+            }
 
             TypeOrTypeInfo type;
 
@@ -56,7 +70,7 @@ namespace MonoMod.Utils {
                 string methodID = method.GetFindableID(withType: false);
                 MethodInfo found = type.AsType().GetMethods().First(m => m.GetFindableID(withType: false) == methodID);
                 if (found != null)
-                    return ResolveReflectionCache[mref] = found;
+                    return _Cache(mref, found);
             }
 
             TypeReference tscope =
@@ -89,8 +103,10 @@ namespace MonoMod.Utils {
                         throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
                 }
 
-                if (!AssemblyCache.TryGetValue(asmName, out Assembly asm))
-                    AssemblyCache[asmName] = asm = Assembly.Load(new AssemblyName(asmName));
+                lock (AssemblyCache) {
+                    if (!AssemblyCache.TryGetValue(asmName, out Assembly asm))
+                        AssemblyCache[asmName] = asm = Assembly.Load(new AssemblyName(asmName));
+                }
                 module = string.IsNullOrEmpty(moduleName) ? asm.GetModules()[0] : asm.GetModule(moduleName);
             }
 
@@ -119,7 +135,7 @@ namespace MonoMod.Utils {
                     type = module.GetType(mref.FullName.Replace("/", "+"), false, false).GetTypeInfo();
                 }
 
-                return ResolveReflectionCache[mref] = type;
+                return _Cache(mref, type);
             }
 
             bool typeless = mref.DeclaringType.FullName == "<Module>";
@@ -144,9 +160,7 @@ namespace MonoMod.Utils {
                 member = (_ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo).AsType().GetMembers((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
             }
 
-            if (member == null)
-                return null;
-            return ResolveReflectionCache[mref] = member;
+            return _Cache(mref, member);
         }
 
         public static SignatureHelper ResolveReflection(this CallSite csite, Module context) {
