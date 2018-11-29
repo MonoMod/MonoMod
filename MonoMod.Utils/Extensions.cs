@@ -297,6 +297,18 @@ namespace MonoMod.Utils {
             }
         }
 
+        public static bool IsCompatible(this Type type, Type other)
+            => _IsCompatible(type, other) || _IsCompatible(other, type);
+        public static bool _IsCompatible(this Type type, Type other) {
+            if (type.GetTypeInfo().IsAssignableFrom(other.GetTypeInfo()))
+                return true;
+
+            if (other.GetTypeInfo().IsEnum && IsCompatible(type, Enum.GetUnderlyingType(other)))
+                return true;
+
+            return false;
+        }
+
         public static Type GetThisParamType(this MethodBase method) {
             Type type = method.DeclaringType;
             if (type.GetTypeInfo().IsValueType)

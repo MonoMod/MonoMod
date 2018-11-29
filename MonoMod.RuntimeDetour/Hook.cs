@@ -36,7 +36,7 @@ namespace MonoMod.RuntimeDetour {
 
             // Check if hook ret -> method ret is valid. Don't check for method ret -> hook ret, as that's too strict.
             Type returnType = (from as MethodInfo)?.ReturnType ?? typeof(void);
-            if (_Hook.ReturnType != returnType && !_Hook.ReturnType.IsAssignableFrom(returnType))
+            if (_Hook.ReturnType != returnType && !_Hook.ReturnType.IsCompatible(returnType))
                 throw new InvalidOperationException($"Return type of hook for {from} doesn't match, must be {((from as MethodInfo)?.ReturnType ?? typeof(void)).FullName}");
 
             if (target == null && !to.IsStatic) {
@@ -69,8 +69,7 @@ namespace MonoMod.RuntimeDetour {
             for (int i = 0; i < argTypes.Length; i++) {
                 Type argMethod = argTypes[i];
                 Type argHook = hookArgs[i + (origType == null ? 0 : 1)].ParameterType;
-                if (!argMethod.IsAssignableFrom(argHook) &&
-                    !argHook.IsAssignableFrom(argMethod))
+                if (!argMethod.IsCompatible(argHook))
                     throw new InvalidOperationException($"Parameter #{i} of hook for {from} doesn't match, must be {argMethod.FullName} or related");
             }
 
