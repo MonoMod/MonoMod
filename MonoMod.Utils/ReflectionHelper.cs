@@ -116,7 +116,7 @@ namespace MonoMod.Utils {
                     throw new ArgumentException("Type <Module> cannot be resolved to a runtime reflection type");
 
                 if (mref is TypeSpecification ts) {
-                    type = _ResolveReflection(ts.ElementType, module) as TypeOrTypeInfo;
+                    type = _ResolveReflection(ts.ElementType, null) as TypeOrTypeInfo;
                     if (type == null)
                         return null;
 
@@ -207,38 +207,45 @@ namespace MonoMod.Utils {
                     break;
             }
 
-            List<Type> modReq = new List<Type>();
-            List<Type> modOpt = new List<Type>();
+            if (context != null) {
+                List<Type> modReq = new List<Type>();
+                List<Type> modOpt = new List<Type>();
 
-            foreach (ParameterDefinition param in csite.Parameters) {
-                if (param.ParameterType.IsSentinel)
-                    shelper.AddSentinel();
+                foreach (ParameterDefinition param in csite.Parameters) {
+                    if (param.ParameterType.IsSentinel)
+                        shelper.AddSentinel();
 
-                if (param.ParameterType.IsPinned) {
-                    shelper.AddArgument(param.ParameterType.ResolveReflection(), true);
-                    continue;
-                }
-
-                modOpt.Clear();
-                modReq.Clear();
-
-                for (
-                    TypeReference paramTypeRef = param.ParameterType;
-                    paramTypeRef is TypeSpecification paramTypeSpec;
-                    paramTypeRef = paramTypeSpec.ElementType
-                ) {
-                    switch (paramTypeRef) {
-                        case RequiredModifierType paramTypeModReq:
-                            modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
-                            break;
-
-                        case OptionalModifierType paramTypeOptReq:
-                            modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
-                            break;
+                    if (param.ParameterType.IsPinned) {
+                        shelper.AddArgument(param.ParameterType.ResolveReflection(), true);
+                        continue;
                     }
+
+                    modOpt.Clear();
+                    modReq.Clear();
+
+                    for (
+                        TypeReference paramTypeRef = param.ParameterType;
+                        paramTypeRef is TypeSpecification paramTypeSpec;
+                        paramTypeRef = paramTypeSpec.ElementType
+                    ) {
+                        switch (paramTypeRef) {
+                            case RequiredModifierType paramTypeModReq:
+                                modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
+                                break;
+
+                            case OptionalModifierType paramTypeOptReq:
+                                modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
+                                break;
+                        }
+                    }
+
+                    shelper.AddArgument(param.ParameterType.ResolveReflection(), modReq.ToArray(), modOpt.ToArray());
                 }
 
-                shelper.AddArgument(param.ParameterType.ResolveReflection(), modReq.ToArray(), modOpt.ToArray());
+            } else {
+                foreach (ParameterDefinition param in csite.Parameters) {
+                    shelper.AddArgument(param.ParameterType.ResolveReflection());
+                }
             }
 
             return shelper;

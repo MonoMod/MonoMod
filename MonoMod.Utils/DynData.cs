@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 
 namespace MonoMod.Utils {
-    public class DynData<TTarget> : IDisposable where TTarget : class {
+    public sealed class DynData<TTarget> : IDisposable where TTarget : class {
 
         public static readonly HashSet<string> Disposable = new HashSet<string>();
         public static event Action<DynData<TTarget>, TTarget> OnInitialize;
