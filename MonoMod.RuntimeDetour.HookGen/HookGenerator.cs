@@ -177,7 +177,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             foreach (TypeDefinition type in Modder.Module.Types) {
                 GenerateFor(type, out TypeDefinition hookType, out TypeDefinition hookILType);
-                if (hookType == null || hookILType == null)
+                if (hookType == null || hookILType == null || hookType.IsNested)
                     continue;
                 OutputModule.Types.Add(hookType);
                 OutputModule.Types.Add(hookILType);
