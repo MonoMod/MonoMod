@@ -39,10 +39,10 @@ namespace MonoMod.Utils {
 
         private static readonly FieldInfo f_DynILGen_m_scope =
             typeof(ILGenerator).GetTypeInfo().Assembly
-            .GetType("System.Reflection.Emit.DynamicILGenerator").GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance);
+            .GetType("System.Reflection.Emit.DynamicILGenerator")?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo f_DynScope_m_tokens =
             typeof(ILGenerator).GetTypeInfo().Assembly
-            .GetType("System.Reflection.Emit.DynamicScope").GetField("m_tokens", BindingFlags.NonPublic | BindingFlags.Instance);
+            .GetType("System.Reflection.Emit.DynamicScope")?.GetField("m_tokens", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Based on https://referencesource.microsoft.com/#mscorlib/system/reflection/mdimport.cs,74bfbae3c61889bc
         private static readonly Type[] CorElementTypes = new Type[] {
