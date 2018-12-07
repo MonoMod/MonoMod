@@ -345,7 +345,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     continue;
                 add = true;
                 hookType.NestedTypes.Add(hookNestedType);
-                hookType.NestedTypes.Add(hookNestedILType);
+                hookILType.NestedTypes.Add(hookNestedILType);
             }
 
             if (!add) {
