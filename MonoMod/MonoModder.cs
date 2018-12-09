@@ -2165,12 +2165,29 @@ namespace MonoMod {
         /// <param name="type">The type of the new token.</param>
         /// <returns>A MetadataToken with an unique RID for the target module.</returns>
         public virtual MetadataToken GetMetadataToken(TokenType type) {
-            try {
-                while (Module.LookupToken(CurrentRID | (int) type) != null) {
+            /* Notes:
+             * 
+             * Mono.Cecil does a great job fixing tokens anyway.
+             * 
+             * The ModuleDef must be constructed with a reader, thus
+             * from an image, as that is the only way a MetadataReader
+             * gets assigned to the ModuleDef.
+             * 
+             * At the same time, the module has only got a file name when
+             * it has been passed on from the image it has been created from.
+             * 
+             * Creating an image from a name-less stream results in an empty string.
+             */
+            if (Module.FileName == null) {
+                ++CurrentRID;
+            } else {
+                try {
+                    while (Module.LookupToken(CurrentRID | (int) type) != null) {
+                        ++CurrentRID;
+                    }
+                } catch {
                     ++CurrentRID;
                 }
-            } catch {
-                CurrentRID++;
             }
             return new MetadataToken(type, CurrentRID);
         }

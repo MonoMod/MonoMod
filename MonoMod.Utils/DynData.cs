@@ -123,7 +123,7 @@ namespace MonoMod.Utils {
             Setters.Remove(name);
         }
 
-        protected void Dispose(bool disposing) {
+        private void Dispose(bool disposing) {
             foreach (string name in Disposable)
                 if (Data.TryGetValue(name, out object value) && value is IDisposable valueDisposable)
                     valueDisposable.Dispose();
