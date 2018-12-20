@@ -128,7 +128,7 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             DynamicMethod dm = new DynamicMethod(
-                $"native_{((long) target).ToString("X16")}",
+                $"Native<{((long) target).ToString("X16")}>",
                 returnType, argTypes,
                 true
             ).StubCriticalDetour();

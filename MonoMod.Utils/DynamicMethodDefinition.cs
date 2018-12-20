@@ -137,7 +137,7 @@ namespace MonoMod.Utils {
             }
 
             DynamicMethod dm = new DynamicMethod(
-                "DynamicMethodDefinition:" + def.DeclaringType.FullName + "::" + def.Name,
+                $"DynamicMethodDefinition<{Method}>",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 true // If any random errors pop up, try setting this to false first.

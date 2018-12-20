@@ -283,7 +283,7 @@ namespace MonoMod.Utils {
             // It also returns a value for types of which the size cannot be determined otherwise.
 
             DynamicMethod dm = new DynamicMethod(
-                $"GetSize:{t.FullName}",
+                $"GetSize<{t.FullName}>",
                 typeof(int), Type.EmptyTypes,
                 true
             );

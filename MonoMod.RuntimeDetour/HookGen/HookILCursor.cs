@@ -349,7 +349,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             argTypes[args.Length] = delType;
 
             DynamicMethod dmInvoke = new DynamicMethod(
-                "HookIL:Invoke:" + delInvokeOrig.DeclaringType.FullName,
+                $"HookIL:Invoke<{delInvokeOrig.DeclaringType.FullName}>?{cb.GetHashCode()}",
                 delInvokeOrig.ReturnType, argTypes,
                 true // If any random errors pop up, try setting this to false first.
             );

@@ -177,7 +177,7 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             DynamicMethod dm;
-            string name = $"Trampoline:Native<{Method?.Name.ToString() ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}";
+            string name = $"Trampoline:Native<{Method?.ToString() ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}";
             if (Method != null) {
                 dm = new DynamicMethod(
                     name,
