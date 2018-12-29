@@ -2178,9 +2178,12 @@ namespace MonoMod {
              * 
              * Creating an image from a name-less stream results in an empty string.
              */
+#if !CECIL0_9
             if (Module.FileName == null) {
                 ++CurrentRID;
-            } else {
+            } else
+#endif
+            {
                 try {
                     while (Module.LookupToken(CurrentRID | (int) type) != null) {
                         ++CurrentRID;
