@@ -119,6 +119,8 @@ namespace MonoMod.Utils {
 
         public DynamicMethod Generate() {
             MethodDefinition def = Definition;
+            // Fix up any mistakes which might accidentally pop up.
+            def.ConvertShortLongOps();
 
             Type[] genericArgsType = Method.DeclaringType.GetTypeInfo().IsGenericType ? Method.DeclaringType.GetGenericArguments() : null;
             Type[] genericArgsMethod = Method.IsGenericMethod ? Method.GetGenericArguments() : null;

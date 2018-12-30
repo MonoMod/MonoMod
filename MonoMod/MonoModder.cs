@@ -1959,7 +1959,6 @@ namespace MonoMod {
                     method.ImplAttributes &= (MethodImplAttributes) 0x0100;
                 }
 
-                method.RecalculateILOffsets();
                 method.ConvertShortLongOps();
 
                 RunCustomAttributeHandlers(method);
