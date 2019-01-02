@@ -134,6 +134,10 @@ namespace MonoMod.Utils {
 
                 } else {
                     type = module.GetType(mref.FullName.Replace("/", "+"), false, false).GetTypeInfo();
+#if !NETSTANDARD1_X
+                    if (type == null)
+                        type = module.GetTypes().FirstOrDefault(m => mref.Is(m));
+#endif
                 }
 
                 return _Cache(mref, type);
@@ -145,9 +149,7 @@ namespace MonoMod.Utils {
 
             if (mref is GenericInstanceMethod mrefGenMethod) {
                 member = _ResolveReflection(mrefGenMethod.ElementMethod, module);
-                if (member == null)
-                    return null;
-                member = (member as MethodInfo).MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
+                member = (member as MethodInfo)?.MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
 
             } else if (typeless) {
                 if (mref is MethodReference)
