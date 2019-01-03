@@ -136,7 +136,7 @@ namespace MonoMod.Utils {
                     type = module.GetType(mref.FullName.Replace("/", "+"), false, false).GetTypeInfo();
 #if !NETSTANDARD1_X
                     if (type == null)
-                        type = module.GetTypes().FirstOrDefault(m => mref.Is(m));
+                        type = module.GetTypes().FirstOrDefault(m => mref.Is(m)).GetTypeInfo();
 #endif
                 }
 
