@@ -53,7 +53,7 @@ namespace MonoMod.UnitTest {
             TestObjectGeneric<string> test = new TestObjectGeneric<string>();
             try {
                 Console.WriteLine(StringOriginal);
-                Counter += i;
+                Counter += new int?(i).Value;
             } catch (Exception) {
                 return Tuple.Create("", -1);
             }
