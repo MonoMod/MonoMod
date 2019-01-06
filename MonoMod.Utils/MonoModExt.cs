@@ -417,6 +417,9 @@ namespace MonoMod.Utils {
 
                 bool IsParamTypeRef(TypeReference typeRef, TypeOrTypeInfo typeInfo) {
                     if (typeRef is GenericParameter genParamTypeRef) {
+                        if (!typeInfo.IsGenericParameter)
+                            return false;
+
                         if (genParamTypeRef.Owner is MethodReference && methodRef is GenericInstanceMethod genMethodRef &&
                             IsParamTypeRef(genMethodRef.GenericArguments[genParamTypeRef.Position], typeInfo))
                             return true;
