@@ -472,6 +472,15 @@ namespace MonoMod.Utils {
                 return true;
             }
 
+            if (mref is FieldReference && !(minfo is System.Reflection.FieldInfo))
+                return false;
+
+            if (mref is PropertyReference && !(minfo is System.Reflection.PropertyInfo))
+                return false;
+
+            if (mref is EventReference && !(minfo is System.Reflection.EventInfo))
+                return false;
+
             return true;
         }
 
