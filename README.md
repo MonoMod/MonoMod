@@ -25,7 +25,7 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 - Chaser6
 - [KyleTheScientist](https://www.twitch.tv/kylethescientist)
 - [Renaud Bédard](https://twitter.com/renaudbedard)
-- leo60288
+- [leo60228](https://leo60228.space)
 - [Rubydragon](https://www.twitch.tv/rubydrag0n)
 - [Artus Elias Meyer-Toms](https://twitter.com/artuselias)
 
