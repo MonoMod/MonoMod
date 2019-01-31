@@ -19,7 +19,7 @@ namespace MonoMod.UnitTest {
             Assert.Equal(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
             MethodInfo original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
-            DynamicMethod patched;
+            MethodBase patched;
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(original)) {
                 // Modify the MethodDefinition.
                 foreach (Instruction instr in dmd.Definition.Body.Instructions) {
@@ -28,7 +28,7 @@ namespace MonoMod.UnitTest {
                 }
 
                 // Generate a DynamicMethod from the modified MethodDefinition.
-                patched = dmd.Generate();
+                patched = dmd.GenerateAuto();
             }
 
             // Run the DynamicMethod.

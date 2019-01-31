@@ -7,6 +7,11 @@ using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Linq;
+using System.Diagnostics;
+using System.ComponentModel;
+#if !NETSTANDARD
+using System.Diagnostics.SymbolStore;
+#endif
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition : IDisposable {
@@ -14,6 +19,8 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
         private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
+
+        private static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
 
         static DynamicMethodDefinition() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
@@ -73,6 +80,10 @@ namespace MonoMod.Utils {
             (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve() ??
             throw new InvalidOperationException("Method definition not found");
 
+#if !NETSTANDARD
+        public TypeBuilder TypeBuilder;
+#endif
+
         public DynamicMethodDefinition(MethodBase method, Func<AssemblyName, ModuleDefinition> moduleGen = null) {
             Method = method ?? throw new ArgumentNullException(nameof(method));
             Reload(moduleGen, false);
@@ -117,14 +128,15 @@ namespace MonoMod.Utils {
             }
         }
 
+        public MethodInfo GenerateAuto(object typeBuilder = null) {
+#if NETSTANDARD
+            return Generate();
+#else
+            return Generate(typeBuilder as TypeBuilder);
+#endif
+        }
+
         public DynamicMethod Generate() {
-            MethodDefinition def = Definition;
-            // Fix up any mistakes which might accidentally pop up.
-            def.ConvertShortLongOps();
-
-            Type[] genericArgsType = Method.DeclaringType.GetTypeInfo().IsGenericType ? Method.DeclaringType.GetGenericArguments() : null;
-            Type[] genericArgsMethod = Method.IsGenericMethod ? Method.GetGenericArguments() : null;
-
             ParameterInfo[] args = Method.GetParameters();
             Type[] argTypes;
             if (!Method.IsStatic) {
@@ -146,8 +158,105 @@ namespace MonoMod.Utils {
             );
             ILGenerator il = dm.GetILGenerator();
 
+            _Generate(dm, il);
+
+            return dm;
+        }
+
+#if !NETSTANDARD
+        public MethodInfo Generate(TypeBuilder typeBuilder) {
+            MethodBuilder method = GenerateMethodBuilder(typeBuilder);
+            typeBuilder = (TypeBuilder) method.DeclaringType;
+            Type type = typeBuilder.CreateType();
+            return type.GetMethod(method.Name);
+        }
+
+        public MethodBuilder GenerateMethodBuilder(TypeBuilder typeBuilder) {
+            if (typeBuilder == null)
+                typeBuilder = TypeBuilder;
+            if (typeBuilder == null) {
+                AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                    new AssemblyName() {
+                        Name = $"DynamicMethodDefinitionAssembly.{Method}.{GetHashCode()}"
+                    },
+                    AssemblyBuilderAccess.RunAndSave
+                );
+
+                ab.SetCustomAttribute(new CustomAttributeBuilder(c_DebuggableAttribute, new object[] {
+                    DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
+                }));
+
+                ModuleBuilder module = ab.DefineDynamicModule($"DynamicMethodDefinitionAssembly<{Method}>?{GetHashCode()}.dll", true);
+                typeBuilder = TypeBuilder = module.DefineType("MainType", System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Class);
+            }
+
+            ParameterInfo[] args = Method.GetParameters();
+            Type[] argTypes;
+            Type[][] argTypesModReq;
+            Type[][] argTypesModOpt;
+            if (!Method.IsStatic) {
+                argTypes = new Type[args.Length + 1];
+                argTypesModReq = new Type[args.Length + 1][];
+                argTypesModOpt = new Type[args.Length + 1][];
+                argTypes[0] = Method.GetThisParamType();
+                argTypesModReq[0] = Type.EmptyTypes;
+                argTypesModOpt[0] = Type.EmptyTypes;
+                for (int i = 0; i < args.Length; i++) {
+                    argTypes[i + 1] = args[i].ParameterType;
+                    argTypesModReq[i + 1] = args[i].GetRequiredCustomModifiers();
+                    argTypesModOpt[i + 1] = args[i].GetOptionalCustomModifiers();
+                }
+            } else {
+                argTypes = new Type[args.Length];
+                argTypesModReq = new Type[args.Length][];
+                argTypesModOpt = new Type[args.Length][];
+                for (int i = 0; i < args.Length; i++) {
+                    argTypes[i] = args[i].ParameterType;
+                    argTypesModReq[i] = args[i].GetRequiredCustomModifiers();
+                    argTypesModOpt[i] = args[i].GetOptionalCustomModifiers();
+                }
+            }
+
+            // Required because the return type modifiers aren't easily accessible via reflection.
+            ResolveWithModifiers(Definition.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt);
+
+            MethodBuilder mb = typeBuilder.DefineMethod(
+                Method.Name,
+                System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+                CallingConventions.Standard,
+                returnType, returnTypeModReq, returnTypeModOpt,
+                argTypes, argTypesModReq, argTypesModOpt
+            );
+            ILGenerator il = mb.GetILGenerator();
+
+            _Generate(mb, il);
+
+            return mb;
+        }
+#endif
+
+        private void _Generate(MethodBase _mb, ILGenerator il) {
+            DynamicMethod dm = _mb as DynamicMethod;
+#if !NETSTANDARD
+            MethodBuilder mb = _mb as MethodBuilder;
+            ModuleBuilder moduleBuilder = mb?.Module as ModuleBuilder;
+#endif
+
+            MethodDefinition def = Definition;
+            MethodDebugInformation defInfo = def.DebugInformation;
+            // Fix up any mistakes which might accidentally pop up.
+            def.ConvertShortLongOps();
+
             LocalBuilder[] locals = def.Body.Variables.Select(
-                var => il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned)
+                var => {
+                    LocalBuilder local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
+#if !NETSTANDARD
+                    if (mb != null && defInfo != null && defInfo.TryGetName(var, out string name)) {
+                        local.SetLocalSymInfo(name);
+                    }
+#endif
+                    return local;
+                }
             ).ToArray();
 
             // Pre-pass - Set up label map.
@@ -164,10 +273,29 @@ namespace MonoMod.Utils {
                 }
             }
 
+#if !NETSTANDARD
+            Dictionary<Document, ISymbolDocumentWriter> infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
+#endif
+
             object[] emitArgs = new object[2];
             foreach (Instruction instr in def.Body.Instructions) {
                 if (labelMap.TryGetValue(instr.Offset, out Label label))
                     il.MarkLabel(label);
+
+#if !NETSTANDARD
+                SequencePoint instrInfo = defInfo?.GetSequencePoint(instr);
+                if (mb != null && instrInfo != null) {
+                    if (!infoDocCache.TryGetValue(instrInfo.Document, out ISymbolDocumentWriter infoDoc)) {
+                        infoDocCache[instrInfo.Document] = infoDoc = moduleBuilder.DefineDocument(
+                            instrInfo.Document.Url,
+                            instrInfo.Document.LanguageGuid,
+                            instrInfo.Document.LanguageVendorGuid,
+                            instrInfo.Document.TypeGuid
+                        );
+                    }
+                    il.MarkSequencePoint(infoDoc, instrInfo.StartLine, instrInfo.StartColumn, instrInfo.EndLine, instrInfo.EndColumn);
+                }
+#endif
 
                 // TODO: This can be improved perf-wise!
                 foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
@@ -211,9 +339,16 @@ namespace MonoMod.Utils {
                     } else if (operand is MemberReference mref) {
                         operand = mref.ResolveReflection();
                     } else if (operand is CallSite csite) {
-                        // SignatureHelper in unmanaged contexts cannot be fully made use of for DynamicMethods.
-                        EmitCallSite(dm, il, _ReflOpCodes[instr.OpCode.Value], csite);
-                        continue;
+                        if (dm != null) {
+                            // SignatureHelper in unmanaged contexts cannot be fully made use of for DynamicMethods.
+                            EmitCallSite(dm, il, _ReflOpCodes[instr.OpCode.Value], csite);
+                            continue;
+                        }
+#if !NETSTANDARD
+                        operand = csite.ResolveReflection(mb.Module);
+#else
+                        throw new NotSupportedException();
+#endif
                     }
 
                     if (operand == null)
@@ -238,8 +373,38 @@ namespace MonoMod.Utils {
                 }
 
             }
+        }
 
-            return dm;
+        private static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type> modReq = null, List<Type> modOpt = null) {
+            if (modReq == null)
+                modReq = new List<Type>();
+            else
+                modReq.Clear();
+
+            if (modOpt == null)
+                modOpt = new List<Type>();
+            else
+                modOpt.Clear();
+
+            for (
+                TypeReference mod = typeRef;
+                mod is TypeSpecification modSpec;
+                mod = modSpec.ElementType
+            ) {
+                switch (mod) {
+                    case RequiredModifierType paramTypeModReq:
+                        modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
+                        break;
+
+                    case OptionalModifierType paramTypeOptReq:
+                        modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
+                        break;
+                }
+            }
+
+            type = typeRef.ResolveReflection();
+            typeModReq = modReq.ToArray();
+            typeModOpt = modOpt.ToArray();
         }
 
         public void Dispose() {

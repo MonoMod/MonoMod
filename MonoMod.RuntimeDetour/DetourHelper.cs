@@ -99,9 +99,9 @@ namespace MonoMod.RuntimeDetour {
         public static IntPtr GetNativeStart(this Expression method)
             => ((MethodCallExpression) method).Method.GetNativeStart();
 
-        public static DynamicMethod CreateILCopy(this MethodBase method)
+        public static MethodInfo CreateILCopy(this MethodBase method)
             => Runtime.CreateCopy(method);
-        public static bool TryCreateILCopy(this MethodBase method, out DynamicMethod dm)
+        public static bool TryCreateILCopy(this MethodBase method, out MethodInfo dm)
             => Runtime.TryCreateCopy(method, out dm);
 
         public static T Pin<T>(this T method) where T : MethodBase {

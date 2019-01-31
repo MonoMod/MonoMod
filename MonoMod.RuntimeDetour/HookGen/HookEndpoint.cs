@@ -27,7 +27,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
             }
         }
-        private DynamicMethod ILManipulated;
+        private MethodBase ILManipulated;
         private Detour ILDetour;
 
         internal HookEndpoint(MethodBase method) {
@@ -36,7 +36,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         internal void UpdateILManipulated(bool force = false) {
             if (force || ILList.Count != 0)
-                ILManipulated = DMD.Generate();
+                ILManipulated = DMD.GenerateAuto();
             else
                 ILManipulated = null;
 

@@ -111,22 +111,8 @@ namespace MonoMod.Utils {
             List<Type> modReq = new List<Type>();
             List<Type> modOpt = new List<Type>();
 
-            for (
-                TypeReference returnTypeRef = csite.ReturnType;
-                returnTypeRef is TypeSpecification returnTypeSpec;
-                returnTypeRef = returnTypeSpec.ElementType
-            ) {
-                switch (returnTypeRef) {
-                    case RequiredModifierType paramTypeModReq:
-                        modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
-                        break;
-
-                    case OptionalModifierType paramTypeOptReq:
-                        modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
-                        break;
-                }
-            }
-            AddArgument(csite.ReturnType.ResolveReflection(), modReq.ToArray(), modOpt.ToArray());
+            ResolveWithModifiers(csite.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt, modReq, modOpt);
+            AddArgument(returnType, returnTypeModReq, returnTypeModOpt);
 
             foreach (ParameterDefinition param in csite.Parameters) {
                 if (param.ParameterType.IsSentinel)
@@ -138,26 +124,8 @@ namespace MonoMod.Utils {
                     // continue;
                 }
 
-                modOpt.Clear();
-                modReq.Clear();
-
-                for (
-                    TypeReference paramTypeRef = param.ParameterType;
-                    paramTypeRef is TypeSpecification paramTypeSpec;
-                    paramTypeRef = paramTypeSpec.ElementType
-                ) {
-                    switch (paramTypeRef) {
-                        case RequiredModifierType paramTypeModReq:
-                            modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
-                            break;
-
-                        case OptionalModifierType paramTypeOptReq:
-                            modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
-                            break;
-                    }
-                }
-
-                AddArgument(param.ParameterType.ResolveReflection(), modReq.ToArray(), modOpt.ToArray());
+                ResolveWithModifiers(param.ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
+                AddArgument(paramType, paramTypeModReq, paramTypeModOpt);
             }
 
             AddElementType(0x00 /* CorElementType.End */);

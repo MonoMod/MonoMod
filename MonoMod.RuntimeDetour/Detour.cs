@@ -14,7 +14,7 @@ namespace MonoMod.RuntimeDetour {
     public class Detour : IDetour {
 
         private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
-        private static Dictionary<MethodBase, DynamicMethod> _BackupMethods = new Dictionary<MethodBase, DynamicMethod>();
+        private static Dictionary<MethodBase, MethodInfo> _BackupMethods = new Dictionary<MethodBase, MethodInfo>();
 
         public static Func<Detour, MethodBase, MethodBase, bool> OnDetour;
         public static Func<Detour, bool> OnUndo;
@@ -63,7 +63,7 @@ namespace MonoMod.RuntimeDetour {
         private NativeDetour _TopDetour;
 
         // Called by the generated trampolines, updated when the Detour chain changes.
-        private DynamicMethod _ChainedTrampoline;
+        private MethodInfo _ChainedTrampoline;
 
         public Detour(MethodBase from, MethodBase to) {
             Method = from;

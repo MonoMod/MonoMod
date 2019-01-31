@@ -46,7 +46,7 @@ namespace MonoMod.RuntimeDetour {
         public readonly NativeDetourData Data;
         public readonly MethodBase Method;
 
-        private DynamicMethod _BackupMethod;
+        private MethodInfo _BackupMethod;
         private IntPtr _BackupNative;
 
         private bool _IsFree;

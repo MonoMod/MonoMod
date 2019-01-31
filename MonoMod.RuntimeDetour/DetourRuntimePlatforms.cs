@@ -9,8 +9,8 @@ using System.Linq;
 namespace MonoMod.RuntimeDetour {
     public interface IDetourRuntimePlatform {
         IntPtr GetNativeStart(MethodBase method);
-        DynamicMethod CreateCopy(MethodBase method);
-        bool TryCreateCopy(MethodBase method, out DynamicMethod dm);
+        MethodInfo CreateCopy(MethodBase method);
+        bool TryCreateCopy(MethodBase method, out MethodInfo dm);
         void Pin(MethodBase method);
         MethodBase GetDetourTarget(MethodBase from, MethodBase to);
     }
@@ -19,7 +19,7 @@ namespace MonoMod.RuntimeDetour {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         // Prevent the GC from collecting those.
-        protected HashSet<DynamicMethod> PinnedDynamicMethods = new HashSet<DynamicMethod>();
+        protected HashSet<MethodBase> PinnedMethods = new HashSet<MethodBase>();
 
         private bool GlueThiscallStructRetPtr;
 
@@ -94,29 +94,24 @@ namespace MonoMod.RuntimeDetour {
             => GetFunctionPointer(GetMethodHandle(method));
 
         public void Pin(MethodBase method) {
+            PinnedMethods.Add(method);
             RuntimeMethodHandle handle = GetMethodHandle(method);
-
-            if (method is DynamicMethod) {
-                DynamicMethod dm = (DynamicMethod) method;
-                PinnedDynamicMethods.Add(dm);
-            }
-
             PrepareMethod(handle);
         }
 
-        public DynamicMethod CreateCopy(MethodBase method) {
-            if (!TryCreateCopy(method, out DynamicMethod dm))
+        public MethodInfo CreateCopy(MethodBase method) {
+            if (!TryCreateCopy(method, out MethodInfo dm))
                 throw new InvalidOperationException($"Uncopyable method: {method?.ToString() ?? "NULL"}");
             return dm;
         }
-        public bool TryCreateCopy(MethodBase method, out DynamicMethod dm) {
+        public bool TryCreateCopy(MethodBase method, out MethodInfo dm) {
             if (method == null || (method.GetMethodImplementationFlags() & (MethodImplAttributes.OPTIL | MethodImplAttributes.Native | MethodImplAttributes.Runtime)) != 0) {
                 dm = null;
                 return false;
             }
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(method))
-                dm = dmd.Generate();
+                dm = dmd.GenerateAuto();
 
             dm.Pin();
             return true;
