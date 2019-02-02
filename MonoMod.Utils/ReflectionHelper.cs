@@ -166,7 +166,9 @@ namespace MonoMod.Utils {
             return _Cache(mref, member);
         }
 
-        public static SignatureHelper ResolveReflection(this CallSite csite, Module context) {
+        public static SignatureHelper ResolveReflection(this CallSite csite, Module context)
+            => ResolveReflectionSignature(csite, context);
+        public static SignatureHelper ResolveReflectionSignature(this IMethodSignature csite, Module context) {
             SignatureHelper shelper;
             switch (csite.CallingConvention) {
 #if !NETSTANDARD

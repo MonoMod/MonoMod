@@ -95,7 +95,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             _ChainedTrampoline = new DynamicMethod(
-                $"Chain<{Method}>?{GetHashCode()}",
+                $"Chain<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 false // Otherwise just ret is invalid for whatever reason.
@@ -237,7 +237,7 @@ namespace MonoMod.RuntimeDetour {
             ILGenerator il;
 
             dm = new DynamicMethod(
-                $"Trampoline<{Method}>?{GetHashCode()}",
+                $"Trampoline<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
                 returnType, argTypes,
                 Method.DeclaringType,
                 true

@@ -136,7 +136,7 @@ namespace MonoMod.RuntimeDetour {
                     argTypes.Add(fromInfo.ReturnType.MakeByRefType()); // __ret - Refs are shiny pointers.
                     argTypes.AddRange(from.GetParameters().Select(p => p.ParameterType));
                     dm = new DynamicMethod(
-                        $"Glue:ThiscallStructRetPtr<{from},{to}>",
+                        $"Glue:ThiscallStructRetPtr<{from.GetFindableID(simple: true)},{to.GetFindableID(simple: true)}>",
                         typeof(void), argTypes.ToArray(),
                         true
                     );

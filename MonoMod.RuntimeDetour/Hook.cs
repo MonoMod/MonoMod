@@ -80,7 +80,7 @@ namespace MonoMod.RuntimeDetour {
             ILGenerator il;
 
             dm = new DynamicMethod(
-                $"Hook<{Method}>?{GetHashCode()}",
+                $"Hook<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 true
@@ -113,7 +113,7 @@ namespace MonoMod.RuntimeDetour {
                     origArgTypes[i] = origArgs[i].ParameterType;
 
                 dm = new DynamicMethod(
-                    $"Chain:TMP<{Method}>?{GetHashCode()}",
+                    $"Chain:TMP<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
                     (origInvoke as MethodInfo)?.ReturnType ?? typeof(void), origArgTypes,
                     Method.DeclaringType,
                     true

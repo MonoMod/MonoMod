@@ -10,6 +10,8 @@ using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
 #if !NETSTANDARD
+using System.Security.Permissions;
+using System.Security;
 using System.Diagnostics.SymbolStore;
 #endif
 
@@ -20,7 +22,11 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
         private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
 
+#if !NETSTANDARD
         private static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
+        private static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(new Type[] { });
+        private static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new Type[] { typeof(string) });
+#endif
 
         static DynamicMethodDefinition() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
@@ -128,11 +134,13 @@ namespace MonoMod.Utils {
             }
         }
 
-        public MethodInfo GenerateAuto(object typeBuilder = null) {
+        public MethodInfo GenerateAuto()
+            => GenerateAuto(null);
+        public MethodInfo GenerateAuto(object context) {
 #if NETSTANDARD
             return Generate();
 #else
-            return Generate(typeBuilder as TypeBuilder);
+            return Generate(context as TypeBuilder);
 #endif
         }
 
@@ -151,7 +159,7 @@ namespace MonoMod.Utils {
             }
 
             DynamicMethod dm = new DynamicMethod(
-                $"DynamicMethodDefinition<{Method}>",
+                $"DynamicMethodDefinition<{Method.GetFindableID(simple: true)}>",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 true // If any random errors pop up, try setting this to false first.
@@ -185,9 +193,11 @@ namespace MonoMod.Utils {
                 ab.SetCustomAttribute(new CustomAttributeBuilder(c_DebuggableAttribute, new object[] {
                     DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
                 }));
+                ab.SetCustomAttribute(new CustomAttributeBuilder(c_UnverifiableCodeAttribute, new object[] {
+                }));
 
-                ModuleBuilder module = ab.DefineDynamicModule($"DynamicMethodDefinitionAssembly<{Method}>?{GetHashCode()}.dll", true);
-                typeBuilder = TypeBuilder = module.DefineType("MainType", System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Class);
+                ModuleBuilder module = ab.DefineDynamicModule($"DynamicMethodDefinitionAssembly<{Method.GetFindableID(simple: true)}>?{GetHashCode()}.dll", true);
+                typeBuilder = TypeBuilder = module.DefineType("DynamicMethodDefinitionBuilder", System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Class);
             }
 
             ParameterInfo[] args = Method.GetParameters();
@@ -221,7 +231,7 @@ namespace MonoMod.Utils {
             ResolveWithModifiers(Definition.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt);
 
             MethodBuilder mb = typeBuilder.DefineMethod(
-                Method.Name,
+                Method.GetFindableID(simple: true),
                 System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                 CallingConventions.Standard,
                 returnType, returnTypeModReq, returnTypeModOpt,
@@ -240,6 +250,11 @@ namespace MonoMod.Utils {
 #if !NETSTANDARD
             MethodBuilder mb = _mb as MethodBuilder;
             ModuleBuilder moduleBuilder = mb?.Module as ModuleBuilder;
+            AssemblyBuilder assemblyBuilder = moduleBuilder.Assembly as AssemblyBuilder;
+            HashSet<Assembly> accessChecksIgnored = null;
+            if (mb != null) {
+                accessChecksIgnored = new HashSet<Assembly>();
+            }
 #endif
 
             MethodDefinition def = Definition;
@@ -337,7 +352,22 @@ namespace MonoMod.Utils {
                     } else if (operand is ParameterDefinition param) {
                         operand = param.Index;
                     } else if (operand is MemberReference mref) {
-                        operand = mref.ResolveReflection();
+                        MemberInfo member = mref.ResolveReflection();
+                        operand = member;
+#if !NETSTANDARD
+                        // TODO: Only do the following for inaccessible members.
+                        if (mb != null) {
+                            Assembly asm = member.Module.Assembly;
+                            if (!accessChecksIgnored.Contains(asm)) {
+                                // while (member.DeclaringType != null)
+                                //     member = member.DeclaringType;
+                                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(c_IgnoresAccessChecksToAttribute, new object[] {
+                                    asm.GetName().Name
+                                }));
+                                accessChecksIgnored.Add(asm);
+                            }
+                        }
+#endif
                     } else if (operand is CallSite csite) {
                         if (dm != null) {
                             // SignatureHelper in unmanaged contexts cannot be fully made use of for DynamicMethods.
@@ -350,6 +380,30 @@ namespace MonoMod.Utils {
                         throw new NotSupportedException();
 #endif
                     }
+
+#if !NETSTANDARD
+                    if (mb != null && operand is MethodBase called && called.DeclaringType == null) {
+                        // "Global" methods (f.e. DynamicMethods) cannot be tokenized.
+                        if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Call) {
+                            if (operand is DynamicMethod target) {
+                                // This should be heavily optimizable.
+                                operand = CreateMethodProxy(mb, target);
+
+                            } else {
+                                IntPtr ptr = called.GetLdftnPointer();
+                                if (IntPtr.Size == 4)
+                                    il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, (int) ptr);
+                                else
+                                    il.Emit(System.Reflection.Emit.OpCodes.Ldc_I8, (long) ptr);
+                                il.Emit(System.Reflection.Emit.OpCodes.Conv_I);
+                                instr.OpCode = Mono.Cecil.Cil.OpCodes.Calli;
+                                operand = ((MethodReference) instr.Operand).ResolveReflectionSignature(mb.Module);
+                            }
+                        } else {
+                            throw new NotSupportedException($"Unsupported global method operand on opcode {instr.OpCode.Name}");
+                        }
+                    }
+#endif
 
                     if (operand == null)
                         throw new NullReferenceException($"Unexpected null in {def} @ {instr}");

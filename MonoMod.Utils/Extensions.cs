@@ -297,6 +297,32 @@ namespace MonoMod.Utils {
             }
         }
 
+        private static readonly Dictionary<MethodBase, Func<IntPtr>> _GetLdftnPointerCache = new Dictionary<MethodBase, Func<IntPtr>>();
+        public static IntPtr GetLdftnPointer(this MethodBase m) {
+            if (_GetLdftnPointerCache.TryGetValue(m, out Func<IntPtr> func))
+                return func();
+
+            // Note: ldftn doesn't JIT the method on mono, keeping the class constructor untouched.
+            // Its result thus doesn't always match MethodHandle.GetFunctionPointer().
+
+            DynamicMethod dm = new DynamicMethod(
+                $"GetLdftnPointer<{m.GetFindableID(simple: true)}>",
+                typeof(int), Type.EmptyTypes,
+                true
+            );
+
+            ILGenerator il = dm.GetILGenerator();
+            if (m is ConstructorInfo)
+                il.Emit(OpCodes.Ldftn, (ConstructorInfo) m);
+            else
+                il.Emit(OpCodes.Ldftn, (MethodInfo) m);
+            il.Emit(OpCodes.Ret);
+
+            lock (_GetLdftnPointerCache) {
+                return (_GetLdftnPointerCache[m] = dm.CreateDelegate(typeof(Func<IntPtr>)) as Func<IntPtr>)();
+            }
+        }
+
         public static bool IsCompatible(this Type type, Type other)
             => _IsCompatible(type, other) || _IsCompatible(other, type);
         public static bool _IsCompatible(this Type type, Type other) {

@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace MonoMod.Utils {
     // The following mostly qualifies as r/badcode material.
-    public sealed partial class DynamicMethodDefinition : IDisposable {
+    public sealed partial class DynamicMethodDefinition {
 
         // Mono
         private static readonly FastReflectionDelegate _ILGen_make_room =

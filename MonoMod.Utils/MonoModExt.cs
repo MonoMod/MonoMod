@@ -207,7 +207,7 @@ namespace MonoMod.Utils {
             StringBuilder builder = new StringBuilder();
 
             if (simple) {
-                if (withType)
+                if (withType && method.DeclaringType != null)
                     builder.Append(type ?? method.DeclaringType.GetPatchFullName()).Append("::");
                 builder.Append(name ?? method.Name);
                 return builder.ToString();
@@ -290,7 +290,7 @@ namespace MonoMod.Utils {
             StringBuilder builder = new StringBuilder();
 
             if (simple) {
-                if (withType)
+                if (withType && method.DeclaringType != null)
                     builder.Append(type ?? method.DeclaringType.FullName).Append("::");
                 builder.Append(name ?? method.Name);
                 return builder.ToString();
