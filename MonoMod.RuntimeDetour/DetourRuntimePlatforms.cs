@@ -111,7 +111,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(method))
-                dm = dmd.GenerateAuto();
+                dm = dmd.Generate();
 
             dm.Pin();
             return true;

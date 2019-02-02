@@ -86,10 +86,6 @@ namespace MonoMod.Utils {
             (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve() ??
             throw new InvalidOperationException("Method definition not found");
 
-#if !NETSTANDARD
-        public TypeBuilder TypeBuilder;
-#endif
-
         public DynamicMethodDefinition(MethodBase method, Func<AssemblyName, ModuleDefinition> moduleGen = null) {
             Method = method ?? throw new ArgumentNullException(nameof(method));
             Reload(moduleGen, false);
@@ -134,17 +130,17 @@ namespace MonoMod.Utils {
             }
         }
 
-        public MethodInfo GenerateAuto()
-            => GenerateAuto(null);
-        public MethodInfo GenerateAuto(object context) {
+        public MethodInfo Generate()
+            => Generate(null);
+        public MethodInfo Generate(object context) {
 #if NETSTANDARD
-            return Generate();
+            return GenerateViaDynamicMethod();
 #else
-            return Generate(context as TypeBuilder);
+            return GenerateViaMethodBuilder(context as TypeBuilder);
 #endif
         }
 
-        public DynamicMethod Generate() {
+        public DynamicMethod GenerateViaDynamicMethod() {
             ParameterInfo[] args = Method.GetParameters();
             Type[] argTypes;
             if (!Method.IsStatic) {
@@ -159,7 +155,7 @@ namespace MonoMod.Utils {
             }
 
             DynamicMethod dm = new DynamicMethod(
-                $"DynamicMethodDefinition<{Method.GetFindableID(simple: true)}>",
+                $"DMD<{Method.GetFindableID(simple: true)}>",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
                 Method.DeclaringType,
                 true // If any random errors pop up, try setting this to false first.
@@ -172,7 +168,7 @@ namespace MonoMod.Utils {
         }
 
 #if !NETSTANDARD
-        public MethodInfo Generate(TypeBuilder typeBuilder) {
+        public MethodInfo GenerateViaMethodBuilder(TypeBuilder typeBuilder) {
             MethodBuilder method = GenerateMethodBuilder(typeBuilder);
             typeBuilder = (TypeBuilder) method.DeclaringType;
             Type type = typeBuilder.CreateType();
@@ -180,12 +176,10 @@ namespace MonoMod.Utils {
         }
 
         public MethodBuilder GenerateMethodBuilder(TypeBuilder typeBuilder) {
-            if (typeBuilder == null)
-                typeBuilder = TypeBuilder;
             if (typeBuilder == null) {
                 AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
-                        Name = $"DynamicMethodDefinitionAssembly.{Method}.{GetHashCode()}"
+                        Name = $"DMDASM_{GetHashCode()}"
                     },
                     AssemblyBuilderAccess.RunAndSave
                 );
@@ -196,8 +190,11 @@ namespace MonoMod.Utils {
                 ab.SetCustomAttribute(new CustomAttributeBuilder(c_UnverifiableCodeAttribute, new object[] {
                 }));
 
-                ModuleBuilder module = ab.DefineDynamicModule($"DynamicMethodDefinitionAssembly<{Method.GetFindableID(simple: true)}>?{GetHashCode()}.dll", true);
-                typeBuilder = TypeBuilder = module.DefineType("DynamicMethodDefinitionBuilder", System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Class);
+                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", true);
+                typeBuilder = module.DefineType(
+                    $"DMD<{Method.GetFindableID(simple: true).Replace('.', '_')}>?{GetHashCode()}",
+                    System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
+                );
             }
 
             ParameterInfo[] args = Method.GetParameters();
@@ -231,7 +228,7 @@ namespace MonoMod.Utils {
             ResolveWithModifiers(Definition.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt);
 
             MethodBuilder mb = typeBuilder.DefineMethod(
-                Method.GetFindableID(simple: true),
+                Method.Name.Replace('.', '_'),
                 System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                 CallingConventions.Standard,
                 returnType, returnTypeModReq, returnTypeModOpt,
@@ -292,6 +289,7 @@ namespace MonoMod.Utils {
             Dictionary<Document, ISymbolDocumentWriter> infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
 #endif
 
+            int paramOffs = def.HasThis ? 1 : 0;
             object[] emitArgs = new object[2];
             foreach (Instruction instr in def.Body.Instructions) {
                 if (labelMap.TryGetValue(instr.Offset, out Label label))
@@ -350,7 +348,7 @@ namespace MonoMod.Utils {
                     } else if (operand is VariableDefinition var) {
                         operand = locals[var.Index];
                     } else if (operand is ParameterDefinition param) {
-                        operand = param.Index;
+                        operand = param.Index + paramOffs;
                     } else if (operand is MemberReference mref) {
                         MemberInfo member = mref.ResolveReflection();
                         operand = member;

@@ -28,7 +28,7 @@ namespace MonoMod.UnitTest {
                 }
 
                 // Generate a DynamicMethod from the modified MethodDefinition.
-                patched = dmd.GenerateAuto();
+                patched = dmd.Generate();
             }
 
             // Run the DynamicMethod.

@@ -21,7 +21,7 @@ namespace MonoMod.Utils {
 
         private MethodBuilder CreateMethodProxy(MethodBuilder context, DynamicMethod target) {
             TypeBuilder tb = (TypeBuilder) context.DeclaringType;
-            string name = ".dmproxy." + target.GetHashCode();
+            string name = $".dmdproxy<{target.Name.Replace('.', '_')}>?{target.GetHashCode()}";
             MethodBuilder mb;
 
             // System.NotSupportedException: The invoked member is not supported before the type is created.
@@ -34,7 +34,7 @@ namespace MonoMod.Utils {
             Type[] args = target.GetParameters().Select(param => param.ParameterType).ToArray();
             mb = tb.DefineMethod(
                 name,
-                System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+                System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Private | System.Reflection.MethodAttributes.Static,
                 CallingConventions.Standard,
                 target.ReturnType,
                 args
@@ -48,6 +48,7 @@ namespace MonoMod.Utils {
             il.Emit(OpCodes.Ldc_I4, args.Length);
             il.Emit(OpCodes.Newarr, typeof(object));
             for (int i = 0; i < args.Length; i++) {
+                il.Emit(OpCodes.Dup);
                 il.Emit(OpCodes.Ldc_I4, i);
                 il.Emit(OpCodes.Ldarg, i);
                 il.Emit(OpCodes.Stelem_Ref);
@@ -56,6 +57,8 @@ namespace MonoMod.Utils {
             il.Emit(OpCodes.Callvirt, m_MethodBase_InvokeSimple);
             if (target.ReturnType == typeof(void))
                 il.Emit(OpCodes.Pop);
+            else if (target.ReturnType.IsValueType)
+                il.Emit(OpCodes.Unbox_Any, target.ReturnType);
             il.Emit(OpCodes.Ret);
 
             return mb;

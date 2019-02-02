@@ -36,7 +36,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         internal void UpdateILManipulated(bool force = false) {
             if (force || ILList.Count != 0)
-                ILManipulated = DMD.GenerateAuto();
+                ILManipulated = DMD.Generate();
             else
                 ILManipulated = null;
 
