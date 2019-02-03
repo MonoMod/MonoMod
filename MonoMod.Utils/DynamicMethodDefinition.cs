@@ -200,9 +200,8 @@ namespace MonoMod.Utils {
             Type type = typeBuilder.CreateType();
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"))) {
                 string path = method.Module.FullyQualifiedName;
+                string name = System.IO.Path.GetFileName(path);
                 string dir = System.IO.Path.GetDirectoryName(path);
-                string name = $"{Definition.GetFindableID().Replace('.', '_').Replace(':', '_').Replace('/', '_')}_{GetHashCode()}.dll";
-                path = System.IO.Path.Combine(dir, name);
                 if (!System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
                 if (System.IO.File.Exists(path))
@@ -237,7 +236,7 @@ namespace MonoMod.Utils {
                     }));
                 }
 
-                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{Definition.GetFindableID().Replace('.', '_').Replace(':', '_').Replace('/', '_')}_{GetHashCode()}.dll", true);
+                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", true);
                 typeBuilder = module.DefineType(
                     $"DMD<{Method.GetFindableID(simple: true).Replace('.', '_')}>?{GetHashCode()}",
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
