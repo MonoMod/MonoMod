@@ -151,7 +151,7 @@ namespace MonoMod.Utils {
                     return GenerateViaDynamicMethod();
 
 #if !NETSTANDARD
-                case GeneratorType.ModuleBuilder:
+                case GeneratorType.MethodBuilder:
                     return GenerateViaMethodBuilder(context as TypeBuilder);
 #endif
 
@@ -198,16 +198,34 @@ namespace MonoMod.Utils {
             MethodBuilder method = GenerateMethodBuilder(typeBuilder);
             typeBuilder = (TypeBuilder) method.DeclaringType;
             Type type = typeBuilder.CreateType();
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"))) {
+                string path = method.Module.FullyQualifiedName;
+                string dir = System.IO.Path.GetDirectoryName(path);
+                string name = $"{Definition.GetFindableID().Replace('.', '_').Replace(':', '_').Replace('/', '_')}_{GetHashCode()}.dll";
+                path = System.IO.Path.Combine(dir, name);
+                if (!System.IO.Directory.Exists(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+                ((AssemblyBuilder) typeBuilder.Assembly).Save(name);
+            }
             return type.GetMethod(method.Name);
         }
 
         public MethodBuilder GenerateMethodBuilder(TypeBuilder typeBuilder) {
             if (typeBuilder == null) {
+                string dumpDir = Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP");
+                if (string.IsNullOrEmpty(dumpDir)) {
+                    dumpDir = null;
+                } else {
+                    dumpDir = System.IO.Path.GetFullPath(dumpDir);
+                }
                 AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
                         Name = $"DMDASM_{GetHashCode()}"
                     },
-                    AssemblyBuilderAccess.RunAndSave
+                    AssemblyBuilderAccess.RunAndSave,
+                    dumpDir
                 );
 
                 ab.SetCustomAttribute(new CustomAttributeBuilder(c_UnverifiableCodeAttribute, new object[] {
@@ -219,7 +237,7 @@ namespace MonoMod.Utils {
                     }));
                 }
 
-                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", true);
+                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{Definition.GetFindableID().Replace('.', '_').Replace(':', '_').Replace('/', '_')}_{GetHashCode()}.dll", true);
                 typeBuilder = module.DefineType(
                     $"DMD<{Method.GetFindableID(simple: true).Replace('.', '_')}>?{GetHashCode()}",
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
@@ -276,7 +294,8 @@ namespace MonoMod.Utils {
 #if !NETSTANDARD
             MethodBuilder mb = _mb as MethodBuilder;
             ModuleBuilder moduleBuilder = mb?.Module as ModuleBuilder;
-            AssemblyBuilder assemblyBuilder = moduleBuilder?.Assembly as AssemblyBuilder;
+            // moduleBuilder.Assembly sometimes avoids the .Assembly override under mysterious circumstances.
+            AssemblyBuilder assemblyBuilder = (mb?.DeclaringType as TypeBuilder)?.Assembly as AssemblyBuilder;
             HashSet<Assembly> accessChecksIgnored = null;
             if (mb != null) {
                 accessChecksIgnored = new HashSet<Assembly>();
@@ -285,8 +304,6 @@ namespace MonoMod.Utils {
 
             MethodDefinition def = Definition;
             MethodDebugInformation defInfo = Debug ? def.DebugInformation : null;
-            // Fix up any mistakes which might accidentally pop up.
-            def.ConvertShortLongOps();
 
             LocalBuilder[] locals = def.Body.Variables.Select(
                 var => {
@@ -301,16 +318,16 @@ namespace MonoMod.Utils {
             ).ToArray();
 
             // Pre-pass - Set up label map.
-            Dictionary<int, Label> labelMap = new Dictionary<int, Label>();
+            Dictionary<Instruction, Label> labelMap = new Dictionary<Instruction, Label>();
             foreach (Instruction instr in def.Body.Instructions) {
                 if (instr.Operand is Instruction[] targets) {
                     foreach (Instruction target in targets)
-                        if (!labelMap.ContainsKey(target.Offset))
-                            labelMap[target.Offset] = il.DefineLabel();
+                        if (!labelMap.ContainsKey(target))
+                            labelMap[target] = il.DefineLabel();
 
                 } else if (instr.Operand is Instruction target) {
-                    if (!labelMap.ContainsKey(target.Offset))
-                        labelMap[target.Offset] = il.DefineLabel();
+                    if (!labelMap.ContainsKey(target))
+                        labelMap[target] = il.DefineLabel();
                 }
             }
 
@@ -321,7 +338,10 @@ namespace MonoMod.Utils {
             int paramOffs = def.HasThis ? 1 : 0;
             object[] emitArgs = new object[2];
             foreach (Instruction instr in def.Body.Instructions) {
-                if (labelMap.TryGetValue(instr.Offset, out Label label))
+                // Let's hope that the JIT treats the long forms identically to the short forms.
+                instr.OpCode = instr.OpCode.ShortToLongOp();
+
+                if (labelMap.TryGetValue(instr, out Label label))
                     il.MarkLabel(label);
 
 #if !NETSTANDARD
@@ -371,9 +391,9 @@ namespace MonoMod.Utils {
                     object operand = instr.Operand;
 
                     if (operand is Instruction[] targets) {
-                        operand = targets.Select(target => labelMap[target.Offset]).ToArray();
+                        operand = targets.Select(target => labelMap[target]).ToArray();
                     } else if (operand is Instruction target) {
-                        operand = labelMap[target.Offset];
+                        operand = labelMap[target];
                     } else if (operand is VariableDefinition var) {
                         operand = locals[var.Index];
                     } else if (operand is ParameterDefinition param) {
@@ -549,7 +569,7 @@ namespace MonoMod.Utils {
             DynamicMethod = 1,
             DM = 1,
 #if !NETSTANDARD
-            ModuleBuilder = 2,
+            MethodBuilder = 2,
             MB = 2,
 #endif
         }
