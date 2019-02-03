@@ -338,9 +338,6 @@ namespace MonoMod.Utils {
             int paramOffs = def.HasThis ? 1 : 0;
             object[] emitArgs = new object[2];
             foreach (Instruction instr in def.Body.Instructions) {
-                // Let's hope that the JIT treats the long forms identically to the short forms.
-                instr.OpCode = instr.OpCode.ShortToLongOp();
-
                 if (labelMap.TryGetValue(instr, out Label label))
                     il.MarkLabel(label);
 
@@ -392,8 +389,12 @@ namespace MonoMod.Utils {
 
                     if (operand is Instruction[] targets) {
                         operand = targets.Select(target => labelMap[target]).ToArray();
+                        // Let's hope that the JIT treats the long forms identically to the short forms.
+                        instr.OpCode = instr.OpCode.ShortToLongOp();
                     } else if (operand is Instruction target) {
                         operand = labelMap[target];
+                        // Let's hope that the JIT treats the long forms identically to the short forms.
+                        instr.OpCode = instr.OpCode.ShortToLongOp();
                     } else if (operand is VariableDefinition var) {
                         operand = locals[var.Index];
                     } else if (operand is ParameterDefinition param) {
