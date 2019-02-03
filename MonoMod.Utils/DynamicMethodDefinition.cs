@@ -86,7 +86,20 @@ namespace MonoMod.Utils {
             (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve() ??
             throw new InvalidOperationException("Method definition not found");
 
+        public GeneratorType Generator = GeneratorType.Auto;
+        public bool Debug = false;
+
         public DynamicMethodDefinition(MethodBase method, Func<AssemblyName, ModuleDefinition> moduleGen = null) {
+            string type = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
+            if (!string.IsNullOrEmpty(type)) {
+                try {
+                    // TryGet is unavailable.
+                    Generator = (GeneratorType) Enum.Parse(typeof(GeneratorType), type, true);
+                } catch {
+                }
+            }
+            Debug = Environment.GetEnvironmentVariable("MONOMOD_DMD_DEBUG") == "1";
+
             Method = method ?? throw new ArgumentNullException(nameof(method));
             Reload(moduleGen, false);
         }
@@ -133,11 +146,24 @@ namespace MonoMod.Utils {
         public MethodInfo Generate()
             => Generate(null);
         public MethodInfo Generate(object context) {
-#if NETSTANDARD
-            return GenerateViaDynamicMethod();
-#else
-            return GenerateViaMethodBuilder(context as TypeBuilder);
+            switch (Generator) {
+                case GeneratorType.DynamicMethod:
+                    return GenerateViaDynamicMethod();
+
+#if !NETSTANDARD
+                case GeneratorType.ModuleBuilder:
+                    return GenerateViaMethodBuilder(context as TypeBuilder);
 #endif
+
+                default:
+#if NETSTANDARD
+                    return GenerateViaDynamicMethod();
+#else
+                    if (Debug)
+                        return GenerateViaMethodBuilder(context as TypeBuilder);
+                    return GenerateViaDynamicMethod();
+#endif
+            }
         }
 
         public DynamicMethod GenerateViaDynamicMethod() {
@@ -184,11 +210,14 @@ namespace MonoMod.Utils {
                     AssemblyBuilderAccess.RunAndSave
                 );
 
-                ab.SetCustomAttribute(new CustomAttributeBuilder(c_DebuggableAttribute, new object[] {
-                    DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
-                }));
                 ab.SetCustomAttribute(new CustomAttributeBuilder(c_UnverifiableCodeAttribute, new object[] {
                 }));
+
+                if (Debug) {
+                    ab.SetCustomAttribute(new CustomAttributeBuilder(c_DebuggableAttribute, new object[] {
+                        DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
+                    }));
+                }
 
                 ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", true);
                 typeBuilder = module.DefineType(
@@ -247,7 +276,7 @@ namespace MonoMod.Utils {
 #if !NETSTANDARD
             MethodBuilder mb = _mb as MethodBuilder;
             ModuleBuilder moduleBuilder = mb?.Module as ModuleBuilder;
-            AssemblyBuilder assemblyBuilder = moduleBuilder.Assembly as AssemblyBuilder;
+            AssemblyBuilder assemblyBuilder = moduleBuilder?.Assembly as AssemblyBuilder;
             HashSet<Assembly> accessChecksIgnored = null;
             if (mb != null) {
                 accessChecksIgnored = new HashSet<Assembly>();
@@ -255,7 +284,7 @@ namespace MonoMod.Utils {
 #endif
 
             MethodDefinition def = Definition;
-            MethodDebugInformation defInfo = def.DebugInformation;
+            MethodDebugInformation defInfo = Debug ? def.DebugInformation : null;
             // Fix up any mistakes which might accidentally pop up.
             def.ConvertShortLongOps();
 
@@ -512,6 +541,16 @@ namespace MonoMod.Utils {
                 Cache.Clear();
             }
 
+#endif
+        }
+
+        public enum GeneratorType {
+            Auto = 0,
+            DynamicMethod = 1,
+            DM = 1,
+#if !NETSTANDARD
+            ModuleBuilder = 2,
+            MB = 2,
 #endif
         }
 
