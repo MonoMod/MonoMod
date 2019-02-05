@@ -302,12 +302,14 @@ namespace MonoMod.Utils {
 #endif
 
             MethodDefinition def = Definition;
+#if !CECIL0_9
             MethodDebugInformation defInfo = Debug ? def.DebugInformation : null;
+#endif
 
             LocalBuilder[] locals = def.Body.Variables.Select(
                 var => {
                     LocalBuilder local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
-#if !NETSTANDARD
+#if !NETSTANDARD && !CECIL0_9
                     if (mb != null && defInfo != null && defInfo.TryGetName(var, out string name)) {
                         local.SetLocalSymInfo(name);
                     }
@@ -330,7 +332,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-#if !NETSTANDARD
+#if !NETSTANDARD && !CECIL0_9
             Dictionary<Document, ISymbolDocumentWriter> infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
 #endif
 
@@ -340,7 +342,7 @@ namespace MonoMod.Utils {
                 if (labelMap.TryGetValue(instr, out Label label))
                     il.MarkLabel(label);
 
-#if !NETSTANDARD
+#if !NETSTANDARD && !CECIL0_9
                 SequencePoint instrInfo = defInfo?.GetSequencePoint(instr);
                 if (mb != null && instrInfo != null) {
                     if (!infoDocCache.TryGetValue(instrInfo.Document, out ISymbolDocumentWriter infoDoc)) {
