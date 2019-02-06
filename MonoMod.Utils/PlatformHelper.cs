@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -68,13 +69,32 @@ namespace MonoMod.Utils {
                 RuntimeInformation.OSArchitecture.HasFlag(Architecture.Arm))
                 Current |= Platform.ARM;
 #else
-            // Detect ARM based on PE info.
-            typeof(object).Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
-            if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET 4.5 */)
-                Current |= Platform.ARM;
+            if (Is(Platform.Unix) && Type.GetType("Mono.Runtime") != null) {
+                /* I'd love to use RuntimeInformation, but it returns X64 up until...
+                 * https://github.com/mono/mono/commit/396559769d0e4ca72837e44bcf837b7c91596414
+                 * ... and that commit still hasn't reached Mono 5.16 on Debian, dated
+                 * tarball Mon Nov 26 17:21:35 UTC 2018
+                 * There's also the possibility to [DllImport("libc.so.6")]
+                 * -ade
+                 */
+                string arch;
+                using (Process uname = Process.Start(new ProcessStartInfo("uname", "-m") {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true
+                })) {
+                    arch = uname.StandardOutput.ReadLine().Trim();
+                }
+
+                if (arch.StartsWith("aarch") || arch.StartsWith("arm"))
+                    Current |= Platform.ARM;
+
+            } else {
+                // Detect ARM based on PE info or uname.
+                typeof(object).Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
+                if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET 4.5 */)
+                    Current |= Platform.ARM;
+            }
 #endif
-
-
 
         }
 

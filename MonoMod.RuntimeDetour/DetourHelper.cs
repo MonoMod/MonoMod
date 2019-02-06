@@ -4,6 +4,7 @@ using System.Reflection.Emit;
 using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
+using MonoMod.RuntimeDetour.Platforms;
 
 namespace MonoMod.RuntimeDetour {
     public static class DetourHelper {
@@ -42,7 +43,7 @@ namespace MonoMod.RuntimeDetour {
                         _Native = new DetourNativeX86Platform();
                     }
 
-                    if ((PlatformHelper.Current & Platform.Windows) == Platform.Windows) {
+                    if (PlatformHelper.Is(Platform.Windows)) {
                         _Native = new DetourNativeWindowsPlatform(_Native);
                     }
                     // TODO: Do Linux, macOS and other systems require protection lifting?
@@ -144,11 +145,12 @@ namespace MonoMod.RuntimeDetour {
         }
 
         // Used in EmitDetourApply.
-        private static NativeDetourData ToNativeDetourData(IntPtr method, IntPtr target, int size, IntPtr extra)
+        private static NativeDetourData ToNativeDetourData(IntPtr method, IntPtr target, uint size, byte type, IntPtr extra)
             => new NativeDetourData {
                 Method = method,
                 Target = target,
                 Size = size,
+                Type = type,
                 Extra = extra
             };
 
@@ -176,7 +178,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Emit a call to DetourManager.Native.Copy using the given parameters.
         /// </summary>
-        public static void EmitDetourCopy(this ILGenerator il, IntPtr src, IntPtr dst, int size) {
+        public static void EmitDetourCopy(this ILGenerator il, IntPtr src, IntPtr dst, byte type) {
             // Load NativePlatform instance.
             il.Emit(OpCodes.Ldsfld, _f_Native);
 
@@ -185,7 +187,8 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Conv_I);
             il.Emit(OpCodes.Ldc_I8, (long) dst);
             il.Emit(OpCodes.Conv_I);
-            il.Emit(OpCodes.Ldc_I4, size);
+            il.Emit(OpCodes.Ldc_I4, type);
+            il.Emit(OpCodes.Conv_I1);
 
             // Copy.
             il.Emit(OpCodes.Callvirt, _m_Copy);
@@ -204,6 +207,8 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Ldc_I8, (long) data.Target);
             il.Emit(OpCodes.Conv_I);
             il.Emit(OpCodes.Ldc_I4, data.Size);
+            il.Emit(OpCodes.Ldc_I4, data.Type);
+            il.Emit(OpCodes.Conv_I1);
             il.Emit(OpCodes.Ldc_I8, (long) data.Extra);
             il.Emit(OpCodes.Conv_I);
 

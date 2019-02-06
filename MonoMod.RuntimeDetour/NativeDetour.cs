@@ -19,9 +19,14 @@ namespace MonoMod.RuntimeDetour {
         public IntPtr Target;
 
         /// <summary>
+        /// The type of the detour. Determined when the structure is created by the IDetourNativePlatform.
+        /// </summary>
+        public byte Type;
+
+        /// <summary>
         /// The size of the detour. Calculated when the structure is created by the IDetourNativePlatform.
         /// </summary>
-        public int Size;
+        public uint Size;
 
         /// <summary>
         /// DetourManager.Native-specific data.
@@ -57,14 +62,14 @@ namespace MonoMod.RuntimeDetour {
             if (!(OnDetour?.InvokeWhileTrue(this, method, from, to) ?? true))
                 return;
 
-            Data = DetourHelper.Native.Create(from, to);
+            Data = DetourHelper.Native.Create(from, to, null);
 
             // Backing up the original function only needs to happen once.
             method?.TryCreateILCopy(out _BackupMethod);
 
             // BackupNative is required even if BackupMethod is present to undo the detour.
-            _BackupNative = DetourHelper.Native.MemAlloc(Data.Size);
-            DetourHelper.Native.Copy(Data.Method, _BackupNative, Data.Size);
+            _BackupNative = DetourHelper.Native.MemAlloc(Data.Type);
+            DetourHelper.Native.Copy(Data.Method, _BackupNative, Data.Type);
 
             Apply();
         }
@@ -115,7 +120,7 @@ namespace MonoMod.RuntimeDetour {
             if (_IsFree)
                 return;
 
-            DetourHelper.Native.Copy(_BackupNative, Data.Method, Data.Size);
+            DetourHelper.Native.Copy(_BackupNative, Data.Method, Data.Type);
         }
 
         /// <summary>
@@ -194,7 +199,7 @@ namespace MonoMod.RuntimeDetour {
             }
             ILGenerator il = dm.GetILGenerator();
 
-            il.EmitDetourCopy(_BackupNative, Data.Method, Data.Size);
+            il.EmitDetourCopy(_BackupNative, Data.Method, Data.Type);
 
             // Store the return value in a local as we can't preserve the stack across exception block boundaries.
             LocalBuilder localResult = null;
