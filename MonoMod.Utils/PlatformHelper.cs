@@ -30,10 +30,10 @@ namespace MonoMod.Utils {
 #else
             // For old Mono, get from a private property to accurately get the platform.
             // static extern PlatformID Platform
-            PropertyInfo property_platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
+            PropertyInfo p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
             string platID;
-            if (property_platform != null) {
-                platID = property_platform.GetValue(null, new object[0]).ToString();
+            if (p_Platform != null) {
+                platID = p_Platform.GetValue(null, new object[0]).ToString();
             } else {
                 // For .NET and newer Mono, use the usual value.
                 platID = Environment.OSVersion.Platform.ToString();
@@ -55,7 +55,12 @@ namespace MonoMod.Utils {
                 Current = Platform.iOS;
             }
 
-            Current |= (IntPtr.Size == 4 ? Platform.Bits32 : Platform.Bits64);
+            // Is64BitOperatingSystem has been added in .NET 4.0
+            MethodInfo m_get_Is64BitOperatingSystem = typeof(Environment).GetProperty("Is64BitOperatingSystem")?.GetGetMethod();
+            if (m_get_Is64BitOperatingSystem != null)
+                Current |= (((bool) m_get_Is64BitOperatingSystem.Invoke(null, new object[0])) ? Platform.Bits64 : Platform.Bits32);
+            else
+                Current |= (IntPtr.Size >= 8 ? Platform.Bits64 : Platform.Bits32);
 
 #if NETSTANDARD
             // Detect ARM based on RuntimeInformation.

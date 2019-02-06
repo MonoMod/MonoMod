@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.Utils;
+using System;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour {
@@ -92,19 +93,19 @@ namespace MonoMod.RuntimeDetour {
         public void Copy(IntPtr src, IntPtr dst, int size) {
             switch ((DetourSize) size) {
                 case DetourSize.Rel32:
-                    *((uint*) ((ulong) dst)) = *((uint*) ((ulong) src));
-                    *((byte*) ((ulong) dst) + 4) = *((byte*) ((ulong) src) + 4);
+                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
+                    *(byte*) ((ulong) dst + 4) = *(byte*) ((ulong) src + 4);
                     break;
 
                 case DetourSize.Abs32:
-                    *((uint*) ((ulong) dst)) = *((uint*) ((ulong) src));
-                    *((ushort*) ((ulong) dst + 4)) = *((ushort*) ((ulong) src + 4));
+                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
+                    *(ushort*) ((ulong) dst + 4) = *(ushort*) ((ulong) src + 4);
                     break;
 
                 case DetourSize.Abs64:
-                    *((ulong*) ((ulong) dst)) = *((ulong*) ((ulong) src));
-                    *((uint*) ((ulong) dst + 8)) = *((uint*) ((ulong) src + 8));
-                    *((ushort*) ((ulong) dst + 12)) = *((ushort*) ((ulong) src + 12));
+                    *(ulong*) ((ulong) dst) = *(ulong*) ((ulong) src);
+                    *(uint*) ((ulong) dst + 8) = *(uint*) ((ulong) src + 8);
+                    *(ushort*) ((ulong) dst + 12) = *(ushort*) ((ulong) src + 12);
                     break;
 
                 default:
@@ -132,7 +133,7 @@ namespace MonoMod.RuntimeDetour {
     public unsafe sealed class DetourNativeARMPlatform : IDetourNativePlatform {
         private enum DetourSize : int {
             Arm32 = 4 + 4,
-            Arm64 = 4 + 8
+            Arm64 = 4 + 4 + 8
         }
 
         public NativeDetourData Create(IntPtr from, IntPtr to) {
@@ -151,23 +152,34 @@ namespace MonoMod.RuntimeDetour {
         public void Apply(NativeDetourData detour) {
             int offs = 0;
             
-            // TODO: Find possibly better ARM detours.
             switch ((DetourSize) detour.Size) {
                 case DetourSize.Arm32:
+                    // FIXME: This fails on arm64.
                     // LDR PC, [PC, #-4]
                     detour.Method.Write(ref offs, (byte) 0x04);
                     detour.Method.Write(ref offs, (byte) 0xF0);
                     detour.Method.Write(ref offs, (byte) 0x1F);
                     detour.Method.Write(ref offs, (byte) 0xE5);
+                    // <to>
                     detour.Method.Write(ref offs, (uint) detour.Target);
                     break;
 
                 case DetourSize.Arm64:
-                    // LDR PC, [PC, #-4]
-                    detour.Method.Write(ref offs, (byte) 0x04);
-                    detour.Method.Write(ref offs, (byte) 0xF0);
+                    // FIXME: This fails on mono.
+                    // PC isn't available on arm64.
+                    // We need to burn a register and branch instead.
+                    // Please check / update https://github.com/0x0ade/MonoMod/issues/38
+                    // LDR X15, #8
+                    detour.Method.Write(ref offs, (byte) 0x4F);
+                    detour.Method.Write(ref offs, (byte) 0x00);
+                    detour.Method.Write(ref offs, (byte) 0x00);
+                    detour.Method.Write(ref offs, (byte) 0x58);
+                    // BR X15
+                    detour.Method.Write(ref offs, (byte) 0xE0);
+                    detour.Method.Write(ref offs, (byte) 0x01);
                     detour.Method.Write(ref offs, (byte) 0x1F);
-                    detour.Method.Write(ref offs, (byte) 0xE5);
+                    detour.Method.Write(ref offs, (byte) 0xD6);
+                    // <to>
                     detour.Method.Write(ref offs, (ulong) detour.Target);
                     break;
 
@@ -179,13 +191,14 @@ namespace MonoMod.RuntimeDetour {
         public void Copy(IntPtr src, IntPtr dst, int size) {
             switch ((DetourSize) size) {
                 case DetourSize.Arm32:
-                    *((uint*) ((ulong) dst)) = *((uint*) ((ulong) src));
-                    *((uint*) ((ulong) dst + 4)) = *((uint*) ((ulong) src) + 4);
+                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
+                    *(uint*) ((ulong) dst + 4) = *(uint*) ((ulong) src + 4);
                     break;
 
                 case DetourSize.Arm64:
-                    *((uint*) ((ulong) dst)) = *((uint*) ((ulong) src));
-                    *((ulong*) ((ulong) dst + 4)) = *((ulong*) ((ulong) src) + 4);
+                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
+                    *(uint*) ((ulong) dst + 4) = *(uint*) ((ulong) src + 4);
+                    *(ulong*) ((ulong) dst + 8) = *(ulong*) ((ulong) src + 8);
                     break;
 
                 default:
