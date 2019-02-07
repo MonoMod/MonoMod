@@ -59,7 +59,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void Apply(NativeDetourData detour) {
             int offs = 0;
 
-            Console.WriteLine($"{nameof(DetourNativeARMPlatform)} apply: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} -> 0x{detour.Target.ToString("X16")}");
+            // Console.WriteLine($"{nameof(DetourNativeARMPlatform)} apply: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} -> 0x{detour.Target.ToString("X16")}");
             switch ((DetourType) detour.Type) {
                 case DetourType.Thumb:
                     // Note: PC is 4 bytes ahead
