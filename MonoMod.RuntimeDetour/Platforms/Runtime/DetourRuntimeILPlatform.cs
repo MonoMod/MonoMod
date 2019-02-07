@@ -55,7 +55,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private _SelftestStruct _SelftestGetStruct(IntPtr x, IntPtr y) {
-            Console.WriteLine("WTF");
+            Console.Error.WriteLine("If you're reading this, the MonoMod.RuntimeDetour selftest failed.");
             throw new Exception("This method should've been detoured!");
         }
 

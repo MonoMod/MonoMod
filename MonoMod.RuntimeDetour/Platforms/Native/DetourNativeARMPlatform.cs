@@ -13,8 +13,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
             AArch64
         }
         private static readonly uint[] DetourSizes = {
-            2 + 2 + 4,
-            2 + 2 + 4,
+            4 + 2 + 2 + 4,
+            4 + 2 + 2 + 4,
             4 + 4,
             4 + 4 + 4,
             4 + 4 + 8
@@ -22,7 +22,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         private static DetourType GetDetourType(IntPtr from, IntPtr to) {
             // The lowest bit is set for Thumb, unset for ARM.
-            if (((ulong) from & 0x1) == 0x1)
+            if (((long) from & 0x1) == 0x1)
                 return DetourType.ThumbX;
 
             if (IntPtr.Size == 4)
@@ -37,7 +37,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 Target = to
             };
             detour.Size = DetourSizes[detour.Type = type ?? (byte) GetDetourType(from, to)];
-            // Console.WriteLine($"{nameof(DetourNativeARMPlatform)} create: {(DetourType) detour.Type} 0x{((ulong) detour.Method).ToString("X16")} + 0x{detour.Size.ToString("X8")} -> 0x{((ulong) detour.Target).ToString("X16")}");
+            // Console.WriteLine($"{nameof(DetourNativeARMPlatform)} create: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} + 0x{detour.Size.ToString("X8")} -> 0x{detour.Target.ToString("X16")}");
             return detour;
         }
 
@@ -48,20 +48,25 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void Apply(NativeDetourData detour) {
             int offs = 0;
 
-            // Console.WriteLine($"{nameof(DetourNativeARMPlatform)} apply: {(DetourType) detour.Type} 0x{((ulong) detour.Method).ToString("X16")} -> 0x{((ulong) detour.Target).ToString("X16")}");
+            // Console.WriteLine($"{nameof(DetourNativeARMPlatform)} apply: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} -> 0x{detour.Target.ToString("X16")}");
             switch ((DetourType) detour.Type) {
                 case DetourType.Thumb:
                     // TODO: Short range Thumb branch using B
                 case DetourType.ThumbX:
                     // Burn a register to stay safe.
                     // Note: PC is 4 bytes ahead
-                    // R12 is available but out of Thumb scope.
-                    // LDR R7, [PC, #0]
-                    detour.Method.Write(ref offs, (byte) 0x00);
-                    detour.Method.Write(ref offs, (byte) 0x4F);
-                    // BX R7
-                    detour.Method.Write(ref offs, (byte) 0x38);
+                    // R8+ are available but require LDR.W
+                    // LDR.W R8, [PC, #4]
+                    detour.Method.Write(ref offs, (byte) 0xDF);
+                    detour.Method.Write(ref offs, (byte) 0xF8);
+                    detour.Method.Write(ref offs, (byte) 0x04);
+                    detour.Method.Write(ref offs, (byte) 0x80);
+                    // BX R8
+                    detour.Method.Write(ref offs, (byte) 0x40);
                     detour.Method.Write(ref offs, (byte) 0x47);
+                    // NOP
+                    detour.Method.Write(ref offs, (byte) 0x00);
+                    detour.Method.Write(ref offs, (byte) 0xBF);
                     // <to>
                     detour.Method.Write(ref offs, (uint) detour.Target);
                     break;
@@ -80,14 +85,14 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 case DetourType.AArch32X:
                     // Burn a register to stay safe.
-                    // Note: PC is 4 bytes ahead, PC == R15
-                    // LDR R14, [PC, #0]
+                    // Note: PC is 4 bytes ahead
+                    // LDR R8, [PC, #0]
                     detour.Method.Write(ref offs, (byte) 0x00);
-                    detour.Method.Write(ref offs, (byte) 0xC0);
+                    detour.Method.Write(ref offs, (byte) 0x80);
                     detour.Method.Write(ref offs, (byte) 0x9F);
                     detour.Method.Write(ref offs, (byte) 0xE5);
-                    // BX R14
-                    detour.Method.Write(ref offs, (byte) 0x1C);
+                    // BX R8
+                    detour.Method.Write(ref offs, (byte) 0x18);
                     detour.Method.Write(ref offs, (byte) 0xFF);
                     detour.Method.Write(ref offs, (byte) 0x2F);
                     detour.Method.Write(ref offs, (byte) 0xE1);
@@ -123,26 +128,27 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 case DetourType.Thumb:
                     // TODO: Short range Thumb branch using B
                 case DetourType.ThumbX:
-                    *(ushort*) ((ulong) dst) = *(ushort*) ((ulong) src);
-                    *(ushort*) ((ulong) dst + 2) = *(ushort*) ((ulong) src + 2);
-                    *(uint*) ((ulong) dst + 4) = *(uint*) ((ulong) src + 4);
+                    *(uint*) ((long) dst) = *(uint*) ((long) src);
+                    *(ushort*) ((long) dst + 4) = *(ushort*) ((long) src + 4);
+                    *(ushort*) ((long) dst + 6) = *(ushort*) ((long) src + 6);
+                    *(uint*) ((long) dst + 8) = *(uint*) ((long) src + 8);
                     break;
 
                 case DetourType.AArch32:
-                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
-                    *(uint*) ((ulong) dst + 4) = *(uint*) ((ulong) src + 4);
+                    *(uint*) ((long) dst) = *(uint*) ((long) src);
+                    *(uint*) ((long) dst + 4) = *(uint*) ((long) src + 4);
                     break;
 
                 case DetourType.AArch32X:
-                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
-                    *(uint*) ((ulong) dst + 4) = *(uint*) ((ulong) src + 4);
-                    *(uint*) ((ulong) dst + 8) = *(uint*) ((ulong) src + 8);
+                    *(uint*) ((long) dst) = *(uint*) ((long) src);
+                    *(uint*) ((long) dst + 4) = *(uint*) ((long) src + 4);
+                    *(uint*) ((long) dst + 8) = *(uint*) ((long) src + 8);
                     break;
 
                 case DetourType.AArch64:
-                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
-                    *(uint*) ((ulong) dst + 4) = *(uint*) ((ulong) src + 4);
-                    *(ulong*) ((ulong) dst + 8) = *(ulong*) ((ulong) src + 8);
+                    *(uint*) ((long) dst) = *(uint*) ((long) src);
+                    *(uint*) ((long) dst + 4) = *(uint*) ((long) src + 4);
+                    *(ulong*) ((long) dst + 8) = *(ulong*) ((long) src + 8);
                     break;
 
                 default:

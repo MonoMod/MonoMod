@@ -16,7 +16,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         };
 
         private static bool Is32Bit(long to)
-            => (((ulong) to) & 0x00000000FFFFFFFF) == ((ulong) to);
+            => (((ulong) to) & 0x00000000FFFFFFFFUL) == ((ulong) to);
 
         private static DetourType GetDetourType(IntPtr from, IntPtr to) {
             long rel = (long) to - ((long) from + 5);
@@ -39,7 +39,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 Target = to
             };
             detour.Size = DetourSizes[detour.Type = type ?? (byte) GetDetourType(from, to)];
-            // Console.WriteLine($"{nameof(DetourNativeX86Platform)} create: {(DetourType) detour.Type} 0x{((ulong) detour.Method).ToString("X16")} + 0x{detour.Size.ToString("X8")} -> 0x{((ulong) detour.Target).ToString("X16")}");
+            // Console.WriteLine($"{nameof(DetourNativeX86Platform)} create: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} + 0x{detour.Size.ToString("X8")} -> 0x{detour.Target.ToString("X16")}");
             return detour;
         }
 
@@ -50,7 +50,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void Apply(NativeDetourData detour) {
             int offs = 0;
 
-            // Console.WriteLine($"{nameof(DetourNativeX86Platform)} apply: {(DetourType) detour.Type} 0x{((ulong) detour.Method).ToString("X16")} -> 0x{((ulong) detour.Target).ToString("X16")}");
+            // Console.WriteLine($"{nameof(DetourNativeX86Platform)} apply: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} -> 0x{detour.Target.ToString("X16")}");
             switch ((DetourType) detour.Type) {
                 case DetourType.Rel32:
                     // JMP DeltaNextInstr
@@ -88,19 +88,19 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void Copy(IntPtr src, IntPtr dst, byte type) {
             switch ((DetourType) type) {
                 case DetourType.Rel32:
-                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
-                    *(byte*) ((ulong) dst + 4) = *(byte*) ((ulong) src + 4);
+                    *(uint*) ((long) dst) = *(uint*) ((long) src);
+                    *(byte*) ((long) dst + 4) = *(byte*) ((long) src + 4);
                     break;
 
                 case DetourType.Abs32:
-                    *(uint*) ((ulong) dst) = *(uint*) ((ulong) src);
-                    *(ushort*) ((ulong) dst + 4) = *(ushort*) ((ulong) src + 4);
+                    *(uint*) ((long) dst) = *(uint*) ((long) src);
+                    *(ushort*) ((long) dst + 4) = *(ushort*) ((long) src + 4);
                     break;
 
                 case DetourType.Abs64:
-                    *(ulong*) ((ulong) dst) = *(ulong*) ((ulong) src);
-                    *(uint*) ((ulong) dst + 8) = *(uint*) ((ulong) src + 8);
-                    *(ushort*) ((ulong) dst + 12) = *(ushort*) ((ulong) src + 12);
+                    *(ulong*) ((long) dst) = *(ulong*) ((long) src);
+                    *(uint*) ((long) dst + 8) = *(uint*) ((long) src + 8);
+                    *(ushort*) ((long) dst + 12) = *(ushort*) ((long) src + 12);
                     break;
 
                 default:
