@@ -101,10 +101,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     break;
 
                 case DetourType.AArch64:
-                    // FIXME: This fails on mono.
                     // PC isn't available on arm64.
                     // We need to burn a register and branch instead.
-                    // LDR X15, #8
+                    // LDR X15, .+8
                     detour.Method.Write(ref offs, (byte) 0x4F);
                     detour.Method.Write(ref offs, (byte) 0x00);
                     detour.Method.Write(ref offs, (byte) 0x00);
