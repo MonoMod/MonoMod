@@ -7,13 +7,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
         // TODO: Make use of possibly shorter near branches.
         public enum DetourType : byte {
             Thumb,
-            ThumbX,
+            ThumbBX,
             AArch32,
-            AArch32X,
+            AArch32BX,
             AArch64
         }
         private static readonly uint[] DetourSizes = {
-            4 + 2 + 2 + 4,
+            4 + 4,
             4 + 2 + 2 + 4,
             4 + 4,
             4 + 4 + 4,
@@ -21,20 +21,31 @@ namespace MonoMod.RuntimeDetour.Platforms {
         };
 
         private static DetourType GetDetourType(IntPtr from, IntPtr to) {
+            if (IntPtr.Size >= 8)
+                return DetourType.AArch64;
+
             // The lowest bit is set for Thumb, unset for ARM.
-            if (((long) from & 0x1) == 0x1)
-                return DetourType.ThumbX;
-
-            if (IntPtr.Size == 4)
-                return DetourType.AArch32X;
-
-            return DetourType.AArch64;
+            bool fromThumb = ((long) from & 0x1) == 0x1;
+            bool toThumb = ((long) from & 0x1) == 0x1;
+            if (fromThumb) {
+                if (toThumb) {
+                    return DetourType.Thumb;
+                } else {
+                    return DetourType.ThumbBX;
+                }
+            } else {
+                if (toThumb) {
+                    return DetourType.AArch32BX;
+                } else {
+                    return DetourType.AArch32;
+                }
+            }
         }
 
         public NativeDetourData Create(IntPtr from, IntPtr to, byte? type) {
             NativeDetourData detour = new NativeDetourData {
-                Method = from,
-                Target = to
+                Method = (IntPtr) ((long) from & ~0x1),
+                Target = (IntPtr) ((long) to & ~0x1)
             };
             detour.Size = DetourSizes[detour.Type = type ?? (byte) GetDetourType(from, to)];
             // Console.WriteLine($"{nameof(DetourNativeARMPlatform)} create: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} + 0x{detour.Size.ToString("X8")} -> 0x{detour.Target.ToString("X16")}");
@@ -48,43 +59,53 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void Apply(NativeDetourData detour) {
             int offs = 0;
 
-            // Console.WriteLine($"{nameof(DetourNativeARMPlatform)} apply: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} -> 0x{detour.Target.ToString("X16")}");
+            Console.WriteLine($"{nameof(DetourNativeARMPlatform)} apply: {(DetourType) detour.Type} 0x{detour.Method.ToString("X16")} -> 0x{detour.Target.ToString("X16")}");
             switch ((DetourType) detour.Type) {
                 case DetourType.Thumb:
-                    // TODO: Short range Thumb branch using B
-                case DetourType.ThumbX:
+                    // Note: PC is 4 bytes ahead
+                    // LDR.W PC, [PC, #0]
+                    detour.Method.Write(ref offs, (byte) 0xDF);
+                    detour.Method.Write(ref offs, (byte) 0xF8);
+                    detour.Method.Write(ref offs, (byte) 0x00);
+                    detour.Method.Write(ref offs, (byte) 0xF0);
+                    // <to> | 0x1 (-> Thumb)
+                    detour.Method.Write(ref offs, (uint) detour.Target | 0x1);
+                    break;
+
+                case DetourType.ThumbBX:
+                    // FIXME: This fails on dotnet for arm running on aarch64.
                     // Burn a register to stay safe.
                     // Note: PC is 4 bytes ahead
-                    // R8+ are available but require LDR.W
-                    // LDR.W R8, [PC, #4]
+                    // LDR.W R10, [PC, #4]
                     detour.Method.Write(ref offs, (byte) 0xDF);
                     detour.Method.Write(ref offs, (byte) 0xF8);
                     detour.Method.Write(ref offs, (byte) 0x04);
-                    detour.Method.Write(ref offs, (byte) 0x80);
-                    // BX R8
-                    detour.Method.Write(ref offs, (byte) 0x40);
+                    detour.Method.Write(ref offs, (byte) 0xA0);
+                    // BX R10
+                    detour.Method.Write(ref offs, (byte) 0x50);
                     detour.Method.Write(ref offs, (byte) 0x47);
                     // NOP
                     detour.Method.Write(ref offs, (byte) 0x00);
                     detour.Method.Write(ref offs, (byte) 0xBF);
-                    // <to>
-                    detour.Method.Write(ref offs, (uint) detour.Target);
+                    // <to> | 0x0 (-> ARM)
+                    detour.Method.Write(ref offs, (uint) detour.Target | 0x0);
                     break;
 
                 case DetourType.AArch32:
-                    // FIXME: This fails on dotnet for arm running on aarch64.
+                    // FIXME: This was never tested.
                     // Note: PC is 8 bytes ahead
                     // LDR PC, [PC, #-4]
                     detour.Method.Write(ref offs, (byte) 0x04);
                     detour.Method.Write(ref offs, (byte) 0xF0);
                     detour.Method.Write(ref offs, (byte) 0x1F);
                     detour.Method.Write(ref offs, (byte) 0xE5);
-                    // <to>
-                    detour.Method.Write(ref offs, (uint) detour.Target);
+                    // <to> | 0x0 (-> ARM)
+                    detour.Method.Write(ref offs, (uint) detour.Target | 0x0);
                     break;
 
-                case DetourType.AArch32X:
-                    // Burn a register to stay safe.
+                case DetourType.AArch32BX:
+                    // FIXME: This was never tested.
+                    // Burn a register. Required to use BX to change state.
                     // Note: PC is 4 bytes ahead
                     // LDR R8, [PC, #0]
                     detour.Method.Write(ref offs, (byte) 0x00);
@@ -96,8 +117,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     detour.Method.Write(ref offs, (byte) 0xFF);
                     detour.Method.Write(ref offs, (byte) 0x2F);
                     detour.Method.Write(ref offs, (byte) 0xE1);
-                    // <to>
-                    detour.Method.Write(ref offs, (uint) detour.Target);
+                    // <to> | 0x1 (-> Thumb)
+                    detour.Method.Write(ref offs, (uint) detour.Target | 0x1);
                     break;
 
                 case DetourType.AArch64:
@@ -125,8 +146,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void Copy(IntPtr src, IntPtr dst, byte type) {
             switch ((DetourType) type) {
                 case DetourType.Thumb:
-                    // TODO: Short range Thumb branch using B
-                case DetourType.ThumbX:
+                    *(uint*) ((long) dst) = *(uint*) ((long) src);
+                    *(uint*) ((long) dst + 4) = *(uint*) ((long) src + 4);
+                    break;
+
+                case DetourType.ThumbBX:
                     *(uint*) ((long) dst) = *(uint*) ((long) src);
                     *(ushort*) ((long) dst + 4) = *(ushort*) ((long) src + 4);
                     *(ushort*) ((long) dst + 6) = *(ushort*) ((long) src + 6);
@@ -138,7 +162,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     *(uint*) ((long) dst + 4) = *(uint*) ((long) src + 4);
                     break;
 
-                case DetourType.AArch32X:
+                case DetourType.AArch32BX:
                     *(uint*) ((long) dst) = *(uint*) ((long) src);
                     *(uint*) ((long) dst + 4) = *(uint*) ((long) src + 4);
                     *(uint*) ((long) dst + 8) = *(uint*) ((long) src + 8);
