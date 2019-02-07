@@ -112,32 +112,36 @@ namespace MonoMod.Utils {
 
             try {
                 ModuleDefinition module = (moduleGen ?? _ModuleGen)?.Invoke(Method.Module.Assembly.GetName());
-                if (module == null) {
-                    if (_Module != null && !force) {
-                        module = _Module;
-                    } else {
+                lock (_ModuleRefs) {
+                    if (module == null) {
+                        if (_Module != null && !force) {
+                            module = _Module;
+                        } else {
 #if !CECIL0_9
-                        _Module?.Dispose();
+                            _Module?.Dispose();
 #endif
-                        _Module = null;
+                            _Module = null;
+                        }
                         ReaderParameters rp = new ReaderParameters();
                         if (_ModuleGen != null)
                             rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
                         module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.GetTypeInfo().Assembly.GetLocation(), rp);
                     }
+                    _Module = module;
                 }
-                _Module = module;
                 _ModuleRef++;
             } catch when (_DisposeEarly()) {
             }
 
             bool _DisposeEarly() {
                 if (moduleTmp != null) {
+                    lock (_ModuleRefs) {
 #if !CECIL0_9
-                    moduleTmp.Dispose();
+                        moduleTmp.Dispose();
 #endif
-                    _Module = null;
-                    _ModuleRef = 0;
+                        _Module = null;
+                        _ModuleRef = 0;
+                    }
                 }
                 return false;
             }
@@ -511,11 +515,13 @@ namespace MonoMod.Utils {
         }
 
         public void Dispose() {
-            if (_Module != null && (--_ModuleRef) == 0) {
+            lock (_ModuleRefs) {
+                if (_Module != null && (--_ModuleRef) == 0) {
 #if !CECIL0_9
-                _Module.Dispose();
+                    _Module.Dispose();
 #endif
-                _Module = null;
+                    _Module = null;
+                }
             }
         }
 

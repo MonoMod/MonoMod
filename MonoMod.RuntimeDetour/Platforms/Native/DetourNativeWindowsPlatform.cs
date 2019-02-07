@@ -30,7 +30,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         public void MakeWritable(NativeDetourData detour) {
             Protection oldProtection;
-            if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_READWRITE, out oldProtection))
+            // PAGE_READWRITE causes an AccessViolationException / TargetInvocationException.
+            if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_EXECUTE_READWRITE, out oldProtection))
                 throw new System.ComponentModel.Win32Exception();
 
             Inner.MakeWritable(detour);
@@ -38,7 +39,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         public void MakeExecutable(NativeDetourData detour) {
             Protection oldProtection;
-            if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_EXECUTE_READ, out oldProtection))
+            if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_EXECUTE_READWRITE, out oldProtection))
                 throw new System.ComponentModel.Win32Exception();
 
             Inner.MakeExecutable(detour);
