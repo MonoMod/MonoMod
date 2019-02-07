@@ -82,8 +82,10 @@ namespace MonoMod.Utils {
         }
 
         public MethodBase Method { get; private set; }
+        private MethodDefinition _Definition;
         public MethodDefinition Definition =>
-            (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve() ??
+            _Definition ??
+            (_Definition = (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve()?.Clone()) ??
             throw new InvalidOperationException("Method definition not found");
 
         public GeneratorType Generator = GeneratorType.Auto;
@@ -101,20 +103,21 @@ namespace MonoMod.Utils {
             Debug = Environment.GetEnvironmentVariable("MONOMOD_DMD_DEBUG") == "1";
 
             Method = method ?? throw new ArgumentNullException(nameof(method));
-            Reload(moduleGen, false);
+            Reload(moduleGen);
         }
 
-        public void Reload(Func<AssemblyName, ModuleDefinition> moduleGen = null, bool force = false) {
+        public void Reload(Func<AssemblyName, ModuleDefinition> moduleGen = null, bool forceModule = false) {
             ModuleDefinition moduleTmp = null;
 
             if (moduleGen != null)
                 _ModuleGen = moduleGen;
 
             try {
+                _Definition = null;
                 ModuleDefinition module = (moduleGen ?? _ModuleGen)?.Invoke(Method.Module.Assembly.GetName());
                 lock (_ModuleRefs) {
                     if (module == null) {
-                        if (_Module != null && !force) {
+                        if (_Module != null && !forceModule) {
                             module = _Module;
                         } else {
 #if !CECIL0_9
@@ -128,8 +131,9 @@ namespace MonoMod.Utils {
                         module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.GetTypeInfo().Assembly.GetLocation(), rp);
                     }
                     _Module = module;
+                    _ModuleRef++;
                 }
-                _ModuleRef++;
+                _Definition = Definition;
             } catch when (_DisposeEarly()) {
             }
 

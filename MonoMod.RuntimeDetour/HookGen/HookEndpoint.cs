@@ -127,7 +127,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 h.Dispose();
             ActiveHookILs.Clear();
 
-            DMD.Reload(null, true);
+            DMD.Reload();
             MethodDefinition def = DMD.Definition;
             try {
                 foreach (Delegate cb in ILList)
@@ -140,7 +140,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         private bool _ManipulatorFailure() {
-            DMD.Reload(null, true);
+            DMD.Reload();
             return false;
         }
 

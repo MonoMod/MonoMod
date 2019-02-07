@@ -60,6 +60,38 @@ namespace MonoMod.Utils {
             }
         }
 
+        public static MethodDefinition Clone(this MethodDefinition o, MethodDefinition c = null) {
+            if (o == null)
+                return null;
+            if (c == null)
+                c = new MethodDefinition(o.Name, o.Attributes, o.ReturnType);
+            c.Name = o.Name;
+            c.Attributes = o.Attributes;
+            c.ReturnType = o.ReturnType;
+            c.DeclaringType = o.DeclaringType;
+            c.MetadataToken = c.MetadataToken;
+            c.Body = o.Body.Clone(c);
+            c.Attributes = o.Attributes;
+            c.ImplAttributes = o.ImplAttributes;
+            c.PInvokeInfo = o.PInvokeInfo;
+            c.IsPreserveSig = o.IsPreserveSig;
+            c.IsPInvokeImpl = o.IsPInvokeImpl;
+
+            foreach (GenericParameter genParam in o.GenericParameters)
+                c.GenericParameters.Add(genParam.Clone());
+
+            foreach (ParameterDefinition param in o.Parameters)
+                c.Parameters.Add(param);
+
+            foreach (CustomAttribute attrib in o.CustomAttributes)
+                c.CustomAttributes.Add(attrib.Clone());
+
+            foreach (MethodReference @override in o.Overrides)
+                c.Overrides.Add(@override);
+
+            return c;
+        }
+
         public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
             if (o == null)
                 return null;

@@ -1395,27 +1395,13 @@ namespace MonoMod {
                 }
 
             } else if (existingMethod != null && origMethod == null) {
-                origMethod = new MethodDefinition(method.GetOriginalName(), existingMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName, existingMethod.ReturnType);
-                origMethod.DeclaringType = existingMethod.DeclaringType;
-                origMethod.MetadataToken = GetMetadataToken(TokenType.Method);
-                origMethod.Body = existingMethod.Body.Clone(origMethod);
+                origMethod = existingMethod.Clone();
+                origMethod.Name = method.GetOriginalName();
                 origMethod.Attributes = existingMethod.Attributes & ~MethodAttributes.SpecialName & ~MethodAttributes.RTSpecialName;
-                origMethod.ImplAttributes = existingMethod.ImplAttributes;
-                origMethod.PInvokeInfo = existingMethod.PInvokeInfo;
-                origMethod.IsPreserveSig = existingMethod.IsPreserveSig;
-                origMethod.IsPInvokeImpl = existingMethod.IsPInvokeImpl;
-
+                origMethod.MetadataToken = GetMetadataToken(TokenType.Method);
                 origMethod.IsVirtual = false; // Fix overflow when calling orig_ method, but orig_ method already defined higher up
 
-                foreach (GenericParameter genParam in existingMethod.GenericParameters)
-                    origMethod.GenericParameters.Add(genParam.Clone());
-
-                foreach (ParameterDefinition param in existingMethod.Parameters)
-                    origMethod.Parameters.Add(param);
-
-                foreach (CustomAttribute attrib in existingMethod.CustomAttributes)
-                    origMethod.CustomAttributes.Add(attrib.Clone());
-
+                origMethod.Overrides.Clear();
                 foreach (MethodReference @override in method.Overrides)
                     origMethod.Overrides.Add(@override);
 
