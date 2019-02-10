@@ -162,8 +162,10 @@ namespace MonoMod.RuntimeDetour {
                 return _BackupMethod;
             }
 
+            /*
             if (signature == null)
                 signature = _BackupMethod;
+            */
             if (signature == null)
                 throw new ArgumentNullException("A signature must be given if the NativeDetour doesn't hold a reference to a managed method.");
 
@@ -208,7 +210,6 @@ namespace MonoMod.RuntimeDetour {
 
             Label blockTry = il.BeginExceptionBlock();
 
-            // TODO: Use specialized Ldarg.* if possible; What about ref types?
             for (int i = 0; i < argTypes.Length; i++)
                 il.Emit(OpCodes.Ldarg, i);
 
@@ -220,7 +221,9 @@ namespace MonoMod.RuntimeDetour {
                 throw new NotSupportedException($"Method type {methodCallable.GetType().FullName} not supported.");
 
             if (localResult != null)
-                il.Emit(OpCodes.Stloc_0);
+                il.Emit(OpCodes.Stloc, localResult);
+
+            il.Emit(OpCodes.Leave, blockTry);
 
             il.BeginFinallyBlock();
 
@@ -230,7 +233,7 @@ namespace MonoMod.RuntimeDetour {
             il.EndExceptionBlock();
 
             if (localResult != null)
-                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(OpCodes.Ldloc, localResult);
 
             il.Emit(OpCodes.Ret);
 

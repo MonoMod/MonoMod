@@ -71,19 +71,23 @@ namespace MonoMod.UnitTest {
             Console.WriteLine();
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static int TestMethod_A(TestObject self, int a, int b) {
             return 42;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static int TestStaticMethod_A(int a, int b) {
             return a * b * 2;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void TestVoidMethod_A(int a, int b) {
             Console.WriteLine("Hook A");
             TestObject.VoidResult += 1;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static int TestMethod_B(Func<TestObject, int, int, int> orig, TestObject self, int a, int b) {
             return orig(self, a, b) + 42;
         }

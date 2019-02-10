@@ -154,7 +154,7 @@ namespace MonoMod.RuntimeDetour {
                 Extra = extra
             };
 
-        private static readonly FieldInfo _f_Native = typeof(DetourHelper).GetField("Native");
+        private static readonly FieldInfo _f_Native = typeof(DetourHelper).GetField("_Native", BindingFlags.NonPublic | BindingFlags.Static);
         private static readonly MethodInfo _m_ToNativeDetourData = typeof(DetourHelper).GetMethod("ToNativeDetourData", BindingFlags.NonPublic | BindingFlags.Static);
         private static readonly MethodInfo _m_Copy = typeof(IDetourNativePlatform).GetMethod("Copy");
         private static readonly MethodInfo _m_Apply = typeof(IDetourNativePlatform).GetMethod("Apply");
@@ -182,13 +182,13 @@ namespace MonoMod.RuntimeDetour {
             // Load NativePlatform instance.
             il.Emit(OpCodes.Ldsfld, _f_Native);
 
-            // Fill stack with src, dst, size
+            // Fill stack with src, dst, type
             il.Emit(OpCodes.Ldc_I8, (long) src);
             il.Emit(OpCodes.Conv_I);
             il.Emit(OpCodes.Ldc_I8, (long) dst);
             il.Emit(OpCodes.Conv_I);
-            il.Emit(OpCodes.Ldc_I4, type);
-            il.Emit(OpCodes.Conv_I1);
+            il.Emit(OpCodes.Ldc_I4, (int) type);
+            il.Emit(OpCodes.Conv_U1);
 
             // Copy.
             il.Emit(OpCodes.Callvirt, _m_Copy);
@@ -207,8 +207,8 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Ldc_I8, (long) data.Target);
             il.Emit(OpCodes.Conv_I);
             il.Emit(OpCodes.Ldc_I4, data.Size);
-            il.Emit(OpCodes.Ldc_I4, data.Type);
-            il.Emit(OpCodes.Conv_I1);
+            il.Emit(OpCodes.Ldc_I4, (int) data.Type);
+            il.Emit(OpCodes.Conv_U1);
             il.Emit(OpCodes.Ldc_I8, (long) data.Extra);
             il.Emit(OpCodes.Conv_I);
 

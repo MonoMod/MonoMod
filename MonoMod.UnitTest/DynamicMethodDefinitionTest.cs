@@ -8,6 +8,7 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 
 namespace MonoMod.UnitTest {
     public class DynamicMethodDefinitionTest {
@@ -54,6 +55,7 @@ namespace MonoMod.UnitTest {
             try {
                 Console.WriteLine(StringOriginal);
                 Counter += new int?(i).Value;
+                Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
             } catch (Exception) {
                 return Tuple.Create("", -1);
             }
