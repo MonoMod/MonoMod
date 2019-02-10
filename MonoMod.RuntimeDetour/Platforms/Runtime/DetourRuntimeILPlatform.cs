@@ -94,21 +94,27 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public MethodInfo CreateCopy(MethodBase method) {
-            if (!TryCreateCopy(method, out MethodInfo dm))
+            if (method == null || (method.GetMethodImplementationFlags() & (MethodImplAttributes.OPTIL | MethodImplAttributes.Native | MethodImplAttributes.Runtime)) != 0) {
                 throw new InvalidOperationException($"Uncopyable method: {method?.ToString() ?? "NULL"}");
-            return dm;
+            }
+
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(method))
+                return dmd.Generate();
         }
+
         public bool TryCreateCopy(MethodBase method, out MethodInfo dm) {
             if (method == null || (method.GetMethodImplementationFlags() & (MethodImplAttributes.OPTIL | MethodImplAttributes.Native | MethodImplAttributes.Runtime)) != 0) {
                 dm = null;
                 return false;
             }
 
-            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(method))
-                dm = dmd.Generate();
-
-            dm.Pin();
-            return true;
+            try {
+                dm = CreateCopy(method);
+                return true;
+            } catch {
+                dm = null;
+                return false;
+            }
         }
 
         public MethodBase GetDetourTarget(MethodBase from, MethodBase to) {

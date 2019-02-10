@@ -233,17 +233,14 @@ namespace MonoMod.RuntimeDetour {
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dm;
-            ILGenerator il;
-
-            dm = new DynamicMethod(
+            DynamicMethod dm = new DynamicMethod(
                 $"Trampoline<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
                 returnType, argTypes,
-                Method.DeclaringType,
+                Method?.DeclaringType ?? typeof(Detour),
                 true
             );
 
-            il = dm.GetILGenerator();
+            ILGenerator il = dm.GetILGenerator();
 
             for (int i = 0; i < 10; i++) {
                 // Prevent old Unity mono from inlining the DynamicMethod.

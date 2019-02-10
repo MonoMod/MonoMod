@@ -183,22 +183,12 @@ namespace MonoMod.RuntimeDetour {
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dm;
-            string name = $"Trampoline:Native<{Method?.GetFindableID(simple: true) ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}";
-            if (Method != null) {
-                dm = new DynamicMethod(
-                    name,
-                    returnType, argTypes,
-                    Method.DeclaringType,
-                    true
-                );
-            } else {
-                dm = new DynamicMethod(
-                    name,
-                    returnType, argTypes,
-                    true
-                );
-            }
+            DynamicMethod dm = new DynamicMethod(
+                $"Trampoline:Native<{Method?.GetFindableID(simple: true) ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}",
+                returnType, argTypes,
+                Method?.DeclaringType ?? typeof(NativeDetour),
+                true
+            );
             ILGenerator il = dm.GetILGenerator();
 
             il.EmitDetourCopy(_BackupNative, Data.Method, Data.Type);
