@@ -77,16 +77,23 @@ namespace MonoMod.Utils {
                  * There's also the possibility to [DllImport("libc.so.6")]
                  * -ade
                  */
-                string arch;
-                using (Process uname = Process.Start(new ProcessStartInfo("uname", "-m") {
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true
-                })) {
-                    arch = uname.StandardOutput.ReadLine().Trim();
-                }
+                try {
+                    string arch;
+                    using (Process uname = Process.Start(new ProcessStartInfo("uname", "-m") {
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true
+                    })) {
+                        arch = uname.StandardOutput.ReadLine().Trim();
+                    }
 
-                if (arch.StartsWith("aarch") || arch.StartsWith("arm"))
-                    Current |= Platform.ARM;
+                    if (arch.StartsWith("aarch") || arch.StartsWith("arm"))
+                        Current |= Platform.ARM;
+                } catch (Exception) {
+                    // Starting a process can fail for various reasons. One of them being...
+                    /* System.TypeInitializationException: The type initializer for 'MonoMod.Utils.PlatformHelper' threw an exception. ---> System.MissingMethodException: Method 'MonoIO.CreatePipe' not found.
+                     * at System.Diagnostics.Process.StartWithCreateProcess (System.Diagnostics.ProcessStartInfo startInfo) <0x414ceb20 + 0x0061f> in <filename unknown>:0 
+                     */
+                }
 
             } else {
                 // Detect ARM based on PE info or uname.
