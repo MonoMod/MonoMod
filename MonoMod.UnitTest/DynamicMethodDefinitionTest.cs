@@ -56,10 +56,20 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine(StringOriginal);
                 Counter += new int?(i).Value;
                 Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
+                TargetTest("A", "B");
             } catch (Exception) {
                 return Tuple.Create("", -1);
             }
             return Tuple.Create(StringOriginal, Counter);
         }
+
+        public static int TargetTest<T>(string a, string b) {
+            return (a + b).GetHashCode();
+        }
+
+        public static int TargetTest(string a, string b) {
+            return (a + b).GetHashCode();
+        }
+
     }
 }
