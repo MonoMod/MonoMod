@@ -523,7 +523,7 @@ namespace MonoMod.Utils {
                             return false;
 
                         for (int i = 0; i < gparamRefs.Count; i++) {
-                            if (!gparamRefs[i].Is(gparamInfos[i].GetTypeInfo()))
+                            if (!IsParamTypeRef(gparamRefs[i], gparamInfos[i].GetTypeInfo()))
                                 return false;
                         }
 
@@ -539,7 +539,7 @@ namespace MonoMod.Utils {
                             return false;
 
                         for (int i = 0; i < gparamRefs.Count; i++) {
-                            if (!gparamRefs[i].Is(gparamInfos[i].GetTypeInfo()))
+                            if (!IsParamTypeRef(gparamRefs[i], gparamInfos[i].GetTypeInfo()))
                                 return false;
                         }
 

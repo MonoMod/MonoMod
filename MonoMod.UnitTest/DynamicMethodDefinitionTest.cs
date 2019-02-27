@@ -54,9 +54,17 @@ namespace MonoMod.UnitTest {
             TestObjectGeneric<string> test = new TestObjectGeneric<string>();
             try {
                 Console.WriteLine(StringOriginal);
+
                 Counter += new int?(i).Value;
+
                 Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
-                TargetTest("A", "B");
+
+                List<string> list = new List<string>();
+                list.AddRange(new string[] { "A", "B", "C" });
+                foreach (string str in list) {
+                    TargetTest("A", str);
+                }
+
             } catch (Exception) {
                 return Tuple.Create("", -1);
             }
