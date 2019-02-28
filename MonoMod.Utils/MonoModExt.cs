@@ -502,7 +502,8 @@ namespace MonoMod.Utils {
                             IsParamTypeRef(paramGenMethodRef.GenericArguments[paramGenParamTypeRef.Position], paramTypeInfo))
                             return true;
 
-                        if (paramGenParamTypeRef.Owner is TypeReference && methodRef.DeclaringType is GenericInstanceType genTypeRefRef &&
+                        if (paramGenParamTypeRef.Owner is TypeReference paramGenParamTypeRefOwnerType && methodRef.DeclaringType is GenericInstanceType genTypeRefRef &&
+                            paramGenParamTypeRefOwnerType.Equals(genTypeRefRef.ElementType) && // This is to prevent List<Tuple<...>> checks from incorrectly checking Tuple's args in List.
                             IsParamTypeRef(genTypeRefRef.GenericArguments[paramGenParamTypeRef.Position], paramTypeInfo))
                             return true;
 
