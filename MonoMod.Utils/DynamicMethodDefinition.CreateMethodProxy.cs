@@ -43,18 +43,33 @@ namespace MonoMod.Utils {
 
             // Load the DynamicMethod reference first.
             il.EmitReference(target);
+
             // Load any other arguments on top of that.
             il.Emit(OpCodes.Ldnull);
             il.Emit(OpCodes.Ldc_I4, args.Length);
             il.Emit(OpCodes.Newarr, typeof(object));
+
             for (int i = 0; i < args.Length; i++) {
                 il.Emit(OpCodes.Dup);
                 il.Emit(OpCodes.Ldc_I4, i);
+
                 il.Emit(OpCodes.Ldarg, i);
+
+                Type argType = args[i];
+                bool argIsByRef = argType.IsByRef;
+                if (argIsByRef)
+                    argType = argType.GetElementType();
+                bool argIsValueType = argType.GetTypeInfo().IsValueType;
+                if (argIsByRef || argIsValueType) {
+                    il.Emit(OpCodes.Box, args[i]);
+                }
+
                 il.Emit(OpCodes.Stelem_Ref);
             }
+
             // Invoke the delegate and return its result.
             il.Emit(OpCodes.Callvirt, m_MethodBase_InvokeSimple);
+
             if (target.ReturnType == typeof(void))
                 il.Emit(OpCodes.Pop);
             else if (target.ReturnType.IsValueType)
