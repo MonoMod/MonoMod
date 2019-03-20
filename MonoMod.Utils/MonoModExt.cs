@@ -740,8 +740,13 @@ namespace MonoMod.Utils {
                 if (type.IsPinned)
                     return new PinnedType(relinkedElem);
 
-                if (type.IsArray)
-                    return new ArrayType(relinkedElem, ((ArrayType) type).Dimensions.Count);
+                if (type.IsArray) {
+                    ArrayType at = new ArrayType(relinkedElem, ((ArrayType) type).Rank);
+                    for (int i = 0; i < at.Rank; i++)
+                        // It's a struct.
+                        at.Dimensions[i] = ((ArrayType) type).Dimensions[i];
+                    return at;
+                }
 
                 if (type.IsRequiredModifier)
                     return new RequiredModifierType(((RequiredModifierType) type).ModifierType.Relink(relinker, context), relinkedElem);
@@ -1515,8 +1520,13 @@ namespace MonoMod.Utils {
             if (arrayType != null) {
                 TypeReference inflatedElementType = _InflateGenericType(genericInstanceProvider, arrayType.ElementType);
 
-                if (inflatedElementType != arrayType.ElementType)
-                    return new ArrayType(inflatedElementType, arrayType.Rank);
+                if (inflatedElementType != arrayType.ElementType) {
+                    ArrayType at = new ArrayType(inflatedElementType, arrayType.Rank);
+                    for (int i = 0; i < arrayType.Rank; i++)
+                        // It's a struct.
+                        at.Dimensions[i] = arrayType.Dimensions[i];
+                    return at;
+                }
 
                 return arrayType;
             }
