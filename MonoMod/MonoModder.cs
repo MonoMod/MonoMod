@@ -767,7 +767,11 @@ namespace MonoMod {
              if (mtp is TypeReference) {
                 TypeReference type = (TypeReference) mtp;
 
-                // Type isn't coming from a mod module - just return the original.
+                // Type is coming from the input module - return the original.
+                if (type.Module == Module)
+                    return type;
+
+                // Type isn't coming from a mod module - import the original.
                 if (!Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
@@ -883,7 +887,9 @@ namespace MonoMod {
                     return RelinkModuleMapCache[name] = Module.ImportReference(found);
                 }
 
-                return RelinkModuleMapCache[name] = Module.ImportReference(type);
+                // Value types (i.e. enums) as custom attribute parameters aren't marked as value types.
+                // To prevent that and other issues from popping up, don't cache the default.
+                return Module.ImportReference(type);
             }
 
             return null;

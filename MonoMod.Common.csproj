@@ -75,7 +75,7 @@
         <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
         <DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X;$(DefineConstants)</DefineConstants>
         <DefineConstants Condition="$(CecilLegacy)">CECIL0_10;$(DefineConstants)</DefineConstants>
-        <CecilVersion Condition="$(CecilLegacy) And '$(CecilVersion)' == ''">0.10.0</CecilVersion>
+        <CecilVersion Condition="$(CecilLegacy) And '$(CecilVersion)' == ''">0.10.3</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
         <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil, which targets .NET Standard 1.0 -->
@@ -104,7 +104,7 @@
 
   <!-- Mono.Cecil reference. -->
   <PropertyGroup>
-    <CecilVersion Condition="'$(CecilVersion)' == ''">0.10.0</CecilVersion>
+    <CecilVersion Condition="'$(CecilVersion)' == ''">0.10.3</CecilVersion>
   </PropertyGroup>
   <ItemGroup Condition="$(Cecil)">
     <PackageReference Include="Mono.Cecil">
