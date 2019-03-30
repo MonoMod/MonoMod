@@ -326,6 +326,9 @@ namespace MonoMod.Utils {
         public static bool IsCompatible(this Type type, Type other)
             => _IsCompatible(type, other) || _IsCompatible(other, type);
         public static bool _IsCompatible(this Type type, Type other) {
+            if (type == other)
+                return true;
+
             if (type.GetTypeInfo().IsAssignableFrom(other.GetTypeInfo()))
                 return true;
 

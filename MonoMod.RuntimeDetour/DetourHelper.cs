@@ -45,8 +45,9 @@ namespace MonoMod.RuntimeDetour {
 
                     if (PlatformHelper.Is(Platform.Windows)) {
                         _Native = new DetourNativeWindowsPlatform(_Native);
+                    } else if (PlatformHelper.Is(Platform.Unix)) {
+                        _Native = new DetourNativePosixPlatform(_Native);
                     }
-                    // TODO: Do Linux, macOS and other systems require protection lifting?
 
                     return _Native;
                 }

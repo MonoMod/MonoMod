@@ -69,5 +69,4 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Inner.MemFree(ptr);
         }
     }
-
 }
