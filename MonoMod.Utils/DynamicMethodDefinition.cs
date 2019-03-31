@@ -196,6 +196,11 @@ namespace MonoMod.Utils {
             );
             ILGenerator il = dm.GetILGenerator();
 
+            for (int i = 0; i < 10; i++) {
+                // Prevent mono from inlining the DynamicMethod.
+                il.Emit(System.Reflection.Emit.OpCodes.Nop);
+            }
+
             _Generate(dm, il);
 
             return dm;

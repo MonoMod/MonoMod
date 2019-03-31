@@ -29,7 +29,7 @@ namespace MonoMod.Utils {
         public static DynamicMethod Stub(this DynamicMethod dm) {
             ILGenerator il = dm.GetILGenerator();
             for (int i = 0; i < 10; i++) {
-                // Prevent old Unity mono from inlining the DynamicMethod.
+                // Prevent mono from inlining the DynamicMethod.
                 il.Emit(OpCodes.Nop);
             }
             if (dm.ReturnType != typeof(void)) {
