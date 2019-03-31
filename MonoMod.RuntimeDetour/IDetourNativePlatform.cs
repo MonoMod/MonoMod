@@ -10,7 +10,7 @@ namespace MonoMod.RuntimeDetour {
         void Copy(IntPtr src, IntPtr dst, byte type);
         void MakeWritable(NativeDetourData detour);
         void MakeExecutable(NativeDetourData detour);
-        IntPtr MemAlloc(int size);
+        IntPtr MemAlloc(uint size);
         void MemFree(IntPtr ptr);
     }
 }

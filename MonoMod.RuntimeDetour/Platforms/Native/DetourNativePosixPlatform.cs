@@ -52,7 +52,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Inner.Copy(src, dst, type);
         }
 
-        public IntPtr MemAlloc(int size) {
+        public IntPtr MemAlloc(uint size) {
             return Inner.MemAlloc(size);
         }
 

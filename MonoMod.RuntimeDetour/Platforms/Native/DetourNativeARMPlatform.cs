@@ -187,8 +187,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // no-op.
         }
 
-        public IntPtr MemAlloc(int size) {
-            return Marshal.AllocHGlobal(size);
+        public IntPtr MemAlloc(uint size) {
+            return Marshal.AllocHGlobal((int) size);
         }
 
         public void MemFree(IntPtr ptr) {

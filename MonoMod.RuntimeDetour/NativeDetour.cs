@@ -68,7 +68,7 @@ namespace MonoMod.RuntimeDetour {
             method?.TryCreateILCopy(out _BackupMethod);
 
             // BackupNative is required even if BackupMethod is present to undo the detour.
-            _BackupNative = DetourHelper.Native.MemAlloc(Data.Type);
+            _BackupNative = DetourHelper.Native.MemAlloc(Data.Size);
             DetourHelper.Native.Copy(Data.Method, _BackupNative, Data.Type);
 
             Apply();
