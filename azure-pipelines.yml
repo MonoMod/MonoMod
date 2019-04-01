@@ -81,24 +81,3 @@ steps:
     nobuild: true
     projects: 'MonoMod.UnitTest/*.csproj'
     configuration: '$(buildConfiguration)'
-
-# Create and publish a "test" artifact.
-- task: CopyFiles@2
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-  displayName: 'Artifacts: Pack: test'
-  continueOnError: true
-  inputs:
-    sourceFolder: '$(Agent.BuildDirectory)'
-    contents: 'MonoMod.UnitTest/bin/*/*'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/test'
-    cleanTargetFolder: true
-    overWrite: true
-    flattenFolders: false
-- task: PublishBuildArtifacts@1
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-  displayName: 'Artifacts: Publish: test'
-  continueOnError: true
-  inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/test'
-    artifactName: 'test'
-    publishLocation: 'Container'
