@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using MonoMod.Utils;
 using System.Reflection.Emit;
+using System.Text;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -47,6 +48,18 @@ namespace MonoMod.UnitTest {
                 staticResult = (int) dm.Invoke(null, new object[] { 2, 3 });
                 Console.WriteLine($"TestStaticMethod(2, 3): {staticResult}");
                 Assert.Equal(12, staticResult);
+            }
+
+            // This was provided by Chicken Bones (tModLoader).
+            using (Hook h = new Hook(
+                typeof(Encoding).GetMethod("GetEncoding", new Type[] { typeof(string) }),
+                new Func<Func<string, Encoding>, string, Encoding>((orig, name) => {
+                    if (name == "IBM437")
+                        return null;
+                    return orig(name);
+                })
+            )) {
+                Assert.Null(Encoding.GetEncoding("IBM437"));
             }
         }
 

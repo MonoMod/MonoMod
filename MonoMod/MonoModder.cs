@@ -112,7 +112,9 @@ namespace MonoMod {
         public bool Strict;
         public bool MissingDependencyThrow;
         public bool RemovePatchReferences;
-        public bool PreventInline = false;
+        public bool PreventInline;
+        public bool? UpgradeMSCORLIB;
+
         public ReadingMode ReadingMode = ReadingMode.Immediate;
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
 
@@ -255,6 +257,9 @@ namespace MonoMod {
             Strict = Environment.GetEnvironmentVariable("MONOMOD_STRICT") == "1";
             MissingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0";
             RemovePatchReferences = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_REMOVE_PATCH") != "0";
+
+            string upgradeMSCORLIBStr = Environment.GetEnvironmentVariable("MONOMOD_MSCORLIB_UPGRADE");
+            UpgradeMSCORLIB = string.IsNullOrEmpty(upgradeMSCORLIBStr) ? (bool?) null : (upgradeMSCORLIBStr != "0");
 
             MonoModRulesManager.Register(this);
         }
@@ -1496,18 +1501,14 @@ namespace MonoMod {
                 _SplitUpgrade();
             }
 
-            string mscorlibUpgradeStr = Environment.GetEnvironmentVariable("MONOMOD_MSCORLIB_UPGRADE");
-            bool mscorlibUpdate;
-            if (!string.IsNullOrEmpty(mscorlibUpgradeStr)) {
-                mscorlibUpdate = mscorlibUpgradeStr == "1";
-            } else {
+            if (UpgradeMSCORLIB == null) {
                 // Check if the assembly depends on mscorlib 2.0.5.0, possibly Unity.
                 // If so, upgrade to that version (or away to an even higher version).
                 Version fckUnity = new Version(2, 0, 5, 0);
-                mscorlibUpdate = Module.AssemblyReferences.Any(x => x.Version == fckUnity);
+                UpgradeMSCORLIB = Module.AssemblyReferences.Any(x => x.Version == fckUnity);
             }
 
-            if (mscorlibUpdate) {
+            if (UpgradeMSCORLIB.Value) {
                 // Attempt to remap and remove redundant mscorlib references.
                 // Subpass 1: Find newest referred version.
                 List<AssemblyNameReference> mscorlibDeps = new List<AssemblyNameReference>();
