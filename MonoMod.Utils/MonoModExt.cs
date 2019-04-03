@@ -92,25 +92,52 @@ namespace MonoMod.Utils {
             return c;
         }
 
-        public static MethodBody Clone(this MethodBody o, MethodDefinition m) {
-            if (o == null)
+        public static MethodBody Clone(this MethodBody bo, MethodDefinition m) {
+            if (bo == null)
                 return null;
 
-            MethodBody c = new MethodBody(m);
-            c.MaxStackSize = o.MaxStackSize;
-            c.InitLocals = o.InitLocals;
-            c.LocalVarToken = o.LocalVarToken;
+            MethodBody bc = new MethodBody(m);
+            bc.MaxStackSize = bo.MaxStackSize;
+            bc.InitLocals = bo.InitLocals;
+            bc.LocalVarToken = bo.LocalVarToken;
 
-            c.Instructions.AddRange(o.Instructions);
-            c.ExceptionHandlers.AddRange(o.ExceptionHandlers);
-            c.Variables.AddRange(o.Variables);
+            bc.Instructions.AddRange(bo.Instructions.Select(o => {
+                Instruction c = Instruction.Create(OpCodes.Nop);
+                c.OpCode = o.OpCode;
+                c.Operand = o.Operand;
+                c.Offset = o.Offset;
+                return c;
+            }));
+
+            bc.ExceptionHandlers.AddRange(bo.ExceptionHandlers.Select(o => {
+                ExceptionHandler c = new ExceptionHandler(o.HandlerType);
+                c.TryStart = o.TryStart == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.TryStart)];
+                c.TryEnd = o.TryEnd == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.TryEnd)];
+                c.FilterStart = o.FilterStart == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.FilterStart)];
+                c.HandlerStart = o.HandlerStart == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.HandlerStart)];
+                c.HandlerEnd = o.HandlerEnd == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.HandlerEnd)];
+                c.CatchType = o.CatchType;
+                return c;
+            }));
+
+            bc.Variables.AddRange(bo.Variables.Select(o => {
+                VariableDefinition c = new VariableDefinition(o.VariableType);
+                return c;
+            }));
 
 #if !CECIL0_9
-            m.CustomDebugInformations.AddRange(o.Method.CustomDebugInformations);
-            m.DebugInformation.SequencePoints.AddRange(o.Method.DebugInformation.SequencePoints);
+            m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations); // Abstract. TODO: Implement deep CustomDebugInformations copy.
+            m.DebugInformation.SequencePoints.AddRange(bo.Method.DebugInformation.SequencePoints.Select(o => {
+                SequencePoint c = new SequencePoint(bc.Instructions.FirstOrDefault(i => i.Offset == o.Offset), o.Document);
+                c.StartLine = o.StartLine;
+                c.StartColumn = o.StartColumn;
+                c.EndLine = o.EndLine;
+                c.EndColumn = o.EndColumn;
+                return c;
+            }));
 #endif
 
-            return c;
+            return bc;
         }
 
         public static readonly System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -642,9 +669,9 @@ namespace MonoMod.Utils {
             return null;
         }
 
-        public static void AddRange<T>(this Collection<T> list, Collection<T> other) {
-            for (int i = 0; i < other.Count; i++)
-                list.Add(other[i]);
+        public static void AddRange<T>(this Collection<T> list, IEnumerable<T> other) {
+            foreach (T entry in other)
+                list.Add(entry);
         }
         public static void AddRange(this IDictionary dict, IDictionary other) {
             foreach (DictionaryEntry entry in other)
