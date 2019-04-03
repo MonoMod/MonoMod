@@ -312,7 +312,7 @@ namespace MonoMod.Utils {
                     } else if (operand is CallSite csite) {
                         if (dm != null) {
                             // SignatureHelper in unmanaged contexts cannot be fully made use of for DynamicMethods.
-                            EmitCallSite(dm, il, _ReflOpCodes[instr.OpCode.Value], csite);
+                            _EmitCallSite(dm, il, _ReflOpCodes[instr.OpCode.Value], csite);
                             continue;
                         }
 #if !NETSTANDARD
@@ -328,7 +328,7 @@ namespace MonoMod.Utils {
                         if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Call) {
                             if (operand is DynamicMethod target) {
                                 // This should be heavily optimizable.
-                                operand = CreateMethodProxy(mb, target);
+                                operand = _EmitMethodProxy(mb, target);
 
                             } else {
                                 IntPtr ptr = called.GetLdftnPointer();

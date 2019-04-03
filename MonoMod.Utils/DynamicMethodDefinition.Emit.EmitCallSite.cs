@@ -62,7 +62,7 @@ namespace MonoMod.Utils {
             typeof(IntPtr)
         };
 
-        internal static void EmitCallSite(DynamicMethod dm, ILGenerator il, System.Reflection.Emit.OpCode opcode, CallSite csite) {
+        internal static void _EmitCallSite(DynamicMethod dm, ILGenerator il, System.Reflection.Emit.OpCode opcode, CallSite csite) {
             /* The mess in this method is heavily based off of the code available at the following links:
              * https://github.com/Microsoft/referencesource/blob/3b1eaf5203992df69de44c783a3eda37d3d4cd10/mscorlib/system/reflection/emit/dynamicmethod.cs#L791
              * https://github.com/Microsoft/referencesource/blob/3b1eaf5203992df69de44c783a3eda37d3d4cd10/mscorlib/system/reflection/emit/dynamicilgenerator.cs#L353

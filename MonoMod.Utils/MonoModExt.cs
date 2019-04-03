@@ -109,6 +109,14 @@ namespace MonoMod.Utils {
                 return c;
             }));
 
+            foreach (Instruction c in bc.Instructions) {
+                if (c.Operand is Instruction target) {
+                    c.Operand = bc.Instructions[bo.Instructions.IndexOf(target)];
+                } else if (c.Operand is Instruction[] targets) {
+                    c.Operand = targets.Select(i => bc.Instructions[bo.Instructions.IndexOf(i)]).ToArray();
+                }
+            }
+
             bc.ExceptionHandlers.AddRange(bo.ExceptionHandlers.Select(o => {
                 ExceptionHandler c = new ExceptionHandler(o.HandlerType);
                 c.TryStart = o.TryStart == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.TryStart)];
