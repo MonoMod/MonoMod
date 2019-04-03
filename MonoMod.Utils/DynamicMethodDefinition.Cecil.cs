@@ -50,38 +50,29 @@ namespace MonoMod.Utils {
 
             try {
 
+#pragma warning disable IDE0039 // Use local function
                 Relinker relinker = (mtp, ctx) => {
                     return module.ImportReference(mtp);
                 };
+#pragma warning restore IDE0039 // Use local function
 
                 MethodDefinition method = Definition;
-                MethodDefinition clone = new MethodDefinition(method.Name, method.Attributes, module.TypeSystem.Void);
-                clone.CallingConvention = method.CallingConvention;
-                clone.ExplicitThis = method.ExplicitThis;
-                clone.MethodReturnType = method.MethodReturnType;
-                clone.Attributes = method.Attributes;
-                clone.ImplAttributes = method.ImplAttributes;
-                clone.SemanticsAttributes = method.SemanticsAttributes;
-                clone.DeclaringType = typeDef;
-                clone.PInvokeInfo = method.PInvokeInfo;
-                clone.IsPInvokeImpl = method.IsPInvokeImpl;
-
-                foreach (GenericParameter genParam in method.GenericParameters)
-                    clone.GenericParameters.Add(genParam.Clone().Relink(relinker, clone));
+                MethodDefinition clone = new MethodDefinition(method.Name, method.Attributes, module.TypeSystem.Void) {
+                    MethodReturnType = method.MethodReturnType,
+                    Attributes = Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
+                    ImplAttributes = Mono.Cecil.MethodImplAttributes.IL | Mono.Cecil.MethodImplAttributes.Managed,
+                    DeclaringType = typeDef,
+                    NoInlining = true
+                };
 
                 foreach (ParameterDefinition param in method.Parameters)
                     clone.Parameters.Add(param.Clone().Relink(relinker, clone));
-
-                foreach (CustomAttribute attrib in method.CustomAttributes)
-                    clone.CustomAttributes.Add(attrib.Clone().Relink(relinker, clone));
-
-                foreach (MethodReference @override in method.Overrides)
-                    clone.Overrides.Add(@override);
 
                 clone.ReturnType = method.ReturnType.Relink(relinker, clone);
 
                 typeDef.Methods.Add(clone);
 
+                clone.HasThis = method.HasThis;
                 Mono.Cecil.Cil.MethodBody body = clone.Body = method.Body.Clone(clone);
 
                 foreach (VariableDefinition var in clone.Body.Variables)
@@ -102,30 +93,46 @@ namespace MonoMod.Utils {
                         operand = mtp.Relink(relinker, clone);
                     }
 
-                    // TODO: Fix up method body. Fix up DynamicMethod(Definition) inline refs.
+                    // TODO: Fix up DynamicMethod inline refs.
 
                     instr.Operand = operand;
                 }
 
-                clone.SetPublic(true);
-                if (!clone.IsStatic) {
-                    clone.IsStatic = true;
-                    clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, method.DeclaringType.Relink(relinker, clone)));
+                clone.HasThis = false;
+
+                if (method.HasThis) {
+                    TypeReference type = method.DeclaringType;
+                    if (type.IsValueType)
+                        type = new ByReferenceType(type);
+                    clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, type.Relink(relinker, clone)));
+                }
+
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"))) {
+                    string dir = Path.GetFullPath(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"));
+                    string name = module.Name + ".dll";
+                    string path = Path.Combine(dir, name);
+                    dir = Path.GetDirectoryName(path);
+                    if (!Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
+                    if (File.Exists(path))
+                        File.Delete(path);
+                    using (Stream fileStream = File.OpenWrite(path))
+                        module.Write(fileStream);
                 }
 
                 Assembly asm;
                 using (MemoryStream asmStream = new MemoryStream()) {
-                    typeDef.Module.Write(asmStream);
+                    module.Write(asmStream);
                     asmStream.Seek(0, SeekOrigin.Begin);
 #if NETSTANDARD1_X
-                // System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
-                asm = (Assembly) _AssemblyLoadContext_LoadFromStream(_AssemblyLoadContext_Default, asmStream);
+                    // System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
+                    asm = (Assembly) _AssemblyLoadContext_LoadFromStream(_AssemblyLoadContext_Default, asmStream);
 #else
                     asm = Assembly.Load(asmStream.GetBuffer());
 #endif
                 }
 
-                return asm.GetType(typeDef.FullName).GetMethod(method.Name);
+                return asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false).GetMethod(clone.Name);
 
             } finally {
                 if (moduleIsPrivate)

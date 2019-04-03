@@ -77,7 +77,7 @@ namespace MonoMod.RuntimeDetour {
 
             lock (_BackupMethods) {
                 if ((!_BackupMethods.TryGetValue(Method, out MethodInfo backup) || backup == null) &&
-                    Method.TryCreateILCopy(out backup))
+                    (backup = Method.CreateILCopy()) != null)
                     _BackupMethods[Method] = backup;
             }
 

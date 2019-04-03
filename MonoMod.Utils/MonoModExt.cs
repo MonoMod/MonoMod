@@ -32,7 +32,7 @@ namespace MonoMod.Utils {
         static readonly Regex TypeGenericParamRegex = new Regex(@"\!\d");
         static readonly Regex MethodGenericParamRegex = new Regex(@"\!\!\d");
 
-        static Type t_ParamArrayAttribute = typeof(ParamArrayAttribute);
+        static readonly Type t_ParamArrayAttribute = typeof(ParamArrayAttribute);
 
         public static ModuleDefinition ReadModule(string path, ReaderParameters rp) {
             Retry:
@@ -245,9 +245,8 @@ namespace MonoMod.Utils {
 
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModIfFlag") {
                     string flag = (string) attrib.ConstructorArguments[0].Value;
-                    object valueObj;
                     bool value;
-                    if (!SharedData.TryGetValue(flag, out valueObj) || !(valueObj is bool))
+                    if (!SharedData.TryGetValue(flag, out object valueObj) || !(valueObj is bool))
                         if (attrib.ConstructorArguments.Count == 2)
                             value = (bool) attrib.ConstructorArguments[1].Value;
                         else
@@ -759,8 +758,7 @@ namespace MonoMod.Utils {
             if (type == null)
                 return null;
 
-            if (type is TypeSpecification) {
-                TypeSpecification ts = (TypeSpecification) type;
+            if (type is TypeSpecification ts) {
                 TypeReference relinkedElem = ts.ElementType.Relink(relinker, context);
 
                 if (type.IsSentinel)
@@ -1210,8 +1208,7 @@ namespace MonoMod.Utils {
             return name.StartsWith("patch_") ? name.Substring(6) : name;
         }
         private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
-            if (cap is TypeReference) {
-                TypeReference type = (TypeReference) cap;
+            if (cap is TypeReference type) {
                 CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
                 string name;
 
@@ -1301,8 +1298,7 @@ namespace MonoMod.Utils {
                 return name;
             }
 
-            if (cap is FieldReference) {
-                FieldReference field = (FieldReference) cap;
+            if (cap is FieldReference field) {
                 return $"{field.FieldType.GetPatchFullName()} {field.DeclaringType.GetPatchFullName()}::{cap.GetPatchName()}";
             }
 
@@ -1370,8 +1366,7 @@ namespace MonoMod.Utils {
 
         // Required for field -> call conversions where the original access was an address access.
         public static void AppendGetAddr(this MethodBody body, Instruction instr, TypeReference type, IDictionary<TypeReference, VariableDefinition> localMap = null) {
-            VariableDefinition local;
-            if (localMap == null || !localMap.TryGetValue(type, out local)) {
+            if (localMap == null || !localMap.TryGetValue(type, out VariableDefinition local)) {
                 local = new VariableDefinition(type);
                 body.Variables.Add(local);
                 if (localMap != null)
@@ -1490,12 +1485,10 @@ namespace MonoMod.Utils {
             if (a.GetType() != b.GetType())
                 return false;
 
-            GenericInstanceType gita = a as GenericInstanceType;
-            if (gita != null)
+            if (a is GenericInstanceType gita)
                 return gita.IsMatchingSignature((GenericInstanceType) b);
 
-            IModifierType mta = a as IModifierType;
-            if (mta != null)
+            if (a is IModifierType mta)
                 return mta.IsMatchingSignature((IModifierType) b);
 
             return IsMatchingSignature(a.ElementType, b.ElementType);
@@ -1551,8 +1544,7 @@ namespace MonoMod.Utils {
         }
 
         private static TypeReference _InflateGenericType(GenericInstanceType genericInstanceProvider, TypeReference typeToInflate) {
-            ArrayType arrayType = typeToInflate as ArrayType;
-            if (arrayType != null) {
+            if (typeToInflate is ArrayType arrayType) {
                 TypeReference inflatedElementType = _InflateGenericType(genericInstanceProvider, arrayType.ElementType);
 
                 if (inflatedElementType != arrayType.ElementType) {
@@ -1566,8 +1558,7 @@ namespace MonoMod.Utils {
                 return arrayType;
             }
 
-            GenericInstanceType genericInst = typeToInflate as GenericInstanceType;
-            if (genericInst != null) {
+            if (typeToInflate is GenericInstanceType genericInst) {
                 GenericInstanceType result = new GenericInstanceType(genericInst.ElementType);
 
                 for (int i = 0; i < genericInst.GenericArguments.Count; ++i)
@@ -1576,8 +1567,7 @@ namespace MonoMod.Utils {
                 return result;
             }
 
-            GenericParameter genericParameter = typeToInflate as GenericParameter;
-            if (genericParameter != null) {
+            if (typeToInflate is GenericParameter genericParameter) {
                 if (genericParameter.Owner is MethodReference)
                     return genericParameter;
 
@@ -1586,8 +1576,7 @@ namespace MonoMod.Utils {
                 return genericInstanceProvider.GenericArguments[parameter.Position];
             }
 
-            FunctionPointerType functionPointerType = typeToInflate as FunctionPointerType;
-            if (functionPointerType != null) {
+            if (typeToInflate is FunctionPointerType functionPointerType) {
                 FunctionPointerType result = new FunctionPointerType();
                 result.ReturnType = _InflateGenericType(genericInstanceProvider, functionPointerType.ReturnType);
 
@@ -1597,8 +1586,7 @@ namespace MonoMod.Utils {
                 return result;
             }
 
-            IModifierType modifierType = typeToInflate as IModifierType;
-            if (modifierType != null) {
+            if (typeToInflate is IModifierType modifierType) {
                 TypeReference modifier = _InflateGenericType(genericInstanceProvider, modifierType.ModifierType);
                 TypeReference elementType = _InflateGenericType(genericInstanceProvider, modifierType.ElementType);
 
@@ -1608,8 +1596,7 @@ namespace MonoMod.Utils {
                 return new RequiredModifierType(modifier, elementType);
             }
 
-            PinnedType pinnedType = typeToInflate as PinnedType;
-            if (pinnedType != null) {
+            if (typeToInflate is PinnedType pinnedType) {
                 TypeReference elementType = _InflateGenericType(genericInstanceProvider, pinnedType.ElementType);
 
                 if (elementType != pinnedType.ElementType)
@@ -1618,8 +1605,7 @@ namespace MonoMod.Utils {
                 return pinnedType;
             }
 
-            PointerType pointerType = typeToInflate as PointerType;
-            if (pointerType != null) {
+            if (typeToInflate is PointerType pointerType) {
                 TypeReference elementType = _InflateGenericType(genericInstanceProvider, pointerType.ElementType);
 
                 if (elementType != pointerType.ElementType)
@@ -1628,8 +1614,7 @@ namespace MonoMod.Utils {
                 return pointerType;
             }
 
-            ByReferenceType byReferenceType = typeToInflate as ByReferenceType;
-            if (byReferenceType != null) {
+            if (typeToInflate is ByReferenceType byReferenceType) {
                 TypeReference elementType = _InflateGenericType(genericInstanceProvider, byReferenceType.ElementType);
 
                 if (elementType != byReferenceType.ElementType)
@@ -1638,8 +1623,7 @@ namespace MonoMod.Utils {
                 return byReferenceType;
             }
 
-            SentinelType sentinelType = typeToInflate as SentinelType;
-            if (sentinelType != null) {
+            if (typeToInflate is SentinelType sentinelType) {
                 TypeReference elementType = _InflateGenericType(genericInstanceProvider, sentinelType.ElementType);
 
                 if (elementType != sentinelType.ElementType)

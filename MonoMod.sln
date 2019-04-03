@@ -3,19 +3,24 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28010.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod", "MonoMod\MonoMod.csproj", "{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod", "MonoMod\MonoMod.csproj", "{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.DebugIL", "MonoMod.DebugIL\MonoMod.DebugIL.csproj", "{68E38462-2DB9-4692-AD91-077A8FBE8AE9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.DebugIL", "MonoMod.DebugIL\MonoMod.DebugIL.csproj", "{68E38462-2DB9-4692-AD91-077A8FBE8AE9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.RuntimeDetour", "MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj", "{D0C584C0-81D7-486E-B70E-D7F9256E0909}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.RuntimeDetour", "MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj", "{D0C584C0-81D7-486E-B70E-D7F9256E0909}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.Utils", "MonoMod.Utils\MonoMod.Utils.csproj", "{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Utils", "MonoMod.Utils\MonoMod.Utils.csproj", "{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.RuntimeDetour.HookGen", "MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj", "{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.RuntimeDetour.HookGen", "MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj", "{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.BaseLoader", "MonoMod.BaseLoader\MonoMod.BaseLoader.csproj", "{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.BaseLoader", "MonoMod.BaseLoader\MonoMod.BaseLoader.csproj", "{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.UnitTest", "MonoMod.UnitTest\MonoMod.UnitTest.csproj", "{0291CFD9-75F9-4978-BE83-58DE5194BECA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.UnitTest", "MonoMod.UnitTest\MonoMod.UnitTest.csproj", "{0291CFD9-75F9-4978-BE83-58DE5194BECA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BCABFBF3-BB48-4C21-9A52-E140015570A9}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
