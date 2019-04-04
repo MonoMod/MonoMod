@@ -53,8 +53,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (hookDelegate == null)
                 return;
 
-            Stack<Hook> hooks;
-            if (!HookMap.TryGetValue(hookDelegate, out hooks))
+            if (!HookMap.TryGetValue(hookDelegate, out Stack<Hook> hooks))
                 HookMap[hookDelegate] = hooks = new Stack<Hook>();
 
             if (HookList.Count == 0) {
@@ -75,8 +74,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             // Note: A hook delegate can be applied multiple times.
             // The following code removes the last hook of that delegate type.
-            Stack<Hook> hooks;
-            if (!HookMap.TryGetValue(hookDelegate, out hooks))
+            if (!HookMap.TryGetValue(hookDelegate, out Stack<Hook> hooks))
                 return;
 
             Hook hook = hooks.Pop();

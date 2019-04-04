@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Linq.Expressions;
 using MonoMod.Utils;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour {
     public class Hook : IDetour {
@@ -20,8 +20,8 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _Hook;
         private Detour _Detour;
 
-        private Type _OrigDelegateType;
-        private MethodInfo _OrigDelegateInvoke;
+        private readonly Type _OrigDelegateType;
+        private readonly MethodInfo _OrigDelegateInvoke;
 
         private int? _RefTarget;
         private int? _RefTrampoline;
@@ -76,34 +76,33 @@ namespace MonoMod.RuntimeDetour {
             MethodInfo origInvoke = _OrigDelegateInvoke = origType?.GetMethod("Invoke");
             // TODO: Check origType Invoke arguments.
 
-            DynamicMethod dm;
-            ILGenerator il;
+            DynamicMethodDefinition dmd;
+            ILProcessor il;
 
-            dm = new DynamicMethod(
+            using (dmd = new DynamicMethodDefinition(
                 $"Hook<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
-                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                Method.DeclaringType,
-                true
-            );
-            il = dm.GetILGenerator();
+                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes
+            )) {
+                il = dmd.GetILProcessor();
 
-            if (target != null) {
-                _RefTarget = il.EmitReference(target);
+                if (target != null) {
+                    _RefTarget = il.EmitReference(target);
+                }
+
+                if (origType != null) {
+                    _RefTrampoline = il.EmitReference<Delegate>(null);
+                }
+
+                // TODO: Use specialized Ldarg.* if possible; What about ref types?
+                for (int i = 0; i < argTypes.Length; i++)
+                    il.Emit(OpCodes.Ldarg, i);
+
+                il.Emit(OpCodes.Call, _Hook);
+
+                il.Emit(OpCodes.Ret);
+
+                Target = dmd.Generate().Pin();
             }
-
-            if (origType != null) {
-                _RefTrampoline = il.EmitReference<Delegate>(null);
-            }
-
-            // TODO: Use specialized Ldarg.* if possible; What about ref types?
-            for (int i = 0; i < argTypes.Length; i++)
-                il.Emit(OpCodes.Ldarg, i);
-
-            il.Emit(OpCodes.Call, _Hook);
-
-            il.Emit(OpCodes.Ret);
-
-            Target = dm.Pin();
 
             // Temporarily provide a trampoline that waits for the proper trampoline.
             if (origType != null) {
@@ -112,32 +111,29 @@ namespace MonoMod.RuntimeDetour {
                 for (int i = 0; i < origArgs.Length; i++)
                     origArgTypes[i] = origArgs[i].ParameterType;
 
-                dm = new DynamicMethod(
+                using (dmd = new DynamicMethodDefinition(
                     $"Chain:TMP<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
-                    (origInvoke as MethodInfo)?.ReturnType ?? typeof(void), origArgTypes,
-                    Method.DeclaringType,
-                    true
-                );
-                il = dm.GetILGenerator();
+                    (origInvoke as MethodInfo)?.ReturnType ?? typeof(void), origArgTypes
+                )) {
+                    il = dmd.GetILProcessor();
 
-                // while (ref == null) { }
-                Label lblStart = il.DefineLabel();
-                il.MarkLabel(lblStart);
-                _RefTrampolineTmp = il.EmitReference<Delegate>(null);
-                il.Emit(OpCodes.Brfalse, lblStart);
+                    // while (ref == null) { }
+                    _RefTrampolineTmp = il.EmitReference<Delegate>(null);
+                    il.Emit(OpCodes.Brfalse, il.Body.Instructions[0]);
 
-                // Invoke the generated delegate.
-                il.EmitGetReference<Delegate>(_RefTrampolineTmp.Value);
+                    // Invoke the generated delegate.
+                    il.EmitGetReference<Delegate>(_RefTrampolineTmp.Value);
 
-                // TODO: Use specialized Ldarg.* if possible; What about ref types?
-                for (int i = 0; i < argTypes.Length; i++)
-                    il.Emit(OpCodes.Ldarg, i);
+                    // TODO: Use specialized Ldarg.* if possible; What about ref types?
+                    for (int i = 0; i < argTypes.Length; i++)
+                        il.Emit(OpCodes.Ldarg, i);
 
-                il.Emit(OpCodes.Callvirt, origInvoke);
+                    il.Emit(OpCodes.Callvirt, origInvoke);
 
-                il.Emit(OpCodes.Ret);
+                    il.Emit(OpCodes.Ret);
 
-                DynamicMethodHelper.SetReference(_RefTrampoline.Value, dm.CreateDelegate(origType));
+                    DynamicMethodHelper.SetReference(_RefTrampoline.Value, dmd.Generate().CreateDelegate(origType));
+                }
             }
 
             _Detour = new Detour(Method, Target);

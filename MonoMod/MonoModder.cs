@@ -55,18 +55,18 @@ namespace MonoMod {
 
         [MonoMod__WasIDictionary__]
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
-        public IDictionary<string, object> _RelinkMap { get { return RelinkMap; } set { RelinkMap = (Dictionary<string, object>) value; } }
+        public IDictionary<string, object> _RelinkMap { get => RelinkMap; set => RelinkMap = (Dictionary<string, object>) value; }
         [MonoMod__WasIDictionary__]
         public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
-        public IDictionary<string, ModuleDefinition> _RelinkModuleMap { get { return RelinkModuleMap; } set { RelinkModuleMap = (Dictionary<string, ModuleDefinition>) value; } }
+        public IDictionary<string, ModuleDefinition> _RelinkModuleMap { get => RelinkModuleMap; set => RelinkModuleMap = (Dictionary<string, ModuleDefinition>) value; }
         public HashSet<string> SkipList = new HashSet<string>(EqualityComparer<string>.Default);
 
         [MonoMod__WasIDictionary__]
         public Dictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
-        public IDictionary<string, IMetadataTokenProvider> _RelinkMapCache { get { return RelinkMapCache; } set { RelinkMapCache = (Dictionary<string, IMetadataTokenProvider>) value; } }
+        public IDictionary<string, IMetadataTokenProvider> _RelinkMapCache { get => RelinkMapCache; set => RelinkMapCache = (Dictionary<string, IMetadataTokenProvider>) value; }
         [MonoMod__WasIDictionary__]
         public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
-        public IDictionary<string, TypeReference> _RelinkModuleMapCache { get { return RelinkModuleMapCache; } set { RelinkModuleMapCache = (Dictionary<string, TypeReference>) value; } }
+        public IDictionary<string, TypeReference> _RelinkModuleMapCache { get => RelinkModuleMapCache; set => RelinkModuleMapCache = (Dictionary<string, TypeReference>) value; }
 
         public Dictionary<string, OpCode> ForceCallMap = new Dictionary<string, OpCode>();
 
@@ -75,10 +75,10 @@ namespace MonoMod {
 
         [MonoMod__WasIDictionary__]
         public Dictionary<string, FastReflectionDelegate> CustomAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
-        public IDictionary<string, FastReflectionDelegate> _CustomAttributeHandlers { get { return CustomAttributeHandlers; } set { CustomAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; } }
+        public IDictionary<string, FastReflectionDelegate> _CustomAttributeHandlers { get => CustomAttributeHandlers; set => CustomAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; }
         [MonoMod__WasIDictionary__]
         public Dictionary<string, FastReflectionDelegate> CustomMethodAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
-        public IDictionary<string, FastReflectionDelegate> _CustomMethodAttributeHandlers { get { return CustomMethodAttributeHandlers; } set { CustomMethodAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; } }
+        public IDictionary<string, FastReflectionDelegate> _CustomMethodAttributeHandlers { get => CustomMethodAttributeHandlers; set => CustomMethodAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; }
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -95,10 +95,10 @@ namespace MonoMod {
 
         [MonoMod__WasIDictionary__]
         public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
-        public IDictionary<ModuleDefinition, List<ModuleDefinition>> _DependencyMap { get { return DependencyMap; } set { DependencyMap = (Dictionary<ModuleDefinition, List<ModuleDefinition>>) value; } }
+        public IDictionary<ModuleDefinition, List<ModuleDefinition>> _DependencyMap { get => DependencyMap; set => DependencyMap = (Dictionary<ModuleDefinition, List<ModuleDefinition>>) value; }
         [MonoMod__WasIDictionary__]
         public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
-        public IDictionary<string, ModuleDefinition> _DependencyCache { get { return DependencyCache; } set { DependencyCache = (Dictionary<string, ModuleDefinition>) value; } }
+        public IDictionary<string, ModuleDefinition> _DependencyCache { get => DependencyCache; set => DependencyCache = (Dictionary<string, ModuleDefinition>) value; }
 
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
 
@@ -131,9 +131,7 @@ namespace MonoMod {
                 }
                 return _assemblyResolver;
             }
-            set {
-                _assemblyResolver = value;
-            }
+            set => _assemblyResolver = value;
         }
 
         protected ReaderParameters _readerParameters;
@@ -147,9 +145,7 @@ namespace MonoMod {
                 }
                 return _readerParameters;
             }
-            set {
-                _readerParameters = value;
-            }
+            set => _readerParameters = value;
         }
 
         protected WriterParameters _writerParameters;
@@ -161,7 +157,8 @@ namespace MonoMod {
                     if (DebugSymbolOutputFormat == DebugSymbolFormat.Auto) {
                         if (((int) PlatformHelper.Current & (int) Platform.Windows) == (int) Platform.Windows)
                             pdb = true;
-                        else mdb = true;
+                        else
+                            mdb = true;
                     }
                     _writerParameters = new WriterParameters() {
                         WriteSymbols = true,
@@ -177,9 +174,7 @@ namespace MonoMod {
                 }
                 return _writerParameters;
             }
-            set {
-                _writerParameters = value;
-            }
+            set => _writerParameters = value;
         }
 
         protected string[] _GACPaths;
@@ -230,9 +225,7 @@ namespace MonoMod {
 
                 return _GACPaths;
             }
-            set {
-                _GACPaths = value;
-            }
+            set => _GACPaths = value;
         }
 
         public MonoModder() {
@@ -366,13 +359,11 @@ namespace MonoMod {
             MapDependency(main, depRef.Name, depRef.FullName, depRef);
         }
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null, AssemblyNameReference depRef = null) {
-            List<ModuleDefinition> mapped;
-            if (!DependencyMap.TryGetValue(main, out mapped))
+            if (!DependencyMap.TryGetValue(main, out List<ModuleDefinition> mapped))
                 DependencyMap[main] = mapped = new List<ModuleDefinition>();
 
-            ModuleDefinition dep;
             if (fullName != null && (
-                DependencyCache.TryGetValue(fullName, out dep) ||
+                DependencyCache.TryGetValue(fullName, out ModuleDefinition dep) ||
                 DependencyCache.TryGetValue(fullName + " [RT:" + main.RuntimeVersion + "]", out dep)
             )) {
                 LogVerbose($"[MapDependency] {main.Name} -> {dep.Name} (({fullName}), ({name})) from cache");
@@ -707,8 +698,7 @@ namespace MonoMod {
                 return;
 
             foreach (CustomAttribute attrib in cap.CustomAttributes) {
-                FastReflectionDelegate handler;
-                if (CustomAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))
+                if (CustomAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out FastReflectionDelegate handler))
                     handler?.Invoke(null, cap, attrib);
                 if (cap is MethodReference && CustomMethodAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))
                     handler?.Invoke(null, (MethodDefinition) cap, attrib);
@@ -769,9 +759,7 @@ namespace MonoMod {
             }
         }
         public virtual IMetadataTokenProvider MainRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-             if (mtp is TypeReference) {
-                TypeReference type = (TypeReference) mtp;
-
+             if (mtp is TypeReference type) {
                 // Type is coming from the input module - return the original.
                 if (type.Module == Module)
                     return type;
@@ -822,9 +810,8 @@ namespace MonoMod {
             if (RelinkMapCache.TryGetValue(name, out IMetadataTokenProvider cached))
                 return cached;
 
-            object val;
             if (relink && (
-                RelinkMap.TryGetValue(name, out val) ||
+                RelinkMap.TryGetValue(name, out object val) ||
                 (nameAlt != null && RelinkMap.TryGetValue(nameAlt, out val))
             )) {
                 // If the value already is a mtp, import and cache the imported reference.
@@ -875,13 +862,11 @@ namespace MonoMod {
 
 
             if (relinkModule && mtp is TypeReference) {
-                TypeReference type;
-                if (RelinkModuleMapCache.TryGetValue(name, out type))
+                if (RelinkModuleMapCache.TryGetValue(name, out TypeReference type))
                     return type;
                 type = (TypeReference) mtp;
 
-                ModuleDefinition scope;
-                if (RelinkModuleMap.TryGetValue(type.Scope.Name, out scope)) {
+                if (RelinkModuleMap.TryGetValue(type.Scope.Name, out ModuleDefinition scope)) {
                     TypeReference found = scope.GetType(type.FullName);
                     if (found == null) {
                         if (Strict)
@@ -937,8 +922,7 @@ namespace MonoMod {
                 foreach (ModuleDefinition dep in DependencyMap[mod])
                     if ((type = FindType(dep, name, crawled)) != null) {
                         // Type may come from a dependency. If the assembly reference is missing, add.
-                        AssemblyNameReference dllRef = type.Scope as AssemblyNameReference;
-                        if (dllRef != null && !Module.AssemblyReferences.Any(n => n.Name == dllRef.Name))
+                        if (type.Scope is AssemblyNameReference dllRef && !Module.AssemblyReferences.Any(n => n.Name == dllRef.Name))
                             Module.AssemblyReferences.Add(dllRef);
                         return Module.ImportReference(type);
                     }
@@ -1009,7 +993,7 @@ namespace MonoMod {
             foreach (GenericParameter genParam in type.GenericParameters)
                 newType.GenericParameters.Add(genParam.Clone());
 
-            foreach (var interf in type.Interfaces)
+            foreach (InterfaceImplementation interf in type.Interfaces)
                 newType.Interfaces.Add(interf);
 
             newType.ClassSize = type.ClassSize;
@@ -1547,8 +1531,9 @@ namespace MonoMod {
             if (FindType("MonoMod.MonoModExt") != null)
                 return;
             bool requiresUpgrade = false;
-            List<ModuleReference> modules = new List<ModuleReference>(Mods);
-            modules.Add(Module);
+            List<ModuleReference> modules = new List<ModuleReference>(Mods) {
+                Module
+            };
             foreach (ModuleDefinition mod in modules) {
                 for (int i = 0; i < mod.AssemblyReferences.Count; i++) {
                     AssemblyNameReference dep = mod.AssemblyReferences[i];
@@ -1594,8 +1579,7 @@ namespace MonoMod {
             MapDependency(Module, split);
             MissingDependencyThrow = missingDependencyThrow;
 
-            ModuleDefinition splitModule;
-            if (!DependencyCache.TryGetValue(split, out splitModule)) {
+            if (!DependencyCache.TryGetValue(split, out ModuleDefinition splitModule)) {
                 Log($"[UpgradeSplit] {split} doesn't exist, skipping it.");
                 return false;
             }
@@ -1750,7 +1734,7 @@ namespace MonoMod {
                     continue;
 
                 // Before relinking, check for an existing forced call opcode mapping.
-                OpCode forceCall = default(OpCode);
+                OpCode forceCall = default;
                 bool hasForceCall = operand is MethodReference && (
                     ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(), out forceCall) ||
                     ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(simple: true), out forceCall)
@@ -1762,9 +1746,8 @@ namespace MonoMod {
 
                 // Check again after relinking.
                 if (!hasForceCall && operand is MethodReference) {
-                    OpCode forceCallRelinked;
-                    bool hasForceCallRelinked = 
-                        ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(), out forceCallRelinked) ||
+                    bool hasForceCallRelinked =
+                        ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(), out OpCode forceCallRelinked) ||
                         ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(simple: true), out forceCallRelinked)
                     ;
                     // If a relinked force call exists, prefer it over the existing forced call opcode.

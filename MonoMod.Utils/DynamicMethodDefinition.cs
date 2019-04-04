@@ -9,9 +9,9 @@ using Mono.Cecil.Cil;
 using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
+using System.Security;
 #if !NETSTANDARD
 using System.Security.Permissions;
-using System.Security;
 using System.Diagnostics.SymbolStore;
 #endif
 
@@ -22,16 +22,30 @@ namespace MonoMod.Utils {
             _InitReflEmit();
         }
 
+        private static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
+#if !NETSTANDARD1_X
+        private static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(new Type[] { });
+#endif
+        private static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new Type[] { typeof(string) });
+
+
+        private static readonly Dictionary<string, AssemblyDefinition> _DynModuleCache = new Dictionary<string, AssemblyDefinition>();
+        private static readonly Dictionary<Module, ModuleDefinition> _DynModuleReflCache = new Dictionary<Module, ModuleDefinition>();
         private static readonly Dictionary<Module, ModuleDefinition> _Modules = new Dictionary<Module, ModuleDefinition>();
+
         private static readonly Dictionary<Module, int> _ModuleRefs = new Dictionary<Module, int>();
         private Func<AssemblyName, ModuleDefinition> _ModuleGen;
         private ModuleDefinition _Module {
             get {
+                if (Method == null)
+                    return _DynModuleDefinition;
                 if (_Modules.TryGetValue(Method.Module, out ModuleDefinition module))
                     return module;
                 return null;
             }
             set {
+                if (Method == null)
+                    throw new InvalidOperationException();
                 lock (_Modules) {
                     _Modules[Method.Module] = value;
                 }
@@ -39,11 +53,15 @@ namespace MonoMod.Utils {
         }
         private int _ModuleRef {
             get {
+                if (Method == null)
+                    return 0;
                 if (_ModuleRefs.TryGetValue(Method.Module, out int refs))
                     return refs;
                 return 0;
             }
             set {
+                if (Method == null)
+                    return;
                 lock (_ModuleRefs) {
                     _ModuleRefs[Method.Module] = value;
                 }
@@ -53,14 +71,19 @@ namespace MonoMod.Utils {
         public MethodBase Method { get; private set; }
         private MethodDefinition _Definition;
         public MethodDefinition Definition =>
-            _Definition ??
-            (_Definition = (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve()?.Clone()) ??
-            throw new InvalidOperationException("Method definition not found");
+            Method == null ? _Definition : (
+                _Definition ??
+                (_Definition = (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve()?.Clone()) ??
+                throw new InvalidOperationException("Method definition not found")
+            );
 
         public GeneratorType Generator = GeneratorType.Auto;
         public bool Debug = false;
 
-        public DynamicMethodDefinition(MethodBase method, Func<AssemblyName, ModuleDefinition> moduleGen = null) {
+        private ModuleDefinition _DynModuleDefinition;
+        private bool _DynModuleIsPrivate;
+
+        internal DynamicMethodDefinition() {
             string type = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
             if (!string.IsNullOrEmpty(type)) {
                 try {
@@ -70,12 +93,50 @@ namespace MonoMod.Utils {
                 }
             }
             Debug = Environment.GetEnvironmentVariable("MONOMOD_DMD_DEBUG") == "1";
+        }
 
+        public DynamicMethodDefinition(MethodBase method, Func<AssemblyName, ModuleDefinition> moduleGen = null)
+            : this() {
             Method = method ?? throw new ArgumentNullException(nameof(method));
             Reload(moduleGen);
         }
 
+        public DynamicMethodDefinition(string name, Type returnType, Type[] parameterTypes)
+            : this() {
+            Method = null;
+
+            ModuleDefinition module = _DynModuleDefinition = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
+                Kind = ModuleKind.Dll,
+                AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, new DefaultAssemblyResolver()),
+                ReflectionImporterProvider = new ReflectionCecilImporterProvider(null)
+            });
+            _DynModuleIsPrivate = true;
+
+            TypeDefinition type = new TypeDefinition(
+                "",
+                $"DMD<{name}>?{GetHashCode()}",
+                Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Class
+            );
+            module.Types.Add(type);
+
+            MethodDefinition def = _Definition = new MethodDefinition(
+                name,
+                Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
+                module.ImportReference(returnType)
+            );
+            foreach (Type paramType in parameterTypes)
+                def.Parameters.Add(new ParameterDefinition(module.ImportReference(paramType)));
+            type.Methods.Add(def);
+        }
+
+        public ILProcessor GetILProcessor() {
+            return Definition.Body.GetILProcessor();
+        }
+
         public void Reload(Func<AssemblyName, ModuleDefinition> moduleGen = null, bool forceModule = false) {
+            if (Method == null)
+                throw new InvalidOperationException();
+
             ModuleDefinition moduleTmp = null;
 
             if (moduleGen != null)
@@ -95,8 +156,10 @@ namespace MonoMod.Utils {
                             _Module = null;
                         }
                         ReaderParameters rp = new ReaderParameters();
-                        if (_ModuleGen != null)
+                        if (_ModuleGen != null) {
                             rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
+                            rp.ReflectionImporterProvider = new ReflectionCecilImporterProvider(rp.ReflectionImporterProvider);
+                        }
                         module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.GetTypeInfo().Assembly.GetLocation(), rp);
                     }
                     _Module = module;
@@ -147,39 +210,9 @@ namespace MonoMod.Utils {
             }
         }
 
-        private static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type> modReq = null, List<Type> modOpt = null) {
-            if (modReq == null)
-                modReq = new List<Type>();
-            else
-                modReq.Clear();
-
-            if (modOpt == null)
-                modOpt = new List<Type>();
-            else
-                modOpt.Clear();
-
-            for (
-                TypeReference mod = typeRef;
-                mod is TypeSpecification modSpec;
-                mod = modSpec.ElementType
-            ) {
-                switch (mod) {
-                    case RequiredModifierType paramTypeModReq:
-                        modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
-                        break;
-
-                    case OptionalModifierType paramTypeOptReq:
-                        modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
-                        break;
-                }
-            }
-
-            type = typeRef.ResolveReflection();
-            typeModReq = modReq.ToArray();
-            typeModOpt = modOpt.ToArray();
-        }
-
         public void Dispose() {
+            if (Method == null && !_DynModuleIsPrivate)
+                return;
             lock (_ModuleRefs) {
                 if (_Module != null && (--_ModuleRef) == 0) {
 #if !CECIL0_9
@@ -201,13 +234,17 @@ namespace MonoMod.Utils {
             }
 
             public AssemblyDefinition Resolve(AssemblyNameReference name) {
-                if (Cache.TryGetValue(name.FullName, out AssemblyDefinition asm))
+                if (_DynModuleCache.TryGetValue(name.FullName, out AssemblyDefinition asm))
+                    return asm;
+                if (Cache.TryGetValue(name.FullName, out asm))
                     return asm;
                 return Cache[name.FullName] = Gen(new AssemblyName(name.FullName))?.Assembly ?? Fallback.Resolve(name);
             }
 
             public AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters) {
-                if (Cache.TryGetValue(name.FullName, out AssemblyDefinition asm))
+                if (_DynModuleCache.TryGetValue(name.FullName, out AssemblyDefinition asm))
+                    return asm;
+                if (Cache.TryGetValue(name.FullName, out asm))
                     return asm;
                 return Cache[name.FullName] = Gen(new AssemblyName(name.FullName)).Assembly ?? Fallback.Resolve(name, parameters);
             }
@@ -215,13 +252,17 @@ namespace MonoMod.Utils {
 #if CECIL0_9
 
             public AssemblyDefinition Resolve(string fullName) {
-                if (Cache.TryGetValue(fullName, out AssemblyDefinition asm))
+                if (_DynModuleCache.TryGetValue(fullName, out AssemblyDefinition asm))
+                    return asm;
+                if (Cache.TryGetValue(fullName, out asm))
                     return asm;
                 return Cache[fullName] = Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName);
             }
 
             public AssemblyDefinition Resolve(string fullName, ReaderParameters parameters) {
-                if (Cache.TryGetValue(fullName, out AssemblyDefinition asm))
+                if (_DynModuleCache.TryGetValue(fullName, out AssemblyDefinition asm))
+                    return asm;
+                if (Cache.TryGetValue(fullName, out asm))
                     return asm;
                 return Cache[fullName] = Gen(new AssemblyName(fullName)).Assembly ?? Fallback.Resolve(fullName, parameters);
             }
@@ -235,6 +276,61 @@ namespace MonoMod.Utils {
             }
 
 #endif
+        }
+
+        class ReflectionCecilImporterProvider : IReflectionImporterProvider {
+            private readonly IReflectionImporterProvider Fallback;
+
+            public ReflectionCecilImporterProvider(IReflectionImporterProvider fallback) {
+                Fallback = fallback;
+            }
+
+            public IReflectionImporter GetReflectionImporter(ModuleDefinition module) {
+                return new ReflectionCecilImporter(module, Fallback?.GetReflectionImporter(module) ?? new DefaultReflectionImporter(module));
+            }
+        }
+
+        class ReflectionCecilImporter : IReflectionImporter {
+            private readonly ModuleDefinition Module;
+            private readonly IReflectionImporter Fallback;
+
+            public ReflectionCecilImporter(ModuleDefinition module, IReflectionImporter fallback) {
+                Module = module;
+                Fallback = fallback;
+            }
+
+            public AssemblyNameReference ImportReference(AssemblyName reference) {
+                return Fallback.ImportReference(reference);
+            }
+
+            public TypeReference ImportReference(Type type, IGenericParameterProvider context) {
+                if (_DynModuleReflCache.TryGetValue(type.GetTypeInfo().Module, out ModuleDefinition dynModule) && dynModule != Module)
+                    return Module.ImportReference(dynModule.ImportReference(type, context).Resolve());
+                return Fallback.ImportReference(type, context);
+            }
+
+            public FieldReference ImportReference(FieldInfo field, IGenericParameterProvider context) {
+                if (_DynModuleReflCache.TryGetValue(field.DeclaringType.GetTypeInfo().Module, out ModuleDefinition dynModule) && dynModule != Module)
+                    return Module.ImportReference(dynModule.ImportReference(field, context).Resolve());
+                return Fallback.ImportReference(field, context);
+            }
+
+            public MethodReference ImportReference(MethodBase method, IGenericParameterProvider context) {
+                if (method is DynamicMethod dm)
+                    return new DynamicMethodReference(Module, dm);
+                if (_DynModuleReflCache.TryGetValue(method.DeclaringType.GetTypeInfo().Module, out ModuleDefinition dynModule) && dynModule != Module)
+                    return Module.ImportReference(dynModule.ImportReference(method, context).Resolve());
+                return Fallback.ImportReference(method, context);
+            }
+        }
+
+        class DynamicMethodReference : MethodReference {
+            public DynamicMethod DynamicMethod;
+
+            public DynamicMethodReference(ModuleDefinition module, DynamicMethod dm)
+                : base("", module.TypeSystem.Void) {
+                DynamicMethod = dm;
+            }
         }
 
         public enum GeneratorType {

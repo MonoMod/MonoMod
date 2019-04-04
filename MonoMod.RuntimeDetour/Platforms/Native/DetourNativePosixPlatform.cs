@@ -1,4 +1,6 @@
-﻿using MonoMod.Utils;
+﻿#pragma warning disable IDE1006 // Naming Styles
+
+using MonoMod.Utils;
 using System;
 using System.Runtime.InteropServices;
 

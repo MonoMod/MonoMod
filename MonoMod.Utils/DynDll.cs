@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿#pragma warning disable IDE1006 // Naming Styles
+
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
@@ -62,8 +64,7 @@ namespace MonoMod.Utils {
                 return lib;
             }
 
-            int mappedFlags;
-            if (!DllFlags.TryGetValue(name, out mappedFlags))
+            if (!DllFlags.TryGetValue(name, out int mappedFlags))
                 mappedFlags = RTLD_NOW;
 
             IntPtr e = IntPtr.Zero;
@@ -164,9 +165,7 @@ namespace MonoMod.Utils {
         public string[] EntryPoints;
         [Obsolete("Pass the entry points as parameters instead.")]
         public string EntryPoint {
-            set {
-                EntryPoints = new string[] { value };
-            }
+            set => EntryPoints = new string[] { value };
         }
         public DynDllImportAttribute(string dll, params string[] entryPoints) {
             DLL = dll;

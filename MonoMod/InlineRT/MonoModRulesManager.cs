@@ -35,11 +35,11 @@ namespace MonoMod.InlineRT {
 #endif
 
         public static MonoModder Modder {
-            get {
 #if NETSTANDARD1_X
-                // StackTrace missing from .NET Standard before 2.0
-                return ModderLast.Value.Target as MonoModder;
+            // StackTrace missing from .NET Standard before 2.0
+            get => ModderLast.Value.Target as MonoModder;
 #else
+            get {
                 StackTrace st = new StackTrace();
                 for (int i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
@@ -52,16 +52,16 @@ namespace MonoMod.InlineRT {
                         return modder;
                 }
                 return null;
-#endif
             }
+#endif
         }
 
         public static Type RuleType {
-            get {
 #if NETSTANDARD1_X
-                // StackTrace missing from .NET Standard before 2.0
-                return RuleTypeLast.Value;
+            // StackTrace missing from .NET Standard before 2.0
+            get => RuleTypeLast.Value;
 #else
+            get {
                 StackTrace st = new StackTrace();
                 for (int i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
@@ -71,8 +71,8 @@ namespace MonoMod.InlineRT {
                         return method.DeclaringType;
                 }
                 return null;
-#endif
             }
+#endif
         }
 
         public static void Register(MonoModder self) {

@@ -31,20 +31,43 @@ namespace MonoMod.Utils {
 #endif
 
         public MethodInfo GenerateViaCecil(TypeDefinition typeDef) {
+            MethodDefinition def = Definition;
+
             bool moduleIsPrivate = false;
             ModuleDefinition module = typeDef?.Module;
+            HashSet<string> accessChecksIgnored = null;
             if (typeDef == null) {
                 moduleIsPrivate = true;
+                accessChecksIgnored = new HashSet<string>();
 
                 string name = $"DMDASM_{GetHashCode()}";
-                module = ModuleDefinition.CreateModule(name, ModuleKind.Dll);
+                module = ModuleDefinition.CreateModule(name + ".dll", new ModuleParameters() {
+                    Kind = ModuleKind.Dll,
+                    AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, new DefaultAssemblyResolver()),
+                    ReflectionImporterProvider = new ReflectionCecilImporterProvider(null)
+                });
+
+#if !NETSTANDARD1_X
+                module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(c_UnverifiableCodeAttribute)));
+#endif
+
+                if (Debug) {
+                    CustomAttribute caDebug = new CustomAttribute(module.ImportReference(c_DebuggableAttribute));
+                    caDebug.ConstructorArguments.Add(new CustomAttributeArgument(
+                        module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
+                        DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
+                    ));
+                    module.Assembly.CustomAttributes.Add(caDebug);
+                }
+
                 typeDef = new TypeDefinition(
                     "",
-                    $"DMD<{Method.GetFindableID(simple: true).Replace('.', '_')}>?{GetHashCode()}",
+                    $"DMD<{Method?.GetFindableID(simple: true)?.Replace('.', '_')}>?{GetHashCode()}",
                     Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Abstract | Mono.Cecil.TypeAttributes.Sealed | Mono.Cecil.TypeAttributes.Class
                 ) {
                     BaseType = module.TypeSystem.Object
                 };
+
                 module.Types.Add(typeDef);
             }
 
@@ -56,24 +79,23 @@ namespace MonoMod.Utils {
                 };
 #pragma warning restore IDE0039 // Use local function
 
-                MethodDefinition method = Definition;
-                MethodDefinition clone = new MethodDefinition(method.Name, method.Attributes, module.TypeSystem.Void) {
-                    MethodReturnType = method.MethodReturnType,
+                MethodDefinition clone = new MethodDefinition(def.Name, def.Attributes, module.TypeSystem.Void) {
+                    MethodReturnType = def.MethodReturnType,
                     Attributes = Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
                     ImplAttributes = Mono.Cecil.MethodImplAttributes.IL | Mono.Cecil.MethodImplAttributes.Managed,
                     DeclaringType = typeDef,
                     NoInlining = true
                 };
 
-                foreach (ParameterDefinition param in method.Parameters)
+                foreach (ParameterDefinition param in def.Parameters)
                     clone.Parameters.Add(param.Clone().Relink(relinker, clone));
 
-                clone.ReturnType = method.ReturnType.Relink(relinker, clone);
+                clone.ReturnType = def.ReturnType.Relink(relinker, clone);
 
                 typeDef.Methods.Add(clone);
 
-                clone.HasThis = method.HasThis;
-                Mono.Cecil.Cil.MethodBody body = clone.Body = method.Body.Clone(clone);
+                clone.HasThis = def.HasThis;
+                Mono.Cecil.Cil.MethodBody body = clone.Body = def.Body.Clone(clone);
 
                 foreach (VariableDefinition var in clone.Body.Variables)
                     var.VariableType = var.VariableType.Relink(relinker, clone);
@@ -89,19 +111,37 @@ namespace MonoMod.Utils {
                     // Import references.
                     if (operand is ParameterDefinition param) {
                         operand = clone.Parameters[param.Index];
+
                     } else if (operand is IMetadataTokenProvider mtp) {
                         operand = mtp.Relink(relinker, clone);
+
                     }
 
-                    // TODO: Fix up DynamicMethod inline refs.
+                    if (operand is DynamicMethodReference dmref) {
+                        // TODO: Fix up DynamicMethod inline refs.
+                    }
+
+                    if (accessChecksIgnored != null && operand is MemberReference mref) {
+                        // TODO: Only do the following for inaccessible members.
+                        IMetadataScope asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
+                        if (!accessChecksIgnored.Contains(asmRef.Name)) {
+                            CustomAttribute caAccess = new CustomAttribute(module.ImportReference(c_IgnoresAccessChecksToAttribute));
+                            caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
+                                module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
+                                asmRef.Name
+                            ));
+                            module.Assembly.CustomAttributes.Add(caAccess);
+                            accessChecksIgnored.Add(asmRef.Name);
+                        }
+                    }
 
                     instr.Operand = operand;
                 }
 
                 clone.HasThis = false;
 
-                if (method.HasThis) {
-                    TypeReference type = method.DeclaringType;
+                if (def.HasThis) {
+                    TypeReference type = def.DeclaringType;
                     if (type.IsValueType)
                         type = new ByReferenceType(type);
                     clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, type.Relink(relinker, clone)));
@@ -131,6 +171,19 @@ namespace MonoMod.Utils {
                     asm = Assembly.Load(asmStream.GetBuffer());
 #endif
                 }
+
+                _DynModuleCache[module.Assembly.Name.FullName] = module.Assembly;
+                _DynModuleReflCache[asm.GetModules()[0]] = module;
+                _DynModuleIsPrivate = false;
+                moduleIsPrivate = false;
+
+#if !NETSTANDARD1_X
+                AppDomain.CurrentDomain.AssemblyResolve += (sender, args) => {
+                    if (args.Name == asm.GetName().FullName || args.Name == asm.GetName().Name || args.Name == asm.FullName)
+                        return asm;
+                    return null;
+                };
+#endif
 
                 return asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false).GetMethod(clone.Name);
 

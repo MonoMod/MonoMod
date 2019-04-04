@@ -45,7 +45,7 @@ namespace MonoMod.Utils {
         public static MemberInfo ResolveReflection(this MemberReference mref)
             => _ResolveReflection(mref, null);
 
-        private static MemberInfo _ResolveReflection(MemberReference mref, Module module) {
+        private static MemberInfo _ResolveReflection(MemberReference mref, Module[] modules) {
             if (mref == null)
                 return null;
 
@@ -64,7 +64,7 @@ namespace MonoMod.Utils {
 
             if (mref is MethodReference method && mref.DeclaringType is ArrayType) {
                 // ArrayType holds special methods.
-                type = _ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo;
+                type = _ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo;
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
                 string methodID = method.GetFindableID(withType: false);
@@ -78,7 +78,7 @@ namespace MonoMod.Utils {
                 mref as TypeReference ??
                 throw new ArgumentException("MemberReference hasn't got a DeclaringType / isn't a TypeReference in itself");
 
-            if (module == null) {
+            if (modules == null) {
                 string asmName;
                 string moduleName;
 
@@ -103,12 +103,23 @@ namespace MonoMod.Utils {
                         throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
                 }
 
-                Assembly asm;
+                Assembly asm = null;
                 lock (AssemblyCache) {
-                    if (!AssemblyCache.TryGetValue(asmName, out asm))
-                        AssemblyCache[asmName] = asm = Assembly.Load(new AssemblyName(asmName));
+                    if (!AssemblyCache.TryGetValue(asmName, out asm)) {
+#if !NETSTANDARD1_X
+                        asm =
+                            AppDomain.CurrentDomain.GetAssemblies()
+                            .FirstOrDefault(other => {
+                                AssemblyName name = other.GetName();
+                                return name.Name == asmName || name.FullName == asmName;
+                            });
+#endif
+                        if (asm == null)
+                            asm = Assembly.Load(new AssemblyName(asmName));
+                        AssemblyCache[asmName] = asm;
+                    }
                 }
-                module = string.IsNullOrEmpty(moduleName) ? asm.GetModules()[0] : asm.GetModule(moduleName);
+                modules = string.IsNullOrEmpty(moduleName) ? asm.GetModules() : new Module[] { asm.GetModule(moduleName) };
             }
 
             if (mref is TypeReference tref) {
@@ -133,10 +144,14 @@ namespace MonoMod.Utils {
                         return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray()).GetTypeInfo();
 
                 } else {
-                    type = module.GetType(mref.FullName.Replace("/", "+"), false, false).GetTypeInfo();
+                    type = modules
+                        .Select(module => module.GetType(mref.FullName.Replace("/", "+"), false, false).GetTypeInfo())
+                        .FirstOrDefault(m => m != null);
 #if !NETSTANDARD1_X
                     if (type == null)
-                        type = module.GetTypes().FirstOrDefault(m => mref.Is(m)).GetTypeInfo();
+                        type = modules
+                            .Select(module => module.GetTypes().FirstOrDefault(m => mref.Is(m)).GetTypeInfo())
+                            .FirstOrDefault(m => m != null);
 #endif
                 }
 
@@ -148,19 +163,23 @@ namespace MonoMod.Utils {
             MemberInfo member;
 
             if (mref is GenericInstanceMethod mrefGenMethod) {
-                member = _ResolveReflection(mrefGenMethod.ElementMethod, module);
+                member = _ResolveReflection(mrefGenMethod.ElementMethod, modules);
                 member = (member as MethodInfo)?.MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
 
             } else if (typeless) {
                 if (mref is MethodReference)
-                    member = module.GetMethods((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
+                    member = modules
+                        .Select(module => module.GetMethods((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m)))
+                        .FirstOrDefault(m => m != null);
                 else if (mref is FieldReference)
-                    member = module.GetFields((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
+                    member = modules
+                        .Select(module => module.GetFields((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m)))
+                        .FirstOrDefault(m => m != null);
                 else
                     throw new NotSupportedException($"Unsupported <Module> member type {mref.GetType().FullName}");
 
             } else {
-                member = (_ResolveReflection(mref.DeclaringType, module) as TypeOrTypeInfo).AsType().GetMembers((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
+                member = (_ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo).AsType().GetMembers((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
             }
 
             return _Cache(mref, member);

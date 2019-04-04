@@ -35,8 +35,7 @@ namespace MonoMod.ModInterop {
 
             // Refresh all existing fields and methods.
             foreach (FieldInfo field in Fields) {
-                List<MethodInfo> methods;
-                if (!Methods.TryGetValue(field.GetModImportName(), out methods)) {
+                if (!Methods.TryGetValue(field.GetModImportName(), out List<MethodInfo> methods)) {
                     field.SetValue(null, null);
                     continue;
                 }
@@ -63,8 +62,7 @@ namespace MonoMod.ModInterop {
             if (!string.IsNullOrEmpty(prefix))
                 name = prefix + "." + name;
 
-            List<MethodInfo> methods;
-            if (!Methods.TryGetValue(name, out methods))
+            if (!Methods.TryGetValue(name, out List<MethodInfo> methods))
                 Methods[name] = methods = new List<MethodInfo>();
 
             if (!methods.Contains(method))

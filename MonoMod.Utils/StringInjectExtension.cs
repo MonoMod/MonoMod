@@ -10,7 +10,7 @@ namespace MonoMod.Utils {
     public static class StringInjectExtension {
         /// <summary>
         /// Extension method that replaces keys in a string with the values of matching dictionary entries.
-        /// <remarks>Uses <see cref="String.Format()"/> internally; custom formats should match those used for that method.</remarks>
+        /// <remarks>Uses <see cref="string.Format()"/> internally; custom formats should match those used for that method.</remarks>
         /// </summary>
         /// <param name="formatString">The format string, containing keys like {foo} and {foo:SomeFormat}.</param>
         /// <param name="dictionary">An <see cref="IDictionary"/> with keys and values to inject into the string</param>
@@ -21,7 +21,7 @@ namespace MonoMod.Utils {
 
         /// <summary>
         /// Extension method that replaces keys in a string with the values of matching hashtable entries.
-        /// <remarks>Uses <see cref="String.Format()"/> internally; custom formats should match those used for that method.</remarks>
+        /// <remarks>Uses <see cref="string.Format()"/> internally; custom formats should match those used for that method.</remarks>
         /// </summary>
         /// <param name="formatString">The format string, containing keys like {foo} and {foo:SomeFormat}.</param>
         /// <param name="attributes">A <see cref="Hashtable"/> with keys and values to inject into the string</param>

@@ -85,7 +85,7 @@ namespace MonoMod.RuntimeDetour {
                 if (caller?.DeclaringType == null)
                     continue;
 
-                var currentCallerTypeName = caller.DeclaringType.FullName;
+                string currentCallerTypeName = caller.DeclaringType.FullName;
                 if (rootDetourTypeName == null) {
                     // Skip until we've reached a method in Detour/Hook/NativeDetour.
                     if (!HookTypeNames.Contains(currentCallerTypeName))
@@ -117,7 +117,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         internal bool RegisterHook(Hook _detour, MethodBase from, MethodBase to, object target) {
-            var owner = GetHookOwner();
+            Assembly owner = GetHookOwner();
             if (owner == null)
                 return true; // continue with default detour creation, we just don't track it
 
@@ -127,7 +127,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         internal bool RegisterDetour(Detour _detour, MethodBase from, MethodBase to) {
-            var owner = GetHookOwner();
+            Assembly owner = GetHookOwner();
             if (owner == null)
                 return true; // continue with default detour creation, we just don't track it
 
@@ -137,7 +137,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         internal bool RegisterNativeDetour(NativeDetour _detour, MethodBase method, IntPtr from, IntPtr to) {
-            var owner = GetHookOwner();
+            Assembly owner = GetHookOwner();
             if (owner == null)
                 return true; // continue with default detour creation, we just don't track it
 
@@ -147,7 +147,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         internal bool UnregisterDetour(IDetour _detour) {
-            if (DetourOwners.TryGetValue(_detour, out var owner)) {
+            if (DetourOwners.TryGetValue(_detour, out Assembly owner)) {
                 DetourOwners.Remove(_detour);
                 OwnedDetourLists[owner].Remove(_detour);
             }

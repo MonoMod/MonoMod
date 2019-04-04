@@ -4,24 +4,22 @@ using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Linq;
-using System.Reflection.Emit;
-using SREmit = System.Reflection.Emit;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 
-namespace MonoMod.RuntimeDetour.HookGen {
-    public class HookILCursor {
+namespace MonoMod.Utils {
+    public class CecILCursor {
 
         private static readonly List<object> References = new List<object>();
-        private static readonly Dictionary<int, DynamicMethod> DelegateInvokers = new Dictionary<int, DynamicMethod>();
+        private static readonly Dictionary<int, MethodInfo> DelegateInvokers = new Dictionary<int, MethodInfo>();
         public static object GetReference(int id) => References[id];
         public static void SetReference(int id, object obj) => References[id] = obj;
 
         private readonly List<int> ManagedReferenceIDs = new List<int>();
         public int AddReference(object obj) {
             if (ManagedReferenceIDs.Count == 0) {
-                HookIL.OnDispose += () => {
+                Context.OnDispose += () => {
                     foreach (int id in ManagedReferenceIDs)
                         FreeReference(id);
                 };
@@ -40,9 +38,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 DelegateInvokers.Remove(id);
         }
 
-        private static readonly MethodInfo _GetReference = typeof(HookILCursor).GetMethod("GetReference");
+        private static readonly MethodInfo _GetReference = typeof(CecILCursor).GetMethod("GetReference");
 
-        public HookIL HookIL { get; }
+        public CecIL Context { get; }
 
         private Instruction _Next;
         public Instruction Next {
@@ -63,14 +61,14 @@ namespace MonoMod.RuntimeDetour.HookGen {
             set => Prev = value;
         }
 
-        public MethodDefinition Method => HookIL.Method;
-        public ILProcessor IL => HookIL.IL;
+        public MethodDefinition Method => Context.Method;
+        public ILProcessor IL => Context.IL;
 
-        public MethodBody Body => HookIL.Body;
-        public ModuleDefinition Module => HookIL.Module;
-        public Mono.Collections.Generic.Collection<Instruction> Instrs => HookIL.Instrs;
+        public MethodBody Body => Context.Body;
+        public ModuleDefinition Module => Context.Module;
+        public Mono.Collections.Generic.Collection<Instruction> Instrs => Context.Instrs;
 
-        private HookILLabel[] _insertAfterLabels;
+        private CecILLabel[] _insertAfterLabels;
 
         public int Index {
             get {
@@ -82,18 +80,18 @@ namespace MonoMod.RuntimeDetour.HookGen {
             set => Next = value == Instrs.Count ? null : Instrs[value];
         }
 
-        internal HookILCursor(HookIL hookil, Instruction instr) {
-            HookIL = hookil;
+        internal CecILCursor(CecIL context, Instruction instr) {
+            Context = context;
             Next = instr;
         }
 
-        public HookILCursor(HookILCursor old) {
-            HookIL = old.HookIL;
+        public CecILCursor(CecILCursor old) {
+            Context = old.Context;
             Next = old.Next;
         }
 
-        public HookILCursor Clone()
-            => new HookILCursor(this);
+        public CecILCursor Clone()
+            => new CecILCursor(this);
 
         public void Remove() {
             int index = Index;
@@ -101,25 +99,25 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Index = index;
         }
 
-        public void GotoLabel(HookILLabel label) {
+        public void GotoLabel(CecILLabel label) {
             Next = label.Target;
         }
 
-        public void MarkLabel(HookILLabel label) {
+        public void MarkLabel(CecILLabel label) {
             label.Target = Next;
             _insertAfterLabels = new [] { label };
         }
 
         public void MoveAfterLabel() {
-            _insertAfterLabels = HookIL._Labels.Where(l => l.Target == Next).ToArray();
+            _insertAfterLabels = Context._Labels.Where(l => l.Target == Next).ToArray();
         }
 
         public void MoveBeforeLabel() {
             _insertAfterLabels = null;
         }
 
-        public IEnumerable<HookILLabel> GetIncomingLabels()
-            => HookIL.GetIncomingLabels(Next);
+        public IEnumerable<CecILLabel> GetIncomingLabels()
+            => Context.GetIncomingLabels(Next);
 
         #region Misc IL Helpers
 
@@ -168,12 +166,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         }
 
-        public void FindNext(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindNext(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             if (!TryFindNext(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
-        public bool TryFindNext(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            cursors = new HookILCursor[predicates.Length];
+        public bool TryFindNext(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new CecILCursor[predicates.Length];
             Instruction instrOrig = Next;
             Func<Instruction, bool> first = predicates[0];
             while (TryGotoNext(first)) {
@@ -196,12 +194,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         }
 
-        public void FindPrev(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindPrev(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             if (!TryFindPrev(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
-        public bool TryFindPrev(out HookILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            cursors = new HookILCursor[predicates.Length];
+        public bool TryFindPrev(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new CecILCursor[predicates.Length];
             Instruction instrOrig = Next;
             Func<Instruction, bool> last = predicates[predicates.Length - 1];
             while (TryGotoPrev(last)) {
@@ -242,56 +240,56 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         #region Base Create / Emit Helpers
 
-        private HookILCursor _Insert(Instruction instr) {
+        private CecILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
             if (_insertAfterLabels != null) {
-                foreach (HookILLabel label in _insertAfterLabels)
+                foreach (CecILLabel label in _insertAfterLabels)
                     label.Target = instr;
 
                 _insertAfterLabels = null;
             }
-            return new HookILCursor(HookIL, instr);
+            return new CecILCursor(Context, instr);
         }
 
-        public HookILCursor Emit(OpCode opcode, ParameterDefinition parameter)
+        public CecILCursor Emit(OpCode opcode, ParameterDefinition parameter)
             => _Insert(IL.Create(opcode, parameter));
-        public HookILCursor Emit(OpCode opcode, VariableDefinition variable)
+        public CecILCursor Emit(OpCode opcode, VariableDefinition variable)
             => _Insert(IL.Create(opcode, variable));
-        public HookILCursor Emit(OpCode opcode, Instruction[] targets)
+        public CecILCursor Emit(OpCode opcode, Instruction[] targets)
             => _Insert(IL.Create(opcode, targets));
-        public HookILCursor Emit(OpCode opcode, Instruction target)
+        public CecILCursor Emit(OpCode opcode, Instruction target)
             => _Insert(IL.Create(opcode, target));
-        public HookILCursor Emit(OpCode opcode, double value)
+        public CecILCursor Emit(OpCode opcode, double value)
             => _Insert(IL.Create(opcode, value));
-        public HookILCursor Emit(OpCode opcode, float value)
+        public CecILCursor Emit(OpCode opcode, float value)
             => _Insert(IL.Create(opcode, value));
-        public HookILCursor Emit(OpCode opcode, long value)
+        public CecILCursor Emit(OpCode opcode, long value)
             => _Insert(IL.Create(opcode, value));
-        public HookILCursor Emit(OpCode opcode, sbyte value)
+        public CecILCursor Emit(OpCode opcode, sbyte value)
             => _Insert(IL.Create(opcode, value));
-        public HookILCursor Emit(OpCode opcode, byte value)
+        public CecILCursor Emit(OpCode opcode, byte value)
             => _Insert(IL.Create(opcode, value));
-        public HookILCursor Emit(OpCode opcode, string value)
+        public CecILCursor Emit(OpCode opcode, string value)
             => _Insert(IL.Create(opcode, value));
-        public HookILCursor Emit(OpCode opcode, FieldReference field)
+        public CecILCursor Emit(OpCode opcode, FieldReference field)
             => _Insert(IL.Create(opcode, field));
-        public HookILCursor Emit(OpCode opcode, CallSite site)
+        public CecILCursor Emit(OpCode opcode, CallSite site)
             => _Insert(IL.Create(opcode, site));
-        public HookILCursor Emit(OpCode opcode, TypeReference type)
+        public CecILCursor Emit(OpCode opcode, TypeReference type)
             => _Insert(IL.Create(opcode, type));
-        public HookILCursor Emit(OpCode opcode)
+        public CecILCursor Emit(OpCode opcode)
             => _Insert(IL.Create(opcode));
-        public HookILCursor Emit(OpCode opcode, int value)
+        public CecILCursor Emit(OpCode opcode, int value)
             => _Insert(IL.Create(opcode, value));
-        public HookILCursor Emit(OpCode opcode, MethodReference method)
+        public CecILCursor Emit(OpCode opcode, MethodReference method)
             => _Insert(IL.Create(opcode, method));
-        public HookILCursor Emit(OpCode opcode, FieldInfo field)
+        public CecILCursor Emit(OpCode opcode, FieldInfo field)
             => _Insert(IL.Create(opcode, field));
-        public HookILCursor Emit(OpCode opcode, MethodBase method)
+        public CecILCursor Emit(OpCode opcode, MethodBase method)
             => _Insert(IL.Create(opcode, method));
-        public HookILCursor Emit(OpCode opcode, Type type)
+        public CecILCursor Emit(OpCode opcode, Type type)
             => _Insert(IL.Create(opcode, type));
-        public HookILCursor Emit(OpCode opcode, object operand)
+        public CecILCursor Emit(OpCode opcode, object operand)
             => _Insert(IL.Create(opcode, operand));
 
         #endregion
@@ -299,7 +297,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         #region Reference-oriented Emit Helpers
 
         /// <summary>
-        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use HookILCursor.FreeReference(id).
+        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use CecILCursor.FreeReference(id).
         /// </summary>
         public int EmitReference<T>(T obj) {
             Type t = typeof(T);
@@ -312,7 +310,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         /// <summary>
-        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use HookILCursor.FreeReference(id).
+        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use CecILCursor.FreeReference(id).
         /// </summary>
         public void EmitGetReference<T>(int id) {
             Type t = typeof(T);
@@ -323,13 +321,13 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         /// <summary>
-        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
+        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use CecILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegate(Action cb)
             => EmitDelegateInvoke(EmitDelegatePush(cb));
 
         /// <summary>
-        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
+        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use CecILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegate<T>(T cb) where T : Delegate {
             Instruction instrPrev = Next;
@@ -346,33 +344,32 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 argTypes[i] = args[i].ParameterType;
             argTypes[args.Length] = delType;
 
-            DynamicMethod dmInvoke = new DynamicMethod(
-                $"HookIL:Invoke<{delInvokeOrig.DeclaringType.FullName}>?{cb.GetHashCode()}",
-                delInvokeOrig.ReturnType, argTypes,
-                true // If any random errors pop up, try setting this to false first.
-            );
-            ILGenerator il = dmInvoke.GetILGenerator();
+            using (DynamicMethodDefinition dmdInvoke = new DynamicMethodDefinition(
+                $"CecIL:Invoke<{delInvokeOrig.DeclaringType.FullName}>?{cb.GetHashCode()}",
+                delInvokeOrig.ReturnType, argTypes
+            )) {
+                ILProcessor il = dmdInvoke.GetILProcessor();
 
-            // Load the delegate reference first.
-            il.Emit(SREmit.OpCodes.Ldarg, args.Length);
-            // Load any other arguments on top of that.
-            for (int i = 0; i < args.Length; i++) 
-                il.Emit(SREmit.OpCodes.Ldarg, i);
-            // Invoke the delegate and return its result.
-            il.Emit(SREmit.OpCodes.Callvirt, delInvokeOrig);
-            il.Emit(SREmit.OpCodes.Ret);
+                // Load the delegate reference first.
+                il.Emit(OpCodes.Ldarg, args.Length);
+                // Load any other arguments on top of that.
+                for (int i = 0; i < args.Length; i++)
+                    il.Emit(OpCodes.Ldarg, i);
+                // Invoke the delegate and return its result.
+                il.Emit(OpCodes.Callvirt, delInvokeOrig);
+                il.Emit(OpCodes.Ret);
 
-            dmInvoke = dmInvoke.Pin();
-
-            // Invoke the DynamicMethod.
-            DelegateInvokers[id] = dmInvoke;
-            Emit(OpCodes.Call, dmInvoke); // DynamicMethodDefinition should pass it through.
+                // Invoke the DynamicMethodDefinition.
+                MethodInfo miInvoke = dmdInvoke.Generate();
+                DelegateInvokers[id] = miInvoke;
+                Emit(OpCodes.Call, miInvoke);
+            }
 
             return id;
         }
 
         /// <summary>
-        /// Emit an inline delegate reference. Note that the delegates "leak" unless you use HookILCursor.FreeReference(id).
+        /// Emit an inline delegate reference. Note that the delegates "leak" unless you use CecILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegatePush<T>(T cb) where T : Delegate
             => EmitReference(cb);

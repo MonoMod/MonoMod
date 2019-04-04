@@ -17,9 +17,7 @@ namespace MonoMod.Utils {
         protected long CachedLength;
         private bool _CacheBuffer = true;
         public bool CacheBuffer {
-            get {
-                return _CacheBuffer;
-            }
+            get => _CacheBuffer;
             set {
                 if (!value) {
                     CachedBuffer = null;
@@ -28,34 +26,16 @@ namespace MonoMod.Utils {
             }
         }
 
-        public override bool CanRead {
-            get {
-                return LimitStream.CanRead;
-            }
-        }
+        public override bool CanRead => LimitStream.CanRead;
 
-        public override bool CanSeek {
-            get {
-                return LimitStream.CanSeek;
-            }
-        }
+        public override bool CanSeek => LimitStream.CanSeek;
 
-        public override bool CanWrite {
-            get {
-                return LimitStream.CanWrite;
-            }
-        }
+        public override bool CanWrite => LimitStream.CanWrite;
 
-        public override long Length {
-            get {
-                return LimitPublicLength ?? LimitLength;
-            }
-        }
+        public override long Length => LimitPublicLength ?? LimitLength;
 
         public override long Position {
-            get {
-                return LimitStreamShared || !CanSeek ? _Position : LimitStream.Position - LimitOffset;
-            }
+            get => LimitStreamShared || !CanSeek ? _Position : LimitStream.Position - LimitOffset;
             set {
                 if (CanSeek)
                     LimitStream.Position = value + LimitOffset;

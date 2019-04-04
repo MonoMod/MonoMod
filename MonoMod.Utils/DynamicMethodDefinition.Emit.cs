@@ -22,12 +22,6 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
         private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
 
-#if !NETSTANDARD
-        private static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
-        private static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(new Type[] { });
-        private static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new Type[] { typeof(string) });
-#endif
-
         static void _InitReflEmit() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 System.Reflection.Emit.OpCode reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null);
@@ -54,23 +48,41 @@ namespace MonoMod.Utils {
         }
 
         public DynamicMethod GenerateViaDynamicMethod() {
-            ParameterInfo[] args = Method.GetParameters();
             Type[] argTypes;
-            if (!Method.IsStatic) {
-                argTypes = new Type[args.Length + 1];
-                argTypes[0] = Method.GetThisParamType();
+
+            if (Method != null) {
+                ParameterInfo[] args = Method.GetParameters();
+                int offs = 0;
+                if (!Method.IsStatic) {
+                    offs++;
+                    argTypes = new Type[args.Length + 1];
+                    argTypes[0] = Method.GetThisParamType();
+                } else {
+                    argTypes = new Type[args.Length];
+                }
                 for (int i = 0; i < args.Length; i++)
-                    argTypes[i + 1] = args[i].ParameterType;
+                    argTypes[i + offs] = args[i].ParameterType;
+
             } else {
-                argTypes = new Type[args.Length];
-                for (int i = 0; i < args.Length; i++)
-                    argTypes[i] = args[i].ParameterType;
+                int offs = 0;
+                if (Definition.HasThis) {
+                    offs++;
+                    argTypes = new Type[Definition.Parameters.Count + 1];
+                    Type type = Definition.DeclaringType.ResolveReflection();
+                    if (type.GetTypeInfo().IsValueType)
+                        type = type.MakeByRefType();
+                    argTypes[0] = type;
+                } else {
+                    argTypes = new Type[Definition.Parameters.Count];
+                }
+                for (int i = 0; i < Definition.Parameters.Count; i++)
+                    argTypes[i + offs] = Definition.Parameters[i].ParameterType.ResolveReflection();
             }
 
             DynamicMethod dm = new DynamicMethod(
-                $"DMD<{Method.GetFindableID(simple: true)}>",
-                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                Method.DeclaringType,
+                $"DMD<{Method?.GetFindableID(simple: true) ?? Definition.GetFindableID(simple: true)}>",
+                (Method as MethodInfo)?.ReturnType ?? Definition.ReturnType?.ResolveReflection() ?? typeof(void), argTypes,
+                Method?.DeclaringType ?? typeof(DynamicMethodDefinition),
                 true // If any random errors pop up, try setting this to false first.
             );
             ILGenerator il = dm.GetILGenerator();
@@ -130,43 +142,75 @@ namespace MonoMod.Utils {
 
                 ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", true);
                 typeBuilder = module.DefineType(
-                    $"DMD<{Method.GetFindableID(simple: true).Replace('.', '_')}>?{GetHashCode()}",
+                    $"DMD<{Method?.GetFindableID(simple: true)?.Replace('.', '_')}>?{GetHashCode()}",
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
                 );
             }
 
-            ParameterInfo[] args = Method.GetParameters();
+            // TODO: if Method == null, use Definition
+
             Type[] argTypes;
             Type[][] argTypesModReq;
             Type[][] argTypesModOpt;
-            if (!Method.IsStatic) {
-                argTypes = new Type[args.Length + 1];
-                argTypesModReq = new Type[args.Length + 1][];
-                argTypesModOpt = new Type[args.Length + 1][];
-                argTypes[0] = Method.GetThisParamType();
-                argTypesModReq[0] = Type.EmptyTypes;
-                argTypesModOpt[0] = Type.EmptyTypes;
-                for (int i = 0; i < args.Length; i++) {
-                    argTypes[i + 1] = args[i].ParameterType;
-                    argTypesModReq[i + 1] = args[i].GetRequiredCustomModifiers();
-                    argTypesModOpt[i + 1] = args[i].GetOptionalCustomModifiers();
+
+            if (Method != null) {
+                ParameterInfo[] args = Method.GetParameters();
+                int offs = 0;
+                if (!Method.IsStatic) {
+                    offs++;
+                    argTypes = new Type[args.Length + 1];
+                    argTypesModReq = new Type[args.Length + 1][];
+                    argTypesModOpt = new Type[args.Length + 1][];
+                    argTypes[0] = Method.GetThisParamType();
+                    argTypesModReq[0] = Type.EmptyTypes;
+                    argTypesModOpt[0] = Type.EmptyTypes;
+                } else {
+                    argTypes = new Type[args.Length];
+                    argTypesModReq = new Type[args.Length][];
+                    argTypesModOpt = new Type[args.Length][];
                 }
-            } else {
-                argTypes = new Type[args.Length];
-                argTypesModReq = new Type[args.Length][];
-                argTypesModOpt = new Type[args.Length][];
+
                 for (int i = 0; i < args.Length; i++) {
-                    argTypes[i] = args[i].ParameterType;
-                    argTypesModReq[i] = args[i].GetRequiredCustomModifiers();
-                    argTypesModOpt[i] = args[i].GetOptionalCustomModifiers();
+                    argTypes[i + offs] = args[i].ParameterType;
+                    argTypesModReq[i + offs] = args[i].GetRequiredCustomModifiers();
+                    argTypesModOpt[i + offs] = args[i].GetOptionalCustomModifiers();
+                }
+
+            } else {
+                int offs = 0;
+                if (Definition.HasThis) {
+                    offs++;
+                    argTypes = new Type[Definition.Parameters.Count + 1];
+                    argTypesModReq = new Type[Definition.Parameters.Count + 1][];
+                    argTypesModOpt = new Type[Definition.Parameters.Count + 1][];
+                    Type type = Definition.DeclaringType.ResolveReflection();
+                    if (type.GetTypeInfo().IsValueType)
+                        type = type.MakeByRefType();
+                    argTypes[0] = type;
+                    argTypesModReq[0] = Type.EmptyTypes;
+                    argTypesModOpt[0] = Type.EmptyTypes;
+                } else {
+                    argTypes = new Type[Definition.Parameters.Count];
+                    argTypesModReq = new Type[Definition.Parameters.Count][];
+                    argTypesModOpt = new Type[Definition.Parameters.Count][];
+                }
+
+                List<Type> modReq = new List<Type>();
+                List<Type> modOpt = new List<Type>();
+
+                for (int i = 0; i < Definition.Parameters.Count; i++) {
+                    _EmitResolveWithModifiers(Definition.Parameters[i].ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
+                    argTypes[i + offs] = paramType;
+                    argTypesModReq[i + offs] = paramTypeModReq;
+                    argTypesModOpt[i + offs] = paramTypeModOpt;
                 }
             }
 
             // Required because the return type modifiers aren't easily accessible via reflection.
-            ResolveWithModifiers(Definition.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt);
+            _EmitResolveWithModifiers(Definition.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt);
 
             MethodBuilder mb = typeBuilder.DefineMethod(
-                Method.Name.Replace('.', '_'),
+                (Method?.Name ?? Definition.Name).Replace('.', '_'),
                 System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                 CallingConventions.Standard,
                 returnType, returnTypeModReq, returnTypeModOpt,
@@ -293,22 +337,28 @@ namespace MonoMod.Utils {
                     } else if (operand is ParameterDefinition param) {
                         operand = param.Index + paramOffs;
                     } else if (operand is MemberReference mref) {
-                        MemberInfo member = mref.ResolveReflection();
-                        operand = member;
+                        if (mref is DynamicMethodReference dmref) {
+                            operand = dmref.DynamicMethod;
+
+                        } else {
+                            MemberInfo member = mref.ResolveReflection();
+                            operand = member;
 #if !NETSTANDARD
-                        // TODO: Only do the following for inaccessible members.
-                        if (mb != null && member != null) {
-                            Assembly asm = member.Module.Assembly;
-                            if (!accessChecksIgnored.Contains(asm)) {
-                                // while (member.DeclaringType != null)
-                                //     member = member.DeclaringType;
-                                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(c_IgnoresAccessChecksToAttribute, new object[] {
+                            // TODO: Only do the following for inaccessible members.
+                            if (mb != null && member != null) {
+                                Assembly asm = member.Module.Assembly;
+                                if (!accessChecksIgnored.Contains(asm)) {
+                                    // while (member.DeclaringType != null)
+                                    //     member = member.DeclaringType;
+                                    assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(c_IgnoresAccessChecksToAttribute, new object[] {
                                     asm.GetName().Name
                                 }));
-                                accessChecksIgnored.Add(asm);
+                                    accessChecksIgnored.Add(asm);
+                                }
                             }
-                        }
 #endif
+                        }
+
                     } else if (operand is CallSite csite) {
                         if (dm != null) {
                             // SignatureHelper in unmanaged contexts cannot be fully made use of for DynamicMethods.
@@ -368,6 +418,38 @@ namespace MonoMod.Utils {
                 }
 
             }
+        }
+
+        private static void _EmitResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type> modReq = null, List<Type> modOpt = null) {
+            if (modReq == null)
+                modReq = new List<Type>();
+            else
+                modReq.Clear();
+
+            if (modOpt == null)
+                modOpt = new List<Type>();
+            else
+                modOpt.Clear();
+
+            for (
+                TypeReference mod = typeRef;
+                mod is TypeSpecification modSpec;
+                mod = modSpec.ElementType
+            ) {
+                switch (mod) {
+                    case RequiredModifierType paramTypeModReq:
+                        modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
+                        break;
+
+                    case OptionalModifierType paramTypeOptReq:
+                        modOpt.Add(paramTypeOptReq.ModifierType.ResolveReflection());
+                        break;
+                }
+            }
+
+            type = typeRef.ResolveReflection();
+            typeModReq = modReq.ToArray();
+            typeModOpt = modOpt.ToArray();
         }
 
     }

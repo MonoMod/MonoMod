@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
-using System.Reflection.Emit;
+using SRE = System.Reflection.Emit;
+using CIL = Mono.Cecil.Cil;
 using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
@@ -26,58 +27,88 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Fill the DynamicMethod with a stub.
         /// </summary>
-        public static DynamicMethod Stub(this DynamicMethod dm) {
-            ILGenerator il = dm.GetILGenerator();
+        public static SRE.DynamicMethod Stub(this SRE.DynamicMethod dm) {
+            SRE.ILGenerator il = dm.GetILGenerator();
             for (int i = 0; i < 10; i++) {
                 // Prevent mono from inlining the DynamicMethod.
-                il.Emit(OpCodes.Nop);
+                il.Emit(SRE.OpCodes.Nop);
             }
             if (dm.ReturnType != typeof(void)) {
                 il.DeclareLocal(dm.ReturnType);
-                il.Emit(OpCodes.Ldloca_S, (sbyte) 0);
-                il.Emit(OpCodes.Initobj, dm.ReturnType);
-                il.Emit(OpCodes.Ldloc_0);
+                il.Emit(SRE.OpCodes.Ldloca_S, (sbyte) 0);
+                il.Emit(SRE.OpCodes.Initobj, dm.ReturnType);
+                il.Emit(SRE.OpCodes.Ldloc_0);
             }
-            il.Emit(OpCodes.Ret);
+            il.Emit(SRE.OpCodes.Ret);
             return dm;
         }
 
         /// <summary>
-        /// Emit a ldtoken + MethodBase.GetMethodFromHandle. This would be methodof(...) in C#, if it would exist.
+        /// Fill the DynamicMethod with a stub.
         /// </summary>
-        public static void EmitMethodOf(this ILGenerator il, MethodBase method) {
-            if (method is MethodInfo)
-                il.Emit(OpCodes.Ldtoken, (MethodInfo) method);
-            else if (method is ConstructorInfo)
-                il.Emit(OpCodes.Ldtoken, (ConstructorInfo) method);
-            else
-                throw new NotSupportedException($"Method type {method.GetType().FullName} not supported.");
-
-            il.Emit(OpCodes.Call, _GetMethodFromHandle);
+        public static DynamicMethodDefinition Stub(this DynamicMethodDefinition dmd) {
+            CIL.ILProcessor il = dmd.GetILProcessor();
+            for (int i = 0; i < 10; i++) {
+                // Prevent mono from inlining the DynamicMethod.
+                il.Emit(CIL.OpCodes.Nop);
+            }
+            if (dmd.Definition.ReturnType != dmd.Definition.Module.TypeSystem.Void) {
+                il.Body.Variables.Add(new CIL.VariableDefinition(dmd.Definition.ReturnType));
+                il.Emit(CIL.OpCodes.Ldloca_S, (sbyte) 0);
+                il.Emit(CIL.OpCodes.Initobj, dmd.Definition.ReturnType);
+                il.Emit(CIL.OpCodes.Ldloc_0);
+            }
+            il.Emit(CIL.OpCodes.Ret);
+            return dmd;
         }
 
         /// <summary>
         /// Emit a reference to an arbitrary object. Note that the references "leak."
         /// </summary>
-        public static int EmitReference<T>(this ILGenerator il, T obj) {
+        public static int EmitReference<T>(this SRE.ILGenerator il, T obj) {
             Type t = typeof(T);
             int id = AddReference(obj);
-            il.Emit(OpCodes.Ldc_I4, id);
-            il.Emit(OpCodes.Call, _GetReference);
+            il.Emit(SRE.OpCodes.Ldc_I4, id);
+            il.Emit(SRE.OpCodes.Call, _GetReference);
             if (t.GetTypeInfo().IsValueType)
-                il.Emit(OpCodes.Unbox_Any, t);
+                il.Emit(SRE.OpCodes.Unbox_Any, t);
             return id;
         }
 
         /// <summary>
         /// Emit a reference to an arbitrary object. Note that the references "leak."
         /// </summary>
-        public static int EmitGetReference<T>(this ILGenerator il, int id) {
+        public static int EmitReference<T>(this CIL.ILProcessor il, T obj) {
             Type t = typeof(T);
-            il.Emit(OpCodes.Ldc_I4, id);
-            il.Emit(OpCodes.Call, _GetReference);
+            int id = AddReference(obj);
+            il.Emit(CIL.OpCodes.Ldc_I4, id);
+            il.Emit(CIL.OpCodes.Call, _GetReference);
             if (t.GetTypeInfo().IsValueType)
-                il.Emit(OpCodes.Unbox_Any, t);
+                il.Emit(CIL.OpCodes.Unbox_Any, t);
+            return id;
+        }
+
+        /// <summary>
+        /// Emit a reference to an arbitrary object. Note that the references "leak."
+        /// </summary>
+        public static int EmitGetReference<T>(this SRE.ILGenerator il, int id) {
+            Type t = typeof(T);
+            il.Emit(SRE.OpCodes.Ldc_I4, id);
+            il.Emit(SRE.OpCodes.Call, _GetReference);
+            if (t.GetTypeInfo().IsValueType)
+                il.Emit(SRE.OpCodes.Unbox_Any, t);
+            return id;
+        }
+
+        /// <summary>
+        /// Emit a reference to an arbitrary object. Note that the references "leak."
+        /// </summary>
+        public static int EmitGetReference<T>(this CIL.ILProcessor il, int id) {
+            Type t = typeof(T);
+            il.Emit(CIL.OpCodes.Ldc_I4, id);
+            il.Emit(CIL.OpCodes.Call, _GetReference);
+            if (t.GetTypeInfo().IsValueType)
+                il.Emit(CIL.OpCodes.Unbox_Any, t);
             return id;
         }
 

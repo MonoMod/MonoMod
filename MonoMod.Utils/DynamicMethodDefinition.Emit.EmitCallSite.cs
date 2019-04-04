@@ -111,7 +111,7 @@ namespace MonoMod.Utils {
             List<Type> modReq = new List<Type>();
             List<Type> modOpt = new List<Type>();
 
-            ResolveWithModifiers(csite.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt, modReq, modOpt);
+            _EmitResolveWithModifiers(csite.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt, modReq, modOpt);
             AddArgument(returnType, returnTypeModReq, returnTypeModOpt);
 
             foreach (ParameterDefinition param in csite.Parameters) {
@@ -124,7 +124,7 @@ namespace MonoMod.Utils {
                     // continue;
                 }
 
-                ResolveWithModifiers(param.ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
+                _EmitResolveWithModifiers(param.ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
                 AddArgument(paramType, paramTypeModReq, paramTypeModOpt);
             }
 

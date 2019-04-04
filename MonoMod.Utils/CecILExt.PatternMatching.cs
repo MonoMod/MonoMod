@@ -11,8 +11,8 @@ using Mono.Cecil.Cil;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
 
-namespace MonoMod.RuntimeDetour.HookGen {
-    public static partial class HookExtensions {
+namespace MonoMod.Utils {
+    public static partial class CecILExt {
 
         public static bool Match(this Instruction instr, OpCode opcode)
             => instr.OpCode == opcode;
@@ -448,143 +448,143 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         // Merged into MatchBr*
         /*
-        public static bool MatchBrS(this Instruction instr, HookILLabel value)
+        public static bool MatchBrS(this Instruction instr, CecILLabel value)
             => instr.MatchBrS(out var v) && v == value;
-        public static bool MatchBrS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBrS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Br_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBrfalseS(this Instruction instr, HookILLabel value)
+        public static bool MatchBrfalseS(this Instruction instr, CecILLabel value)
             => instr.MatchBrfalseS(out var v) && v == value;
-        public static bool MatchBrfalseS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBrfalseS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Brfalse_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBrtrueS(this Instruction instr, HookILLabel value)
+        public static bool MatchBrtrueS(this Instruction instr, CecILLabel value)
             => instr.MatchBrtrueS(out var v) && v == value;
-        public static bool MatchBrtrueS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBrtrueS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Brtrue_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBeqS(this Instruction instr, HookILLabel value)
+        public static bool MatchBeqS(this Instruction instr, CecILLabel value)
             => instr.MatchBeqS(out var v) && v == value;
-        public static bool MatchBeqS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBeqS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Beq_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgeS(this Instruction instr, HookILLabel value)
+        public static bool MatchBgeS(this Instruction instr, CecILLabel value)
             => instr.MatchBgeS(out var v) && v == value;
-        public static bool MatchBgeS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBgeS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bge_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgtS(this Instruction instr, HookILLabel value)
+        public static bool MatchBgtS(this Instruction instr, CecILLabel value)
             => instr.MatchBgtS(out var v) && v == value;
-        public static bool MatchBgtS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBgtS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bgt_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBleS(this Instruction instr, HookILLabel value)
+        public static bool MatchBleS(this Instruction instr, CecILLabel value)
             => instr.MatchBleS(out var v) && v == value;
-        public static bool MatchBleS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBleS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Ble_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBltS(this Instruction instr, HookILLabel value)
+        public static bool MatchBltS(this Instruction instr, CecILLabel value)
             => instr.MatchBltS(out var v) && v == value;
-        public static bool MatchBltS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBltS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Blt_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBneUnS(this Instruction instr, HookILLabel value)
+        public static bool MatchBneUnS(this Instruction instr, CecILLabel value)
             => instr.MatchBneUnS(out var v) && v == value;
-        public static bool MatchBneUnS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBneUnS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bne_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgeUnS(this Instruction instr, HookILLabel value)
+        public static bool MatchBgeUnS(this Instruction instr, CecILLabel value)
             => instr.MatchBgeUnS(out var v) && v == value;
-        public static bool MatchBgeUnS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBgeUnS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bge_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgtUnS(this Instruction instr, HookILLabel value)
+        public static bool MatchBgtUnS(this Instruction instr, CecILLabel value)
             => instr.MatchBgtUnS(out var v) && v == value;
-        public static bool MatchBgtUnS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBgtUnS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bgt_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBleUnS(this Instruction instr, HookILLabel value)
+        public static bool MatchBleUnS(this Instruction instr, CecILLabel value)
             => instr.MatchBleUnS(out var v) && v == value;
-        public static bool MatchBleUnS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBleUnS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Ble_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBltUnS(this Instruction instr, HookILLabel value)
+        public static bool MatchBltUnS(this Instruction instr, CecILLabel value)
             => instr.MatchBltUnS(out var v) && v == value;
-        public static bool MatchBltUnS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBltUnS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Blt_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
@@ -592,167 +592,167 @@ namespace MonoMod.RuntimeDetour.HookGen {
         } // OperandType.ShortInlineBrTarget
         */
 
-        public static bool MatchBr(this Instruction instr, HookILLabel value)
+        public static bool MatchBr(this Instruction instr, CecILLabel value)
             => instr.MatchBr(out var v) && v == value;
-        public static bool MatchBr(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBr(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Br ||
                 instr.OpCode == OpCodes.Br_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBrfalse(this Instruction instr, HookILLabel value)
+        public static bool MatchBrfalse(this Instruction instr, CecILLabel value)
             => instr.MatchBrfalse(out var v) && v == value;
-        public static bool MatchBrfalse(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBrfalse(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Brfalse ||
                 instr.OpCode == OpCodes.Brfalse_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBrtrue(this Instruction instr, HookILLabel value)
+        public static bool MatchBrtrue(this Instruction instr, CecILLabel value)
             => instr.MatchBrtrue(out var v) && v == value;
-        public static bool MatchBrtrue(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBrtrue(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Brtrue ||
                 instr.OpCode == OpCodes.Brtrue_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBeq(this Instruction instr, HookILLabel value)
+        public static bool MatchBeq(this Instruction instr, CecILLabel value)
             => instr.MatchBeq(out var v) && v == value;
-        public static bool MatchBeq(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBeq(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Beq ||
                 instr.OpCode == OpCodes.Beq_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBge(this Instruction instr, HookILLabel value)
+        public static bool MatchBge(this Instruction instr, CecILLabel value)
             => instr.MatchBge(out var v) && v == value;
-        public static bool MatchBge(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBge(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bge ||
                 instr.OpCode == OpCodes.Bge_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBgt(this Instruction instr, HookILLabel value)
+        public static bool MatchBgt(this Instruction instr, CecILLabel value)
             => instr.MatchBgt(out var v) && v == value;
-        public static bool MatchBgt(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBgt(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bgt ||
                 instr.OpCode == OpCodes.Bgt_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBle(this Instruction instr, HookILLabel value)
+        public static bool MatchBle(this Instruction instr, CecILLabel value)
             => instr.MatchBle(out var v) && v == value;
-        public static bool MatchBle(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBle(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Ble ||
                 instr.OpCode == OpCodes.Ble_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBlt(this Instruction instr, HookILLabel value)
+        public static bool MatchBlt(this Instruction instr, CecILLabel value)
             => instr.MatchBlt(out var v) && v == value;
-        public static bool MatchBlt(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBlt(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Blt ||
                 instr.OpCode == OpCodes.Blt_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBneUn(this Instruction instr, HookILLabel value)
+        public static bool MatchBneUn(this Instruction instr, CecILLabel value)
             => instr.MatchBneUn(out var v) && v == value;
-        public static bool MatchBneUn(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBneUn(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bne_Un ||
                 instr.OpCode == OpCodes.Bne_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBgeUn(this Instruction instr, HookILLabel value)
+        public static bool MatchBgeUn(this Instruction instr, CecILLabel value)
             => instr.MatchBgeUn(out var v) && v == value;
-        public static bool MatchBgeUn(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBgeUn(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bge_Un ||
                 instr.OpCode == OpCodes.Bge_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBgtUn(this Instruction instr, HookILLabel value)
+        public static bool MatchBgtUn(this Instruction instr, CecILLabel value)
             => instr.MatchBgtUn(out var v) && v == value;
-        public static bool MatchBgtUn(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBgtUn(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Bgt_Un ||
                 instr.OpCode == OpCodes.Bgt_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBleUn(this Instruction instr, HookILLabel value)
+        public static bool MatchBleUn(this Instruction instr, CecILLabel value)
             => instr.MatchBleUn(out var v) && v == value;
-        public static bool MatchBleUn(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBleUn(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Ble_Un ||
                 instr.OpCode == OpCodes.Ble_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBltUn(this Instruction instr, HookILLabel value)
+        public static bool MatchBltUn(this Instruction instr, CecILLabel value)
             => instr.MatchBltUn(out var v) && v == value;
-        public static bool MatchBltUn(this Instruction instr, out HookILLabel value) {
+        public static bool MatchBltUn(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Blt_Un ||
                 instr.OpCode == OpCodes.Blt_Un_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchSwitch(this Instruction instr, HookILLabel[] value)
+        public static bool MatchSwitch(this Instruction instr, CecILLabel[] value)
             => instr.MatchSwitch(out var v) && v.SequenceEqual(value);
-        public static bool MatchSwitch(this Instruction instr, out HookILLabel[] value) {
+        public static bool MatchSwitch(this Instruction instr, out CecILLabel[] value) {
             if (instr.OpCode == OpCodes.Switch) {
-                value = (HookILLabel[]) instr.Operand;
+                value = (CecILLabel[]) instr.Operand;
                 return true;
             }
             value = default;
@@ -1839,22 +1839,22 @@ namespace MonoMod.RuntimeDetour.HookGen {
             return false;
         } // OperandType.InlineNone
 
-        public static bool MatchLeave(this Instruction instr, HookILLabel value)
+        public static bool MatchLeave(this Instruction instr, CecILLabel value)
             => instr.MatchLeave(out var v) && v == value;
-        public static bool MatchLeave(this Instruction instr, out HookILLabel value) {
+        public static bool MatchLeave(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Leave) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchLeaveS(this Instruction instr, HookILLabel value)
+        public static bool MatchLeaveS(this Instruction instr, CecILLabel value)
             => instr.MatchLeaveS(out var v) && v == value;
-        public static bool MatchLeaveS(this Instruction instr, out HookILLabel value) {
+        public static bool MatchLeaveS(this Instruction instr, out CecILLabel value) {
             if (instr.OpCode == OpCodes.Leave_S) {
-                value = (HookILLabel) instr.Operand;
+                value = (CecILLabel) instr.Operand;
                 return true;
             }
             value = default;

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using MonoMod.RuntimeDetour.Platforms;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour {
     public static class DetourHelper {
@@ -121,7 +121,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="target">The pointer to the native function to call.</param>
         /// <param name="signature">A MethodBase with the target function's signature.</param>
         /// <returns>The detoured DynamicMethod.</returns>
-        public static DynamicMethod GenerateNativeProxy(IntPtr target, MethodBase signature) {
+        public static MethodInfo GenerateNativeProxy(IntPtr target, MethodBase signature) {
             Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
 
             ParameterInfo[] args = signature.GetParameters();
@@ -129,11 +129,12 @@ namespace MonoMod.RuntimeDetour {
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dm = new DynamicMethod(
+            MethodInfo dm;
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"Native<{((long) target).ToString("X16")}>",
-                returnType, argTypes,
-                true
-            ).StubCriticalDetour();
+                returnType, argTypes
+            ))
+                dm = dmd.StubCriticalDetour().Generate().Pin();
 
             // Detour the new DynamicMethod into the target.
             NativeDetourData detour = Native.Create(dm.GetNativeStart(), target);
@@ -142,7 +143,7 @@ namespace MonoMod.RuntimeDetour {
             Native.MakeExecutable(detour);
             Native.Free(detour);
 
-            return dm.Pin();
+            return dm;
         }
 
         // Used in EmitDetourApply.
@@ -162,15 +163,15 @@ namespace MonoMod.RuntimeDetour {
         private static readonly ConstructorInfo _ctor_Exception = typeof(Exception).GetConstructor(new Type[] { typeof(string) });
 
         /// <summary>
-        /// Fill the DynamicMethod with a throw.
+        /// Fill the DynamicMethodDefinition with a throw.
         /// </summary>
-        public static DynamicMethod StubCriticalDetour(this DynamicMethod dm) {
-            ILGenerator il = dm.GetILGenerator();
+        public static DynamicMethodDefinition StubCriticalDetour(this DynamicMethodDefinition dm) {
+            ILProcessor il = dm.GetILProcessor();
             for (int i = 0; i < 10; i++) {
                 // Prevent mono from inlining the DynamicMethod.
                 il.Emit(OpCodes.Nop);
             }
-            il.Emit(OpCodes.Ldstr, $"{dm.Name} should've been detoured!");
+            il.Emit(OpCodes.Ldstr, $"{dm.Definition.Name} should've been detoured!");
             il.Emit(OpCodes.Newobj, _ctor_Exception);
             il.Emit(OpCodes.Throw);
             return dm;
@@ -179,7 +180,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Emit a call to DetourManager.Native.Copy using the given parameters.
         /// </summary>
-        public static void EmitDetourCopy(this ILGenerator il, IntPtr src, IntPtr dst, byte type) {
+        public static void EmitDetourCopy(this ILProcessor il, IntPtr src, IntPtr dst, byte type) {
             // Load NativePlatform instance.
             il.Emit(OpCodes.Ldsfld, _f_Native);
 
@@ -198,7 +199,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Emit a call to DetourManager.Native.Apply using a copy of the given data.
         /// </summary>
-        public static void EmitDetourApply(this ILGenerator il, NativeDetourData data) {
+        public static void EmitDetourApply(this ILProcessor il, NativeDetourData data) {
             // Load NativePlatform instance.
             il.Emit(OpCodes.Ldsfld, _f_Native);
 
@@ -207,7 +208,7 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Conv_I);
             il.Emit(OpCodes.Ldc_I8, (long) data.Target);
             il.Emit(OpCodes.Conv_I);
-            il.Emit(OpCodes.Ldc_I4, data.Size);
+            il.Emit(OpCodes.Ldc_I4, (int) data.Size);
             il.Emit(OpCodes.Ldc_I4, (int) data.Type);
             il.Emit(OpCodes.Conv_U1);
             il.Emit(OpCodes.Ldc_I8, (long) data.Extra);

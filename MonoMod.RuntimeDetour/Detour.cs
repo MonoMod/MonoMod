@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Linq.Expressions;
 using MonoMod.Utils;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour {
     /// <summary>
@@ -23,9 +23,7 @@ namespace MonoMod.RuntimeDetour {
         public bool IsValid => _DetourMap[Method].Contains(this);
 
         public int Index {
-            get {
-                return _DetourMap[Method].IndexOf(this);
-            }
+            get => _DetourMap[Method].IndexOf(this);
             set {
                 List<Detour> detours = _DetourMap[Method];
                 lock (detours) {
@@ -95,12 +93,11 @@ namespace MonoMod.RuntimeDetour {
                     argTypes[i] = args[i].ParameterType;
             }
 
-            _ChainedTrampoline = new DynamicMethod(
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"Chain<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
-                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes,
-                Method.DeclaringType,
-                false // Otherwise just ret is invalid for whatever reason.
-            ).StubCriticalDetour().Pin();
+                (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes
+            ))
+                _ChainedTrampoline = dmd.StubCriticalDetour().Generate().Pin();
 
             // Add the detour to the detour map.
             List<Detour> detours;
@@ -234,22 +231,20 @@ namespace MonoMod.RuntimeDetour {
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dm = new DynamicMethod(
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"Trampoline<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
-                returnType, argTypes,
-                Method?.DeclaringType ?? typeof(Detour),
-                true
-            );
+                returnType, argTypes
+            )) {
+                ILProcessor il = dmd.GetILProcessor();
 
-            ILGenerator il = dm.GetILGenerator();
+                for (int i = 0; i < 10; i++) {
+                    // Prevent mono from inlining the DynamicMethod.
+                    il.Emit(OpCodes.Nop);
+                }
+                il.Emit(OpCodes.Jmp, _ChainedTrampoline);
 
-            for (int i = 0; i < 10; i++) {
-                // Prevent mono from inlining the DynamicMethod.
-                il.Emit(OpCodes.Nop);
+                return dmd.Generate().Pin();
             }
-            il.Emit(OpCodes.Jmp, _ChainedTrampoline);
-
-            return dm.Pin();
         }
 
         /// <summary>

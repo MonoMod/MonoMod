@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Reflection.Emit;
 using MonoMod.Utils;
 using System.Linq;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour.Platforms {
     public abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
@@ -122,41 +122,45 @@ namespace MonoMod.RuntimeDetour.Platforms {
             MethodInfo toInfo = to as MethodInfo;
             Type context = to.DeclaringType;
 
-            DynamicMethod dm = null;
+            MethodInfo dm = null;
 
             if (GlueThiscallStructRetPtr &&
                 fromInfo != null && !from.IsStatic &&
                 toInfo != null && to.IsStatic &&
                 fromInfo.ReturnType == toInfo.ReturnType &&
                 fromInfo.ReturnType.GetTypeInfo().IsValueType) {
+
                 int size = fromInfo.ReturnType.GetManagedSize();
                 if (size == 3 || size == 5 || size == 6 || size == 7 || size >= 9) {
-                    List<Type> argTypes = new List<Type>();
-                    argTypes.Add(from.GetThisParamType()); // this
-                    argTypes.Add(fromInfo.ReturnType.MakeByRefType()); // __ret - Refs are shiny pointers.
+                    List<Type> argTypes = new List<Type> {
+                        from.GetThisParamType(), // this
+                        fromInfo.ReturnType.MakeByRefType() // __ret - Refs are shiny pointers.
+                    };
                     argTypes.AddRange(from.GetParameters().Select(p => p.ParameterType));
-                    dm = new DynamicMethod(
+
+                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                         $"Glue:ThiscallStructRetPtr<{from.GetFindableID(simple: true)},{to.GetFindableID(simple: true)}>",
-                        typeof(void), argTypes.ToArray(),
-                        true
-                    );
+                        typeof(void), argTypes.ToArray()
+                    )) {
+                        ILProcessor il = dmd.GetILProcessor();
 
-                    ILGenerator il = dm.GetILGenerator();
+                        // Load the return buffer address.
+                        il.Emit(OpCodes.Ldarg, 1);
 
-                    // Load the return buffer address.
-                    il.Emit(OpCodes.Ldarg, 1);
+                        // Invoke the target method with all remaining arguments.
+                        {
+                            il.Emit(OpCodes.Ldarg, 0);
+                            for (int i = 2; i < argTypes.Count; i++)
+                                il.Emit(OpCodes.Ldarg, i);
+                            il.Emit(OpCodes.Call, (MethodInfo) to);
+                        }
 
-                    // Invoke the target method with all remaining arguments.
-                    {
-                        il.Emit(OpCodes.Ldarg, 0);
-                        for (int i = 2; i < argTypes.Count; i++)
-                            il.Emit(OpCodes.Ldarg, i);
-                        il.Emit(OpCodes.Call, (MethodInfo) to);
+                        // Store the returned object to the return buffer.
+                        il.Emit(OpCodes.Stobj, fromInfo.ReturnType);
+                        il.Emit(OpCodes.Ret);
+
+                        dm = dmd.Generate();
                     }
-
-                    // Store the returned object to the return buffer.
-                    il.Emit(OpCodes.Stobj, fromInfo.ReturnType);
-                    il.Emit(OpCodes.Ret);
                 }
             }
 

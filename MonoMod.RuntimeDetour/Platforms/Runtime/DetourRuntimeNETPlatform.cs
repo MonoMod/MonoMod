@@ -52,9 +52,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #endif
 
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
-            if (method is DynamicMethod) {
-                // Compile the method handle before getting our hands on the final method handle.
-                DynamicMethod dm = (DynamicMethod) method;
+            // Compile the method handle before getting our hands on the final method handle.
+            if (method is DynamicMethod dm) {
 #if !NETSTANDARD1_X
                 if (m_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                     // mscorlib 2.0.0.0

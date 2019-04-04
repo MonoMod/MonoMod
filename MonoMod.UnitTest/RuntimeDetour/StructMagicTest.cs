@@ -130,56 +130,28 @@ namespace MonoMod.UnitTest {
             private uint packedValue;
 
             public byte B {
-                get {
-                    unchecked {
-                        return (byte) (packedValue >> 16);
-                    }
-                }
-                set {
-                    packedValue = (packedValue & 0xff00ffff) | ((uint) value << 16);
-                }
+                get => (byte) (packedValue >> 16);
+                set => packedValue = (packedValue & 0xff00ffff) | ((uint) value << 16);
             }
 
             public byte G {
-                get {
-                    unchecked {
-                        return (byte) (packedValue >> 8);
-                    }
-                }
-                set {
-                    packedValue = (packedValue & 0xffff00ff) | ((uint) value << 8);
-                }
+                get => (byte) (packedValue >> 8);
+                set => packedValue = (packedValue & 0xffff00ff) | ((uint) value << 8);
             }
 
             public byte R {
-                get {
-                    unchecked {
-                        return (byte) (packedValue);
-                    }
-                }
-                set {
-                    packedValue = (packedValue & 0xffffff00) | value;
-                }
+                get => (byte) (packedValue);
+                set => packedValue = (packedValue & 0xffffff00) | value;
             }
 
             public byte A {
-                get {
-                    unchecked {
-                        return (byte) (packedValue >> 24);
-                    }
-                }
-                set {
-                    packedValue = (packedValue & 0x00ffffff) | ((uint) value << 24);
-                }
+                get => (byte) (packedValue >> 24);
+                set => packedValue = (packedValue & 0x00ffffff) | ((uint) value << 24);
             }
 
             public uint PackedValue {
-                get {
-                    return packedValue;
-                }
-                set {
-                    packedValue = value;
-                }
+                get => packedValue;
+                set => packedValue = value;
             }
         }
 

@@ -10,11 +10,7 @@ using static System.Reflection.TypeExtensions;
 namespace MonoMod.InlineRT {
     public static partial class MonoModRule {
 
-        public static MonoModder Modder {
-            get {
-                return MonoModRulesManager.Modder;
-            }
-        }
+        public static MonoModder Modder => MonoModRulesManager.Modder;
 
         public static void RelinkModule(string from, string toName) {
             MonoModder self = Modder;

@@ -68,8 +68,7 @@ namespace MonoMod.BaseLoader {
                             string pathRelinked = Path.Combine(Path.GetDirectoryName(path), nameRelinked);
                             if (!File.Exists(pathRelinked))
                                 continue;
-                            ModuleDefinition relinked;
-                            if (!StaticRelinkModuleCache.TryGetValue(nameRelinkedNeutral, out relinked)) {
+                            if (!StaticRelinkModuleCache.TryGetValue(nameRelinkedNeutral, out ModuleDefinition relinked)) {
                                 relinked = ModuleDefinition.ReadModule(pathRelinked, new ReaderParameters(ReadingMode.Immediate));
                                 StaticRelinkModuleCache[nameRelinkedNeutral] = relinked;
                             }
@@ -115,9 +114,7 @@ namespace MonoMod.BaseLoader {
 
                 return _Modder;
             }
-            set {
-                _Modder = value;
-            }
+            set => _Modder = value;
         }
 
         /// <summary>
@@ -168,8 +165,7 @@ namespace MonoMod.BaseLoader {
                 modder.OutputPath = cachedPath;
                 modder.MissingDependencyResolver = depResolver;
 
-                string symbolPath;
-                modder.ReaderParameters.SymbolStream = meta.OpenStream(out symbolPath, meta.DLL.Substring(0, meta.DLL.Length - 4) + ".pdb", meta.DLL + ".mdb");
+                modder.ReaderParameters.SymbolStream = meta.OpenStream(out string symbolPath, meta.DLL.Substring(0, meta.DLL.Length - 4) + ".pdb", meta.DLL + ".mdb");
                 modder.ReaderParameters.ReadSymbols = modder.ReaderParameters.SymbolStream != null;
                 if (modder.ReaderParameters.SymbolReaderProvider != null &&
                     modder.ReaderParameters.SymbolReaderProvider is RelinkerSymbolReaderProvider) {
@@ -232,8 +228,7 @@ namespace MonoMod.BaseLoader {
 
         private static MissingDependencyResolver GenerateModDependencyResolver(ModMetadata meta)
             => (mod, main, name, fullName) => {
-                string result;
-                Stream stream = meta.OpenStream(out result, name + ".dll");
+                Stream stream = meta.OpenStream(out string result, name + ".dll");
                 if (stream == null)
                     return null;
                 using (stream) {

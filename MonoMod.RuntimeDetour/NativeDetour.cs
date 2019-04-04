@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Linq.Expressions;
 using MonoMod.Utils;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour {
     /// <summary>
@@ -183,51 +183,70 @@ namespace MonoMod.RuntimeDetour {
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dm = new DynamicMethod(
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"Trampoline:Native<{Method?.GetFindableID(simple: true) ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}",
-                returnType, argTypes,
-                Method?.DeclaringType ?? typeof(NativeDetour),
-                true
-            );
-            ILGenerator il = dm.GetILGenerator();
+                returnType, argTypes
+            )) {
+                ILProcessor il = dmd.GetILProcessor();
 
-            il.EmitDetourCopy(_BackupNative, Data.Method, Data.Type);
+                ExceptionHandler eh = new ExceptionHandler(ExceptionHandlerType.Finally);
+                il.Body.ExceptionHandlers.Add(eh);
 
-            // Store the return value in a local as we can't preserve the stack across exception block boundaries.
-            LocalBuilder localResult = null;
-            if (returnType != typeof(void))
-                localResult = il.DeclareLocal(returnType);
+                il.EmitDetourCopy(_BackupNative, Data.Method, Data.Type);
 
-            Label blockTry = il.BeginExceptionBlock();
+                // Store the return value in a local as we can't preserve the stack across exception block boundaries.
+                VariableDefinition localResult = null;
+                if (returnType != typeof(void))
+                    il.Body.Variables.Add(localResult = new VariableDefinition(il.Import(returnType)));
 
-            for (int i = 0; i < argTypes.Length; i++)
-                il.Emit(OpCodes.Ldarg, i);
+                // Label blockTry = il.BeginExceptionBlock();
+                int instriTryStart = il.Body.Instructions.Count;
 
-            if (methodCallable is MethodInfo)
-                il.Emit(OpCodes.Call, (MethodInfo) methodCallable);
-            else if (methodCallable is ConstructorInfo)
-                il.Emit(OpCodes.Call, (ConstructorInfo) methodCallable);
-            else
-                throw new NotSupportedException($"Method type {methodCallable.GetType().FullName} not supported.");
+                for (int i = 0; i < argTypes.Length; i++)
+                    il.Emit(OpCodes.Ldarg, i);
 
-            if (localResult != null)
-                il.Emit(OpCodes.Stloc, localResult);
+                if (methodCallable is MethodInfo)
+                    il.Emit(OpCodes.Call, (MethodInfo) methodCallable);
+                else if (methodCallable is ConstructorInfo)
+                    il.Emit(OpCodes.Call, (ConstructorInfo) methodCallable);
+                else
+                    throw new NotSupportedException($"Method type {methodCallable.GetType().FullName} not supported.");
 
-            il.Emit(OpCodes.Leave, blockTry);
+                if (localResult != null)
+                    il.Emit(OpCodes.Stloc, localResult);
 
-            il.BeginFinallyBlock();
+                il.Emit(OpCodes.Leave, (object) null);
+                Instruction instrLeave = il.Body.Instructions[il.Body.Instructions.Count - 1];
 
-            // Reapply the detour even if the method threw an exception.
-            il.EmitDetourApply(Data);
+                // il.BeginFinallyBlock();
+                int instriTryEnd = il.Body.Instructions.Count;
+                int instriFinallyStart = il.Body.Instructions.Count;
 
-            il.EndExceptionBlock();
+                // Reapply the detour even if the method threw an exception.
+                il.EmitDetourApply(Data);
 
-            if (localResult != null)
-                il.Emit(OpCodes.Ldloc, localResult);
+                // il.EndExceptionBlock();
+                int instriFinallyEnd = il.Body.Instructions.Count;
 
-            il.Emit(OpCodes.Ret);
+                Instruction instrLeaveTarget = null;
 
-            return dm.Pin();
+                if (localResult != null) {
+                    il.Emit(OpCodes.Ldloc, localResult);
+                    instrLeaveTarget = il.Body.Instructions[il.Body.Instructions.Count - 1];
+                }
+
+                il.Emit(OpCodes.Ret);
+                instrLeaveTarget = instrLeaveTarget ?? il.Body.Instructions[il.Body.Instructions.Count - 1];
+                instrLeave.Operand = instrLeaveTarget;
+
+                // TODO: Are the exception handler indices correct?
+                eh.TryStart = il.Body.Instructions[instriTryStart];
+                eh.TryEnd = il.Body.Instructions[instriTryEnd];
+                eh.HandlerStart = il.Body.Instructions[instriTryEnd];
+                eh.HandlerEnd = il.Body.Instructions[instriFinallyEnd];
+
+                return dmd.Generate().Pin();
+            }
         }
 
         /// <summary>
