@@ -13,7 +13,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly Dictionary<Delegate, Stack<Hook>> HookMap = new Dictionary<Delegate, Stack<Hook>>();
         private readonly List<Hook> HookList = new List<Hook>();
         private readonly List<Delegate> ILList = new List<Delegate>();
-        private readonly List<IDisposable> ActiveHookILs = new List<IDisposable>();
+        private readonly List<IDisposable> ActiveCecILs = new List<IDisposable>();
 
         private DynamicMethodDefinition _DMD;
         private DynamicMethodDefinition DMD {
@@ -121,9 +121,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return;
             ILList.RemoveAt(index);
 
-            foreach (HookIL h in ActiveHookILs)
+            foreach (IDisposable h in ActiveCecILs)
                 h.Dispose();
-            ActiveHookILs.Clear();
+            ActiveCecILs.Clear();
 
             DMD.Reload();
             MethodDefinition def = DMD.Definition;
@@ -143,20 +143,38 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         private bool InvokeManipulator(MethodDefinition def, Delegate cb) {
-            if (cb.TryCastDelegate(out ILManipulator manip)) {
-                // The callback is an ILManipulator, or compatible to it out of the box.
-                HookIL hookIL = new HookIL(def);
-                hookIL.Invoke(manip);
-                if (hookIL._ReadOnly)
-                    return false;
+            {
+#pragma warning disable CS0618 // Type or member is obsolete
+                if (cb.TryCastDelegate(out ILManipulator manip)) {
+                    // The callback is an ILManipulator, or compatible to it out of the box.
+                    HookIL il = new HookIL(def);
+                    il.Invoke(manip);
+                    if (il._ReadOnly)
+                        return false;
 
-                ActiveHookILs.Add(hookIL);
-                return true;
+                    ActiveCecILs.Add(il);
+                    return true;
+                }
+#pragma warning restore CS0618 // Type or member is obsolete
+            }
+
+            {
+                if (cb.TryCastDelegate(out CecIL.Manipulator manip)) {
+                    // The callback is an ILManipulator, or compatible to it out of the box.
+                    CecIL il = new CecIL(def);
+                    il.Invoke(manip);
+                    if (il.IsReadOnly)
+                        return false;
+
+                    ActiveCecILs.Add(il);
+                    return true;
+                }
             }
 
             // Check if the method accepts a HookIL from another assembly.
             ParameterInfo[] args = cb.GetMethodInfo().GetParameters();
-            if (args.Length == 1 && args[0].ParameterType.FullName == typeof(HookIL).FullName) {
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (args.Length == 1 && (args[0].ParameterType.FullName == typeof(HookIL).FullName || args[0].ParameterType.FullName == typeof(CecIL).FullName)) {
                 // Instantiate it. We should rather pass a "proxy" of some sorts, but eh.
                 object hookIL = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
                 Type t_hookIL = hookIL.GetType();
@@ -165,9 +183,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     return false;
 
                 if (hookIL is IDisposable disp)
-                    ActiveHookILs.Add(disp);
+                    ActiveCecILs.Add(disp);
                 return true;
             }
+#pragma warning restore CS0618 // Type or member is obsolete
 
             // Fallback - body and IL processor.
             cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());

@@ -12,6 +12,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
     /// <summary>
     /// Wrapper class used by the ILManipulator in HookExtensions.
     /// </summary>
+    [Obsolete("Use CecIL from MonoMod.Utils instead.")]
     public class HookIL : IDisposable {
 
         public MethodDefinition Method { get; private set; }

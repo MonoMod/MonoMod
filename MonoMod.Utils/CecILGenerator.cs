@@ -24,7 +24,7 @@ namespace MonoMod.Utils {
 
         public event Action OnDispose;
 
-        internal bool _ReadOnly = false;
+        public bool IsReadOnly { get; internal set; } = false;
 
         public CecIL(MethodDefinition method) {
             Method = method;
@@ -52,7 +52,7 @@ namespace MonoMod.Utils {
         }
 
         public bool MakeReadOnly()
-            => _ReadOnly = true;
+            => IsReadOnly = true;
 
         public CecILCursor At(int index)
             => At(index == -1 || index == Instrs.Count ? null : Instrs[index]);

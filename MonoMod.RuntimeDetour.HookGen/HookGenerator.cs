@@ -47,13 +47,13 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         public ModuleDefinition OutputModule;
 
-        public bool RDRefHide;
-
         public string Namespace;
         public string NamespaceIL;
         public bool HookOrig;
         public bool HookPrivate;
         public string HookExtName;
+
+        public bool UseLegacyHookIL;
 
         public ModuleDefinition module_RuntimeDetour;
 
@@ -64,9 +64,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public TypeReference t_RuntimeMethodHandle;
         public TypeReference t_EditorBrowsableState;
 
-        public TypeReference t_HookEndpointManager;
         public TypeDefinition td_HookExtensions;
-        public TypeReference t_HookExtensions;
 
         public MethodReference m_Object_ctor;
         public MethodReference m_ObsoleteAttribute_ctor;
@@ -92,8 +90,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 Runtime = modder.Module.Runtime
             });
 
-            RDRefHide = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_RDREF_HIDE") == "1";
-
             Namespace = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE");
             if (string.IsNullOrEmpty(Namespace))
                 Namespace = "On";
@@ -105,6 +101,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
             HookExtName = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_EXTENSIONS");
             if (string.IsNullOrEmpty(HookExtName))
                 HookExtName = $"ːHookExtensionsː{NameVerifyRegex.Replace(modder.Module.Assembly.Name.Name, "_")}";
+
+            UseLegacyHookIL = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_OLDHOOKIL") == "1";
 
             modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour");
             if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour", out module_RuntimeDetour))
@@ -118,12 +116,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             t_EditorBrowsableState = OutputModule.ImportReference(modder.FindType("System.ComponentModel.EditorBrowsableState"));
 
             TypeDefinition td_HookEndpointManager = module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpointManager");
-            td_HookExtensions = module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookExtensions");
-            t_HookExtensions = OutputModule.ImportReference(td_HookExtensions);
-            t_HookEndpointManager = OutputModule.ImportReference(td_HookEndpointManager);
-            t_HookEndpointManager = OutputModule.ImportReference(module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookIL"));
 
-            t_ILManipulator = OutputModule.ImportReference(module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.ILManipulator"));
+            t_ILManipulator = OutputModule.ImportReference(
+                UseLegacyHookIL ? module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.ILManipulator") :
+                module_RuntimeDetour.GetType("MonoMod.Utils.CecIL/Manipulator")
+            );
 
             m_Object_ctor = OutputModule.ImportReference(modder.FindType("System.Object").Resolve().FindMethod("System.Void .ctor()"));
             m_ObsoleteAttribute_ctor = OutputModule.ImportReference(modder.FindType("System.ObsoleteAttribute").Resolve().FindMethod("System.Void .ctor(System.String,System.Boolean)"));
@@ -144,166 +141,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public void Generate() {
-            if (RDRefHide) {
-                // Generate the hook wrappers before generating anything else.
-                // This is required to prevent mods from depending on HookGen itself.
-                if (td_HookExtensionsWrapper == null) {
-                    Modder.LogVerbose($"[HookGen] Generating hook extensions wrapper {HookExtName}");
-                    int namespaceIndex = HookExtName.LastIndexOf(".");
-                    td_HookExtensionsWrapper = new TypeDefinition(
-                        namespaceIndex < 0 ? "" : HookExtName.Substring(0, namespaceIndex),
-                        namespaceIndex < 0 ? HookExtName : HookExtName.Substring(namespaceIndex + 1),
-                        td_HookExtensions.Attributes,
-                        OutputModule.TypeSystem.Object
-                    );
-
-                    foreach (CustomAttribute attrib in td_HookExtensions.CustomAttributes)
-                        td_HookExtensionsWrapper.CustomAttributes.Add(attrib.Relink(Relinker, td_HookExtensionsWrapper));
-
-                    // Proxy all public methods, events and properties from HookExtensions to HookExtWrapper.
-                    GenerateProxy(td_HookExtensions, td_HookExtensionsWrapper, null, null, null);
-
-                    // Generate the nested delegate type.
-                    MethodDefinition md_ILManipulator_Invoke = td_HookExtensions.NestedTypes.FirstOrDefault(n => n.Name == "ILManipulatorMini").FindMethod("Invoke");
-                    md_ILManipulator_Invoke.IsStatic = true; // Prevent "self" parameter from being generated in new delegate type.
-                    TypeDefinition td_ILManipulatorWrapper = GenerateDelegateFor(md_ILManipulator_Invoke);
-                    td_ILManipulatorWrapper.Name = "ILManipulator";
-                    td_HookExtensionsWrapper.NestedTypes.Add(td_ILManipulatorWrapper);
-                    t_ILManipulator = td_ILManipulatorWrapper;
-
-                    OutputModule.Types.Add(td_HookExtensionsWrapper);
-                }
-            }
-
             foreach (TypeDefinition type in Modder.Module.Types) {
                 GenerateFor(type, out TypeDefinition hookType, out TypeDefinition hookILType);
                 if (hookType == null || hookILType == null || hookType.IsNested)
                     continue;
                 OutputModule.Types.Add(hookType);
                 OutputModule.Types.Add(hookILType);
-            }
-        }
-
-        private void GenerateProxy(TypeDefinition from, TypeDefinition to, TypeReference fromRef, MethodReference wrapperCtor, FieldReference wrapperField) {
-            ILProcessor il;
-            foreach (MethodDefinition method in from.Methods) {
-                if (method.IsRuntimeSpecialName || !method.IsPublic)
-                    continue;
-
-                MethodDefinition proxy = new MethodDefinition(method.Name, method.Attributes, method.ReturnType);
-                to.Methods.Add(proxy);
-
-                foreach (GenericParameter genParam in method.GenericParameters)
-                    proxy.GenericParameters.Add(genParam.Relink(WrappedRelinker, proxy));
-
-                foreach (ParameterDefinition param in method.Parameters)
-                    proxy.Parameters.Add(param.Relink(WrappedRelinker, proxy));
-
-                foreach (CustomAttribute attrib in method.CustomAttributes)
-                    proxy.CustomAttributes.Add(attrib.Relink(WrappedRelinker, proxy));
-
-                proxy.ReturnType = proxy.ReturnType?.Relink(WrappedRelinker, proxy);
-
-                proxy.Body = new MethodBody(proxy);
-                il = proxy.Body.GetILProcessor();
-
-                if (method.ReturnType.GetElementType().FullName == from.FullName) {
-                    il.Emit(OpCodes.Newobj, wrapperCtor);
-                    il.Emit(OpCodes.Dup);
-                }
-
-                MethodReference methodRef = method.Relink(Relinker, proxy);
-                methodRef.DeclaringType = fromRef ?? methodRef.DeclaringType;
-
-                if (proxy.GenericParameters.Count != 0) {
-                    GenericInstanceMethod methodRefGen = new GenericInstanceMethod(methodRef);
-                    foreach (GenericParameter genParam in proxy.GenericParameters)
-                        methodRefGen.GenericArguments.Add(genParam);
-                    methodRef = methodRefGen;
-                }
-
-                if (!method.IsStatic) {
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, wrapperField);
-                    for (int i = 0; i < method.Parameters.Count; i++) {
-                        il.Emit(OpCodes.Ldarg, i + 1);
-                        if (method.Parameters[i].ParameterType.GetElementType().FullName == from.FullName)
-                            il.Emit(OpCodes.Ldfld, wrapperField);
-                    }
-                    il.Emit(OpCodes.Callvirt, methodRef);
-                } else {
-                    for (int i = 0; i < method.Parameters.Count; i++) {
-                        il.Emit(OpCodes.Ldarg, i);
-                        if (method.Parameters[i].ParameterType.GetElementType().FullName == from.FullName)
-                            il.Emit(OpCodes.Ldfld, wrapperField);
-                    }
-                    il.Emit(OpCodes.Call, methodRef);
-                }
-
-                if (method.ReturnType.GetElementType().FullName == from.FullName)
-                    il.Emit(OpCodes.Stfld, wrapperField);
-                il.Emit(OpCodes.Ret);
-
-            }
-
-            foreach (PropertyDefinition prop in from.Properties) {
-                PropertyDefinition proxy = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType.Relink(WrappedRelinker, to));
-                to.Properties.Add(proxy);
-
-                MethodDefinition proxyMethod;
-
-                if (prop.GetMethod != null) {
-                    if ((proxyMethod = to.FindMethod(prop.GetMethod.GetFindableID(withType: false))) == null)
-                        goto Next;
-                    proxy.GetMethod = proxyMethod;
-                }
-
-                if (prop.SetMethod != null) {
-                    if ((proxyMethod = to.FindMethod(prop.SetMethod.GetFindableID(withType: false))) == null)
-                        goto Next;
-                    proxy.SetMethod = proxyMethod;
-                }
-
-                foreach (MethodDefinition method in prop.OtherMethods) {
-                    if ((proxyMethod = to.FindMethod(method.GetFindableID(withType: false))) == null)
-                        goto Next;
-                    proxy.OtherMethods.Add(proxyMethod);
-                }
-
-                Next: continue;
-            }
-
-            foreach (EventDefinition evt in from.Events) {
-                EventDefinition proxy = new EventDefinition(evt.Name, evt.Attributes, evt.EventType.Relink(WrappedRelinker, to));
-                to.Events.Add(proxy);
-
-                MethodDefinition proxyMethod;
-
-                if (evt.AddMethod != null) {
-                    if ((proxyMethod = to.FindMethod(evt.AddMethod.GetFindableID(withType: false))) == null)
-                        goto Next;
-                    proxy.AddMethod = proxyMethod;
-                }
-
-                if (evt.RemoveMethod != null) {
-                    if ((proxyMethod = to.FindMethod(evt.RemoveMethod.GetFindableID(withType: false))) == null)
-                        goto Next;
-                    proxy.RemoveMethod = proxyMethod;
-                }
-
-                if (evt.InvokeMethod != null) {
-                    if ((proxyMethod = to.FindMethod(evt.InvokeMethod.GetFindableID(withType: false))) == null)
-                        goto Next;
-                    proxy.InvokeMethod = proxyMethod;
-                }
-
-                foreach (MethodDefinition method in evt.OtherMethods) {
-                    if ((proxyMethod = to.FindMethod(method.GetFindableID(withType: false))) == null)
-                        goto Next;
-                    proxy.OtherMethods.Add(proxyMethod);
-                }
-
-                Next: continue;
             }
         }
 
@@ -680,19 +523,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
             CustomAttribute attrib = new CustomAttribute(m_EditorBrowsableAttribute_ctor);
             attrib.ConstructorArguments.Add(new CustomAttributeArgument(t_EditorBrowsableState, state));
             return attrib;
-        }
-
-        IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            return OutputModule.ImportReference(Modder.Relinker(mtp, context));
-        }
-
-        IMetadataTokenProvider WrappedRelinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
-            if (mtp is TypeReference type) {
-                if (type.DeclaringType?.FullName == td_HookExtensions.FullName && type.Name == t_ILManipulator.Name)
-                    return t_ILManipulator;
-            }
-
-            return Relinker(mtp, context);
         }
 
     }

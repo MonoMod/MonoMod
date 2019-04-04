@@ -10,7 +10,9 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
 
 namespace MonoMod.RuntimeDetour.HookGen {
+    [Obsolete("Use CecIL.Manipulator from MonoMod.Utils instead.")]
     public delegate void ILManipulator(HookIL il);
+    [Obsolete("Use CecILExt from MonoMod.Utils instead.")]
     public static partial class HookExtensions {
 
         // This delegate will be cloned into the wrapper inside of the generated assembly.
