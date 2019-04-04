@@ -9,8 +9,8 @@ using System.Linq;
 using System.Collections.ObjectModel;
 
 namespace MonoMod.Utils {
-    public class CecIL : IDisposable {
-        public delegate void Manipulator(CecIL il);
+    public class MMIL : IDisposable {
+        public delegate void Manipulator(MMIL il);
 
         public MethodDefinition Method { get; private set; }
         public ILProcessor IL { get; private set; }
@@ -19,14 +19,14 @@ namespace MonoMod.Utils {
         public ModuleDefinition Module => Method.Module;
         public Mono.Collections.Generic.Collection<Instruction> Instrs => Body.Instructions;
 
-        internal List<CecILLabel> _Labels = new List<CecILLabel>();
-        public ReadOnlyCollection<CecILLabel> Labels => _Labels.AsReadOnly();
+        internal List<MMILLabel> _Labels = new List<MMILLabel>();
+        public ReadOnlyCollection<MMILLabel> Labels => _Labels.AsReadOnly();
 
         public event Action OnDispose;
 
         public bool IsReadOnly { get; internal set; } = false;
 
-        public CecIL(MethodDefinition method) {
+        public MMIL(MethodDefinition method) {
             Method = method;
             IL = method.Body.GetILProcessor();
         }
@@ -34,17 +34,17 @@ namespace MonoMod.Utils {
         public void Invoke(Manipulator manip) {
             foreach (Instruction instr in Instrs) {
                 if (instr.Operand is Instruction target)
-                    instr.Operand = new CecILLabel(this, target);
+                    instr.Operand = new MMILLabel(this, target);
                 else if (instr.Operand is Instruction[] targets)
-                    instr.Operand = targets.Select(t => new CecILLabel(this, t)).ToArray();
+                    instr.Operand = targets.Select(t => new MMILLabel(this, t)).ToArray();
             }
 
             manip(this);
 
             foreach (Instruction instr in Instrs) {
-                if (instr.Operand is CecILLabel label)
+                if (instr.Operand is MMILLabel label)
                     instr.Operand = label.Target;
-                else if (instr.Operand is CecILLabel[] targets)
+                else if (instr.Operand is MMILLabel[] targets)
                     instr.Operand = targets.Select(l => l.Target).ToArray();
             }
 
@@ -54,12 +54,12 @@ namespace MonoMod.Utils {
         public bool MakeReadOnly()
             => IsReadOnly = true;
 
-        public CecILCursor At(int index)
+        public MMILCursor At(int index)
             => At(index == -1 || index == Instrs.Count ? null : Instrs[index]);
-        public CecILCursor At(CecILLabel label)
+        public MMILCursor At(MMILLabel label)
             => At(label.Target);
-        public CecILCursor At(Instruction instr)
-            => new CecILCursor(this, instr);
+        public MMILCursor At(Instruction instr)
+            => new MMILCursor(this, instr);
 
         public FieldReference Import(FieldInfo field)
             => Module.ImportReference(field);
@@ -68,10 +68,10 @@ namespace MonoMod.Utils {
         public TypeReference Import(Type type)
             => Module.ImportReference(type);
 
-        public CecILLabel DefineLabel()
-            => new CecILLabel(this);
-        public CecILLabel DefineLabel(Instruction target)
-            => new CecILLabel(this, target);
+        public MMILLabel DefineLabel()
+            => new MMILLabel(this);
+        public MMILLabel DefineLabel(Instruction target)
+            => new MMILLabel(this, target);
 
         public void ReplaceOperands(object from, object to) {
             foreach (Instruction instr in Instrs)
@@ -79,7 +79,7 @@ namespace MonoMod.Utils {
                     instr.Operand = to;
         }
 
-        public IEnumerable<CecILLabel> GetIncomingLabels(Instruction instr)
+        public IEnumerable<MMILLabel> GetIncomingLabels(Instruction instr)
             => _Labels.Where(l => l.Target == instr);
 
         public void Dispose() {

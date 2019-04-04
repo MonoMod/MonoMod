@@ -11,7 +11,7 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    [Obsolete("Use CecILCursor from MonoMod.Utils instead.")]
+    [Obsolete("Use MMILCursor from MonoMod.Utils instead.")]
     public class HookILCursor {
 
         private static readonly List<object> References = new List<object>();

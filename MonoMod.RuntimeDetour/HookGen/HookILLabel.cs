@@ -4,7 +4,7 @@ using System.Linq;
 using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    [Obsolete("Use CecILLabel from MonoMod.Utils instead.")]
+    [Obsolete("Use MMILLabel from MonoMod.Utils instead.")]
     public sealed class HookILLabel {
 
         private readonly HookIL HookIL;

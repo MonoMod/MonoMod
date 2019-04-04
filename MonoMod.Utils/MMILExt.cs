@@ -10,7 +10,7 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
 
 namespace MonoMod.Utils {
-    public static partial class CecILExt {
+    public static partial class MMILExt {
 
         #region Misc Helpers
 

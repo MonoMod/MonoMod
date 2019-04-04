@@ -9,7 +9,7 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 
 namespace MonoMod.Utils {
-    public class CecILCursor {
+    public class MMILCursor {
 
         private static readonly List<object> References = new List<object>();
         private static readonly Dictionary<int, MethodInfo> DelegateInvokers = new Dictionary<int, MethodInfo>();
@@ -38,9 +38,9 @@ namespace MonoMod.Utils {
                 DelegateInvokers.Remove(id);
         }
 
-        private static readonly MethodInfo _GetReference = typeof(CecILCursor).GetMethod("GetReference");
+        private static readonly MethodInfo _GetReference = typeof(MMILCursor).GetMethod("GetReference");
 
-        public CecIL Context { get; }
+        public MMIL Context { get; }
 
         private Instruction _Next;
         public Instruction Next {
@@ -68,7 +68,7 @@ namespace MonoMod.Utils {
         public ModuleDefinition Module => Context.Module;
         public Mono.Collections.Generic.Collection<Instruction> Instrs => Context.Instrs;
 
-        private CecILLabel[] _insertAfterLabels;
+        private MMILLabel[] _insertAfterLabels;
 
         public int Index {
             get {
@@ -80,18 +80,18 @@ namespace MonoMod.Utils {
             set => Next = value == Instrs.Count ? null : Instrs[value];
         }
 
-        internal CecILCursor(CecIL context, Instruction instr) {
+        internal MMILCursor(MMIL context, Instruction instr) {
             Context = context;
             Next = instr;
         }
 
-        public CecILCursor(CecILCursor old) {
+        public MMILCursor(MMILCursor old) {
             Context = old.Context;
             Next = old.Next;
         }
 
-        public CecILCursor Clone()
-            => new CecILCursor(this);
+        public MMILCursor Clone()
+            => new MMILCursor(this);
 
         public void Remove() {
             int index = Index;
@@ -99,11 +99,11 @@ namespace MonoMod.Utils {
             Index = index;
         }
 
-        public void GotoLabel(CecILLabel label) {
+        public void GotoLabel(MMILLabel label) {
             Next = label.Target;
         }
 
-        public void MarkLabel(CecILLabel label) {
+        public void MarkLabel(MMILLabel label) {
             label.Target = Next;
             _insertAfterLabels = new [] { label };
         }
@@ -116,7 +116,7 @@ namespace MonoMod.Utils {
             _insertAfterLabels = null;
         }
 
-        public IEnumerable<CecILLabel> GetIncomingLabels()
+        public IEnumerable<MMILLabel> GetIncomingLabels()
             => Context.GetIncomingLabels(Next);
 
         #region Misc IL Helpers
@@ -166,12 +166,12 @@ namespace MonoMod.Utils {
             return false;
         }
 
-        public void FindNext(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindNext(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             if (!TryFindNext(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
-        public bool TryFindNext(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            cursors = new CecILCursor[predicates.Length];
+        public bool TryFindNext(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new MMILCursor[predicates.Length];
             Instruction instrOrig = Next;
             Func<Instruction, bool> first = predicates[0];
             while (TryGotoNext(first)) {
@@ -194,12 +194,12 @@ namespace MonoMod.Utils {
             return false;
         }
 
-        public void FindPrev(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindPrev(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             if (!TryFindPrev(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
-        public bool TryFindPrev(out CecILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            cursors = new CecILCursor[predicates.Length];
+        public bool TryFindPrev(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new MMILCursor[predicates.Length];
             Instruction instrOrig = Next;
             Func<Instruction, bool> last = predicates[predicates.Length - 1];
             while (TryGotoPrev(last)) {
@@ -240,56 +240,56 @@ namespace MonoMod.Utils {
 
         #region Base Create / Emit Helpers
 
-        private CecILCursor _Insert(Instruction instr) {
+        private MMILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
             if (_insertAfterLabels != null) {
-                foreach (CecILLabel label in _insertAfterLabels)
+                foreach (MMILLabel label in _insertAfterLabels)
                     label.Target = instr;
 
                 _insertAfterLabels = null;
             }
-            return new CecILCursor(Context, instr);
+            return new MMILCursor(Context, instr);
         }
 
-        public CecILCursor Emit(OpCode opcode, ParameterDefinition parameter)
+        public MMILCursor Emit(OpCode opcode, ParameterDefinition parameter)
             => _Insert(IL.Create(opcode, parameter));
-        public CecILCursor Emit(OpCode opcode, VariableDefinition variable)
+        public MMILCursor Emit(OpCode opcode, VariableDefinition variable)
             => _Insert(IL.Create(opcode, variable));
-        public CecILCursor Emit(OpCode opcode, Instruction[] targets)
+        public MMILCursor Emit(OpCode opcode, Instruction[] targets)
             => _Insert(IL.Create(opcode, targets));
-        public CecILCursor Emit(OpCode opcode, Instruction target)
+        public MMILCursor Emit(OpCode opcode, Instruction target)
             => _Insert(IL.Create(opcode, target));
-        public CecILCursor Emit(OpCode opcode, double value)
+        public MMILCursor Emit(OpCode opcode, double value)
             => _Insert(IL.Create(opcode, value));
-        public CecILCursor Emit(OpCode opcode, float value)
+        public MMILCursor Emit(OpCode opcode, float value)
             => _Insert(IL.Create(opcode, value));
-        public CecILCursor Emit(OpCode opcode, long value)
+        public MMILCursor Emit(OpCode opcode, long value)
             => _Insert(IL.Create(opcode, value));
-        public CecILCursor Emit(OpCode opcode, sbyte value)
+        public MMILCursor Emit(OpCode opcode, sbyte value)
             => _Insert(IL.Create(opcode, value));
-        public CecILCursor Emit(OpCode opcode, byte value)
+        public MMILCursor Emit(OpCode opcode, byte value)
             => _Insert(IL.Create(opcode, value));
-        public CecILCursor Emit(OpCode opcode, string value)
+        public MMILCursor Emit(OpCode opcode, string value)
             => _Insert(IL.Create(opcode, value));
-        public CecILCursor Emit(OpCode opcode, FieldReference field)
+        public MMILCursor Emit(OpCode opcode, FieldReference field)
             => _Insert(IL.Create(opcode, field));
-        public CecILCursor Emit(OpCode opcode, CallSite site)
+        public MMILCursor Emit(OpCode opcode, CallSite site)
             => _Insert(IL.Create(opcode, site));
-        public CecILCursor Emit(OpCode opcode, TypeReference type)
+        public MMILCursor Emit(OpCode opcode, TypeReference type)
             => _Insert(IL.Create(opcode, type));
-        public CecILCursor Emit(OpCode opcode)
+        public MMILCursor Emit(OpCode opcode)
             => _Insert(IL.Create(opcode));
-        public CecILCursor Emit(OpCode opcode, int value)
+        public MMILCursor Emit(OpCode opcode, int value)
             => _Insert(IL.Create(opcode, value));
-        public CecILCursor Emit(OpCode opcode, MethodReference method)
+        public MMILCursor Emit(OpCode opcode, MethodReference method)
             => _Insert(IL.Create(opcode, method));
-        public CecILCursor Emit(OpCode opcode, FieldInfo field)
+        public MMILCursor Emit(OpCode opcode, FieldInfo field)
             => _Insert(IL.Create(opcode, field));
-        public CecILCursor Emit(OpCode opcode, MethodBase method)
+        public MMILCursor Emit(OpCode opcode, MethodBase method)
             => _Insert(IL.Create(opcode, method));
-        public CecILCursor Emit(OpCode opcode, Type type)
+        public MMILCursor Emit(OpCode opcode, Type type)
             => _Insert(IL.Create(opcode, type));
-        public CecILCursor Emit(OpCode opcode, object operand)
+        public MMILCursor Emit(OpCode opcode, object operand)
             => _Insert(IL.Create(opcode, operand));
 
         #endregion
@@ -297,7 +297,7 @@ namespace MonoMod.Utils {
         #region Reference-oriented Emit Helpers
 
         /// <summary>
-        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use CecILCursor.FreeReference(id).
+        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use MMILCursor.FreeReference(id).
         /// </summary>
         public int EmitReference<T>(T obj) {
             Type t = typeof(T);
@@ -310,7 +310,7 @@ namespace MonoMod.Utils {
         }
 
         /// <summary>
-        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use CecILCursor.FreeReference(id).
+        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use MMILCursor.FreeReference(id).
         /// </summary>
         public void EmitGetReference<T>(int id) {
             Type t = typeof(T);
@@ -321,13 +321,13 @@ namespace MonoMod.Utils {
         }
 
         /// <summary>
-        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use CecILCursor.FreeReference(id).
+        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use MMILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegate(Action cb)
             => EmitDelegateInvoke(EmitDelegatePush(cb));
 
         /// <summary>
-        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use CecILCursor.FreeReference(id).
+        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use MMILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegate<T>(T cb) where T : Delegate {
             Instruction instrPrev = Next;
@@ -345,7 +345,7 @@ namespace MonoMod.Utils {
             argTypes[args.Length] = delType;
 
             using (DynamicMethodDefinition dmdInvoke = new DynamicMethodDefinition(
-                $"CecIL:Invoke<{delInvokeOrig.DeclaringType.FullName}>?{cb.GetHashCode()}",
+                $"MMIL:Invoke<{delInvokeOrig.DeclaringType.FullName}>?{cb.GetHashCode()}",
                 delInvokeOrig.ReturnType, argTypes
             )) {
                 ILProcessor il = dmdInvoke.GetILProcessor();
@@ -369,7 +369,7 @@ namespace MonoMod.Utils {
         }
 
         /// <summary>
-        /// Emit an inline delegate reference. Note that the delegates "leak" unless you use CecILCursor.FreeReference(id).
+        /// Emit an inline delegate reference. Note that the delegates "leak" unless you use MMILCursor.FreeReference(id).
         /// </summary>
         public int EmitDelegatePush<T>(T cb) where T : Delegate
             => EmitReference(cb);
