@@ -56,6 +56,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public bool UseLegacyHookIL;
 
         public ModuleDefinition module_RuntimeDetour;
+        public ModuleDefinition module_Utils;
 
         public TypeReference t_MulticastDelegate;
         public TypeReference t_IAsyncResult;
@@ -107,6 +108,10 @@ namespace MonoMod.RuntimeDetour.HookGen {
             modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour");
             if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour", out module_RuntimeDetour))
                 throw new FileNotFoundException("MonoMod.RuntimeDetour not found!");
+
+            modder.MapDependency(modder.Module, "MonoMod.Utils");
+            if (!modder.DependencyCache.TryGetValue("MonoMod.Utils", out module_Utils))
+                throw new FileNotFoundException("MonoMod.Utils not found!");
 
             t_MulticastDelegate = OutputModule.ImportReference(modder.FindType("System.MulticastDelegate"));
             t_IAsyncResult = OutputModule.ImportReference(modder.FindType("System.IAsyncResult"));

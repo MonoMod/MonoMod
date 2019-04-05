@@ -34,11 +34,11 @@ namespace MonoMod.InlineRT {
         private static readonly Dictionary<WeakReference, long> IDMap = new Dictionary<WeakReference, long>(new WeakReferenceComparer());
 #endif
 
-        public static MonoModder Modder {
 #if NETSTANDARD1_X
-            // StackTrace missing from .NET Standard before 2.0
-            get => ModderLast.Value.Target as MonoModder;
+        // StackTrace missing from .NET Standard before 2.0
+        public static MonoModder Modder => ModderLast.Value.Target as MonoModder;
 #else
+        public static MonoModder Modder {
             get {
                 StackTrace st = new StackTrace();
                 for (int i = 1; i < st.FrameCount; i++) {
@@ -53,14 +53,14 @@ namespace MonoMod.InlineRT {
                 }
                 return null;
             }
+    }
 #endif
-        }
 
-        public static Type RuleType {
 #if NETSTANDARD1_X
-            // StackTrace missing from .NET Standard before 2.0
-            get => RuleTypeLast.Value;
+        // StackTrace missing from .NET Standard before 2.0
+        public static Type RuleType => RuleTypeLast.Value;
 #else
+        public static Type RuleType {
             get {
                 StackTrace st = new StackTrace();
                 for (int i = 1; i < st.FrameCount; i++) {
@@ -72,10 +72,10 @@ namespace MonoMod.InlineRT {
                 }
                 return null;
             }
+    }
 #endif
-        }
 
-        public static void Register(MonoModder self) {
+    public static void Register(MonoModder self) {
             WeakReference weak = new WeakReference(self);
 #if NETSTANDARD1_X
             ModderLast.Value = weak;
