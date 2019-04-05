@@ -21,9 +21,9 @@ namespace MonoMod.Utils {
 
         public bool UseDefault =
 #if NETSTANDARD
-            true;
-#else
             false;
+#else
+            true;
 #endif
 
         public MMReflectionImporter(ModuleDefinition module) {
