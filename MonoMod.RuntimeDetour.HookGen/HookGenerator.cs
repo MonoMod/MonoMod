@@ -124,7 +124,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             t_ILManipulator = OutputModule.ImportReference(
                 UseLegacyHookIL ? module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.ILManipulator") :
-                module_RuntimeDetour.GetType("MonoMod.Utils.MMIL/Manipulator")
+                module_Utils.GetType("MonoMod.Utils.MMIL/Manipulator")
             );
 
             m_Object_ctor = OutputModule.ImportReference(modder.FindType("System.Object").Resolve().FindMethod("System.Void .ctor()"));

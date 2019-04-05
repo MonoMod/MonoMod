@@ -13,7 +13,6 @@ using System.IO;
 using System.Security;
 
 namespace MonoMod.Utils {
-    // This is a modified version of Cecil 0.10 ~ 0.11's DefaultReflectionModifier.
     public sealed class MMReflectionImporter : IReflectionImporter {
 
         private readonly ModuleDefinition Module;
