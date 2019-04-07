@@ -94,7 +94,7 @@ namespace MonoMod.Utils {
 
             _GenerateEmit(dm, il);
 
-            return dm;
+            return (DynamicMethod) _Postbuild(dm);
         }
 
 #if !NETSTANDARD
@@ -112,7 +112,7 @@ namespace MonoMod.Utils {
                     System.IO.File.Delete(path);
                 ((AssemblyBuilder) typeBuilder.Assembly).Save(name);
             }
-            return type.GetMethod(method.Name);
+            return _Postbuild(type.GetMethod(method.Name));
         }
 
         public MethodBuilder GenerateMethodBuilder(TypeBuilder typeBuilder) {

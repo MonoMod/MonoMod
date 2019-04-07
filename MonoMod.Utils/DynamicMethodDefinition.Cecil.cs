@@ -185,7 +185,7 @@ namespace MonoMod.Utils {
                 };
 #endif
 
-                return asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false).GetMethod(clone.Name);
+                return _Postbuild(asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false).GetMethod(clone.Name));
 
             } finally {
                 if (moduleIsPrivate)
