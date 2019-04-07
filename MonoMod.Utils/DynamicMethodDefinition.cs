@@ -23,6 +23,7 @@ namespace MonoMod.Utils {
         }
 
         private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
+        private static bool _PreferCecil;
 
         private static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
 #if !NETSTANDARD1_X
@@ -87,6 +88,15 @@ namespace MonoMod.Utils {
         private bool _DynModuleIsPrivate;
 
         internal DynamicMethodDefinition() {
+            // If SRE has been stubbed out, prefer Cecil.
+            _PreferCecil =
+                // Mono
+                typeof(DynamicMethod).GetField("il_info", BindingFlags.NonPublic | BindingFlags.Instance) == null &&
+                // .NET
+                typeof(ILGenerator).GetTypeInfo().Assembly
+                .GetType("System.Reflection.Emit.DynamicILGenerator")?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance) == null &&
+                true;
+
             string type = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
             if (!string.IsNullOrEmpty(type)) {
                 try {
@@ -95,6 +105,7 @@ namespace MonoMod.Utils {
                 } catch {
                 }
             }
+
             Debug = Environment.GetEnvironmentVariable("MONOMOD_DMD_DEBUG") == "1";
         }
 
@@ -202,14 +213,17 @@ namespace MonoMod.Utils {
                     return GenerateViaCecil(context as TypeDefinition);
 
                 default:
-#if NETSTANDARD
-                    // TODO: Automatically fall back to GenerateViaCecil
-                    return GenerateViaDynamicMethod();
-#else
+                    if (_PreferCecil)
+                        return GenerateViaCecil(context as TypeDefinition);
+
                     if (Debug)
+#if NETSTANDARD
+                        return GenerateViaCecil(context as TypeDefinition);
+#else
                         return GenerateViaMethodBuilder(context as TypeBuilder);
-                    return GenerateViaDynamicMethod();
 #endif
+
+                    return GenerateViaDynamicMethod();
             }
         }
 

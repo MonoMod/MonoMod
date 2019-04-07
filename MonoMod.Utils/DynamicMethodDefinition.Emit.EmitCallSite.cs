@@ -82,7 +82,7 @@ namespace MonoMod.Utils {
             }
 #if !NETSTANDARD
             DynamicILInfo _info = null;
-            if (Type.GetType("Mono.Runtime") != null) {
+            if (_IsMono) {
                 // GetDynamicILInfo throws "invalid signature" in .NET - let's hope for the best for mono...
                 _info = dm.GetDynamicILInfo();
             } else {
