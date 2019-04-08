@@ -275,6 +275,9 @@ namespace MonoMod.Utils {
         }
 
         private static unsafe MethodInfo _Postbuild(MethodInfo mi) {
+            if (mi == null)
+                return null;
+
 #if NETSTANDARD1_X
 
             // nop
