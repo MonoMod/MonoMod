@@ -20,6 +20,9 @@ namespace MonoMod.Utils {
 
         static DynamicMethodDefinition() {
             _InitReflEmit();
+            _InitCopier();
+
+            PreferRuntimeILCopy = Environment.GetEnvironmentVariable("MONOMOD_DMD_COPY") == "1";
         }
 
         private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
@@ -41,15 +44,15 @@ namespace MonoMod.Utils {
         private Func<AssemblyName, ModuleDefinition> _ModuleGen;
         private ModuleDefinition _Module {
             get {
-                if (Method == null)
+                if (_DynModuleDefinition != null)
                     return _DynModuleDefinition;
                 if (_Modules.TryGetValue(Method.Module, out ModuleDefinition module))
                     return module;
                 return null;
             }
             set {
-                if (Method == null)
-                    throw new InvalidOperationException();
+                if (_DynModuleDefinition != null)
+                    return;
                 lock (_Modules) {
                     _Modules[Method.Module] = value;
                 }
@@ -57,14 +60,14 @@ namespace MonoMod.Utils {
         }
         private int _ModuleRef {
             get {
-                if (Method == null)
+                if (_DynModuleDefinition != null)
                     return 0;
                 if (_ModuleRefs.TryGetValue(Method.Module, out int refs))
                     return refs;
                 return 0;
             }
             set {
-                if (Method == null)
+                if (_DynModuleDefinition != null)
                     return;
                 lock (_ModuleRefs) {
                     _ModuleRefs[Method.Module] = value;
@@ -75,12 +78,13 @@ namespace MonoMod.Utils {
         public MethodBase Method { get; private set; }
         private MethodDefinition _Definition;
         public MethodDefinition Definition =>
-            Method == null ? _Definition : (
+            _DynModuleDefinition != null ? _Definition : (
                 _Definition ??
                 (_Definition = (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve()?.Clone()) ??
                 throw new InvalidOperationException("Method definition not found")
             );
 
+        public static bool PreferRuntimeILCopy;
         public GeneratorType Generator = GeneratorType.Auto;
         public bool Debug = false;
 
@@ -119,6 +123,14 @@ namespace MonoMod.Utils {
             : this() {
             Method = null;
 
+            _CreateDynModule(name, returnType, parameterTypes);
+        }
+
+        public ILProcessor GetILProcessor() {
+            return Definition.Body.GetILProcessor();
+        }
+
+        private ModuleDefinition _CreateDynModule(string name, Type returnType, Type[] parameterTypes) {
             ModuleDefinition module = _DynModuleDefinition = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
                 Kind = ModuleKind.Dll,
                 AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, new DefaultAssemblyResolver()),
@@ -141,10 +153,8 @@ namespace MonoMod.Utils {
             foreach (Type paramType in parameterTypes)
                 def.Parameters.Add(new ParameterDefinition(module.ImportReference(paramType)));
             type.Methods.Add(def);
-        }
 
-        public ILProcessor GetILProcessor() {
-            return Definition.Body.GetILProcessor();
+            return module;
         }
 
         public void Reload(Func<AssemblyName, ModuleDefinition> moduleGen = null, bool forceModule = false) {
@@ -158,6 +168,7 @@ namespace MonoMod.Utils {
 
             try {
                 _Definition = null;
+
                 ModuleDefinition module = (moduleGen ?? _ModuleGen)?.Invoke(Method.Module.Assembly.GetName());
                 lock (_ModuleRefs) {
                     if (module == null) {
@@ -168,13 +179,36 @@ namespace MonoMod.Utils {
                             _Module?.Dispose();
 #endif
                             _Module = null;
+                            _DynModuleDefinition = null;
                         }
-                        ReaderParameters rp = new ReaderParameters();
-                        if (_ModuleGen != null) {
-                            rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
-                            rp.ReflectionImporterProvider = new ReflectionCecilImporterProvider(rp.ReflectionImporterProvider);
+
+                        string location = Method.DeclaringType.GetTypeInfo().Assembly.GetLocation();
+                        if (!string.IsNullOrEmpty(location)) {
+                            ReaderParameters rp = new ReaderParameters();
+                            if (_ModuleGen != null) {
+                                rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
+                                rp.ReflectionImporterProvider = new ReflectionCecilImporterProvider(rp.ReflectionImporterProvider);
+                            }
+                            module = moduleTmp = ModuleDefinition.ReadModule(location, rp);
+
+                        } else {
+                            Type[] argTypes;
+                            ParameterInfo[] args = Method.GetParameters();
+                            int offs = 0;
+                            if (!Method.IsStatic) {
+                                offs++;
+                                argTypes = new Type[args.Length + 1];
+                                argTypes[0] = Method.GetThisParamType();
+                            } else {
+                                argTypes = new Type[args.Length];
+                            }
+                            for (int i = 0; i < args.Length; i++)
+                                argTypes[i + offs] = args[i].ParameterType;
+                            module = _CreateDynModule(Method.Name, (Method as MethodInfo)?.ReturnType, argTypes);
+
+                            _CopyMethodToDefinition();
                         }
-                        module = moduleTmp = ModuleDefinition.ReadModule(Method.DeclaringType.GetTypeInfo().Assembly.GetLocation(), rp);
+
                     }
                     _Module = module;
                     _ModuleRef++;
@@ -228,7 +262,7 @@ namespace MonoMod.Utils {
         }
 
         public void Dispose() {
-            if (Method == null && !_DynModuleIsPrivate)
+            if (_DynModuleDefinition != null && !_DynModuleIsPrivate)
                 return;
             lock (_ModuleRefs) {
                 if (_Module != null && (--_ModuleRef) == 0) {
