@@ -765,7 +765,7 @@ namespace MonoMod {
                     return type;
 
                 // Type isn't coming from a mod module - import the original.
-                if (!Mods.Contains(type.Module))
+                if (type.Module != null && !Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
                 // Type **refrence** is coming from a mod module - resolve it just to be safe.
