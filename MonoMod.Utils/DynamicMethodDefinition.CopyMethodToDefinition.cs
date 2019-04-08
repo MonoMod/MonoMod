@@ -106,15 +106,15 @@ namespace MonoMod.Utils {
             }
 
             void ReadOperand(BinaryReader reader, Instruction instr) {
-                int index;
+                int index, offs, length;
                 switch (instr.OpCode.OperandType) {
                     case OperandType.InlineNone:
                         instr.Operand = null;
                         break;
 
                     case OperandType.InlineSwitch:
-                        int length = reader.ReadInt32();
-                        int offs = (int) reader.BaseStream.Position + (4 * length);
+                        length = reader.ReadInt32();
+                        offs = (int) reader.BaseStream.Position + (4 * length);
                         int[] targets = new int[length];
                         for (int i = 0; i < length; i++)
                             targets[i] = reader.ReadInt32() + offs;
@@ -122,11 +122,13 @@ namespace MonoMod.Utils {
                         break;
 
                     case OperandType.ShortInlineBrTarget:
-                        instr.Operand = (int) reader.BaseStream.Position + reader.ReadSByte();
+                        offs = reader.ReadSByte();
+                        instr.Operand = (int) reader.BaseStream.Position + offs;
                         break;
 
                     case OperandType.InlineBrTarget:
-                        instr.Operand = (int) reader.BaseStream.Position + reader.ReadInt32();
+                        offs = reader.ReadInt32();
+                        instr.Operand = (int) reader.BaseStream.Position + offs;
                         break;
 
                     case OperandType.ShortInlineI:
