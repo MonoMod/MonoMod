@@ -768,7 +768,7 @@ namespace MonoMod {
                 if (type.Module != null && !Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
-                // Type **refrence** is coming from a mod module - resolve it just to be safe.
+                // Type **reference** is coming from a mod module - resolve it just to be safe.
                 type = type.SafeResolve() ?? type;
                 TypeReference found = FindTypeDeep(type.GetPatchFullName());
 

@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Mono.Cecil.Cil;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -256,8 +256,8 @@ namespace MonoMod.Utils {
         public static Delegate CreateDelegate(this MethodBase method, Type delegateType, object target) {
             if (!typeof(Delegate).IsAssignableFrom(delegateType))
                 throw new ArgumentException("Type argument must be a delegate type!");
-            if (method is DynamicMethod)
-                return ((DynamicMethod) method).CreateDelegate(delegateType, target);
+            if (method is System.Reflection.Emit.DynamicMethod)
+                return ((System.Reflection.Emit.DynamicMethod) method).CreateDelegate(delegateType, target);
 
             // TODO: Check delegate Invoke parameters against method parameters.
 
@@ -281,18 +281,17 @@ namespace MonoMod.Utils {
             // Note: sizeof is more accurate for the "managed size" than Marshal.SizeOf (marshalled size)
             // It also returns a value for types of which the size cannot be determined otherwise.
 
-            DynamicMethod dm = new DynamicMethod(
+            DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"GetSize<{t.FullName}>",
-                typeof(int), Type.EmptyTypes,
-                true
+                typeof(int), Type.EmptyTypes
             );
 
-            ILGenerator il = dm.GetILGenerator();
-            il.Emit(OpCodes.Sizeof, t);
+            ILProcessor il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Sizeof, dmd.Definition.Module.ImportReference(t));
             il.Emit(OpCodes.Ret);
 
             lock (_GetManagedSizeCache) {
-                return _GetManagedSizeCache[t] = (dm.CreateDelegate(typeof(Func<int>)) as Func<int>)();
+                return _GetManagedSizeCache[t] = (dmd.Generate().CreateDelegate(typeof(Func<int>)) as Func<int>)();
             }
         }
 
@@ -304,21 +303,17 @@ namespace MonoMod.Utils {
             // Note: ldftn doesn't JIT the method on mono, keeping the class constructor untouched.
             // Its result thus doesn't always match MethodHandle.GetFunctionPointer().
 
-            DynamicMethod dm = new DynamicMethod(
+            DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"GetLdftnPointer<{m.GetFindableID(simple: true)}>",
-                typeof(int), Type.EmptyTypes,
-                true
+                typeof(int), Type.EmptyTypes
             );
 
-            ILGenerator il = dm.GetILGenerator();
-            if (m is ConstructorInfo)
-                il.Emit(OpCodes.Ldftn, (ConstructorInfo) m);
-            else
-                il.Emit(OpCodes.Ldftn, (MethodInfo) m);
+            ILProcessor il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldftn, dmd.Definition.Module.ImportReference(m));
             il.Emit(OpCodes.Ret);
 
             lock (_GetLdftnPointerCache) {
-                return (_GetLdftnPointerCache[m] = dm.CreateDelegate(typeof(Func<IntPtr>)) as Func<IntPtr>)();
+                return (_GetLdftnPointerCache[m] = dmd.Generate().CreateDelegate(typeof(Func<IntPtr>)) as Func<IntPtr>)();
             }
         }
 
