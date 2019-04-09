@@ -60,8 +60,8 @@ namespace MonoMod.Utils {
                 if (argIsByRef)
                     argType = argType.GetElementType();
                 bool argIsValueType = argType.GetTypeInfo().IsValueType;
-                if (argIsByRef || argIsValueType) {
-                    il.Emit(OpCodes.Box, args[i]);
+                if (argIsValueType) {
+                    il.Emit(OpCodes.Box, argType);
                 }
 
                 il.Emit(OpCodes.Stelem_Ref);
