@@ -96,13 +96,13 @@ namespace MonoMod.Utils {
                 bodyTo.ExceptionHandlers.Add(handler);
 
                 handler.TryStart = GetInstruction(clause.TryOffset, false);
-                handler.TryEnd = GetInstruction(clause.TryOffset + clause.TryLength - 1, false);
+                handler.TryEnd = GetInstruction(handler.TryStart.Offset + clause.TryLength - 1, false);
 
                 handler.HandlerStart = GetInstruction(clause.HandlerOffset, false);
                 handler.FilterStart = GetInstruction(clause.FilterOffset, false);
-                handler.HandlerEnd = GetInstruction(clause.HandlerOffset + clause.HandlerLength - 1, true);
+                handler.HandlerEnd = GetInstruction((handler.FilterStart ?? handler.HandlerStart).Offset + clause.HandlerLength - 1, true);
 
-                handler.CatchType = moduleTo.ImportReference(clause.CatchType);
+                handler.CatchType = clause.CatchType == null ? null : moduleTo.ImportReference(clause.CatchType);
             }
 
             void ReadOperand(BinaryReader reader, Instruction instr) {
