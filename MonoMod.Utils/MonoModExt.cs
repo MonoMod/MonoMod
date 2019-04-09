@@ -693,6 +693,11 @@ namespace MonoMod.Utils {
                 dict.Add(entry.Key, entry.Value);
         }
 
+        public static void InsertRange<T>(this Collection<T> list, int index, IEnumerable<T> other) {
+            foreach (T entry in other)
+                list.Insert(index++, entry);
+        }
+
         public static void PushRange<T>(this Stack<T> stack, IEnumerable<T> other) {
             foreach (T entry in other)
                 stack.Push(entry);
