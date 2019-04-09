@@ -189,13 +189,16 @@ namespace MonoMod.Utils {
                     case OperandType.ShortInlineVar:
                     case OperandType.InlineVar:
                         index = instr.OpCode.OperandType == OperandType.ShortInlineVar ? reader.ReadByte() : reader.ReadInt16();
-                        if (instr.OpCode.Name.Contains("loc")) {
-                            instr.Operand = bodyTo.Variables[index];
-                        } else {
-                            instr.Operand = def.Parameters[index];
-                        }
+                        instr.Operand = bodyTo.Variables[index];
                         break;
 
+                    case OperandType.InlineArg:
+                    case OperandType.ShortInlineArg:
+                        index = instr.OpCode.OperandType == OperandType.ShortInlineArg ? reader.ReadByte() : reader.ReadInt16();
+                        instr.Operand = def.Parameters[index];
+                        break;
+
+                    case OperandType.InlinePhi: // No opcode seems to use this
                     default:
                         throw new NotSupportedException($"Unsupported opcode ${instr.OpCode.Name}");
                 }
