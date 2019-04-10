@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections.ObjectModel;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 using MonoMod.Utils;
+using System.Text;
 
 namespace MonoMod.Cil {
     public class ILContext : IDisposable {
@@ -99,6 +100,32 @@ namespace MonoMod.Cil {
         public void Dispose() {
             OnDispose?.Invoke();
             OnDispose = null;
+        }
+
+        public override string ToString() {
+            StringBuilder builder = new StringBuilder();
+
+            builder.AppendLine($"// ILContext: {Method}");
+            foreach (Instruction instr in Instrs)
+                ToString(builder, instr);
+
+            return builder.ToString();
+        }
+
+        internal static StringBuilder ToString(StringBuilder builder, Instruction instr) {
+            if (instr == null)
+                return builder;
+
+            object operand = instr.Operand;
+            if (operand is ILLabel label)
+                instr.Operand = label.Target;
+            else if (operand is ILLabel[] labels)
+                instr.Operand = labels.Select(l => l.Target).ToArray();
+
+            builder.AppendLine(instr.ToString());
+
+            instr.Operand = operand;
+            return builder;
         }
 
     }

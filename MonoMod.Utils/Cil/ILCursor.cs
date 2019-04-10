@@ -9,6 +9,7 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 using MonoMod.Utils;
+using System.Text;
 
 namespace MonoMod.Cil {
     /// <summary>
@@ -167,6 +168,16 @@ namespace MonoMod.Cil {
         public bool IsBefore(Instruction instr) => Index <= Context.IndexOf(instr);
 
         public bool IsAfter(Instruction instr) => Index > Context.IndexOf(instr);
+
+        public override string ToString() {
+            StringBuilder builder = new StringBuilder();
+
+            builder.AppendLine($"// ILCursor: {Method}, {Index}");
+            ILContext.ToString(builder, Prev);
+            ILContext.ToString(builder, Next);
+
+            return builder.ToString();
+        }
 
         #region Movement functions
 
