@@ -53,8 +53,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public bool HookPrivate;
         public string HookExtName;
 
-        public bool UseLegacyHookIL;
-
         public ModuleDefinition module_RuntimeDetour;
         public ModuleDefinition module_Utils;
 
@@ -64,8 +62,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public TypeReference t_MethodBase;
         public TypeReference t_RuntimeMethodHandle;
         public TypeReference t_EditorBrowsableState;
-
-        public TypeDefinition td_HookExtensions;
 
         public MethodReference m_Object_ctor;
         public MethodReference m_ObsoleteAttribute_ctor;
@@ -78,8 +74,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public MethodReference m_Unmodify;
 
         public TypeReference t_ILManipulator;
-
-        public TypeDefinition td_HookExtensionsWrapper;
 
         public HookGenerator(MonoModder modder, string name) {
             Modder = modder;
@@ -99,11 +93,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 NamespaceIL = "IL";
             HookOrig = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_ORIG") == "1";
             HookPrivate = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_PRIVATE") == "1";
-            HookExtName = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_EXTENSIONS");
-            if (string.IsNullOrEmpty(HookExtName))
-                HookExtName = $"ːHookExtensionsː{NameVerifyRegex.Replace(modder.Module.Assembly.Name.Name, "_")}";
-
-            UseLegacyHookIL = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_OLDHOOKIL") == "1";
 
             modder.MapDependency(modder.Module, "MonoMod.RuntimeDetour");
             if (!modder.DependencyCache.TryGetValue("MonoMod.RuntimeDetour", out module_RuntimeDetour))
@@ -123,8 +112,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             TypeDefinition td_HookEndpointManager = module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpointManager");
 
             t_ILManipulator = OutputModule.ImportReference(
-                UseLegacyHookIL ? module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.ILManipulator") :
-                module_Utils.GetType("MonoMod.Utils.MMIL/Manipulator")
+                module_Utils.GetType("MonoMod.Cil.ILContext/Manipulator")
             );
 
             m_Object_ctor = OutputModule.ImportReference(modder.FindType("System.Object").Resolve().FindMethod("System.Void .ctor()"));

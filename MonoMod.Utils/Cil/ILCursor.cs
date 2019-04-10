@@ -8,8 +8,9 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
+using MonoMod.Utils;
 
-namespace MonoMod.Utils {
+namespace MonoMod.Cil {
     /// <summary>
     /// Specifies where a MMILCursor should be positioned in relation to the target of a search function
     /// </summary>
@@ -50,7 +51,7 @@ namespace MonoMod.Utils {
         Prev
     }
 
-    public class MMILCursor {
+    public class ILCursor {
 
         private static readonly List<object> References = new List<object>();
         private static readonly Dictionary<int, MethodInfo> DelegateInvokers = new Dictionary<int, MethodInfo>();
@@ -79,13 +80,13 @@ namespace MonoMod.Utils {
                 DelegateInvokers.Remove(id);
         }
 
-        private static readonly MethodInfo _GetReference = typeof(MMILCursor).GetMethod("GetReference");
+        private static readonly MethodInfo _GetReference = typeof(ILCursor).GetMethod("GetReference");
 
-        public MMIL Context { get; }
+        public ILContext Context { get; }
 
         // private state
         private Instruction _next;
-        private MMILLabel[] _afterLabels;
+        private ILLabel[] _afterLabels;
         private SearchTarget _searchTarget;
 
         /// <summary>
@@ -140,7 +141,7 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Enumerates all labels which point to the current instruction (<c>label.Target == Next</c>)
         /// </summary>
-        public IEnumerable<MMILLabel> IncomingLabels => Context.GetIncomingLabels(Next);
+        public IEnumerable<ILLabel> IncomingLabels => Context.GetIncomingLabels(Next);
 
         // Context convenience accessors
         public MethodDefinition Method => Context.Method;
@@ -149,19 +150,19 @@ namespace MonoMod.Utils {
         public ModuleDefinition Module => Context.Module;
         public InstrList Instrs => Context.Instrs;
 
-        public MMILCursor(MMIL context) {
+        public ILCursor(ILContext context) {
             Context = context;
         }
 
-        public MMILCursor(MMILCursor c) {
+        public ILCursor(ILCursor c) {
             Context = c.Context;
             _next = c._next;
             _searchTarget = c._searchTarget;
             _afterLabels = c._afterLabels;
         }
 
-        public MMILCursor Clone()
-            => new MMILCursor(this);
+        public ILCursor Clone()
+            => new ILCursor(this);
 
         public bool IsBefore(Instruction instr) => Index <= Context.IndexOf(instr);
 
@@ -176,7 +177,7 @@ namespace MonoMod.Utils {
         /// <param name="moveType">Where to move in relation to the target instruction and incoming labels (branches)</param>
         /// <param name="setTarget">Whether to set the `SearchTarget` and skip the target instruction with the next search function</param>
         /// <returns>this</returns>
-        public MMILCursor Goto(Instruction insn, MoveType moveType = MoveType.Before, bool setTarget = false) {
+        public ILCursor Goto(Instruction insn, MoveType moveType = MoveType.Before, bool setTarget = false) {
             if (moveType == MoveType.After)
                 _next = insn?.Next ?? Instrs[0];
             else
@@ -199,7 +200,7 @@ namespace MonoMod.Utils {
         /// Move the cursor after incoming labels (branches). If an instruction is emitted, all labels which currently point to Next, will point to the newly emitted instruction.
         /// </summary>
         /// <returns>this</returns>
-        public MMILCursor MoveAfterLabels() {
+        public ILCursor MoveAfterLabels() {
             _afterLabels = IncomingLabels.ToArray();
             return this;
         }
@@ -208,7 +209,7 @@ namespace MonoMod.Utils {
         /// Move the cursor before incoming labels (branches). This is the default behaviour. Emitted instructions will not cause labels to change targets.
         /// </summary>
         /// <returns>this</returns>
-        public MMILCursor MoveBeforeLabels() {
+        public ILCursor MoveBeforeLabels() {
             _afterLabels = null;
             return this;
         }
@@ -217,7 +218,7 @@ namespace MonoMod.Utils {
         /// Moves the cursor to a target index. Supports negative indexing. See <see cref="Goto(Instruction, MoveType, bool)"/>
         /// </summary>
         /// <returns>this</returns>
-        public MMILCursor Goto(int index, MoveType moveType = MoveType.Before, bool setTarget = false) {
+        public ILCursor Goto(int index, MoveType moveType = MoveType.Before, bool setTarget = false) {
             if (index < 0)
                 index += Instrs.Count;
 
@@ -228,7 +229,7 @@ namespace MonoMod.Utils {
         /// Overload for <c>Goto(label.Target)</c>. <paramref name="moveType"/> defaults to MoveType.AfterLabel
         /// </summary>
         /// <returns>this</returns>
-        public MMILCursor GotoLabel(MMILLabel label, MoveType moveType = MoveType.AfterLabel, bool setTarget = false) =>
+        public ILCursor GotoLabel(ILLabel label, MoveType moveType = MoveType.AfterLabel, bool setTarget = false) =>
         Goto(label.Target, moveType, setTarget);
 
         /// <summary>
@@ -236,7 +237,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public MMILCursor GotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+        public ILCursor GotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
             if (!TryGotoNext(moveType, predicates))
                 throw new KeyNotFoundException();
 
@@ -272,7 +273,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public MMILCursor GotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+        public ILCursor GotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
             if (!TryGotoPrev(moveType, predicates))
                 throw new KeyNotFoundException();
 
@@ -305,9 +306,9 @@ namespace MonoMod.Utils {
         }
 
         // manual overloads for params + default args
-        public MMILCursor GotoNext(params Func<Instruction, bool>[] predicates) => GotoNext(MoveType.Before, predicates);
+        public ILCursor GotoNext(params Func<Instruction, bool>[] predicates) => GotoNext(MoveType.Before, predicates);
         public bool TryGotoNext(params Func<Instruction, bool>[] predicates) => TryGotoNext(MoveType.Before, predicates);
-        public MMILCursor GotoPrev(params Func<Instruction, bool>[] predicates) => GotoPrev(MoveType.Before, predicates);
+        public ILCursor GotoPrev(params Func<Instruction, bool>[] predicates) => GotoPrev(MoveType.Before, predicates);
         public bool TryGotoPrev(params Func<Instruction, bool>[] predicates) => TryGotoPrev(MoveType.Before, predicates);
         #endregion
 
@@ -317,7 +318,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public void FindNext(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             if (!TryFindNext(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
@@ -327,9 +328,9 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <returns>True if a match was found</returns>
-        public bool TryFindNext(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            cursors = new MMILCursor[predicates.Length];
-            MMILCursor c = this;
+        public bool TryFindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new ILCursor[predicates.Length];
+            ILCursor c = this;
             for (int i = 0; i < predicates.Length; i++) {
                 c = c.Clone();
                 if (!c.TryGotoNext(predicates[i]))
@@ -345,7 +346,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public void FindPrev(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             if (!TryFindPrev(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
@@ -355,9 +356,9 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <returns>True if a match was found</returns>
-        public bool TryFindPrev(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
-            cursors = new MMILCursor[predicates.Length];
-            MMILCursor c = this;
+        public bool TryFindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            cursors = new ILCursor[predicates.Length];
+            ILCursor c = this;
             for (int i = predicates.Length - 1; i >= 0; i--) {
                 c = c.Clone();
                 if (!c.TryGotoPrev(predicates[i]))
@@ -375,9 +376,9 @@ namespace MonoMod.Utils {
         /// Sets the target of a label to the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
         /// <param name="label">The label to mark</param>
-        public void MarkLabel(MMILLabel label) {
+        public void MarkLabel(ILLabel label) {
             if (label == null)
-                label = new MMILLabel(Context);
+                label = new ILLabel(Context);
 
             label.Target = Next;
             if (_afterLabels != null) {
@@ -393,8 +394,8 @@ namespace MonoMod.Utils {
         /// Creates a new label targetting the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
         /// <returns>The newly created label</returns>
-        public MMILLabel MarkLabel() {
-            MMILLabel label = DefineLabel();
+        public ILLabel MarkLabel() {
+            ILLabel label = DefineLabel();
             MarkLabel(label);
             return label;
         }
@@ -403,9 +404,9 @@ namespace MonoMod.Utils {
         /// Create a new label for use with <see cref="MarkLabel"/>
         /// </summary>
         /// <returns>A new label with no target</returns>
-        public MMILLabel DefineLabel() => Context.DefineLabel();
+        public ILLabel DefineLabel() => Context.DefineLabel();
 
-        private MMILCursor _Insert(Instruction instr) {
+        private ILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
             _Retarget(instr);
             return this;
@@ -414,7 +415,7 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Removes the Next instruction
         /// </summary>
-        public MMILCursor Remove() {
+        public ILCursor Remove() {
             int index = Index;
             _Retarget(Next.Next);
             Instrs.RemoveAt(index);
@@ -424,7 +425,7 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Removes several instructions
         /// </summary>
-        public MMILCursor RemoveRange(int num) {
+        public ILCursor RemoveRange(int num) {
             int index = Index;
             _Retarget(Instrs[index+num]);
             while (num-- > 0) // TODO: currently requires O(n) removals, shifting the backing array each time
@@ -437,50 +438,50 @@ namespace MonoMod.Utils {
         /// </summary>
         private void _Retarget(Instruction next) {
             if (_afterLabels != null)
-                foreach (MMILLabel label in _afterLabels)
+                foreach (ILLabel label in _afterLabels)
                     label.Target = next;
             Goto(Next);
         }
 
-        public MMILCursor Emit(OpCode opcode, ParameterDefinition parameter)
+        public ILCursor Emit(OpCode opcode, ParameterDefinition parameter)
             => _Insert(IL.Create(opcode, parameter));
-        public MMILCursor Emit(OpCode opcode, VariableDefinition variable)
+        public ILCursor Emit(OpCode opcode, VariableDefinition variable)
             => _Insert(IL.Create(opcode, variable));
-        public MMILCursor Emit(OpCode opcode, Instruction[] targets)
+        public ILCursor Emit(OpCode opcode, Instruction[] targets)
             => _Insert(IL.Create(opcode, targets));
-        public MMILCursor Emit(OpCode opcode, Instruction target)
+        public ILCursor Emit(OpCode opcode, Instruction target)
             => _Insert(IL.Create(opcode, target));
-        public MMILCursor Emit(OpCode opcode, double value)
+        public ILCursor Emit(OpCode opcode, double value)
             => _Insert(IL.Create(opcode, value));
-        public MMILCursor Emit(OpCode opcode, float value)
+        public ILCursor Emit(OpCode opcode, float value)
             => _Insert(IL.Create(opcode, value));
-        public MMILCursor Emit(OpCode opcode, long value)
+        public ILCursor Emit(OpCode opcode, long value)
             => _Insert(IL.Create(opcode, value));
-        public MMILCursor Emit(OpCode opcode, sbyte value)
+        public ILCursor Emit(OpCode opcode, sbyte value)
             => _Insert(IL.Create(opcode, value));
-        public MMILCursor Emit(OpCode opcode, byte value)
+        public ILCursor Emit(OpCode opcode, byte value)
             => _Insert(IL.Create(opcode, value));
-        public MMILCursor Emit(OpCode opcode, string value)
+        public ILCursor Emit(OpCode opcode, string value)
             => _Insert(IL.Create(opcode, value));
-        public MMILCursor Emit(OpCode opcode, FieldReference field)
+        public ILCursor Emit(OpCode opcode, FieldReference field)
             => _Insert(IL.Create(opcode, field));
-        public MMILCursor Emit(OpCode opcode, CallSite site)
+        public ILCursor Emit(OpCode opcode, CallSite site)
             => _Insert(IL.Create(opcode, site));
-        public MMILCursor Emit(OpCode opcode, TypeReference type)
+        public ILCursor Emit(OpCode opcode, TypeReference type)
             => _Insert(IL.Create(opcode, type));
-        public MMILCursor Emit(OpCode opcode)
+        public ILCursor Emit(OpCode opcode)
             => _Insert(IL.Create(opcode));
-        public MMILCursor Emit(OpCode opcode, int value)
+        public ILCursor Emit(OpCode opcode, int value)
             => _Insert(IL.Create(opcode, value));
-        public MMILCursor Emit(OpCode opcode, MethodReference method)
+        public ILCursor Emit(OpCode opcode, MethodReference method)
             => _Insert(IL.Create(opcode, method));
-        public MMILCursor Emit(OpCode opcode, FieldInfo field)
+        public ILCursor Emit(OpCode opcode, FieldInfo field)
             => _Insert(IL.Create(opcode, field));
-        public MMILCursor Emit(OpCode opcode, MethodBase method)
+        public ILCursor Emit(OpCode opcode, MethodBase method)
             => _Insert(IL.Create(opcode, method));
-        public MMILCursor Emit(OpCode opcode, Type type)
+        public ILCursor Emit(OpCode opcode, Type type)
             => _Insert(IL.Create(opcode, type));
-        public MMILCursor Emit(OpCode opcode, object operand)
+        public ILCursor Emit(OpCode opcode, object operand)
             => _Insert(IL.Create(opcode, operand));
 
         #endregion

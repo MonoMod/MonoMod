@@ -9,14 +9,8 @@ using Mono.Cecil.Cil;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
 
-namespace MonoMod.RuntimeDetour.HookGen {
-    [Obsolete("Use MMIL.Manipulator from MonoMod.Utils instead.")]
-    public delegate void ILManipulator(HookIL il);
-    [Obsolete("Use MMILExt from MonoMod.Utils instead.")]
-    public static partial class HookExtensions {
-
-        // This delegate will be cloned into the wrapper inside of the generated assembly.
-        public delegate void ILManipulatorMini(MethodBody body, ILProcessor il);
+namespace MonoMod.Utils {
+    public static class ILExt {
 
         #region Misc Helpers
 
@@ -37,9 +31,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return false;
             return member.DeclaringType.FullName.Replace("+", "/") == type.FullName.Replace("+", "/") && member.Name == name;
         }
-
-        public static bool Is(this MemberReference member, MemberInfo other)
-            => MonoModExt.Is(member, other);
 
         #endregion
 

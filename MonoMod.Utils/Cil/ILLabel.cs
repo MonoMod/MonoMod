@@ -2,21 +2,21 @@
 using System.Linq;
 using Mono.Cecil.Cil;
 
-namespace MonoMod.Utils {
-    public sealed class MMILLabel {
+namespace MonoMod.Cil {
+    public sealed class ILLabel {
 
-        private readonly MMIL Context;
+        private readonly ILContext Context;
         public Instruction Target;
         
         public IEnumerable<Instruction> Branches
             => Context.Instrs.Where(i => i.Operand == this);
 
-        internal MMILLabel(MMIL context) {
+        internal ILLabel(ILContext context) {
             Context = context;
             Context._Labels.Add(this);
         }
 
-        internal MMILLabel(MMIL context, Instruction target)
+        internal ILLabel(ILContext context, Instruction target)
             : this(context) {
             Target = target;
         }

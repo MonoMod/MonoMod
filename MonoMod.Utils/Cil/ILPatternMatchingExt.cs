@@ -10,9 +10,10 @@ using System.ComponentModel;
 using Mono.Cecil.Cil;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
+using MonoMod.Cil;
 
-namespace MonoMod.Utils {
-    public static partial class MMILExt {
+namespace MonoMod.Cil {
+    public static class ILPatternMatchingExt {
 
         public static bool Match(this Instruction instr, OpCode opcode)
             => instr.OpCode == opcode;
@@ -448,143 +449,143 @@ namespace MonoMod.Utils {
 
         // Merged into MatchBr*
         /*
-        public static bool MatchBrS(this Instruction instr, MMILLabel value)
+        public static bool MatchBrS(this Instruction instr, ILLabel value)
             => instr.MatchBrS(out var v) && v == value;
-        public static bool MatchBrS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBrS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Br_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBrfalseS(this Instruction instr, MMILLabel value)
+        public static bool MatchBrfalseS(this Instruction instr, ILLabel value)
             => instr.MatchBrfalseS(out var v) && v == value;
-        public static bool MatchBrfalseS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBrfalseS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Brfalse_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBrtrueS(this Instruction instr, MMILLabel value)
+        public static bool MatchBrtrueS(this Instruction instr, ILLabel value)
             => instr.MatchBrtrueS(out var v) && v == value;
-        public static bool MatchBrtrueS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBrtrueS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Brtrue_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBeqS(this Instruction instr, MMILLabel value)
+        public static bool MatchBeqS(this Instruction instr, ILLabel value)
             => instr.MatchBeqS(out var v) && v == value;
-        public static bool MatchBeqS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBeqS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Beq_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgeS(this Instruction instr, MMILLabel value)
+        public static bool MatchBgeS(this Instruction instr, ILLabel value)
             => instr.MatchBgeS(out var v) && v == value;
-        public static bool MatchBgeS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBgeS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bge_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgtS(this Instruction instr, MMILLabel value)
+        public static bool MatchBgtS(this Instruction instr, ILLabel value)
             => instr.MatchBgtS(out var v) && v == value;
-        public static bool MatchBgtS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBgtS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bgt_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBleS(this Instruction instr, MMILLabel value)
+        public static bool MatchBleS(this Instruction instr, ILLabel value)
             => instr.MatchBleS(out var v) && v == value;
-        public static bool MatchBleS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBleS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Ble_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBltS(this Instruction instr, MMILLabel value)
+        public static bool MatchBltS(this Instruction instr, ILLabel value)
             => instr.MatchBltS(out var v) && v == value;
-        public static bool MatchBltS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBltS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Blt_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBneUnS(this Instruction instr, MMILLabel value)
+        public static bool MatchBneUnS(this Instruction instr, ILLabel value)
             => instr.MatchBneUnS(out var v) && v == value;
-        public static bool MatchBneUnS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBneUnS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bne_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgeUnS(this Instruction instr, MMILLabel value)
+        public static bool MatchBgeUnS(this Instruction instr, ILLabel value)
             => instr.MatchBgeUnS(out var v) && v == value;
-        public static bool MatchBgeUnS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBgeUnS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bge_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBgtUnS(this Instruction instr, MMILLabel value)
+        public static bool MatchBgtUnS(this Instruction instr, ILLabel value)
             => instr.MatchBgtUnS(out var v) && v == value;
-        public static bool MatchBgtUnS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBgtUnS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bgt_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBleUnS(this Instruction instr, MMILLabel value)
+        public static bool MatchBleUnS(this Instruction instr, ILLabel value)
             => instr.MatchBleUnS(out var v) && v == value;
-        public static bool MatchBleUnS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBleUnS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Ble_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.ShortInlineBrTarget
 
-        public static bool MatchBltUnS(this Instruction instr, MMILLabel value)
+        public static bool MatchBltUnS(this Instruction instr, ILLabel value)
             => instr.MatchBltUnS(out var v) && v == value;
-        public static bool MatchBltUnS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBltUnS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Blt_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
@@ -592,167 +593,167 @@ namespace MonoMod.Utils {
         } // OperandType.ShortInlineBrTarget
         */
 
-        public static bool MatchBr(this Instruction instr, MMILLabel value)
+        public static bool MatchBr(this Instruction instr, ILLabel value)
             => instr.MatchBr(out var v) && v == value;
-        public static bool MatchBr(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBr(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Br ||
                 instr.OpCode == OpCodes.Br_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBrfalse(this Instruction instr, MMILLabel value)
+        public static bool MatchBrfalse(this Instruction instr, ILLabel value)
             => instr.MatchBrfalse(out var v) && v == value;
-        public static bool MatchBrfalse(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBrfalse(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Brfalse ||
                 instr.OpCode == OpCodes.Brfalse_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBrtrue(this Instruction instr, MMILLabel value)
+        public static bool MatchBrtrue(this Instruction instr, ILLabel value)
             => instr.MatchBrtrue(out var v) && v == value;
-        public static bool MatchBrtrue(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBrtrue(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Brtrue ||
                 instr.OpCode == OpCodes.Brtrue_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBeq(this Instruction instr, MMILLabel value)
+        public static bool MatchBeq(this Instruction instr, ILLabel value)
             => instr.MatchBeq(out var v) && v == value;
-        public static bool MatchBeq(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBeq(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Beq ||
                 instr.OpCode == OpCodes.Beq_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBge(this Instruction instr, MMILLabel value)
+        public static bool MatchBge(this Instruction instr, ILLabel value)
             => instr.MatchBge(out var v) && v == value;
-        public static bool MatchBge(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBge(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bge ||
                 instr.OpCode == OpCodes.Bge_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBgt(this Instruction instr, MMILLabel value)
+        public static bool MatchBgt(this Instruction instr, ILLabel value)
             => instr.MatchBgt(out var v) && v == value;
-        public static bool MatchBgt(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBgt(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bgt ||
                 instr.OpCode == OpCodes.Bgt_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBle(this Instruction instr, MMILLabel value)
+        public static bool MatchBle(this Instruction instr, ILLabel value)
             => instr.MatchBle(out var v) && v == value;
-        public static bool MatchBle(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBle(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Ble ||
                 instr.OpCode == OpCodes.Ble_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBlt(this Instruction instr, MMILLabel value)
+        public static bool MatchBlt(this Instruction instr, ILLabel value)
             => instr.MatchBlt(out var v) && v == value;
-        public static bool MatchBlt(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBlt(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Blt ||
                 instr.OpCode == OpCodes.Blt_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBneUn(this Instruction instr, MMILLabel value)
+        public static bool MatchBneUn(this Instruction instr, ILLabel value)
             => instr.MatchBneUn(out var v) && v == value;
-        public static bool MatchBneUn(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBneUn(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bne_Un ||
                 instr.OpCode == OpCodes.Bne_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBgeUn(this Instruction instr, MMILLabel value)
+        public static bool MatchBgeUn(this Instruction instr, ILLabel value)
             => instr.MatchBgeUn(out var v) && v == value;
-        public static bool MatchBgeUn(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBgeUn(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bge_Un ||
                 instr.OpCode == OpCodes.Bge_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBgtUn(this Instruction instr, MMILLabel value)
+        public static bool MatchBgtUn(this Instruction instr, ILLabel value)
             => instr.MatchBgtUn(out var v) && v == value;
-        public static bool MatchBgtUn(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBgtUn(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Bgt_Un ||
                 instr.OpCode == OpCodes.Bgt_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBleUn(this Instruction instr, MMILLabel value)
+        public static bool MatchBleUn(this Instruction instr, ILLabel value)
             => instr.MatchBleUn(out var v) && v == value;
-        public static bool MatchBleUn(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBleUn(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Ble_Un ||
                 instr.OpCode == OpCodes.Ble_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchBltUn(this Instruction instr, MMILLabel value)
+        public static bool MatchBltUn(this Instruction instr, ILLabel value)
             => instr.MatchBltUn(out var v) && v == value;
-        public static bool MatchBltUn(this Instruction instr, out MMILLabel value) {
+        public static bool MatchBltUn(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Blt_Un ||
                 instr.OpCode == OpCodes.Blt_Un_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchSwitch(this Instruction instr, MMILLabel[] value)
+        public static bool MatchSwitch(this Instruction instr, ILLabel[] value)
             => instr.MatchSwitch(out var v) && v.SequenceEqual(value);
-        public static bool MatchSwitch(this Instruction instr, out MMILLabel[] value) {
+        public static bool MatchSwitch(this Instruction instr, out ILLabel[] value) {
             if (instr.OpCode == OpCodes.Switch) {
-                value = (MMILLabel[]) instr.Operand;
+                value = (ILLabel[]) instr.Operand;
                 return true;
             }
             value = default;
@@ -1839,22 +1840,22 @@ namespace MonoMod.Utils {
             return false;
         } // OperandType.InlineNone
 
-        public static bool MatchLeave(this Instruction instr, MMILLabel value)
+        public static bool MatchLeave(this Instruction instr, ILLabel value)
             => instr.MatchLeave(out var v) && v == value;
-        public static bool MatchLeave(this Instruction instr, out MMILLabel value) {
+        public static bool MatchLeave(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Leave) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;
             return false;
         } // OperandType.InlineBrTarget
 
-        public static bool MatchLeaveS(this Instruction instr, MMILLabel value)
+        public static bool MatchLeaveS(this Instruction instr, ILLabel value)
             => instr.MatchLeaveS(out var v) && v == value;
-        public static bool MatchLeaveS(this Instruction instr, out MMILLabel value) {
+        public static bool MatchLeaveS(this Instruction instr, out ILLabel value) {
             if (instr.OpCode == OpCodes.Leave_S) {
-                value = (MMILLabel) instr.Operand;
+                value = (ILLabel) instr.Operand;
                 return true;
             }
             value = default;

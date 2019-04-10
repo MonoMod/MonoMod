@@ -4,6 +4,7 @@ using System.Reflection.Emit;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
+using MonoMod.Cil;
 
 namespace MonoMod.RuntimeDetour.HookGen {
     internal sealed class HookEndpoint {
@@ -143,38 +144,20 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         private bool InvokeManipulator(MethodDefinition def, Delegate cb) {
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                if (cb.TryCastDelegate(out ILManipulator manip)) {
-                    // The callback is an ILManipulator, or compatible to it out of the box.
-                    HookIL il = new HookIL(def);
-                    il.Invoke(manip);
-                    if (il._ReadOnly)
-                        return false;
+            if (cb.TryCastDelegate(out ILContext.Manipulator manip)) {
+                // The callback is an ILManipulator, or compatible to it out of the box.
+                ILContext il = new ILContext(def);
+                il.Invoke(manip);
+                if (il.IsReadOnly)
+                    return false;
 
-                    ActiveMMILs.Add(il);
-                    return true;
-                }
-#pragma warning restore CS0618 // Type or member is obsolete
-            }
-
-            {
-                if (cb.TryCastDelegate(out MMIL.Manipulator manip)) {
-                    // The callback is an ILManipulator, or compatible to it out of the box.
-                    MMIL il = new MMIL(def);
-                    il.Invoke(manip);
-                    if (il.IsReadOnly)
-                        return false;
-
-                    ActiveMMILs.Add(il);
-                    return true;
-                }
+                ActiveMMILs.Add(il);
+                return true;
             }
 
             // Check if the method accepts a HookIL from another assembly.
             ParameterInfo[] args = cb.GetMethodInfo().GetParameters();
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (args.Length == 1 && (args[0].ParameterType.FullName == typeof(HookIL).FullName || args[0].ParameterType.FullName == typeof(MMIL).FullName)) {
+            if (args.Length == 1 && args[0].ParameterType.FullName == typeof(ILContext).FullName) {
                 // Instantiate it. We should rather pass a "proxy" of some sorts, but eh.
                 object hookIL = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
                 Type t_hookIL = hookIL.GetType();
@@ -186,7 +169,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     ActiveMMILs.Add(disp);
                 return true;
             }
-#pragma warning restore CS0618 // Type or member is obsolete
 
             // Fallback - body and IL processor.
             cb.DynamicInvoke(def.Body, def.Body.GetILProcessor());
