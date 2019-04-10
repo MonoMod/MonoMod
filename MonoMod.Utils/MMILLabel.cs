@@ -8,8 +8,8 @@ namespace MonoMod.Utils {
         private readonly MMIL Context;
         public Instruction Target;
         
-        public IEnumerable<MMILCursor> Branches
-            => Context.Instrs.Where(i => i.Operand == this).Select(i => new MMILCursor(Context, i));
+        public IEnumerable<Instruction> Branches
+            => Context.Instrs.Where(i => i.Operand == this);
 
         internal MMILLabel(MMIL context) {
             Context = context;

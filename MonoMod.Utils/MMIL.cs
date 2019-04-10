@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Reflection;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -12,7 +11,7 @@ namespace MonoMod.Utils {
     public class MMIL : IDisposable {
         public delegate void Manipulator(MMIL il);
 
-        public MethodDefinition Method { get; private set; }
+        public MethodDefinition Method { get; }
         public ILProcessor IL { get; private set; }
 
         public MethodBody Body => Method.Body;
@@ -24,7 +23,7 @@ namespace MonoMod.Utils {
 
         public event Action OnDispose;
 
-        public bool IsReadOnly { get; internal set; } = false;
+        public bool IsReadOnly => IL == null;
 
         public MMIL(MethodDefinition method) {
             Method = method;
@@ -51,15 +50,23 @@ namespace MonoMod.Utils {
             Method.ConvertShortLongOps();
         }
 
-        public bool MakeReadOnly()
-            => IsReadOnly = true;
+        /// <summary>
+        /// Removes the ILProcessor and signifies to the the rest of MonoMod that the method contents have not been altered.
+        /// If the method is altered prior to MakeReadOnly, or after by using the MethodBody directly the results are undefined.
+        /// </summary>
+        public void MakeReadOnly() {
+            IL = null;
+        }
 
-        public MMILCursor At(int index)
-            => At(index == -1 || index == Instrs.Count ? null : Instrs[index]);
-        public MMILCursor At(MMILLabel label)
-            => At(label.Target);
-        public MMILCursor At(Instruction instr)
-            => new MMILCursor(this, instr);
+        [Obsolete("Use new MMILCursor(il).Goto(index)")]
+        public MMILCursor At(int index) => 
+            new MMILCursor(this).Goto(index);
+        [Obsolete("Use new MMILCursor(il).GotoLabel(index)")]
+        public MMILCursor At(MMILLabel label) => 
+            new MMILCursor(this).GotoLabel(label);
+        [Obsolete("Use new MMILCursor(il).GotoLabel(index)")]
+        public MMILCursor At(Instruction instr) => 
+            new MMILCursor(this).Goto(instr);
 
         public FieldReference Import(FieldInfo field)
             => Module.ImportReference(field);
@@ -72,6 +79,11 @@ namespace MonoMod.Utils {
             => new MMILLabel(this);
         public MMILLabel DefineLabel(Instruction target)
             => new MMILLabel(this, target);
+
+        public int IndexOf(Instruction instr) {
+            int index = Instrs.IndexOf(instr);
+            return index == -1 ? Instrs.Count : index;
+        }
 
         public void ReplaceOperands(object from, object to) {
             foreach (Instruction instr in Instrs)
