@@ -1293,8 +1293,7 @@ namespace MonoMod {
 
 
         public virtual void PatchField(TypeDefinition targetType, FieldDefinition field) {
-            TypeDefinition type = field.DeclaringType;
-            string typeName = type.GetPatchFullName();
+            string typeName = field.DeclaringType.GetPatchFullName();
 
             if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals(Module))
                 return;
@@ -1307,9 +1306,9 @@ namespace MonoMod {
                     return;
             }
 
-            FieldDefinition existingField = type.FindField(field.Name);
+            FieldDefinition existingField = targetType.FindField(field.Name);
 
-            if (type.HasMMAttribute("Ignore") && existingField != null) {
+            if (field.HasMMAttribute("Ignore") && existingField != null) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
                 foreach (CustomAttribute attrib in field.CustomAttributes)
                     if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
@@ -1317,17 +1316,17 @@ namespace MonoMod {
                 return;
             }
 
-            if (targetType.HasField(field))
-                return;
+            if (existingField == null) {
+                existingField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
+                existingField.AddAttribute(GetMonoModAddedCtor());
+                existingField.InitialValue = field.InitialValue;
+                if (field.HasConstant)
+                    existingField.Constant = field.Constant;
+                targetType.Fields.Add(existingField);
+            }
 
-            FieldDefinition newField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
-            newField.AddAttribute(GetMonoModAddedCtor());
-            newField.InitialValue = field.InitialValue;
-            if (field.HasConstant)
-                newField.Constant = field.Constant;
             foreach (CustomAttribute attrib in field.CustomAttributes)
-                newField.CustomAttributes.Add(attrib.Clone());
-            targetType.Fields.Add(newField);
+                existingField.CustomAttributes.Add(attrib.Clone());
         }
 
         public virtual MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {

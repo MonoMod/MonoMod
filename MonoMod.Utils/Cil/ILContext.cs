@@ -61,13 +61,13 @@ namespace MonoMod.Cil {
             IL = null;
         }
 
-        [Obsolete("Use new MMILCursor(il).Goto(index)")]
+        [Obsolete("Use new ILCursor(il).Goto(index)")]
         public ILCursor At(int index) => 
             new ILCursor(this).Goto(index);
-        [Obsolete("Use new MMILCursor(il).GotoLabel(index)")]
+        [Obsolete("Use new ILCursor(il).GotoLabel(index)")]
         public ILCursor At(ILLabel label) => 
             new ILCursor(this).GotoLabel(label);
-        [Obsolete("Use new MMILCursor(il).GotoLabel(index)")]
+        [Obsolete("Use new ILCursor(il).GotoLabel(index)")]
         public ILCursor At(Instruction instr) => 
             new ILCursor(this).Goto(instr);
 
