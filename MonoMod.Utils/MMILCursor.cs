@@ -329,11 +329,13 @@ namespace MonoMod.Utils {
         /// <returns>True if a match was found</returns>
         public bool TryFindNext(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             cursors = new MMILCursor[predicates.Length];
+            MMILCursor c = this;
             for (int i = 0; i < predicates.Length; i++) {
-                cursors[i] = (i == 0 ? this : cursors[i-1]).Clone();
-
-                if (!cursors[i].TryGotoNext(predicates[i]))
+                c = c.Clone();
+                if (!c.TryGotoNext(predicates[i]))
                     return false;
+
+                cursors[i] = c;
             }
             return true;
         }
@@ -355,11 +357,13 @@ namespace MonoMod.Utils {
         /// <returns>True if a match was found</returns>
         public bool TryFindPrev(out MMILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             cursors = new MMILCursor[predicates.Length];
+            MMILCursor c = this;
             for (int i = predicates.Length - 1; i >= 0; i--) {
-                cursors[i] = (i+1 == predicates.Length ? this : cursors[i + 1]).Clone();
-
-                if (!cursors[i].TryGotoPrev(predicates[i]))
+                c = c.Clone();
+                if (!c.TryGotoPrev(predicates[i]))
                     return false;
+
+                cursors[i] = c;
             }
             return true;
         }
