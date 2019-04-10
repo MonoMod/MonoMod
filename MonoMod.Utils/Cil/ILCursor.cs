@@ -434,6 +434,7 @@ namespace MonoMod.Cil {
             int index = Index;
             _Retarget(Next.Next);
             Instrs.RemoveAt(index);
+            Index = index;
             return this;
         }
 
@@ -445,6 +446,7 @@ namespace MonoMod.Cil {
             _Retarget(Instrs[index+num]);
             while (num-- > 0) // TODO: currently requires O(n) removals, shifting the backing array each time
                 Instrs.RemoveAt(index);
+            Index = index;
             return this;
         }
 
