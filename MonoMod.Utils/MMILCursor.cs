@@ -117,14 +117,9 @@ namespace MonoMod.Utils {
         /// Setter accepts negative indexing by adding <c>Instrs.Count</c> to the operand
         /// </summary>
         public int Index {
-            get => IndexOf(Next);
+            get => Context.IndexOf(Next);
             set => Goto(value);
         }
-
-        /// <summary>
-        /// Enumerates all labels which point to the current instruction (<c>label.Target == Next</c>)
-        /// </summary>
-        public IEnumerable<MMILLabel> GetIncomingLabels() => Context.GetIncomingLabels(Next);
 
         /// <summary>
         /// Indicates whether the position of a MMILCursor is the result of a search function and 
@@ -141,6 +136,11 @@ namespace MonoMod.Utils {
                 _searchTarget = value;
             }
         }
+
+        /// <summary>
+        /// Enumerates all labels which point to the current instruction (<c>label.Target == Next</c>)
+        /// </summary>
+        public IEnumerable<MMILLabel> IncomingLabels => Context.GetIncomingLabels(Next);
 
         // Context convenience accessors
         public MethodDefinition Method => Context.Method;
@@ -163,14 +163,9 @@ namespace MonoMod.Utils {
         public MMILCursor Clone()
             => new MMILCursor(this);
 
-        public int IndexOf(Instruction instr) {
-            int index = Instrs.IndexOf(instr);
-            return index == -1 ? Instrs.Count : index;
-        }
+        public bool IsBefore(Instruction instr) => Index <= Context.IndexOf(instr);
 
-        public bool IsBefore(Instruction instr) => Index <= IndexOf(instr);
-
-        public bool IsAfter(Instruction instr) => Index > IndexOf(instr);
+        public bool IsAfter(Instruction instr) => Index > Context.IndexOf(instr);
 
         #region Movement functions
 
@@ -205,7 +200,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <returns>this</returns>
         public MMILCursor MoveAfterLabels() {
-            _afterLabels = GetIncomingLabels().ToArray();
+            _afterLabels = IncomingLabels.ToArray();
             return this;
         }
 
@@ -375,7 +370,11 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Sets the target of a label to the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
+        /// <param name="label">The label to mark</param>
         public void MarkLabel(MMILLabel label) {
+            if (label == null)
+                label = new MMILLabel(Context);
+
             label.Target = Next;
             if (_afterLabels != null) {
                 Array.Resize(ref _afterLabels, _afterLabels.Length+1);
@@ -385,6 +384,22 @@ namespace MonoMod.Utils {
                 _afterLabels = new[] { label };
             }
         }
+
+        /// <summary>
+        /// Creates a new label targetting the current position (<c>label.Target = Next</c>) and moves after it.
+        /// </summary>
+        /// <returns>The newly created label</returns>
+        public MMILLabel MarkLabel() {
+            MMILLabel label = DefineLabel();
+            MarkLabel(label);
+            return label;
+        }
+
+        /// <summary>
+        /// Create a new label for use with <see cref="MarkLabel"/>
+        /// </summary>
+        /// <returns>A new label with no target</returns>
+        public MMILLabel DefineLabel() => Context.DefineLabel();
 
         private MMILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
@@ -418,7 +433,7 @@ namespace MonoMod.Utils {
         /// </summary>
         private void _Retarget(Instruction next) {
             if (_afterLabels != null)
-                foreach (var label in _afterLabels)
+                foreach (MMILLabel label in _afterLabels)
                     label.Target = next;
             Goto(Next);
         }

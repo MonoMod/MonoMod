@@ -80,6 +80,11 @@ namespace MonoMod.Utils {
         public MMILLabel DefineLabel(Instruction target)
             => new MMILLabel(this, target);
 
+        public int IndexOf(Instruction instr) {
+            int index = Instrs.IndexOf(instr);
+            return index == -1 ? Instrs.Count : index;
+        }
+
         public void ReplaceOperands(object from, object to) {
             foreach (Instruction instr in Instrs)
                 if (instr.Operand?.Equals(from) ?? from == null)
