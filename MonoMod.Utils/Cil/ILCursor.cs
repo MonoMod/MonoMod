@@ -102,7 +102,7 @@ namespace MonoMod.Cil {
         /// The instruction immediately preceding the cursor position or null if the cursor is at the start of the instruction list.
         /// </summary>
         public Instruction Prev {
-            get => Next?.Previous ?? Instrs[Instrs.Count - 1];
+            get => Next == null ? Instrs[Instrs.Count - 1] : Next.Previous;
             set => Goto(value, MoveType.After);
         }
 
@@ -153,6 +153,7 @@ namespace MonoMod.Cil {
 
         public ILCursor(ILContext context) {
             Context = context;
+            Index = 0;
         }
 
         public ILCursor(ILCursor c) {
@@ -172,7 +173,7 @@ namespace MonoMod.Cil {
         public override string ToString() {
             StringBuilder builder = new StringBuilder();
 
-            builder.AppendLine($"// ILCursor: {Method}, {Index}");
+            builder.AppendLine($"// ILCursor: {Method}, {Index}, {SearchTarget}");
             ILContext.ToString(builder, Prev);
             ILContext.ToString(builder, Next);
 
