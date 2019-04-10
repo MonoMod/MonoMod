@@ -321,9 +321,11 @@ namespace MonoMod.Cil {
         public bool TryGotoNext(params Func<Instruction, bool>[] predicates) => TryGotoNext(MoveType.Before, predicates);
         public ILCursor GotoPrev(params Func<Instruction, bool>[] predicates) => GotoPrev(MoveType.Before, predicates);
         public bool TryGotoPrev(params Func<Instruction, bool>[] predicates) => TryGotoPrev(MoveType.Before, predicates);
+
         #endregion
 
         #region Movement functions
+
         /// <summary>
         /// Find the next occurences of a series of instructions matching the given set of predicates with gaps permitted.
         /// </summary>
@@ -383,6 +385,7 @@ namespace MonoMod.Cil {
         #endregion
 
         #region IL Manipulation
+
         /// <summary>
         /// Sets the target of a label to the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
@@ -494,6 +497,9 @@ namespace MonoMod.Cil {
             => _Insert(IL.Create(opcode, type));
         public ILCursor Emit(OpCode opcode, object operand)
             => _Insert(IL.Create(opcode, operand));
+
+        public ILCursor Emit<T>(OpCode opcode, string memberName)
+            => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).FirstOrDefault()));
 
         #endregion
 

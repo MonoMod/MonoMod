@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Reflection;
-using System.Linq.Expressions;
 using MonoMod.Utils;
-using System.Collections.Generic;
 using Mono.Cecil;
-using System.ComponentModel;
 using Mono.Cecil.Cil;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
-using System.Linq;
+
+#if NETSTANDARD
+using TypeOrTypeInfo = System.Reflection.TypeInfo;
+using static System.Reflection.IntrospectionExtensions;
+using static System.Reflection.TypeExtensions;
+#else
+using TypeOrTypeInfo = System.Type;
+#endif
 
 namespace MonoMod.Utils {
     public static class ILExt {
@@ -52,6 +55,20 @@ namespace MonoMod.Utils {
             => il.Body.Method.Module.ImportReference(method);
         public static TypeReference Import(this ILProcessor il, Type type)
             => il.Body.Method.Module.ImportReference(type);
+        public static MemberReference Import(this ILProcessor il, MemberInfo member) {
+            if (member == null)
+                throw new ArgumentNullException(nameof(member));
+            switch (member) {
+                case FieldInfo info:
+                    return il.Import(info);
+                case MethodBase info:
+                    return il.Import(info);
+                case TypeOrTypeInfo info:
+                    return il.Import(info.AsType());
+                default:
+                    throw new NotSupportedException("Unsupported member type " + member.GetType().FullName);
+            }
+        }
 
         public static Instruction Create(this ILProcessor il, OpCode opcode, FieldInfo field)
             => il.Create(opcode, il.Import(field));
@@ -68,6 +85,20 @@ namespace MonoMod.Utils {
             instr.Operand = operand;
             return instr;
         }
+        public static Instruction Create(this ILProcessor il, OpCode opcode, MemberInfo member) {
+            if (member == null)
+                throw new ArgumentNullException(nameof(member));
+            switch (member) {
+                case FieldInfo info:
+                    return il.Create(opcode, info);
+                case MethodBase info:
+                    return il.Create(opcode, info);
+                case TypeOrTypeInfo info:
+                    return il.Create(opcode, info.AsType());
+                default:
+                    throw new NotSupportedException("Unsupported member type " + member.GetType().FullName);
+            }
+        }
 
         public static void Emit(this ILProcessor il, OpCode opcode, FieldInfo field)
             => il.Emit(opcode, il.Import(field));
@@ -75,6 +106,23 @@ namespace MonoMod.Utils {
             => il.Emit(opcode, il.Import(method));
         public static void Emit(this ILProcessor il, OpCode opcode, Type type)
             => il.Emit(opcode, il.Import(type));
+        public static void Emit(this ILProcessor il, OpCode opcode, MemberInfo member) {
+            if (member == null)
+                throw new ArgumentNullException(nameof(member));
+            switch (member) {
+                case FieldInfo info:
+                    il.Emit(opcode, info);
+                    break;
+                case MethodBase info:
+                    il.Emit(opcode, info);
+                    break;
+                case TypeOrTypeInfo info:
+                    il.Emit(opcode, info.AsType());
+                    break;
+                default:
+                    throw new NotSupportedException("Unsupported member type " + member.GetType().FullName);
+            }
+        }
         public static void Emit(this ILProcessor il, OpCode opcode, object operand)
             => il.Append(il.Create(opcode, operand));
 
