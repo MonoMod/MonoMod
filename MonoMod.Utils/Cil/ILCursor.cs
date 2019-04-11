@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Reflection;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System.Linq;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
-using OpCodes = Mono.Cecil.Cil.OpCodes;
-using OpCode = Mono.Cecil.Cil.OpCode;
-using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 using MonoMod.Utils;
-using System.Text;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
+using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 
 namespace MonoMod.Cil {
     /// <summary>
@@ -53,36 +51,6 @@ namespace MonoMod.Cil {
     }
 
     public class ILCursor {
-
-        private static readonly List<object> References = new List<object>();
-        private static readonly Dictionary<int, MethodInfo> DelegateInvokers = new Dictionary<int, MethodInfo>();
-        public static object GetReference(int id) => References[id];
-        public static void SetReference(int id, object obj) => References[id] = obj;
-
-        private readonly List<int> ManagedReferenceIDs = new List<int>();
-        public int AddReference(object obj) {
-            if (ManagedReferenceIDs.Count == 0) {
-                Context.OnDispose += () => {
-                    foreach (int id in ManagedReferenceIDs)
-                        FreeReference(id);
-                };
-            }
-            ManagedReferenceIDs.Add(References.Count);
-
-            lock (References) {
-                References.Add(obj);
-                return References.Count - 1;
-            }
-        }
-
-        public static void FreeReference(int id) {
-            References[id] = null;
-            if (DelegateInvokers.ContainsKey(id))
-                DelegateInvokers.Remove(id);
-        }
-
-        private static readonly MethodInfo _GetReference = typeof(ILCursor).GetMethod("GetReference");
-
         public ILContext Context { get; }
 
         // private state
@@ -503,96 +471,5 @@ namespace MonoMod.Cil {
             => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).FirstOrDefault()));
 
         #endregion
-
-        #region Reference-oriented Emit Helpers
-
-        /// <summary>
-        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use MMILCursor.FreeReference(id).
-        /// </summary>
-        public int EmitReference<T>(T obj) {
-            Type t = typeof(T);
-            int id = AddReference(obj);
-            Emit(OpCodes.Ldc_I4, id);
-            Emit(OpCodes.Call, _GetReference);
-            if (t.GetTypeInfo().IsValueType)
-                Emit(OpCodes.Unbox_Any, t);
-            return id;
-        }
-
-        /// <summary>
-        /// Emit a reference to an arbitrary object. Note that the references "leak" unless you use MMILCursor.FreeReference(id).
-        /// </summary>
-        public void EmitGetReference<T>(int id) {
-            Type t = typeof(T);
-            Emit(OpCodes.Ldc_I4, id);
-            Emit(OpCodes.Call, _GetReference);
-            if (t.GetTypeInfo().IsValueType)
-                Emit(OpCodes.Unbox_Any, t);
-        }
-
-        /// <summary>
-        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use MMILCursor.FreeReference(id).
-        /// </summary>
-        public int EmitDelegate(Action cb)
-            => EmitDelegateInvoke(EmitDelegatePush(cb));
-
-        /// <summary>
-        /// Emit an inline delegate reference and invocation. Note that the delegates "leak" unless you use MMILCursor.FreeReference(id).
-        /// </summary>
-        public int EmitDelegate<T>(T cb) where T : Delegate {
-            Instruction instrPrev = Next;
-            int id = EmitDelegatePush(cb);
-
-            // Create a DynamicMethod that shifts the stack around a little.
-
-            Type delType = References[id].GetType();
-            MethodInfo delInvokeOrig = delType.GetMethod("Invoke");
-
-            ParameterInfo[] args = delInvokeOrig.GetParameters();
-            Type[] argTypes = new Type[args.Length + 1];
-            for (int i = 0; i < args.Length; i++)
-                argTypes[i] = args[i].ParameterType;
-            argTypes[args.Length] = delType;
-
-            using (DynamicMethodDefinition dmdInvoke = new DynamicMethodDefinition(
-                $"MMIL:Invoke<{delInvokeOrig.DeclaringType.FullName}>?{cb.GetHashCode()}",
-                delInvokeOrig.ReturnType, argTypes
-            )) {
-                ILProcessor il = dmdInvoke.GetILProcessor();
-
-                // Load the delegate reference first.
-                il.Emit(OpCodes.Ldarg, args.Length);
-                // Load any other arguments on top of that.
-                for (int i = 0; i < args.Length; i++)
-                    il.Emit(OpCodes.Ldarg, i);
-                // Invoke the delegate and return its result.
-                il.Emit(OpCodes.Callvirt, delInvokeOrig);
-                il.Emit(OpCodes.Ret);
-
-                // Invoke the DynamicMethodDefinition.
-                MethodInfo miInvoke = dmdInvoke.Generate();
-                DelegateInvokers[id] = miInvoke;
-                Emit(OpCodes.Call, miInvoke);
-            }
-
-            return id;
-        }
-
-        /// <summary>
-        /// Emit an inline delegate reference. Note that the delegates "leak" unless you use MMILCursor.FreeReference(id).
-        /// </summary>
-        public int EmitDelegatePush<T>(T cb) where T : Delegate
-            => EmitReference(cb);
-
-        /// <summary>
-        /// Emit a delegate invocation.
-        /// </summary>
-        public int EmitDelegateInvoke(int id) {
-            Emit(OpCodes.Callvirt, References[id].GetType().GetMethod("Invoke"));
-            return id;
-        }
-
-        #endregion
-
     }
 }
