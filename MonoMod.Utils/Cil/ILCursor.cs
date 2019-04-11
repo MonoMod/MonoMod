@@ -506,47 +506,19 @@ namespace MonoMod.Cil {
                 return -1;
             }
 
+            int id = EmitReference(cb);
+
             MethodInfo delInvoke = typeof(T).GetMethod("Invoke");
-            ParameterInfo[] args = delInvoke.GetParameters();
-            if (args.Length == 0) { // optimisation for no-arg delegates
-                int id = EmitReference(cb);
-                Emit(OpCodes.Callvirt, typeof(T).GetMethod("Invoke"));
-                return id;
+            MethodInfo invoker = Context.ReferenceBag.GetDelegateInvoker<T>();
+            if (invoker != null) {
+                // Prevent the invoker from getting GC'd early, f.e. when it's a DynamicMethod.
+                AddReference(invoker);
+                Emit(OpCodes.Call, invoker);
+            } else {
+                Emit(OpCodes.Callvirt, delInvoke);
             }
 
-            // TODO: attempt a stack-walk to insert the invoke target at the bottom of the stack
-
-            // As virtual calls require the target (delegate) to be on the bottom of the stack, generate a static method which stores the stack in params
-            Type[] argTypes = new Type[args.Length];
-            for (int i = 0; i < args.Length; i++)
-                argTypes[i] = args[i].ParameterType;
-
-            using (DynamicMethodDefinition dmdInvoke = new DynamicMethodDefinition(
-                $"MMIL:Invoke<{delInvoke.DeclaringType.FullName}>?{cb.GetHashCode()}",
-                delInvoke.ReturnType, argTypes
-            )) {
-                ILProcessor il = dmdInvoke.GetILProcessor();
-
-                // Load the delegate reference first.
-                int id = AddReference(cb);
-                il.Emit(OpCodes.Ldc_I4, id);
-                il.Emit(OpCodes.Call, Context.ReferenceBag.GetGetter<T>());
-
-                // Load the rest of the args
-                for (int i = 0; i < args.Length; i++)
-                    il.Emit(OpCodes.Ldarg, i);
-
-                // Invoke the delegate and return its result.
-                il.Emit(OpCodes.Callvirt, delInvoke);
-                il.Emit(OpCodes.Ret);
-
-                // Invoke the DynamicMethodDefinition.
-                MethodInfo miInvoke = dmdInvoke.Generate();
-                AddReference(miInvoke); // Pin the method so it doesn't get garbage collected until the context does
-                Emit(OpCodes.Call, miInvoke);
-
-                return id;
-            }
+            return id;
         }
 
         #endregion
