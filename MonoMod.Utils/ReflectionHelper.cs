@@ -138,7 +138,7 @@ namespace MonoMod.Utils {
                         return ResolveReflectionCache[mref] = type.MakePointerType().GetTypeInfo();
 
                     if (ts.IsArray)
-                        return ResolveReflectionCache[mref] = type.MakeArrayType((ts as ArrayType).Dimensions.Count).GetTypeInfo();
+                        return ResolveReflectionCache[mref] = (ts as ArrayType).IsVector ? type.MakeArrayType().GetTypeInfo() : type.MakeArrayType((ts as ArrayType).Dimensions.Count).GetTypeInfo();
 
                     if (ts.IsGenericInstance)
                         return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray()).GetTypeInfo();
