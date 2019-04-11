@@ -102,11 +102,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
             try {
                 if (!InvokeManipulator(DMD.Definition, callback))
                     return;
-            } catch when (_ManipulatorFailure()) {
+
+                UpdateILManipulated(true);
+            } catch when (_ManipulatorFailure(true)) {
                 throw;
             }
-
-            UpdateILManipulated(true);
 
             ILList.Add(callback);
 
@@ -131,15 +131,35 @@ namespace MonoMod.RuntimeDetour.HookGen {
             try {
                 foreach (Delegate cb in ILList)
                     InvokeManipulator(def, cb);
-            } catch when(_ManipulatorFailure()) {
+
+                UpdateILManipulated();
+            } catch when (_ManipulatorFailure(false)) {
                 throw;
             }
-
-            UpdateILManipulated();
         }
 
-        private bool _ManipulatorFailure() {
+        private bool _ManipulatorFailure(bool reapply) {
             DMD.Reload();
+
+
+
+            if (reapply) {
+                try {
+                    if (reapply) {
+                        MethodDefinition def = DMD.Definition;
+                        foreach (Delegate cb in ILList)
+                            InvokeManipulator(def, cb);
+                    }
+
+                    UpdateILManipulated();
+                } catch when (_ManipulatorFailure(false)) {
+                    throw;
+                }
+
+            } else {
+                UpdateILManipulated();
+            }
+
             return false;
         }
 
