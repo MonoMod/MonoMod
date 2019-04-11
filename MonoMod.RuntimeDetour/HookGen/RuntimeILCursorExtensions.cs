@@ -44,24 +44,25 @@ namespace MonoMod.Cil {
         /// Emit the IL to invoke a delegate as if it were a method. Stack behaviour matches OpCodes.Call
         /// </summary>
         public static void EmitDelegate<T>(this ILCursor cursor, T cb) where T : Delegate {
-            cursor.EmitReference(cb);
-            if (cb.TryCastDelegate(out Action _)) {
-                // optimisation for no-arg delegates
+            if (cb.GetInvocationList().Length == 1 && cb.Target == null) { // optimisation for static delegates
+                cursor.Emit(OpCodes.Call, cb.GetMethodInfo());
+                return;
+            }
+
+            MethodInfo delInvoke = typeof(T).GetMethod("Invoke");
+            ParameterInfo[] args = delInvoke.GetParameters();
+            if (args.Length == 0) { // optimisation for no-arg delegates
+                cursor.EmitReference(cb);
                 cursor.Emit(OpCodes.Callvirt, typeof(T).GetMethod("Invoke"));
                 return;
             }
 
-            // As the delegate reference is now on the top of the stack, and Invoke requires the delegate to be on the bottom,
-            // Emit a dynamic method which stores the stack into params and then Invokes the delegate
+            // TODO: attempt a stack-walk to insert the invoke target at the bottom of the stack
 
-            Type delType = typeof(T);
-            MethodInfo delInvoke = delType.GetMethod("Invoke");
-
-            ParameterInfo[] args = delInvoke.GetParameters();
-            Type[] argTypes = new Type[args.Length + 1];
+            // As virtual calls require the target (delegate) to be on the bottom of the stack, generate a static method which stores the stack in params
+            Type[] argTypes = new Type[args.Length];
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
-            argTypes[args.Length] = delType;
 
             using (DynamicMethodDefinition dmdInvoke = new DynamicMethodDefinition(
                 $"MMIL:Invoke<{delInvoke.DeclaringType.FullName}>?{cb.GetHashCode()}",
@@ -70,10 +71,13 @@ namespace MonoMod.Cil {
                 ILProcessor il = dmdInvoke.GetILProcessor();
 
                 // Load the delegate reference first.
-                il.Emit(OpCodes.Ldarg, args.Length);
-                // Load any other arguments on top of that.
+                il.Emit(OpCodes.Ldc_I4, cursor.AddReference(cb));
+                il.Emit(OpCodes.Call, ReferenceStore<T>.GetMethod);
+
+                // Load the rest of the args
                 for (int i = 0; i < args.Length; i++)
                     il.Emit(OpCodes.Ldarg, i);
+
                 // Invoke the delegate and return its result.
                 il.Emit(OpCodes.Callvirt, delInvoke);
                 il.Emit(OpCodes.Ret);
