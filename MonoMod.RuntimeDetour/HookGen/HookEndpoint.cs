@@ -141,8 +141,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private bool _ManipulatorFailure(bool reapply) {
             DMD.Reload();
 
-
-
             if (reapply) {
                 try {
                     if (reapply) {
@@ -167,6 +165,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (cb.TryCastDelegate(out ILContext.Manipulator manip)) {
                 // The callback is an ILManipulator, or compatible to it out of the box.
                 ILContext il = new ILContext(def);
+                il.ReferenceBag = RuntimeILReferenceBag.Instance;
                 il.Invoke(manip);
                 if (il.IsReadOnly)
                     return false;
@@ -181,6 +180,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 // Instantiate it. We should rather pass a "proxy" of some sorts, but eh.
                 object hookIL = args[0].ParameterType.GetConstructors()[0].Invoke(new object[] { def });
                 Type t_hookIL = hookIL.GetType();
+                // TODO: Set the reference bag.
                 t_hookIL.GetMethod("Invoke").Invoke(hookIL, new object[] { cb });
                 if (t_hookIL.GetField("_ReadOnly", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(hookIL) as bool? ?? false)
                     return false;

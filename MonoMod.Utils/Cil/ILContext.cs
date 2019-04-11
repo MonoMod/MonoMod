@@ -24,9 +24,10 @@ namespace MonoMod.Cil {
         internal List<ILLabel> _Labels = new List<ILLabel>();
         public ReadOnlyCollection<ILLabel> Labels => _Labels.AsReadOnly();
 
-        public event Action OnDispose;
-
         public bool IsReadOnly => IL == null;
+
+        public event Action OnDispose;
+        public IILReferenceBag ReferenceBag = NopILReferenceBag.Instance;
 
         public ILContext(MethodDefinition method) {
             Method = method;
@@ -96,6 +97,19 @@ namespace MonoMod.Cil {
 
         public IEnumerable<ILLabel> GetIncomingLabels(Instruction instr)
             => _Labels.Where(l => l.Target == instr);
+
+        /// <summary>
+        /// Bind an arbitary object to an ILContext for static retrieval.
+        /// </summary>
+        /// <typeparam name="T">The type of the object. The combination of typeparam and id provides the unique static reference.</typeparam>
+        /// <param name="t">The object to store.</param>
+        /// <returns>The id to use in combination with the typeparam for object retrieval.</returns>
+        public int AddReference<T>(T t) {
+            IILReferenceBag bag = ReferenceBag;
+            int id = bag.Store(t);
+            OnDispose += () => bag.Clear<T>(id);
+            return id;
+        }
 
         public void Dispose() {
             OnDispose?.Invoke();

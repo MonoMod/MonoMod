@@ -8,6 +8,7 @@ using Mono.Cecil.Cil;
 using MonoMod.Utils;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
+using System.ComponentModel;
 
 namespace MonoMod.Cil {
     /// <summary>
@@ -471,5 +472,84 @@ namespace MonoMod.Cil {
             => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).FirstOrDefault()));
 
         #endregion
+
+        #region Reference-oriented Emit Helpers
+
+        /// <summary>
+        /// Bind an arbitary object to an ILContext for static retrieval. See <see cref="ILContext.AddReference{T}(T)"/>
+        /// </summary>
+        public int AddReference<T>(T t) => Context.AddReference(t);
+
+        /// <summary>
+        /// Emits the IL to retrieve a stored reference of type <typeparamref name="T"/> with the given <paramref name="id"/> and place it on the stack.
+        /// </summary>
+        public void EmitGetReference<T>(int id) {
+            Emit(OpCodes.Ldc_I4, id);
+            Emit(OpCodes.Call, Context.ReferenceBag.GetGetter<T>());
+        }
+
+        /// <summary>
+        /// Store an object in the reference store, and emit the IL to retrieve it and place it on the stack.
+        /// </summary>
+        public int EmitReference<T>(T t) {
+            int id = AddReference(t);
+            EmitGetReference<T>(id);
+            return id;
+        }
+
+        /// <summary>
+        /// Emit the IL to invoke a delegate as if it were a method. Stack behaviour matches OpCodes.Call
+        /// </summary>
+        public int EmitDelegate<T>(T cb) where T : Delegate {
+            if (cb.GetInvocationList().Length == 1 && cb.Target == null) { // optimisation for static delegates
+                Emit(OpCodes.Call, cb.GetMethodInfo());
+                return -1;
+            }
+
+            MethodInfo delInvoke = typeof(T).GetMethod("Invoke");
+            ParameterInfo[] args = delInvoke.GetParameters();
+            if (args.Length == 0) { // optimisation for no-arg delegates
+                int id = EmitReference(cb);
+                Emit(OpCodes.Callvirt, typeof(T).GetMethod("Invoke"));
+                return id;
+            }
+
+            // TODO: attempt a stack-walk to insert the invoke target at the bottom of the stack
+
+            // As virtual calls require the target (delegate) to be on the bottom of the stack, generate a static method which stores the stack in params
+            Type[] argTypes = new Type[args.Length];
+            for (int i = 0; i < args.Length; i++)
+                argTypes[i] = args[i].ParameterType;
+
+            using (DynamicMethodDefinition dmdInvoke = new DynamicMethodDefinition(
+                $"MMIL:Invoke<{delInvoke.DeclaringType.FullName}>?{cb.GetHashCode()}",
+                delInvoke.ReturnType, argTypes
+            )) {
+                ILProcessor il = dmdInvoke.GetILProcessor();
+
+                // Load the delegate reference first.
+                int id = AddReference(cb);
+                il.Emit(OpCodes.Ldc_I4, id);
+                il.Emit(OpCodes.Call, Context.ReferenceBag.GetGetter<T>());
+
+                // Load the rest of the args
+                for (int i = 0; i < args.Length; i++)
+                    il.Emit(OpCodes.Ldarg, i);
+
+                // Invoke the delegate and return its result.
+                il.Emit(OpCodes.Callvirt, delInvoke);
+                il.Emit(OpCodes.Ret);
+
+                // Invoke the DynamicMethodDefinition.
+                MethodInfo miInvoke = dmdInvoke.Generate();
+                AddReference(miInvoke); // Pin the method so it doesn't get garbage collected until the context does
+                Emit(OpCodes.Call, miInvoke);
+
+                return id;
+            }
+        }
+
+        #endregion
+
     }
 }
