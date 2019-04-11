@@ -423,7 +423,7 @@ namespace MonoMod.Cil {
 
         private ILCursor _Insert(Instruction instr) {
             Instrs.Insert(Index, instr);
-            _Retarget(instr);
+            _Retarget(instr, MoveType.After);
             return this;
         }
 
@@ -432,9 +432,8 @@ namespace MonoMod.Cil {
         /// </summary>
         public ILCursor Remove() {
             int index = Index;
-            _Retarget(Next.Next);
+            _Retarget(Next.Next, MoveType.Before);
             Instrs.RemoveAt(index);
-            Index = index;
             return this;
         }
 
@@ -443,21 +442,20 @@ namespace MonoMod.Cil {
         /// </summary>
         public ILCursor RemoveRange(int num) {
             int index = Index;
-            _Retarget(Instrs[index+num]);
+            _Retarget(Instrs[index+num], MoveType.Before);
             while (num-- > 0) // TODO: currently requires O(n) removals, shifting the backing array each time
                 Instrs.RemoveAt(index);
-            Index = index;
             return this;
         }
 
         /// <summary>
         /// Moves the cursor and all labels the cursor is positioned after to a target instruction
         /// </summary>
-        private void _Retarget(Instruction next) {
+        private void _Retarget(Instruction next, MoveType moveType) {
             if (_afterLabels != null)
                 foreach (ILLabel label in _afterLabels)
                     label.Target = next;
-            Goto(Next);
+            Goto(next, moveType);
         }
 
         public ILCursor Emit(OpCode opcode, ParameterDefinition parameter)
