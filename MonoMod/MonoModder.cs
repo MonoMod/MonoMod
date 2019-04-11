@@ -750,10 +750,13 @@ namespace MonoMod {
         public virtual IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context) {
             try {
                 // TODO: Handle mtp being deleted but being hooked in a better, Strict-compatible way.
-                return PostRelinker(
+                IMetadataTokenProvider relinked = PostRelinker(
                     MainRelinker(mtp, context) ?? mtp,
                     context
                 );
+                if (relinked == null)
+                    throw new RelinkTargetNotFoundException(mtp, context);
+                return relinked;
             } catch (Exception e) {
                 throw new RelinkFailedException(null, e, mtp, context);
             }
@@ -1679,13 +1682,6 @@ namespace MonoMod {
         }
 
         public virtual void PatchRefsInMethod(MethodDefinition method) {
-            if ((!AllowedSpecialName(method) && !method.IsConstructor) ||
-                method.HasMMAttribute("Ignore") ||
-                SkipList.Contains(method.GetFindableID()) ||
-                !method.MatchingConditionals(Module))
-                // Ignore ignored methods
-                return;
-
             LogVerbose($"[VERBOSE] [PatchRefsInMethod] Patching refs in {method}");
 
             // Don't foreach when modifying the collection
