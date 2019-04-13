@@ -148,7 +148,7 @@ namespace MonoMod.Utils {
             MethodDefinition def = _Definition = new MethodDefinition(
                 name,
                 Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
-                module.ImportReference(returnType)
+                returnType != null ? module.ImportReference(returnType) : module.TypeSystem.Void
             );
             foreach (Type paramType in parameterTypes)
                 def.Parameters.Add(new ParameterDefinition(module.ImportReference(paramType)));
