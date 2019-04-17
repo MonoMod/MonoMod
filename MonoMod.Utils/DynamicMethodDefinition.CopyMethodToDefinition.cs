@@ -100,7 +100,7 @@ namespace MonoMod.Utils {
 
                 handler.HandlerStart = GetInstruction(clause.HandlerOffset, false);
                 handler.FilterStart = GetInstruction(clause.FilterOffset, false);
-                handler.HandlerEnd = GetInstruction((handler.FilterStart ?? handler.HandlerStart).Offset + clause.HandlerLength, true);
+                handler.HandlerEnd = GetInstruction((handler.FilterStart ?? handler.HandlerStart).Offset + clause.HandlerLength + 1, true);
 
                 handler.CatchType = clause.CatchType == null ? null : moduleTo.ImportReference(clause.CatchType);
             }
