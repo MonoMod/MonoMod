@@ -1013,7 +1013,7 @@ namespace MonoMod.Utils {
             return null;
         }
         public static System.Reflection.MethodInfo FindMethodDeep(this Type type, string findableID, bool simple = true) {
-            return type.FindMethod(findableID, simple) ?? type.BaseType?.FindMethodDeep(findableID, simple);
+            return type.FindMethod(findableID, simple) ?? type.GetTypeInfo().BaseType?.FindMethodDeep(findableID, simple);
         }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
             foreach (PropertyDefinition prop in type.Properties)
