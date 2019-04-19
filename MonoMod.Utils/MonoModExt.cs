@@ -984,6 +984,9 @@ namespace MonoMod.Utils {
 
             return null;
         }
+        public static MethodDefinition FindMethodDeep(this TypeDefinition type, string findableID, bool simple = true) {
+            return type.FindMethod(findableID, simple) ?? type.BaseType?.Resolve()?.FindMethodDeep(findableID, simple);
+        }
         public static System.Reflection.MethodInfo FindMethod(this Type type, string findableID, bool simple = true) {
             System.Reflection.MethodInfo[] methods = type.GetMethods(
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static |
@@ -1009,21 +1012,33 @@ namespace MonoMod.Utils {
 
             return null;
         }
+        public static System.Reflection.MethodInfo FindMethodDeep(this Type type, string findableID, bool simple = true) {
+            return type.FindMethod(findableID, simple) ?? type.GetTypeInfo().BaseType?.FindMethodDeep(findableID, simple);
+        }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
             foreach (PropertyDefinition prop in type.Properties)
                 if (prop.Name == name) return prop;
             return null;
+        }
+        public static PropertyDefinition FindPropertyDeep(this TypeDefinition type, string name) {
+            return type.FindProperty(name) ?? type.BaseType?.Resolve()?.FindPropertyDeep(name);
         }
         public static FieldDefinition FindField(this TypeDefinition type, string name) {
             foreach (FieldDefinition field in type.Fields)
                 if (field.Name == name) return field;
             return null;
         }
+        public static FieldDefinition FindFieldDeep(this TypeDefinition type, string name) {
+            return type.FindField(name) ?? type.BaseType?.Resolve()?.FindFieldDeep(name);
+        }
 
         public static EventDefinition FindEvent(this TypeDefinition type, string name) {
             foreach (EventDefinition eventDef in type.Events)
                 if (eventDef.Name == name) return eventDef;
             return null;
+        }
+        public static EventDefinition FindEventDeep(this TypeDefinition type, string name) {
+            return type.FindEvent(name) ?? type.BaseType?.Resolve()?.FindEventDeep(name);
         }
 
         public static bool HasMethod(this TypeDefinition type, MethodDefinition method)
