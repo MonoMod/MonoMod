@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;

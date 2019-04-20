@@ -17,9 +17,6 @@ namespace MonoMod.Utils {
         private static readonly MethodInfo m_Console_WriteLine = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(object) });
         private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
 
-        [Obsolete("Use CreateFastDelegate instead.")]
-        public static FastReflectionDelegate CreateDelegate(MethodBase method, bool directBoxValueAccess = true)
-            => CreateFastDelegate(method, directBoxValueAccess);
         public static FastReflectionDelegate CreateFastDelegate(this MethodBase method, bool directBoxValueAccess = true) {
             DynamicMethod dynam = new DynamicMethod($"FastReflection<{method.GetFindableID(simple: true)}>", typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).GetTypeInfo().Module, true);
             ILGenerator il = dynam.GetILGenerator();
@@ -127,9 +124,6 @@ namespace MonoMod.Utils {
             return (T) (object) dynam.CreateDelegate(t);
         }
 
-        [Obsolete("Use GetFastDelegate instead.")]
-        public static FastReflectionDelegate GetDelegate(MethodInfo method, bool directBoxValueAccess = true)
-            => GetFastDelegate(method, directBoxValueAccess);
         public static FastReflectionDelegate GetFastDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
             if (_MethodCache.TryGetValue(method, out FastReflectionDelegate dmd))
                 return dmd;

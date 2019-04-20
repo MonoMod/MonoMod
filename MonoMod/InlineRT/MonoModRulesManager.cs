@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -22,9 +21,8 @@ namespace MonoMod.InlineRT {
             .GetType("System.Runtime.Loader.AssemblyLoadContext");
         private static readonly object _AssemblyLoadContext_Default =
             t_AssemblyLoadContext.GetProperty("Default").GetValue(null);
-        private static readonly FastReflectionDelegate _AssemblyLoadContext_LoadFromStream =
-            t_AssemblyLoadContext.GetMethod("LoadFromStream", new Type[] { typeof(Stream) })
-            .CreateFastDelegate();
+        private static readonly MethodInfo _AssemblyLoadContext_LoadFromStream =
+            t_AssemblyLoadContext.GetMethod("LoadFromStream", new Type[] { typeof(Stream) });
 
         internal static readonly ThreadLocal<WeakReference> ModderLast = new ThreadLocal<WeakReference>();
         internal static readonly ThreadLocal<Type> RuleTypeLast = new ThreadLocal<Type>();
@@ -177,7 +175,7 @@ namespace MonoMod.InlineRT {
                 asmStream.Seek(0, SeekOrigin.Begin);
 #if NETSTANDARD1_X
                 // System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
-                asm = (Assembly) _AssemblyLoadContext_LoadFromStream(_AssemblyLoadContext_Default, asmStream);
+                asm = (Assembly) _AssemblyLoadContext_LoadFromStream.Invoke(_AssemblyLoadContext_Default, new object[] { asmStream });
 #else
                 asm = Assembly.Load(asmStream.GetBuffer());
 #endif

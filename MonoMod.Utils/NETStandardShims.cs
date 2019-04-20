@@ -13,6 +13,8 @@ using MonoMod.Utils;
  */
 static class NETStandardShims {
 
+    private static readonly object[] _NoArgs = new object[0];
+
 #if !NETSTANDARD
 
     public static Type GetTypeInfo(this Type t)
@@ -53,29 +55,25 @@ static class NETStandardShims {
     public static MethodImplAttributes GetMethodImplementationFlags(this MethodBase m)
         => m.MethodImplementationFlags;
 
-    private static readonly FastReflectionDelegate _Assembly_get_Location =
-        typeof(Assembly).GetMethod("get_Location", BindingFlags.Public | BindingFlags.Instance)
-        ?.CreateFastDelegate();
+    private static readonly MethodInfo _Assembly_get_Location =
+        typeof(Assembly).GetMethod("get_Location", BindingFlags.Public | BindingFlags.Instance);
     public static string GetLocation(this Assembly asm)
-        => (string) _Assembly_get_Location(asm);
+        => (string) _Assembly_get_Location.Invoke(asm, _NoArgs);
 
-    private static readonly FastReflectionDelegate _MemberInfo_get_MetadataToken =
-        typeof(MemberInfo).GetMethod("get_MetadataToken", BindingFlags.Public | BindingFlags.Instance)
-        ?.CreateFastDelegate();
+    private static readonly MethodInfo _MemberInfo_get_MetadataToken =
+        typeof(MemberInfo).GetMethod("get_MetadataToken", BindingFlags.Public | BindingFlags.Instance);
     public static int GetMetadataToken(this MemberInfo m)
-        => (int) _MemberInfo_get_MetadataToken(m);
+        => (int) _MemberInfo_get_MetadataToken.Invoke(m, _NoArgs);
 
-    private static readonly FastReflectionDelegate _Module_GetMethods =
-        typeof(Module).GetMethod("GetMethods", new Type[] { typeof(BindingFlags) })
-        ?.CreateFastDelegate();
+    private static readonly MethodInfo _Module_GetMethods =
+        typeof(Module).GetMethod("GetMethods", new Type[] { typeof(BindingFlags) });
     public static MethodInfo[] GetMethods(this Module m, BindingFlags bf)
-        => (MethodInfo[]) _Module_GetMethods(m, bf);
+        => (MethodInfo[]) _Module_GetMethods.Invoke(m, new object[] { bf });
 
-    private static readonly FastReflectionDelegate _Module_GetFields =
-        typeof(Module).GetMethod("GetFields", new Type[] { typeof(BindingFlags) })
-        ?.CreateFastDelegate();
+    private static readonly MethodInfo _Module_GetFields =
+        typeof(Module).GetMethod("GetFields", new Type[] { typeof(BindingFlags) });
     public static FieldInfo[] GetFields(this Module m, BindingFlags bf)
-        => (FieldInfo[]) _Module_GetFields(m, bf);
+        => (FieldInfo[]) _Module_GetFields.Invoke(m, new object[] { bf });
 
 #endif
 

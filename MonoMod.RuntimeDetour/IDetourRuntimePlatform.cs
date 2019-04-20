@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Reflection.Emit;
 using MonoMod.Utils;
 using System.Linq;
 

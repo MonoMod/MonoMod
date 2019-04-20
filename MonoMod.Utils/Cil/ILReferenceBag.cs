@@ -121,8 +121,8 @@ namespace MonoMod.Cil {
         }
 
         public static class FastDelegateInvokers {
-            private static MethodInfo[] actions;
-            private static MethodInfo[] funcs;
+            private static readonly MethodInfo[] actions;
+            private static readonly MethodInfo[] funcs;
             static FastDelegateInvokers() {
                 IEnumerable<MethodInfo> invokers = typeof(FastDelegateInvokers).GetMethods().Where(m => m.Name == "Invoke").OrderBy(m => m.GetParameters().Length);
                 actions = invokers.Where(m => m.ReturnType == typeof(void)).ToArray();

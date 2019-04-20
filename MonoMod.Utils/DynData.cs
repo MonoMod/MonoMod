@@ -5,6 +5,8 @@ using System.Reflection;
 namespace MonoMod.Utils {
     public sealed class DynData<TTarget> : IDisposable where TTarget : class {
 
+        private static readonly object[] _NoArgs = new object[0];
+
         public static readonly HashSet<string> Disposable = new HashSet<string>();
         public static event Action<DynData<TTarget>, TTarget> OnInitialize;
 
@@ -37,8 +39,7 @@ namespace MonoMod.Utils {
                 foreach (WeakReference weak in dead)
                     _DataMap.Remove(weak);
             };
-
-            // TODO: Use DynamicMethod to generate more performant getters and setters.
+            
             foreach (FieldInfo field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                 string name = field.Name;
                 _SpecialGetters[name] = (obj) => field.GetValue(obj);
@@ -50,14 +51,12 @@ namespace MonoMod.Utils {
 
                 MethodInfo get = prop.GetGetMethod(true);
                 if (get != null) {
-                    FastReflectionDelegate getFast = get.CreateFastDelegate(true);
-                    _SpecialGetters[name] = (obj) => getFast(obj);
+                    _SpecialGetters[name] = (obj) => get.Invoke(obj, _NoArgs);
                 }
 
                 MethodInfo set = prop.GetSetMethod(true);
                 if (set != null) {
-                    FastReflectionDelegate setFast = set.CreateFastDelegate(true);
-                    _SpecialSetters[name] = (obj, value) => setFast(obj, value);
+                    _SpecialSetters[name] = (obj, value) => set.Invoke(obj, _NoArgs);
                 }
             }
         }
