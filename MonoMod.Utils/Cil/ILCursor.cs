@@ -160,7 +160,8 @@ namespace MonoMod.Cil {
         /// <returns>this</returns>
         public ILCursor Goto(Instruction insn, MoveType moveType = MoveType.Before, bool setTarget = false) {
             if (moveType == MoveType.After)
-                _next = insn?.Next ?? Instrs[0];
+                // Moving past the end of the method shouldn't move any further, nor wrap around.
+                _next = insn?.Next;
             else
                 _next = insn;
 
@@ -240,7 +241,7 @@ namespace MonoMod.Cil {
                     if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
                         goto Next;
 
-                Goto(moveType == MoveType.After ? i + predicates.Length : i, moveType, true);
+                Goto(moveType == MoveType.After ? i + predicates.Length - 1 : i, moveType, true);
                 return true;
 
                 Next:
@@ -277,7 +278,7 @@ namespace MonoMod.Cil {
                     if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
                         goto Next;
 
-                Goto(moveType == MoveType.After ? i + predicates.Length : i, moveType, true);
+                Goto(moveType == MoveType.After ? i + predicates.Length - 1 : i, moveType, true);
                 return true;
 
                 Next:
