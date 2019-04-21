@@ -592,11 +592,11 @@ namespace MonoMod {
 
             caHandler = type.GetMMAttribute("CustomAttributeAttribute");
             if (caHandler != null)
-                CustomAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
+                CustomAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).Invoke(self, args);
 
             caHandler = type.GetMMAttribute("CustomMethodAttributeAttribute");
             if (caHandler != null)
-                CustomMethodAttributeHandlers[type.FullName] = rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).GetFastDelegate();
+                CustomMethodAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).Invoke(self, args);
 
             CustomAttribute hook;
 

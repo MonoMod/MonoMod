@@ -71,15 +71,11 @@ namespace MonoMod.InlineRT {
 
 
         public static void RegisterCustomAttribute(string attribName, string handlerName) {
-            MonoModder self = Modder;
-
-            self.CustomAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetMethod(handlerName).GetFastDelegate();
+            Modder.CustomAttributeHandlers[attribName] = (self, args) => MonoModRulesManager.RuleType.GetMethod(handlerName).Invoke(self, args);
         }
 
         public static void RegisterCustomMethodAttribute(string attribName, string handlerName) {
-            MonoModder self = Modder;
-
-            self.CustomMethodAttributeHandlers[attribName] = MonoModRulesManager.RuleType.GetMethod(handlerName).GetFastDelegate();
+            Modder.CustomMethodAttributeHandlers[attribName] = (self, args) => MonoModRulesManager.RuleType.GetMethod(handlerName).Invoke(self, args);
         }
 
         public static class Flag {
