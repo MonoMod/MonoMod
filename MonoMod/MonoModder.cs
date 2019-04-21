@@ -994,7 +994,7 @@ namespace MonoMod {
             TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType);
 
             foreach (GenericParameter genParam in type.GenericParameters)
-                newType.GenericParameters.Add(genParam.Clone());
+                newType.GenericParameters.Add(genParam.Clone().Relink(Relinker, newType));
 
             foreach (InterfaceImplementation interf in type.Interfaces)
                 newType.Interfaces.Add(interf);
