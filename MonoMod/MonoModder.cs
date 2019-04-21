@@ -1636,6 +1636,10 @@ namespace MonoMod {
                 type.BaseType = type.BaseType.Relink(Relinker, type);
 
             // Don't foreach when modifying the collection
+            for (int i = 0; i < type.GenericParameters.Count; i++)
+                type.GenericParameters[i] = type.GenericParameters[i].Relink(Relinker, type);
+
+            // Don't foreach when modifying the collection
             for (int i = 0; i < type.Interfaces.Count; i++) {
 #if !CECIL0_9
                 InterfaceImplementation interf = type.Interfaces[i];
