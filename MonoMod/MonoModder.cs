@@ -444,7 +444,7 @@ namespace MonoMod {
             // Try to use the AssemblyResolver with the full name (or even partial name).
             if (path == null) {
                 try {
-                    dep = AssemblyResolver.Resolve(new AssemblyNameReference(fullName ?? name, new Version(0, 0, 0, 0)))?.MainModule;
+                    dep = AssemblyResolver.Resolve(AssemblyNameReference.Parse(fullName ?? name))?.MainModule;
                 } catch { }
                 if (dep != null)
 #if !CECIL0_9
