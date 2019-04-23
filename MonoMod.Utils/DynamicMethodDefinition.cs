@@ -26,6 +26,9 @@ namespace MonoMod.Utils {
         }
 
         private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
+        private static readonly bool _IsNewMonoSRE = _IsMono && typeof(DynamicMethod).GetField("il_info", BindingFlags.NonPublic | BindingFlags.Instance) != null;
+        private static readonly bool _IsOldMonoSRE = _IsMono && !_IsNewMonoSRE && typeof(DynamicMethod).GetField("ilgen", BindingFlags.NonPublic | BindingFlags.Instance) != null;
+
         private static bool _PreferCecil;
 
         private static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
@@ -94,11 +97,16 @@ namespace MonoMod.Utils {
         internal DynamicMethodDefinition() {
             // If SRE has been stubbed out, prefer Cecil.
             _PreferCecil =
-                // Mono
-                typeof(DynamicMethod).GetField("il_info", BindingFlags.NonPublic | BindingFlags.Instance) == null &&
+                // Mono 4.X+
+                !_IsNewMonoSRE &&
+                
+                // Unity pre 2018
+                !_IsOldMonoSRE &&
+                
                 // .NET
                 typeof(ILGenerator).GetTypeInfo().Assembly
                 .GetType("System.Reflection.Emit.DynamicILGenerator")?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance) == null &&
+                
                 true;
 
             string type = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
@@ -288,52 +296,59 @@ namespace MonoMod.Utils {
                 if (!(mi is DynamicMethod) && mi.DeclaringType != null) {
                     // Mono doesn't know about IgnoresAccessChecksToAttribute,
                     // but it lets some assemblies have unrestricted access.
-                    // https://github.com/mono/mono/blob/df846bcbc9706e325f3b5dca4d09530b80e9db83/mono/metadata/metadata-internals.h#L207
-                    // https://github.com/mono/mono/blob/1af992a5ffa46e20dd61a64b6dcecef0edb5c459/mono/metadata/appdomain.c#L1286
-                    // https://github.com/mono/mono/blob/beb81d3deb068f03efa72be986c96f9c3ab66275/mono/metadata/class.c#L5748
-                    IntPtr asmPtr = (IntPtr) f_mono_assembly.GetValue(mi.Module.Assembly);
-                    int offs =
-                        // ref_count (4 + padding)
-                        IntPtr.Size +
-                        // basedir
-                        IntPtr.Size +
 
-                        // aname
-                        // name
-                        IntPtr.Size +
-                        // culture
-                        IntPtr.Size +
-                        // hash_value
-                        IntPtr.Size +
-                        // public_key
-                        IntPtr.Size +
-                        // public_key_token (17 + padding)
-                        20 +
-                        // hash_alg
-                        4 +
-                        // hash_len
-                        4 +
-                        // flags
-                        4 +
+                    if (_IsOldMonoSRE) {
+                        // If you're reading this:
+                        // You really should've chosen the SRE backend instead...
 
-                        // major, minor, build, revision, arch (10 framework / 20 core + padding)
-                        (
-                            typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? (IntPtr.Size == 4 ? 20 : 24) :
-                            (IntPtr.Size == 4 ? 12 : 16)
-                        ) +
+                    } else {
+                        // https://github.com/mono/mono/blob/df846bcbc9706e325f3b5dca4d09530b80e9db83/mono/metadata/metadata-internals.h#L207
+                        // https://github.com/mono/mono/blob/1af992a5ffa46e20dd61a64b6dcecef0edb5c459/mono/metadata/appdomain.c#L1286
+                        // https://github.com/mono/mono/blob/beb81d3deb068f03efa72be986c96f9c3ab66275/mono/metadata/class.c#L5748
+                        IntPtr asmPtr = (IntPtr) f_mono_assembly.GetValue(mi.Module.Assembly);
+                        int offs =
+                            // ref_count (4 + padding)
+                            IntPtr.Size +
+                            // basedir
+                            IntPtr.Size +
 
-                        // image
-                        IntPtr.Size +
-                        // friend_assembly_names
-                        IntPtr.Size +
-                        // friend_assembly_names_inited
-                        1 +
-                        // in_gac
-                        1 +
-                        // dynamic
-                        1;
-                    byte* corlibInternalPtr = (byte*) ((long) asmPtr + offs);
-                    *corlibInternalPtr = 1;
+                            // aname
+                            // name
+                            IntPtr.Size +
+                            // culture
+                            IntPtr.Size +
+                            // hash_value
+                            IntPtr.Size +
+                            // public_key
+                            IntPtr.Size +
+                            // public_key_token (17 + padding)
+                            20 +
+                            // hash_alg
+                            4 +
+                            // hash_len
+                            4 +
+                            // flags
+                            4 +
+
+                            // major, minor, build, revision, arch (10 framework / 20 core + padding)
+                            (
+                                typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? (IntPtr.Size == 4 ? 20 : 24) :
+                                (IntPtr.Size == 4 ? 12 : 16)
+                            ) +
+
+                            // image
+                            IntPtr.Size +
+                            // friend_assembly_names
+                            IntPtr.Size +
+                            // friend_assembly_names_inited
+                            1 +
+                            // in_gac
+                            1 +
+                            // dynamic
+                            1;
+                        byte* corlibInternalPtr = (byte*) ((long) asmPtr + offs);
+                        *corlibInternalPtr = 1;
+                    }
                 }
 
 
