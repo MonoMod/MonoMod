@@ -97,17 +97,21 @@ namespace MonoMod.Utils {
         internal DynamicMethodDefinition() {
             // If SRE has been stubbed out, prefer Cecil.
             _PreferCecil =
-                // Mono 4.X+
-                !_IsNewMonoSRE &&
+                (_IsMono && (
+                    // Mono 4.X+
+                    !_IsNewMonoSRE &&
+                    // Unity pre 2018
+                    !_IsOldMonoSRE
+                )) ||
                 
-                // Unity pre 2018
-                !_IsOldMonoSRE &&
+                (!_IsMono && (
+                    // .NET
+                    typeof(ILGenerator).GetTypeInfo().Assembly
+                    .GetType("System.Reflection.Emit.DynamicILGenerator")
+                    ?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance) == null
+                )) ||
                 
-                // .NET
-                typeof(ILGenerator).GetTypeInfo().Assembly
-                .GetType("System.Reflection.Emit.DynamicILGenerator")?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance) == null &&
-                
-                true;
+                false;
 
             string type = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
             if (!string.IsNullOrEmpty(type)) {
@@ -136,6 +140,10 @@ namespace MonoMod.Utils {
 
         public ILProcessor GetILProcessor() {
             return Definition.Body.GetILProcessor();
+        }
+
+        public ILGenerator GetILGenerator() {
+            return new Cil.CecilILGenerator(Definition.Body.GetILProcessor()).GetProxy();
         }
 
         private ModuleDefinition _CreateDynModule(string name, Type returnType, Type[] parameterTypes) {

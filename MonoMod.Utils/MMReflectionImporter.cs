@@ -15,6 +15,13 @@ using System.Security;
 namespace MonoMod.Utils {
     public sealed class MMReflectionImporter : IReflectionImporter {
 
+        private class _Provider : IReflectionImporterProvider {
+            public IReflectionImporter GetReflectionImporter(ModuleDefinition module) {
+                return new MMReflectionImporter(module);
+            }
+        }
+        public static readonly IReflectionImporterProvider Provider = new _Provider();
+
         private readonly ModuleDefinition Module;
         private readonly DefaultReflectionImporter Default;
 
