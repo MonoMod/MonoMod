@@ -56,7 +56,7 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override unsafe Label DefineLabel() {
-            Label handle = Activator.CreateInstance<Label>();
+            Label handle = default;
             // The label struct holds a single int field on .NET Framework, .NET Core and Mono.
             *(int*) &handle = _Labels.Count;
             Instruction instr = IL.Create(OpCodes.Nop);

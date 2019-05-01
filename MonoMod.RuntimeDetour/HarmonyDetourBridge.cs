@@ -16,30 +16,11 @@ namespace MonoMod.RuntimeDetour {
             Integrated
         }
 
-        private static readonly BindingFlags _FlagsHarmonyAll =
-            BindingFlags.Public |
-            BindingFlags.NonPublic |
-            BindingFlags.Instance |
-            BindingFlags.Static |
-#if !NETSTANDARD1_X
-            BindingFlags.GetField |
-            BindingFlags.SetField |
-            BindingFlags.GetProperty |
-            BindingFlags.SetProperty |
-#endif
-        0;
-
         public static bool Initialized { get; private set; }
         private static BridgeType CurrentType;
 
         private static Assembly _ASM;
         private static readonly List<IDetour> _Detours = new List<IDetour>();
-
-        private static Type t_PatchInfo;
-        private static FieldInfo f_PatchInfo_prefixes;
-        private static FieldInfo f_PatchInfo_postfixes;
-        private static FieldInfo f_PatchInfo_transpilers;
-        private static FieldInfo f_PatchInfo_finalizers;
 
         [ThreadStatic]
         private static DynamicMethodDefinition _LastWrapperDMD;
@@ -59,12 +40,6 @@ namespace MonoMod.RuntimeDetour {
             Initialized = true;
 
             CurrentType = type;
-
-            t_PatchInfo = _ASM.GetType("Harmony.PatchInfo") ?? _ASM.GetType("HarmonyLib.PatchInfo");
-            f_PatchInfo_prefixes = t_PatchInfo.GetField("prefixes", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            f_PatchInfo_postfixes = t_PatchInfo.GetField("postfixes", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            f_PatchInfo_transpilers = t_PatchInfo.GetField("transpilers", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            f_PatchInfo_finalizers = t_PatchInfo.GetField("finalizers", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
             foreach (MethodInfo methodRD in typeof(HarmonyDetourBridge).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)) {
                 foreach (DetourToRDAttribute info in methodRD.GetCustomAttributes(typeof(DetourToRDAttribute), false)) {
