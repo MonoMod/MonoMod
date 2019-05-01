@@ -502,7 +502,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 goto Retry;
             }
 
-            return OutputModule.ImportReference(typeRef);
+            try {
+                return OutputModule.ImportReference(typeRef);
+            } catch {
+                // Under rare circumstances, ImportReference can fail, f.e. Private<K> : Public<K, V>
+                return OutputModule.TypeSystem.Object;
+            }
         }
 
         CustomAttribute GenerateObsolete(string message, bool error) {
