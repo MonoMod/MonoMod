@@ -94,6 +94,8 @@ namespace MonoMod.Utils {
         private ModuleDefinition _DynModuleDefinition;
         private bool _DynModuleIsPrivate;
 
+        private Guid GUID = Guid.NewGuid();
+
         internal DynamicMethodDefinition() {
             // If SRE has been stubbed out, prefer Cecil.
             _PreferCecil =
@@ -288,6 +290,11 @@ namespace MonoMod.Utils {
                     _Module = null;
                 }
             }
+        }
+
+        private string _GetDumpName(string type) {
+            // TODO: Add {Definition.GetFindableID(withType: false)} without killing MethodBuilder
+            return $"DMDASM.{GUID.GetHashCode():X8}.{type}";
         }
 
         private static unsafe MethodInfo _Postbuild(MethodInfo mi) {

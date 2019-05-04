@@ -38,8 +38,8 @@ namespace MonoMod.Utils {
                 moduleIsPrivate = true;
                 accessChecksIgnored = new HashSet<string>();
 
-                string name = $"DMDASM_{GetHashCode()}";
-                module = ModuleDefinition.CreateModule(name + ".dll", new ModuleParameters() {
+                string name = _GetDumpName("Cecil");
+                module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
                     Kind = ModuleKind.Dll,
                     AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, new DefaultAssemblyResolver()),
                     ReflectionImporterProvider = new ReflectionCecilImporterProvider(null)

@@ -17,15 +17,16 @@ using Mono.Collections.Generic;
 namespace MonoMod.Utils.Cil {
     public sealed class CecilILGenerator : ILGeneratorShim {
 
+        private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
+
         // https://github.com/Unity-Technologies/mono/blob/unity-5.6/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
         // https://github.com/Unity-Technologies/mono/blob/unity-2018.3-mbe/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
-        private static readonly ConstructorInfo c_LocalBuilder_mono =
-            typeof(LocalBuilder).GetConstructor(new Type[] { typeof(Type), typeof(ILGenerator) });
-
         // https://github.com/dotnet/coreclr/blob/master/src/System.Private.CoreLib/src/System/Reflection/Emit/LocalBuilder.cs
-        // .NET Framework matches .NET Core
-        private static readonly ConstructorInfo c_LocalBuilder_corefx =
-            typeof(LocalBuilder).GetConstructor(new Type[] { typeof(int), typeof(Type), typeof(MethodInfo), typeof(bool) });
+        // Mono: Type, ILGenerator
+        // .NET Framework matches .NET Core: int, Type, MethodInfo(, bool)
+        private static readonly ConstructorInfo c_LocalBuilder =
+            typeof(LocalBuilder).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)[0];
+        private static ParameterInfo[] c_LocalBuilder_params = c_LocalBuilder.GetParameters();
 
         private static readonly Dictionary<short, OpCode> _MCCOpCodes = new Dictionary<short, OpCode>();
 
@@ -40,6 +41,7 @@ namespace MonoMod.Utils.Cil {
 
         private readonly List<Instruction> _Labels = new List<Instruction>();
         private readonly Dictionary<LocalBuilder, VariableDefinition> _Variables = new Dictionary<LocalBuilder, VariableDefinition>();
+        private readonly Stack<ExceptionHandlerChain> _ExceptionHandlers = new Stack<ExceptionHandlerChain>();
 
         public CecilILGenerator(ILProcessor il) {
             IL = il;
@@ -64,21 +66,27 @@ namespace MonoMod.Utils.Cil {
             return handle;
         }
 
-        public override void MarkLabel(Label loc) {
+        public override void MarkLabel(Label loc) => MarkLabel(_(loc));
+        private Instruction MarkLabel() => MarkLabel(_(DefineLabel()));
+        private Instruction MarkLabel(Instruction instr) {
             Collection<Instruction> instrs = IL.Body.Instructions;
-            Instruction instr = _(loc);
             int index = instrs.IndexOf(instr);
             if (index != -1)
                 instrs.RemoveAt(index);
             IL.Append(instr);
+            return instr;
         }
+
 
         public override LocalBuilder DeclareLocal(Type type) => DeclareLocal(type, false);
         public override LocalBuilder DeclareLocal(Type type, bool pinned) {
             // The handle itself is out of sync with the "backing" VariableDefinition.
             LocalBuilder handle = (LocalBuilder) (
-                c_LocalBuilder_mono?.Invoke(new object[] { type, null }) ??
-                c_LocalBuilder_corefx?.Invoke(new object[] { 0, type, null, false })
+                c_LocalBuilder_params.Length == 4 ? c_LocalBuilder.Invoke(new object[] { 0, type, null, false }) :
+                c_LocalBuilder_params.Length == 3 ? c_LocalBuilder.Invoke(new object[] { 0, type, null }) :
+                c_LocalBuilder_params.Length == 2 ? c_LocalBuilder.Invoke(new object[] { type, null }) :
+                c_LocalBuilder_params.Length == 0 ? c_LocalBuilder.Invoke(new object[] { }) :
+                throw new NotSupportedException()
             );
 
             TypeReference typeRef = IL.Import(type);
@@ -95,7 +103,12 @@ namespace MonoMod.Utils.Cil {
         public override void Emit(SRE.OpCode opcode, byte arg) => IL.Emit(_(opcode), arg);
         public override void Emit(SRE.OpCode opcode, sbyte arg) => IL.Emit(_(opcode), arg);
         public override void Emit(SRE.OpCode opcode, short arg) => IL.Emit(_(opcode), arg);
-        public override void Emit(SRE.OpCode opcode, int arg) => IL.Emit(_(opcode), arg);
+        public override void Emit(SRE.OpCode opcode, int arg) {
+            if (opcode.Name.EndsWith(".s"))
+                IL.Emit(_(opcode), (sbyte) arg);
+            else
+                IL.Emit(_(opcode), arg);
+        }
         public override void Emit(SRE.OpCode opcode, long arg) => IL.Emit(_(opcode), arg);
         public override void Emit(SRE.OpCode opcode, float arg) => IL.Emit(_(opcode), arg);
         public override void Emit(SRE.OpCode opcode, double arg) => IL.Emit(_(opcode), arg);
@@ -139,39 +152,107 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override Label BeginExceptionBlock() {
-            throw new NotImplementedException();
+            ExceptionHandlerChain chain = new ExceptionHandlerChain(this);
+            _ExceptionHandlers.Push(chain);
+            return chain.SkipAll;
         }
 
         public override void BeginCatchBlock(Type exceptionType) {
-            throw new NotImplementedException();
+            ExceptionHandler handler = _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Catch);
+            handler.CatchType = exceptionType == null ? null : IL.Import(exceptionType);
         }
 
         public override void BeginExceptFilterBlock() {
-            throw new NotImplementedException();
+            _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Filter);
         }
 
         public override void BeginFaultBlock() {
-            throw new NotImplementedException();
+            _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Fault);
         }
 
         public override void BeginFinallyBlock() {
-            throw new NotImplementedException();
+            _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Finally);
         }
 
         public override void EndExceptionBlock() {
-            throw new NotImplementedException();
+            _ExceptionHandlers.Pop().End();
         }
 
         public override void BeginScope() {
-            // Does nothing in Mono.
         }
 
         public override void EndScope() {
-            // Does nothing in Mono.
         }
 
         public override void UsingNamespace(string usingNamespace) {
-            // Does nothing in Mono.
+        }
+
+        private class ExceptionHandlerChain {
+
+            private CecilILGenerator IL;
+
+            private Instruction _Start;
+            public readonly Label SkipAll;
+            private readonly Instruction _SkipAllI;
+            private Label _SkipHandler;
+
+            private ExceptionHandler _Prev;
+            private ExceptionHandler _Handler;
+
+            public ExceptionHandlerChain(CecilILGenerator il) {
+                IL = il;
+                _Start = il.MarkLabel();
+                SkipAll = il.DefineLabel();
+                _SkipAllI = il._(SkipAll);
+            }
+
+            public ExceptionHandler BeginHandler(ExceptionHandlerType type) {
+                ExceptionHandler prev = _Prev = _Handler;
+                if (prev != null)
+                    EndHandler(prev);
+
+                IL.Emit(SRE.OpCodes.Leave, _SkipHandler = IL.DefineLabel());
+
+                ExceptionHandler next = _Handler = new ExceptionHandler(0);
+                Instruction firstHandlerInstr = IL.MarkLabel();
+                next.TryStart = _Start;
+                next.TryEnd = firstHandlerInstr;
+                next.HandlerType = type;
+                if (type == ExceptionHandlerType.Filter)
+                    next.FilterStart = firstHandlerInstr;
+                else
+                    next.HandlerStart = firstHandlerInstr;
+
+                IL.IL.Body.ExceptionHandlers.Add(next);
+                return next;
+            }
+
+            public void EndHandler(ExceptionHandler handler) {
+                Label skip = _SkipHandler;
+
+                switch (handler.HandlerType) {
+                    case ExceptionHandlerType.Filter:
+                        IL.Emit(SRE.OpCodes.Endfilter);
+                        break;
+
+                    case ExceptionHandlerType.Finally:
+                        IL.Emit(SRE.OpCodes.Endfinally);
+                        break;
+
+                    default:
+                        IL.Emit(SRE.OpCodes.Leave, skip);
+                        break;
+                }
+
+                IL.MarkLabel(skip);
+                handler.HandlerEnd = IL._(skip);
+            }
+
+            public void End() {
+                EndHandler(_Handler);
+                IL.MarkLabel(SkipAll);
+            }
+
         }
 
     }

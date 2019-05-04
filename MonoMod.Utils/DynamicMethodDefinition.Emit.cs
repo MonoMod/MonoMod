@@ -125,7 +125,7 @@ namespace MonoMod.Utils {
                 }
                 AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
-                        Name = $"DMDASM_{GetHashCode()}"
+                        Name = _GetDumpName("MethodBuilder")
                     },
                     AssemblyBuilderAccess.RunAndSave,
                     dumpDir
