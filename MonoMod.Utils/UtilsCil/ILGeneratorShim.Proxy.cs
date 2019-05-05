@@ -32,6 +32,10 @@ namespace MonoMod.Utils.Cil {
                 .Invoke(new object[] { this });
         }
 
+        public static Type GetProxyType<TShim>() where TShim : ILGeneratorShim => GetProxyType(typeof(TShim));
+        public static Type GetProxyType(Type tShim) => ProxyType.MakeGenericType(tShim);
+        public static Type ProxyType => ILGeneratorBuilder.GenerateProxy();
+
         static class ILGeneratorBuilder {
 
             public const string Namespace = "MonoMod.Utils.Cil";

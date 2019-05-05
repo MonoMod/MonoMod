@@ -51,11 +51,7 @@ namespace MonoMod.Utils.Cil {
         private unsafe Instruction _(Label handle) => _Labels[*(int*) &handle];
         private VariableDefinition _(LocalBuilder handle) => _Variables[handle];
 
-        public override int ILOffset {
-            get {
-                throw new NotSupportedException();
-            }
-        }
+        public override int ILOffset => throw new NotSupportedException();
 
         public override unsafe Label DefineLabel() {
             Label handle = default;
@@ -189,9 +185,9 @@ namespace MonoMod.Utils.Cil {
 
         private class ExceptionHandlerChain {
 
-            private CecilILGenerator IL;
+            private readonly CecilILGenerator IL;
 
-            private Instruction _Start;
+            private readonly Instruction _Start;
             public readonly Label SkipAll;
             private readonly Instruction _SkipAllI;
             private Label _SkipHandler;

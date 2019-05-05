@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Utils;
+using MonoMod.Utils.Cil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,21 +12,45 @@ using System.Text;
 namespace MonoMod.RuntimeDetour {
     public static class HarmonyDetourBridge {
 
-        public enum BridgeType {
-            Basic,
-            Integrated
+        public enum Type {
+            Auto,
+            Basic
         }
 
         public static bool Initialized { get; private set; }
-        private static BridgeType CurrentType;
+        private static Type CurrentType;
 
         private static Assembly _ASM;
-        private static readonly List<IDetour> _Detours = new List<IDetour>();
+        private static readonly List<IDisposable> _Detours = new List<IDisposable>();
+
+        private static readonly Dictionary<System.Type, MethodInfo> _Emitters = new Dictionary<System.Type, MethodInfo>();
 
         [ThreadStatic]
         private static DynamicMethodDefinition _LastWrapperDMD;
 
-        public static bool Init(bool forceLoad = true, BridgeType type = BridgeType.Basic) {
+        static HarmonyDetourBridge() {
+            System.Type t_OpCode = typeof(System.Reflection.Emit.OpCode);
+            System.Type t_Proxy = ILGeneratorShim.GetProxyType<CecilILGenerator>();
+            foreach (MethodInfo method in t_Proxy.GetMethods()) {
+                if (method.Name != "Emit")
+                    continue;
+
+                ParameterInfo[] args = method.GetParameters();
+                if (args.Length != 2)
+                    continue;
+
+                if (args[0].ParameterType != t_OpCode)
+                    continue;
+
+                System.Type argType = args[1].ParameterType;
+                if (_Emitters.ContainsKey(argType) && method.DeclaringType != t_Proxy)
+                    continue;
+
+                _Emitters[argType] = method;
+            }
+        }
+
+        public static bool Init(bool forceLoad = true, Type type = Type.Auto) {
             if (_ASM == null)
                 _ASM = _FindHarmony();
             if (_ASM == null && forceLoad)
@@ -39,36 +64,51 @@ namespace MonoMod.RuntimeDetour {
                 return true;
             Initialized = true;
 
+            if (type == Type.Auto)
+                type = Type.Basic;
+
             CurrentType = type;
 
-            foreach (MethodInfo methodRD in typeof(HarmonyDetourBridge).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)) {
-                foreach (DetourToRDAttribute info in methodRD.GetCustomAttributes(typeof(DetourToRDAttribute), false)) {
-                    MethodInfo methodH = GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name);
-                    if (methodH == null)
-                        continue;
-                    _Detours.Add(new Hook(methodH, methodRD));
-                }
+            try {
+                foreach (MethodInfo methodRD in typeof(HarmonyDetourBridge).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)) {
+                    foreach (DetourToRDAttribute info in methodRD.GetCustomAttributes(typeof(DetourToRDAttribute), false))
+                        foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name))
+                            _Detours.Add(new Hook(methodH, methodRD));
 
-                foreach (DetourToHAttribute info in methodRD.GetCustomAttributes(typeof(DetourToHAttribute), false)) {
-                    MethodInfo methodH = GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name);
-                    if (methodH == null)
-                        continue;
-                    _Detours.Add(new Detour(methodRD, methodH));
-                }
+                    foreach (DetourToHAttribute info in methodRD.GetCustomAttributes(typeof(DetourToHAttribute), false))
+                        foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name))
+                            _Detours.Add(new Detour(methodRD, methodH));
 
-                foreach (TranspileAttribute info in methodRD.GetCustomAttributes(typeof(DetourToHAttribute), false)) {
-                    MethodInfo methodH = GetHarmonyMethod(methodRD, info.Type, -1, info.Name);
-                    if (methodH == null)
-                        continue;
-                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(methodH)) {
-                        using (ILContext il = new ILContext(dmd.Definition))
-                            il.Invoke((ILContext.Manipulator) methodH.CreateDelegate<ILContext.Manipulator>());
-                        _Detours.Add(new Detour(methodH, dmd.Generate()));
+                    foreach (TranspileAttribute info in methodRD.GetCustomAttributes(typeof(TranspileAttribute), false)) {
+                        foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, -1, info.Name)) {
+                            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(methodH)) {
+                                ILContext il = new ILContext(dmd.Definition) {
+                                    ReferenceBag = RuntimeILReferenceBag.Instance
+                                };
+                                _Detours.Add(il);
+                                il.Invoke((ILContext.Manipulator) methodRD.CreateDelegate<ILContext.Manipulator>());
+                                if (il.IsReadOnly) {
+                                    il.Dispose();
+                                    _Detours.Remove(il);
+                                    continue;
+                                }
+                                _Detours.Add(new Detour(methodH, dmd.Generate()));
+                            }
+                        }
                     }
                 }
+            } catch (Exception) when (_EarlyReset()) {
+                throw;
             }
-
+ 
             return true;
+        }
+
+        private static bool _EarlyReset() {
+            foreach (IDisposable detour in _Detours)
+                detour.Dispose();
+            _Detours.Clear();
+            return false;
         }
 
         public static void Reset() {
@@ -76,38 +116,43 @@ namespace MonoMod.RuntimeDetour {
                 return;
             Initialized = false;
 
-            foreach (Detour detour in _Detours)
-                detour.Dispose();
-            _Detours.Clear();
+            _EarlyReset();
         }
 
-        private static MethodInfo GetHarmonyMethod(MethodInfo ctx, string typeName, int skipParams, string name) {
-            Type type = _ASM.GetType("Harmony." + typeName) ?? _ASM.GetType("HarmonyLib." + typeName);
+        private static IEnumerable<MethodInfo> GetHarmonyMethod(MethodInfo ctx, string typeName, int skipParams, string name) {
+            System.Type type =
+                _ASM.GetType("HarmonyLib." + typeName) ??
+                _ASM.GetType("Harmony." + typeName) ??
+                _ASM.GetType("Harmony.ILCopying." + typeName);
             if (type == null)
                 return null;
+
+            if (string.IsNullOrEmpty(name))
+                name = ctx.Name;
 
             if (skipParams < 0)
                 return type
                     .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
-                    .Where(method => method.Name == name)
-                    .ElementAtOrDefault(-skipParams);
+                    .Where(method => method.Name == name);
 
+            return new MethodInfo[] {
 #if NETSTANDARD1_X
-            return type
+                type
                 .GetMethod(
-                    !string.IsNullOrEmpty(name) ? name : ctx.Name,
+                    name,
                     ctx.GetParameters().Skip(skipParams).Select(p => p.ParameterType).ToArray()
-                );
+                )
 #else
-            return type
+                type
                 .GetMethod(
-                    !string.IsNullOrEmpty(name) ? name : ctx.Name,
+                    name,
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static,
                     null,
                     ctx.GetParameters().Skip(skipParams).Select(p => p.ParameterType).ToArray(),
                     null
-                );
+                )
 #endif
+            };
         }
 
         // Replacement for DynamicTools.CreateDynamicMethod
@@ -116,14 +161,14 @@ namespace MonoMod.RuntimeDetour {
                 throw new ArgumentNullException(nameof(original));
 
             ParameterInfo[] args = original.GetParameters();
-            Type[] argTypes;
+            System.Type[] argTypes;
             if (!original.IsStatic) {
-                argTypes = new Type[args.Length + 1];
+                argTypes = new System.Type[args.Length + 1];
                 argTypes[0] = original.GetThisParamType();
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i + 1] = args[i].ParameterType;
             } else {
-                argTypes = new Type[args.Length];
+                argTypes = new System.Type[args.Length];
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i] = args[i].ParameterType;
             }
@@ -154,7 +199,26 @@ namespace MonoMod.RuntimeDetour {
 
         [DetourToRD("Memory")]
         private static string DetourMethod(MethodBase original, MethodBase replacement) {
+            if (replacement == null) {
+                replacement = _LastWrapperDMD.Generate();
+                _LastWrapperDMD.Dispose();
+                _LastWrapperDMD = null;
+            }
+
             _Detours.Add(new Detour(original, replacement));
+            return null;
+        }
+
+        [DetourToRD("MethodBodyReader", 1)]
+        private static MethodInfo EmitMethodForType(object self, System.Type type) {
+            foreach (KeyValuePair<System.Type, MethodInfo> entry in _Emitters)
+                if (entry.Key == type)
+                    return entry.Value;
+
+            foreach (KeyValuePair<System.Type, MethodInfo> entry in _Emitters)
+                if (entry.Key.IsAssignableFrom(type))
+                    return entry.Value;
+
             return null;
         }
 
@@ -172,6 +236,16 @@ namespace MonoMod.RuntimeDetour {
 
         // TODO: Does NativeThisPointer.NeedsNativeThisPointerFix need to be patched?
 
+        [Transpile("PatchFunctions")]
+        private static void UpdateWrapper(ILContext il) {
+            ILCursor c = new ILCursor(il);
+
+            // Pop the MissingMethodException.
+            // CreatePatchedMethod returns null, deal with it.
+            c.GotoNext(i => i.MatchThrow());
+            c.Next.OpCode = OpCodes.Pop;
+        }
+
         [Transpile("MethodPatcher")]
         private static void CreatePatchedMethod(ILContext il) {
             ILCursor c = new ILCursor(il);
@@ -179,7 +253,11 @@ namespace MonoMod.RuntimeDetour {
             // The original method uses System.Reflection.Emit.
 
             // Find and replace DynamicTools.CreateDynamicMethod
-            c.GotoNext(i => i.MatchCall("Harmony.DynamicTools", "CreateDynamicMethod"));
+            if (!c.TryGotoNext(i => i.MatchCall("Harmony.DynamicTools", "CreateDynamicMethod"))) {
+                // Not the right method. Harmony defines two CreatePatchedMethod methods.
+                il.MakeReadOnly();
+                return;
+            }
             c.Next.OpCode = OpCodes.Call;
             c.Next.Operand = il.Import(typeof(HarmonyDetourBridge).GetMethod("CreateDMD", BindingFlags.NonPublic | BindingFlags.Static));
             
@@ -192,7 +270,7 @@ namespace MonoMod.RuntimeDetour {
             // Find and replace patch.GetILGenerator
             c.GotoNext(i => i.MatchCallvirt<System.Reflection.Emit.DynamicMethod>("GetILGenerator"));
             c.Next.OpCode = OpCodes.Call;
-            c.Next.Operand = il.Import(typeof(DynamicMethodDefinition).GetMethod("GetILGenerator", BindingFlags.Public | BindingFlags.Static));
+            c.Next.Operand = il.Import(typeof(DynamicMethodDefinition).GetMethod("GetILGenerator", BindingFlags.Public | BindingFlags.Instance));
 
             // Find and remove DynamicTools.PrepareDynamicMethod
             c.GotoNext(i => i.MatchCall("Harmony.DynamicTools", "PrepareDynamicMethod"));
@@ -250,7 +328,7 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 #endif
-            return Type.GetType("Harmony.HarmonyInstance", false, false)?.GetTypeInfo()?.Assembly;
+            return System.Type.GetType("Harmony.HarmonyInstance", false, false)?.GetTypeInfo()?.Assembly;
         }
 
     }
