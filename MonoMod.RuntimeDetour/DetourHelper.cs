@@ -43,10 +43,29 @@ namespace MonoMod.RuntimeDetour {
                         _Native = new DetourNativeX86Platform();
                     }
 
+                    if (Type.GetType("Mono.Runtime") != null) {
+                        try {
+                            // It's prefixed with lib on every platform.
+                            _Native = new DetourNativeMonoPlatform(_Native, $"libmonosgen-2.0.{PlatformHelper.LibrarySuffix}");
+                            return _Native;
+                        } catch {
+                            // Fall back to another native platform wrapper.
+                        }
+                    }
+
                     if (PlatformHelper.Is(Platform.Windows)) {
                         _Native = new DetourNativeWindowsPlatform(_Native);
                     } else if (PlatformHelper.Is(Platform.Unix)) {
-                        _Native = new DetourNativePosixPlatform(_Native);
+                        if (Type.GetType("Mono.Runtime") != null) {
+                            try {
+                                _Native = new DetourNativeMonoPosixPlatform(_Native);
+                            } catch {
+                                // If you're reading this: Good job, your copy of Mono doesn't ship with MonoPosixHelper.
+                                // https://www.youtube.com/watch?v=l60MnDJklnM
+                            }
+                        } else {
+                            // TODO: .NET Core Posix native platform wrapper.
+                        }
                     }
 
                     return _Native;

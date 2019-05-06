@@ -5,12 +5,82 @@ using System;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
-    public unsafe sealed class DetourNativePosixPlatform : IDetourNativePlatform {
+    public unsafe sealed class DetourNativeMonoPosixPlatform : IDetourNativePlatform {
         private IDetourNativePlatform Inner;
 
-        public DetourNativePosixPlatform(IDetourNativePlatform inner) {
+        private long _Pagesize;
+
+        public DetourNativeMonoPosixPlatform(IDetourNativePlatform inner) {
             Inner = inner;
+
+            _Pagesize = sysconf(SysconfName._SC_PAGESIZE, 0);
         }
+
+        private static string GetLastError(string name) {
+            int raw = _GetLastError();
+            if (ToErrno(raw, out Errno errno) == 0) {
+                return $"{name} returned {errno}";
+            }
+            return $"{name} returned 0x${raw:X8}";
+        }
+
+        private unsafe void SetMemPerms(IntPtr start, ulong len, MmapProts prot) {
+            long pagesize = _Pagesize;
+            long startPage = ((long) start) & ~(_Pagesize - 1);
+            long endPage = ((long) start + (long) len) & ~(_Pagesize - 1);
+            endPage = (((endPage - startPage) / _Pagesize) + 1) * _Pagesize;
+
+            if (mprotect((IntPtr) startPage, (ulong) endPage, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC) != 0)
+                throw new Exception(GetLastError("mprotect"));
+        }
+
+        public void MakeWritable(NativeDetourData detour) {
+            // RWX because old versions of mono always use RWX.
+            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
+            Inner.MakeWritable(detour);
+        }
+
+        public void MakeExecutable(NativeDetourData detour) {
+            // RWX because old versions of mono always use RWX.
+            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
+            Inner.MakeExecutable(detour);
+        }
+
+        public NativeDetourData Create(IntPtr from, IntPtr to, byte? type) {
+            return Inner.Create(from, to, type);
+        }
+
+        public void Free(NativeDetourData detour) {
+            Inner.Free(detour);
+        }
+
+        public void Apply(NativeDetourData detour) {
+            Inner.Apply(detour);
+        }
+
+        public void Copy(IntPtr src, IntPtr dst, byte type) {
+            Inner.Copy(src, dst, type);
+        }
+
+        public IntPtr MemAlloc(uint size) {
+            return Inner.MemAlloc(size);
+        }
+
+        public void MemFree(IntPtr ptr) {
+            Inner.MemFree(ptr);
+        }
+
+        // Good luck if your copy of Mono doesn't ship with MonoPosixHelper...
+        [DllImport("MonoPosixHelper", SetLastError = true, EntryPoint = "Mono_Posix_Syscall_sysconf")]
+        public static extern long sysconf(SysconfName name, Errno defaultError);
+
+        [DllImport("MonoPosixHelper", SetLastError = true, EntryPoint = "Mono_Posix_Syscall_mprotect")]
+        private static extern int mprotect(IntPtr start, ulong len, MmapProts prot);
+
+        [DllImport("MonoPosixHelper", CallingConvention = CallingConvention.Cdecl, EntryPoint = "Mono_Posix_Stdlib_GetLastError")]
+        private static extern int _GetLastError();
+        [DllImport("MonoPosixHelper", EntryPoint = "Mono_Posix_ToErrno")]
+        private static extern int ToErrno(int value, out Errno rval);
 
         [Flags]
         private enum MmapProts : int {
@@ -388,74 +458,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
             EBADMACHO = 1088,   // Malformed Macho file
             ENOATTR = 1093, // Attribute not found
             ENOPOLICY = 1103,   // No such policy registered
-        }
-
-        [DllImport("MonoPosixHelper", SetLastError = true, EntryPoint = "Mono_Posix_Syscall_sysconf")]
-        public static extern long sysconf(SysconfName name, Errno defaultError);
-
-        // Good luck if your copy of Mono doesn't ship with MonoPosixHelper...
-        [DllImport("MonoPosixHelper", SetLastError = true, EntryPoint = "Mono_Posix_Syscall_mprotect")]
-        private static extern int mprotect(IntPtr start, ulong len, MmapProts prot);
-
-        [DllImport("MonoPosixHelper", CallingConvention = CallingConvention.Cdecl, EntryPoint = "Mono_Posix_Stdlib_GetLastError")]
-        private static extern int _GetLastError();
-        [DllImport("MonoPosixHelper", EntryPoint = "Mono_Posix_ToErrno")]
-        private static extern int ToErrno(int value, out Errno rval);
-
-        private static string GetLastError(string name) {
-            int raw = _GetLastError();
-            if (ToErrno(raw, out Errno errno) == 0) {
-                return $"{name} returned {errno}";
-            }
-            return $"{name} returned 0x${raw:X8}";
-        }
-
-        private static unsafe void SetMemPerms(IntPtr start, ulong len, MmapProts prot) {
-            long pagesize = sysconf(SysconfName._SC_PAGESIZE, 0);
-
-            long startPage = ((long) start) & ~(pagesize - 1);
-            long endPage = ((long) start + (long) len) & ~(pagesize - 1);
-            endPage = (((endPage - startPage) / pagesize) + 1) * pagesize;
-
-            if (mprotect((IntPtr) startPage, (ulong) endPage, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC) != 0) {
-                throw new Exception(GetLastError("mprotect"));
-            }
-        }
-
-        public void MakeWritable(NativeDetourData detour) {
-            // RWX because old versions of mono always use RWX.
-            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
-            Inner.MakeWritable(detour);
-        }
-
-        public void MakeExecutable(NativeDetourData detour) {
-            // RWX because old versions of mono always use RWX.
-            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
-            Inner.MakeExecutable(detour);
-        }
-
-        public NativeDetourData Create(IntPtr from, IntPtr to, byte? type) {
-            return Inner.Create(from, to, type);
-        }
-
-        public void Free(NativeDetourData detour) {
-            Inner.Free(detour);
-        }
-
-        public void Apply(NativeDetourData detour) {
-            Inner.Apply(detour);
-        }
-
-        public void Copy(IntPtr src, IntPtr dst, byte type) {
-            Inner.Copy(src, dst, type);
-        }
-
-        public IntPtr MemAlloc(uint size) {
-            return Inner.MemAlloc(size);
-        }
-
-        public void MemFree(IntPtr ptr) {
-            Inner.MemFree(ptr);
         }
     }
 }
