@@ -103,9 +103,15 @@ namespace MonoMod.Utils {
             }
 #endif
 
+            LibrarySuffix =
+                Is(Platform.MacOS) ? "dylib" :
+                Is(Platform.Unix) ? "so" :
+                "dll";
+
         }
 
         public static Platform Current { get; private set; }
+        public static string LibrarySuffix { get; private set; }
 
         public static bool Is(Platform platform)
             => (Current & platform) == platform;
