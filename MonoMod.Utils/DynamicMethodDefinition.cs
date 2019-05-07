@@ -197,9 +197,14 @@ namespace MonoMod.Utils {
                                 rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
                                 rp.ReflectionImporterProvider = new ReflectionCecilImporterProvider(rp.ReflectionImporterProvider);
                             }
-                            module = moduleTmp = ModuleDefinition.ReadModule(location, rp);
+                            try {
+                                module = moduleTmp = ModuleDefinition.ReadModule(location, rp);
+                            } catch when (_DisposeEarly(true)) {
+                                module = moduleTmp = null;
+                            }
+                        }
 
-                        } else {
+                        if (module == null) {
                             Type[] argTypes;
                             ParameterInfo[] args = Method.GetParameters();
                             int offs = 0;
@@ -222,10 +227,11 @@ namespace MonoMod.Utils {
                     _ModuleRef++;
                 }
                 _Definition = Definition;
-            } catch when (_DisposeEarly()) {
+            } catch when (_DisposeEarly(false)) {
+                throw;
             }
 
-            bool _DisposeEarly() {
+            bool _DisposeEarly(bool silent) {
                 if (moduleTmp != null) {
                     lock (_ModuleRefs) {
 #if !CECIL0_9
@@ -235,7 +241,7 @@ namespace MonoMod.Utils {
                         _ModuleRef = 0;
                     }
                 }
-                return false;
+                return silent;
             }
         }
 
