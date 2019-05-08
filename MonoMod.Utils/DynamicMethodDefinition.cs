@@ -284,12 +284,16 @@ namespace MonoMod.Utils {
                     // In .NET Framework, DynamicILGenerator doesn't support fault and filter blocks.
                     // This is a non-issue in .NET Core and it could be an issue in mono.
                     // https://github.com/dotnet/coreclr/issues/1764
-#if !NETSTANDARD
+#if NETFRAMEWORK || NETSTANDARD1_X
                     if (Definition.Body.ExceptionHandlers.Any(eh =>
                         eh.HandlerType == ExceptionHandlerType.Fault ||
                         eh.HandlerType == ExceptionHandlerType.Filter
                     ))
+#if NETSTANDARD
+                        return GenerateViaCecil(context as TypeDefinition);
+#else
                         return GenerateViaMethodBuilder(context as TypeBuilder);
+#endif
 #endif
 
                     return GenerateViaDynamicMethod();
