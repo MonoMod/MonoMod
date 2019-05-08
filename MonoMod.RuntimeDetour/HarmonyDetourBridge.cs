@@ -323,12 +323,15 @@ namespace MonoMod.RuntimeDetour {
 #if !NETSTANDARD1_X
             foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies()) {
                 if (asm.GetName().Name == "0Harmony" || asm.GetName().Name == "Harmony" ||
-                    asm.GetType("Harmony.HarmonyInstance") != null) {
+                    asm.GetType("Harmony.HarmonyInstance") != null ||
+                    asm.GetType("HarmonyLib.Harmony") != null) {
                     return asm;
                 }
             }
 #endif
-            return System.Type.GetType("Harmony.HarmonyInstance", false, false)?.GetTypeInfo()?.Assembly;
+            return
+                System.Type.GetType("Harmony.HarmonyInstance", false, false)?.GetTypeInfo()?.Assembly ??
+                System.Type.GetType("HarmonyLib.Harmony", false, false)?.GetTypeInfo()?.Assembly;
         }
 
     }
