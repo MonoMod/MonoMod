@@ -7,9 +7,9 @@ using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
     public unsafe sealed class DetourNativeMonoPlatform : IDetourNativePlatform {
-        private IDetourNativePlatform Inner;
+        private readonly IDetourNativePlatform Inner;
 
-        private long _Pagesize;
+        private readonly long _Pagesize;
 
         public DetourNativeMonoPlatform(IDetourNativePlatform inner, string libmono) {
             Inner = inner;
@@ -68,6 +68,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Inner.MemFree(ptr);
         }
 
+#pragma warning disable IDE0044 // Add readonly modifier
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value null
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int d_mono_pagesize();
         [DynDllImport("mono")]
@@ -77,6 +79,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private delegate int d_mono_mprotect(IntPtr addr, IntPtr length, int flags);
         [DynDllImport("mono")]
         private d_mono_mprotect mono_mprotect;
+#pragma warning restore IDE0044 // Add readonly modifier
+#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value null
 
         [Flags]
         private enum MmapProts : int {

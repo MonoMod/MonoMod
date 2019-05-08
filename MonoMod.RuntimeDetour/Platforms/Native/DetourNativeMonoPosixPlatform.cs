@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
     public unsafe sealed class DetourNativeMonoPosixPlatform : IDetourNativePlatform {
-        private IDetourNativePlatform Inner;
+        private readonly IDetourNativePlatform Inner;
 
-        private long _Pagesize;
+        private readonly long _Pagesize;
 
         public DetourNativeMonoPosixPlatform(IDetourNativePlatform inner) {
             Inner = inner;
