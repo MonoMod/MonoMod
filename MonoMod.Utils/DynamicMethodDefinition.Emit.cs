@@ -140,7 +140,10 @@ namespace MonoMod.Utils {
                     }));
                 }
 
-                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", true);
+                // Note: Debugging can fail on mono if Mono.CompilerServices.SymbolWriter.dll cannot be found,
+                // or if Mono.CompilerServices.SymbolWriter.SymbolWriterImpl can't be found inside of that.
+                // https://github.com/mono/mono/blob/f879e35e3ed7496d819bd766deb8be6992d068ed/mcs/class/corlib/System.Reflection.Emit/ModuleBuilder.cs#L146
+                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", Debug);
                 typeBuilder = module.DefineType(
                     $"DMD<{Method?.GetFindableID(simple: true)?.Replace('.', '_')}>?{GetHashCode()}",
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
