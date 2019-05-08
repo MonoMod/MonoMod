@@ -65,6 +65,8 @@ namespace MonoMod.UnitTest {
                     TargetTest("A", str);
                 }
 
+            } catch (Exception e) when (e == null) {
+                return Tuple.Create("", -2);
             } catch (Exception) {
                 return Tuple.Create("", -1);
             }

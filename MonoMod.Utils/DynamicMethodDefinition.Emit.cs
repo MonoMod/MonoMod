@@ -22,6 +22,10 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
         private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
 
+#if !NETSTANDARD
+        private static readonly bool _MBCanRunAndCollect = Enum.IsDefined(typeof(AssemblyBuilderAccess), "RunAndCollect");
+#endif
+
         static void _InitReflEmit() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 System.Reflection.Emit.OpCode reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null);
@@ -123,11 +127,12 @@ namespace MonoMod.Utils {
                 } else {
                     dumpDir = System.IO.Path.GetFullPath(dumpDir);
                 }
+                bool collect = string.IsNullOrEmpty(dumpDir) && _MBCanRunAndCollect;
                 AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
                         Name = _GetDumpName("MethodBuilder")
                     },
-                    AssemblyBuilderAccess.RunAndSave,
+                    collect ? (AssemblyBuilderAccess) 9 : AssemblyBuilderAccess.RunAndSave,
                     dumpDir
                 );
 
@@ -140,7 +145,10 @@ namespace MonoMod.Utils {
                     }));
                 }
 
-                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", true);
+                // Note: Debugging can fail on mono if Mono.CompilerServices.SymbolWriter.dll cannot be found,
+                // or if Mono.CompilerServices.SymbolWriter.SymbolWriterImpl can't be found inside of that.
+                // https://github.com/mono/mono/blob/f879e35e3ed7496d819bd766deb8be6992d068ed/mcs/class/corlib/System.Reflection.Emit/ModuleBuilder.cs#L146
+                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", Debug);
                 typeBuilder = module.DefineType(
                     $"DMD<{Method?.GetFindableID(simple: true)?.Replace('.', '_')}>?{GetHashCode()}",
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
@@ -274,6 +282,7 @@ namespace MonoMod.Utils {
 
             int paramOffs = def.HasThis ? 1 : 0;
             object[] emitArgs = new object[2];
+            bool checkTryEndEarly = false;
             foreach (Instruction instr in def.Body.Instructions) {
                 if (labelMap.TryGetValue(instr, out Label label))
                     il.MarkLabel(label);
@@ -295,16 +304,18 @@ namespace MonoMod.Utils {
 
                 // TODO: This can be improved perf-wise!
                 foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
+                    if (checkTryEndEarly && handler.HandlerEnd == instr) {
+                        il.EndExceptionBlock();
+                    }
+
                     if (handler.TryStart == instr) {
                         il.BeginExceptionBlock();
-
                     } else if (handler.FilterStart == instr) {
                         il.BeginExceptFilterBlock();
-
                     } else if (handler.HandlerStart == instr) {
                         switch (handler.HandlerType) {
                             case ExceptionHandlerType.Filter:
-                                // Handled by FilterStart
+                                il.BeginCatchBlock(null);
                                 break;
                             case ExceptionHandlerType.Catch:
                                 il.BeginCatchBlock(handler.CatchType.ResolveReflection());
@@ -314,6 +325,21 @@ namespace MonoMod.Utils {
                                 break;
                             case ExceptionHandlerType.Fault:
                                 il.BeginFaultBlock();
+                                break;
+                        }
+
+                    }
+
+                    // Avoid duplicate endfilter / endfinally
+                    if (handler.HandlerStart == instr.Next) {
+                        switch (handler.HandlerType) {
+                            case ExceptionHandlerType.Filter:
+                                if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Endfilter)
+                                    goto SkipEmit;
+                                break;
+                            case ExceptionHandlerType.Finally:
+                                if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Endfinally)
+                                    goto SkipEmit;
                                 break;
                         }
                     }
@@ -328,14 +354,18 @@ namespace MonoMod.Utils {
                         operand = targets.Select(target => labelMap[target]).ToArray();
                         // Let's hope that the JIT treats the long forms identically to the short forms.
                         instr.OpCode = instr.OpCode.ShortToLongOp();
+
                     } else if (operand is Instruction target) {
                         operand = labelMap[target];
                         // Let's hope that the JIT treats the long forms identically to the short forms.
                         instr.OpCode = instr.OpCode.ShortToLongOp();
+
                     } else if (operand is VariableDefinition var) {
                         operand = locals[var.Index];
+
                     } else if (operand is ParameterDefinition param) {
                         operand = param.Index + paramOffs;
+
                     } else if (operand is MemberReference mref) {
                         if (mref is DynamicMethodReference dmref) {
                             operand = dmref.DynamicMethod;
@@ -411,12 +441,20 @@ namespace MonoMod.Utils {
                 }
 
                 // TODO: This can be improved perf-wise!
-                foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
-                    if (handler.HandlerEnd == instr.Next) {
-                        il.EndExceptionBlock();
+                if (!checkTryEndEarly) {
+                    foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
+                        if (handler.HandlerEnd == instr.Next) {
+                            il.EndExceptionBlock();
+                        }
                     }
                 }
 
+                checkTryEndEarly = false;
+                continue;
+
+                SkipEmit:
+                checkTryEndEarly = true;
+                continue;
             }
         }
 
