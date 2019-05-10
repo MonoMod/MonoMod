@@ -78,14 +78,14 @@ namespace MonoMod.Utils {
                 switch (instr.OpCode.OperandType) {
                     case OperandType.ShortInlineBrTarget:
                     case OperandType.InlineBrTarget:
-                        instr.Operand = GetInstruction((int) instr.Operand, false);
+                        instr.Operand = GetInstruction((int) instr.Operand);
                         break;
 
                     case OperandType.InlineSwitch:
                         int[] offsets = (int[]) instr.Operand;
                         Instruction[] targets = new Instruction[offsets.Length];
                         for (int i = 0; i < offsets.Length; i++)
-                            targets[i] = GetInstruction(offsets[i], false);
+                            targets[i] = GetInstruction(offsets[i]);
                         instr.Operand = targets;
                         break;
                 }
@@ -95,12 +95,12 @@ namespace MonoMod.Utils {
                 ExceptionHandler handler = new ExceptionHandler((ExceptionHandlerType) clause.Flags);
                 bodyTo.ExceptionHandlers.Add(handler);
 
-                handler.TryStart = GetInstruction(clause.TryOffset, false);
-                handler.TryEnd = GetInstruction(handler.TryStart.Offset + clause.TryLength - 1, false);
+                handler.TryStart = GetInstruction(clause.TryOffset);
+                handler.TryEnd = GetInstruction(clause.TryOffset + clause.TryLength);
 
-                handler.HandlerStart = GetInstruction(clause.HandlerOffset, false);
-                handler.FilterStart = GetInstruction(clause.FilterOffset, false);
-                handler.HandlerEnd = GetInstruction(handler.HandlerStart.Offset + clause.HandlerLength - 1, true);
+                handler.FilterStart = handler.HandlerType != ExceptionHandlerType.Filter ? null : GetInstruction(clause.FilterOffset);
+                handler.HandlerStart = GetInstruction(clause.HandlerOffset);
+                handler.HandlerEnd = GetInstruction(clause.HandlerOffset + clause.HandlerLength);
 
                 handler.CatchType = clause.CatchType == null ? null : moduleTo.ImportReference(clause.CatchType);
             }
@@ -204,7 +204,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            Instruction GetInstruction(int offset, bool isEnd) {
+            Instruction GetInstruction(int offset) {
                 int last = bodyTo.Instructions.Count - 1;
                 if (offset < 0 || offset > bodyTo.Instructions[last].Offset)
                     return null;
@@ -215,13 +215,8 @@ namespace MonoMod.Utils {
                     int mid = min + ((max - min) / 2);
                     Instruction instr = bodyTo.Instructions[mid];
 
-                    if (isEnd) {
-                        if (offset == instr.Offset + instr.GetSize() - 1)
-                            return instr;
-                    } else {
-                        if (offset == instr.Offset)
-                            return instr;
-                    }
+                    if (offset == instr.Offset)
+                        return instr;
 
                     if (offset < instr.Offset)
                         max = mid - 1;
