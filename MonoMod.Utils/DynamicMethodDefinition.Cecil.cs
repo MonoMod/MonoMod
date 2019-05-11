@@ -150,7 +150,7 @@ namespace MonoMod.Utils {
                     string name = module.Name + ".dll";
                     string path = Path.Combine(dir, name);
                     dir = Path.GetDirectoryName(path);
-                    if (!Directory.Exists(dir))
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                         Directory.CreateDirectory(dir);
                     if (File.Exists(path))
                         File.Delete(path);
@@ -174,14 +174,6 @@ namespace MonoMod.Utils {
                 _DynModuleReflCache[asm.GetModules()[0]] = module;
                 _DynModuleIsPrivate = false;
                 moduleIsPrivate = false;
-
-#if !NETSTANDARD1_X
-                AppDomain.CurrentDomain.AssemblyResolve += (sender, args) => {
-                    if (args.Name == asm.GetName().FullName || args.Name == asm.GetName().Name || args.Name == asm.FullName)
-                        return asm;
-                    return null;
-                };
-#endif
 
                 return _Postbuild(asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false).GetMethod(clone.Name));
 
