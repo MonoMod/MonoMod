@@ -304,6 +304,22 @@ namespace MonoMod.Utils {
         }
 
         private static unsafe MethodInfo _Postbuild(MethodInfo mi) {
+#if !NETSTANDARD1_X
+            if (mi.DeclaringType != null && mi.DeclaringType.Assembly != null) {
+                Assembly asm = mi.DeclaringType.Assembly;
+                AssemblyName asmName = asm.GetName();
+
+                ReflectionHelper.AssemblyCache[asmName.Name] = asm;
+                ReflectionHelper.AssemblyCache[asmName.FullName] = asm;
+
+                AppDomain.CurrentDomain.AssemblyResolve += (sender, args) => {
+                    if (args.Name == asmName.FullName || args.Name == asmName.Name || args.Name == asm.FullName)
+                        return asm;
+                    return null;
+                };
+            }
+#endif
+
             if (mi == null)
                 return null;
 

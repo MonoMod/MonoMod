@@ -110,7 +110,7 @@ namespace MonoMod.Utils {
                 string path = method.Module.FullyQualifiedName;
                 string name = System.IO.Path.GetFileName(path);
                 string dir = System.IO.Path.GetDirectoryName(path);
-                if (!System.IO.Directory.Exists(dir))
+                if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
                 if (System.IO.File.Exists(path))
                     System.IO.File.Delete(path);
