@@ -32,6 +32,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             DetourHelper.Native.MakeWritable(detour);
             DetourHelper.Native.Apply(detour);
             DetourHelper.Native.MakeExecutable(detour);
+            DetourHelper.Native.FlushICache(detour);
             DetourHelper.Native.Free(detour);
             // No need to undo the detour.
 

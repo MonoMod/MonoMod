@@ -43,29 +43,27 @@ namespace MonoMod.RuntimeDetour {
                         _Native = new DetourNativeX86Platform();
                     }
 
+                    if (PlatformHelper.Is(Platform.Windows)) {
+                        return _Native = new DetourNativeWindowsPlatform(_Native);
+                    }
+
                     if (Type.GetType("Mono.Runtime") != null) {
                         try {
                             // It's prefixed with lib on every platform.
-                            _Native = new DetourNativeMonoPlatform(_Native, $"libmonosgen-2.0.{PlatformHelper.LibrarySuffix}");
-                            return _Native;
+                            return _Native = new DetourNativeMonoPlatform(_Native, $"libmonosgen-2.0.{PlatformHelper.LibrarySuffix}");
                         } catch {
                             // Fall back to another native platform wrapper.
                         }
-                    }
 
-                    if (PlatformHelper.Is(Platform.Windows)) {
-                        _Native = new DetourNativeWindowsPlatform(_Native);
-                    } else if (PlatformHelper.Is(Platform.Unix)) {
-                        if (Type.GetType("Mono.Runtime") != null) {
-                            try {
-                                _Native = new DetourNativeMonoPosixPlatform(_Native);
-                            } catch {
-                                // If you're reading this: Good job, your copy of Mono doesn't ship with MonoPosixHelper.
-                                // https://www.youtube.com/watch?v=l60MnDJklnM
-                            }
-                        } else {
-                            // TODO: .NET Core Posix native platform wrapper.
+                        // MonoPosixHelper is available outside of Unix as well.
+                        try {
+                            _Native = new DetourNativeMonoPosixPlatform(_Native);
+                        } catch {
+                            // Good job, your copy of Mono doesn't ship with MonoPosixHelper.
+                            // https://www.youtube.com/watch?v=l60MnDJklnM
                         }
+                    } else {
+                        // TODO: .NET Core Posix native platform wrapper.
                     }
 
                     return _Native;
@@ -73,6 +71,14 @@ namespace MonoMod.RuntimeDetour {
             }
             set => _Native = value;
         }
+
+        #region Interface extension methods
+
+        public static void MakeWritable(this IDetourNativePlatform plat, NativeDetourData detour) => plat.MakeWritable(detour.Method, detour.Size);
+        public static void MakeExecutable(this IDetourNativePlatform plat, NativeDetourData detour) => plat.MakeExecutable(detour.Method, detour.Size);
+        public static void FlushICache(this IDetourNativePlatform plat, NativeDetourData detour) => plat.FlushICache(detour.Method, detour.Size);
+
+        #endregion
 
         #region Native helpers
 
@@ -160,6 +166,7 @@ namespace MonoMod.RuntimeDetour {
             Native.MakeWritable(detour);
             Native.Apply(detour);
             Native.MakeExecutable(detour);
+            Native.FlushICache(detour);
             Native.Free(detour);
 
             return dm;

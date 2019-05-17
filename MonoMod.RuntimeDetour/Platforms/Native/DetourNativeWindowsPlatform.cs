@@ -11,19 +11,20 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Inner = inner;
         }
 
-        public void MakeWritable(NativeDetourData detour) {
+        public void MakeWritable(IntPtr src, uint size) {
             // PAGE_READWRITE causes an AccessViolationException / TargetInvocationException.
-            if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_EXECUTE_READWRITE, out _))
+            if (!VirtualProtect(src, (IntPtr) size, Protection.PAGE_EXECUTE_READWRITE, out _))
                 throw new Win32Exception();
-
-            Inner.MakeWritable(detour);
         }
 
-        public void MakeExecutable(NativeDetourData detour) {
-            if (!VirtualProtect(detour.Method, (IntPtr) detour.Size, Protection.PAGE_EXECUTE_READWRITE, out _))
+        public void MakeExecutable(IntPtr src, uint size) {
+            if (!VirtualProtect(src, (IntPtr) size, Protection.PAGE_EXECUTE_READWRITE, out _))
                 throw new Win32Exception();
+        }
 
-            Inner.MakeExecutable(detour);
+        public void FlushICache(IntPtr src, uint size) {
+            if (!FlushInstructionCache(GetCurrentProcess(), src, (UIntPtr) size))
+                throw new Win32Exception();
         }
 
         public NativeDetourData Create(IntPtr from, IntPtr to, byte? type) {
@@ -53,8 +54,14 @@ namespace MonoMod.RuntimeDetour.Platforms {
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool VirtualProtect(IntPtr lpAddress, IntPtr dwSize, Protection flNewProtect, out Protection lpflOldProtect);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetCurrentProcess();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool FlushInstructionCache(IntPtr hProcess, IntPtr lpBaseAddress, UIntPtr dwSize);
+
         [Flags]
-        private enum Protection {
+        private enum Protection : uint {
             PAGE_NOACCESS = 0x01,
             PAGE_READONLY = 0x02,
             PAGE_READWRITE = 0x04,

@@ -34,16 +34,19 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 throw new Exception(GetLastError("mprotect"));
         }
 
-        public void MakeWritable(NativeDetourData detour) {
+        public void MakeWritable(IntPtr src, uint size) {
             // RWX because old versions of mono always use RWX.
-            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
-            Inner.MakeWritable(detour);
+            SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
         }
 
-        public void MakeExecutable(NativeDetourData detour) {
+        public void MakeExecutable(IntPtr src, uint size) {
             // RWX because old versions of mono always use RWX.
-            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
-            Inner.MakeExecutable(detour);
+            SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
+        }
+
+        public void FlushICache(IntPtr src, uint size) {
+            // There is no cache flushing function in MPH.
+            Inner.FlushICache(src, size);
         }
 
         public NativeDetourData Create(IntPtr from, IntPtr to, byte? type) {

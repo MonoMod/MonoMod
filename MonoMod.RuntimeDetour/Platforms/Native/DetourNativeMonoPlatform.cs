@@ -32,16 +32,19 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 throw new System.ComponentModel.Win32Exception();
         }
 
-        public void MakeWritable(NativeDetourData detour) {
+        public void MakeWritable(IntPtr src, uint size) {
             // RWX because old versions of mono always use RWX.
-            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
-            Inner.MakeWritable(detour);
+            SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
         }
 
-        public void MakeExecutable(NativeDetourData detour) {
+        public void MakeExecutable(IntPtr src, uint size) {
             // RWX because old versions of mono always use RWX.
-            SetMemPerms(detour.Method, detour.Size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
-            Inner.MakeExecutable(detour);
+            SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
+        }
+
+        public void FlushICache(IntPtr src, uint size) {
+            // mono_arch_flush_icache isn't reliably exported.
+            Inner.FlushICache(src, size);
         }
 
         public NativeDetourData Create(IntPtr from, IntPtr to, byte? type) {
@@ -70,6 +73,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
 #pragma warning disable IDE0044 // Add readonly modifier
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value null
+
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int d_mono_pagesize();
         [DynDllImport("mono")]
@@ -79,6 +83,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private delegate int d_mono_mprotect(IntPtr addr, IntPtr length, int flags);
         [DynDllImport("mono")]
         private d_mono_mprotect mono_mprotect;
+
 #pragma warning restore IDE0044 // Add readonly modifier
 #pragma warning restore CS0649 // Field is never assigned to, and will always have its default value null
 

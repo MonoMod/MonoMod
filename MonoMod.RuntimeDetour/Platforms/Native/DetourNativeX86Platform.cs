@@ -1,5 +1,6 @@
 ﻿using MonoMod.Utils;
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
@@ -108,12 +109,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
         }
 
-        public void MakeWritable(NativeDetourData detour) {
+        public void MakeWritable(IntPtr src, uint size) {
             // no-op.
         }
 
-        public void MakeExecutable(NativeDetourData detour) {
+        public void MakeExecutable(IntPtr src, uint size) {
             // no-op.
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void FlushICache(IntPtr src, uint size) {
+            // On X86, apparently a call / ret is enough to flush the entire cache.
         }
 
         public IntPtr MemAlloc(uint size) {

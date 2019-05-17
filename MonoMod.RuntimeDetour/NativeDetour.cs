@@ -108,6 +108,7 @@ namespace MonoMod.RuntimeDetour {
             DetourHelper.Native.MakeWritable(Data);
             DetourHelper.Native.Apply(Data);
             DetourHelper.Native.MakeExecutable(Data);
+            DetourHelper.Native.FlushICache(Data);
         }
 
         /// <summary>

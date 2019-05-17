@@ -1,5 +1,6 @@
 ﻿using MonoMod.Utils;
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
@@ -179,12 +180,31 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
         }
 
-        public void MakeWritable(NativeDetourData detour) {
+        public void MakeWritable(IntPtr src, uint size) {
             // no-op.
         }
 
-        public void MakeExecutable(NativeDetourData detour) {
+        public void MakeExecutable(IntPtr src, uint size) {
             // no-op.
+        }
+
+        public void FlushICache(IntPtr src, uint size) {
+            // On ARM, we must flush the instruction cache.
+            // Sadly, mono_arch_flush_icache isn't reliably exported.
+            // This thus requires running native code to invoke the syscall.
+
+            if (flushicache == null) {
+                // Emit a native delegate once. It lives as long as the application.
+                byte[] code = IntPtr.Size >= 8 ? _FlushCache64 : _FlushCache32;
+                IntPtr flushPtr = Marshal.AllocHGlobal(code.Length);
+                Marshal.Copy(code, 0, flushPtr, code.Length);
+                DetourHelper.Native.MakeExecutable(flushPtr, (uint) code.Length);
+
+                // It'd be ironic if the flush function would need to be flushed itself...
+                flushicache = flushPtr.AsDelegate<d_flushicache>();
+            }
+
+            flushicache(src, (int) size);
         }
 
         public IntPtr MemAlloc(uint size) {
@@ -194,5 +214,60 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void MemFree(IntPtr ptr) {
             Marshal.FreeHGlobal(ptr);
         }
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int d_flushicache(IntPtr code, int size);
+        private d_flushicache flushicache;
+
+        // The following tools were used to obtain the shellcode.
+        // https://godbolt.org/ ARM(64) gcc 8.2
+        // http://shell-storm.org/online/Online-Assembler-and-Disassembler/
+        // http://alexaltea.github.io/keystone.js/ .map(x => "0x" + x.toString(16).padStart(2, "0")).join(", ")
+
+        /* -O2 -fPIE -march=armv6
+        // On ARM non-64, apparently SVC is the newer "Unified Assembler Language" (UAL) syntax.
+        // In older versions of mono (before they fully switched to __clear_cache), it was only used for Android.
+        // Adapted from mono's instruction flushing code.
+        // https://github.com/mono/mono/blob/d2acc1d780d40f0a418347181c5adab533944d90/mono/mini/mini-arm.c#L1195
+        void flushicache(void* code, int size) {
+	        const int syscall = 0xf0002;
+	        __asm __volatile (
+		        "mov	 r0, %0\n"			
+		        "mov	 r1, %1\n"
+		        "mov	 r7, %2\n"
+		        "mov     r2, #0x0\n"
+		        "svc     0x00000000\n"
+		        :
+		        :   "r" (code), "r" (((long) code) + size), "r" (syscall)
+		        :   "r0", "r1", "r7", "r2"
+		    );
+        }
+        */
+        private readonly byte[] _FlushCache32 = { 0x00, 0x30, 0xa0, 0xe1, 0x01, 0xc0, 0x80, 0xe0, 0x14, 0xe0, 0x9f, 0xe5, 0x03, 0x00, 0xa0, 0xe1, 0x0c, 0x10, 0xa0, 0xe1, 0x0e, 0x70, 0xa0, 0xe1, 0x00, 0x20, 0xa0, 0xe3, 0x00, 0x00, 0x00, 0xef, 0x80, 0x80, 0xbd, 0xe8, 0x02, 0x00, 0x0f, 0x00 };
+
+        /* -O2 -fPIE -march=armv8-a
+        // Adapted from mono's instruction flushing code.
+        // https://github.com/mono/mono/blob/cd5e14a3ccaa76e6ba6c58b26823863a2d0a0854/mono/mini/mini-arm64.c#L1997
+        void flushicache(void* code, int size) {
+	        unsigned long end = (unsigned long) (((unsigned long) code) + size);
+	        unsigned long addr;
+	        const unsigned int icache_line_size = 4;
+	        const unsigned int dcache_line_size = 4;
+
+	        addr = (unsigned long) code & ~(unsigned long) (dcache_line_size - 1);
+	        for (; addr < end; addr += dcache_line_size)
+		        asm volatile("dc civac, %0" : : "r" (addr) : "memory");
+	        asm volatile("dsb ish" : : : "memory");
+
+	        addr = (unsigned long) code & ~(unsigned long) (icache_line_size - 1);
+	        for (; addr < end; addr += icache_line_size)
+		        asm volatile("ic ivau, %0" : : "r" (addr) : "memory");
+
+	        asm volatile ("dsb ish" : : : "memory");
+	        asm volatile ("isb" : : : "memory");
+        }
+        */
+        private readonly byte[] _FlushCache64 = { 0x00, 0xf4, 0x7e, 0x92, 0x3f, 0x00, 0x00, 0xeb, 0xc9, 0x00, 0x00, 0x54, 0xe2, 0x03, 0x00, 0xaa, 0x22, 0x7e, 0x0b, 0xd5, 0x42, 0x10, 0x00, 0x91, 0x3f, 0x00, 0x02, 0xeb, 0xa8, 0xff, 0xff, 0x54, 0x9f, 0x3b, 0x03, 0xd5, 0x3f, 0x00, 0x00, 0xeb, 0xa9, 0x00, 0x00, 0x54, 0x20, 0x75, 0x0b, 0xd5, 0x00, 0x10, 0x00, 0x91, 0x3f, 0x00, 0x00, 0xeb, 0xa8, 0xff, 0xff, 0x54, 0x9f, 0x3b, 0x03, 0xd5, 0xdf, 0x3f, 0x03, 0xd5, 0xc0, 0x03, 0x5f, 0xd6 };
+
     }
 }

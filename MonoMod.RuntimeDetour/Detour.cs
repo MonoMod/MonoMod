@@ -129,6 +129,7 @@ namespace MonoMod.RuntimeDetour {
                 DetourHelper.Native.MakeWritable(link);
                 DetourHelper.Native.Apply(link);
                 DetourHelper.Native.MakeExecutable(link);
+                DetourHelper.Native.FlushICache(link);
                 DetourHelper.Native.Free(link);
 
                 detours.Add(this);
@@ -289,6 +290,7 @@ namespace MonoMod.RuntimeDetour {
                     DetourHelper.Native.MakeWritable(link);
                     DetourHelper.Native.Apply(link);
                     DetourHelper.Native.MakeExecutable(link);
+                    DetourHelper.Native.FlushICache(link);
                     DetourHelper.Native.Free(link);
                 }
 
@@ -299,6 +301,7 @@ namespace MonoMod.RuntimeDetour {
                 DetourHelper.Native.MakeWritable(link);
                 DetourHelper.Native.Apply(link);
                 DetourHelper.Native.MakeExecutable(link);
+                DetourHelper.Native.FlushICache(link);
                 DetourHelper.Native.Free(link);
             }
         }
