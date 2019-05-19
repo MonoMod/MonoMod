@@ -22,6 +22,8 @@ namespace MonoMod.Utils {
         public static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
         public static readonly Dictionary<MemberReference, MemberInfo> ResolveReflectionCache = new Dictionary<MemberReference, MemberInfo>();
 
+        private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
+
         private static MemberInfo _Cache(MemberReference key, MemberInfo value) {
             if (key != null && value != null) {
                 lock (ResolveReflectionCache) {
@@ -68,7 +70,10 @@ namespace MonoMod.Utils {
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
                 string methodID = method.GetFindableID(withType: false);
-                MethodInfo found = type.AsType().GetMethods().First(m => m.GetFindableID(withType: false) == methodID);
+                MethodBase found = 
+                    type.AsType().GetMethods(_BindingFlagsAll).Cast<MethodBase>()
+                    .Concat(type.AsType().GetConstructors(_BindingFlagsAll))
+                    .FirstOrDefault(m => m.GetFindableID(withType: false) == methodID);
                 if (found != null)
                     return _Cache(mref, found);
             }
@@ -169,17 +174,17 @@ namespace MonoMod.Utils {
             } else if (typeless) {
                 if (mref is MethodReference)
                     member = modules
-                        .Select(module => module.GetMethods((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m)))
+                        .Select(module => module.GetMethods(_BindingFlagsAll).FirstOrDefault(m => mref.Is(m)))
                         .FirstOrDefault(m => m != null);
                 else if (mref is FieldReference)
                     member = modules
-                        .Select(module => module.GetFields((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m)))
+                        .Select(module => module.GetFields(_BindingFlagsAll).FirstOrDefault(m => mref.Is(m)))
                         .FirstOrDefault(m => m != null);
                 else
                     throw new NotSupportedException($"Unsupported <Module> member type {mref.GetType().FullName}");
 
             } else {
-                member = (_ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo).AsType().GetMembers((BindingFlags) (-1)).FirstOrDefault(m => mref.Is(m));
+                member = (_ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo).AsType().GetMembers(_BindingFlagsAll).FirstOrDefault(m => mref.Is(m));
             }
 
             return _Cache(mref, member);

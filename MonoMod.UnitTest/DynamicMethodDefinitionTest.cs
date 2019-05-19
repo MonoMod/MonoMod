@@ -61,8 +61,11 @@ namespace MonoMod.UnitTest {
 
                 List<string> list = new List<string>();
                 list.AddRange(new string[] { "A", "B", "C" });
+
+                string[][] array2d1 = new string[][] { new string[] { "A" } };
+                string[,] array2d2 = new string[,] { { "B" } };
                 foreach (string str in list) {
-                    TargetTest("A", str);
+                    TargetTest(array2d1[0][0], array2d2[0, 0], str);
                 }
 
             } catch (Exception e) when (e == null) {
@@ -73,12 +76,12 @@ namespace MonoMod.UnitTest {
             return Tuple.Create(StringOriginal, Counter);
         }
 
-        public static int TargetTest<T>(string a, string b) {
-            return (a + b).GetHashCode();
+        public static int TargetTest<T>(string a, string b, string c) {
+            return (a + b + c).GetHashCode();
         }
 
-        public static int TargetTest(string a, string b) {
-            return (a + b).GetHashCode();
+        public static int TargetTest(string a, string b, string c) {
+            return (a + b + c).GetHashCode();
         }
 
     }
