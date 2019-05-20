@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/vsts/pipelines/apps/windows/dot-net
 
 pool:
-  vmImage: 'VS2017-Win2016'
+  vmImage: 'windows-2019'
 
 variables:
   solution: '**/*.sln'
@@ -15,11 +15,11 @@ name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
 steps:
 # Install the .NET Core SDK.
-- task: DotNetCoreInstaller@0
+- task: UseDotNet@2
   displayName: 'Install: .NET Core SDK'
   inputs:
     packageType: 'sdk'
-    version: '2.0.0'
+    version: '2.x'
 
 # Run pre-build steps.
 - task: DotNetCoreCLI@2
