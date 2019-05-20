@@ -14,16 +14,6 @@ using TypeAttributes = Mono.Cecil.TypeAttributes;
 namespace MonoMod.Utils.Cil {
     public partial class ILGeneratorShim {
 
-#if NETSTANDARD1_X
-        private static readonly Type t_AssemblyLoadContext =
-            typeof(Assembly).GetTypeInfo().Assembly
-            .GetType("System.Runtime.Loader.AssemblyLoadContext");
-        private static readonly object _AssemblyLoadContext_Default =
-            t_AssemblyLoadContext.GetProperty("Default").GetValue(null);
-        private static readonly MethodInfo _AssemblyLoadContext_LoadFromStream =
-            t_AssemblyLoadContext.GetMethod("LoadFromStream", new Type[] { typeof(Stream) });
-#endif
-
         public System.Reflection.Emit.ILGenerator GetProxy() {
             return (System.Reflection.Emit.ILGenerator) ILGeneratorBuilder
                 .GenerateProxy()
@@ -55,7 +45,6 @@ namespace MonoMod.Utils.Cil {
                     FullName,
                     new ModuleParameters() {
                         Kind = ModuleKind.Dll,
-                        AssemblyResolver = new DefaultAssemblyResolver(),
                         ReflectionImporterProvider = MMReflectionImporter.Provider
                     }
                 )) {
@@ -122,22 +111,8 @@ namespace MonoMod.Utils.Cil {
                         il.Emit(OpCodes.Ret);
                     }
 
-                    using (MemoryStream asmStream = new MemoryStream()) {
-                        module.Write(asmStream);
-                        asmStream.Seek(0, SeekOrigin.Begin);
-#if NETSTANDARD1_X
-                        // System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
-                        asm = (Assembly) _AssemblyLoadContext_LoadFromStream.Invoke(_AssemblyLoadContext_Default, new object[] { asmStream });
-#else
-                        asm = Assembly.Load(asmStream.GetBuffer());
-#endif
-                    }
+                    asm = ReflectionHelper.Load(module);
                 }
-
-#if !NETSTANDARD1_X
-                AppDomain.CurrentDomain.AssemblyResolve +=
-                    (s, e) => e.Name == asm.FullName ? asm : null;
-#endif
 
                 return ProxyType = asm.GetType(FullName);
             }

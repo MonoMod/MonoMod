@@ -1,9 +1,11 @@
-﻿using Mono.Cecil.Cil;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Utils;
 using MonoMod.Utils.Cil;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -20,13 +22,13 @@ namespace MonoMod.RuntimeDetour {
         public static bool Initialized { get; private set; }
         private static Type CurrentType;
 
-        private static Assembly _ASM;
+        private static Assembly _HarmonyASM;
         private static readonly List<IDisposable> _Detours = new List<IDisposable>();
 
         private static readonly Dictionary<System.Type, MethodInfo> _Emitters = new Dictionary<System.Type, MethodInfo>();
 
-        [ThreadStatic]
-        private static DynamicMethodDefinition _LastWrapperDMD;
+        [ThreadStatic] private static DynamicMethodDefinition _LastWrapperDMD;
+        private static Assembly _SharedStateASM;
 
         static HarmonyDetourBridge() {
             System.Type t_OpCode = typeof(System.Reflection.Emit.OpCode);
@@ -51,13 +53,13 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public static bool Init(bool forceLoad = true, Type type = Type.Auto) {
-            if (_ASM == null)
-                _ASM = _FindHarmony();
-            if (_ASM == null && forceLoad)
-                _ASM = Assembly.Load(new AssemblyName() {
+            if (_HarmonyASM == null)
+                _HarmonyASM = _FindHarmony();
+            if (_HarmonyASM == null && forceLoad)
+                _HarmonyASM = Assembly.Load(new AssemblyName() {
                     Name = "0Harmony"
                 });
-            if (_ASM == null)
+            if (_HarmonyASM == null)
                 return false;
 
             if (Initialized)
@@ -71,17 +73,24 @@ namespace MonoMod.RuntimeDetour {
 
             try {
                 foreach (MethodInfo methodRD in typeof(HarmonyDetourBridge).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)) {
+                    bool critical = methodRD.GetCustomAttributes(typeof(CriticalAttribute), false).Any();
+
                     foreach (DetourToRDAttribute info in methodRD.GetCustomAttributes(typeof(DetourToRDAttribute), false))
-                        foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name))
+                        foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name)) {
+                            critical = false;
                             _Detours.Add(new Hook(methodH, methodRD));
+                        }
 
                     foreach (DetourToHAttribute info in methodRD.GetCustomAttributes(typeof(DetourToHAttribute), false))
-                        foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name))
+                        foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, info.SkipParams, info.Name)) {
+                            critical = false;
                             _Detours.Add(new Detour(methodRD, methodH));
+                        }
 
                     foreach (TranspileAttribute info in methodRD.GetCustomAttributes(typeof(TranspileAttribute), false)) {
                         foreach (MethodInfo methodH in GetHarmonyMethod(methodRD, info.Type, -1, info.Name)) {
                             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(methodH)) {
+                                critical = false;
                                 ILContext il = new ILContext(dmd.Definition) {
                                     ReferenceBag = RuntimeILReferenceBag.Instance
                                 };
@@ -96,6 +105,9 @@ namespace MonoMod.RuntimeDetour {
                             }
                         }
                     }
+
+                    if (critical)
+                        throw new Exception($"Cannot apply HarmonyDetourBridge rule {methodRD.Name}");
                 }
             } catch (Exception) when (_EarlyReset()) {
                 throw;
@@ -119,11 +131,16 @@ namespace MonoMod.RuntimeDetour {
             _EarlyReset();
         }
 
+        private static System.Type GetHarmonyType(string typeName) {
+            return
+                _HarmonyASM.GetType(typeName) ??
+                _HarmonyASM.GetType("HarmonyLib." + typeName) ??
+                _HarmonyASM.GetType("Harmony." + typeName) ??
+                _HarmonyASM.GetType("Harmony.ILCopying." + typeName);
+        }
+
         private static IEnumerable<MethodInfo> GetHarmonyMethod(MethodInfo ctx, string typeName, int skipParams, string name) {
-            System.Type type =
-                _ASM.GetType("HarmonyLib." + typeName) ??
-                _ASM.GetType("Harmony." + typeName) ??
-                _ASM.GetType("Harmony.ILCopying." + typeName);
+            System.Type type = GetHarmonyType(typeName);
             if (type == null)
                 return null;
 
@@ -191,13 +208,13 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        [DetourToRD("Memory")]
+        [DetourToRD("Memory"), Critical]
         private static string WriteJump(long memory, long destination) {
             _Detours.Add(new NativeDetour((IntPtr) memory, (IntPtr) destination));
             return null;
         }
 
-        [DetourToRD("Memory")]
+        [DetourToRD("Memory"), Critical]
         private static string DetourMethod(MethodBase original, MethodBase replacement) {
             if (replacement == null) {
                 replacement = _LastWrapperDMD.Generate();
@@ -222,7 +239,7 @@ namespace MonoMod.RuntimeDetour {
             return null;
         }
 
-        [DetourToRD("PatchProcessor", 2)]
+        [DetourToRD("PatchProcessor", 2), Critical]
         private static List<System.Reflection.Emit.DynamicMethod> Patch(Func<object, List<System.Reflection.Emit.DynamicMethod>> orig, object self) {
             orig(self);
 
@@ -236,7 +253,7 @@ namespace MonoMod.RuntimeDetour {
 
         // TODO: Does NativeThisPointer.NeedsNativeThisPointerFix need to be patched?
 
-        [Transpile("PatchFunctions")]
+        [Transpile("PatchFunctions"), Critical]
         private static void UpdateWrapper(ILContext il) {
             ILCursor c = new ILCursor(il);
 
@@ -246,14 +263,16 @@ namespace MonoMod.RuntimeDetour {
             c.Next.OpCode = OpCodes.Pop;
         }
 
-        [Transpile("MethodPatcher")]
+        [Transpile("MethodPatcher"), Critical]
         private static void CreatePatchedMethod(ILContext il) {
             ILCursor c = new ILCursor(il);
 
             // The original method uses System.Reflection.Emit.
 
+            System.Type t_DynamicTools = GetHarmonyType("DynamicTools");
+
             // Find and replace DynamicTools.CreateDynamicMethod
-            if (!c.TryGotoNext(i => i.MatchCall("Harmony.DynamicTools", "CreateDynamicMethod"))) {
+            if (!c.TryGotoNext(i => i.MatchCall(t_DynamicTools, "CreateDynamicMethod"))) {
                 // Not the right method. Harmony defines two CreatePatchedMethod methods.
                 il.MakeReadOnly();
                 return;
@@ -273,7 +292,7 @@ namespace MonoMod.RuntimeDetour {
             c.Next.Operand = il.Import(typeof(DynamicMethodDefinition).GetMethod("GetILGenerator", BindingFlags.Public | BindingFlags.Instance));
 
             // Find and remove DynamicTools.PrepareDynamicMethod
-            c.GotoNext(i => i.MatchCall("Harmony.DynamicTools", "PrepareDynamicMethod"));
+            c.GotoNext(i => i.MatchCall(t_DynamicTools, "PrepareDynamicMethod"));
             c.Next.OpCode = OpCodes.Pop;
             c.Next.Operand = null;
 
@@ -286,6 +305,47 @@ namespace MonoMod.RuntimeDetour {
                 _LastWrapperDMD = dmd;
                 return null;
             });
+        }
+
+        [DetourToRD("HarmonySharedState", 1)]
+        private static Assembly SharedStateAssembly(Func<Assembly> orig) {
+            Assembly asm = orig();
+            if (asm != null)
+                return asm;
+
+            if (_SharedStateASM != null)
+                return _SharedStateASM;
+
+            string name = (string) GetHarmonyType("HarmonySharedState").GetField("name", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+            using (ModuleDefinition module = ModuleDefinition.CreateModule(
+                $"MonoMod.RuntimeDetour.{name}",
+                new ModuleParameters() {
+                    Kind = ModuleKind.Dll,
+                    ReflectionImporterProvider = MMReflectionImporter.Provider
+                }
+            )) {
+                TypeDefinition type = new TypeDefinition(
+                    "", name,
+                    Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Abstract | Mono.Cecil.TypeAttributes.Sealed | Mono.Cecil.TypeAttributes.Class
+                ) {
+                    BaseType = module.TypeSystem.Object
+                };
+                module.Types.Add(type);
+
+                type.Fields.Add(new FieldDefinition(
+                    "state",
+                    Mono.Cecil.FieldAttributes.Public | Mono.Cecil.FieldAttributes.Static,
+                    module.ImportReference(typeof(Dictionary<MethodBase, byte[]>))
+                ));
+
+                type.Fields.Add(new FieldDefinition(
+                    "version",
+                    Mono.Cecil.FieldAttributes.Public | Mono.Cecil.FieldAttributes.Static,
+                    module.ImportReference(typeof(int))
+                ));
+
+                return _SharedStateASM = ReflectionHelper.Load(module);
+            }
         }
 
         private class DetourToRDAttribute : Attribute {
@@ -317,6 +377,9 @@ namespace MonoMod.RuntimeDetour {
                 Type = type;
                 Name = name;
             }
+        }
+
+        private class CriticalAttribute : Attribute {
         }
 
         private static Assembly _FindHarmony() {

@@ -8,6 +8,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.IO;
 
 #if NETSTANDARD
 using TypeOrTypeInfo = System.Reflection.TypeInfo;
@@ -24,6 +25,16 @@ namespace MonoMod.Utils {
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
 
+#if NETSTANDARD1_X
+        private static readonly Type t_AssemblyLoadContext =
+            typeof(Assembly).GetTypeInfo().Assembly
+            .GetType("System.Runtime.Loader.AssemblyLoadContext");
+        private static readonly object _AssemblyLoadContext_Default =
+            t_AssemblyLoadContext.GetProperty("Default").GetValue(null);
+        private static readonly MethodInfo _AssemblyLoadContext_LoadFromStream =
+            t_AssemblyLoadContext.GetMethod("LoadFromStream", new Type[] { typeof(Stream) });
+#endif
+
         private static MemberInfo _Cache(MemberReference key, MemberInfo value) {
             if (key != null && value != null) {
                 lock (ResolveReflectionCache) {
@@ -31,6 +42,51 @@ namespace MonoMod.Utils {
                 }
             }
             return value;
+        }
+
+        public static Assembly Load(ModuleDefinition module) {
+            using (MemoryStream stream = new MemoryStream()) {
+                module.Write(stream);
+                stream.Seek(0, SeekOrigin.Begin);
+                return Load(stream);
+            }
+        }
+
+        public static Assembly Load(Stream stream) {
+            Assembly asm;
+
+#if NETSTANDARD1_X
+            // System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
+            asm = (Assembly) _AssemblyLoadContext_LoadFromStream.Invoke(_AssemblyLoadContext_Default, new object[] { stream });
+#else
+
+            if (stream is MemoryStream ms) {
+                asm = Assembly.Load(ms.GetBuffer());
+            } else {
+                using (MemoryStream copy = new MemoryStream()) {
+
+#if NETFRAMEWORK
+                    byte[] buffer = new byte[4096];
+                    int read;
+                    while (0 < (read = stream.Read(buffer, 0, buffer.Length))) {
+                        copy.Write(buffer, 0, read);
+                    }
+#else
+                    stream.CopyTo(copy);
+#endif
+
+                    copy.Seek(0, SeekOrigin.Begin);
+                    asm = Assembly.Load(copy.GetBuffer());
+                }
+            }
+#endif
+
+#if !NETSTANDARD1_X
+            AppDomain.CurrentDomain.AssemblyResolve +=
+                (s, e) => e.Name == asm.FullName ? asm : null;
+#endif
+
+            return asm;
         }
 
         public static Type ResolveReflection(this TypeReference mref)
