@@ -14,13 +14,6 @@ variables:
 name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
 steps:
-# Install the .NET Core SDK.
-- task: UseDotNet@2
-  displayName: 'Install: .NET Core SDK'
-  inputs:
-    packageType: 'sdk'
-    version: '2.x'
-
 # Run pre-build steps.
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Restore'
