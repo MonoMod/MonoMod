@@ -429,6 +429,44 @@ namespace MonoMod.Cil {
             return false;
         } // OperandType.InlineMethod
 
+        public static bool MatchCallvirt(this Instruction instr, string typeFullName, string name)
+            => instr.MatchCallvirt(out var v) && v.Is(typeFullName, name);
+        public static bool MatchCallvirt<T>(this Instruction instr, string name)
+            => instr.MatchCallvirt(out var v) && v.Is(typeof(T), name);
+        public static bool MatchCallvirt(this Instruction instr, Type type, string name)
+            => instr.MatchCallvirt(out var v) && v.Is(type, name);
+        public static bool MatchCallvirt(this Instruction instr, MethodBase value)
+            => instr.MatchCallvirt(out var v) && v.Is(value);
+        public static bool MatchCallvirt(this Instruction instr, MethodReference value)
+            => instr.MatchCallvirt(out var v) && v == value;
+        public static bool MatchCallvirt(this Instruction instr, out MethodReference value) {
+            if (instr.OpCode == OpCodes.Callvirt) {
+                value = instr.Operand as MethodReference;
+                return true;
+            }
+            value = default;
+            return false;
+        } // OperandType.InlineMethod
+
+        public static bool MatchCallOrCallvirt(this Instruction instr, string typeFullName, string name)
+            => instr.MatchCallOrCallvirt(out var v) && v.Is(typeFullName, name);
+        public static bool MatchCallOrCallvirt<T>(this Instruction instr, string name)
+            => instr.MatchCallOrCallvirt(out var v) && v.Is(typeof(T), name);
+        public static bool MatchCallOrCallvirt(this Instruction instr, Type type, string name)
+            => instr.MatchCallOrCallvirt(out var v) && v.Is(type, name);
+        public static bool MatchCallOrCallvirt(this Instruction instr, MethodBase value)
+            => instr.MatchCallOrCallvirt(out var v) && v.Is(value);
+        public static bool MatchCallOrCallvirt(this Instruction instr, MethodReference value)
+            => instr.MatchCallOrCallvirt(out var v) && v == value;
+        public static bool MatchCallOrCallvirt(this Instruction instr, out MethodReference value) {
+            if (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) {
+                value = instr.Operand as MethodReference;
+                return true;
+            }
+            value = default;
+            return false;
+        } // OperandType.InlineMethod
+
         public static bool MatchCalli(this Instruction instr, IMethodSignature value)
             => instr.MatchCalli(out var v) && v == value;
         public static bool MatchCalli(this Instruction instr, out IMethodSignature value) {
@@ -1046,25 +1084,6 @@ namespace MonoMod.Cil {
             }
             return false;
         } // OperandType.InlineNone
-
-        public static bool MatchCallvirt(this Instruction instr, string typeFullName, string name)
-            => instr.MatchCallvirt(out var v) && v.Is(typeFullName, name);
-        public static bool MatchCallvirt<T>(this Instruction instr, string name)
-            => instr.MatchCallvirt(out var v) && v.Is(typeof(T), name);
-        public static bool MatchCallvirt(this Instruction instr, Type type, string name)
-            => instr.MatchCallvirt(out var v) && v.Is(type, name);
-        public static bool MatchCallvirt(this Instruction instr, MethodBase value)
-            => instr.MatchCallvirt(out var v) && v.Is(value);
-        public static bool MatchCallvirt(this Instruction instr, MethodReference value)
-            => instr.MatchCallvirt(out var v) && v == value;
-        public static bool MatchCallvirt(this Instruction instr, out MethodReference value) {
-            if (instr.OpCode == OpCodes.Callvirt) {
-                value = instr.Operand as MethodReference;
-                return true;
-            }
-            value = default;
-            return false;
-        } // OperandType.InlineMethod
 
         public static bool MatchCpobj(this Instruction instr, string fullName)
             => instr.MatchCpobj(out var v) && v.Is(fullName);
