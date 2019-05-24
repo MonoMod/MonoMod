@@ -22,6 +22,7 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 ### Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
 - [Chad Yates](https://twitter.com/ChadCYates)
 - [Sc2ad](https://github.com/sc2ad)
+- Raegous
 - Chaser6
 - [KyleTheScientist](https://www.twitch.tv/kylethescientist)
 - [Renaud Bédard](https://twitter.com/renaudbedard)
