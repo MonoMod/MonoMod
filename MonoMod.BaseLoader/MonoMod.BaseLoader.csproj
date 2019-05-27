@@ -5,6 +5,7 @@
     <ProjectGuid>{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}</ProjectGuid>
 
     <AssemblyName>MonoMod.BaseLoader</AssemblyName>
+    <PackageId></PackageId>
     <Description></Description>
     <PackageTags>$(PackageTags)</PackageTags>
 

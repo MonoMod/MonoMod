@@ -5,6 +5,7 @@
     <ProjectGuid>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</ProjectGuid>
 
     <AssemblyName>MonoMod.Utils</AssemblyName>
+    <PackageId>MonoMod.Utils</PackageId>
     <Description>Utilities and smaller MonoMod "components" (f.e. ModInterop, DynDll, DynData). Can be used for your own mods. Required by all other MonoMod components.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
 

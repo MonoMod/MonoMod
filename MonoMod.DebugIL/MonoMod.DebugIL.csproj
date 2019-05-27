@@ -5,6 +5,7 @@
     <ProjectGuid>{68E38462-2DB9-4692-AD91-077A8FBE8AE9}</ProjectGuid>
 
     <AssemblyName>MonoMod.DebugIL</AssemblyName>
+    <PackageId></PackageId>
     <Description></Description>
     <PackageTags>$(PackageTags)</PackageTags>
 

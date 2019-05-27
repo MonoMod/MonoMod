@@ -5,6 +5,7 @@
     <ProjectGuid>{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}</ProjectGuid>
 
     <AssemblyName>MonoMod</AssemblyName>
+    <PackageId>MonoMod</PackageId>
     <Description>General purpose .NET assembly modding "basework". This package contains the core IL patcher and relinker.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
 

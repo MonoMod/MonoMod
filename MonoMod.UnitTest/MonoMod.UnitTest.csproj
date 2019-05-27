@@ -5,6 +5,7 @@
     <ProjectGuid>{0291CFD9-75F9-4978-BE83-58DE5194BECA}</ProjectGuid>
 
     <AssemblyName>MonoMod.UnitTest</AssemblyName>
+    <PackageId></PackageId>
     <Description></Description>
     <PackageTags>$(PackageTags)</PackageTags>
 
@@ -26,7 +27,7 @@
     <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
     <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
   </ItemGroup>
-  
+
   <!-- xUnit -->
   <ItemGroup>
     <PackageReference Include="NETStandard.Library" Version="2.0.0">

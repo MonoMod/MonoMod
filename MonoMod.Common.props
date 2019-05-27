@@ -20,6 +20,7 @@
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <IsCecilLegacy>false</IsCecilLegacy>
 
@@ -38,7 +39,7 @@
     <Version Condition="'$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version> <!-- Azure Pipelines -->
     <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) Maik Macho</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
-    <PackageLicenseUrl>https://github.com/0x0ade/MonoMod/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/0x0ade/MonoMod</PackageProjectUrl>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
   </PropertyGroup>
@@ -104,7 +105,7 @@
     </Otherwise>
   </Choose>
 
-  <!-- Mono.Cecil reference. Must be placed in each .csproj -->
+  <!-- Mono.Cecil  -->
   <!--
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.10.*">

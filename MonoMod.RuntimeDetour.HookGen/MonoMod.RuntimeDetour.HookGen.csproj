@@ -5,6 +5,7 @@
     <ProjectGuid>{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}</ProjectGuid>
 
     <AssemblyName>MonoMod.RuntimeDetour.HookGen</AssemblyName>
+    <PackageId>MonoMod.RuntimeDetour.HookGen</PackageId>
     <Description>Auto-generate hook helper .dlls, hook arbitrary methods via events: On.Namespace.Type.Method += YourHandlerHere;</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
