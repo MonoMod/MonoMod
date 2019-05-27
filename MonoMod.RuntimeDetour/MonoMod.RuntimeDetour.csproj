@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Metadata -->
   <PropertyGroup>
     <ProjectGuid>{D0C584C0-81D7-486E-B70E-D7F9256E0909}</ProjectGuid>
 
@@ -10,7 +11,14 @@
     <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>
     <OutputType>Library</OutputType>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.csproj" />
+  <Import Project="..\MonoMod.Common.props" />
+
+  <!-- Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
+    </PackageReference>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />

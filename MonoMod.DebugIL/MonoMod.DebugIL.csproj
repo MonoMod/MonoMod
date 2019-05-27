@@ -1,14 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Metadata -->
   <PropertyGroup>
     <ProjectGuid>{68E38462-2DB9-4692-AD91-077A8FBE8AE9}</ProjectGuid>
 
     <AssemblyName>MonoMod.DebugIL</AssemblyName>
+    <Description></Description>
+    <PackageTags>$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.csproj" />
+  <Import Project="..\MonoMod.Common.props" />
+
+  <!-- Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
+    </PackageReference>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />

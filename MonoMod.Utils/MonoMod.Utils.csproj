@@ -1,13 +1,22 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Metadata -->
   <PropertyGroup>
     <ProjectGuid>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</ProjectGuid>
 
     <AssemblyName>MonoMod.Utils</AssemblyName>
     <Description>Utilities and smaller MonoMod "components" (f.e. ModInterop, DynDll, DynData). Can be used for your own mods. Required by all other MonoMod components.</Description>
+    <PackageTags>$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>
     <ILGen>true</ILGen>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.csproj" />
+  <Import Project="..\MonoMod.Common.props" />
+
+  <!-- Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
+    </PackageReference>
+  </ItemGroup>
 </Project>

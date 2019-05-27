@@ -1,13 +1,66 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Metadata -->
   <PropertyGroup>
     <ProjectGuid>{0291CFD9-75F9-4978-BE83-58DE5194BECA}</ProjectGuid>
 
     <AssemblyName>MonoMod.UnitTest</AssemblyName>
+    <Description></Description>
+    <PackageTags>$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net452;netcoreapp1.0;netcoreapp2.0</TargetFrameworks>
     <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.props" />
 
+  <!-- Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
+    </PackageReference>
+    <Reference Include="0Harmony" HintPath="lib\0Harmony.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />
+    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
+    <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
+  </ItemGroup>
+  
+  <!-- xUnit -->
+  <ItemGroup>
+    <PackageReference Include="NETStandard.Library" Version="2.0.0">
+      <Version Condition="'$(TargetFramework)' == 'netcoreapp1.0'">1.6.1</Version>
+      <Version Condition="'$(TargetFramework)' == 'netcoreapp2.0'">2.0.0</Version>
+    </PackageReference>
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.analyzers" Version="0.10.*" />
+    <PackageReference Include="xunit.core" Version="2.*" />
+    <PackageReference Include="xunit.runner.console" Version="2.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
+    <Reference Include="Microsoft.VisualStudio.QualityTools.CodedUITestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Extension, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TestTools.UITesting, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <PropertyGroup>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -15,70 +68,4 @@
     <IsCodedUITest>False</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.csproj" />
-
-  <Choose>
-    <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
-      <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-      </ItemGroup>
-    </When>
-  </Choose>
-  <ItemGroup>
-    <PackageReference Include="NETStandard.Library" Condition="'$(TargetFramework)' == 'netcoreapp1.0'">
-      <Version>1.6.1</Version>
-    </PackageReference>
-    <PackageReference Include="NETStandard.Library" Condition="'$(TargetFramework)' == 'netcoreapp2.0'">
-      <Version>2.0.0</Version>
-    </PackageReference>
-    <PackageReference Include="xunit">
-      <Version>2.4.1</Version>
-    </PackageReference>
-    <PackageReference Include="xunit.analyzers">
-      <Version>0.10.0</Version>
-    </PackageReference>
-    <PackageReference Include="xunit.core">
-      <Version>2.4.1</Version>
-    </PackageReference>
-    <PackageReference Include="xunit.runner.console">
-      <Version>2.4.1</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="xunit.runner.visualstudio">
-      <Version>2.4.1</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
-  <Choose>
-    <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
-      <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.QualityTools.CodedUITestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-        <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-        <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Extension, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-        <Reference Include="Microsoft.VisualStudio.TestTools.UITesting, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-          <Private>False</Private>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
-    <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>lib\0Harmony.dll</HintPath>
-    </Reference>
-  </ItemGroup>
 </Project>

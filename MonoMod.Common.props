@@ -21,28 +21,28 @@
 
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
-    <Cecil Condition="'$(Cecil)' == ''">true</Cecil>
-    <CecilLegacy>false</CecilLegacy>
+    <IsCecilLegacy>false</IsCecilLegacy>
 
-    <ILGen Condition="'$(ILGen)' == ''">false</ILGen>
+    <IsNETFramework>false</IsNETFramework>
+    <IsNETStandard>false</IsNETStandard>
+    <IsNETStandard1X>false</IsNETStandard1X>
 
-    <NETFramework>false</NETFramework>
-    <NETStandard>false</NETStandard>
-    <NETStandard1X>false</NETStandard1X>
+    <!-- Fix dotnet pack not being able to find .NET Framework 3.5 -->
+    <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net35' And '$(OS)' == 'Windows_NT'">$(MSBuildProgramFiles32)\Reference Assemblies\Microsoft\Framework\.NETFramework\v3.5\Profile\Client</FrameworkPathOverride>
   </PropertyGroup>
 
-  <!-- dotnet pack -->
+  <!-- Metadata -->
   <PropertyGroup>
     <Authors>0x0ade</Authors> <!-- Note: This previously said "Maik Macho and collaborators", but with dotnet pack, <Authors> is also the list of owners. -->
-    <Copyright>Copyright 2018 Maik Macho</Copyright>
+    <Version>1.0.0.0</Version> <!-- GitHub default. -->
+    <Version>$([System.DateTime]::Now.ToString(yy.MM.dd)).00</Version> <!-- Devbuild default. -->
+    <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) Maik Macho</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
     <PackageLicenseUrl>https://github.com/0x0ade/MonoMod/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/0x0ade/MonoMod</PackageProjectUrl>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
-    <!-- Fix dotnet pack not being able to find .NET Framework 3.5 -->
-    <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net35' And '$(OS)' == 'Windows_NT'">$(MSBuildProgramFiles32)\Reference Assemblies\Microsoft\Framework\.NETFramework\v3.5\Profile\Client</FrameworkPathOverride>
   </PropertyGroup>
 
   <!-- Debug -->
@@ -62,7 +62,7 @@
 
   <!-- Legacy -->
   <PropertyGroup Condition="'$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'ReleaseLegacy'">
-    <CecilLegacy>true</CecilLegacy>
+    <IsCecilLegacy>true</IsCecilLegacy>
   </PropertyGroup>
 
   <!-- Common references. -->
@@ -70,31 +70,35 @@
     <When Condition="$(TargetFramework.StartsWith('netstandard')) Or $(TargetFramework.StartsWith('netcoreapp'))">
       <!-- .NET Standard -->
       <PropertyGroup>
-        <NETStandard>true</NETStandard>
-        <NETStandard1X Condition="$(TargetFramework.StartsWith('netstandard1')) Or $(TargetFramework.StartsWith('netcoreapp1'))">true</NETStandard1X>
+        <IsNETStandard>true</IsNETStandard>
+        <IsNETStandard1X Condition="$(TargetFramework.StartsWith('netstandard1')) Or $(TargetFramework.StartsWith('netcoreapp1'))">true</IsNETStandard1X>
         <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
-        <DefineConstants Condition="$(NETStandard1X)">NETSTANDARD1_X;$(DefineConstants)</DefineConstants>
-        <DefineConstants Condition="$(CecilLegacy)">CECIL0_10;$(DefineConstants)</DefineConstants>
-        <CecilVersion Condition="$(CecilLegacy) And '$(CecilVersion)' == ''">0.10.3</CecilVersion>
+        <DefineConstants Condition="$(IsNETStandard1X)">NETSTANDARD1_X;$(DefineConstants)</DefineConstants>
+        <DefineConstants Condition="$(IsCecilLegacy)">CECIL0_10;$(DefineConstants)</DefineConstants>
+        <CecilVersion Condition="$(IsCecilLegacy) And '$(CecilVersion)' == ''">0.10.0</CecilVersion>
+        <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
+      <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. -->
       <ItemGroup>
-        <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil, which targets .NET Standard 1.0 -->
-        <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
-        <PackageReference Include="System.Collections.NonGeneric" Version="4.3.0" />
-        <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
-        <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
-        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
-        <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="4.3.0" />
+        <PackageReference Include="System.Reflection.TypeExtensions" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.Collections.NonGeneric" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.ComponentModel.TypeConverter" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.IO.FileSystem.Primitives" Version="$(NETShimVersion)" />
+      </ItemGroup>
+      <!-- This could be made optional at compile-time, but it's preferred to check for availability at runtime. -->
+      <ItemGroup>
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="$(NETShimVersion)" />
       </ItemGroup>
     </When>
     <Otherwise>
       <!-- .NET Framework -->
       <PropertyGroup>
-        <NETFramework>true</NETFramework>
+        <IsNETFramework>true</IsNETFramework>
         <DefineConstants>NETFRAMEWORK;$(DefineConstants)</DefineConstants>
-        <DefineConstants Condition="$(CecilLegacy)">CECIL0_9;$(DefineConstants)</DefineConstants>
-        <CecilVersion Condition="$(CecilLegacy) And '$(CecilVersion)' == ''">0.9.6</CecilVersion>
-	  </PropertyGroup>
+        <DefineConstants Condition="$(IsCecilLegacy)">CECIL0_9;$(DefineConstants)</DefineConstants>
+        <CecilVersion Condition="$(IsCecilLegacy) And '$(CecilVersion)' == ''">0.9.6</CecilVersion>
+      </PropertyGroup>
       <ItemGroup>
         <!-- <Reference Include="mscorlib" /> -->
         <Reference Include="System" />
@@ -102,21 +106,17 @@
     </Otherwise>
   </Choose>
 
-  <!-- Mono.Cecil reference. -->
-  <PropertyGroup>
-    <CecilVersion Condition="'$(CecilVersion)' == ''">0.10.3</CecilVersion>
-  </PropertyGroup>
-  <ItemGroup Condition="$(Cecil)">
-    <PackageReference Include="Mono.Cecil">
-      <Version>$(CecilVersion)</Version>
+  <!-- Mono.Cecil reference. Must be placed in each .csproj -->
+  <!--
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>
+  -->
 
   <!-- Shared source files. -->
-  <ItemGroup >
-    <Compile Condition="'$(AssemblyName)' != 'MonoMod'" Include="..\MonoMod\Properties\AssemblyInfo.Common.cs">
-      <Link>AssemblyInfo.Common.cs</Link>
-    </Compile>
+  <ItemGroup>
     <Compile Condition="'$(AssemblyName)' != 'MonoMod.Utils'" Include="..\MonoMod.Utils\NETStandardShims.cs">
       <Link>NETStandardShims.cs</Link>
     </Compile>

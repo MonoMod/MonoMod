@@ -1,19 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Metadata -->
   <PropertyGroup>
     <ProjectGuid>{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}</ProjectGuid>
 
     <AssemblyName>MonoMod.BaseLoader</AssemblyName>
+    <Description></Description>
+    <PackageTags>$(PackageTags)</PackageTags>
 
     <TargetFramework>net35</TargetFramework>
     <OutputType>Library</OutputType>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.csproj" />
+  <Import Project="..\MonoMod.Common.props" />
 
+  <!-- Dependencies -->
   <ItemGroup>
-    <PackageReference Include="YamlDotNet">
-      <Version>5.2.1</Version>
+    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
+    <PackageReference Include="YamlDotNet" Version="5.*" />
   </ItemGroup>
 
   <ItemGroup>
