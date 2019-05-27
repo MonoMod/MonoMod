@@ -2,8 +2,6 @@
 <Project>
   <!-- Standard properties. -->
   <PropertyGroup>
-    <Version Condition="'$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version>
-
     <OutputType Condition="'$(OutputType)' == ''">Library</OutputType>
     <RootNamespace Condition="'$(RootNamespace)' == ''">$(AssemblyName)</RootNamespace>
 
@@ -36,8 +34,8 @@
   <!-- Metadata -->
   <PropertyGroup>
     <Authors>0x0ade</Authors> <!-- Note: This previously said "Maik Macho and collaborators", but with dotnet pack, <Authors> is also the list of owners. -->
-    <Version>1.0.0.0</Version> <!-- GitHub default. -->
-    <Version>$([System.DateTime]::Now.ToString(yy.MM.dd)).00</Version> <!-- Devbuild default. -->
+    <Version>$([System.DateTime]::Now.ToString(yy.MM.dd)).00</Version> <!-- Devbuild -->
+    <Version Condition="'$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version> <!-- Azure Pipelines -->
     <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) Maik Macho</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
     <PackageLicenseUrl>https://github.com/0x0ade/MonoMod/blob/master/LICENSE</PackageLicenseUrl>
