@@ -20,10 +20,6 @@ steps:
   inputs:
     command: 'restore'
     projects: 'MonoMod*/*.csproj'
-- task: PowerShell@2
-  displayName: 'Run: PowerShell: azure-pipelines-prebuild.ps1'
-  inputs:
-    filePath: 'azure-pipelines-prebuild.ps1'
 
 # Build.
 - task: DotNetCoreCLI@2
