@@ -1,5 +1,5 @@
 # Using RuntimeDetour
-Using RuntimeDetour boils down to the following most of the time:
+Creating a new detour looks like this most of the time:
 ```cs
 // Create a Detour (or a Hook).
 Detour d = new Detour(methodInfoFrom, methodInfoTo);
@@ -38,9 +38,11 @@ On.Celeste.Player.GetTrailColor += (orig, player, wasDashB) => {
 // Or...
 
 IL.Celeste.Player.GetTrailColor += (il) => {
-    HookILCursor c = il.At(0);
+    ILCursor c = new ILCursor(il);
+    // The new cursor starts out at the beginning of the method.
+    // You can either set .Index directly or perform basic pattern matching using .Goto*
 
-    // Insert Console.WriteLine(...) at the beginning.
+    // Insert Console.WriteLine(...)
     c.Emit(OpCodes.Ldstr, "2 - Hello, IL manipulation!");
     c.Emit(OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) }));
 
@@ -58,7 +60,7 @@ IL.Celeste.Player.GetTrailColor += (il) => {
 
 ```
 
-**The generated MMHOOK .dll doesn't contain any hooks in itself - it only enables runtime hooking, using RuntimeDetour behind the scene.**
+**HookGen doesn't modify the original assembly. The generated MMHOOK .dll doesn't contain the original code - it only contains events using RuntimeDetour behind behind the scene.**
 
 For every non-generic method in the input assembly, HookGen generates an event and two delegate types with the "On." namespace prefix.  
 The first delegate type, orig_MethodName, matches the original method's signature, adding a "self" parameter for instance methods.  
@@ -84,9 +86,9 @@ The "platform layer" is an abstraction layer that makes porting RuntimeDetour to
 
 - **IDetourNativePlatform** is responsible for freeing, copying and allocating memory, setting page flags (read-write-execute) and applying the actual native detour, using the struct NativeDetourData.  
 As it's operating completely on the native level, it isn't restricted to .NET runtime methods and can also detour native functions.  
-This allows maintaining the x86 / x86-64 native code separately from the ARM native code and any other Windows-specific fixes.  
+This allows maintaining the x86 / x86-64 native code separately from the ARM native code and any other platform-specific fixes.  
 - **IDetourRuntimePlatform** is responsible for pinning methods, creating IL-copies at runtime and getting the starting address of the JIT's resulting native code.  
-The Mono and .NET Framework detour platforms inherit from the shared DetourRuntimeILPlatform, with the only differences being the way how the RuntimeMethodHandle is obtained and how DynamicMethods are JITed.
+The Mono and .NET Framework detour platforms inherit from the shared DetourRuntimeILPlatform, with the only main differences being how the RuntimeMethodHandle is obtained and how DynamicMethods are JITed.
 
 ## IDetour classes:
 
@@ -96,4 +98,4 @@ The following classes implement this interface and allow you to create detours b
 **No multi-detour management happens on this level.** A "from" pointer can be NativeDetoured only once at a time if you need deterministic results.  
 If you apply a NativeDetour on a "managed function" (System.Reflection.MethodBase), it creates an IL-copy of the method and uses it as the trampoline. Otherwise, the trampoline temporarily undoes the detour and calls the original method. This means that **NativeDetour can be used on large enough native functions.**
 - **Detour** is the first fully-managed detour level. It thus doesn't allow you to pass a pointer as a method to detour "from", but it manages a **dynamic detour chain**. Calling the **trampoline calls the previous detour**, if it exist, or the original method, if none exists. It holds an internal NativeDetour for the top of the detour chain.
-- **Hook** takes detours to the next level and are the **driving force behind HookGen**. It allows you to detour from a method to any arbitrary delegate with a matching signature, allowing you to receive the trampoline as the first parameter.
+- **Hook** takes detours to the next level and are the driving force behind HookGen. It allows you to detour from a method to any arbitrary **delegate with a matching signature**, allowing you to receive the **trampoline as the first parameter**.
