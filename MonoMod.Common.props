@@ -21,6 +21,12 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
+    <!-- https://github.com/dotnet/sourcelink -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
     <IsCecilLegacy>false</IsCecilLegacy>
 
     <IsNETFramework>false</IsNETFramework>
@@ -39,6 +45,7 @@
     <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) Maik Macho</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Repository>https://github.com/0x0ade/MonoMod</Repository>
     <PackageProjectUrl>https://github.com/0x0ade/MonoMod</PackageProjectUrl>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
   </PropertyGroup>
@@ -104,7 +111,7 @@
     </Otherwise>
   </Choose>
 
-  <!-- Mono.Cecil  -->
+  <!-- Mono.Cecil - added to each csproj manually for GitHub dependency graph. -->
   <!--
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.10.*">
@@ -112,6 +119,11 @@
     </PackageReference>
   </ItemGroup>
   -->
+
+  <!-- Source Link -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19270-01" PrivateAssets="All" />
+  </ItemGroup>
 
   <!-- Shared source files. -->
   <ItemGroup>
