@@ -160,8 +160,10 @@ namespace MonoMod.Utils {
                 return _Postbuild(asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false).GetMethod(clone.Name));
 
             } finally {
+#if !CECIL0_9
                 if (moduleIsPrivate)
                     module.Dispose();
+#endif
             }
         }
 

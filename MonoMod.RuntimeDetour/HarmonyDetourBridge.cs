@@ -317,13 +317,24 @@ namespace MonoMod.RuntimeDetour {
                 return _SharedStateASM;
 
             string name = (string) GetHarmonyType("HarmonySharedState").GetField("name", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
-            using (ModuleDefinition module = ModuleDefinition.CreateModule(
+#if !CECIL0_9
+            using (
+#endif
+            ModuleDefinition module = ModuleDefinition.CreateModule(
                 $"MonoMod.RuntimeDetour.{name}",
                 new ModuleParameters() {
                     Kind = ModuleKind.Dll,
+#if !CECIL0_9
                     ReflectionImporterProvider = MMReflectionImporter.Provider
+#endif
                 }
-            )) {
+            )
+#if CECIL0_9
+            ;
+#else
+            )
+#endif
+            {
                 TypeDefinition type = new TypeDefinition(
                     "", name,
                     Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Abstract | Mono.Cecil.TypeAttributes.Sealed | Mono.Cecil.TypeAttributes.Class

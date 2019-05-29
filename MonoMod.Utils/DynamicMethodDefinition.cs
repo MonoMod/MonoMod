@@ -152,7 +152,9 @@ namespace MonoMod.Utils {
             ModuleDefinition module = _DynModuleDefinition = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
                 Kind = ModuleKind.Dll,
                 AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, new DefaultAssemblyResolver()),
+#if !CECIL0_9
                 ReflectionImporterProvider = new ReflectionCecilImporterProvider(null)
+#endif
             });
             _DynModuleIsPrivate = true;
 
@@ -205,7 +207,9 @@ namespace MonoMod.Utils {
                             ReaderParameters rp = new ReaderParameters();
                             if (_ModuleGen != null) {
                                 rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
+#if !CECIL0_9
                                 rp.ReflectionImporterProvider = new ReflectionCecilImporterProvider(rp.ReflectionImporterProvider);
+#endif
                             }
                             try {
                                 module = moduleTmp = ModuleDefinition.ReadModule(location, rp);
@@ -512,6 +516,7 @@ namespace MonoMod.Utils {
                 return Fallback.ImportReference(method, context);
             }
         }
+#endif
 
         class DynamicMethodReference : MethodReference {
             public DynamicMethod DynamicMethod;
@@ -521,7 +526,6 @@ namespace MonoMod.Utils {
                 DynamicMethod = dm;
             }
         }
-#endif
 
         public enum GeneratorType {
             Auto = 0,

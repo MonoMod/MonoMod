@@ -18,6 +18,10 @@ using static System.Reflection.IntrospectionExtensions;
 using static System.Reflection.TypeExtensions;
 #endif
 
+#if CECIL0_9
+using InterfaceImplementation = Mono.Cecil.TypeReference;
+#endif
+
 namespace MonoMod {
 
     public delegate bool MethodParser(MonoModder modder, MethodBody body, Instruction instr, ref int instri);

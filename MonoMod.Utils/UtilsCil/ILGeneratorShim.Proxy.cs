@@ -48,7 +48,9 @@ namespace MonoMod.Utils.Cil {
                     FullName,
                     new ModuleParameters() {
                         Kind = ModuleKind.Dll,
+#if !CECIL0_9
                         ReflectionImporterProvider = MMReflectionImporter.Provider
+#endif
                     }
                 )
 #if CECIL0_9
