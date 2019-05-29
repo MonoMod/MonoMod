@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !CECIL0_9
+using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Linq.Expressions;
@@ -99,3 +100,4 @@ namespace MonoMod.Utils {
 
     }
 }
+#endif

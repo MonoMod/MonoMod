@@ -466,6 +466,7 @@ namespace MonoMod.Utils {
 #endif
         }
 
+#if !CECIL0_9
         class ReflectionCecilImporterProvider : IReflectionImporterProvider {
             private readonly IReflectionImporterProvider Fallback;
 
@@ -520,6 +521,7 @@ namespace MonoMod.Utils {
                 DynamicMethod = dm;
             }
         }
+#endif
 
         public enum GeneratorType {
             Auto = 0,

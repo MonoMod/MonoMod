@@ -367,10 +367,13 @@ namespace MonoMod.Utils {
                         operand = param.Index + paramOffs;
 
                     } else if (operand is MemberReference mref) {
+#if !CECIL0_9
                         if (mref is DynamicMethodReference dmref) {
                             operand = dmref.DynamicMethod;
 
-                        } else {
+                        } else
+#endif
+                        {
                             MemberInfo member = mref.ResolveReflection();
                             operand = member;
 #if !NETSTANDARD

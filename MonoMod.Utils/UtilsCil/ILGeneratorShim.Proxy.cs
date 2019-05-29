@@ -41,13 +41,22 @@ namespace MonoMod.Utils.Cil {
                 Type t_ILGenerator = typeof(System.Reflection.Emit.ILGenerator);
                 Type t_ILGeneratorProxyTarget = typeof(ILGeneratorShim);
 
-                using (ModuleDefinition module = ModuleDefinition.CreateModule(
+#if !CECIL0_9
+                using (
+#endif
+                ModuleDefinition module = ModuleDefinition.CreateModule(
                     FullName,
                     new ModuleParameters() {
                         Kind = ModuleKind.Dll,
                         ReflectionImporterProvider = MMReflectionImporter.Provider
                     }
-                )) {
+                )
+#if CECIL0_9
+                ;
+#else
+                )
+#endif
+                {
 
                     TypeDefinition type = new TypeDefinition(
                         Namespace,
