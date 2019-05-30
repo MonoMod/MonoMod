@@ -102,8 +102,13 @@ namespace MonoMod.Utils {
 
         public static void Emit(this ILProcessor il, OpCode opcode, FieldInfo field)
             => il.Emit(opcode, il.Import(field));
-        public static void Emit(this ILProcessor il, OpCode opcode, MethodBase method)
-            => il.Emit(opcode, il.Import(method));
+        public static void Emit(this ILProcessor il, OpCode opcode, MethodBase method) {
+            if (method is System.Reflection.Emit.DynamicMethod) {
+                il.Emit(opcode, (object) method);
+                return;
+            }
+            il.Emit(opcode, il.Import(method));
+        }
         public static void Emit(this ILProcessor il, OpCode opcode, Type type)
             => il.Emit(opcode, il.Import(type));
         public static void Emit(this ILProcessor il, OpCode opcode, MemberInfo member) {
