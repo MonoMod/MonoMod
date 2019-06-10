@@ -7,7 +7,7 @@
 
     <Configurations>Debug;Release;DebugLegacy;ReleaseLegacy</Configurations>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
-    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <Platform Condition="'$(Platform)' == ''">Any CPU</Platform>
     <OutputPath>bin\$(Configuration)</OutputPath>
 
     <LangVersion>7.3</LangVersion>
@@ -21,21 +21,59 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
-    <!-- https://github.com/dotnet/sourcelink -->
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-
     <IsCecilLegacy>false</IsCecilLegacy>
 
     <IsNETFramework>false</IsNETFramework>
     <IsNETStandard>false</IsNETStandard>
     <IsNETStandard1X>false</IsNETStandard1X>
 
-    <!-- Fix dotnet pack not being able to find .NET Framework 3.5 -->
-    <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net35' And '$(OS)' == 'Windows_NT'">$(MSBuildProgramFiles32)\Reference Assemblies\Microsoft\Framework\.NETFramework\v3.5\Profile\Client</FrameworkPathOverride>
+    <MonoModSourceLink Condition="'$(MonoModSourceLink)' == '' And '$(MSBuildRuntimeType)' != 'Core'">false</MonoModSourceLink>
+    <MonoModSourceLink Condition="'$(MonoModSourceLink)' == ''">true</MonoModSourceLink>
   </PropertyGroup>
+
+  <PropertyGroup Condition="$(MonoModSourceLink)">
+    <!-- https://github.com/dotnet/sourcelink -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <Choose>
+    <When Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(OS)' == 'Windows_NT'">
+      <!-- Fix dotnet pack not being able to find .NET Framework 3.5 on Windows. -->
+      <PropertyGroup>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net35'">$(MSBuildProgramFiles32)\Reference Assemblies\Microsoft\Framework\.NETFramework\v3.5\Profile\Client</FrameworkPathOverride>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(MSBuildRuntimeType)' == 'Core' And '$(OS)' == 'Unix'">
+      <!-- Fix dotnet not being able to find .NET Framework at all outside of Windows. -->
+      <!-- With help from https://github.com/dotnet/sdk/issues/335#issuecomment-368669050 -->
+      <PropertyGroup Condition="$(TargetFramework.StartsWith('net3')) Or $(TargetFramework.StartsWith('net4'))">
+        <MonoLibsPath Condition="'$(MonoLibsPath)' == '' And Exists('/Library/Frameworks/Mono.framework/Versions/Current/lib/mono')">/Library/Frameworks/Mono.framework/Versions/Current/lib/mono</MonoLibsPath>
+        <MonoLibsPath Condition="'$(MonoLibsPath)' == '' And Exists('/usr/lib/mono')">/usr/lib/mono</MonoLibsPath>
+        <MonoLibsPath Condition="'$(MonoLibsPath)' == '' And Exists('/usr/local/lib/mono')">/usr/local/lib/mono</MonoLibsPath>
+      </PropertyGroup>
+      <PropertyGroup Condition="'$(MonoLibsPath)' != ''">
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net20'">$(MonoLibsPath)/2.0-api</FrameworkPathOverride>
+        <!-- 3.5 builds on top of 2.0, unlike other point releases. -->
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net35'">$(MonoLibsPath)/2.0-api</FrameworkPathOverride>
+        <AssemblySearchPaths Condition="'$(TargetFramework)' == 'net35'">$(MonoLibsPath)/3.5-api;$(AssemblySearchPaths)</AssemblySearchPaths>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net40'">$(MonoLibsPath)/4.0-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net45'">$(MonoLibsPath)/4.5-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net451'">$(MonoLibsPath)/4.5.1-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net452'">$(MonoLibsPath)/4.5.2-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net46'">$(MonoLibsPath)/4.6-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net461'">$(MonoLibsPath)/4.6.1-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net462'">$(MonoLibsPath)/4.6.2-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net47'">$(MonoLibsPath)/4.7-api</FrameworkPathOverride>
+        <FrameworkPathOverride Condition="'$(TargetFramework)' == 'net471'">$(MonoLibsPath)/4.7.1-api</FrameworkPathOverride>
+        <EnableFrameworkPathOverride>true</EnableFrameworkPathOverride>
+        <!-- Add the Facades directory if it exists. -->
+        <AssemblySearchPaths Condition="Exists('$(FrameworkPathOverride)/Facades')">$(FrameworkPathOverride)/Facades;$(AssemblySearchPaths)</AssemblySearchPaths>
+      </PropertyGroup>
+    </When>
+  </Choose>
 
   <!-- Metadata -->
   <PropertyGroup>
@@ -121,7 +159,7 @@
   -->
 
   <!-- Source Link -->
-  <ItemGroup>
+  <ItemGroup Condition="$(MonoModSourceLink)">
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19270-01" PrivateAssets="All" />
   </ItemGroup>
 

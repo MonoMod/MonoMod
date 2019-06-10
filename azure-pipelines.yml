@@ -1,34 +1,70 @@
-# .NET Desktop
-# Build and run tests for .NET Desktop or Windows classic desktop solutions.
-# Add steps that publish symbols, save build artifacts, and more:
-# https://docs.microsoft.com/vsts/pipelines/apps/windows/dot-net
-
-pool:
-  vmImage: 'windows-2019'
+strategy:
+  matrix:
+    windows:
+      jobArchName: 'Windows'
+      imageName: 'windows-2019'
+      artifactPrefix: ''
+      artifactSuffix: ''
+      builder: 'core'
+      testers: ';fx;core1;core2;'
+      coreVersion: ''
+    linux-core:
+      jobArchName: 'Linux .NET Core'
+      imageName: 'ubuntu-16.04'
+      artifactPrefix: '~dbg/linux-core/'
+      artifactSuffix: ''
+      builder: 'core'
+      testers: ';core2;'
+      coreVersion: '2.1.x'
+    linux-mono:
+      jobArchName: 'Linux Mono'
+      imageName: 'ubuntu-16.04'
+      artifactPrefix: '~dbg/linux-mono/'
+      artifactSuffix: ''
+      builder: 'mono'
+      testers: ';mono;'
+      coreVersion: ''
+  maxParallel: 3
 
 variables:
   solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
+  buildPlatform: 'Any CPU'
+  xunit: '{0}{1}/.nuget/packages/xunit.runner.console/2.4.1/tools/{2}/xunit.console.{3} MonoMod.UnitTest/bin/Release/{2}/MonoMod.UnitTest.dll -xml testresults.{4}.{2}.xml'
 
 name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
+pool:
+  vmImage: '$(imageName)'
+
 steps:
 # Run pre-build steps.
+- task: UseDotNet@2
+  condition: and(succeeded(), ne(variables.coreVersion, ''))
+  displayName: 'Update .NET Core SDK'
+  inputs:
+    packageType: sdk
+    version: '$(coreVersion)'
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Restore'
   inputs:
     command: 'restore'
     projects: 'MonoMod*/*.csproj'
 
-# Build.
+# Build using core.
 - task: DotNetCoreCLI@2
+  condition: and(succeeded(), eq(variables.builder, 'core'))
   displayName: 'dotnet: Build'
   inputs:
     command: 'build'
     projects: 'MonoMod*/*.csproj'
-    configuration: '$(buildConfiguration)'
-    arguments: '--configuration $(buildConfiguration)'
+    arguments: '--configuration $(buildConfiguration) "/p:Configuration=$(buildConfiguration)"'
+# Build using mono.
+- task: CmdLine@2
+  condition: and(succeeded(), eq(variables.builder, 'mono'))
+  displayName: 'mono: Build'
+  inputs:
+    script: 'msbuild MonoMod.sln "/p:Configuration=$(buildConfiguration)" "/p:Platform=$(buildPlatform)"'
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
@@ -43,7 +79,7 @@ steps:
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: and(succeeded(), ne(variables.Build.Reason, 'PullRequest'))
   displayName: 'Artifacts: Pack: nupkgs'
   continueOnError: true
   inputs:
@@ -54,19 +90,45 @@ steps:
     packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour|.RuntimeDetour.HookGen)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
 - task: PublishBuildArtifacts@1
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: and(succeeded(), ne(variables.Build.Reason, 'PullRequest'))
   displayName: 'Artifacts: Publish: nupkgs'
   continueOnError: true
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
-    artifactName: 'nupkgs'
+    artifactName: '$(artifactPrefix)nupkgs$(artifactSuffix)'
     publishLocation: 'Container'
 
-# Run tests last.
-- task: DotNetCoreCLI@2
-  displayName: 'dotnet: Test'
+# Run tests.
+# I've tried to simplify this mess. It's impossible. --ade
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';fx;'))
+  displayName: 'Test: fx: net452'
   inputs:
-    command: 'test'
-    nobuild: true
-    projects: 'MonoMod.UnitTest/*.csproj'
-    configuration: '$(buildConfiguration)'
+    script: ${{format(variables.xunit, '', '%userprofile%', 'net452', 'exe', 'fx')}}
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';mono;'))
+  displayName: 'Test: mono: net452'
+  inputs:
+    script: ${{format(variables.xunit, 'mono ', '~', 'net452', 'exe', 'mono')}}
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core1;'))
+  displayName: 'Test: core: netcoreapp1.0'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp1.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj'
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core2;'))
+  displayName: 'Test: core: netcoreapp2.0'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj'
+
+# Publish test results.
+- task: PublishTestResults@2
+  condition: always()
+  displayName: 'Test: Publish: xUnit'
+  inputs:
+    testResultsFormat: 'xUnit'
+    testResultsFiles: '**/testresults.*.xml'
+    failTaskOnFailedTests: true
+    testRunTitle: 'Tests @ $(jobArchName)'
+    buildPlatform: '$(buildPlatform)'
+    buildConfiguration: '$(buildConfiguration)'

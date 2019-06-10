@@ -3,6 +3,7 @@
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
@@ -25,11 +26,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private unsafe void SetMemPerms(IntPtr start, ulong len, MmapProts prot) {
             long pagesize = _Pagesize;
             long startPage = ((long) start) & ~(pagesize - 1);
-            long endPage = ((long) start + (long) len) & ~(pagesize - 1);
-            endPage = (((endPage - startPage) / pagesize) + 1) * pagesize;
+            long endPage = ((long) start + (long) len + pagesize - 1) & ~(pagesize - 1);
 
-            if (mono_mprotect((IntPtr) startPage, (IntPtr) endPage, (int) (MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC)) != 0)
-                throw new System.ComponentModel.Win32Exception();
+            if (mono_mprotect((IntPtr) startPage, (IntPtr) (endPage - startPage), (int) (MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC)) != 0) {
+                int error = Marshal.GetLastWin32Error();
+                if (error == 0) {
+                    // This can happen on some Android devices.
+                    // Let's hope for the best.
+                } else {
+                    throw new Win32Exception();
+                }
+            }
         }
 
         public void MakeWritable(IntPtr src, uint size) {
