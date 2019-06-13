@@ -105,30 +105,49 @@ steps:
   displayName: 'Test: fx: net452'
   inputs:
     script: ${{format(variables.xunit, '', '%userprofile%', 'net452', 'exe', 'fx')}}
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';fx;'))
+  displayName: 'Test: Publish: fx: net452'
+  inputs:
+    testResultsFormat: 'xUnit'
+    testResultsFiles: '**/testresults.fx.net452.xml'
+    testRunTitle: 'Tests @ $(jobArchName) fx net452'
+
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';mono;'))
   displayName: 'Test: mono: net452'
   inputs:
     script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'mono')}}
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';mono;'))
+  displayName: 'Test: Publish: mono: net452'
+  inputs:
+    testResultsFormat: 'xUnit'
+    testResultsFiles: '**/testresults.mono.net452.xml'
+    testRunTitle: 'Tests @ $(jobArchName) mono net452'
+
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core1;'))
   displayName: 'Test: core: netcoreapp1.0'
   inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp1.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj'
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp1.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l trx;LogFileName=testresults.core.netcoreapp1.0.trx'
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';core1;'))
+  displayName: 'Test: Publish: core: netcoreapp1.0'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.netcoreapp1.0.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp1.0'
+
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core2;'))
   displayName: 'Test: core: netcoreapp2.0'
   inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj'
-
-# Publish test results.
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l trx;LogFileName=testresults.core.netcoreapp2.0.trx'
 - task: PublishTestResults@2
-  condition: always()
-  displayName: 'Test: Publish: xUnit'
+  condition: and(always(), contains(variables.testers, ';core2;'))
+  displayName: 'Test: Publish: core: netcoreapp2.0'
   inputs:
-    testResultsFormat: 'xUnit'
-    testResultsFiles: '**/testresults.*.xml'
-    failTaskOnFailedTests: true
-    testRunTitle: 'Tests @ $(jobArchName)'
-    buildPlatform: '$(buildPlatform)'
-    buildConfiguration: '$(buildConfiguration)'
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.netcoreapp2.0.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.0'
