@@ -8,6 +8,8 @@ using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
     public class TestObject {
+        public static readonly object Lock = new object();
+
         public static int VoidResult;
 
         // Prevent JIT from inlining the method call.

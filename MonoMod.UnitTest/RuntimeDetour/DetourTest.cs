@@ -12,69 +12,71 @@ namespace MonoMod.UnitTest {
     public class DetourTest {
         [Fact]
         public void TestDetours() {
-            Console.WriteLine("Detours: none");
-            TestObject.TestStep(5, 6, 8);
-            Console.WriteLine();
+            lock (TestObject.Lock) {
+                Console.WriteLine("Detours: none");
+                TestObject.TestStep(5, 6, 8);
+                Console.WriteLine();
 
-            // Three examples of using Detour.
-            // Note that if you need non-layered, low-level hooks, you can use NativeDetour instead.
-            // This is also why the variable type is IDetour.
-            // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
-            IDetour detourTestMethodA = new Detour(
-                () => default(TestObject).TestMethod(default, default),
-                () => TestMethod_A(default, default, default)
-            );
-            // Method references as delegates.
-            IDetour detourTestStaticMethodA = new Detour<Func<int, int, int>>(
-                TestObject.TestStaticMethod,
-                TestStaticMethod_A
-            );
-            // MethodBase, old syntax.
-            // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
-            IDetour detourTestVoidMethodA = new Detour(
-                typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
-            );
-            Console.WriteLine("Detours: A");
-            TestObject.TestStep(42, 12, 1);
-            Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
-            detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
-            Console.WriteLine();
+                // Three examples of using Detour.
+                // Note that if you need non-layered, low-level hooks, you can use NativeDetour instead.
+                // This is also why the variable type is IDetour.
+                // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
+                IDetour detourTestMethodA = new Detour(
+                    () => default(TestObject).TestMethod(default, default),
+                    () => TestMethod_A(default, default, default)
+                );
+                // Method references as delegates.
+                IDetour detourTestStaticMethodA = new Detour<Func<int, int, int>>(
+                    TestObject.TestStaticMethod,
+                    TestStaticMethod_A
+                );
+                // MethodBase, old syntax.
+                // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
+                IDetour detourTestVoidMethodA = new Detour(
+                    typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
+                    typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
+                );
+                Console.WriteLine("Detours: A");
+                TestObject.TestStep(42, 12, 1);
+                Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
+                detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
+                Console.WriteLine();
 
-            IDetour detourTestMethodB = new Detour(
-                () => default(TestObject).TestMethod(default, default),
-                () => TestMethod_B(default, default, default)
-            );
-            IDetour detourTestStaticMethodB = new Detour(
-                 () => TestObject.TestStaticMethod(default, default),
-                 () => TestStaticMethod_B(default, default)
-            );
-            IDetour detourTestVoidMethodB = new Detour(
-                 () => TestObject.TestVoidMethod(default, default),
-                 () => TestVoidMethod_B(default, default)
-            );
-            Console.WriteLine("Detours: A + B");
-            TestObject.TestStep(120, 8, 2);
-            Console.WriteLine("Testing trampoline, should invoke hook A, TestVoidMethod(2, 3)");
-            Action<int, int> trampolineTestVoidMethodB = detourTestVoidMethodB.GenerateTrampoline<Action<int, int>>();
-            trampolineTestVoidMethodB(2, 3);
-            Console.WriteLine();
+                IDetour detourTestMethodB = new Detour(
+                    () => default(TestObject).TestMethod(default, default),
+                    () => TestMethod_B(default, default, default)
+                );
+                IDetour detourTestStaticMethodB = new Detour(
+                     () => TestObject.TestStaticMethod(default, default),
+                     () => TestStaticMethod_B(default, default)
+                );
+                IDetour detourTestVoidMethodB = new Detour(
+                     () => TestObject.TestVoidMethod(default, default),
+                     () => TestVoidMethod_B(default, default)
+                );
+                Console.WriteLine("Detours: A + B");
+                TestObject.TestStep(120, 8, 2);
+                Console.WriteLine("Testing trampoline, should invoke hook A, TestVoidMethod(2, 3)");
+                Action<int, int> trampolineTestVoidMethodB = detourTestVoidMethodB.GenerateTrampoline<Action<int, int>>();
+                trampolineTestVoidMethodB(2, 3);
+                Console.WriteLine();
 
-            detourTestMethodA.Undo();
-            detourTestStaticMethodA.Undo();
-            detourTestVoidMethodA.Undo();
-            Console.WriteLine("Detours: B");
-            TestObject.TestStep(120, 8, 2);
-            Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
-            trampolineTestVoidMethodB(2, 3);
-            Console.WriteLine();
+                detourTestMethodA.Undo();
+                detourTestStaticMethodA.Undo();
+                detourTestVoidMethodA.Undo();
+                Console.WriteLine("Detours: B");
+                TestObject.TestStep(120, 8, 2);
+                Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
+                trampolineTestVoidMethodB(2, 3);
+                Console.WriteLine();
 
-            detourTestMethodB.Undo();
-            detourTestStaticMethodB.Undo();
-            detourTestVoidMethodB.Undo();
-            Console.WriteLine("Detours: none");
-            TestObject.TestStep(5, 6, 8);
-            Console.WriteLine();
+                detourTestMethodB.Undo();
+                detourTestStaticMethodB.Undo();
+                detourTestVoidMethodB.Undo();
+                Console.WriteLine("Detours: none");
+                TestObject.TestStep(5, 6, 8);
+                Console.WriteLine();
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
