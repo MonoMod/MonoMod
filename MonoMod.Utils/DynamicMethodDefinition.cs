@@ -202,7 +202,7 @@ namespace MonoMod.Utils {
                             _DynModuleDefinition = null;
                         }
 
-                        string location = Method.DeclaringType.GetTypeInfo().Assembly.GetLocation();
+                        string location = Method.DeclaringType?.GetTypeInfo().Assembly.GetLocation();
                         if (!string.IsNullOrEmpty(location)) {
                             ReaderParameters rp = new ReaderParameters();
                             if (_ModuleGen != null) {

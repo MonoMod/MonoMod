@@ -40,7 +40,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // Make sure that the selftest isn't optimized away.
             try {
             } finally {
-                s = _SelftestGetStruct(IntPtr.Zero, IntPtr.Zero);
+                // s = _SelftestGetStruct(IntPtr.Zero, IntPtr.Zero);
+                ((Func<IntPtr, IntPtr, _SelftestStruct>) selftest.CreateDelegate<Func<IntPtr, IntPtr, _SelftestStruct>>(this))(IntPtr.Zero, IntPtr.Zero);
                 unsafe {
                     *&s = s;
                 }
