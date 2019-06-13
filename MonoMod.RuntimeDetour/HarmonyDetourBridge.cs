@@ -109,7 +109,8 @@ namespace MonoMod.RuntimeDetour {
                     if (critical)
                         throw new Exception($"Cannot apply HarmonyDetourBridge rule {methodRD.Name}");
                 }
-            } catch (Exception) when (_EarlyReset()) {
+            } catch {
+                _EarlyReset();
                 throw;
             }
  

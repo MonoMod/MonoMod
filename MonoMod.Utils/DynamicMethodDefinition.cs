@@ -213,7 +213,8 @@ namespace MonoMod.Utils {
                             }
                             try {
                                 module = moduleTmp = ModuleDefinition.ReadModule(location, rp);
-                            } catch when (_DisposeEarly(true)) {
+                            } catch {
+                                _DisposeEarly(true);
                                 module = moduleTmp = null;
                             }
                         }
@@ -241,7 +242,8 @@ namespace MonoMod.Utils {
                     _ModuleRef++;
                 }
                 _Definition = Definition;
-            } catch when (_DisposeEarly(false)) {
+            } catch {
+                _DisposeEarly(false);
                 throw;
             }
 

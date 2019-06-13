@@ -103,7 +103,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     return;
 
                 UpdateILManipulated(true);
-            } catch when (_ManipulatorFailure(true)) {
+            } catch {
+                _ManipulatorFailure(true);
                 throw;
             }
 
@@ -132,7 +133,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     InvokeManipulator(def, cb);
 
                 UpdateILManipulated();
-            } catch when (_ManipulatorFailure(false)) {
+            } catch {
+                _ManipulatorFailure(false);
                 throw;
             }
         }
@@ -149,7 +151,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     }
 
                     UpdateILManipulated();
-                } catch when (_ManipulatorFailure(false)) {
+                } catch {
+                    _ManipulatorFailure(false);
                     throw;
                 }
 
