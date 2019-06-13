@@ -256,12 +256,16 @@ namespace MonoMod.Utils {
         public static Delegate CreateDelegate(this MethodBase method, Type delegateType, object target) {
             if (!typeof(Delegate).IsAssignableFrom(delegateType))
                 throw new ArgumentException("Type argument must be a delegate type!");
-            if (method is System.Reflection.Emit.DynamicMethod)
-                return ((System.Reflection.Emit.DynamicMethod) method).CreateDelegate(delegateType, target);
+            if (method is System.Reflection.Emit.DynamicMethod dm)
+                return dm.CreateDelegate(delegateType, target);
 
             // TODO: Check delegate Invoke parameters against method parameters.
 
 #if NETSTANDARD1_X
+            // Built-in CreateDelegate is available in .NET Standard 1.X+
+            if (method is System.Reflection.MethodInfo mi)
+                return mi.CreateDelegate(delegateType, target);
+
             throw new NotSupportedException();
 #else
             RuntimeMethodHandle handle = method.MethodHandle;
