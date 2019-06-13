@@ -109,7 +109,7 @@ steps:
   condition: and(always(), contains(variables.testers, ';mono;'))
   displayName: 'Test: mono: net452'
   inputs:
-    script: ${{format(variables.xunit, 'mono ', '~', 'net452', 'exe', 'mono')}}
+    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'mono')}}
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core1;'))
   displayName: 'Test: core: netcoreapp1.0'

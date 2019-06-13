@@ -20,10 +20,10 @@ namespace MonoMod.UnitTest {
                 // Please take a look at DetourTest and HookTest instead.
 
                 using (NativeDetour d = new NativeDetour(
-                // .GetNativeStart() to enforce a native detour.
-                typeof(TestObject).GetMethod("TestStaticMethod").GetNativeStart(),
-                typeof(DetourExtTest).GetMethod("TestStaticMethod_A")
-            )) {
+                    // .GetNativeStart() to enforce a native detour.
+                    typeof(TestObject).GetMethod("TestStaticMethod").GetNativeStart(),
+                    typeof(DetourExtTest).GetMethod("TestStaticMethod_A")
+                )) {
                     int staticResult = d.GenerateTrampoline<Func<int, int, int>>()(2, 3);
                     Console.WriteLine($"TestStaticMethod(2, 3): {staticResult}");
                     Assert.Equal(6, staticResult);
@@ -46,7 +46,9 @@ namespace MonoMod.UnitTest {
                     Console.WriteLine($"TestStaticMethod(2, 3): {staticResult}");
                     Assert.Equal(6, staticResult);
 
-                    staticResult = (int) dm.Invoke(null, new object[] { 2, 3 });
+                    // FIXME: dm.Invoke can fail with a release build in mono 5.X!
+                    // staticResult = (int) dm.Invoke(null, new object[] { 2, 3 });
+                    staticResult = ((Func<int, int, int>) dm.CreateDelegate<Func<int, int, int>>())(2, 3);
                     Console.WriteLine($"TestStaticMethod(2, 3): {staticResult}");
                     Assert.Equal(12, staticResult);
                 }
