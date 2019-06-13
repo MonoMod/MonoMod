@@ -130,7 +130,7 @@ steps:
   condition: and(always(), contains(variables.testers, ';core1;'))
   displayName: 'Test: core: netcoreapp1.0'
   inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp1.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l trx;LogFileName=testresults.core.netcoreapp1.0.trx'
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp1.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp1.0.trx"'
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';core1;'))
   displayName: 'Test: Publish: core: netcoreapp1.0'
@@ -143,7 +143,7 @@ steps:
   condition: and(always(), contains(variables.testers, ';core2;'))
   displayName: 'Test: core: netcoreapp2.0'
   inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l trx;LogFileName=testresults.core.netcoreapp2.0.trx'
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp2.0.trx"'
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';core2;'))
   displayName: 'Test: Publish: core: netcoreapp2.0'
