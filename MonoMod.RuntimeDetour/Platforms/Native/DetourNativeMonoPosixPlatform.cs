@@ -26,11 +26,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         private unsafe void SetMemPerms(IntPtr start, ulong len, MmapProts prot) {
             long pagesize = _Pagesize;
-            long startPage = ((long) start) & ~(_Pagesize - 1);
-            long endPage = ((long) start + (long) len) & ~(_Pagesize - 1);
-            endPage = (((endPage - startPage) / _Pagesize) + 1) * _Pagesize;
+            long startPage = ((long) start) & ~(pagesize - 1);
+            long endPage = ((long) start + (long) len + pagesize - 1) & ~(pagesize - 1);
 
-            if (mprotect((IntPtr) startPage, (ulong) endPage, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC) != 0)
+            if (mprotect((IntPtr) startPage, (ulong) (endPage - startPage), prot) != 0)
                 throw new Exception(GetLastError("mprotect"));
         }
 

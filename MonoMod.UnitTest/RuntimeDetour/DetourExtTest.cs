@@ -54,6 +54,9 @@ namespace MonoMod.UnitTest {
                 }
 
                 // This was provided by Chicken Bones (tModLoader).
+                // GetEncoding behaves differently on .NET Core, which is why this test only applies to .NET Framework and Mono.
+                // TODO: Create a replacement for this test for .NET Core.
+#if NETFRAMEWORK
                 using (Hook h = new Hook(
                     typeof(Encoding).GetMethod("GetEncoding", new Type[] { typeof(string) }),
                     new Func<Func<string, Encoding>, string, Encoding>((orig, name) => {
@@ -64,6 +67,7 @@ namespace MonoMod.UnitTest {
                 )) {
                     Assert.Null(Encoding.GetEncoding("IBM437"));
                 }
+#endif
             }
         }
 

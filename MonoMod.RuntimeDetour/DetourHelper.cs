@@ -54,17 +54,26 @@ namespace MonoMod.RuntimeDetour {
                         } catch {
                             // Fall back to another native platform wrapper.
                         }
-
-                        // MonoPosixHelper is available outside of Unix as well.
-                        try {
-                            _Native = new DetourNativeMonoPosixPlatform(_Native);
-                        } catch {
-                            // Good job, your copy of Mono doesn't ship with MonoPosixHelper.
-                            // https://www.youtube.com/watch?v=l60MnDJklnM
-                        }
                     } else {
                         // TODO: .NET Core Posix native platform wrapper.
                     }
+
+                    // MonoPosixHelper is available outside of Unix and even outside of Mono.
+                    try {
+                        _Native = new DetourNativeMonoPosixPlatform(_Native);
+                    } catch {
+                        // Good job, your copy of Mono doesn't ship with MonoPosixHelper.
+                        // https://www.youtube.com/watch?v=l60MnDJklnM
+                    }
+
+#if NETSTANDARD && !NETSTANDARD1_X
+                    // Might as well try libc...
+                    try {
+                        _Native = new DetourNativeLibcPlatform(_Native);
+                    } catch {
+                        // Oh well.
+                    }
+#endif
 
                     return _Native;
                 }

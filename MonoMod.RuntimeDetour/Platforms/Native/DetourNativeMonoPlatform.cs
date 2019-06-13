@@ -28,7 +28,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             long startPage = ((long) start) & ~(pagesize - 1);
             long endPage = ((long) start + (long) len + pagesize - 1) & ~(pagesize - 1);
 
-            if (mono_mprotect((IntPtr) startPage, (IntPtr) (endPage - startPage), (int) (MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC)) != 0) {
+            if (mono_mprotect((IntPtr) startPage, (IntPtr) (endPage - startPage), (int) prot) != 0) {
                 int error = Marshal.GetLastWin32Error();
                 if (error == 0) {
                     // This can happen on some Android devices.
