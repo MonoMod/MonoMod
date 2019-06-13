@@ -24,7 +24,23 @@ strategy:
       builder: 'mono'
       testers: ';mono;'
       coreVersion: ''
-  maxParallel: 3
+    macos-core:
+      jobArchName: 'macOS .NET Core'
+      imageName: 'macOS-10.14'
+      artifactPrefix: '~dbg/macos-core/'
+      artifactSuffix: ''
+      builder: 'core'
+      testers: ';core2;'
+      coreVersion: '2.1.x'
+    macos-mono:
+      jobArchName: 'macOS Mono'
+      imageName: 'macOS-10.14'
+      artifactPrefix: '~dbg/macos-mono/'
+      artifactSuffix: ''
+      builder: 'mono'
+      testers: ';mono;'
+      coreVersion: ''
+  maxParallel: 5
 
 variables:
   solution: '**/*.sln'
