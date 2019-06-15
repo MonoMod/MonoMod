@@ -11,6 +11,7 @@ namespace MonoMod.RuntimeDetour {
         MethodInfo CreateCopy(MethodBase method);
         bool TryCreateCopy(MethodBase method, out MethodInfo dm);
         void Pin(MethodBase method);
+        void Unpin(MethodBase method);
         MethodBase GetDetourTarget(MethodBase from, MethodBase to);
     }
 }

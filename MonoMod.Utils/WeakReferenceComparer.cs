@@ -6,9 +6,9 @@ using System.Text;
 namespace MonoMod.Utils {
     public sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
         public override bool Equals(WeakReference x, WeakReference y)
-            => ReferenceEquals(x.Target, y.Target) && x.IsAlive == y.IsAlive;
+            => x.IsAlive == y.IsAlive && (x.IsAlive ? ReferenceEquals(x.Target, y.Target) : ReferenceEquals(x, y));
 
         public override int GetHashCode(WeakReference obj)
-            => obj.Target?.GetHashCode() ?? 0;
+            => 0;
     }
 }

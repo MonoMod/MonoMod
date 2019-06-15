@@ -14,14 +14,14 @@ namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
     public class DetourExtTest {
         [Fact]
-        public void TestDetours() {
+        public void TestDetoursExt() {
             lock (TestObject.Lock) {
                 // The following use cases are not meant to be usage examples.
                 // Please take a look at DetourTest and HookTest instead.
 
                 using (NativeDetour d = new NativeDetour(
                     // .GetNativeStart() to enforce a native detour.
-                    typeof(TestObject).GetMethod("TestStaticMethod").GetNativeStart(),
+                    typeof(TestObject).GetMethod("TestStaticMethod").Pin().GetNativeStart(),
                     typeof(DetourExtTest).GetMethod("TestStaticMethod_A")
                 )) {
                     int staticResult = d.GenerateTrampoline<Func<int, int, int>>()(2, 3);

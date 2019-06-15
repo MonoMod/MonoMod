@@ -64,9 +64,9 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _ChainedTrampoline;
 
         public Detour(MethodBase from, MethodBase to) {
-            Method = from;
-            Target = to;
-            TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to);
+            Method = from.Pin();
+            Target = to.Pin();
+            TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to).Pin();
 
             if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
                 return;
@@ -76,7 +76,7 @@ namespace MonoMod.RuntimeDetour {
             lock (_BackupMethods) {
                 if ((!_BackupMethods.TryGetValue(Method, out MethodInfo backup) || backup == null) &&
                     (backup = Method.CreateILCopy()) != null)
-                    _BackupMethods[Method] = backup;
+                    _BackupMethods[Method] = backup.Pin();
             }
 
             // Generate a "chained trampoline" DynamicMethod.
@@ -185,10 +185,25 @@ namespace MonoMod.RuntimeDetour {
             lock (detours) {
                 detours.Remove(this);
                 _TopUndo();
-                if (detours.Count > 0)
+                if (detours.Count > 0) {
                     detours[detours.Count - 1]._TopApply();
-                _UpdateChainedTrampolines(Method);
+                    _UpdateChainedTrampolines(Method);
+                } else {
+                    /*
+                    lock (_BackupMethods) {
+                        _BackupMethods.Remove(Method);
+                    }
+                    lock (_DetourMap) {
+                        _DetourMap.Remove(Method);
+                    }
+                    */
+                }
             }
+
+            _ChainedTrampoline.Unpin();
+            Method.Unpin();
+            Target.Unpin();
+            TargetReal.Unpin();
         }
 
         /// <summary>
@@ -244,7 +259,7 @@ namespace MonoMod.RuntimeDetour {
                 }
                 il.Emit(OpCodes.Jmp, _ChainedTrampoline);
 
-                return dmd.Generate().Pin();
+                return dmd.Generate();
             }
         }
 

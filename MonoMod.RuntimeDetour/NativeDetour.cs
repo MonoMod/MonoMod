@@ -78,14 +78,17 @@ namespace MonoMod.RuntimeDetour {
             : this(null, from, to) {
         }
         public NativeDetour(MethodBase from, IntPtr to)
-            : this(from, from.GetNativeStart(), to) {
+            // TODO: Unpin!
+            : this(from, from.Pin().GetNativeStart(), to) {
         }
 
         public NativeDetour(IntPtr from, MethodBase to)
-            : this(from, to.GetNativeStart()) {
+            // TODO: Unpin!
+            : this(from, to.Pin().GetNativeStart()) {
         }
         public NativeDetour(MethodBase from, MethodBase to)
-            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).GetNativeStart()) {
+            // TODO: Unpin!
+            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart()) {
         }
 
         public NativeDetour(Delegate from, IntPtr to)
@@ -246,7 +249,7 @@ namespace MonoMod.RuntimeDetour {
                 eh.HandlerStart = il.Body.Instructions[instriTryEnd];
                 eh.HandlerEnd = il.Body.Instructions[instriFinallyEnd];
 
-                return dmd.Generate().Pin();
+                return dmd.Generate();
             }
         }
 

@@ -11,7 +11,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         // Prevent the GC from collecting those.
-        protected HashSet<MethodBase> PinnedMethods = new HashSet<MethodBase>();
+        protected Dictionary<MethodBase, int> PinnedMethods = new Dictionary<MethodBase, int>();
 
         private bool GlueThiscallStructRetPtr;
 
@@ -90,9 +90,27 @@ namespace MonoMod.RuntimeDetour.Platforms {
             => GetFunctionPointer(GetMethodHandle(method));
 
         public void Pin(MethodBase method) {
-            PinnedMethods.Add(method);
-            RuntimeMethodHandle handle = GetMethodHandle(method);
-            PrepareMethod(handle);
+            lock (PinnedMethods) {
+                if (!PinnedMethods.TryGetValue(method, out int count))
+                    count = 0;
+                if (count == 0) {
+                    RuntimeMethodHandle handle = GetMethodHandle(method);
+                    PrepareMethod(handle);
+                }
+                PinnedMethods[method] = ++count;
+            }
+        }
+
+        public void Unpin(MethodBase method) {
+            lock (PinnedMethods) {
+                if (!PinnedMethods.TryGetValue(method, out int count))
+                    return;
+                if (count == 1) {
+                    PinnedMethods.Remove(method);
+                    return;
+                }
+                PinnedMethods[method] = --count;
+            }
         }
 
         public MethodInfo CreateCopy(MethodBase method) {

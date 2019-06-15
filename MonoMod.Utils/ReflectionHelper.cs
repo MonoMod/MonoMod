@@ -21,7 +21,7 @@ namespace MonoMod.Utils {
     public static class ReflectionHelper {
 
         public static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
-        public static readonly Dictionary<MemberReference, MemberInfo> ResolveReflectionCache = new Dictionary<MemberReference, MemberInfo>();
+        public static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
 
@@ -38,7 +38,7 @@ namespace MonoMod.Utils {
         private static MemberInfo _Cache(MemberReference key, MemberInfo value) {
             if (key != null && value != null) {
                 lock (ResolveReflectionCache) {
-                    ResolveReflectionCache[key] = value;
+                    ResolveReflectionCache[key.FullName] = value;
                 }
             }
             return value;
@@ -108,7 +108,7 @@ namespace MonoMod.Utils {
                 return null;
 
             lock (ResolveReflectionCache) {
-                if (ResolveReflectionCache.TryGetValue(mref, out MemberInfo cached) && cached != null)
+                if (ResolveReflectionCache.TryGetValue(mref.FullName, out MemberInfo cached) && cached != null)
                     return cached;
             }
 
@@ -193,16 +193,16 @@ namespace MonoMod.Utils {
                         return null;
 
                     if (ts.IsByReference)
-                        return ResolveReflectionCache[mref] = type.MakeByRefType().GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = type.MakeByRefType().GetTypeInfo();
 
                     if (ts.IsPointer)
-                        return ResolveReflectionCache[mref] = type.MakePointerType().GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = type.MakePointerType().GetTypeInfo();
 
                     if (ts.IsArray)
-                        return ResolveReflectionCache[mref] = (ts as ArrayType).IsVector ? type.MakeArrayType().GetTypeInfo() : type.MakeArrayType((ts as ArrayType).Dimensions.Count).GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = (ts as ArrayType).IsVector ? type.MakeArrayType().GetTypeInfo() : type.MakeArrayType((ts as ArrayType).Dimensions.Count).GetTypeInfo();
 
                     if (ts.IsGenericInstance)
-                        return ResolveReflectionCache[mref] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray()).GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray()).GetTypeInfo();
 
                 } else {
                     type = modules

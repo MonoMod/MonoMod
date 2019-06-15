@@ -202,7 +202,8 @@ namespace MonoMod.RuntimeDetour {
         private static long GetMethodStart(MethodBase method, out Exception exception) {
             exception = null;
             try {
-                return (long) method.GetNativeStart();
+                _Detours.Add(new LazyDisposable<MethodBase>(method, m => DetourHelper.Unpin(m)));
+                return (long) method.Pin().GetNativeStart();
             } catch (Exception e) {
                 exception = e;
                 return 0;

@@ -205,6 +205,7 @@ namespace MonoMod.RuntimeDetour {
                 DynamicMethodHelper.FreeReference(_RefTrampoline.Value);
             if (_RefTrampolineTmp != null)
                 DynamicMethodHelper.FreeReference(_RefTrampolineTmp.Value);
+            Target.Unpin();
         }
 
         public MethodBase GenerateTrampoline(MethodBase signature = null) {

@@ -124,12 +124,8 @@ namespace MonoMod.RuntimeDetour {
 
         #region Method-related helpers
 
-        /// <summary>
-        /// Get a pointer to the start of the executable section of the method. Normally, this is the JITed "native" function.
-        /// Note: DetourManager.GetNativeStart silently pins your method. If you want to skip pinning, use DetourManager.Runtime.GetNativeStart directly.
-        /// </summary>
         public static IntPtr GetNativeStart(this MethodBase method)
-            => Runtime.GetNativeStart(method.Pin());
+            => Runtime.GetNativeStart(method);
         public static IntPtr GetNativeStart(this Delegate method)
             => method.GetMethodInfo().GetNativeStart();
         public static IntPtr GetNativeStart(this Expression method)
@@ -142,6 +138,11 @@ namespace MonoMod.RuntimeDetour {
 
         public static T Pin<T>(this T method) where T : MethodBase {
             Runtime.Pin(method);
+            return method;
+        }
+
+        public static T Unpin<T>(this T method) where T : MethodBase {
+            Runtime.Unpin(method);
             return method;
         }
 
