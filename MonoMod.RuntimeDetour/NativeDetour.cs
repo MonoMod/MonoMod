@@ -6,33 +6,9 @@ using Mono.Cecil.Cil;
 using System.Collections.Generic;
 
 namespace MonoMod.RuntimeDetour {
-    /// <summary>
-    /// The data forming a "raw" native detour, created and consumed by DetourManager.Native.
-    /// </summary>
-    public struct NativeDetourData {
-        /// <summary>
-        /// The method to detour from. Set when the structure is created by the IDetourNativePlatform.
-        /// </summary>
-        public IntPtr Method;
-        /// <summary>
-        /// The target method to be called instead. Set when the structure is created by the IDetourNativePlatform.
-        /// </summary>
-        public IntPtr Target;
-
-        /// <summary>
-        /// The type of the detour. Determined when the structure is created by the IDetourNativePlatform.
-        /// </summary>
-        public byte Type;
-
-        /// <summary>
-        /// The size of the detour. Calculated when the structure is created by the IDetourNativePlatform.
-        /// </summary>
-        public uint Size;
-
-        /// <summary>
-        /// DetourManager.Native-specific data.
-        /// </summary>
-        public IntPtr Extra;
+    public struct NativeDetourConfig {
+        public bool ManualApply;
+        public bool SkipILCopy;
     }
 
     /// <summary>
@@ -41,13 +17,14 @@ namespace MonoMod.RuntimeDetour {
     /// If you don't need the trampoline generator or any of the management helpers, use DetourManager.Native directly.
     /// Unless you're writing your own detour manager or need to detour native functions, it's better to create instances of Detour instead.
     /// </summary>
-    public class NativeDetour : IDetour {
+    public unsafe class NativeDetour : IDetour {
 
         public static Func<NativeDetour, MethodBase, IntPtr, IntPtr, bool> OnDetour;
         public static Func<NativeDetour, bool> OnUndo;
         public static Func<NativeDetour, MethodBase, MethodBase> OnGenerateTrampoline;
 
-        public bool IsValid => !_IsFree;
+        public bool IsValid { get; private set; }
+        public bool IsApplied { get; private set; }
 
         public readonly NativeDetourData Data;
         public readonly MethodBase Method;
@@ -57,59 +34,113 @@ namespace MonoMod.RuntimeDetour {
 
         private HashSet<MethodBase> _Pinned = new HashSet<MethodBase>();
 
-        private bool _IsFree;
-
-        public NativeDetour(MethodBase method, IntPtr from, IntPtr to) {
+        public NativeDetour(MethodBase method, IntPtr from, IntPtr to, ref NativeDetourConfig config) {
             Method = method;
 
             if (!(OnDetour?.InvokeWhileTrue(this, method, from, to) ?? true))
                 return;
+            IsValid = true;
 
             Data = DetourHelper.Native.Create(from, to, null);
 
             // Backing up the original function only needs to happen once.
-            method?.TryCreateILCopy(out _BackupMethod);
+            if (!config.SkipILCopy)
+                method?.TryCreateILCopy(out _BackupMethod);
 
             // BackupNative is required even if BackupMethod is present to undo the detour.
             _BackupNative = DetourHelper.Native.MemAlloc(Data.Size);
-            DetourHelper.Native.Copy(Data.Method, _BackupNative, Data.Type);
 
-            Apply();
+            if (!config.ManualApply)
+                Apply();
+        }
+        public NativeDetour(MethodBase method, IntPtr from, IntPtr to, NativeDetourConfig config)
+            : this(method, from, to, ref config) {
+        }
+        public NativeDetour(MethodBase method, IntPtr from, IntPtr to)
+            : this(method, from, to, default) {
         }
 
+        public NativeDetour(IntPtr from, IntPtr to, ref NativeDetourConfig config)
+            : this(null, from, to, ref config) {
+        }
+        public NativeDetour(IntPtr from, IntPtr to, NativeDetourConfig config)
+            : this(null, from, to, ref config) {
+        }
         public NativeDetour(IntPtr from, IntPtr to)
             : this(null, from, to) {
+        }
+        public NativeDetour(MethodBase from, IntPtr to, ref NativeDetourConfig config)
+            : this(from, from.GetNativeStart(), to, ref config) {
+        }
+        public NativeDetour(MethodBase from, IntPtr to, NativeDetourConfig config)
+            : this(from, from.GetNativeStart(), to, ref config) {
         }
         public NativeDetour(MethodBase from, IntPtr to)
             : this(from, from.Pin().GetNativeStart(), to) {
             _Pinned.Add(from);
         }
 
+        public NativeDetour(IntPtr from, MethodBase to, ref NativeDetourConfig config)
+            : this(from, to.GetNativeStart(), ref config) {
+        }
+        public NativeDetour(IntPtr from, MethodBase to, NativeDetourConfig config)
+            : this(from, to.GetNativeStart(), ref config) {
+        }
         public NativeDetour(IntPtr from, MethodBase to)
             : this(from, to.Pin().GetNativeStart()) {
             _Pinned.Add(to);
+        }
+        public NativeDetour(MethodBase from, MethodBase to, ref NativeDetourConfig config)
+            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).GetNativeStart(), ref config) {
+        }
+        public NativeDetour(MethodBase from, MethodBase to, NativeDetourConfig config)
+            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).GetNativeStart(), ref config) {
         }
         public NativeDetour(MethodBase from, MethodBase to)
             : this(from.Pin().GetNativeStart(), DetourHelper.Runtime.GetDetourTarget(from, to)) {
             _Pinned.Add(from);
         }
 
+        public NativeDetour(Delegate from, IntPtr to, ref NativeDetourConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
+        }
+        public NativeDetour(Delegate from, IntPtr to, NativeDetourConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
+        }
         public NativeDetour(Delegate from, IntPtr to)
             : this(from.GetMethodInfo(), to) {
         }
+        public NativeDetour(IntPtr from, Delegate to, ref NativeDetourConfig config)
+            : this(from, to.GetMethodInfo(), ref config) {
+        }
+        public NativeDetour(IntPtr from, Delegate to, NativeDetourConfig config)
+            : this(from, to.GetMethodInfo(), ref config) {
+        }
         public NativeDetour(IntPtr from, Delegate to)
             : this(from, to.GetMethodInfo()) {
+        }
+        public NativeDetour(Delegate from, Delegate to, ref NativeDetourConfig config)
+            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
+        }
+        public NativeDetour(Delegate from, Delegate to, NativeDetourConfig config)
+            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
         }
         public NativeDetour(Delegate from, Delegate to)
             : this(from.GetMethodInfo(), to.GetMethodInfo()) {
         }
 
         /// <summary>
-        /// Apply the native detour. This automatically happens when creating an instance.
+        /// Apply the native detour. This can be done automatically when creating an instance.
         /// </summary>
         public void Apply() {
-            if (_IsFree)
-                throw new InvalidOperationException("Free() has been called on this detour.");
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(NativeDetour));
+
+            if (IsApplied)
+                return;
+            IsApplied = true;
+
+            DetourHelper.Native.Copy(Data.Method, _BackupNative, Data.Type);
 
             DetourHelper.Native.MakeWritable(Data);
             DetourHelper.Native.Apply(Data);
@@ -118,38 +149,50 @@ namespace MonoMod.RuntimeDetour {
         }
 
         /// <summary>
-        /// Undo the native detour. Doesn't free the detour native data, allowing you to reapply it later.
+        /// Undo the native detour without freeing the detour native data, allowing you to reapply it later.
         /// </summary>
         public void Undo() {
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(NativeDetour));
+
             if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
                 return;
 
-            if (_IsFree)
+            if (!IsApplied)
                 return;
+            IsApplied = false;
 
+            DetourHelper.Native.MakeWritable(Data);
             DetourHelper.Native.Copy(_BackupNative, Data.Method, Data.Type);
+            DetourHelper.Native.MakeExecutable(Data);
+            DetourHelper.Native.FlushICache(Data);
         }
 
         /// <summary>
         /// Free the detour's data without undoing it. This makes any further operations on this detour invalid.
         /// </summary>
         public void Free() {
-            if (_IsFree)
+            if (!IsValid)
                 return;
-            _IsFree = true;
+            IsValid = false;
 
             DetourHelper.Native.MemFree(_BackupNative);
             DetourHelper.Native.Free(Data);
 
-            foreach (MethodBase method in _Pinned)
-                method.Unpin();
-            _Pinned.Clear();
+            if (!IsApplied) {
+                foreach (MethodBase method in _Pinned)
+                    method.Unpin();
+                _Pinned.Clear();
+            }
         }
 
         /// <summary>
         /// Undo and free this temporary detour.
         /// </summary>
         public void Dispose() {
+            if (!IsValid)
+                return;
+
             Undo();
             Free();
         }
@@ -164,8 +207,8 @@ namespace MonoMod.RuntimeDetour {
             if (remoteTrampoline != null)
                 return remoteTrampoline;
 
-            if (_IsFree)
-                throw new InvalidOperationException("Free() has been called on this detour.");
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(NativeDetour));
 
             if (_BackupMethod != null) {
                 // If we're detouring an IL method and have an IL copy, invoke the IL copy.

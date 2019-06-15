@@ -13,11 +13,12 @@ namespace MonoMod.RuntimeDetour {
         public static Func<Hook, MethodBase, MethodBase> OnGenerateTrampoline;
 
         public bool IsValid => _Detour.IsValid;
+        public bool IsApplied => _Detour.IsApplied;
 
         public readonly MethodBase Method;
         public readonly MethodBase Target;
+        public readonly MethodBase TargetReal;
 
-        private MethodInfo _Hook;
         private Detour _Detour;
 
         private readonly Type _OrigDelegateType;
@@ -29,21 +30,21 @@ namespace MonoMod.RuntimeDetour {
 
         public Hook(MethodBase from, MethodInfo to, object target) {
             Method = from;
-            _Hook = to;
+            Target = to;
 
             if (!(OnDetour?.InvokeWhileTrue(this, from, to, target) ?? true))
                 return;
 
             // Check if hook ret -> method ret is valid. Don't check for method ret -> hook ret, as that's too strict.
             Type returnType = (from as MethodInfo)?.ReturnType ?? typeof(void);
-            if (_Hook.ReturnType != returnType && !_Hook.ReturnType.IsCompatible(returnType))
+            if (to.ReturnType != returnType && !to.ReturnType.IsCompatible(returnType))
                 throw new InvalidOperationException($"Return type of hook for {from} doesn't match, must be {((from as MethodInfo)?.ReturnType ?? typeof(void)).FullName}");
 
             if (target == null && !to.IsStatic) {
                 throw new InvalidOperationException($"Hook for method {from} must be static, or you must pass a target instance.");
             }
 
-            ParameterInfo[] hookArgs = _Hook.GetParameters();
+            ParameterInfo[] hookArgs = Target.GetParameters();
 
             // Check if the parameters match.
             // If the delegate has got an extra first parameter that itself is a delegate, it's the orig trampoline passthrough.
@@ -96,11 +97,11 @@ namespace MonoMod.RuntimeDetour {
                 for (int i = 0; i < argTypes.Length; i++)
                     il.Emit(OpCodes.Ldarg, i);
 
-                il.Emit(OpCodes.Call, _Hook);
+                il.Emit(OpCodes.Call, Target);
 
                 il.Emit(OpCodes.Ret);
 
-                Target = dmd.Generate().Pin();
+                TargetReal = dmd.Generate().Pin();
             }
 
             // Temporarily provide a trampoline that waits for the proper trampoline.
@@ -134,9 +135,9 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            _Detour = new Detour(Method, Target);
+            _Detour = new Detour(Method, TargetReal);
 
-            UpdateOrig(null);
+            _UpdateOrig(null);
         }
         public Hook(MethodBase from, MethodInfo to)
             : this(from, to, null) {
@@ -171,10 +172,16 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public void Apply() {
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(Hook));
+
             _Detour.Apply();
         }
 
         public void Undo() {
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(Hook));
+
             if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
                 return;
 
@@ -192,6 +199,9 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public void Dispose() {
+            if (!IsValid)
+                return;
+
             Undo();
             Free();
         }
@@ -203,7 +213,7 @@ namespace MonoMod.RuntimeDetour {
                 DynamicMethodHelper.FreeReference(_RefTrampoline.Value);
             if (_RefTrampolineTmp != null)
                 DynamicMethodHelper.FreeReference(_RefTrampolineTmp.Value);
-            Target.Unpin();
+            TargetReal.Unpin();
         }
 
         public MethodBase GenerateTrampoline(MethodBase signature = null) {
@@ -225,7 +235,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         // Used by HookEndpoint for the low level IL manip.
-        internal void UpdateOrig(MethodBase invoke) {
+        internal void _UpdateOrig(MethodBase invoke) {
             if (_OrigDelegateType == null)
                 return;
             Delegate orig = (invoke ?? GenerateTrampoline(_OrigDelegateInvoke)).CreateDelegate(_OrigDelegateType);

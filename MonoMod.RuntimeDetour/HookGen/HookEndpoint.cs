@@ -41,7 +41,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 ILManipulated = null;
 
             if (HookList.Count != 0)
-                HookList[0].UpdateOrig(ILManipulated);
+                HookList[0]._UpdateOrig(ILManipulated);
             else {
                 ILDetour?.Dispose();
                 if (ILManipulated != null)
@@ -64,7 +64,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             Hook hook = new Hook(Method, hookDelegate);
             hooks.Push(hook);
             if (HookList.Count == 0)
-                hook.UpdateOrig(ILManipulated);
+                hook._UpdateOrig(ILManipulated);
             HookList.Add(hook);
         }
 
@@ -87,7 +87,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             HookList.RemoveAt(index);
             if (index == 0) {
                 if (HookList.Count != 0) {
-                    HookList[0].UpdateOrig(ILManipulated);
+                    HookList[0]._UpdateOrig(ILManipulated);
                 } else if (ILManipulated != null) {
                     ILDetour = new Detour(Method, ILManipulated);
                 }

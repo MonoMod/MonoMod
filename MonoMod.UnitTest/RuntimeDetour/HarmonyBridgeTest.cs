@@ -17,7 +17,7 @@ namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
     public class HarmonyBridgeTest {
         [Fact]
-        public void TestHooks() {
+        public void TestHarmonyBridge() {
             Assert.True(HarmonyDetourBridge.Init());
 
             Assert.Equal(42, TestMethod(1, 2));

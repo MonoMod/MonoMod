@@ -4,8 +4,13 @@ using System.Reflection;
 using System.Linq.Expressions;
 using MonoMod.Utils;
 using Mono.Cecil.Cil;
+using System.Linq;
 
 namespace MonoMod.RuntimeDetour {
+    public struct DetourConfig {
+        public bool ManualApply;
+    }
+
     /// <summary>
     /// A fully managed detour.
     /// Multiple Detours for a method to detour from can exist at any given time. Detours can be layered.
@@ -16,20 +21,27 @@ namespace MonoMod.RuntimeDetour {
         private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
         private static Dictionary<MethodBase, MethodInfo> _BackupMethods = new Dictionary<MethodBase, MethodInfo>();
 
+        private List<Detour> _DetourChain => _DetourMap.TryGetValue(Method, out List<Detour> detours) ? detours : null;
+
         public static Func<Detour, MethodBase, MethodBase, bool> OnDetour;
         public static Func<Detour, bool> OnUndo;
         public static Func<Detour, MethodBase, MethodBase> OnGenerateTrampoline;
 
-        public bool IsValid => _DetourMap[Method].Contains(this);
+        public bool IsValid => Index != -1;
+        public bool IsApplied { get; private set; }
+        private bool IsTop => _TopDetour != null;
 
         public int Index {
-            get => _DetourMap[Method].IndexOf(this);
+            get => _DetourChain?.IndexOf(this) ?? -1;
             set {
-                List<Detour> detours = _DetourMap[Method];
+                if (!IsValid)
+                    throw new ObjectDisposedException(nameof(Detour));
+
+                List<Detour> detours = _DetourChain;
                 lock (detours) {
                     int valueOld = detours.IndexOf(this);
                     if (valueOld == -1)
-                        throw new InvalidOperationException("This detour has been undone.");
+                        throw new ObjectDisposedException(nameof(Detour));
 
                     detours.RemoveAt(valueOld);
 
@@ -44,14 +56,12 @@ namespace MonoMod.RuntimeDetour {
                         throw;
                     }
 
-                    Detour top = detours[detours.Count - 1];
-                    if (top != this)
-                        _TopUndo();
-                    top._TopApply();
-                    _UpdateChainedTrampolines(Method);
+                    _RefreshChain(Method);
                 }
             }
         }
+
+        public int MaxIndex => _DetourMap.TryGetValue(Method, out List<Detour> detours) ? detours.Count : -1;
 
         public readonly MethodBase Method;
         public readonly MethodBase Target;
@@ -63,7 +73,7 @@ namespace MonoMod.RuntimeDetour {
         // Called by the generated trampolines, updated when the Detour chain changes.
         private MethodInfo _ChainedTrampoline;
 
-        public Detour(MethodBase from, MethodBase to) {
+        public Detour(MethodBase from, MethodBase to, ref DetourConfig config) {
             Method = from.Pin();
             Target = to.Pin();
             TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to).Pin();
@@ -104,104 +114,113 @@ namespace MonoMod.RuntimeDetour {
                     _DetourMap[Method] = detours = new List<Detour>();
             }
             lock (detours) {
-                // New Detour instances are always on the top.
-                if (detours.Count > 0)
-                    detours[detours.Count - 1]._TopUndo();
-                _TopApply();
-
-                // Do the initial "chained trampoline" setup.
-                NativeDetourData link;
-                if (detours.Count > 0) {
-                    // If a previous Detour exists in the chain, detour our "chained trampoline" to it,
-                    link = DetourHelper.Native.Create(
-                        _ChainedTrampoline.GetNativeStart(),
-                        detours[detours.Count - 1].Target.GetNativeStart()
-                    );
-                } else {
-                    // If this is the first Detour in the chain, detour our "chained trampoline" to the original method.
-                    link = DetourHelper.Native.Create(
-                        _ChainedTrampoline.GetNativeStart(),
-                        _BackupMethods[Method].GetNativeStart()
-                    );
-                }
-                DetourHelper.Native.MakeWritable(link);
-                DetourHelper.Native.Apply(link);
-                DetourHelper.Native.MakeExecutable(link);
-                DetourHelper.Native.FlushICache(link);
-                DetourHelper.Native.Free(link);
-
                 detours.Add(this);
             }
+
+            if (!config.ManualApply)
+                Apply();
+        }
+        public Detour(MethodBase from, MethodBase to, DetourConfig config)
+            : this(from, to, ref config) {
+        }
+        public Detour(MethodBase from, MethodBase to)
+            : this(from, to, default) {
         }
 
+        public Detour(MethodBase method, IntPtr to, ref DetourConfig config)
+            : this(method, DetourHelper.GenerateNativeProxy(to, method), ref config) {
+        }
+        public Detour(MethodBase method, IntPtr to, DetourConfig config)
+            : this(method, DetourHelper.GenerateNativeProxy(to, method), ref config) {
+        }
         public Detour(MethodBase method, IntPtr to)
             : this(method, DetourHelper.GenerateNativeProxy(to, method)) {
         }
 
+        public Detour(Delegate from, IntPtr to, ref DetourConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
+        }
+        public Detour(Delegate from, IntPtr to, DetourConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
+        }
         public Detour(Delegate from, IntPtr to)
             : this(from.GetMethodInfo(), to) {
+        }
+        public Detour(Delegate from, Delegate to, ref DetourConfig config)
+            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
+        }
+        public Detour(Delegate from, Delegate to, DetourConfig config)
+            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
         }
         public Detour(Delegate from, Delegate to)
             : this(from.GetMethodInfo(), to.GetMethodInfo()) {
         }
 
+        public Detour(Expression from, IntPtr to, ref DetourConfig config)
+            : this(((MethodCallExpression) from).Method, to, ref config) {
+        }
+        public Detour(Expression from, IntPtr to, DetourConfig config)
+            : this(((MethodCallExpression) from).Method, to, ref config) {
+        }
         public Detour(Expression from, IntPtr to)
             : this(((MethodCallExpression) from).Method, to) {
+        }
+        public Detour(Expression from, Expression to, ref DetourConfig config)
+            : this(((MethodCallExpression) from).Method, ((MethodCallExpression) to).Method, ref config) {
+        }
+        public Detour(Expression from, Expression to, DetourConfig config)
+            : this(((MethodCallExpression) from).Method, ((MethodCallExpression) to).Method, ref config) {
         }
         public Detour(Expression from, Expression to)
             : this(((MethodCallExpression) from).Method, ((MethodCallExpression) to).Method) {
         }
 
+        public Detour(Expression<Action> from, IntPtr to, ref DetourConfig config)
+            : this(from.Body, to, ref config) {
+        }
+        public Detour(Expression<Action> from, IntPtr to, DetourConfig config)
+            : this(from.Body, to, ref config) {
+        }
         public Detour(Expression<Action> from, IntPtr to)
             : this(from.Body, to) {
+        }
+        public Detour(Expression<Action> from, Expression<Action> to, ref DetourConfig config)
+            : this(from.Body, to.Body, ref config) {
+        }
+        public Detour(Expression<Action> from, Expression<Action> to, DetourConfig config)
+            : this(from.Body, to.Body, ref config) {
         }
         public Detour(Expression<Action> from, Expression<Action> to)
             : this(from.Body, to.Body) {
         }
 
         /// <summary>
-        /// This is a no-op on fully managed detours.
+        /// Mark the detour as applied in the detour chain. This can be done automatically when creating an instance.
         /// </summary>
         public void Apply() {
             if (!IsValid)
-                throw new InvalidOperationException("This detour has been undone.");
+                throw new ObjectDisposedException(nameof(Detour));
 
-            // no-op.
+            if (IsApplied)
+                return;
+            IsApplied = true;
+            _RefreshChain(Method);
         }
 
         /// <summary>
-        /// Permanently undo the detour, while also freeing any related unmanaged resources. This makes any further operations on this detour invalid.
+        /// Undo the detour without freeing it, allowing you to reapply it later.
         /// </summary>
         public void Undo() {
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(Detour));
+
             if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
                 return;
 
-            if (!IsValid)
+            if (!IsApplied)
                 return;
-
-            List<Detour> detours = _DetourMap[Method];
-            lock (detours) {
-                detours.Remove(this);
-                _TopUndo();
-                if (detours.Count > 0) {
-                    detours[detours.Count - 1]._TopApply();
-                    _UpdateChainedTrampolines(Method);
-                } else {
-                    /*
-                    lock (_BackupMethods) {
-                        _BackupMethods.Remove(Method);
-                    }
-                    lock (_DetourMap) {
-                        _DetourMap.Remove(Method);
-                    }
-                    */
-                }
-            }
-
-            _ChainedTrampoline.Unpin();
-            Method.Unpin();
-            Target.Unpin();
-            TargetReal.Unpin();
+            IsApplied = false;
+            _RefreshChain(Method);
         }
 
         /// <summary>
@@ -212,13 +231,38 @@ namespace MonoMod.RuntimeDetour {
             // Freeing a Detour without undoing it would leave a hole open in the detour chain.
             if (!IsValid)
                 return;
+
             Undo();
+
+            List<Detour> detours = _DetourChain;
+            lock (detours) {
+                detours.Remove(this);
+                if (detours.Count == 0) {
+                    lock (_BackupMethods) {
+                        if (_BackupMethods.TryGetValue(Method, out MethodInfo backup)) {
+                            backup.Unpin();
+                            _BackupMethods.Remove(Method);
+                        }
+                    }
+                    lock (_DetourMap) {
+                        _DetourMap.Remove(Method);
+                    }
+                }
+            }
+
+            _ChainedTrampoline.Unpin();
+            Method.Unpin();
+            Target.Unpin();
+            TargetReal.Unpin();
         }
 
         /// <summary>
         /// Undo and free this temporary detour.
         /// </summary>
         public void Dispose() {
+            if (!IsValid)
+                return;
+
             Undo();
             Free();
         }
@@ -279,50 +323,62 @@ namespace MonoMod.RuntimeDetour {
             _TopDetour.Free();
             _TopDetour = null;
         }
+
         private void _TopApply() {
             if (_TopDetour != null)
                 return;
 
-            // GetNativeStart to prevent managed backups.
+            // GetNativeStart to avoid repins and managed copies.
             _TopDetour = new NativeDetour(Method.GetNativeStart(), TargetReal.GetNativeStart());
         }
 
-        private static void _UpdateChainedTrampolines(MethodBase method) {
+        private static void _RefreshChain(MethodBase method) {
             List<Detour> detours = _DetourMap[method];
             lock (detours) {
+                Detour topOld = detours.FindLast(d => d.IsTop);
+                Detour topNew = detours.FindLast(d => d.IsApplied);
+
+                if (topOld != topNew) {
+                    topOld?._TopUndo();
+                    topNew?._TopApply();
+                }
+
                 if (detours.Count == 0)
                     return;
 
-                NativeDetourData link;
+                MethodBase prev = _BackupMethods[method];
+                foreach (Detour detour in detours.Where(d => d.IsApplied)) {
+                    MethodBase next = detour._ChainedTrampoline;
 
-                for (int i = 1; i < detours.Count; i++) {
-                    link = DetourHelper.Native.Create(
-                        detours[i]._ChainedTrampoline.GetNativeStart(),
-                        detours[i - 1].Target.GetNativeStart()
-                    );
-                    DetourHelper.Native.MakeWritable(link);
-                    DetourHelper.Native.Apply(link);
-                    DetourHelper.Native.MakeExecutable(link);
-                    DetourHelper.Native.FlushICache(link);
-                    DetourHelper.Native.Free(link);
+                    using (NativeDetour link = new NativeDetour(
+                        detour._ChainedTrampoline.GetNativeStart(),
+                        prev.GetNativeStart()
+                    )) {
+                        // This link detour is applied permanently.
+                        link.Free(); // Dispose will no longer undo.
+                    }
+
+                    prev = detour.Target;
                 }
-
-                link = DetourHelper.Native.Create(
-                    detours[0]._ChainedTrampoline.GetNativeStart(),
-                    _BackupMethods[method].GetNativeStart()
-                );
-                DetourHelper.Native.MakeWritable(link);
-                DetourHelper.Native.Apply(link);
-                DetourHelper.Native.MakeExecutable(link);
-                DetourHelper.Native.FlushICache(link);
-                DetourHelper.Native.Free(link);
             }
         }
     }
 
     public class Detour<T> : Detour where T : Delegate {
+        public Detour(T from, IntPtr to, ref DetourConfig config)
+            : base(from, to, ref config) {
+        }
+        public Detour(T from, IntPtr to, DetourConfig config)
+            : base(from, to, ref config) {
+        }
         public Detour(T from, IntPtr to)
             : base(from, to) {
+        }
+        public Detour(T from, T to, ref DetourConfig config)
+            : base(from, to, ref config) {
+        }
+        public Detour(T from, T to, DetourConfig config)
+            : base(from, to, ref config) {
         }
         public Detour(T from, T to)
             : base(from, to) {
