@@ -20,7 +20,7 @@ namespace MonoMod.Utils {
     }
 
     public sealed class LazyDisposable<T> : IDisposable {
-        public readonly T Instance;
+        private T Instance;
         public event Action<T> OnDispose;
 
         public LazyDisposable(T instance) {
@@ -33,6 +33,7 @@ namespace MonoMod.Utils {
 
         public void Dispose() {
             OnDispose?.Invoke(Instance);
+            Instance = default;
         }
     }
 }

@@ -155,8 +155,6 @@ namespace MonoMod.Utils {
                 );
             }
 
-            // TODO: if Method == null, use Definition
-
             Type[] argTypes;
             Type[][] argTypesModReq;
             Type[][] argTypesModOpt;
@@ -302,7 +300,6 @@ namespace MonoMod.Utils {
                 }
 #endif
 
-                // TODO: This can be improved perf-wise!
                 foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
                     if (checkTryEndEarly && handler.HandlerEnd == instr) {
                         il.EndExceptionBlock();
@@ -443,7 +440,6 @@ namespace MonoMod.Utils {
                     emit.Invoke(il, emitArgs);
                 }
 
-                // TODO: This can be improved perf-wise!
                 if (!checkTryEndEarly) {
                     foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
                         if (handler.HandlerEnd == instr.Next) {

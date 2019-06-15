@@ -55,7 +55,7 @@ namespace MonoMod.RuntimeDetour {
                             // Fall back to another native platform wrapper.
                         }
                     } else {
-                        // TODO: .NET Core Posix native platform wrapper.
+                        // .NET Core currently doesn't contain any meaningful built-in wrappers.
                     }
 
                     // MonoPosixHelper is available outside of Unix and even outside of Mono.

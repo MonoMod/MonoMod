@@ -23,7 +23,7 @@ namespace MonoMod.RuntimeDetour {
         private static Type CurrentType;
 
         private static Assembly _HarmonyASM;
-        private static readonly List<IDisposable> _Detours = new List<IDisposable>();
+        private static readonly HashSet<IDisposable> _Detours = new HashSet<IDisposable>();
 
         private static readonly Dictionary<System.Type, MethodInfo> _Emitters = new Dictionary<System.Type, MethodInfo>();
 
@@ -252,8 +252,6 @@ namespace MonoMod.RuntimeDetour {
         }
 
         // Patch and both Unpatch methods run UpdateWrapper, which then runs CreatePatchedMethod.
-
-        // TODO: Does NativeThisPointer.NeedsNativeThisPointerFix need to be patched?
 
         [Transpile("PatchFunctions"), Critical]
         private static void UpdateWrapper(ILContext il) {

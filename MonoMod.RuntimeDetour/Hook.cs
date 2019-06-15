@@ -93,7 +93,6 @@ namespace MonoMod.RuntimeDetour {
                     _RefTrampoline = il.EmitReference<Delegate>(null);
                 }
 
-                // TODO: Use specialized Ldarg.* if possible; What about ref types?
                 for (int i = 0; i < argTypes.Length; i++)
                     il.Emit(OpCodes.Ldarg, i);
 
@@ -124,7 +123,6 @@ namespace MonoMod.RuntimeDetour {
                     // Invoke the generated delegate.
                     il.EmitGetReference<Delegate>(_RefTrampolineTmp.Value);
 
-                    // TODO: Use specialized Ldarg.* if possible; What about ref types?
                     for (int i = 0; i < argTypes.Length; i++)
                         il.Emit(OpCodes.Ldarg, i);
 

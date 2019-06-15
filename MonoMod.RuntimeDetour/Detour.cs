@@ -71,8 +71,6 @@ namespace MonoMod.RuntimeDetour {
             if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
                 return;
 
-            // TODO: Check target method arguments.
-
             lock (_BackupMethods) {
                 if ((!_BackupMethods.TryGetValue(Method, out MethodInfo backup) || backup == null) &&
                     (backup = Method.CreateILCopy()) != null)

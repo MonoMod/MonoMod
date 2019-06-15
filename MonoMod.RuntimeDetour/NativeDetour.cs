@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Linq.Expressions;
 using MonoMod.Utils;
 using Mono.Cecil.Cil;
+using System.Collections.Generic;
 
 namespace MonoMod.RuntimeDetour {
     /// <summary>
@@ -54,6 +55,8 @@ namespace MonoMod.RuntimeDetour {
         private readonly MethodInfo _BackupMethod;
         private readonly IntPtr _BackupNative;
 
+        private HashSet<MethodBase> _Pinned = new HashSet<MethodBase>();
+
         private bool _IsFree;
 
         public NativeDetour(MethodBase method, IntPtr from, IntPtr to) {
@@ -78,17 +81,17 @@ namespace MonoMod.RuntimeDetour {
             : this(null, from, to) {
         }
         public NativeDetour(MethodBase from, IntPtr to)
-            // TODO: Unpin!
             : this(from, from.Pin().GetNativeStart(), to) {
+            _Pinned.Add(from);
         }
 
         public NativeDetour(IntPtr from, MethodBase to)
-            // TODO: Unpin!
             : this(from, to.Pin().GetNativeStart()) {
+            _Pinned.Add(to);
         }
         public NativeDetour(MethodBase from, MethodBase to)
-            // TODO: Unpin!
-            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart()) {
+            : this(from.Pin().GetNativeStart(), DetourHelper.Runtime.GetDetourTarget(from, to)) {
+            _Pinned.Add(from);
         }
 
         public NativeDetour(Delegate from, IntPtr to)
@@ -137,6 +140,10 @@ namespace MonoMod.RuntimeDetour {
 
             DetourHelper.Native.MemFree(_BackupNative);
             DetourHelper.Native.Free(Data);
+
+            foreach (MethodBase method in _Pinned)
+                method.Unpin();
+            _Pinned.Clear();
         }
 
         /// <summary>
