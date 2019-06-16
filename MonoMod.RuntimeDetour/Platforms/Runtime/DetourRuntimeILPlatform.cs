@@ -89,14 +89,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         public IntPtr GetNativeStart(MethodBase method) {
             if (PinnedMethods.TryGetValue(method, out MethodPin pin))
-                return pin.Ptr;
+                return GetFunctionPointer(pin.Handle);
             return GetFunctionPointer(GetMethodHandle(method));
         }
 
         public void Pin(MethodBase method) {
             if (PinnedMethods.TryGetValue(method, out MethodPin pin)) {
-                Interlocked.Increment(ref pin.Count);
-                if (pin.Count > 1)
+                if (Interlocked.Increment(ref pin.Count) > 1)
                     return;
             }
 
@@ -104,10 +103,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 if (!PinnedMethods.TryGetValue(method, out pin)) {
                     pin = new MethodPin();
                     pin.Count = 1;
-
-                    RuntimeMethodHandle handle = GetMethodHandle(method);
-                    PrepareMethod(handle);
-                    pin.Ptr = GetFunctionPointer(handle);
+                    PrepareMethod(pin.Handle = GetMethodHandle(method));
                 } else {
                     pin.Count++;
                 }
@@ -203,7 +199,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         protected class MethodPin {
             public int Count;
-            public IntPtr Ptr;
+            public RuntimeMethodHandle Handle;
         }
     }
 }

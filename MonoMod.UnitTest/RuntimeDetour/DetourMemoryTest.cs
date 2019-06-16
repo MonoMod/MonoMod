@@ -59,11 +59,9 @@ namespace MonoMod.UnitTest {
         public static Counter<int> TestStaticMethod(int a, int b) {
             TestObjectGeneric<string> test = new TestObjectGeneric<string>();
             try {
-                Console.WriteLine("TEST");
-
                 a *= new int?(b).Value;
 
-                Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
+                b += new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current?.GetHashCode() ?? 0;
 
                 List<string> list = new List<string>();
                 list.AddRange(new string[] { "A", "B", "C" });
