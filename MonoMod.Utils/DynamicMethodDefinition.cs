@@ -481,7 +481,13 @@ namespace MonoMod.Utils {
             }
 
             public IReflectionImporter GetReflectionImporter(ModuleDefinition module) {
-                return new ReflectionCecilImporter(module, Fallback?.GetReflectionImporter(module) ?? new MMReflectionImporter(module));
+                return new ReflectionCecilImporter(
+                    module,
+                    Fallback?.GetReflectionImporter(module) ??
+                    new MMReflectionImporter(module) {
+                        UseDefault = false
+                    }
+                );
             }
         }
 

@@ -5,13 +5,14 @@ using System.Runtime.CompilerServices;
 using MonoMod.Utils;
 using System.Linq;
 using Mono.Cecil.Cil;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour.Platforms {
     public abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         // Prevent the GC from collecting those.
-        protected Dictionary<MethodBase, int> PinnedMethods = new Dictionary<MethodBase, int>();
+        protected Dictionary<MethodBase, MethodPin> PinnedMethods = new Dictionary<MethodBase, MethodPin>();
 
         private bool GlueThiscallStructRetPtr;
 
@@ -86,30 +87,43 @@ namespace MonoMod.RuntimeDetour.Platforms {
             => RuntimeHelpers.PrepareMethod(handle);
 #endif
 
-        public IntPtr GetNativeStart(MethodBase method)
-            => GetFunctionPointer(GetMethodHandle(method));
+        public IntPtr GetNativeStart(MethodBase method) {
+            if (PinnedMethods.TryGetValue(method, out MethodPin pin))
+                return pin.Ptr;
+            return GetFunctionPointer(GetMethodHandle(method));
+        }
 
         public void Pin(MethodBase method) {
+            if (PinnedMethods.TryGetValue(method, out MethodPin pin)) {
+                Interlocked.Increment(ref pin.Count);
+                if (pin.Count > 1)
+                    return;
+            }
+
             lock (PinnedMethods) {
-                if (!PinnedMethods.TryGetValue(method, out int count))
-                    count = 0;
-                if (count == 0) {
+                if (!PinnedMethods.TryGetValue(method, out pin)) {
+                    pin = new MethodPin();
+                    pin.Count = 1;
+
                     RuntimeMethodHandle handle = GetMethodHandle(method);
                     PrepareMethod(handle);
+                    pin.Ptr = GetFunctionPointer(handle);
+                } else {
+                    pin.Count++;
                 }
-                PinnedMethods[method] = ++count;
+                PinnedMethods[method] = pin;
             }
         }
 
         public void Unpin(MethodBase method) {
             lock (PinnedMethods) {
-                if (!PinnedMethods.TryGetValue(method, out int count))
+                if (!PinnedMethods.TryGetValue(method, out MethodPin pin))
                     return;
-                if (count == 1) {
+                if (pin.Count <= 1) {
                     PinnedMethods.Remove(method);
                     return;
                 }
-                PinnedMethods[method] = --count;
+                Interlocked.Decrement(ref pin.Count);
             }
         }
 
@@ -185,6 +199,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
 
             return dm ?? to;
+        }
+
+        protected class MethodPin {
+            public int Count;
+            public IntPtr Ptr;
         }
     }
 }

@@ -347,7 +347,10 @@ namespace MonoMod.RuntimeDetour {
                     return;
 
                 MethodBase prev = _BackupMethods[method];
-                foreach (Detour detour in detours.Where(d => d.IsApplied)) {
+                foreach (Detour detour in detours) {
+                    if (!detour.IsApplied)
+                        continue;
+
                     MethodBase next = detour._ChainedTrampoline;
 
                     using (NativeDetour link = new NativeDetour(
