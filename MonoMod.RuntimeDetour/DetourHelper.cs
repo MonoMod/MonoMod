@@ -5,6 +5,7 @@ using MonoMod.Utils;
 using System.Collections.Generic;
 using MonoMod.RuntimeDetour.Platforms;
 using Mono.Cecil.Cil;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     public static class DetourHelper {
@@ -13,6 +14,9 @@ namespace MonoMod.RuntimeDetour {
         private static IDetourRuntimePlatform _Runtime;
         public static IDetourRuntimePlatform Runtime {
             get {
+                if (_Runtime != null)
+                    return _Runtime;
+
                 lock (_RuntimeLock) {
                     if (_Runtime != null)
                         return _Runtime;
@@ -33,6 +37,9 @@ namespace MonoMod.RuntimeDetour {
         private static IDetourNativePlatform _Native;
         public static IDetourNativePlatform Native {
             get {
+                if (_Native != null)
+                    return _Native;
+
                 lock (_NativeLock) {
                     if (_Native != null)
                         return _Native;

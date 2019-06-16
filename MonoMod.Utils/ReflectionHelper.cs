@@ -20,8 +20,8 @@ using TypeOrTypeInfo = System.Type;
 namespace MonoMod.Utils {
     public static class ReflectionHelper {
 
-        public static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
-        public static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
+        private static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
+        private static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
 
