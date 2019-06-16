@@ -6,6 +6,10 @@ using MonoMod.Utils;
 using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour {
+    public struct HookConfig {
+        public bool ManualApply;
+    }
+
     public class Hook : IDetour {
 
         public static Func<Hook, MethodBase, MethodBase, object, bool> OnDetour;
@@ -28,7 +32,7 @@ namespace MonoMod.RuntimeDetour {
         private int? _RefTrampoline;
         private int? _RefTrampolineTmp;
 
-        public Hook(MethodBase from, MethodInfo to, object target) {
+        public Hook(MethodBase from, MethodInfo to, object target, ref HookConfig config) {
             Method = from;
             Target = to;
 
@@ -135,37 +139,99 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            _Detour = new Detour(Method, TargetReal);
+            _Detour = new Detour(Method, TargetReal, new DetourConfig {
+                ManualApply = config.ManualApply
+            });
 
             _UpdateOrig(null);
+        }
+        public Hook(MethodBase from, MethodInfo to, object target, HookConfig config)
+            : this(from, to, target, ref config) {
+        }
+        public Hook(MethodBase from, MethodInfo to, object target)
+            : this(from, to, target, default) {
+        }
+        public Hook(MethodBase from, MethodInfo to, ref HookConfig config)
+            : this(from, to, null, ref config) {
+        }
+        public Hook(MethodBase from, MethodInfo to, HookConfig config)
+            : this(from, to, null, ref config) {
         }
         public Hook(MethodBase from, MethodInfo to)
             : this(from, to, null) {
         }
 
+        public Hook(MethodBase method, IntPtr to, ref HookConfig config)
+            : this(method, DetourHelper.GenerateNativeProxy(to, method), null, ref config) {
+        }
+        public Hook(MethodBase method, IntPtr to, HookConfig config)
+            : this(method, DetourHelper.GenerateNativeProxy(to, method), null, ref config) {
+        }
         public Hook(MethodBase method, IntPtr to)
             : this(method, DetourHelper.GenerateNativeProxy(to, method), null) {
+        }
+        public Hook(MethodBase method, Delegate to, ref HookConfig config)
+            : this(method, to.GetMethodInfo(), to.Target, ref config) {
+        }
+        public Hook(MethodBase method, Delegate to, HookConfig config)
+            : this(method, to.GetMethodInfo(), to.Target, ref config) {
         }
         public Hook(MethodBase method, Delegate to)
             : this(method, to.GetMethodInfo(), to.Target) {
         }
 
+        public Hook(Delegate from, IntPtr to, ref HookConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
+        }
+        public Hook(Delegate from, IntPtr to, HookConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
+        }
         public Hook(Delegate from, IntPtr to)
             : this(from.GetMethodInfo(), to) {
+        }
+        public Hook(Delegate from, Delegate to, ref HookConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
+        }
+        public Hook(Delegate from, Delegate to, HookConfig config)
+            : this(from.GetMethodInfo(), to, ref config) {
         }
         public Hook(Delegate from, Delegate to)
             : this(from.GetMethodInfo(), to) {
         }
 
+        public Hook(Expression from, IntPtr to, ref HookConfig config)
+            : this(((MethodCallExpression) from).Method, to, ref config) {
+        }
+        public Hook(Expression from, IntPtr to, HookConfig config)
+            : this(((MethodCallExpression) from).Method, to, ref config) {
+        }
         public Hook(Expression from, IntPtr to)
             : this(((MethodCallExpression) from).Method, to) {
+        }
+        public Hook(Expression from, Delegate to, ref HookConfig config)
+            : this(((MethodCallExpression) from).Method, to, ref config) {
+        }
+        public Hook(Expression from, Delegate to, HookConfig config)
+            : this(((MethodCallExpression) from).Method, to, ref config) {
         }
         public Hook(Expression from, Delegate to)
             : this(((MethodCallExpression) from).Method, to) {
         }
 
+        public Hook(Expression<Action> from, IntPtr to, ref HookConfig config)
+            : this(from.Body, to, ref config) {
+        }
+        public Hook(Expression<Action> from, IntPtr to, HookConfig config)
+            : this(from.Body, to, ref config) {
+        }
         public Hook(Expression<Action> from, IntPtr to)
             : this(from.Body, to) {
+        }
+        public Hook(Expression<Action> from, Delegate to, ref HookConfig config)
+            : this(from.Body, to, ref config) {
+        }
+        public Hook(Expression<Action> from, Delegate to, HookConfig config)
+            : this(from.Body, to, ref config) {
         }
         public Hook(Expression<Action> from, Delegate to)
             : this(from.Body, to) {
@@ -245,19 +311,49 @@ namespace MonoMod.RuntimeDetour {
     }
 
     public class Hook<T> : Hook {
+        public Hook(Expression<Action> from, T to, ref HookConfig config)
+            : base(from.Body, to as Delegate, ref config) {
+        }
+        public Hook(Expression<Action> from, T to, HookConfig config)
+            : base(from.Body, to as Delegate, ref config) {
+        }
         public Hook(Expression<Action> from, T to)
             : base(from.Body, to as Delegate) {
         }
 
+        public Hook(Expression<Func<T>> from, IntPtr to, ref HookConfig config)
+            : base(from.Body, to, ref config) {
+        }
+        public Hook(Expression<Func<T>> from, IntPtr to, HookConfig config)
+            : base(from.Body, to, ref config) {
+        }
         public Hook(Expression<Func<T>> from, IntPtr to)
             : base(from.Body, to) {
+        }
+        public Hook(Expression<Func<T>> from, Delegate to, ref HookConfig config)
+            : base(from.Body, to, ref config) {
+        }
+        public Hook(Expression<Func<T>> from, Delegate to, HookConfig config)
+            : base(from.Body, to, ref config) {
         }
         public Hook(Expression<Func<T>> from, Delegate to)
             : base(from.Body, to) {
         }
 
+        public Hook(T from, IntPtr to, ref HookConfig config)
+            : base(from as Delegate, to, ref config) {
+        }
+        public Hook(T from, IntPtr to, HookConfig config)
+            : base(from as Delegate, to, ref config) {
+        }
         public Hook(T from, IntPtr to)
             : base(from as Delegate, to) {
+        }
+        public Hook(T from, T to, ref HookConfig config)
+            : base(from as Delegate, to as Delegate, ref config) {
+        }
+        public Hook(T from, T to, HookConfig config)
+            : base(from as Delegate, to as Delegate, ref config) {
         }
         public Hook(T from, T to)
             : base(from as Delegate, to as Delegate) {
@@ -265,10 +361,22 @@ namespace MonoMod.RuntimeDetour {
     }
 
     public class Hook<TFrom, TTo> : Hook {
+        public Hook(Expression<Func<TFrom>> from, TTo to, ref HookConfig config)
+            : base(from.Body, to as Delegate) {
+        }
+        public Hook(Expression<Func<TFrom>> from, TTo to, HookConfig config)
+            : base(from.Body, to as Delegate) {
+        }
         public Hook(Expression<Func<TFrom>> from, TTo to)
             : base(from.Body, to as Delegate) {
         }
 
+        public Hook(TFrom from, TTo to, ref HookConfig config)
+            : base(from as Delegate, to as Delegate) {
+        }
+        public Hook(TFrom from, TTo to, HookConfig config)
+            : base(from as Delegate, to as Delegate) {
+        }
         public Hook(TFrom from, TTo to)
             : base(from as Delegate, to as Delegate) {
         }
