@@ -1447,9 +1447,11 @@ namespace MonoMod.Utils {
             string name = Enum.GetName(t_Code, op.Code);
             if (!name.EndsWith("_S"))
                 return op;
-            if (_ShortToLongOp.TryGetValue((int) op.Code, out OpCode found))
-                return found;
-            return _ShortToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
+            lock (_ShortToLongOp) {
+                if (_ShortToLongOp.TryGetValue((int) op.Code, out OpCode found))
+                    return found;
+                return _ShortToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
+            }
         }
 
         private static readonly Dictionary<int, OpCode> _LongToShortOp = new Dictionary<int, OpCode>();
@@ -1457,9 +1459,11 @@ namespace MonoMod.Utils {
             string name = Enum.GetName(t_Code, op.Code);
             if (name.EndsWith("_S"))
                 return op;
-            if (_LongToShortOp.TryGetValue((int) op.Code, out OpCode found))
-                return found;
-            return _LongToShortOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
+            lock (_LongToShortOp) {
+                if (_LongToShortOp.TryGetValue((int) op.Code, out OpCode found))
+                    return found;
+                return _LongToShortOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
+            }
         }
 
         // IsMatchingSignature and related methods taken and adapted from the Mono.Linker:
