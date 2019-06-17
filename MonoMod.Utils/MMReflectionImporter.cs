@@ -35,7 +35,7 @@ namespace MonoMod.Utils {
         }
 
         public static readonly IReflectionImporterProvider Provider = new _Provider();
-        public static readonly IReflectionImporterProvider ProviderNoDefault = new _Provider() { UseDefault = true };
+        public static readonly IReflectionImporterProvider ProviderNoDefault = new _Provider() { UseDefault = false };
 
         private readonly ModuleDefinition Module;
         private readonly DefaultReflectionImporter Default;
@@ -103,8 +103,21 @@ namespace MonoMod.Utils {
                 if (type.IsPointer)
                     return CachedTypes[type] = new PointerType(ImportReference(type.GetElementType(), context));
 
-                if (type.IsArray)
-                    return CachedTypes[type] = new ArrayType(ImportReference(type.GetElementType(), context), type.GetArrayRank());
+                if (type.IsArray) {
+                    ArrayType at = new ArrayType(ImportReference(type.GetElementType(), context), type.GetArrayRank());
+                    // TODO: Find a way to get the bounds without instantiating the array type!
+                    Array a = Array.CreateInstance(type, new int[type.GetArrayRank()]);
+                    if (
+                        at.Rank > 1
+#if !NETSTANDARD1_X
+                        && a.IsFixedSize
+#endif
+                    ) {
+                        for (int i = 0; i < at.Rank; i++)
+                            at.Dimensions[i] = new ArrayDimension(a.GetLowerBound(i), a.GetUpperBound(i));
+                    }
+                    return CachedTypes[type] = at;
+                }
             }
 
             TypeOrTypeInfo typeInfo = type.GetTypeInfo();
@@ -155,16 +168,22 @@ namespace MonoMod.Utils {
 
             Type dclType = type.DeclaringType;
             if (dclType == null)
-                throw new NotSupportedException();
+                throw new InvalidOperationException();
+            TypeOrTypeInfo dclTypeInfo = dclType.GetTypeInfo();
 
             if (context is TypeReference ctxTypeRef) {
                 while (ctxTypeRef != null) {
                     // TODO: Possibly more lightweight type check!
-                    if (!ctxTypeRef.Is(typeInfo)) {
-                        ctxTypeRef = ctxTypeRef.DeclaringType;
-                        continue;
-                    }
-                    return ctxTypeRef.GenericParameters[type.GenericParameterPosition];
+
+                    TypeReference ctxTypeRefEl = ctxTypeRef.GetElementType();
+                    if (ctxTypeRefEl.Is(dclTypeInfo))
+                        return ctxTypeRefEl.GenericParameters[type.GenericParameterPosition];
+
+                    if (ctxTypeRef.Is(dclTypeInfo))
+                        return ctxTypeRef.GenericParameters[type.GenericParameterPosition];
+
+                    ctxTypeRef = ctxTypeRef.DeclaringType;
+                    continue;
                 }
             }
 
@@ -178,8 +197,25 @@ namespace MonoMod.Utils {
             if (UseDefault)
                 return CachedFields[field] = Default.ImportReference(field, context);
 
-            TypeReference declaringType = ImportReference(field.DeclaringType, context);
-            return CachedFields[field] = new FieldReference(
+            Type declType = field.DeclaringType;
+            TypeOrTypeInfo declTypeInfo = declType.GetTypeInfo();
+            TypeReference declaringType = ImportReference(declType, context);
+
+            FieldInfo fieldOrig = field;
+            if (declTypeInfo.IsGenericType) {
+                // In methods of generic types, all generic parameters are already filled in.
+                // Meanwhile, cecil requires generic parameter references.
+#if !NETSTANDARD1_X
+                // Luckily the metadata tokens match up.
+                field = field.Module.ResolveField(field.MetadataToken);
+#else
+                // ... unless we're targetting .NET Standard 1.X.
+                // FIXME: Implement resolving the generic declaring type's definition field definition.
+                throw new NotSupportedException();
+#endif
+            }
+
+            return CachedFields[fieldOrig] = new FieldReference(
                 field.Name,
                 ImportReference(field.FieldType, declaringType),
                 declaringType
@@ -202,17 +238,33 @@ namespace MonoMod.Utils {
                 return CachedMethods[method] = gim;
             }
 
+            Type declType = method.DeclaringType;
+            TypeOrTypeInfo declTypeInfo = declType.GetTypeInfo();
             methodRef = new MethodReference(
                 method.Name,
                 ImportReference(typeof(void), context),
-                ImportReference(method.DeclaringType, context)
+                ImportReference(declType, context)
             );
 
             methodRef.HasThis = (method.CallingConvention & CallingConventions.HasThis) != 0;
             methodRef.ExplicitThis = (method.CallingConvention & CallingConventions.ExplicitThis) != 0;
             if ((method.CallingConvention & CallingConventions.VarArgs) != 0)
                 methodRef.CallingConvention = MethodCallingConvention.VarArg;
-            
+
+            MethodBase methodOrig = method;
+            if (declTypeInfo.IsGenericType) {
+                // In methods of generic types, all generic parameters are already filled in.
+                // Meanwhile, cecil requires generic parameter references.
+#if !NETSTANDARD1_X
+                // Luckily the metadata tokens match up.
+                method = method.Module.ResolveMethod(method.MetadataToken);
+#else
+                // ... unless we're targetting .NET Standard 1.X.
+                // FIXME: Implement resolving the generic declaring type's definition method definition.
+                throw new NotSupportedException();
+#endif
+            }
+
             if (method.IsGenericMethodDefinition)
                 foreach (Type param in method.GetGenericArguments())
                     methodRef.GenericParameters.Add(new GenericParameter(param.Name, methodRef));
@@ -226,7 +278,7 @@ namespace MonoMod.Utils {
                     ImportReference(param.ParameterType, methodRef)
                 ));
 
-            return CachedMethods[method] = methodRef;
+            return CachedMethods[methodOrig] = methodRef;
         }
 
     }
