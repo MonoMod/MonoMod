@@ -211,7 +211,6 @@ namespace MonoMod.Utils {
 #else
                 // ... unless we're targetting .NET Standard 1.X.
                 // FIXME: Implement resolving the generic declaring type's definition field definition.
-                throw new NotSupportedException();
 #endif
             }
 
@@ -261,7 +260,6 @@ namespace MonoMod.Utils {
 #else
                 // ... unless we're targetting .NET Standard 1.X.
                 // FIXME: Implement resolving the generic declaring type's definition method definition.
-                throw new NotSupportedException();
 #endif
             }
 
