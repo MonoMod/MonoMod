@@ -14,7 +14,7 @@ namespace MonoMod.Cil {
     public class ILContext : IDisposable {
         public delegate void Manipulator(ILContext il);
 
-        public MethodDefinition Method { get; }
+        public MethodDefinition Method { get; private set; }
         public ILProcessor IL { get; private set; }
 
         public MethodBody Body => Method.Body;
@@ -59,7 +59,12 @@ namespace MonoMod.Cil {
         /// If the method is altered prior to MakeReadOnly, or after by using the MethodBody directly the results are undefined.
         /// </summary>
         public void MakeReadOnly() {
+            Method = null;
             IL = null;
+            // Labels hold references to Instructions, which can keep
+            // all other Instructions in all referenced modules alive.
+            // _Labels.Clear doesn't shrink the backing array.
+            _Labels = new List<ILLabel>();
         }
 
         [Obsolete("Use new ILCursor(il).Goto(index)")]
@@ -114,6 +119,7 @@ namespace MonoMod.Cil {
         public void Dispose() {
             OnDispose?.Invoke();
             OnDispose = null;
+            MakeReadOnly();
         }
 
         public override string ToString() {

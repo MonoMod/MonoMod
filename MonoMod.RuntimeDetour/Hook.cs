@@ -300,7 +300,6 @@ namespace MonoMod.RuntimeDetour {
             return GenerateTrampoline(typeof(T).GetMethod("Invoke")).CreateDelegate(typeof(T)) as T;
         }
 
-        // Used by HookEndpoint for the low level IL manip.
         internal void _UpdateOrig(MethodBase invoke) {
             if (_OrigDelegateType == null)
                 return;

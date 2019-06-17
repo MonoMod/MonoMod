@@ -13,7 +13,7 @@ using System.Security;
 using System.IO;
 
 namespace MonoMod.Utils {
-    public sealed partial class DynamicMethodDefinition : IDisposable {
+    public sealed partial class DynamicMethodDefinition {
 
         private static OpCode[] _CecilOpCodes1X;
         private static OpCode[] _CecilOpCodes2X;

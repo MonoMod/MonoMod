@@ -15,38 +15,13 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private readonly List<Delegate> ILList = new List<Delegate>();
         private readonly List<IDisposable> ActiveMMILs = new List<IDisposable>();
 
-        private DynamicMethodDefinition _DMD;
-        private DynamicMethodDefinition DMD {
-            get {
-                lock (HookMap) {
-                    if (_DMD != null)
-                        return _DMD;
-
-                    // Note: This can but shouldn't fail, mainly if the user hasn't provided a Cecil ModuleDefinition generator.
-                    return _DMD = new DynamicMethodDefinition(Method, HookEndpointManager.GenerateCecilModule);
-                }
-            }
-        }
-        private MethodBase ILManipulated;
         private Detour ILDetour;
+        private static DetourConfig ILDetourConfig = new DetourConfig() {
+            Priority = int.MinValue / 8
+        };
 
         internal HookEndpoint(MethodBase method) {
             Method = method;
-        }
-
-        internal void UpdateILManipulated(bool force = false) {
-            if (force || ILList.Count != 0)
-                ILManipulated = DMD.Generate();
-            else
-                ILManipulated = null;
-
-            if (HookList.Count != 0)
-                HookList[0]._UpdateOrig(ILManipulated);
-            else {
-                ILDetour?.Dispose();
-                if (ILManipulated != null)
-                    ILDetour = new Detour(Method, ILManipulated);
-            }
         }
 
         public void Add(Delegate hookDelegate) {
@@ -63,8 +38,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             Hook hook = new Hook(Method, hookDelegate);
             hooks.Push(hook);
-            if (HookList.Count == 0)
-                hook._UpdateOrig(ILManipulated);
             HookList.Add(hook);
         }
 
@@ -85,27 +58,26 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             int index = HookList.IndexOf(hook);
             HookList.RemoveAt(index);
-            if (index == 0) {
-                if (HookList.Count != 0) {
-                    HookList[0]._UpdateOrig(ILManipulated);
-                } else if (ILManipulated != null) {
-                    ILDetour = new Detour(Method, ILManipulated);
-                }
-            }
         }
 
         public void Modify(Delegate callback) {
             if (callback == null)
                 return;
 
-            try {
-                if (!InvokeManipulator(DMD.Definition, callback))
-                    return;
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(Method, HookEndpointManager.GenerateCecilModule)) {
+                MethodDefinition def = dmd.Definition;
+                try {
+                    foreach (Delegate cb in ILList)
+                        InvokeManipulator(def, cb);
 
-                UpdateILManipulated(true);
-            } catch {
-                _ManipulatorFailure(true);
-                throw;
+                    if (!InvokeManipulator(def, callback))
+                        return;
+
+                    UpdateILManipulatedDetour(dmd.Generate());
+                } catch {
+                    _ManipulatorFailure(dmd, true);
+                    throw;
+                }
             }
 
             ILList.Add(callback);
@@ -126,38 +98,44 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 h.Dispose();
             ActiveMMILs.Clear();
 
-            DMD.Reload();
-            MethodDefinition def = DMD.Definition;
-            try {
-                foreach (Delegate cb in ILList)
-                    InvokeManipulator(def, cb);
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(Method, HookEndpointManager.GenerateCecilModule)) {
+                MethodDefinition def = dmd.Definition;
+                try {
+                    foreach (Delegate cb in ILList)
+                        InvokeManipulator(def, cb);
 
-                UpdateILManipulated();
-            } catch {
-                _ManipulatorFailure(false);
-                throw;
+                    UpdateILManipulatedDetour(dmd.Generate());
+                } catch {
+                    _ManipulatorFailure(dmd, false);
+                    throw;
+                }
             }
         }
 
-        private bool _ManipulatorFailure(bool reapply) {
-            DMD.Reload();
+        private void UpdateILManipulatedDetour(MethodBase target) {
+            ILDetour?.Dispose();
+            if (target != null)
+                ILDetour = new Detour(Method, target, ref ILDetourConfig);
+            else
+                ILDetour = null;
+        }
 
+        private bool _ManipulatorFailure(DynamicMethodDefinition dmd, bool reapply) {
             if (reapply) {
                 try {
-                    if (reapply) {
-                        MethodDefinition def = DMD.Definition;
-                        foreach (Delegate cb in ILList)
-                            InvokeManipulator(def, cb);
-                    }
+                    dmd.Reload();
+                    MethodDefinition def = dmd.Definition;
+                    foreach (Delegate cb in ILList)
+                        InvokeManipulator(def, cb);
 
-                    UpdateILManipulated();
+                    UpdateILManipulatedDetour(dmd.Generate());
                 } catch {
-                    _ManipulatorFailure(false);
+                    _ManipulatorFailure(dmd, false);
                     throw;
                 }
 
             } else {
-                UpdateILManipulated();
+                UpdateILManipulatedDetour(null);
             }
 
             return false;
@@ -169,9 +147,15 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 ILContext il = new ILContext(def);
                 il.ReferenceBag = RuntimeILReferenceBag.Instance;
                 il.Invoke(manip);
-                if (il.IsReadOnly)
+                if (il.IsReadOnly) {
+                    il.Dispose();
                     return false;
+                }
 
+                // Free the now useless MethodDefinition and ILProcessor references.
+                // This also prevents clueless people from storing the ILContext elsewhere
+                // and reusing it outside of the IL manipulation context.
+                il.MakeReadOnly();
                 ActiveMMILs.Add(il);
                 return true;
             }
@@ -184,9 +168,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 Type t_hookIL = hookIL.GetType();
                 // TODO: Set the reference bag.
                 t_hookIL.GetMethod("Invoke").Invoke(hookIL, new object[] { cb });
-                if (t_hookIL.GetField("_ReadOnly", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(hookIL) as bool? ?? false)
+                if (t_hookIL.GetField("_ReadOnly", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(hookIL) as bool? ?? false) {
+                    (hookIL as IDisposable)?.Dispose();
                     return false;
+                }
 
+                // TODO: Free the underlying MethodDefinition ref.
                 if (hookIL is IDisposable disp)
                     ActiveMMILs.Add(disp);
                 return true;

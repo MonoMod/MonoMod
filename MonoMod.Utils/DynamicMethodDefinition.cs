@@ -96,6 +96,8 @@ namespace MonoMod.Utils {
 
         private Guid GUID = Guid.NewGuid();
 
+        private bool _IsDisposed;
+
         internal DynamicMethodDefinition() {
             // If SRE has been stubbed out, prefer Cecil.
             _PreferCecil =
@@ -309,8 +311,13 @@ namespace MonoMod.Utils {
         }
 
         public void Dispose() {
+            if (_IsDisposed)
+                return;
+            _IsDisposed = true;
+
             if (_DynModuleDefinition != null && !_DynModuleIsPrivate)
                 return;
+
             lock (_ModuleRefs) {
                 if (_Module != null && (--_ModuleRef) == 0) {
 #if !CECIL0_9
