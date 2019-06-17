@@ -102,7 +102,7 @@ namespace MonoMod.Utils {
                 handler.HandlerStart = GetInstruction(clause.HandlerOffset);
                 handler.HandlerEnd = GetInstruction(clause.HandlerOffset + clause.HandlerLength);
 
-                handler.CatchType = clause.CatchType == null ? null : moduleTo.ImportReference(clause.CatchType);
+                handler.CatchType = handler.HandlerType != ExceptionHandlerType.Catch ? null : clause.CatchType == null ? null : moduleTo.ImportReference(clause.CatchType);
             }
 
             void ReadOperand(BinaryReader reader, Instruction instr) {

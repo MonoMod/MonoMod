@@ -193,7 +193,7 @@ namespace MonoMod.Utils {
             if (UseDefault)
                 return CachedMethods[method] = Default.ImportReference(method, context);
 
-            if (method.IsGenericMethod) {
+            if (method.IsGenericMethod && !method.IsGenericMethodDefinition) {
                 GenericInstanceMethod gim = new GenericInstanceMethod(ImportReference((method as MethodInfo).GetGenericMethodDefinition(), context));
                 foreach (Type arg in method.GetGenericArguments())
                     // Generic arguments for the generic instance are often given by the next higher provider.

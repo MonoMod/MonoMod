@@ -22,7 +22,7 @@ namespace MonoMod.Utils {
             _InitReflEmit();
             _InitCopier();
 
-            PreferRuntimeILCopy = Environment.GetEnvironmentVariable("MONOMOD_DMD_COPY") == "1";
+            PreferRuntimeILCopy = Environment.GetEnvironmentVariable("MONOMOD_DMD_COPY") != "0";
         }
 
         private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
@@ -202,20 +202,22 @@ namespace MonoMod.Utils {
                             _DynModuleDefinition = null;
                         }
 
-                        string location = Method.DeclaringType?.GetTypeInfo().Assembly.GetLocation();
-                        if (!string.IsNullOrEmpty(location)) {
-                            ReaderParameters rp = new ReaderParameters();
-                            if (_ModuleGen != null) {
-                                rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
+                        if (!PreferRuntimeILCopy) {
+                            string location = Method.DeclaringType?.GetTypeInfo().Assembly.GetLocation();
+                            if (!string.IsNullOrEmpty(location)) {
+                                ReaderParameters rp = new ReaderParameters();
+                                if (_ModuleGen != null) {
+                                    rp.AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, rp.AssemblyResolver ?? new DefaultAssemblyResolver());
 #if !CECIL0_9
-                                rp.ReflectionImporterProvider = new ReflectionCecilImporterProvider(rp.ReflectionImporterProvider);
+                                    rp.ReflectionImporterProvider = new ReflectionCecilImporterProvider(rp.ReflectionImporterProvider);
 #endif
-                            }
-                            try {
-                                module = moduleTmp = ModuleDefinition.ReadModule(location, rp);
-                            } catch {
-                                _DisposeEarly(true);
-                                module = moduleTmp = null;
+                                }
+                                try {
+                                    module = moduleTmp = ModuleDefinition.ReadModule(location, rp);
+                                } catch {
+                                    _DisposeEarly(true);
+                                    module = moduleTmp = null;
+                                }
                             }
                         }
 

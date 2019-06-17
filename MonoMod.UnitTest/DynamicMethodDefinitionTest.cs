@@ -68,6 +68,15 @@ namespace MonoMod.UnitTest {
                     TargetTest(array2d1[0][0], array2d2[0, 0], str);
                 }
 
+                switch (i) {
+                    case 0:
+                        i *= -2;
+                        break;
+                    case 1:
+                        i *= 2;
+                        break;
+                }
+
             } catch (Exception e) when (e == null) {
                 return Tuple.Create("", -2);
             } catch (Exception) {
