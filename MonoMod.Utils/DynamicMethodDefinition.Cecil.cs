@@ -157,7 +157,10 @@ namespace MonoMod.Utils {
                 _DynModuleIsPrivate = false;
                 moduleIsPrivate = false;
 
-                return _Postbuild(asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false).GetMethod(clone.Name));
+                return _Postbuild(
+                    asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false)
+                    .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
+                );
 
             } finally {
 #if !CECIL0_9

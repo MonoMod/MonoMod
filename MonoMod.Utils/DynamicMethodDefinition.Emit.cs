@@ -116,7 +116,9 @@ namespace MonoMod.Utils {
                     System.IO.File.Delete(path);
                 ((AssemblyBuilder) typeBuilder.Assembly).Save(name);
             }
-            return _Postbuild(type.GetMethod(method.Name));
+            return _Postbuild(
+                type.GetMethod(method.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
+            );
         }
 
         public MethodBuilder GenerateMethodBuilder(TypeBuilder typeBuilder) {

@@ -477,6 +477,20 @@ namespace MonoMod.Utils {
                     return arrayTypeRef.Dimensions.Count == typeInfo.GetArrayRank() && arrayTypeRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
                 }
 
+                if (mref is ByReferenceType byRefTypeRef) {
+                    if (!typeInfo.IsByRef)
+                        return false;
+
+                    return byRefTypeRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
+                }
+
+                if (mref is PointerType ptrTypeRef) {
+                    if (!typeInfo.IsPointer)
+                        return false;
+
+                    return ptrTypeRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
+                }
+
                 if (mref is TypeSpecification typeSpecRef)
                     // Note: There are TypeSpecifications which map to non-ElementType-y reflection Types.
                     return typeSpecRef.ElementType.Is(typeInfo.HasElementType ? typeInfo.GetElementType().GetTypeInfo() : typeInfo);
@@ -586,6 +600,20 @@ namespace MonoMod.Utils {
                             return false;
 
                         return paramArrayTypeRef.Dimensions.Count == paramTypeInfo.GetArrayRank() && IsParamTypeRef(paramArrayTypeRef.ElementType, paramTypeInfo.GetElementType().GetTypeInfo());
+                    }
+
+                    if (paramTypeRef is ByReferenceType paramByRefTypeRef) {
+                        if (!paramTypeInfo.IsByRef)
+                            return false;
+
+                        return paramByRefTypeRef.ElementType.Is(paramTypeInfo.GetElementType().GetTypeInfo());
+                    }
+
+                    if (paramTypeRef is PointerType paramPtrTypeRef) {
+                        if (!paramTypeInfo.IsPointer)
+                            return false;
+
+                        return paramPtrTypeRef.ElementType.Is(paramTypeInfo.GetElementType().GetTypeInfo());
                     }
 
                     if (paramTypeRef is TypeSpecification paramTypeSpecRef)

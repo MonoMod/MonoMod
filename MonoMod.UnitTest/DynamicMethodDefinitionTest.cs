@@ -66,6 +66,8 @@ namespace MonoMod.UnitTest {
                 string[,] array2d2 = new string[,] { { "B" } };
                 foreach (string str in list) {
                     TargetTest(array2d1[0][0], array2d2[0, 0], str);
+                    TargetTest(array2d1[0][0], array2d2[0, 0]);
+                    TargetTest(array2d1[0][0], ref array2d2[0, 0]);
                 }
 
                 switch (i) {
@@ -91,6 +93,14 @@ namespace MonoMod.UnitTest {
 
         public static int TargetTest(string a, string b, string c) {
             return (a + b + c).GetHashCode();
+        }
+
+        public static int TargetTest<T>(string a, T b) {
+            return (a + b).GetHashCode();
+        }
+
+        public static int TargetTest<T>(string a, ref T b) {
+            return (a + b).GetHashCode();
         }
 
     }
