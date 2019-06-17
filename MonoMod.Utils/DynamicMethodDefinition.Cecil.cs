@@ -28,7 +28,7 @@ namespace MonoMod.Utils {
                 moduleIsPrivate = true;
                 accessChecksIgnored = new HashSet<string>();
 
-                string name = _GetDumpName("Cecil");
+                string name = GetDumpName("Cecil");
                 module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
                     Kind = ModuleKind.Dll,
                     AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, new DefaultAssemblyResolver()),

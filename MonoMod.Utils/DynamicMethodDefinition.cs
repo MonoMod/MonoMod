@@ -321,9 +321,9 @@ namespace MonoMod.Utils {
             }
         }
 
-        private string _GetDumpName(string type) {
+        public string GetDumpName(string type) {
             // TODO: Add {Definition.GetFindableID(withType: false)} without killing MethodBuilder
-            return $"DMDASM.{GUID.GetHashCode():X8}.{type}";
+            return $"DMDASM.{GUID.GetHashCode():X8}{(string.IsNullOrEmpty(type) ? "" : $".{type}")}";
         }
 
         private static unsafe MethodInfo _Postbuild(MethodInfo mi) {

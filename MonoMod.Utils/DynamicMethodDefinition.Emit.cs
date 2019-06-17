@@ -132,7 +132,7 @@ namespace MonoMod.Utils {
                 bool collect = string.IsNullOrEmpty(dumpDir) && _MBCanRunAndCollect;
                 AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
-                        Name = _GetDumpName("MethodBuilder")
+                        Name = GetDumpName("MethodBuilder")
                     },
                     collect ? (AssemblyBuilderAccess) 9 : AssemblyBuilderAccess.RunAndSave,
                     dumpDir

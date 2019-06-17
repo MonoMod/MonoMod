@@ -625,6 +625,9 @@ namespace MonoMod.Utils {
                     return paramTypeRef.FullName == paramTypeInfo.FullName;
                 }
 
+                if (!IsParamTypeRef(methodRef.ReturnType, ((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void)).GetTypeInfo()))
+                    return false;
+
                 for (int i = 0; i < paramRefs.Count; i++)
                     if (!IsParamTypeRef(paramRefs[i].ParameterType, paramInfos[i].ParameterType.GetTypeInfo()))
                         return false;
