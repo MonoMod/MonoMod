@@ -22,7 +22,11 @@ namespace MonoMod.Utils {
             _InitReflEmit();
             _InitCopier();
 
+#if NETSTANDARD1_X
+            PreferRuntimeILCopy = Environment.GetEnvironmentVariable("MONOMOD_DMD_COPY") == "1";
+#else
             PreferRuntimeILCopy = Environment.GetEnvironmentVariable("MONOMOD_DMD_COPY") != "0";
+#endif
         }
 
         private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
