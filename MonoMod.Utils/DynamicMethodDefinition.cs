@@ -194,7 +194,7 @@ namespace MonoMod.Utils {
                 ModuleDefinition module = (moduleGen ?? _ModuleGen)?.Invoke(Method.Module.Assembly.GetName());
                 lock (_ModuleRefs) {
                     if (module == null) {
-                        if (_Module != null && !forceModule) {
+                        if (_DynModuleDefinition == null && _Module != null && !forceModule) {
                             module = _Module;
                         } else {
 #if !CECIL0_9
@@ -242,6 +242,7 @@ namespace MonoMod.Utils {
                         }
 
                     }
+
                     _Module = module;
                     _ModuleRef++;
                 }

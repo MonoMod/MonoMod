@@ -35,6 +35,9 @@ namespace MonoMod.Cil {
         }
 
         public void Invoke(Manipulator manip) {
+            if (IsReadOnly)
+                throw new InvalidOperationException();
+
             foreach (Instruction instr in Instrs) {
                 if (instr.Operand is Instruction target)
                     instr.Operand = new ILLabel(this, target);
@@ -43,6 +46,9 @@ namespace MonoMod.Cil {
             }
 
             manip(this);
+
+            if (IsReadOnly)
+                return;
 
             foreach (Instruction instr in Instrs) {
                 if (instr.Operand is ILLabel label)
