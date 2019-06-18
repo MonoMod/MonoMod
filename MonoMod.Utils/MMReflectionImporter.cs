@@ -105,16 +105,25 @@ namespace MonoMod.Utils {
 
                 if (type.IsArray) {
                     ArrayType at = new ArrayType(ImportReference(type.GetElementType(), context), type.GetArrayRank());
-                    // TODO: Find a way to get the bounds without instantiating the array type!
-                    Array a = Array.CreateInstance(type, new int[type.GetArrayRank()]);
-                    if (
-                        at.Rank > 1
+                    if (type != type.GetElementType().MakeArrayType()) {
+                        // Non-SzArray
+                        // TODO: Find a way to get the bounds without instantiating the array type!
+                        /*
+                        Array a = Array.CreateInstance(type, new int[type.GetArrayRank()]);
+                        if (
+                            at.Rank > 1
 #if !NETSTANDARD1_X
-                        && a.IsFixedSize
+                            && a.IsFixedSize
 #endif
-                    ) {
+                        ) {
+                            for (int i = 0; i < at.Rank; i++)
+                                at.Dimensions[i] = new ArrayDimension(a.GetLowerBound(i), a.GetUpperBound(i));
+                        }
+                        */
+                        // For now, always assume [0...,0...,
+                        // Array.CreateInstance only accepts lower bounds anyway.
                         for (int i = 0; i < at.Rank; i++)
-                            at.Dimensions[i] = new ArrayDimension(a.GetLowerBound(i), a.GetUpperBound(i));
+                            at.Dimensions[i] = new ArrayDimension(0, null);
                     }
                     return CachedTypes[type] = at;
                 }
