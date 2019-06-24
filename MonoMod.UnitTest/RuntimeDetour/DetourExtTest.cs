@@ -54,9 +54,10 @@ namespace MonoMod.UnitTest {
                 }
 
                 // This was provided by Chicken Bones (tModLoader).
-                // GetEncoding behaves differently on .NET Core, which is why this test only applies to .NET Framework and Mono.
-                // TODO: Create a replacement for this test for .NET Core.
-#if NETFRAMEWORK
+                // GetEncoding behaves differently on .NET Core and even between .NET Framework versions,
+                // which is why this test only applies to Mono, preferably on Linux to verify if flagging
+                // regions of code as read-writable and then read-executable works for AOT'd code.
+#if false
                 using (Hook h = new Hook(
                     typeof(Encoding).GetMethod("GetEncoding", new Type[] { typeof(string) }),
                     new Func<Func<string, Encoding>, string, Encoding>((orig, name) => {
