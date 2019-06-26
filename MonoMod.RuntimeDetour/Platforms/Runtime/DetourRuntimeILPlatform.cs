@@ -14,20 +14,39 @@ namespace MonoMod.RuntimeDetour.Platforms {
         // Prevent the GC from collecting those.
         protected Dictionary<MethodBase, MethodPin> PinnedMethods = new Dictionary<MethodBase, MethodPin>();
 
-        private bool GlueThiscallStructRetPtr;
+        private GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
 
         public DetourRuntimeILPlatform() {
             // Perform a selftest if this runtime requires special handling for instance methods returning structs.
-            // This is documented behavior for coreclr, but can implicitly affect all other runtimes (including mono!) as well.
+            // This is documented behavior for coreclr, but affects other runtimes (i.e. mono) as well!
             // Specifically, this should affect all __thiscalls
 
-            MethodInfo selftest = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetStruct", BindingFlags.NonPublic | BindingFlags.Instance);
-            Pin(selftest);
-            MethodInfo selftestHook = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetStructHook", BindingFlags.NonPublic | BindingFlags.Static);
-            Pin(selftestHook);
+            // Use reflection to make sure that the selftest isn't optimized away.
+            // Delegates are quite reliable for this job.
+
+            MethodInfo selftestGetRefPtr = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetRefPtr", BindingFlags.NonPublic | BindingFlags.Instance);
+            MethodInfo selftestGetRefPtrHook = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetRefPtrHook", BindingFlags.NonPublic | BindingFlags.Static);
+            _HookSelftest(selftestGetRefPtr, selftestGetRefPtrHook);
+
+            IntPtr selfPtr = ((Func<IntPtr>) selftestGetRefPtr.CreateDelegate<Func<IntPtr>>(this))();
+
+            MethodInfo selftestGetStruct = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetStruct", BindingFlags.NonPublic | BindingFlags.Instance);
+            MethodInfo selftestGetStructHook = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetStructHook", BindingFlags.NonPublic | BindingFlags.Static);
+            _HookSelftest(selftestGetStruct, selftestGetStructHook);
+
+            unsafe {
+                fixed (GlueThiscallStructRetPtrOrder* orderPtr = &GlueThiscallStructRetPtr) {
+                    ((Func<IntPtr, IntPtr, IntPtr, _SelftestStruct>) selftestGetStruct.CreateDelegate<Func<IntPtr, IntPtr, IntPtr, _SelftestStruct>>(this))((IntPtr) orderPtr, (IntPtr) orderPtr, selfPtr);
+                }
+            }
+        }
+
+        private void _HookSelftest(MethodInfo from, MethodInfo to) {
+            Pin(from);
+            Pin(to);
             NativeDetourData detour = DetourHelper.Native.Create(
-                GetNativeStart(selftest),
-                GetNativeStart(selftestHook),
+                GetNativeStart(from),
+                GetNativeStart(to),
                 null
             );
             DetourHelper.Native.MakeWritable(detour);
@@ -36,11 +55,24 @@ namespace MonoMod.RuntimeDetour.Platforms {
             DetourHelper.Native.FlushICache(detour);
             DetourHelper.Native.Free(detour);
             // No need to undo the detour.
-
-            // Use reflection to make sure that the selftest isn't optimized away.
-            // Delegates are quite reliable for this job.
-            ((Func<IntPtr, IntPtr, _SelftestStruct>) selftest.CreateDelegate<Func<IntPtr, IntPtr, _SelftestStruct>>(this))(IntPtr.Zero, IntPtr.Zero);
         }
+
+        #region Selftests
+
+        #region Selftest: Get reference ptr
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private IntPtr _SelftestGetRefPtr() {
+            Console.Error.WriteLine("If you're reading this, the MonoMod.RuntimeDetour selftest failed.");
+            throw new Exception("This method should've been detoured!");
+        }
+
+        private static unsafe IntPtr _SelftestGetRefPtrHook(IntPtr self) {
+            // This is only needed to obtain a raw IntPtr to a reference object.
+            return self;
+        }
+
+        #endregion
 
         #region Selftest: Struct
 
@@ -50,19 +82,32 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private _SelftestStruct _SelftestGetStruct(IntPtr x, IntPtr y) {
+        private _SelftestStruct _SelftestGetStruct(IntPtr x, IntPtr y, IntPtr thisPtr) {
             Console.Error.WriteLine("If you're reading this, the MonoMod.RuntimeDetour selftest failed.");
             throw new Exception("This method should've been detoured!");
         }
 
-        private static unsafe void _SelftestGetStructHook(DetourRuntimeILPlatform self, IntPtr a, IntPtr b, IntPtr c) {
-            // Normally, self = this, a = x, b = y
-            // For coreclr x64 __thiscall, self = this, a = __ret, b = x, c = y
+        private static unsafe void _SelftestGetStructHook(IntPtr a, IntPtr b, IntPtr c, IntPtr d, IntPtr e) {
+            // Normally, a = this, b = x, c = y, d = thisPtr, e = garbage
 
-            // For the selftest, x must be equal to y.
-            // If a != b, a is probably pointing to the return buffer.
-            self.GlueThiscallStructRetPtr = a != b;
+            // For the general selftest, x must be equal to y.
+            // If b != c, b is probably pointing to the return buffer or this.
+            if (b == c) {
+                // Original order.
+                *((GlueThiscallStructRetPtrOrder*) b) = GlueThiscallStructRetPtrOrder.Original;
+
+            } else if (b == e) {
+                // For mono in Unity 5.6.X, a = __ret, b = this, c = x, d = y, e = thisPtr
+                *((GlueThiscallStructRetPtrOrder*) c) = GlueThiscallStructRetPtrOrder.RetThisArgs;
+
+            } else {
+                // For coreclr x64 __thiscall, a = this, b = __ret, c = x, d = y, e = thisPtr
+                *((GlueThiscallStructRetPtrOrder*) c) = GlueThiscallStructRetPtrOrder.ThisRetArgs;
+
+            }
         }
+
+        #endregion
 
         #endregion
 
@@ -148,7 +193,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             MethodInfo dm = null;
 
-            if (GlueThiscallStructRetPtr &&
+            if (GlueThiscallStructRetPtr != GlueThiscallStructRetPtrOrder.Original &&
                 fromInfo != null && !from.IsStatic &&
                 toInfo != null && to.IsStatic &&
                 fromInfo.ReturnType == toInfo.ReturnType &&
@@ -156,10 +201,22 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 int size = fromInfo.ReturnType.GetManagedSize();
                 if (size == 3 || size == 5 || size == 6 || size == 7 || size >= 9) {
+                    Type thisType = from.GetThisParamType();
+                    Type retType = fromInfo.ReturnType.MakeByRefType(); // Refs are shiny pointers.
+
+                    int thisPos = 0;
+                    int retPos = 1;
+
+                    if (GlueThiscallStructRetPtr == GlueThiscallStructRetPtrOrder.RetThisArgs) {
+                        thisPos = 1;
+                        retPos = 0;
+                    }
+
                     List<Type> argTypes = new List<Type> {
-                        from.GetThisParamType(), // this
-                        fromInfo.ReturnType.MakeByRefType() // __ret - Refs are shiny pointers.
+                        thisType
                     };
+                    argTypes.Insert(retPos, retType);
+
                     argTypes.AddRange(from.GetParameters().Select(p => p.ParameterType));
 
                     using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
@@ -169,11 +226,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         ILProcessor il = dmd.GetILProcessor();
 
                         // Load the return buffer address.
-                        il.Emit(OpCodes.Ldarg, 1);
+                        il.Emit(OpCodes.Ldarg, retPos);
 
                         // Invoke the target method with all remaining arguments.
                         {
-                            il.Emit(OpCodes.Ldarg, 0);
+                            il.Emit(OpCodes.Ldarg, thisPos);
                             for (int i = 2; i < argTypes.Count; i++)
                                 il.Emit(OpCodes.Ldarg, i);
                             il.Emit(OpCodes.Call, (MethodInfo) to);
@@ -194,6 +251,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected class MethodPin {
             public int Count;
             public RuntimeMethodHandle Handle;
+        }
+
+        private enum GlueThiscallStructRetPtrOrder {
+            Original,
+            ThisRetArgs,
+            RetThisArgs
         }
     }
 }
