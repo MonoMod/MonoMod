@@ -37,16 +37,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
             DetourHelper.Native.Free(detour);
             // No need to undo the detour.
 
-            _SelftestStruct s;
-            // Make sure that the selftest isn't optimized away.
-            try {
-            } finally {
-                // s = _SelftestGetStruct(IntPtr.Zero, IntPtr.Zero);
-                ((Func<IntPtr, IntPtr, _SelftestStruct>) selftest.CreateDelegate<Func<IntPtr, IntPtr, _SelftestStruct>>(this))(IntPtr.Zero, IntPtr.Zero);
-                unsafe {
-                    *&s = s;
-                }
-            }
+            // Use reflection to make sure that the selftest isn't optimized away.
+            // Delegates are quite reliable for this job.
+            ((Func<IntPtr, IntPtr, _SelftestStruct>) selftest.CreateDelegate<Func<IntPtr, IntPtr, _SelftestStruct>>(this))(IntPtr.Zero, IntPtr.Zero);
         }
 
         #region Selftest: Struct
