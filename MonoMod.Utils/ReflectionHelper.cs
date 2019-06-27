@@ -240,7 +240,21 @@ namespace MonoMod.Utils {
                     throw new NotSupportedException($"Unsupported <Module> member type {mref.GetType().FullName}");
 
             } else {
-                member = (_ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo).AsType().GetMembers(_BindingFlagsAll).FirstOrDefault(m => mref.Is(m));
+                Type declType = (_ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo).AsType();
+
+                if (mref is MethodReference)
+                    member = declType
+                        .GetMethods(_BindingFlagsAll).Cast<MethodBase>()
+                        .Concat(declType.GetConstructors(_BindingFlagsAll))
+                        .FirstOrDefault(m => mref.Is(m));
+                else if (mref is FieldReference) 
+                    member = declType
+                        .GetFields(_BindingFlagsAll)
+                        .FirstOrDefault(m => mref.Is(m));
+                else
+                    member = declType
+                        .GetMembers(_BindingFlagsAll)
+                        .FirstOrDefault(m => mref.Is(m));
             }
 
             return _Cache(mref, member);

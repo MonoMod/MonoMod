@@ -417,8 +417,16 @@ namespace MonoMod.Utils {
                 mrefDecl = null;
 
             if (mref is GenericParameter genParamRef) {
-                if (!(minfo is TypeOrTypeInfo genParamInfo) || !genParamInfo.IsGenericParameter)
+                if (!(minfo is TypeOrTypeInfo genParamInfo))
                     return false;
+                
+                if (!genParamInfo.IsGenericParameter) {
+                    if (genParamRef.Owner is IGenericInstance genParamRefOwner)
+                        return genParamRefOwner.GenericArguments[genParamRef.Position].Is(genParamInfo);
+                    else
+                        return false;
+                }
+
                 // Don't check owner as it introduces a circular check.
                 /*
                 if (!(genParamRef.Owner as MemberReference).Is(genParamInfo.DeclaringMethod ?? (System.Reflection.MemberInfo) genParamInfo.DeclaringType))
@@ -427,14 +435,36 @@ namespace MonoMod.Utils {
                 return genParamRef.Position == genParamInfo.GenericParameterPosition;
             }
 
-            if (!(mrefDecl?.Is(minfo.DeclaringType?.GetTypeInfo()) ?? minfo.DeclaringType == null))
+            if (minfo.DeclaringType != null) {
+                if (mrefDecl == null)
+                    return false;
+
+                Type declType = minfo.DeclaringType;
+
+                if (minfo is TypeOrTypeInfo) {
+                    // Note: type.DeclaringType is supposed to == type.DeclaringType.GetGenericTypeDefinition()
+                    // For whatever reason, old versions of mono (f.e. shipped with Unity 5.0.3) break this,
+                    // requiring us to call .GetGenericTypeDefinition() manually instead.
+                    TypeOrTypeInfo declTypeInfo = declType.GetTypeInfo();
+                    if (declTypeInfo.IsGenericType && !declTypeInfo.IsGenericTypeDefinition)
+                        declType = declType.GetGenericTypeDefinition();
+                }
+
+                if (!mrefDecl.Is(declType.GetTypeInfo()))
+                    return false;
+
+            } else if (mrefDecl != null)
                 return false;
+
             // Note: This doesn't work for TypeSpecification, as the reflection-side type.Name changes according to any modifiers (f.e. IsArray).
             if (!(mref is TypeSpecification) && mref.Name != minfo.Name)
                 return false;
 
             if (mref is TypeReference typeRef) {
                 if (!(minfo is TypeOrTypeInfo typeInfo))
+                    return false;
+
+                if (typeInfo.IsGenericParameter)
                     return false;
 
                 if (mref is GenericInstanceType genTypeRef) {
@@ -499,7 +529,7 @@ namespace MonoMod.Utils {
                 // Avoid converting nested type separators between + (.NET) and / (cecil)
                 if (mrefDecl != null)
                     return mref.Name == typeInfo.Name;
-                return mref.FullName == typeInfo.FullName;
+                return mref.FullName == typeInfo.FullName.Replace("+", "/");
             }
 
             if (mref is MethodReference methodRef) {
@@ -544,92 +574,30 @@ namespace MonoMod.Utils {
                 } else if (methodInfo.IsGenericMethod)
                     return false;
 
-                bool IsParamTypeRef(TypeReference paramTypeRef, TypeOrTypeInfo paramTypeInfo) {
+                Relinker resolver = null;
+                resolver = (paramMemberRef, ctx) => paramMemberRef is GenericParameter paramGenParamTypeRef ? ResolveParameter(paramGenParamTypeRef) : paramMemberRef;
+                TypeReference ResolveParameter(TypeReference paramTypeRef) {
                     if (paramTypeRef is GenericParameter paramGenParamTypeRef) {
-                        if (paramGenParamTypeRef.Owner is MethodReference && methodRef is GenericInstanceMethod paramGenMethodRef &&
-                            IsParamTypeRef(paramGenMethodRef.GenericArguments[paramGenParamTypeRef.Position], paramTypeInfo))
-                            return true;
+                        if (paramGenParamTypeRef.Owner is MethodReference && methodRef is GenericInstanceMethod paramGenMethodRef)
+                            return paramGenMethodRef.GenericArguments[paramGenParamTypeRef.Position];
 
                         if (paramGenParamTypeRef.Owner is TypeReference paramGenParamTypeRefOwnerType && methodRef.DeclaringType is GenericInstanceType genTypeRefRef &&
-                            paramGenParamTypeRefOwnerType.FullName == genTypeRefRef.ElementType.FullName && // This is to prevent List<Tuple<...>> checks from incorrectly checking Tuple's args in List.
-                            IsParamTypeRef(genTypeRefRef.GenericArguments[paramGenParamTypeRef.Position], paramTypeInfo))
-                            return true;
+                            paramGenParamTypeRefOwnerType.FullName == genTypeRefRef.ElementType.FullName) // This is to prevent List<Tuple<...>> checks from incorrectly checking Tuple's args in List.
+                            return genTypeRefRef.GenericArguments[paramGenParamTypeRef.Position];
 
-                        if (!paramTypeInfo.IsGenericParameter)
-                            return false;
-
-                        if (paramGenParamTypeRef.Position == paramTypeInfo.GenericParameterPosition)
-                            return true;
+                        return paramTypeRef;
                     }
 
-                    if (paramTypeRef is GenericInstanceType paramGenTypeRef) {
-                        if (!paramTypeInfo.IsGenericType)
-                            return false;
-
-                        Collection<TypeReference> gparamRefs = paramGenTypeRef.GenericArguments;
-                        Type[] gparamInfos = paramTypeInfo.AsType().GetGenericArguments();
-                        if (gparamRefs.Count != gparamInfos.Length)
-                            return false;
-
-                        for (int i = 0; i < gparamRefs.Count; i++) {
-                            if (!IsParamTypeRef(gparamRefs[i], gparamInfos[i].GetTypeInfo()))
-                                return false;
-                        }
-
-                        return IsParamTypeRef(paramGenTypeRef.ElementType, paramTypeInfo.GetGenericTypeDefinition().GetTypeInfo());
-
-                    } else if (paramTypeRef.HasGenericParameters) {
-                        if (!paramTypeInfo.IsGenericType)
-                            return false;
-
-                        Collection<GenericParameter> gparamRefs = paramTypeRef.GenericParameters;
-                        Type[] gparamInfos = paramTypeInfo.AsType().GetGenericArguments();
-                        if (gparamRefs.Count != gparamInfos.Length)
-                            return false;
-
-                        for (int i = 0; i < gparamRefs.Count; i++) {
-                            if (!IsParamTypeRef(gparamRefs[i], gparamInfos[i].GetTypeInfo()))
-                                return false;
-                        }
-
-                    } else if (paramTypeInfo.IsGenericType)
-                        return false;
-
-                    if (paramTypeRef is ArrayType paramArrayTypeRef) {
-                        if (!paramTypeInfo.IsArray)
-                            return false;
-
-                        return paramArrayTypeRef.Dimensions.Count == paramTypeInfo.GetArrayRank() && IsParamTypeRef(paramArrayTypeRef.ElementType, paramTypeInfo.GetElementType().GetTypeInfo());
-                    }
-
-                    if (paramTypeRef is ByReferenceType paramByRefTypeRef) {
-                        if (!paramTypeInfo.IsByRef)
-                            return false;
-
-                        return paramByRefTypeRef.ElementType.Is(paramTypeInfo.GetElementType().GetTypeInfo());
-                    }
-
-                    if (paramTypeRef is PointerType paramPtrTypeRef) {
-                        if (!paramTypeInfo.IsPointer)
-                            return false;
-
-                        return paramPtrTypeRef.ElementType.Is(paramTypeInfo.GetElementType().GetTypeInfo());
-                    }
-
-                    if (paramTypeRef is TypeSpecification paramTypeSpecRef)
-                        // Note: There are TypeSpecifications which map to non-ElementType-y reflection Types.
-                        return IsParamTypeRef(paramTypeSpecRef.ElementType, paramTypeInfo.HasElementType ? paramTypeInfo.GetElementType().GetTypeInfo() : paramTypeInfo);
-
-                    if (paramTypeRef.DeclaringType != null && paramTypeInfo.DeclaringType != null)
-                        return paramTypeRef.Name == paramTypeInfo.Name && IsParamTypeRef(paramTypeRef.DeclaringType, paramTypeInfo.DeclaringType.GetTypeInfo());
-                    return paramTypeRef.FullName == paramTypeInfo.FullName;
+                    return paramTypeRef.Relink(resolver, null);
                 }
 
-                if (!IsParamTypeRef(methodRef.ReturnType, ((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void)).GetTypeInfo()))
+                if (!ResolveParameter(methodRef.ReturnType).Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void)).GetTypeInfo()) &&
+                    !methodRef.ReturnType.Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void)).GetTypeInfo()))
                     return false;
 
                 for (int i = 0; i < paramRefs.Count; i++)
-                    if (!IsParamTypeRef(paramRefs[i].ParameterType, paramInfos[i].ParameterType.GetTypeInfo()))
+                    if (!ResolveParameter(paramRefs[i].ParameterType).Is(paramInfos[i].ParameterType.GetTypeInfo()) &&
+                        !paramRefs[i].ParameterType.Is(paramInfos[i].ParameterType.GetTypeInfo()))
                         return false;
 
                 return true;
@@ -841,7 +809,7 @@ namespace MonoMod.Utils {
                 throw new NotSupportedException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
             }
 
-            if (type.IsGenericParameter) {
+            if (type.IsGenericParameter && context != null) {
                 GenericParameter genParam = context.GetGenericParameter((GenericParameter) type);
                 if (genParam == null)
                     throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
