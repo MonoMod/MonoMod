@@ -16,7 +16,9 @@ namespace MonoMod.RuntimeDetour {
 
         public enum Type {
             Auto,
-            Basic
+            Basic,
+            AsOriginal,
+            Override
         }
 
         public static bool Initialized { get; private set; }
@@ -29,6 +31,8 @@ namespace MonoMod.RuntimeDetour {
 
         [ThreadStatic] private static DynamicMethodDefinition _LastWrapperDMD;
         private static Assembly _SharedStateASM;
+
+        private static DetourConfig _DetourConfig;
 
         static HarmonyDetourBridge() {
             System.Type t_OpCode = typeof(System.Reflection.Emit.OpCode);
@@ -67,7 +71,14 @@ namespace MonoMod.RuntimeDetour {
             Initialized = true;
 
             if (type == Type.Auto)
-                type = Type.Basic;
+                type = Type.AsOriginal;
+
+            _DetourConfig = new DetourConfig() {
+                Priority =
+                    type == Type.AsOriginal ? int.MinValue / 4 :
+                    type == Type.Override ? int.MaxValue / 4 :
+                    0
+            };
 
             CurrentType = type;
 
@@ -224,7 +235,7 @@ namespace MonoMod.RuntimeDetour {
                 _LastWrapperDMD = null;
             }
 
-            _Detours.Add(new Detour(original, replacement));
+            _Detours.Add(new Detour(original, replacement, ref _DetourConfig));
             return null;
         }
 
