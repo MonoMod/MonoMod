@@ -5,11 +5,15 @@ using System.Linq.Expressions;
 using MonoMod.Utils;
 using Mono.Cecil.Cil;
 using System.Linq;
+using System.Collections.ObjectModel;
 
 namespace MonoMod.RuntimeDetour {
     public struct DetourConfig {
         public bool ManualApply;
         public int Priority;
+        public string ID;
+        public IEnumerable<string> Before;
+        public IEnumerable<string> After;
     }
 
     /// <summary>
@@ -17,7 +21,7 @@ namespace MonoMod.RuntimeDetour {
     /// Multiple Detours for a method to detour from can exist at any given time. Detours can be layered.
     /// If you're writing your own detour manager or need to detour native functions, it's better to create instances of NativeDetour instead.
     /// </summary>
-    public class Detour : IDetour {
+    public class Detour : ISortableDetour {
 
         private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
         private static Dictionary<MethodBase, MethodInfo> _BackupMethods = new Dictionary<MethodBase, MethodInfo>();
@@ -36,6 +40,9 @@ namespace MonoMod.RuntimeDetour {
         public int Index => _DetourChain?.IndexOf(this) ?? -1;
         public int MaxIndex => _DetourChain?.Count ?? -1;
 
+        private readonly int _GlobalIndex;
+        public int GlobalIndex => _GlobalIndex;
+
         private int _Priority;
         public int Priority {
             get => _Priority;
@@ -46,7 +53,49 @@ namespace MonoMod.RuntimeDetour {
                 _RefreshChain(Method);
             }
         }
-        private int _GlobalIndex;
+
+        private string _ID;
+        public string ID {
+            get => _ID;
+            set {
+                if (string.IsNullOrEmpty(value))
+                    value = Target.GetFindableID(simple: true);
+                if (_ID == value)
+                    return;
+                _ID = value;
+                _RefreshChain(Method);
+            }
+        }
+
+        private List<string> _Before = new List<string>();
+        private ReadOnlyCollection<string> _BeforeRO;
+        public IEnumerable<string> Before {
+            get => _BeforeRO ?? (_BeforeRO = _Before.AsReadOnly());
+            set {
+                lock (_Before) {
+                    _Before.Clear();
+                    if (value != null)
+                        foreach (string id in value)
+                            _Before.Add(id);
+                    _RefreshChain(Method);
+                }
+            }
+        }
+
+        private List<string> _After = new List<string>();
+        private ReadOnlyCollection<string> _AfterRO;
+        public IEnumerable<string> After {
+            get => _AfterRO ?? (_AfterRO = _After.AsReadOnly());
+            set {
+                lock (_After) {
+                    _After.Clear();
+                    if (value != null)
+                        foreach (string id in value)
+                            _After.Add(id);
+                    _RefreshChain(Method);
+                }
+            }
+        }
 
         public readonly MethodBase Method;
         public readonly MethodBase Target;
@@ -63,8 +112,16 @@ namespace MonoMod.RuntimeDetour {
             Target = to.Pin();
             TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to).Pin();
 
-            _Priority = config.Priority;
             _GlobalIndex = _GlobalIndexNext++;
+
+            _Priority = config.Priority;
+            _ID = config.ID;
+            if (config.Before != null)
+                foreach (string id in config.Before)
+                    _Before.Add(id);
+            if (config.After != null)
+                foreach (string id in config.After)
+                    _After.Add(id);
 
             if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
                 return;
@@ -324,7 +381,7 @@ namespace MonoMod.RuntimeDetour {
         private static void _RefreshChain(MethodBase method) {
             List<Detour> detours = _DetourMap[method];
             lock (detours) {
-                detours.Sort(PriorityComparer.Instance);
+                detours.Sort(SortableDetourComparer<Detour>.Instance);
 
                 Detour topOld = detours.FindLast(d => d.IsTop);
                 Detour topNew = detours.FindLast(d => d.IsApplied);
@@ -354,16 +411,6 @@ namespace MonoMod.RuntimeDetour {
 
                     prev = detour.Target;
                 }
-            }
-        }
-
-        private sealed class PriorityComparer : IComparer<Detour> {
-            public static readonly PriorityComparer Instance = new PriorityComparer();
-            public int Compare(Detour a, Detour b) {
-                int delta = a._Priority - b._Priority;
-                if (delta == 0)
-                    delta = a._GlobalIndex - b._GlobalIndex;
-                return delta;
             }
         }
     }

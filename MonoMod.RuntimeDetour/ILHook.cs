@@ -6,14 +6,18 @@ using MonoMod.Utils;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using Mono.Cecil;
+using System.Collections.ObjectModel;
 
 namespace MonoMod.RuntimeDetour {
     public struct ILHookConfig {
         public bool ManualApply;
         public int Priority;
+        public string ID;
+        public IEnumerable<string> Before;
+        public IEnumerable<string> After;
     }
 
-    public class ILHook : IDetour {
+    public class ILHook : ISortableDetour {
 
         private static DetourConfig ILDetourConfig = new DetourConfig() {
             Priority = int.MinValue / 8
@@ -34,6 +38,9 @@ namespace MonoMod.RuntimeDetour {
         public int Index => _Ctx?.Chain.IndexOf(this) ?? -1;
         public int MaxIndex => _Ctx?.Chain.Count ?? -1;
 
+        private readonly int _GlobalIndex;
+        public int GlobalIndex => _GlobalIndex;
+
         private int _Priority;
         public int Priority {
             get => _Priority;
@@ -44,7 +51,50 @@ namespace MonoMod.RuntimeDetour {
                 _Ctx.Refresh();
             }
         }
-        private int _GlobalIndex;
+
+        private string _ID;
+        public string ID {
+            get => _ID;
+            set {
+                if (string.IsNullOrEmpty(value))
+                    value = Manipulator.GetMethodInfo()?.GetFindableID(simple: true) ?? GetHashCode().ToString();
+                if (_ID == value)
+                    return;
+                _ID = value;
+                _Ctx.Refresh();
+            }
+        }
+
+        private List<string> _Before = new List<string>();
+        private ReadOnlyCollection<string> _BeforeRO;
+        public IEnumerable<string> Before {
+            get => _BeforeRO ?? (_BeforeRO = _Before.AsReadOnly());
+            set {
+                lock (_Before) {
+                    _Before.Clear();
+                    if (value != null)
+                        foreach (string id in value)
+                            _Before.Add(id);
+                    _Ctx.Refresh();
+                }
+            }
+        }
+
+        private List<string> _After = new List<string>();
+        private ReadOnlyCollection<string> _AfterRO;
+        public IEnumerable<string> After {
+            get => _AfterRO ?? (_AfterRO = _After.AsReadOnly());
+            set {
+                lock (_After) {
+                    _After.Clear();
+                    if (value != null)
+                        foreach (string id in value)
+                            _After.Add(id);
+                    _Ctx.Refresh();
+                }
+            }
+        }
+
         public readonly MethodBase Method;
         public readonly ILContext.Manipulator Manipulator;
 
@@ -52,8 +102,16 @@ namespace MonoMod.RuntimeDetour {
             Method = from.Pin();
             Manipulator = manipulator;
 
-            _Priority = config.Priority;
             _GlobalIndex = _GlobalIndexNext++;
+
+            _Priority = config.Priority;
+            _ID = config.ID;
+            if (config.Before != null)
+                foreach (string id in config.Before)
+                    _Before.Add(id);
+            if (config.After != null)
+                foreach (string id in config.After)
+                    _After.Add(id);
 
             // Add the hook to the hook map.
             Context ctx;
@@ -169,7 +227,7 @@ namespace MonoMod.RuntimeDetour {
                     if (hooks.Count == 0)
                         return;
 
-                    hooks.Sort(PriorityComparer.Instance);
+                    hooks.Sort(SortableDetourComparer<ILHook>.Instance);
 
                     MethodBase dm;
                     using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(Method, GenerateCecilModule)) {
@@ -199,16 +257,6 @@ namespace MonoMod.RuntimeDetour {
                 il.MakeReadOnly();
                 Active.Add(il);
                 return;
-            }
-        }
-
-        private sealed class PriorityComparer : IComparer<ILHook> {
-            public static readonly PriorityComparer Instance = new PriorityComparer();
-            public int Compare(ILHook a, ILHook b) {
-                int delta = a._Priority - b._Priority;
-                if (delta == 0)
-                    delta = a._GlobalIndex - b._GlobalIndex;
-                return delta;
             }
         }
     }

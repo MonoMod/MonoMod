@@ -14,7 +14,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         // Prevent the GC from collecting those.
         protected Dictionary<MethodBase, MethodPin> PinnedMethods = new Dictionary<MethodBase, MethodPin>();
 
-        private GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
+        private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
 
         public DetourRuntimeILPlatform() {
             // Perform a selftest if this runtime requires special handling for instance methods returning structs.
@@ -77,9 +77,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
         #region Selftest: Struct
 
         // Struct must be 3, 5, 6, 7 or 9+ bytes big.
+#pragma warning disable CS0169
         private struct _SelftestStruct {
             private readonly byte A, B, C;
         }
+#pragma warning restore CS0169
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private _SelftestStruct _SelftestGetStruct(IntPtr x, IntPtr y, IntPtr thisPtr) {

@@ -7,7 +7,7 @@ using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour {
     public struct HookConfig {
-        public bool ManualApply;
+        public DetourConfig Detour;
     }
 
     public class Hook : IDetour {
@@ -24,6 +24,7 @@ namespace MonoMod.RuntimeDetour {
         public readonly MethodBase TargetReal;
 
         private Detour _Detour;
+        public Detour Detour => _Detour;
 
         private readonly Type _OrigDelegateType;
         private readonly MethodInfo _OrigDelegateInvoke;
@@ -139,9 +140,7 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            _Detour = new Detour(Method, TargetReal, new DetourConfig {
-                ManualApply = config.ManualApply
-            });
+            _Detour = new Detour(Method, TargetReal, ref config.Detour);
 
             _UpdateOrig(null);
         }

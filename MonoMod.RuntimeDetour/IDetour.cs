@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace MonoMod.RuntimeDetour {
@@ -12,5 +13,13 @@ namespace MonoMod.RuntimeDetour {
 
         MethodBase GenerateTrampoline(MethodBase signature = null);
         T GenerateTrampoline<T>() where T : Delegate;
+    }
+
+    public interface ISortableDetour : IDetour {
+        int GlobalIndex { get; }
+        int Priority { get; set; }
+        string ID { get; set; }
+        IEnumerable<string> Before { get; set; }
+        IEnumerable<string> After { get; set; }
     }
 }
