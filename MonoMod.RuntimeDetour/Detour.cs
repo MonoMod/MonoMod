@@ -33,37 +33,8 @@ namespace MonoMod.RuntimeDetour {
         public bool IsApplied { get; private set; }
         private bool IsTop => _TopDetour != null;
 
-        public int Index {
-            get => _DetourChain?.IndexOf(this) ?? -1;
-            set {
-                if (!IsValid)
-                    throw new ObjectDisposedException(nameof(Detour));
-
-                List<Detour> detours = _DetourChain;
-                lock (detours) {
-                    int valueOld = detours.IndexOf(this);
-                    if (valueOld == -1)
-                        throw new ObjectDisposedException(nameof(Detour));
-
-                    detours.RemoveAt(valueOld);
-
-                    if (value > valueOld)
-                        value--;
-
-                    try {
-                        detours.Insert(value, this);
-                    } catch {
-                        // Too lazy to manually check the bounds.
-                        detours.Insert(valueOld, this);
-                        throw;
-                    }
-
-                    _RefreshChain(Method);
-                }
-            }
-        }
-
-        public int MaxIndex => _DetourMap.TryGetValue(Method, out List<Detour> detours) ? detours.Count : -1;
+        public int Index => _DetourChain?.IndexOf(this) ?? -1;
+        public int MaxIndex => _DetourChain?.Count ?? -1;
 
         private int _Priority;
         public int Priority {
@@ -353,7 +324,7 @@ namespace MonoMod.RuntimeDetour {
         private static void _RefreshChain(MethodBase method) {
             List<Detour> detours = _DetourMap[method];
             lock (detours) {
-                detours.Sort(DetourComparer.Instance);
+                detours.Sort(PriorityComparer.Instance);
 
                 Detour topOld = detours.FindLast(d => d.IsTop);
                 Detour topNew = detours.FindLast(d => d.IsApplied);
@@ -386,8 +357,8 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private sealed class DetourComparer : IComparer<Detour> {
-            public static readonly DetourComparer Instance = new DetourComparer();
+        private sealed class PriorityComparer : IComparer<Detour> {
+            public static readonly PriorityComparer Instance = new PriorityComparer();
             public int Compare(Detour a, Detour b) {
                 int delta = a._Priority - b._Priority;
                 if (delta == 0)
