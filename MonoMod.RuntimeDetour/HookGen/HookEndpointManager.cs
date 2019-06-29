@@ -10,9 +10,14 @@ namespace MonoMod.RuntimeDetour.HookGen {
         private static readonly Dictionary<MethodBase, object> HookEndpointMap = new Dictionary<MethodBase, object>();
         private static readonly Dictionary<object, List<HookEntry>> OwnedHookLists = new Dictionary<object, List<HookEntry>>();
 
-        public static event Func<AssemblyName, ModuleDefinition> OnGenerateCecilModule;
+        [Obsolete("Use the ILHook counterpart instead")]
+        public static event Func<AssemblyName, ModuleDefinition> OnGenerateCecilModule {
+            add => ILHook.OnGenerateCecilModule += value;
+            remove => ILHook.OnGenerateCecilModule += value;
+        }
+        [Obsolete("Use the ILHook counterpart instead")]
         public static ModuleDefinition GenerateCecilModule(AssemblyName name)
-            => OnGenerateCecilModule?.InvokeWhileNull<ModuleDefinition>(name);
+            => ILHook.GenerateCecilModule(name);
 
         public static event Func<Delegate, object> OnGetOwner;
         public static object GetOwner(Delegate hook)
