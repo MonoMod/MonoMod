@@ -10,18 +10,23 @@ namespace MonoMod.RuntimeDetour {
     public sealed class DetourContext : IDisposable {
 
         [ThreadStatic]
-        internal static List<DetourContext> _Contexts;
-        internal static List<DetourContext> Contexts => _Contexts ?? (_Contexts = new List<DetourContext>());
+        private static List<DetourContext> _Contexts;
+        private static List<DetourContext> Contexts => _Contexts ?? (_Contexts = new List<DetourContext>());
 
+        [ThreadStatic]
+        private static DetourContext Last;
         internal static DetourContext Current {
             get {
+                if (Last?.IsValid ?? false)
+                    return Last;
+
                 List<DetourContext> ctxs = Contexts;
                 for (int i = ctxs.Count - 1; i > -1; i--) {
                     DetourContext ctx = ctxs[i];
                     if (!ctx.IsValid)
                         ctxs.RemoveAt(i);
                     else
-                        return ctx;
+                        return Last = ctx;
                 }
 
                 return null;
@@ -89,6 +94,7 @@ namespace MonoMod.RuntimeDetour {
 #endif
             _FallbackID = Creator?.Module?.Assembly?.GetName().Name ?? Creator.GetFindableID(simple: true);
 
+            Last = null;
             Contexts.Add(this);
 
             Priority = priority;
@@ -108,6 +114,7 @@ namespace MonoMod.RuntimeDetour {
             if (!IsDisposed)
                 return;
             IsDisposed = true;
+            Last = null;
             Contexts.Remove(this);
         }
     }
