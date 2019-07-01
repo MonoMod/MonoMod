@@ -170,7 +170,7 @@ namespace MonoMod.RuntimeDetour {
             : this(from, to, ref config) {
         }
         public Detour(MethodBase from, MethodBase to)
-            : this(from, to, default) {
+            : this(from, to, DetourContext.Current?.DetourConfig ?? default) {
         }
 
         public Detour(MethodBase method, IntPtr to, ref DetourConfig config)

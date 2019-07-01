@@ -132,7 +132,7 @@ namespace MonoMod.RuntimeDetour {
             : this(from, manipulator, ref config) {
         }
         public ILHook(MethodBase from, ILContext.Manipulator manipulator)
-            : this(from, manipulator, default) {
+            : this(from, manipulator, DetourContext.Current?.ILHookConfig ?? default) {
         }
 
         public void Apply() {

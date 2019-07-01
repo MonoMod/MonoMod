@@ -7,7 +7,11 @@ using Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour {
     public struct HookConfig {
-        public DetourConfig Detour;
+        public bool ManualApply;
+        public int Priority;
+        public string ID;
+        public IEnumerable<string> Before;
+        public IEnumerable<string> After;
     }
 
     public class Hook : IDetour {
@@ -140,7 +144,12 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            _Detour = new Detour(Method, TargetReal, ref config.Detour);
+            _Detour = new Detour(Method, TargetReal, new DetourConfig() {
+                Priority = config.Priority,
+                ID = config.ID,
+                Before = config.Before,
+                After = config.After
+            });
 
             _UpdateOrig(null);
         }
@@ -148,7 +157,7 @@ namespace MonoMod.RuntimeDetour {
             : this(from, to, target, ref config) {
         }
         public Hook(MethodBase from, MethodInfo to, object target)
-            : this(from, to, target, default) {
+            : this(from, to, target, DetourContext.Current?.HookConfig ?? default) {
         }
         public Hook(MethodBase from, MethodInfo to, ref HookConfig config)
             : this(from, to, null, ref config) {
