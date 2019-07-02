@@ -33,7 +33,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private MethodBase Creator;
+        private MethodBase Creator = null;
 
         public int Priority;
         private string _FallbackID;
@@ -90,11 +90,19 @@ namespace MonoMod.RuntimeDetour {
 
         public DetourContext(int priority, string id) {
 #if !NETSTANDARD1_X
-            Creator = new StackFrame(1).GetMethod();
+            StackTrace stack = new StackTrace();
+            int frameCount = stack.FrameCount;
+            for (int i = 0; i < frameCount; i++) {
+                MethodBase caller = stack.GetFrame(i).GetMethod();
+                if (caller?.DeclaringType == typeof(DetourContext))
+                    continue;
+                Creator = caller;
+                break;
+            }
 #endif
             _FallbackID = Creator?.Module?.Assembly?.GetName().Name ?? Creator.GetFindableID(simple: true);
 
-            Last = null;
+            Last = this;
             Contexts.Add(this);
 
             Priority = priority;

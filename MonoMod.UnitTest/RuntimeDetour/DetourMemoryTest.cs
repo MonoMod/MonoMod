@@ -16,43 +16,41 @@ namespace MonoMod.UnitTest {
     public class DetourMemoryTest {
         [Fact]
         public void TestDetourMemory() {
-            lock (TestObject.Lock) {
-                // The following use cases are not meant to be usage examples.
-                // Please take a look at DetourTest and HookTest instead.
-                HashSet<Hook> hooks = new HashSet<Hook>();
+            // The following use cases are not meant to be usage examples.
+            // Please take a look at DetourTest and HookTest instead.
+            HashSet<Hook> hooks = new HashSet<Hook>();
 
-                long memPre = GC.GetTotalMemory(true);
-                long memPost;
+            long memPre = GC.GetTotalMemory(true);
+            long memPost;
 
-                try {
+            try {
 
-                    Console.WriteLine($"GC.GetTotalMemory before detour memory test: {memPre}");
-                    for (int i = 0; i < 256; i++) {
-                        Hook h = new Hook(
-                            typeof(DetourMemoryTest).GetMethod("TestStaticMethod"),
-                            typeof(DetourMemoryTest).GetMethod("TestStaticMethodHook")
-                        );
-                        hooks.Add(h);
-                        int staticResult = TestStaticMethod(2, 3).Count;
-                        Assert.Equal(6 + 1 + i, staticResult);
-                    }
-
-                    memPost = GC.GetTotalMemory(true);
-                    Console.WriteLine($"GC.GetTotalMemory after detour memory test: {memPost}");
-                    Console.WriteLine($"After - Before: {memPost - memPre}");
-
-                } finally {
-                    foreach (Hook h in hooks)
-                        h.Dispose();
-                    hooks.Clear();
+                Console.WriteLine($"GC.GetTotalMemory before detour memory test: {memPre}");
+                for (int i = 0; i < 256; i++) {
+                    Hook h = new Hook(
+                        typeof(DetourMemoryTest).GetMethod("TestStaticMethod"),
+                        typeof(DetourMemoryTest).GetMethod("TestStaticMethodHook")
+                    );
+                    hooks.Add(h);
+                    int staticResult = TestStaticMethod(2, 3).Count;
+                    Assert.Equal(6 + 1 + i, staticResult);
                 }
 
-                GC.Collect();
-                long memClear = GC.GetTotalMemory(true);
+                memPost = GC.GetTotalMemory(true);
+                Console.WriteLine($"GC.GetTotalMemory after detour memory test: {memPost}");
+                Console.WriteLine($"After - Before: {memPost - memPre}");
 
-                Console.WriteLine($"GC.GetTotalMemory after detour memory test clear: {memClear}");
-                Console.WriteLine($"Clear - Before: {memClear - memPre}");
+            } finally {
+                foreach (Hook h in hooks)
+                    h.Dispose();
+                hooks.Clear();
             }
+
+            GC.Collect();
+            long memClear = GC.GetTotalMemory(true);
+
+            Console.WriteLine($"GC.GetTotalMemory after detour memory test clear: {memClear}");
+            Console.WriteLine($"Clear - Before: {memClear - memPre}");
         }
 
 

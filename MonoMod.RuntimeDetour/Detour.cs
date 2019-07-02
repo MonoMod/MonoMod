@@ -25,7 +25,7 @@ namespace MonoMod.RuntimeDetour {
 
         private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
         private static Dictionary<MethodBase, MethodInfo> _BackupMethods = new Dictionary<MethodBase, MethodInfo>();
-        private static int _GlobalIndexNext = int.MinValue;
+        private static uint _GlobalIndexNext = uint.MinValue;
 
         private List<Detour> _DetourChain => _DetourMap.TryGetValue(Method, out List<Detour> detours) ? detours : null;
 
@@ -40,8 +40,8 @@ namespace MonoMod.RuntimeDetour {
         public int Index => _DetourChain?.IndexOf(this) ?? -1;
         public int MaxIndex => _DetourChain?.Count ?? -1;
 
-        private readonly int _GlobalIndex;
-        public int GlobalIndex => _GlobalIndex;
+        private readonly uint _GlobalIndex;
+        public uint GlobalIndex => _GlobalIndex;
 
         private int _Priority;
         public int Priority {
@@ -381,7 +381,7 @@ namespace MonoMod.RuntimeDetour {
         private static void _RefreshChain(MethodBase method) {
             List<Detour> detours = _DetourMap[method];
             lock (detours) {
-                detours.Sort(SortableDetourComparer<Detour>.Instance);
+                DetourSorter<Detour>.Sort(detours);
 
                 Detour topOld = detours.FindLast(d => d.IsTop);
                 Detour topNew = detours.FindLast(d => d.IsApplied);

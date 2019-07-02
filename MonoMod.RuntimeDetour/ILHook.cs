@@ -24,7 +24,7 @@ namespace MonoMod.RuntimeDetour {
         };
 
         private static Dictionary<MethodBase, Context> _Map = new Dictionary<MethodBase, Context>();
-        private static int _GlobalIndexNext = int.MinValue;
+        private static uint _GlobalIndexNext = uint.MinValue;
 
         private Context _Ctx => _Map.TryGetValue(Method, out Context ctx) ? ctx : null;
 
@@ -38,8 +38,8 @@ namespace MonoMod.RuntimeDetour {
         public int Index => _Ctx?.Chain.IndexOf(this) ?? -1;
         public int MaxIndex => _Ctx?.Chain.Count ?? -1;
 
-        private readonly int _GlobalIndex;
-        public int GlobalIndex => _GlobalIndex;
+        private readonly uint _GlobalIndex;
+        public uint GlobalIndex => _GlobalIndex;
 
         private int _Priority;
         public int Priority {
@@ -227,7 +227,7 @@ namespace MonoMod.RuntimeDetour {
                     if (hooks.Count == 0)
                         return;
 
-                    hooks.Sort(SortableDetourComparer<ILHook>.Instance);
+                    DetourSorter<ILHook>.Sort(hooks);
 
                     MethodBase dm;
                     using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(Method, GenerateCecilModule)) {

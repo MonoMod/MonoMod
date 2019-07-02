@@ -16,7 +16,7 @@ namespace MonoMod.RuntimeDetour {
     }
 
     public interface ISortableDetour : IDetour {
-        int GlobalIndex { get; }
+        uint GlobalIndex { get; }
         int Priority { get; set; }
         string ID { get; set; }
         IEnumerable<string> Before { get; set; }
