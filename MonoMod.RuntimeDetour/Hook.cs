@@ -27,6 +27,8 @@ namespace MonoMod.RuntimeDetour {
         public readonly MethodBase Target;
         public readonly MethodBase TargetReal;
 
+        public readonly object DelegateTarget;
+
         private Detour _Detour;
         public Detour Detour => _Detour;
 
@@ -40,9 +42,7 @@ namespace MonoMod.RuntimeDetour {
         public Hook(MethodBase from, MethodInfo to, object target, ref HookConfig config) {
             Method = from;
             Target = to;
-
-            if (!(OnDetour?.InvokeWhileTrue(this, from, to, target) ?? true))
-                return;
+            DelegateTarget = target;
 
             // Check if hook ret -> method ret is valid. Don't check for method ret -> hook ret, as that's too strict.
             Type returnType = (from as MethodInfo)?.ReturnType ?? typeof(void);
@@ -248,6 +248,9 @@ namespace MonoMod.RuntimeDetour {
         public void Apply() {
             if (!IsValid)
                 throw new ObjectDisposedException(nameof(Hook));
+
+            if (!(OnDetour?.InvokeWhileTrue(this, Method, Target, DelegateTarget) ?? true))
+                return;
 
             _Detour.Apply();
         }

@@ -123,9 +123,6 @@ namespace MonoMod.RuntimeDetour {
                 foreach (string id in config.After)
                     _After.Add(id);
 
-            if (!(OnDetour?.InvokeWhileTrue(this, from, to) ?? true))
-                return;
-
             lock (_BackupMethods) {
                 if ((!_BackupMethods.TryGetValue(Method, out MethodInfo backup) || backup == null) &&
                     (backup = Method.CreateILCopy()) != null)
@@ -249,6 +246,10 @@ namespace MonoMod.RuntimeDetour {
 
             if (IsApplied)
                 return;
+
+            if (!(OnDetour?.InvokeWhileTrue(this, Method, Target) ?? true))
+                return;
+
             IsApplied = true;
             _RefreshChain(Method);
         }
