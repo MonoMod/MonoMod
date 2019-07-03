@@ -100,7 +100,7 @@ namespace MonoMod.RuntimeDetour {
                 break;
             }
 #endif
-            _FallbackID = Creator?.Module?.Assembly?.GetName().Name ?? Creator.GetFindableID(simple: true);
+            _FallbackID = Creator?.Module?.Assembly?.GetName().Name ?? Creator?.GetFindableID(simple: true);
 
             Last = this;
             Contexts.Add(this);
