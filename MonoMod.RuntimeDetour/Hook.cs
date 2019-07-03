@@ -249,7 +249,7 @@ namespace MonoMod.RuntimeDetour {
             if (!IsValid)
                 throw new ObjectDisposedException(nameof(Hook));
 
-            if (!(OnDetour?.InvokeWhileTrue(this, Method, Target, DelegateTarget) ?? true))
+            if (!IsApplied && !(OnDetour?.InvokeWhileTrue(this, Method, Target, DelegateTarget) ?? true))
                 return;
 
             _Detour.Apply();
@@ -259,7 +259,7 @@ namespace MonoMod.RuntimeDetour {
             if (!IsValid)
                 throw new ObjectDisposedException(nameof(Hook));
 
-            if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
+            if (IsApplied && !(OnUndo?.InvokeWhileTrue(this) ?? true))
                 return;
 
             _Detour.Undo();

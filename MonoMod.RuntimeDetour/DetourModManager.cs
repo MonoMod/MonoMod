@@ -1,4 +1,5 @@
 ﻿#if !NETSTANDARD1_X
+using MonoMod.Cil;
 using MonoMod.RuntimeDetour.HookGen;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace MonoMod.RuntimeDetour {
         public HashSet<Assembly> Ignored = new HashSet<Assembly>();
         
         // events for tracking/logging/rejecting
+        public event Action<Assembly, MethodBase, ILContext.Manipulator> OnILHook;
         public event Action<Assembly, MethodBase, MethodBase, object> OnHook;
         public event Action<Assembly, MethodBase, MethodBase> OnDetour;
         public event Action<Assembly, MethodBase, IntPtr, IntPtr> OnNativeDetour;
@@ -22,9 +24,11 @@ namespace MonoMod.RuntimeDetour {
         public DetourModManager() {
             Ignored.Add(typeof(DetourModManager).Assembly);
 
-            // Keep track of all NativeDetours, Detours and Hooks.
+            // Keep track of all NativeDetours, Detours, Hooks and ILHooks.
             // Hooks have a 1:1 correspondence to Detours, but tracking the 'top level' construct
             // provides better future guarantees and logging
+            ILHook.OnDetour += RegisterILHook;
+            ILHook.OnUndo += UnregisterDetour;
             Hook.OnDetour += RegisterHook;
             Hook.OnUndo += UnregisterDetour;
             Detour.OnDetour += RegisterDetour;
@@ -70,6 +74,7 @@ namespace MonoMod.RuntimeDetour {
             "MonoMod.RuntimeDetour.NativeDetour",
             "MonoMod.RuntimeDetour.Detour",
             "MonoMod.RuntimeDetour.Hook",
+            "MonoMod.RuntimeDetour.ILHook",
         };
         internal Assembly GetHookOwner(StackTrace stack = null) {
             // Stack walking is not fast, but it's the only option
@@ -114,6 +119,16 @@ namespace MonoMod.RuntimeDetour {
 
             list.Add(detour);
             DetourOwners[detour] = owner;
+        }
+
+        internal bool RegisterILHook(ILHook _detour, MethodBase from, ILContext.Manipulator manipulator) {
+            Assembly owner = GetHookOwner();
+            if (owner == null)
+                return true; // continue with default detour creation, we just don't track it
+
+            OnILHook?.Invoke(owner, from, manipulator);
+            TrackDetour(owner, _detour);
+            return true;
         }
 
         internal bool RegisterHook(Hook _detour, MethodBase from, MethodBase to, object target) {

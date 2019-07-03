@@ -19,6 +19,11 @@ namespace MonoMod.RuntimeDetour {
 
     public class ILHook : ISortableDetour {
 
+        // "Detour" is the wrong term, but it's consistent with Hook.OnDetour and Detour.OnDetour
+        // TODO: Consider breaking backwards compatibility in the future.
+        public static Func<ILHook, MethodBase, ILContext.Manipulator, bool> OnDetour;
+        public static Func<ILHook, bool> OnUndo;
+
         private static DetourConfig ILDetourConfig = new DetourConfig() {
             Priority = int.MinValue / 8
         };
@@ -141,6 +146,10 @@ namespace MonoMod.RuntimeDetour {
 
             if (IsApplied)
                 return;
+
+            if (!(OnDetour?.InvokeWhileTrue(this, Method, Manipulator) ?? true))
+                return;
+
             IsApplied = true;
             _Ctx.Refresh();
         }
@@ -151,6 +160,10 @@ namespace MonoMod.RuntimeDetour {
 
             if (!IsApplied)
                 return;
+
+            if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
+                return;
+
             IsApplied = false;
             _Ctx.Refresh();
         }
