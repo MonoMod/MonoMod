@@ -73,7 +73,7 @@ namespace MonoMod.UnitTest {
                     Before = new[] { "A" }
                 }
             )) {
-                Assert.Equal(17, TestMethod(2, 3));
+                TestMethod(2, 3);
                 Assert.Equal(expected, actual);
             }
 
