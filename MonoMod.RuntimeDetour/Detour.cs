@@ -261,11 +261,12 @@ namespace MonoMod.RuntimeDetour {
             if (!IsValid)
                 throw new ObjectDisposedException(nameof(Detour));
 
+            if (!IsApplied)
+                return;
+
             if (!(OnUndo?.InvokeWhileTrue(this) ?? true))
                 return;
 
-            if (!IsApplied)
-                return;
             IsApplied = false;
             _RefreshChain(Method);
         }
