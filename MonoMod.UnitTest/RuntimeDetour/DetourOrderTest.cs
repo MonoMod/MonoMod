@@ -28,13 +28,13 @@ namespace MonoMod.UnitTest {
                 "Default",
                 "AfterA",
                 "A",
-                "BeforeA"
+                "BeforeA",
             };
             string[] expected = {
                 order[1],
+                order[0], // "Default" can end up anywhere.
                 order[2],
                 order[3],
-                order[0]
             };
             List<string> actual = new List<string>();
 
