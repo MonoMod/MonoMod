@@ -11,6 +11,9 @@ namespace MonoMod.RuntimeDetour {
                 // OrderBy().ThenBy() fails for no reason on mono and .NET Core,
                 // but only on Linux and macOS, not on Windows.
 
+                if (detours.Count <= 1)
+                    return;
+
                 detours.Sort(GlobalIndex._);
                 Group group = new Group("Init", detours);
                 group.Step(BeforeAfterAll._);
@@ -36,7 +39,7 @@ namespace MonoMod.RuntimeDetour {
                 Items.AddRange(items);
             }
 
-            public void Step(IStep step) {
+            public void Step(Step step) {
                 if (Children.Count != 0) {
                     foreach (Group other in Children) {
                         other.Step(step);
@@ -47,6 +50,11 @@ namespace MonoMod.RuntimeDetour {
                 if (Items.Count <= 1)
                     return;
 
+                if (Items.Count == 2) {
+                    Items.Sort(step);
+                    return;
+                }
+
                 string stepName = step.GetType().Name;
 
                 Group group = new Group(stepName, new List<T>() { Items[0] });
@@ -55,16 +63,20 @@ namespace MonoMod.RuntimeDetour {
                 for (int i = 1; i < Items.Count; i++) {
                     T item = Items[i];
 
-                    if (group.Items.Any(otherItem => step.Compare(otherItem, item) != 0)) {
+                    if (step.Any(group.Items, item)) {
                         Group groupPrev = group;
                         group = null;
 
-                        foreach (Group otherGroup in Children) {
-                            if (otherGroup.Items.Any(otherItem => step.Compare(otherItem, item) != 0) ||
-                                otherGroup.NonMatching.Any(otherGroupNM => otherGroupNM.Items.Any(otherItem => step.Compare(otherItem, item) != 0)))
-                                continue;
-                            group = otherGroup;
-                            break;
+                        if (Children.Count > 1) {
+                            foreach (Group otherGroup in Children) {
+                                if (otherGroup == groupPrev)
+                                    continue;
+                                if (step.Any(otherGroup.Items, item) ||
+                                    step.Any(otherGroup.NonMatching, item))
+                                    continue;
+                                group = otherGroup;
+                                break;
+                            }
                         }
 
                         if (group == null) {
@@ -106,28 +118,45 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private interface IStep : IComparer<T> {
-            GroupComparer ForGroup { get; }
+        private abstract class Step : IComparer<T> {
+            public abstract GroupComparer ForGroup { get; }
+            public abstract int Compare(T x, T y);
+
+            public bool Any(List<T> xlist, T y) {
+                foreach (T x in xlist)
+                    if (Compare(x, y) != 0)
+                        return true;
+                return false;
+            }
+
+            public bool Any(List<Group> groups, T y) {
+                foreach (Group group in groups)
+                    if (Any(group.Items, y))
+                        return true;
+                return false;
+            }
         }
 
         private sealed class GroupComparer : IComparer<Group> {
-            public IStep Step;
-            public GroupComparer(IStep step) {
+            public Step Step;
+            public GroupComparer(Step step) {
                 Step = step;
             }
-            public int Compare(Group x, Group y) =>
-                x.Items.Select(xi =>
-                    y.Items.Select(yi =>
-                        Step.Compare(xi, yi)
-                    ).FirstOrDefault(d => d != 0)
-                ).FirstOrDefault(d => d != 0);
+            public int Compare(Group xg, Group yg) {
+                int d;
+                foreach (T x in xg.Items)
+                    foreach (T y in yg.Items)
+                        if ((d = Step.Compare(x, y)) != 0)
+                            return d;
+                return 0;
+            }
         }
 
-        private sealed class BeforeAfterAll : IStep {
+        private sealed class BeforeAfterAll : Step {
             public static readonly BeforeAfterAll _ = new BeforeAfterAll();
             public static readonly GroupComparer Group = new GroupComparer(_);
-            public GroupComparer ForGroup => Group;
-            public int Compare(T a, T b) {
+            public override GroupComparer ForGroup => Group;
+            public override int Compare(T a, T b) {
                 if (a.Before.Contains("*") && !b.Before.Contains("*"))
                     return -1;
                 if (a.After.Contains("*") && !b.After.Contains("*"))
@@ -137,11 +166,11 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private sealed class BeforeAfter : IStep {
+        private sealed class BeforeAfter : Step {
             public static readonly BeforeAfter _ = new BeforeAfter();
             public static readonly GroupComparer Group = new GroupComparer(_);
-            public GroupComparer ForGroup => Group;
-            public int Compare(T a, T b) {
+            public override GroupComparer ForGroup => Group;
+            public override int Compare(T a, T b) {
                 if (a.Before.Contains(b.ID))
                     return -1;
                 if (a.After.Contains(b.ID))
@@ -156,11 +185,11 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private sealed class Priority : IStep {
+        private sealed class Priority : Step {
             public static readonly Priority _ = new Priority();
             public static readonly GroupComparer Group = new GroupComparer(_);
-            public GroupComparer ForGroup => Group;
-            public int Compare(T a, T b) {
+            public override GroupComparer ForGroup => Group;
+            public override int Compare(T a, T b) {
                 int delta = a.Priority - b.Priority;
                 if (delta != 0)
                     return delta;
@@ -169,11 +198,11 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private sealed class GlobalIndex : IStep {
+        private sealed class GlobalIndex : Step {
             public static readonly GlobalIndex _ = new GlobalIndex();
             public static readonly GroupComparer Group = new GroupComparer(_);
-            public GroupComparer ForGroup => Group;
-            public int Compare(T a, T b) {
+            public override GroupComparer ForGroup => Group;
+            public override int Compare(T a, T b) {
                 return a.GlobalIndex.CompareTo(b.GlobalIndex);
             }
         }
