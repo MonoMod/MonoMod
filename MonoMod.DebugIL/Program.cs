@@ -13,7 +13,7 @@ namespace MonoMod.DebugIL {
 #if CECIL0_9
             throw new NotSupportedException();
 #else
-            Console.WriteLine("MonoMod.DebugIL " + typeof(Program).GetTypeInfo().Assembly.GetName().Version);
+            Console.WriteLine("MonoMod.DebugIL " + typeof(Program).Assembly.GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");

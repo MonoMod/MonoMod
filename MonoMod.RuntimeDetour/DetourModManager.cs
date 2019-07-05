@@ -1,5 +1,4 @@
-﻿#if !NETSTANDARD1_X
-using MonoMod.Cil;
+﻿using MonoMod.Cil;
 using MonoMod.RuntimeDetour.HookGen;
 using System;
 using System.Collections.Generic;
@@ -170,4 +169,3 @@ namespace MonoMod.RuntimeDetour {
         }
     }
 }
-#endif

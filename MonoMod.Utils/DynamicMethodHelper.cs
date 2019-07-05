@@ -70,7 +70,7 @@ namespace MonoMod.Utils {
             int id = AddReference(obj);
             il.Emit(SRE.OpCodes.Ldc_I4, id);
             il.Emit(SRE.OpCodes.Call, _GetReference);
-            if (t.GetTypeInfo().IsValueType)
+            if (t.IsValueType)
                 il.Emit(SRE.OpCodes.Unbox_Any, t);
             return id;
         }
@@ -83,7 +83,7 @@ namespace MonoMod.Utils {
             int id = AddReference(obj);
             il.Emit(CIL.OpCodes.Ldc_I4, id);
             il.Emit(CIL.OpCodes.Call, _GetReference);
-            if (t.GetTypeInfo().IsValueType)
+            if (t.IsValueType)
                 il.Emit(CIL.OpCodes.Unbox_Any, t);
             return id;
         }
@@ -95,7 +95,7 @@ namespace MonoMod.Utils {
             Type t = typeof(T);
             il.Emit(SRE.OpCodes.Ldc_I4, id);
             il.Emit(SRE.OpCodes.Call, _GetReference);
-            if (t.GetTypeInfo().IsValueType)
+            if (t.IsValueType)
                 il.Emit(SRE.OpCodes.Unbox_Any, t);
             return id;
         }
@@ -107,7 +107,7 @@ namespace MonoMod.Utils {
             Type t = typeof(T);
             il.Emit(CIL.OpCodes.Ldc_I4, id);
             il.Emit(CIL.OpCodes.Call, _GetReference);
-            if (t.GetTypeInfo().IsValueType)
+            if (t.IsValueType)
                 il.Emit(CIL.OpCodes.Unbox_Any, t);
             return id;
         }

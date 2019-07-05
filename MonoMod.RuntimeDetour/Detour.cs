@@ -181,22 +181,22 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public Detour(Delegate from, IntPtr to, ref DetourConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public Detour(Delegate from, IntPtr to, DetourConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public Detour(Delegate from, IntPtr to)
-            : this(from.GetMethodInfo(), to) {
+            : this(from.Method, to) {
         }
         public Detour(Delegate from, Delegate to, ref DetourConfig config)
-            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
+            : this(from.Method, to.Method, ref config) {
         }
         public Detour(Delegate from, Delegate to, DetourConfig config)
-            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
+            : this(from.Method, to.Method, ref config) {
         }
         public Detour(Delegate from, Delegate to)
-            : this(from.GetMethodInfo(), to.GetMethodInfo()) {
+            : this(from.Method, to.Method) {
         }
 
         public Detour(Expression from, IntPtr to, ref DetourConfig config)

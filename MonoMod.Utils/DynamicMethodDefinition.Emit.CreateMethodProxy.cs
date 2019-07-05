@@ -59,7 +59,7 @@ namespace MonoMod.Utils {
                 bool argIsByRef = argType.IsByRef;
                 if (argIsByRef)
                     argType = argType.GetElementType();
-                bool argIsValueType = argType.GetTypeInfo().IsValueType;
+                bool argIsValueType = argType.IsValueType;
                 if (argIsValueType) {
                     il.Emit(OpCodes.Box, argType);
                 }

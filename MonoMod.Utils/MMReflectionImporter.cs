@@ -13,14 +13,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Security;
 
-#if NETSTANDARD
-using TypeOrTypeInfo = System.Reflection.TypeInfo;
-using static System.Reflection.IntrospectionExtensions;
-using static System.Reflection.TypeExtensions;
-#else
-using TypeOrTypeInfo = System.Type;
-#endif
-
 namespace MonoMod.Utils {
     public sealed class MMReflectionImporter : IReflectionImporter {
 
@@ -45,12 +37,7 @@ namespace MonoMod.Utils {
         private readonly Dictionary<FieldInfo, FieldReference> CachedFields = new Dictionary<FieldInfo, FieldReference>();
         private readonly Dictionary<MethodBase, MethodReference> CachedMethods = new Dictionary<MethodBase, MethodReference>();
 
-        public bool UseDefault =
-#if NETSTANDARD
-            false;
-#else
-            false;
-#endif
+        public bool UseDefault = false;
 
         private readonly Dictionary<Type, TypeReference> ElementTypes;
 
@@ -73,9 +60,7 @@ namespace MonoMod.Utils {
                 { typeof(float), module.TypeSystem.Single },
                 { typeof(double), module.TypeSystem.Double },
                 { typeof(string), module.TypeSystem.String },
-#if !NETSTANDARD1_X
                 { typeof(TypedReference), module.TypeSystem.TypedReference },
-#endif
                 { typeof(IntPtr), module.TypeSystem.IntPtr },
                 { typeof(UIntPtr), module.TypeSystem.UIntPtr },
                 { typeof(object), module.TypeSystem.Object },
@@ -112,9 +97,7 @@ namespace MonoMod.Utils {
                         Array a = Array.CreateInstance(type, new int[type.GetArrayRank()]);
                         if (
                             at.Rank > 1
-#if !NETSTANDARD1_X
                             && a.IsFixedSize
-#endif
                         ) {
                             for (int i = 0; i < at.Rank; i++)
                                 at.Dimensions[i] = new ArrayDimension(a.GetLowerBound(i), a.GetUpperBound(i));
@@ -129,10 +112,8 @@ namespace MonoMod.Utils {
                 }
             }
 
-            TypeOrTypeInfo typeInfo = type.GetTypeInfo();
-
-            bool isGeneric = typeInfo.IsGenericType;
-            if (isGeneric && !typeInfo.IsGenericTypeDefinition) {
+            bool isGeneric = type.IsGenericType;
+            if (isGeneric && !type.IsGenericTypeDefinition) {
                 GenericInstanceType git = new GenericInstanceType(ImportReference(type.GetGenericTypeDefinition(), context));
                 foreach (Type arg in type.GetGenericArguments())
                     git.GenericArguments.Add(ImportReference(arg, context));
@@ -140,7 +121,7 @@ namespace MonoMod.Utils {
             }
 
             if (type.IsGenericParameter)
-                return CachedTypes[type] = ImportGenericParameter(type, typeInfo, context);
+                return CachedTypes[type] = ImportGenericParameter(type, context);
 
             if (ElementTypes.TryGetValue(type, out typeRef))
                 return CachedTypes[type] = typeRef;
@@ -149,8 +130,8 @@ namespace MonoMod.Utils {
 				string.Empty,
 				type.Name,
 				Module,
-				ImportReference(typeInfo.Assembly.GetName()),
-                typeInfo.IsValueType
+				ImportReference(type.Assembly.GetName()),
+                type.IsValueType
             );
 
             if (type.IsNested)
@@ -158,16 +139,16 @@ namespace MonoMod.Utils {
             else if (type.Namespace != null)
                 typeRef.Namespace = type.Namespace;
 
-            if (typeInfo.IsGenericType)
+            if (type.IsGenericType)
                 foreach (Type param in type.GetGenericArguments())
                     typeRef.GenericParameters.Add(new GenericParameter(param.Name, typeRef));
 
             return CachedTypes[type] = typeRef;
         }
 
-        private static TypeReference ImportGenericParameter(Type type, TypeOrTypeInfo typeInfo, IGenericParameterProvider context) {
+        private static TypeReference ImportGenericParameter(Type type, IGenericParameterProvider context) {
             if (context is MethodReference ctxMethodRef) {
-                MethodBase dclMethod = typeInfo.DeclaringMethod;
+                MethodBase dclMethod = type.DeclaringMethod;
                 if (dclMethod != null) {
                     return ctxMethodRef.GenericParameters[type.GenericParameterPosition];
                 } else {
@@ -178,17 +159,16 @@ namespace MonoMod.Utils {
             Type dclType = type.DeclaringType;
             if (dclType == null)
                 throw new InvalidOperationException();
-            TypeOrTypeInfo dclTypeInfo = dclType.GetTypeInfo();
 
             if (context is TypeReference ctxTypeRef) {
                 while (ctxTypeRef != null) {
                     // TODO: Possibly more lightweight type check!
 
                     TypeReference ctxTypeRefEl = ctxTypeRef.GetElementType();
-                    if (ctxTypeRefEl.Is(dclTypeInfo))
+                    if (ctxTypeRefEl.Is(dclType))
                         return ctxTypeRefEl.GenericParameters[type.GenericParameterPosition];
 
-                    if (ctxTypeRef.Is(dclTypeInfo))
+                    if (ctxTypeRef.Is(dclType))
                         return ctxTypeRef.GenericParameters[type.GenericParameterPosition];
 
                     ctxTypeRef = ctxTypeRef.DeclaringType;
@@ -207,20 +187,14 @@ namespace MonoMod.Utils {
                 return CachedFields[field] = Default.ImportReference(field, context);
 
             Type declType = field.DeclaringType;
-            TypeOrTypeInfo declTypeInfo = declType.GetTypeInfo();
             TypeReference declaringType = ImportReference(declType, context);
 
             FieldInfo fieldOrig = field;
-            if (declTypeInfo.IsGenericType) {
+            if (declType.IsGenericType) {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
-#if !NETSTANDARD1_X
                 // Luckily the metadata tokens match up.
                 field = field.Module.ResolveField(field.MetadataToken);
-#else
-                // ... unless we're targetting .NET Standard 1.X.
-                // FIXME: Implement resolving the generic declaring type's definition field definition.
-#endif
             }
 
             return CachedFields[fieldOrig] = new FieldReference(
@@ -247,7 +221,6 @@ namespace MonoMod.Utils {
             }
 
             Type declType = method.DeclaringType;
-            TypeOrTypeInfo declTypeInfo = declType.GetTypeInfo();
             methodRef = new MethodReference(
                 method.Name,
                 ImportReference(typeof(void), context),
@@ -260,16 +233,11 @@ namespace MonoMod.Utils {
                 methodRef.CallingConvention = MethodCallingConvention.VarArg;
 
             MethodBase methodOrig = method;
-            if (declTypeInfo.IsGenericType) {
+            if (declType.IsGenericType) {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
-#if !NETSTANDARD1_X
                 // Luckily the metadata tokens match up.
                 method = method.Module.ResolveMethod(method.MetadataToken);
-#else
-                // ... unless we're targetting .NET Standard 1.X.
-                // FIXME: Implement resolving the generic declaring type's definition method definition.
-#endif
             }
 
             if (method.IsGenericMethodDefinition)

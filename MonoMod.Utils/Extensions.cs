@@ -151,7 +151,7 @@ namespace MonoMod.Utils {
 
             Delegate[] delegates = source.GetInvocationList();
             if (delegates.Length == 1)
-                return NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].GetMethodInfo());
+                return NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
 
             Delegate[] delegatesDest = new Delegate[delegates.Length];
             for (int i = 0; i < delegates.Length; i++)
@@ -178,7 +178,7 @@ namespace MonoMod.Utils {
             try {
                 Delegate[] delegates = source.GetInvocationList();
                 if (delegates.Length == 1) {
-                    result = NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].GetMethodInfo());
+                    result = NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
                     return true;
                 }
 
@@ -261,18 +261,16 @@ namespace MonoMod.Utils {
 
             // TODO: Check delegate Invoke parameters against method parameters.
 
-#if NETSTANDARD1_X
-            // Built-in CreateDelegate is available in .NET Standard 1.X+
+#if NETSTANDARD
+            // Built-in CreateDelegate is available in .NET Standard
             if (method is System.Reflection.MethodInfo mi)
                 return mi.CreateDelegate(delegateType, target);
+#endif
 
-            throw new NotSupportedException();
-#else
             RuntimeMethodHandle handle = method.MethodHandle;
             RuntimeHelpers.PrepareMethod(handle);
             IntPtr ptr = handle.GetFunctionPointer();
             return (Delegate) Activator.CreateInstance(delegateType, target, ptr);
-#endif
         }
 
         private static readonly Dictionary<Type, int> _GetManagedSizeCache = new Dictionary<Type, int>() {
@@ -327,10 +325,10 @@ namespace MonoMod.Utils {
             if (type == other)
                 return true;
 
-            if (type.GetTypeInfo().IsAssignableFrom(other.GetTypeInfo()))
+            if (type.IsAssignableFrom(other))
                 return true;
 
-            if (other.GetTypeInfo().IsEnum && IsCompatible(type, Enum.GetUnderlyingType(other)))
+            if (other.IsEnum && IsCompatible(type, Enum.GetUnderlyingType(other)))
                 return true;
 
             return false;
@@ -338,7 +336,7 @@ namespace MonoMod.Utils {
 
         public static Type GetThisParamType(this MethodBase method) {
             Type type = method.DeclaringType;
-            if (type.GetTypeInfo().IsValueType)
+            if (type.IsValueType)
                 type = type.MakeByRefType();
             return type;
         }

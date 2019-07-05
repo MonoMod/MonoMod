@@ -220,13 +220,7 @@ namespace MonoMod.Utils {
                 }
 
                 if (!found)
-                    throw new
-#if NETSTANDARD1_X
-                        Exception
-#else
-                        EntryPointNotFoundException
-#endif
-                        ($"No matching entry point found for {field.Name} in {field.DeclaringType.FullName}");
+                    throw new EntryPointNotFoundException($"No matching entry point found for {field.Name} in {field.DeclaringType.FullName}");
             }
         }
 

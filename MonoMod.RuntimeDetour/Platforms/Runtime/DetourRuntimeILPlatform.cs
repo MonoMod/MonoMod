@@ -114,18 +114,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
         #endregion
 
         protected virtual IntPtr GetFunctionPointer(RuntimeMethodHandle handle)
-#if NETSTANDARD1_X
-            => throw new NotSupportedException();
-#else
             => handle.GetFunctionPointer();
-#endif
 
         protected virtual void PrepareMethod(RuntimeMethodHandle handle)
-#if NETSTANDARD1_X
-            => throw new NotSupportedException();
-#else
             => RuntimeHelpers.PrepareMethod(handle);
-#endif
 
         public IntPtr GetNativeStart(MethodBase method) {
             bool pinGot;
@@ -199,7 +191,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 fromInfo != null && !from.IsStatic &&
                 toInfo != null && to.IsStatic &&
                 fromInfo.ReturnType == toInfo.ReturnType &&
-                fromInfo.ReturnType.GetTypeInfo().IsValueType) {
+                fromInfo.ReturnType.IsValueType) {
 
                 int size = fromInfo.ReturnType.GetManagedSize();
                 if (size == 3 || size == 5 || size == 6 || size == 7 || size >= 9) {

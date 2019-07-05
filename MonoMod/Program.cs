@@ -12,7 +12,7 @@ namespace MonoMod {
 
 #if !MONOMOD_NO_ENTRY
         public static int Main(string[] args) {
-            Console.WriteLine("MonoMod " + typeof(Program).GetTypeInfo().Assembly.GetName().Version);
+            Console.WriteLine("MonoMod " + typeof(Program).Assembly.GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");

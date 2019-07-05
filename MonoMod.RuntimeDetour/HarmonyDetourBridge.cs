@@ -165,22 +165,13 @@ namespace MonoMod.RuntimeDetour {
                     .Where(method => method.Name == name);
 
             return new MethodInfo[] {
-#if NETSTANDARD1_X
-                type
-                .GetMethod(
-                    name,
-                    ctx.GetParameters().Skip(skipParams).Select(p => p.ParameterType).ToArray()
-                )
-#else
-                type
-                .GetMethod(
+                type.GetMethod(
                     name,
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static,
                     null,
                     ctx.GetParameters().Skip(skipParams).Select(p => p.ParameterType).ToArray(),
                     null
                 )
-#endif
             };
         }
 
@@ -405,7 +396,6 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private static Assembly _FindHarmony() {
-#if !NETSTANDARD1_X
             foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies()) {
                 if (asm.GetName().Name == "0Harmony" || asm.GetName().Name == "Harmony" ||
                     asm.GetType("Harmony.HarmonyInstance") != null ||
@@ -413,10 +403,9 @@ namespace MonoMod.RuntimeDetour {
                     return asm;
                 }
             }
-#endif
             return
-                System.Type.GetType("Harmony.HarmonyInstance", false, false)?.GetTypeInfo()?.Assembly ??
-                System.Type.GetType("HarmonyLib.Harmony", false, false)?.GetTypeInfo()?.Assembly;
+                System.Type.GetType("Harmony.HarmonyInstance", false, false)?.Assembly ??
+                System.Type.GetType("HarmonyLib.Harmony", false, false)?.Assembly;
         }
 
     }

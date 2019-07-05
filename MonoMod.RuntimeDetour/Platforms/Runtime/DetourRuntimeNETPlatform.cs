@@ -27,37 +27,14 @@ namespace MonoMod.RuntimeDetour.Platforms {
             _RuntimeHelpers__CompileMethod != null &&
             _RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
 
-#if NETSTANDARD1_X
-        private static readonly MethodInfo _MethodBase_get_MethodHandle =
-            typeof(MethodBase).GetMethod("get_MethodHandle", BindingFlags.Public | BindingFlags.Instance);
-
-        private static readonly MethodInfo _IRuntimeMethodInfo_get_Value =
-            typeof(RuntimeMethodHandle).GetTypeInfo().Assembly
-            .GetType("System.IRuntimeMethodInfo").GetMethod("get_Value", BindingFlags.Public | BindingFlags.Instance);
-        private static readonly MethodInfo _RuntimeMethodHandle_GetFunctionPointer =
-            typeof(RuntimeMethodHandle).GetMethod("GetFunctionPointer", BindingFlags.NonPublic | BindingFlags.Static);
-
-        // .NET Core 1.0.0 should have GetFunctionPointer, but it only has got its internal static counterpart.
-        protected override IntPtr GetFunctionPointer(RuntimeMethodHandle handle)
-            => (IntPtr) _RuntimeMethodHandle_GetFunctionPointer.Invoke(null, new object[] { _IRuntimeMethodInfo_get_Value.Invoke(_RuntimeMethodHandle_m_value.GetValue(handle), _NoArgs) });
-
-        // .NET Core 1.0.0 should have PrepareMethod, but it has only got _CompileMethod.
-        // Let's hope that it works as well.
-        protected override void PrepareMethod(RuntimeMethodHandle handle)
-            => _RuntimeHelpers__CompileMethod.Invoke(null, new object[] { _RuntimeMethodHandle_m_value.GetValue(handle) });
-#endif
-
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             // Compile the method handle before getting our hands on the final method handle.
             if (method is DynamicMethod dm) {
-#if !NETSTANDARD1_X
                 if (_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                     // mscorlib 2.0.0.0
                     _RuntimeHelpers__CompileMethod.Invoke(null, new object[] { ((RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, _NoArgs)).Value });
 
-                } else
-#endif
-                if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
+                } else if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
                     // mscorlib 4.0.0.0
                     _RuntimeHelpers__CompileMethod.Invoke(null, new object[] { _RuntimeMethodHandle_m_value.GetValue(((RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, _NoArgs))) });
 
@@ -77,11 +54,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     return (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(method, _NoArgs);
             }
 
-#if NETSTANDARD1_X
-            return (RuntimeMethodHandle) _MethodBase_get_MethodHandle.Invoke(method, _NoArgs);
-#else
             return method.MethodHandle;
-#endif
         }
     }
 }

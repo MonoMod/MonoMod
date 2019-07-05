@@ -9,11 +9,6 @@ using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.IO;
-#if !NETSTANDARD
-using System.Security.Permissions;
-using System.Security;
-using System.Diagnostics.SymbolStore;
-#endif
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition {
@@ -37,9 +32,7 @@ namespace MonoMod.Utils {
 #endif
                 });
 
-#if !NETSTANDARD1_X
                 module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(c_UnverifiableCodeAttribute)));
-#endif
 
                 if (Debug) {
                     CustomAttribute caDebug = new CustomAttribute(module.ImportReference(c_DebuggableAttribute));

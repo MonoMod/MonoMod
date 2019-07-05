@@ -9,11 +9,9 @@ using Mono.Cecil.Cil;
 using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
-#if !NETSTANDARD
 using System.Security.Permissions;
 using System.Security;
 using System.Diagnostics.SymbolStore;
-#endif
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition {
@@ -73,7 +71,7 @@ namespace MonoMod.Utils {
                     offs++;
                     argTypes = new Type[Definition.Parameters.Count + 1];
                     Type type = Definition.DeclaringType.ResolveReflection();
-                    if (type.GetTypeInfo().IsValueType)
+                    if (type.IsValueType)
                         type = type.MakeByRefType();
                     argTypes[0] = type;
                 } else {
@@ -192,7 +190,7 @@ namespace MonoMod.Utils {
                     argTypesModReq = new Type[Definition.Parameters.Count + 1][];
                     argTypesModOpt = new Type[Definition.Parameters.Count + 1][];
                     Type type = Definition.DeclaringType.ResolveReflection();
-                    if (type.GetTypeInfo().IsValueType)
+                    if (type.IsValueType)
                         type = type.MakeByRefType();
                     argTypes[0] = type;
                     argTypesModReq[0] = Type.EmptyTypes;

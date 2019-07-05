@@ -2,11 +2,6 @@
 using MonoMod.Utils;
 using System;
 
-#if NETSTANDARD
-using static System.Reflection.IntrospectionExtensions;
-using static System.Reflection.TypeExtensions;
-#endif
-
 namespace MonoMod.InlineRT {
     public static partial class MonoModRule {
 

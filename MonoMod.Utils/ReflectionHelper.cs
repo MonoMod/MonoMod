@@ -10,13 +10,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO;
 
-#if NETSTANDARD
-using TypeOrTypeInfo = System.Reflection.TypeInfo;
-using static System.Reflection.IntrospectionExtensions;
-#else
-using TypeOrTypeInfo = System.Type;
-#endif
-
 namespace MonoMod.Utils {
     public static class ReflectionHelper {
 
@@ -24,16 +17,6 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
-
-#if NETSTANDARD1_X
-        private static readonly Type t_AssemblyLoadContext =
-            typeof(Assembly).GetTypeInfo().Assembly
-            .GetType("System.Runtime.Loader.AssemblyLoadContext");
-        private static readonly object _AssemblyLoadContext_Default =
-            t_AssemblyLoadContext.GetProperty("Default").GetValue(null);
-        private static readonly MethodInfo _AssemblyLoadContext_LoadFromStream =
-            t_AssemblyLoadContext.GetMethod("LoadFromStream", new Type[] { typeof(Stream) });
-#endif
 
         private static MemberInfo _Cache(MemberReference key, MemberInfo value) {
             if (key != null && value != null) {
@@ -55,11 +38,6 @@ namespace MonoMod.Utils {
         public static Assembly Load(Stream stream) {
             Assembly asm;
 
-#if NETSTANDARD1_X
-            // System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(asmStream);
-            asm = (Assembly) _AssemblyLoadContext_LoadFromStream.Invoke(_AssemblyLoadContext_Default, new object[] { stream });
-#else
-
             if (stream is MemoryStream ms) {
                 asm = Assembly.Load(ms.GetBuffer());
             } else {
@@ -79,18 +57,15 @@ namespace MonoMod.Utils {
                     asm = Assembly.Load(copy.GetBuffer());
                 }
             }
-#endif
 
-#if !NETSTANDARD1_X
             AppDomain.CurrentDomain.AssemblyResolve +=
                 (s, e) => e.Name == asm.FullName ? asm : null;
-#endif
 
             return asm;
         }
 
         public static Type ResolveReflection(this TypeReference mref)
-            => (_ResolveReflection(mref, null) as TypeOrTypeInfo).AsType();
+            => _ResolveReflection(mref, null) as Type;
         public static MethodBase ResolveReflection(this MethodReference mref)
             => _ResolveReflection(mref, null) as MethodBase;
         public static FieldInfo ResolveReflection(this FieldReference mref)
@@ -112,7 +87,7 @@ namespace MonoMod.Utils {
                     return cached;
             }
 
-            TypeOrTypeInfo type;
+            Type type;
 
             // Special cases.
             if (mref is GenericParameter genParam) {
@@ -122,13 +97,13 @@ namespace MonoMod.Utils {
 
             if (mref is MethodReference method && mref.DeclaringType is ArrayType) {
                 // ArrayType holds special methods.
-                type = _ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo;
+                type = _ResolveReflection(mref.DeclaringType, modules) as Type;
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
                 string methodID = method.GetFindableID(withType: false);
                 MethodBase found = 
-                    type.AsType().GetMethods(_BindingFlagsAll).Cast<MethodBase>()
-                    .Concat(type.AsType().GetConstructors(_BindingFlagsAll))
+                    type.GetMethods(_BindingFlagsAll).Cast<MethodBase>()
+                    .Concat(type.GetConstructors(_BindingFlagsAll))
                     .FirstOrDefault(m => m.GetFindableID(withType: false) == methodID);
                 if (found != null)
                     return _Cache(mref, found);
@@ -167,14 +142,12 @@ namespace MonoMod.Utils {
                 Assembly asm = null;
                 lock (AssemblyCache) {
                     if (!AssemblyCache.TryGetValue(asmName, out asm)) {
-#if !NETSTANDARD1_X
                         asm =
                             AppDomain.CurrentDomain.GetAssemblies()
                             .FirstOrDefault(other => {
                                 AssemblyName name = other.GetName();
                                 return name.Name == asmName || name.FullName == asmName;
                             });
-#endif
                         if (asm == null)
                             asm = Assembly.Load(new AssemblyName(asmName));
                         AssemblyCache[asmName] = asm;
@@ -188,32 +161,30 @@ namespace MonoMod.Utils {
                     throw new ArgumentException("Type <Module> cannot be resolved to a runtime reflection type");
 
                 if (mref is TypeSpecification ts) {
-                    type = _ResolveReflection(ts.ElementType, null) as TypeOrTypeInfo;
+                    type = _ResolveReflection(ts.ElementType, null) as Type;
                     if (type == null)
                         return null;
 
                     if (ts.IsByReference)
-                        return ResolveReflectionCache[mref.FullName] = type.MakeByRefType().GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = type.MakeByRefType();
 
                     if (ts.IsPointer)
-                        return ResolveReflectionCache[mref.FullName] = type.MakePointerType().GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = type.MakePointerType();
 
                     if (ts.IsArray)
-                        return ResolveReflectionCache[mref.FullName] = (ts as ArrayType).IsVector ? type.MakeArrayType().GetTypeInfo() : type.MakeArrayType((ts as ArrayType).Dimensions.Count).GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = (ts as ArrayType).IsVector ? type.MakeArrayType() : type.MakeArrayType((ts as ArrayType).Dimensions.Count);
 
                     if (ts.IsGenericInstance)
-                        return ResolveReflectionCache[mref.FullName] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray()).GetTypeInfo();
+                        return ResolveReflectionCache[mref.FullName] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
 
                 } else {
                     type = modules
-                        .Select(module => module.GetType(mref.FullName.Replace("/", "+"), false, false).GetTypeInfo())
+                        .Select(module => module.GetType(mref.FullName.Replace("/", "+"), false, false))
                         .FirstOrDefault(m => m != null);
-#if !NETSTANDARD1_X
                     if (type == null)
                         type = modules
-                            .Select(module => module.GetTypes().FirstOrDefault(m => mref.Is(m)).GetTypeInfo())
+                            .Select(module => module.GetTypes().FirstOrDefault(m => mref.Is(m)))
                             .FirstOrDefault(m => m != null);
-#endif
                 }
 
                 return _Cache(mref, type);
@@ -225,7 +196,7 @@ namespace MonoMod.Utils {
 
             if (mref is GenericInstanceMethod mrefGenMethod) {
                 member = _ResolveReflection(mrefGenMethod.ElementMethod, modules);
-                member = (member as MethodInfo)?.MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => (_ResolveReflection(arg, null) as TypeOrTypeInfo).AsType()).ToArray());
+                member = (member as MethodInfo)?.MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
 
             } else if (typeless) {
                 if (mref is MethodReference)
@@ -240,7 +211,7 @@ namespace MonoMod.Utils {
                     throw new NotSupportedException($"Unsupported <Module> member type {mref.GetType().FullName}");
 
             } else {
-                Type declType = (_ResolveReflection(mref.DeclaringType, modules) as TypeOrTypeInfo).AsType();
+                Type declType = _ResolveReflection(mref.DeclaringType, modules) as Type;
 
                 if (mref is MethodReference)
                     member = declType

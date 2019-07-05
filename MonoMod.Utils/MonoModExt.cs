@@ -9,14 +9,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-#if NETSTANDARD
-using TypeOrTypeInfo = System.Reflection.TypeInfo;
-using static System.Reflection.IntrospectionExtensions;
-using static System.Reflection.TypeExtensions;
-#else
-using TypeOrTypeInfo = System.Type;
-#endif
-
 namespace MonoMod.Utils {
     [MonoMod__OldName__("MonoMod.Relinker")]
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
@@ -417,7 +409,7 @@ namespace MonoMod.Utils {
                 mrefDecl = null;
 
             if (mref is GenericParameter genParamRef) {
-                if (!(minfo is TypeOrTypeInfo genParamInfo))
+                if (!(minfo is Type genParamInfo))
                     return false;
                 
                 if (!genParamInfo.IsGenericParameter) {
@@ -441,16 +433,15 @@ namespace MonoMod.Utils {
 
                 Type declType = minfo.DeclaringType;
 
-                if (minfo is TypeOrTypeInfo) {
+                if (minfo is Type) {
                     // Note: type.DeclaringType is supposed to == type.DeclaringType.GetGenericTypeDefinition()
                     // For whatever reason, old versions of mono (f.e. shipped with Unity 5.0.3) break this,
                     // requiring us to call .GetGenericTypeDefinition() manually instead.
-                    TypeOrTypeInfo declTypeInfo = declType.GetTypeInfo();
-                    if (declTypeInfo.IsGenericType && !declTypeInfo.IsGenericTypeDefinition)
+                    if (declType.IsGenericType && !declType.IsGenericTypeDefinition)
                         declType = declType.GetGenericTypeDefinition();
                 }
 
-                if (!mrefDecl.Is(declType.GetTypeInfo()))
+                if (!mrefDecl.Is(declType))
                     return false;
 
             } else if (mrefDecl != null)
@@ -461,7 +452,7 @@ namespace MonoMod.Utils {
                 return false;
 
             if (mref is TypeReference typeRef) {
-                if (!(minfo is TypeOrTypeInfo typeInfo))
+                if (!(minfo is Type typeInfo))
                     return false;
 
                 if (typeInfo.IsGenericParameter)
@@ -472,28 +463,28 @@ namespace MonoMod.Utils {
                         return false;
 
                     Collection<TypeReference> gparamRefs = genTypeRef.GenericArguments;
-                    Type[] gparamInfos = typeInfo.AsType().GetGenericArguments();
+                    Type[] gparamInfos = typeInfo.GetGenericArguments();
                     if (gparamRefs.Count != gparamInfos.Length)
                         return false;
 
                     for (int i = 0; i < gparamRefs.Count; i++) {
-                        if (!gparamRefs[i].Is(gparamInfos[i].GetTypeInfo()))
+                        if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
 
-                    return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition().GetTypeInfo());
+                    return genTypeRef.ElementType.Is(typeInfo.GetGenericTypeDefinition());
 
                 } else if (typeRef.HasGenericParameters) {
                     if (!typeInfo.IsGenericType)
                         return false;
 
                     Collection<GenericParameter> gparamRefs = typeRef.GenericParameters;
-                    Type[] gparamInfos = typeInfo.AsType().GetGenericArguments();
+                    Type[] gparamInfos = typeInfo.GetGenericArguments();
                     if (gparamRefs.Count != gparamInfos.Length)
                         return false;
 
                     for (int i = 0; i < gparamRefs.Count; i++) {
-                        if (!gparamRefs[i].Is(gparamInfos[i].GetTypeInfo()))
+                        if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
 
@@ -504,26 +495,26 @@ namespace MonoMod.Utils {
                     if (!typeInfo.IsArray)
                         return false;
 
-                    return arrayTypeRef.Dimensions.Count == typeInfo.GetArrayRank() && arrayTypeRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
+                    return arrayTypeRef.Dimensions.Count == typeInfo.GetArrayRank() && arrayTypeRef.ElementType.Is(typeInfo.GetElementType());
                 }
 
                 if (mref is ByReferenceType byRefTypeRef) {
                     if (!typeInfo.IsByRef)
                         return false;
 
-                    return byRefTypeRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
+                    return byRefTypeRef.ElementType.Is(typeInfo.GetElementType());
                 }
 
                 if (mref is PointerType ptrTypeRef) {
                     if (!typeInfo.IsPointer)
                         return false;
 
-                    return ptrTypeRef.ElementType.Is(typeInfo.GetElementType().GetTypeInfo());
+                    return ptrTypeRef.ElementType.Is(typeInfo.GetElementType());
                 }
 
                 if (mref is TypeSpecification typeSpecRef)
                     // Note: There are TypeSpecifications which map to non-ElementType-y reflection Types.
-                    return typeSpecRef.ElementType.Is(typeInfo.HasElementType ? typeInfo.GetElementType().GetTypeInfo() : typeInfo);
+                    return typeSpecRef.ElementType.Is(typeInfo.HasElementType ? typeInfo.GetElementType() : typeInfo);
 
                 // DeclaringType was already checked before.
                 // Avoid converting nested type separators between + (.NET) and / (cecil)
@@ -551,7 +542,7 @@ namespace MonoMod.Utils {
                         return false;
 
                     for (int i = 0; i < gparamRefs.Count; i++) {
-                        if (!gparamRefs[i].Is(gparamInfos[i].GetTypeInfo()))
+                        if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
 
@@ -567,7 +558,7 @@ namespace MonoMod.Utils {
                         return false;
 
                     for (int i = 0; i < gparamRefs.Count; i++) {
-                        if (!gparamRefs[i].Is(gparamInfos[i].GetTypeInfo()))
+                        if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
 
@@ -591,13 +582,13 @@ namespace MonoMod.Utils {
                     return paramTypeRef.Relink(resolver, null);
                 }
 
-                if (!ResolveParameter(methodRef.ReturnType).Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void)).GetTypeInfo()) &&
-                    !methodRef.ReturnType.Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void)).GetTypeInfo()))
+                if (!ResolveParameter(methodRef.ReturnType).Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void))) &&
+                    !methodRef.ReturnType.Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void))))
                     return false;
 
                 for (int i = 0; i < paramRefs.Count; i++)
-                    if (!ResolveParameter(paramRefs[i].ParameterType).Is(paramInfos[i].ParameterType.GetTypeInfo()) &&
-                        !paramRefs[i].ParameterType.Is(paramInfos[i].ParameterType.GetTypeInfo()))
+                    if (!ResolveParameter(paramRefs[i].ParameterType).Is(paramInfos[i].ParameterType) &&
+                        !paramRefs[i].ParameterType.Is(paramInfos[i].ParameterType))
                         return false;
 
                 return true;
@@ -1012,7 +1003,7 @@ namespace MonoMod.Utils {
             return null;
         }
         public static System.Reflection.MethodInfo FindMethodDeep(this Type type, string findableID, bool simple = true) {
-            return type.FindMethod(findableID, simple) ?? type.GetTypeInfo().BaseType?.FindMethodDeep(findableID, simple);
+            return type.FindMethod(findableID, simple) ?? type.BaseType?.FindMethodDeep(findableID, simple);
         }
         public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
             foreach (PropertyDefinition prop in type.Properties)

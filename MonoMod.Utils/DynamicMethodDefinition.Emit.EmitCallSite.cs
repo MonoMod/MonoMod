@@ -38,10 +38,10 @@ namespace MonoMod.Utils {
             ?.CreateFastDelegate();
 
         private static readonly FieldInfo f_DynILGen_m_scope =
-            typeof(ILGenerator).GetTypeInfo().Assembly
+            typeof(ILGenerator).Assembly
             .GetType("System.Reflection.Emit.DynamicILGenerator")?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo f_DynScope_m_tokens =
-            typeof(ILGenerator).GetTypeInfo().Assembly
+            typeof(ILGenerator).Assembly
             .GetType("System.Reflection.Emit.DynamicScope")?.GetField("m_tokens", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Based on https://referencesource.microsoft.com/#mscorlib/system/reflection/mdimport.cs,74bfbae3c61889bc
@@ -291,7 +291,7 @@ namespace MonoMod.Utils {
 
             void AddOneArgTypeHelper(Type clsArgument) { AddOneArgTypeHelperWorker(clsArgument, false); }
             void AddOneArgTypeHelperWorker(Type clsArgument, bool lastWasGenericInst) {
-                if (clsArgument.GetTypeInfo().IsGenericType && (!clsArgument.GetTypeInfo().IsGenericTypeDefinition || !lastWasGenericInst)) {
+                if (clsArgument.IsGenericType && (!clsArgument.IsGenericTypeDefinition || !lastWasGenericInst)) {
                     AddElementType(0x15 /* CorElementType.GenericInst */);
 
                     AddOneArgTypeHelperWorker(clsArgument.GetGenericTypeDefinition(), true);
@@ -344,7 +344,7 @@ namespace MonoMod.Utils {
                     if (type == 0) {
                         if (clsArgument == typeof(object)) {
                             type = 0x1C /* CorElementType.Object */;
-                        } else if (clsArgument.GetTypeInfo().IsValueType) {
+                        } else if (clsArgument.IsValueType) {
                             type = 0x11 /* CorElementType.ValueType */;
                         } else {
                             // Let's hope for the best.
@@ -359,7 +359,7 @@ namespace MonoMod.Utils {
                         type == 0x1C /* CorElementType.Object */
                     ) {
                         AddElementType(type);
-                    } else if (clsArgument.GetTypeInfo().IsValueType) {
+                    } else if (clsArgument.IsValueType) {
                         InternalAddTypeToken(GetTokenForType(clsArgument), 0x11 /* CorElementType.ValueType */);
                     } else {
                         InternalAddTypeToken(GetTokenForType(clsArgument), 0x12 /* CorElementType.Class */);

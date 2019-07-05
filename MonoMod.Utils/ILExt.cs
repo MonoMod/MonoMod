@@ -4,14 +4,6 @@ using MonoMod.Utils;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-#if NETSTANDARD
-using TypeOrTypeInfo = System.Reflection.TypeInfo;
-using static System.Reflection.IntrospectionExtensions;
-using static System.Reflection.TypeExtensions;
-#else
-using TypeOrTypeInfo = System.Type;
-#endif
-
 namespace MonoMod.Utils {
     public static class ILExt {
 
@@ -63,8 +55,8 @@ namespace MonoMod.Utils {
                     return il.Import(info);
                 case MethodBase info:
                     return il.Import(info);
-                case TypeOrTypeInfo info:
-                    return il.Import(info.AsType());
+                case Type info:
+                    return il.Import(info);
                 default:
                     throw new NotSupportedException("Unsupported member type " + member.GetType().FullName);
             }
@@ -93,8 +85,8 @@ namespace MonoMod.Utils {
                     return il.Create(opcode, info);
                 case MethodBase info:
                     return il.Create(opcode, info);
-                case TypeOrTypeInfo info:
-                    return il.Create(opcode, info.AsType());
+                case Type info:
+                    return il.Create(opcode, info);
                 default:
                     throw new NotSupportedException("Unsupported member type " + member.GetType().FullName);
             }
@@ -121,8 +113,8 @@ namespace MonoMod.Utils {
                 case MethodBase info:
                     il.Emit(opcode, info);
                     break;
-                case TypeOrTypeInfo info:
-                    il.Emit(opcode, info.AsType());
+                case Type info:
+                    il.Emit(opcode, info);
                     break;
                 default:
                     throw new NotSupportedException("Unsupported member type " + member.GetType().FullName);

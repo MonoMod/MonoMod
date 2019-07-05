@@ -62,7 +62,7 @@ namespace MonoMod.RuntimeDetour {
             get => _ID;
             set {
                 if (string.IsNullOrEmpty(value))
-                    value = Manipulator.GetMethodInfo()?.GetFindableID(simple: true) ?? GetHashCode().ToString();
+                    value = Manipulator.Method?.GetFindableID(simple: true) ?? GetHashCode().ToString();
                 if (_ID == value)
                     return;
                 _ID = value;

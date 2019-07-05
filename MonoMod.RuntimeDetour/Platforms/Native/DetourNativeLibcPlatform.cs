@@ -1,10 +1,9 @@
-﻿#if NETSTANDARD && !NETSTANDARD1_X
-
-#pragma warning disable IDE1006 // Naming Styles
+﻿#pragma warning disable IDE1006 // Naming Styles
 
 using MonoMod.Utils;
 using System;
 using System.ComponentModel;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
@@ -16,7 +15,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public DetourNativeLibcPlatform(IDetourNativePlatform inner) {
             Inner = inner;
 
+            // Environment.SystemPageSize is part of .NET Framework 4.0+ and .NET Standard 2.0+
+#if NETSTANDARD
             _Pagesize = Environment.SystemPageSize;
+#else
+            PropertyInfo p_SystemPageSize = typeof(Environment).GetProperty("SystemPageSize");
+            if (p_SystemPageSize == null)
+                throw new NotSupportedException("Unsupported runtime");
+            _Pagesize = (int) p_SystemPageSize.GetValue(null, new object[0]);
+#endif
         }
 
         private unsafe void SetMemPerms(IntPtr start, ulong len, MmapProts prot) {
@@ -81,5 +88,3 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
     }
 }
-
-#endif

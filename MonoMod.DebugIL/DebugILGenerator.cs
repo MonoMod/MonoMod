@@ -11,11 +11,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-#if NETSTANDARD
-using static System.Reflection.IntrospectionExtensions;
-using static System.Reflection.TypeExtensions;
-#endif
-
 namespace MonoMod.DebugIL {
     public class DebugILGenerator {
 
@@ -67,9 +62,7 @@ namespace MonoMod.DebugIL {
                 File.Delete(file);
 
             Directory.Delete(path);
-#if !NETSTANDARD1_X
             Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
-#endif
         }
 
         public static void Generate(MonoModder modder)
@@ -82,9 +75,7 @@ namespace MonoMod.DebugIL {
             }
 
             Directory.CreateDirectory(FullPath);
-#if !NETSTANDARD1_X
             Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
-#endif
 
             CustomAttribute debuggable = Modder.Module.Assembly.GetCustomAttribute("System.Diagnostics.DebuggableAttribute");
             if (debuggable != null)
