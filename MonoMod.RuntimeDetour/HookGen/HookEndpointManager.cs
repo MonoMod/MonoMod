@@ -23,7 +23,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static object GetOwner(Delegate hook)
             => (OnGetOwner ?? DefaultOnGetOwner).InvokeWhileNull<object>(hook);
         private static object DefaultOnGetOwner(Delegate hook)
-            => hook.GetMethodInfo().DeclaringType.GetTypeInfo().Assembly;
+            => hook.Method.DeclaringType.Assembly;
 
         private static HookEndpoint GetEndpoint(MethodBase method) {
             HookEndpoint endpoint;

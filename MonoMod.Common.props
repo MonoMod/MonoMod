@@ -8,6 +8,7 @@
     <Configurations>Debug;Release;DebugLegacy;ReleaseLegacy</Configurations>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Any CPU</Platform>
+    <DebugType Condition="'$(DebugType)' == ''">portable</DebugType>
     <OutputPath>bin\$(Configuration)</OutputPath>
 
     <LangVersion>7.3</LangVersion>
@@ -25,7 +26,6 @@
 
     <IsNETFramework>false</IsNETFramework>
     <IsNETStandard>false</IsNETStandard>
-    <IsNETStandard1X>false</IsNETStandard1X>
 
     <MonoModSourceLink Condition="'$(MonoModSourceLink)' == '' And '$(MSBuildRuntimeType)' != 'Core'">false</MonoModSourceLink>
     <MonoModSourceLink Condition="'$(MonoModSourceLink)' == ''">true</MonoModSourceLink>
@@ -91,14 +91,12 @@
   <!-- Debug -->
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'DebugLegacy'">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <DefineConstants>DEBUG;TRACE;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <!-- Release -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release' Or '$(Configuration)' == 'ReleaseLegacy'">
-    <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
@@ -114,9 +112,7 @@
       <!-- .NET Standard -->
       <PropertyGroup>
         <IsNETStandard>true</IsNETStandard>
-        <IsNETStandard1X Condition="$(TargetFramework.StartsWith('netstandard1')) Or $(TargetFramework.StartsWith('netcoreapp1'))">true</IsNETStandard1X>
         <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
-        <DefineConstants Condition="$(IsNETStandard1X)">NETSTANDARD1_X;$(DefineConstants)</DefineConstants>
         <DefineConstants Condition="$(IsCecilLegacy)">CECIL0_10;$(DefineConstants)</DefineConstants>
         <CecilVersion Condition="$(IsCecilLegacy) And '$(CecilVersion)' == ''">0.10.0</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>

@@ -10,10 +10,8 @@ using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Security;
-#if !NETSTANDARD
 using System.Security.Permissions;
 using System.Diagnostics.SymbolStore;
-#endif
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition : IDisposable {
@@ -22,11 +20,7 @@ namespace MonoMod.Utils {
             _InitReflEmit();
             _InitCopier();
 
-#if NETSTANDARD1_X
-            PreferRuntimeILCopy = Environment.GetEnvironmentVariable("MONOMOD_DMD_COPY") == "1";
-#else
             PreferRuntimeILCopy = Environment.GetEnvironmentVariable("MONOMOD_DMD_COPY") != "0";
-#endif
         }
 
         private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
@@ -36,9 +30,7 @@ namespace MonoMod.Utils {
         private static bool _PreferCecil;
 
         private static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
-#if !NETSTANDARD1_X
         private static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(new Type[] { });
-#endif
         private static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new Type[] { typeof(string) });
 
         private static readonly FieldInfo f_mono_assembly = typeof(Assembly).GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -87,7 +79,7 @@ namespace MonoMod.Utils {
         public MethodDefinition Definition =>
             _DynModuleDefinition != null ? _Definition : (
                 _Definition ??
-                (_Definition = (_Module.LookupToken(Method.GetMetadataToken()) as MethodReference)?.Resolve()?.Clone()) ??
+                (_Definition = (_Module.LookupToken(Method.MetadataToken) as MethodReference)?.Resolve()?.Clone()) ??
                 throw new InvalidOperationException("Method definition not found")
             );
 
@@ -114,7 +106,7 @@ namespace MonoMod.Utils {
                 
                 (!_IsMono && (
                     // .NET
-                    typeof(ILGenerator).GetTypeInfo().Assembly
+                    typeof(ILGenerator).Assembly
                     .GetType("System.Reflection.Emit.DynamicILGenerator")
                     ?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance) == null
                 )) ||
@@ -209,7 +201,7 @@ namespace MonoMod.Utils {
                         }
 
                         if (!PreferRuntimeILCopy) {
-                            string location = Method.DeclaringType?.GetTypeInfo().Assembly.GetLocation();
+                            string location = Method.DeclaringType?.Assembly.Location;
                             if (!string.IsNullOrEmpty(location)) {
                                 ReaderParameters rp = new ReaderParameters();
                                 if (_ModuleGen != null) {
@@ -297,9 +289,9 @@ namespace MonoMod.Utils {
 #endif
 
                     // In .NET Framework, DynamicILGenerator doesn't support fault and filter blocks.
-                    // This is a non-issue in .NET Core and it could be an issue in mono.
+                    // This is a non-issue in .NET Core, yet it could still be an issue in mono.
                     // https://github.com/dotnet/coreclr/issues/1764
-#if NETFRAMEWORK || NETSTANDARD1_X
+#if NETFRAMEWORK
                     if (Definition.Body.ExceptionHandlers.Any(eh =>
                         eh.HandlerType == ExceptionHandlerType.Fault ||
                         eh.HandlerType == ExceptionHandlerType.Filter
@@ -341,12 +333,6 @@ namespace MonoMod.Utils {
         private static unsafe MethodInfo _Postbuild(MethodInfo mi) {
             if (mi == null)
                 return null;
-
-#if NETSTANDARD1_X
-
-            // nop
-
-#else
 
             if (_IsMono) {
                 if (!(mi is DynamicMethod) && mi.DeclaringType != null) {
@@ -409,8 +395,6 @@ namespace MonoMod.Utils {
 
 
             }
-
-#endif
 
             return mi;
         }
@@ -503,13 +487,13 @@ namespace MonoMod.Utils {
             }
 
             public TypeReference ImportReference(Type type, IGenericParameterProvider context) {
-                if (_DynModuleReflCache.TryGetValue(type.GetTypeInfo().Module, out ModuleDefinition dynModule) && dynModule != Module)
+                if (_DynModuleReflCache.TryGetValue(type.Module, out ModuleDefinition dynModule) && dynModule != Module)
                     return Module.ImportReference(dynModule.ImportReference(type, context).Resolve());
                 return Fallback.ImportReference(type, context);
             }
 
             public FieldReference ImportReference(FieldInfo field, IGenericParameterProvider context) {
-                if (_DynModuleReflCache.TryGetValue(field.DeclaringType.GetTypeInfo().Module, out ModuleDefinition dynModule) && dynModule != Module)
+                if (_DynModuleReflCache.TryGetValue(field.DeclaringType.Module, out ModuleDefinition dynModule) && dynModule != Module)
                     return Module.ImportReference(dynModule.ImportReference(field, context).Resolve());
                 return Fallback.ImportReference(field, context);
             }
@@ -517,7 +501,7 @@ namespace MonoMod.Utils {
             public MethodReference ImportReference(MethodBase method, IGenericParameterProvider context) {
                 if (method is DynamicMethod dm)
                     return new DynamicMethodReference(Module, dm);
-                if (_DynModuleReflCache.TryGetValue(method.DeclaringType.GetTypeInfo().Module, out ModuleDefinition dynModule) && dynModule != Module)
+                if (_DynModuleReflCache.TryGetValue(method.DeclaringType.Module, out ModuleDefinition dynModule) && dynModule != Module)
                     return Module.ImportReference(dynModule.ImportReference(method, context).Resolve());
                 return Fallback.ImportReference(method, context);
             }

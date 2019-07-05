@@ -6,7 +6,7 @@ strategy:
       artifactPrefix: ''
       artifactSuffix: ''
       builder: 'core'
-      testers: ';fx;core1;core2;'
+      testers: ';fx;core2;'
       coreVersion: ''
     linux-core:
       jobArchName: 'Linux .NET Core'
@@ -133,19 +133,6 @@ steps:
     testResultsFormat: 'xUnit'
     testResultsFiles: '**/testresults.mono.net452.xml'
     testRunTitle: 'Tests @ $(jobArchName) mono net452'
-
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core1;'))
-  displayName: 'Test: core: netcoreapp1.0'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp1.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp1.0.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core1;'))
-  displayName: 'Test: Publish: core: netcoreapp1.0'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp1.0.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp1.0'
 
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core2;'))

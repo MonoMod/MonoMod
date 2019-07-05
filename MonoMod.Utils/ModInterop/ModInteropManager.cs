@@ -17,8 +17,8 @@ namespace MonoMod.ModInterop {
                 return;
             Registered.Add(type);
 
-            string prefix = type.GetTypeInfo().Assembly.GetName().Name;
-            foreach (ModExportNameAttribute attrib in type.GetTypeInfo().GetCustomAttributes(typeof(ModExportNameAttribute), false)) {
+            string prefix = type.Assembly.GetName().Name;
+            foreach (ModExportNameAttribute attrib in type.GetCustomAttributes(typeof(ModExportNameAttribute), false)) {
                 prefix = attrib.Name;
             }
 
@@ -74,7 +74,7 @@ namespace MonoMod.ModInterop {
                 return attrib.Name;
             }
 
-            foreach (ModImportNameAttribute attrib in field.DeclaringType.GetTypeInfo().GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
+            foreach (ModImportNameAttribute attrib in field.DeclaringType.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
                 return attrib.Name + "." + field.Name;
             }
 

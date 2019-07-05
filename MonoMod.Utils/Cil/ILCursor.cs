@@ -503,7 +503,7 @@ namespace MonoMod.Cil {
         /// </summary>
         public int EmitDelegate<T>(T cb) where T : Delegate {
             if (cb.GetInvocationList().Length == 1 && cb.Target == null) { // optimisation for static delegates
-                Emit(OpCodes.Call, cb.GetMethodInfo());
+                Emit(OpCodes.Call, cb.Method);
                 return -1;
             }
 

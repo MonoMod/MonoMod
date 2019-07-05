@@ -102,31 +102,31 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public NativeDetour(Delegate from, IntPtr to, ref NativeDetourConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public NativeDetour(Delegate from, IntPtr to, NativeDetourConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public NativeDetour(Delegate from, IntPtr to)
-            : this(from.GetMethodInfo(), to) {
+            : this(from.Method, to) {
         }
         public NativeDetour(IntPtr from, Delegate to, ref NativeDetourConfig config)
-            : this(from, to.GetMethodInfo(), ref config) {
+            : this(from, to.Method, ref config) {
         }
         public NativeDetour(IntPtr from, Delegate to, NativeDetourConfig config)
-            : this(from, to.GetMethodInfo(), ref config) {
+            : this(from, to.Method, ref config) {
         }
         public NativeDetour(IntPtr from, Delegate to)
-            : this(from, to.GetMethodInfo()) {
+            : this(from, to.Method) {
         }
         public NativeDetour(Delegate from, Delegate to, ref NativeDetourConfig config)
-            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
+            : this(from.Method, to.Method, ref config) {
         }
         public NativeDetour(Delegate from, Delegate to, NativeDetourConfig config)
-            : this(from.GetMethodInfo(), to.GetMethodInfo(), ref config) {
+            : this(from.Method, to.Method, ref config) {
         }
         public NativeDetour(Delegate from, Delegate to)
-            : this(from.GetMethodInfo(), to.GetMethodInfo()) {
+            : this(from.Method, to.Method) {
         }
 
         /// <summary>

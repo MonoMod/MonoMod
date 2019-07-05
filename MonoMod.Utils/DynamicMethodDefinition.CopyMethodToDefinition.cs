@@ -1,5 +1,4 @@
-﻿#if !NETSTANDARD1_X
-using System;
+﻿using System;
 using System.Reflection;
 using System.Linq.Expressions;
 using MonoMod.Utils;
@@ -231,4 +230,3 @@ namespace MonoMod.Utils {
 
     }
 }
-#endif

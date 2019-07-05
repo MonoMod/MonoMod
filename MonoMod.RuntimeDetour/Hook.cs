@@ -179,32 +179,32 @@ namespace MonoMod.RuntimeDetour {
             : this(method, DetourHelper.GenerateNativeProxy(to, method), null) {
         }
         public Hook(MethodBase method, Delegate to, ref HookConfig config)
-            : this(method, to.GetMethodInfo(), to.Target, ref config) {
+            : this(method, to.Method, to.Target, ref config) {
         }
         public Hook(MethodBase method, Delegate to, HookConfig config)
-            : this(method, to.GetMethodInfo(), to.Target, ref config) {
+            : this(method, to.Method, to.Target, ref config) {
         }
         public Hook(MethodBase method, Delegate to)
-            : this(method, to.GetMethodInfo(), to.Target) {
+            : this(method, to.Method, to.Target) {
         }
 
         public Hook(Delegate from, IntPtr to, ref HookConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public Hook(Delegate from, IntPtr to, HookConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public Hook(Delegate from, IntPtr to)
-            : this(from.GetMethodInfo(), to) {
+            : this(from.Method, to) {
         }
         public Hook(Delegate from, Delegate to, ref HookConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public Hook(Delegate from, Delegate to, HookConfig config)
-            : this(from.GetMethodInfo(), to, ref config) {
+            : this(from.Method, to, ref config) {
         }
         public Hook(Delegate from, Delegate to)
-            : this(from.GetMethodInfo(), to) {
+            : this(from.Method, to) {
         }
 
         public Hook(Expression from, IntPtr to, ref HookConfig config)

@@ -9,7 +9,7 @@
     <Description>Auto-generate hook helper .dlls, hook arbitrary methods via events: On.Namespace.Type.Method += YourHandlerHere;</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
-    <TargetFrameworks>net35;netstandard1.3;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net35;netstandard2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.props" />

@@ -73,14 +73,12 @@ namespace MonoMod.RuntimeDetour {
                         // https://www.youtube.com/watch?v=l60MnDJklnM
                     }
 
-#if NETSTANDARD && !NETSTANDARD1_X
                     // Might as well try libc...
                     try {
                         _Native = new DetourNativeLibcPlatform(_Native);
                     } catch {
                         // Oh well.
                     }
-#endif
 
                     return _Native;
                 }
@@ -134,7 +132,7 @@ namespace MonoMod.RuntimeDetour {
         public static IntPtr GetNativeStart(this MethodBase method)
             => Runtime.GetNativeStart(method);
         public static IntPtr GetNativeStart(this Delegate method)
-            => method.GetMethodInfo().GetNativeStart();
+            => method.Method.GetNativeStart();
         public static IntPtr GetNativeStart(this Expression method)
             => ((MethodCallExpression) method).Method.GetNativeStart();
 

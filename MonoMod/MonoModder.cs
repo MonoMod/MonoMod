@@ -13,11 +13,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.Utils;
 
-#if NETSTANDARD
-using static System.Reflection.IntrospectionExtensions;
-using static System.Reflection.TypeExtensions;
-#endif
-
 #if CECIL0_9
 using InterfaceImplementation = Mono.Cecil.TypeReference;
 #endif
@@ -53,7 +48,7 @@ namespace MonoMod {
 
         public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
 
-        public static readonly Version Version = typeof(MonoModder).GetTypeInfo().Assembly.GetName().Version;
+        public static readonly Version Version = typeof(MonoModder).Assembly.GetName().Version;
 
         // WasIDictionary and the _ IDictionaries are used when upgrading mods.
 
@@ -201,7 +196,7 @@ namespace MonoMod {
                     List<string> paths = new List<string>();
                     string gac = Path.Combine(
                         Path.GetDirectoryName(
-                            Path.GetDirectoryName(typeof(object).GetTypeInfo().Module.FullyQualifiedName)
+                            Path.GetDirectoryName(typeof(object).Module.FullyQualifiedName)
                         ),
                         "gac"
                     );
@@ -457,19 +452,6 @@ namespace MonoMod {
                     path = dep.FullyQualifiedName;
 #endif
             }
-
-#if !NETSTANDARD
-            // Check if available in GAC
-            // Note: This is a fallback as MonoMod depends on a low version of the .NET Framework.
-            // This unfortunately breaks ReflectionOnlyLoad on targets higher than the MonoMod target.
-            if (path == null && fullName != null) {
-                System.Reflection.Assembly asm = null;
-                try {
-                    asm = System.Reflection.Assembly.ReflectionOnlyLoad(fullName);
-                } catch { }
-                path = asm?.Location;
-            }
-#endif
 
             if (dep == null) {
                 if (path != null && File.Exists(path)) {

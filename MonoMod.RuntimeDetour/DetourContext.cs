@@ -75,21 +75,18 @@ namespace MonoMod.RuntimeDetour {
                 if (Creator == null)
                     return true;
 
-#if !NETSTANDARD1_X
                 StackTrace stack = new StackTrace();
                 int frameCount = stack.FrameCount;
 
                 for (int i = 0; i < frameCount; i++)
                     if (stack.GetFrame(i).GetMethod() == Creator)
                         return true;
-#endif
 
                 return false;
             }
         }
 
         public DetourContext(int priority, string id) {
-#if !NETSTANDARD1_X
             StackTrace stack = new StackTrace();
             int frameCount = stack.FrameCount;
             for (int i = 0; i < frameCount; i++) {
@@ -99,8 +96,7 @@ namespace MonoMod.RuntimeDetour {
                 Creator = caller;
                 break;
             }
-#endif
-            _FallbackID = Creator?.DeclaringType?.GetTypeInfo().Assembly?.GetName().Name ?? Creator?.GetFindableID(simple: true);
+            _FallbackID = Creator?.DeclaringType?.Assembly?.GetName().Name ?? Creator?.GetFindableID(simple: true);
 
             Last = this;
             Contexts.Add(this);
