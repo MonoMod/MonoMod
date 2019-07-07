@@ -34,6 +34,7 @@ namespace MonoMod.UnitTest {
             }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void DoNothing() {
         }
         
