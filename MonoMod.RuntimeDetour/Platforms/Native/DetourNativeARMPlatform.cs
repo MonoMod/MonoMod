@@ -27,7 +27,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             // The lowest bit is set for Thumb, unset for ARM.
             bool fromThumb = ((long) from & 0x1) == 0x1;
-            bool toThumb = ((long) from & 0x1) == 0x1;
+            bool toThumb = ((long) to & 0x1) == 0x1;
             if (fromThumb) {
                 if (toThumb) {
                     return DetourType.Thumb;
