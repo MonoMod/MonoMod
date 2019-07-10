@@ -21,6 +21,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
             4 + 4 + 8
         };
 
+        // Disabled by default as it triggers an access error on armv7.
+        // Source: MonoMod Discord server, https://discordapp.com/channels/295566538981769216/295570965663055874/598536798666227712
+        // Left available for any environments which might need it in the future.
+        public bool ShouldFlushICache = false;
+
         private static DetourType GetDetourType(IntPtr from, IntPtr to) {
             if (IntPtr.Size >= 8)
                 return DetourType.AArch64;
@@ -189,6 +194,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // On ARM, we must flush the instruction cache.
             // Sadly, mono_arch_flush_icache isn't reliably exported.
             // This thus requires running native code to invoke the syscall.
+
+            if (!ShouldFlushICache)
+                return;
 
             if (flushicache == null) {
                 // Emit a native delegate once. It lives as long as the application.
