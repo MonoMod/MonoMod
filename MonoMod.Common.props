@@ -83,8 +83,8 @@
     <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) Maik Macho</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Repository>https://github.com/0x0ade/MonoMod</Repository>
-    <PackageProjectUrl>https://github.com/0x0ade/MonoMod</PackageProjectUrl>
+    <Repository>https://github.com/MonoMod/MonoMod</Repository>
+    <PackageProjectUrl>https://github.com/MonoMod/MonoMod</PackageProjectUrl>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
   </PropertyGroup>
 
