@@ -29,6 +29,10 @@
 
     <MonoModSourceLink Condition="'$(MonoModSourceLink)' == '' And '$(MSBuildRuntimeType)' != 'Core'">false</MonoModSourceLink>
     <MonoModSourceLink Condition="'$(MonoModSourceLink)' == ''">true</MonoModSourceLink>
+
+    <MonoModSharedShims Condition="'$(MonoModSharedShims)' == ''">true</MonoModSharedShims>
+
+    <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(MonoModSourceLink)">
@@ -160,9 +164,7 @@
   </ItemGroup>
 
   <!-- Shared source files. -->
-  <ItemGroup>
-    <Compile Condition="'$(AssemblyName)' != 'MonoMod.Utils'" Include="..\MonoMod.Utils\NETStandardShims.cs">
-      <Link>NETStandardShims.cs</Link>
-    </Compile>
+  <ItemGroup Condition="$(MonoModSharedShims)">
+    <Compile Include="..\MonoMod.Common\Shared\**\*.cs" />
   </ItemGroup>
 </Project>

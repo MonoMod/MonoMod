@@ -52,32 +52,20 @@ namespace MonoMod {
 
         // WasIDictionary and the _ IDictionaries are used when upgrading mods.
 
-        [MonoMod__WasIDictionary__]
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
-        public IDictionary<string, object> _RelinkMap { get => RelinkMap; set => RelinkMap = (Dictionary<string, object>) value; }
-        [MonoMod__WasIDictionary__]
         public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
-        public IDictionary<string, ModuleDefinition> _RelinkModuleMap { get => RelinkModuleMap; set => RelinkModuleMap = (Dictionary<string, ModuleDefinition>) value; }
         public HashSet<string> SkipList = new HashSet<string>(EqualityComparer<string>.Default);
 
-        [MonoMod__WasIDictionary__]
         public Dictionary<string, IMetadataTokenProvider> RelinkMapCache = new Dictionary<string, IMetadataTokenProvider>();
-        public IDictionary<string, IMetadataTokenProvider> _RelinkMapCache { get => RelinkMapCache; set => RelinkMapCache = (Dictionary<string, IMetadataTokenProvider>) value; }
-        [MonoMod__WasIDictionary__]
         public Dictionary<string, TypeReference> RelinkModuleMapCache = new Dictionary<string, TypeReference>();
-        public IDictionary<string, TypeReference> _RelinkModuleMapCache { get => RelinkModuleMapCache; set => RelinkModuleMapCache = (Dictionary<string, TypeReference>) value; }
 
         public Dictionary<string, OpCode> ForceCallMap = new Dictionary<string, OpCode>();
 
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
-        [MonoMod__WasIDictionary__]
         public Dictionary<string, FastReflectionDelegate> CustomAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
-        public IDictionary<string, FastReflectionDelegate> _CustomAttributeHandlers { get => CustomAttributeHandlers; set => CustomAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; }
-        [MonoMod__WasIDictionary__]
         public Dictionary<string, FastReflectionDelegate> CustomMethodAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
-        public IDictionary<string, FastReflectionDelegate> _CustomMethodAttributeHandlers { get => CustomMethodAttributeHandlers; set => CustomMethodAttributeHandlers = (Dictionary<string, FastReflectionDelegate>) value; }
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -92,12 +80,8 @@ namespace MonoMod {
         public List<string> DependencyDirs = new List<string>();
         public ModuleDefinition Module;
 
-        [MonoMod__WasIDictionary__]
         public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
-        public IDictionary<ModuleDefinition, List<ModuleDefinition>> _DependencyMap { get => DependencyMap; set => DependencyMap = (Dictionary<ModuleDefinition, List<ModuleDefinition>>) value; }
-        [MonoMod__WasIDictionary__]
         public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
-        public IDictionary<string, ModuleDefinition> _DependencyCache { get => DependencyCache; set => DependencyCache = (Dictionary<string, ModuleDefinition>) value; }
 
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
 
@@ -1469,10 +1453,6 @@ namespace MonoMod {
 
 #region PatchRefs Pass
         public virtual void PatchRefs() {
-            if (Environment.GetEnvironmentVariable("MONOMOD_LEGACY_RELINKMAP") == "1") {
-                _SplitUpgrade();
-            }
-
             if (UpgradeMSCORLIB == null) {
                 // Check if the assembly depends on mscorlib 2.0.5.0, possibly Unity.
                 // If so, upgrade to that version (or away to an even higher version).
@@ -1509,105 +1489,6 @@ namespace MonoMod {
 
             foreach (TypeDefinition type in Module.Types)
                 PatchRefsInType(type);
-        }
-
-        // Private because this method isn't here to stay.
-        private void _SplitUpgrade() {
-            // This is required to stay compatible with mods created before splitting MonoMod into pieces.
-
-            // Only run if the mod refers to MonoMod <= 18.03.* and if MonoModExt is no longer present in MonoMod.
-            if (FindType("MonoMod.MonoModExt") != null)
-                return;
-            bool requiresUpgrade = false;
-            List<ModuleReference> modules = new List<ModuleReference>(Mods) {
-                Module
-            };
-            foreach (ModuleDefinition mod in modules) {
-                for (int i = 0; i < mod.AssemblyReferences.Count; i++) {
-                    AssemblyNameReference dep = mod.AssemblyReferences[i];
-                    if (dep.Name == "MonoMod") {
-                        if (dep.Version.Major < 18 || (dep.Version.Major == 18 && dep.Version.Minor <= 3)) {
-                            requiresUpgrade = true;
-                        }
-                        break;
-                    }
-                }
-                if (requiresUpgrade)
-                    break;
-            }
-            if (!requiresUpgrade)
-                return;
-
-            Log("[UpgradeSplit] Upgrading from MonoMod pre-18.03 to 18.04+");
-            Log("[UpgradeSplit] THIS STEP WILL BE REMOVED IN A FUTURE RELEASE.");
-            Log("[UpgradeSplit] It is only meant to preserve compatibility with mods during the transition to a \"split\" MonoMod.");
-
-            string root = Path.GetDirectoryName(DependencyCache["MonoMod"]
-#if !CECIL0_9
-                .FileName
-#else
-                .FullyQualifiedName
-#endif
-            );
-
-            bool found = false;
-            // Don't compact this, otherwise it'll only run until the first "true" upgrade.
-            found |= _SplitUpgrade("MonoMod");
-            found |= _SplitUpgrade("MonoMod.Utils");
-            found |= _SplitUpgrade("MonoMod.RuntimeDetour");
-            if (!found) {
-                Log("[UpgradeSplit] No MonoMod \"split\" upgrade targets found. Upgrade skipped.");
-                return;
-            }
-        }
-
-        private bool _SplitUpgrade(string split) {
-            bool missingDependencyThrow = MissingDependencyThrow;
-            MissingDependencyThrow = false;
-            MapDependency(Module, split);
-            MissingDependencyThrow = missingDependencyThrow;
-
-            if (!DependencyCache.TryGetValue(split, out ModuleDefinition splitModule)) {
-                Log($"[UpgradeSplit] {split} doesn't exist, skipping it.");
-                return false;
-            }
-
-            _SplitUpgrade(splitModule);
-            return true;
-        }
-
-        private void _SplitUpgrade(ModuleDefinition split) {
-            Log($"[UpgradeSplit] Upgrading to split {split.Name}");
-
-            foreach (TypeDefinition type in split.Types)
-                _SplitUpgrade(type);
-        }
-
-        private void _SplitUpgrade(TypeDefinition type) {
-            CustomAttribute typeAttribOldName = type.GetMMAttribute("__OldName__");
-            string typeOldName = typeAttribOldName == null ? null : (string) typeAttribOldName.ConstructorArguments[0].Value;
-
-            RelinkMap[type.FullName] = type;
-            if (typeOldName != null)
-                RelinkMap[typeOldName] = type;
-
-            foreach (FieldDefinition field in type.Fields) {
-                if (field.HasMMAttribute("__WasIDictionary__")) {
-                    // MonoMod moved from IDictionary to Dictionary, but provides proxies for old mods.
-                    // Relink from old field type + new field name => proxy property.
-                    GenericInstanceType fieldType = (GenericInstanceType) field.FieldType;
-                    GenericInstanceType fieldTypeOld = new GenericInstanceType(
-                        FindTypeDeep("System.Collections.Generic.IDictionary`2")
-                    );
-                    fieldTypeOld.GenericArguments.AddRange(fieldType.GenericArguments);
-                    RelinkMap[$"{fieldTypeOld} {type.FullName}::{field.Name}"] = type.FindProperty($"_{field.Name}");
-                    if (typeOldName != null)
-                        RelinkMap[$"{fieldTypeOld} {typeOldName}::{field.Name}"] = type.FindProperty($"_{field.Name}");
-                }
-            }
-
-            foreach (TypeDefinition nested in type.NestedTypes)
-                _SplitUpgrade(nested);
         }
 
         public virtual void PatchRefs(ModuleDefinition mod) {

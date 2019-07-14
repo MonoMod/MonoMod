@@ -10,9 +10,6 @@ namespace MonoMod.InlineRT {
         public static void RelinkModule(string from, string toName) {
             MonoModder self = Modder;
 
-            from = from.Inject(MonoModExt.SharedData);
-            toName = toName.Inject(MonoModExt.SharedData);
-
             bool retrying = false;
             ModuleDefinition to = null;
             RETRY:
@@ -33,19 +30,12 @@ namespace MonoMod.InlineRT {
         public static void RelinkType(string from, string to) {
             MonoModder self = Modder;
 
-            from = from.Inject(MonoModExt.SharedData);
-            to = to.Inject(MonoModExt.SharedData);
-
             self.Log($"[MonoModRules] RelinkType: {from} -> {to}");
             self.RelinkMap[from] = to;
         }
 
         public static void RelinkMember(string from, string toType, string toMember) {
             MonoModder self = Modder;
-
-            from = from.Inject(MonoModExt.SharedData);
-            toType = toType.Inject(MonoModExt.SharedData);
-            toMember = toMember.Inject(MonoModExt.SharedData);
 
             self.Log($"[MonoModRules] RelinkMember: {from} -> {toType}::{toMember}");
             self.RelinkMap[from] = new RelinkMapEntry(toType, toMember);
@@ -55,8 +45,6 @@ namespace MonoMod.InlineRT {
         public static void Patch(string id, bool patch) {
             MonoModder self = Modder;
 
-            id = id.Inject(MonoModExt.SharedData);
-                
             self.Log($"[MonoModRules] Patch: {id}: {patch}");
             if (patch && self.SkipList.Contains(id))
                 self.SkipList.Remove(id);

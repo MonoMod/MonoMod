@@ -32,12 +32,4 @@ static class NETStandardShims {
 
 #endif
 
-    public static Delegate CreateDelegate(Type type, object target, MethodInfo method)
-        =>
-#if NETSTANDARD
-            method.CreateDelegate(type, target);
-#else
-            Delegate.CreateDelegate(type, target, method);
-#endif
-
 }

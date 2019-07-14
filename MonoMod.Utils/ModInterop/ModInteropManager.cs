@@ -43,7 +43,7 @@ namespace MonoMod.ModInterop {
                 bool matched = false;
                 foreach (MethodInfo method in methods) {
                     try {
-                        field.SetValue(null, NETStandardShims.CreateDelegate(field.FieldType, null, method));
+                        field.SetValue(null, Delegate.CreateDelegate(field.FieldType, null, method));
                         matched = true;
                         break;
                     } catch {

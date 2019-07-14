@@ -20,4 +20,9 @@
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>
+
+  <!-- Shared source files. -->
+  <ItemGroup>
+    <Compile Include="..\MonoMod.Common\Utils\**\*.cs" />
+  </ItemGroup>
 </Project>

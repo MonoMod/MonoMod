@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MonoMod.Utils {
-    public static class Extensions {
+    public static partial class Extensions {
 
         /// <summary>
         /// Create a hexadecimal string for the given bytes.
@@ -151,7 +151,7 @@ namespace MonoMod.Utils {
 
             Delegate[] delegates = source.GetInvocationList();
             if (delegates.Length == 1)
-                return NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
+                return delegates[0].Method.CreateDelegate(type, delegates[0].Target);
 
             Delegate[] delegatesDest = new Delegate[delegates.Length];
             for (int i = 0; i < delegates.Length; i++)
@@ -178,7 +178,7 @@ namespace MonoMod.Utils {
             try {
                 Delegate[] delegates = source.GetInvocationList();
                 if (delegates.Length == 1) {
-                    result = NETStandardShims.CreateDelegate(type, delegates[0].Target, delegates[0].Method);
+                    result = delegates[0].Method.CreateDelegate(type, delegates[0].Target);
                     return true;
                 }
 
@@ -221,104 +221,6 @@ namespace MonoMod.Utils {
             }
         }
 
-        /// <summary>
-        /// Creates a delegate of the specified type from this method.
-        /// </summary>
-        /// <param name="method">The method to create the delegate from.</param>
-        /// <typeparam name="T">The type of the delegate to create.</typeparam>
-        /// <returns>The delegate for this method.</returns>
-        public static Delegate CreateDelegate<T>(this MethodBase method) where T : class
-            => CreateDelegate(method, typeof(T), null);
-        /// <summary>
-        /// Creates a delegate of the specified type with the specified target from this method.
-        /// </summary>
-        /// <param name="method">The method to create the delegate from.</param>
-        /// <typeparam name="T">The type of the delegate to create.</typeparam>
-        /// <param name="target">The object targeted by the delegate.</param>
-        /// <returns>The delegate for this method.</returns>
-        public static Delegate CreateDelegate<T>(this MethodBase method, object target) where T : class
-            => CreateDelegate(method, typeof(T), target);
-        /// <summary>
-        /// Creates a delegate of the specified type from this method.
-        /// </summary>
-        /// <param name="method">The method to create the delegate from.</param>
-        /// <param name="delegateType">The type of the delegate to create.</param>
-        /// <returns>The delegate for this method.</returns>
-        public static Delegate CreateDelegate(this MethodBase method, Type delegateType)
-            => CreateDelegate(method, delegateType, null);
-        /// <summary>
-        /// Creates a delegate of the specified type with the specified target from this method.
-        /// </summary>
-        /// <param name="method">The method to create the delegate from.</param>
-        /// <param name="delegateType">The type of the delegate to create.</param>
-        /// <param name="target">The object targeted by the delegate.</param>
-        /// <returns>The delegate for this method.</returns>
-        public static Delegate CreateDelegate(this MethodBase method, Type delegateType, object target) {
-            if (!typeof(Delegate).IsAssignableFrom(delegateType))
-                throw new ArgumentException("Type argument must be a delegate type!");
-            if (method is System.Reflection.Emit.DynamicMethod dm)
-                return dm.CreateDelegate(delegateType, target);
-
-            // TODO: Check delegate Invoke parameters against method parameters.
-
-#if NETSTANDARD
-            // Built-in CreateDelegate is available in .NET Standard
-            if (method is System.Reflection.MethodInfo mi)
-                return mi.CreateDelegate(delegateType, target);
-#endif
-
-            RuntimeMethodHandle handle = method.MethodHandle;
-            RuntimeHelpers.PrepareMethod(handle);
-            IntPtr ptr = handle.GetFunctionPointer();
-            return (Delegate) Activator.CreateInstance(delegateType, target, ptr);
-        }
-
-        private static readonly Dictionary<Type, int> _GetManagedSizeCache = new Dictionary<Type, int>() {
-            { typeof(void), 0 }
-        };
-        public static int GetManagedSize(this Type t) {
-            if (_GetManagedSizeCache.TryGetValue(t, out int size))
-                return size;
-
-            // Note: sizeof is more accurate for the "managed size" than Marshal.SizeOf (marshalled size)
-            // It also returns a value for types of which the size cannot be determined otherwise.
-
-            DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"GetSize<{t.FullName}>",
-                typeof(int), Type.EmptyTypes
-            );
-
-            ILProcessor il = dmd.GetILProcessor();
-            il.Emit(OpCodes.Sizeof, dmd.Definition.Module.ImportReference(t));
-            il.Emit(OpCodes.Ret);
-
-            lock (_GetManagedSizeCache) {
-                return _GetManagedSizeCache[t] = (dmd.Generate().CreateDelegate(typeof(Func<int>)) as Func<int>)();
-            }
-        }
-
-        private static readonly Dictionary<MethodBase, Func<IntPtr>> _GetLdftnPointerCache = new Dictionary<MethodBase, Func<IntPtr>>();
-        public static IntPtr GetLdftnPointer(this MethodBase m) {
-            if (_GetLdftnPointerCache.TryGetValue(m, out Func<IntPtr> func))
-                return func();
-
-            // Note: ldftn doesn't JIT the method on mono, keeping the class constructor untouched.
-            // Its result thus doesn't always match MethodHandle.GetFunctionPointer().
-
-            DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"GetLdftnPointer<{m.GetFindableID(simple: true)}>",
-                typeof(int), Type.EmptyTypes
-            );
-
-            ILProcessor il = dmd.GetILProcessor();
-            il.Emit(OpCodes.Ldftn, dmd.Definition.Module.ImportReference(m));
-            il.Emit(OpCodes.Ret);
-
-            lock (_GetLdftnPointerCache) {
-                return (_GetLdftnPointerCache[m] = dmd.Generate().CreateDelegate(typeof(Func<IntPtr>)) as Func<IntPtr>)();
-            }
-        }
-
         public static bool IsCompatible(this Type type, Type other)
             => _IsCompatible(type, other) || _IsCompatible(other, type);
         public static bool _IsCompatible(this Type type, Type other) {
@@ -332,13 +234,6 @@ namespace MonoMod.Utils {
                 return true;
 
             return false;
-        }
-
-        public static Type GetThisParamType(this MethodBase method) {
-            Type type = method.DeclaringType;
-            if (type.IsValueType)
-                type = type.MakeByRefType();
-            return type;
         }
 
     }
