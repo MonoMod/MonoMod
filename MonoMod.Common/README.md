@@ -16,6 +16,7 @@ If you want to include MonoMod.Common as a separate library, don't - at least fo
 If you want to only make use of individual source files, add matching `<Compile Include="..." Exclude="..." />` tags to your own project's `.csproj` file.
  
 The current folder dependency tree should be:
+
 | Folder        | Dependencies |
 |---------------|--------------|
 | Utils         | *None*       |
