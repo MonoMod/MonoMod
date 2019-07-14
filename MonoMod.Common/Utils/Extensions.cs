@@ -461,7 +461,7 @@ namespace MonoMod.Utils {
                     return false;
 
                 Relinker resolver = null;
-                resolver = (paramMemberRef, ctx) => paramMemberRef is GenericParameter paramGenParamTypeRef ? ResolveParameter(paramGenParamTypeRef) : paramMemberRef;
+                resolver = (paramMemberRef, ctx) => paramMemberRef is TypeReference paramTypeRef ? ResolveParameter(paramTypeRef) : paramMemberRef;
                 TypeReference ResolveParameter(TypeReference paramTypeRef) {
                     if (paramTypeRef is GenericParameter paramGenParamTypeRef) {
                         if (paramGenParamTypeRef.Owner is MethodReference && methodRef is GenericInstanceMethod paramGenMethodRef)
@@ -474,15 +474,18 @@ namespace MonoMod.Utils {
                         return paramTypeRef;
                     }
 
-                    return paramTypeRef.Relink(resolver, null);
+                    if (paramTypeRef == methodRef.DeclaringType.GetElementType())
+                        return methodRef.DeclaringType;
+
+                    return paramTypeRef;
                 }
 
-                if (!ResolveParameter(methodRef.ReturnType).Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void))) &&
+                if (!methodRef.ReturnType.Relink(resolver, null).Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void))) &&
                     !methodRef.ReturnType.Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void))))
                     return false;
 
                 for (int i = 0; i < paramRefs.Count; i++)
-                    if (!ResolveParameter(paramRefs[i].ParameterType).Is(paramInfos[i].ParameterType) &&
+                    if (!paramRefs[i].ParameterType.Relink(resolver, null).Is(paramInfos[i].ParameterType) &&
                         !paramRefs[i].ParameterType.Is(paramInfos[i].ParameterType))
                         return false;
 
