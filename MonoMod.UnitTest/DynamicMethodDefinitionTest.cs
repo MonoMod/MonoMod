@@ -56,6 +56,7 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine(StringOriginal);
 
                 Counter += new int?(i).Value;
+                Counter += new TestObjectInheritsGeneric();
 
                 Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
 

@@ -51,4 +51,15 @@ namespace MonoMod.UnitTest {
 
     public class TestObjectGeneric<T> {
     }
+
+    public abstract class TestObjectGeneric<T, TSelf> where TSelf : TestObjectGeneric<T, TSelf> {
+        public T Data;
+        public static implicit operator T(TestObjectGeneric<T, TSelf> obj) {
+            if (obj == default)
+                return default;
+            return obj.Data;
+        }
+    }
+    public class TestObjectInheritsGeneric : TestObjectGeneric<int, TestObjectInheritsGeneric> {
+    }
 }
