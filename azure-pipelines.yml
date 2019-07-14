@@ -48,7 +48,7 @@ pool:
 steps:
 - checkout: self 
   clean: false
-  fetchDepth: 3
+  fetchDepth: 1
   lfs: false
   submodules: recursive
 
