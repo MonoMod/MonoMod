@@ -15,8 +15,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Utils", "MonoMod.Ut
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.RuntimeDetour.HookGen", "MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj", "{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.BaseLoader", "MonoMod.BaseLoader\MonoMod.BaseLoader.csproj", "{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.UnitTest", "MonoMod.UnitTest\MonoMod.UnitTest.csproj", "{0291CFD9-75F9-4978-BE83-58DE5194BECA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BCABFBF3-BB48-4C21-9A52-E140015570A9}"
@@ -80,14 +78,6 @@ Global
 		{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}.ReleaseLegacy|Any CPU.ActiveCfg = ReleaseLegacy|Any CPU
 		{032B42A5-C409-4B69-B8E6-EC468EEDFEC1}.ReleaseLegacy|Any CPU.Build.0 = ReleaseLegacy|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.DebugLegacy|Any CPU.ActiveCfg = DebugLegacy|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.DebugLegacy|Any CPU.Build.0 = DebugLegacy|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.ReleaseLegacy|Any CPU.ActiveCfg = ReleaseLegacy|Any CPU
-		{6D0B75E9-2D6D-4B25-9C9B-990CF2A6DEB0}.ReleaseLegacy|Any CPU.Build.0 = ReleaseLegacy|Any CPU
 		{0291CFD9-75F9-4978-BE83-58DE5194BECA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0291CFD9-75F9-4978-BE83-58DE5194BECA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0291CFD9-75F9-4978-BE83-58DE5194BECA}.DebugLegacy|Any CPU.ActiveCfg = DebugLegacy|Any CPU

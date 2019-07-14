@@ -46,6 +46,12 @@ pool:
   vmImage: '$(imageName)'
 
 steps:
+- checkout: self 
+  clean: false
+  fetchDepth: 3
+  lfs: false
+  submodules: recursive
+
 # Run pre-build steps.
 - task: UseDotNet@2
   condition: and(succeeded(), ne(variables.coreVersion, ''))
