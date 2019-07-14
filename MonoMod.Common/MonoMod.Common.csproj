@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Metadata -->
+  <PropertyGroup>
+    <ProjectGuid>{D08C41CC-6121-47FB-AEBF-57A1D94DD09E}</ProjectGuid>
+
+    <AssemblyName>MonoMod.Common</AssemblyName>
+    <PackageId>MonoMod.Common</PackageId>
+    <Description>Common building blocks used by MonoMod which can be used to build your own libraries, f.e. RuntimeDetour's platform abstraction and Utils' DynamicMethodDefinition. Not to be confused with MonoMod.Utils, which is directed towards mods.</Description>
+    <PackageTags>$(PackageTags)</PackageTags>
+
+    <TargetFrameworks>net35;netstandard2.0</TargetFrameworks>
+    <OutputType>Library</OutputType>
+
+    <MonoModSharedShims Condition="'$(MonoModSharedShims)' == ''">false</MonoModSharedShims>
+  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.props" />
+
+  <!-- Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
+    </PackageReference>
+  </ItemGroup>
+</Project>
