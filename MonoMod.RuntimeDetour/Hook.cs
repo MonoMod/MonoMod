@@ -145,6 +145,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             _Detour = new Detour(Method, TargetReal, new DetourConfig() {
+                ManualApply = config.ManualApply,
                 Priority = config.Priority,
                 ID = config.ID,
                 Before = config.Before,
