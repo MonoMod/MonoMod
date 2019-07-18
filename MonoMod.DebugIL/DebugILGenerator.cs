@@ -194,7 +194,7 @@ namespace MonoMod.DebugIL {
                 writer.Write("// Method: (");
                 writer.Write(method.Attributes);
                 writer.Write(") ");
-                writer.WriteLine(method.GetFindableID()); Line++;
+                writer.WriteLine(method.GetID()); Line++;
                 writer.WriteLine(); Line++;
 
                 // TODO: [DbgILGen] Other method metadata?

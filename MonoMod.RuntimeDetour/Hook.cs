@@ -90,7 +90,7 @@ namespace MonoMod.RuntimeDetour {
             ILProcessor il;
 
             using (dmd = new DynamicMethodDefinition(
-                $"Hook<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
+                $"Hook<{Method.GetID(simple: true)}>?{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes
             )) {
                 il = dmd.GetILProcessor();
@@ -121,7 +121,7 @@ namespace MonoMod.RuntimeDetour {
                     origArgTypes[i] = origArgs[i].ParameterType;
 
                 using (dmd = new DynamicMethodDefinition(
-                    $"Chain:TMP<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
+                    $"Chain:TMP<{Method.GetID(simple: true)}>?{GetHashCode()}",
                     (origInvoke as MethodInfo)?.ReturnType ?? typeof(void), origArgTypes
                 )) {
                     il = dmd.GetILProcessor();

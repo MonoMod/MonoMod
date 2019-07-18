@@ -221,20 +221,5 @@ namespace MonoMod.Utils {
             }
         }
 
-        public static bool IsCompatible(this Type type, Type other)
-            => _IsCompatible(type, other) || _IsCompatible(other, type);
-        public static bool _IsCompatible(this Type type, Type other) {
-            if (type == other)
-                return true;
-
-            if (type.IsAssignableFrom(other))
-                return true;
-
-            if (other.IsEnum && IsCompatible(type, Enum.GetUnderlyingType(other)))
-                return true;
-
-            return false;
-        }
-
     }
 }

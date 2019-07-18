@@ -59,7 +59,7 @@ namespace MonoMod.RuntimeDetour {
             get => _ID;
             set {
                 if (string.IsNullOrEmpty(value))
-                    value = Target.GetFindableID(simple: true);
+                    value = Target.GetID(simple: true);
                 if (_ID == value)
                     return;
                 _ID = value;
@@ -144,7 +144,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"Chain<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
+                $"Chain<{Method.GetID(simple: true)}>?{GetHashCode()}",
                 (Method as MethodInfo)?.ReturnType ?? typeof(void), argTypes
             ))
                 _ChainedTrampoline = dmd.StubCriticalDetour().Generate().Pin();
@@ -338,7 +338,7 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"Trampoline<{Method.GetFindableID(simple: true)}>?{GetHashCode()}",
+                $"Trampoline<{Method.GetID(simple: true)}>?{GetHashCode()}",
                 returnType, argTypes
             )) {
                 ILProcessor il = dmd.GetILProcessor();

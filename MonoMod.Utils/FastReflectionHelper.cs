@@ -16,7 +16,7 @@ namespace MonoMod.Utils {
         private static readonly MethodInfo m_object_GetType = typeof(object).GetMethod("GetType");
 
         public static FastReflectionDelegate CreateFastDelegate(this MethodBase method, bool directBoxValueAccess = true) {
-            DynamicMethod dynam = new DynamicMethod($"FastReflection<{method.GetFindableID(simple: true)}>", typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).Module, true);
+            DynamicMethod dynam = new DynamicMethod($"FastReflection<{method.GetID(simple: true)}>", typeof(object), _DynamicMethodDelegateArgs, typeof(FastReflectionHelper).Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
             ParameterInfo[] args = method.GetParameters();
@@ -114,7 +114,7 @@ namespace MonoMod.Utils {
             for (int i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
 
-            DynamicMethod dynam = new DynamicMethod($"FastReflection:JMP<{method.GetFindableID(simple: true)}>", invoke.ReturnType, argTypes, typeof(FastReflectionHelper).Module, true);
+            DynamicMethod dynam = new DynamicMethod($"FastReflection:JMP<{method.GetID(simple: true)}>", invoke.ReturnType, argTypes, typeof(FastReflectionHelper).Module, true);
             ILGenerator il = dynam.GetILGenerator();
 
             il.Emit(OpCodes.Jmp, (MethodInfo) method);

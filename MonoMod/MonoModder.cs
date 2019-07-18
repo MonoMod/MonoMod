@@ -592,9 +592,9 @@ namespace MonoMod {
                     ParseLinkTo(method, hook);
 
                 if (method.HasMMAttribute("ForceCall"))
-                    ForceCallMap[method.GetFindableID()] = OpCodes.Call;
+                    ForceCallMap[method.GetID()] = OpCodes.Call;
                 else if (method.HasMMAttribute("ForceCallvirt"))
-                    ForceCallMap[method.GetFindableID()] = OpCodes.Callvirt;
+                    ForceCallMap[method.GetID()] = OpCodes.Callvirt;
             }
 
             foreach (FieldDefinition field in type.Fields) {
@@ -634,7 +634,7 @@ namespace MonoMod {
             else if (target is MethodReference)
                 to = new RelinkMapEntry(
                     ((MethodReference) target).DeclaringType.GetPatchFullName(),
-                    ((MethodReference) target).GetFindableID(withType: false)
+                    ((MethodReference) target).GetID(withType: false)
                 );
             else if (target is FieldReference)
                 to = new RelinkMapEntry(
@@ -653,7 +653,7 @@ namespace MonoMod {
         }
 
         public virtual void ParseLinkTo(MemberReference from, CustomAttribute hook) {
-            string fromID = (from as MethodReference)?.GetFindableID() ?? from.GetPatchFullName();
+            string fromID = (from as MethodReference)?.GetID() ?? from.GetPatchFullName();
             if (hook.ConstructorArguments.Count == 1)
                 RelinkMap[fromID] = (string) hook.ConstructorArguments[0].Value;
             else
@@ -771,8 +771,8 @@ namespace MonoMod {
             if (mtp is TypeReference) {
                 name = ((TypeReference) mtp).FullName;
             } else if (mtp is MethodReference) {
-                name = ((MethodReference) mtp).GetFindableID(withType: true);
-                nameAlt = ((MethodReference) mtp).GetFindableID(simple: true);
+                name = ((MethodReference) mtp).GetID(withType: true);
+                nameAlt = ((MethodReference) mtp).GetID(simple: true);
             } else if (mtp is FieldReference) {
                 name = ((FieldReference) mtp).FullName;
             } else if (mtp is PropertyReference) {
@@ -1313,7 +1313,7 @@ namespace MonoMod {
 
             string typeName = targetType.GetPatchFullName();
 
-            if (SkipList.Contains(method.GetFindableID(type: typeName)))
+            if (SkipList.Contains(method.GetID(type: typeName)))
                 return null;
 
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
@@ -1330,8 +1330,8 @@ namespace MonoMod {
                 method.IsRuntimeSpecialName = true;
             }
 
-            MethodDefinition existingMethod = targetType.FindMethod(method.GetFindableID(type: typeName));
-            MethodDefinition origMethod = targetType.FindMethod(method.GetFindableID(type: typeName, name: method.GetOriginalName()));
+            MethodDefinition existingMethod = targetType.FindMethod(method.GetID(type: typeName));
+            MethodDefinition origMethod = targetType.FindMethod(method.GetID(type: typeName, name: method.GetOriginalName()));
 
             if (method.HasMMAttribute("Ignore")) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1375,7 +1375,7 @@ namespace MonoMod {
                 origMethod.AddAttribute(GetMonoModOriginalCtor());
 
                 // Check if we've got custom attributes on our own orig_ method.
-                MethodDefinition modOrigMethod = method.DeclaringType.FindMethod(method.GetFindableID(name: method.GetOriginalName()));
+                MethodDefinition modOrigMethod = method.DeclaringType.FindMethod(method.GetID(name: method.GetOriginalName()));
                 if (modOrigMethod != null)
                     foreach (CustomAttribute attrib in modOrigMethod.CustomAttributes)
                         if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName) ||
@@ -1602,8 +1602,8 @@ namespace MonoMod {
                 // Before relinking, check for an existing forced call opcode mapping.
                 OpCode forceCall = default;
                 bool hasForceCall = operand is MethodReference && (
-                    ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(), out forceCall) ||
-                    ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(simple: true), out forceCall)
+                    ForceCallMap.TryGetValue((operand as MethodReference).GetID(), out forceCall) ||
+                    ForceCallMap.TryGetValue((operand as MethodReference).GetID(simple: true), out forceCall)
                 );
 
                 // General relinking
@@ -1613,8 +1613,8 @@ namespace MonoMod {
                 // Check again after relinking.
                 if (!hasForceCall && operand is MethodReference) {
                     bool hasForceCallRelinked =
-                        ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(), out OpCode forceCallRelinked) ||
-                        ForceCallMap.TryGetValue((operand as MethodReference).GetFindableID(simple: true), out forceCallRelinked)
+                        ForceCallMap.TryGetValue((operand as MethodReference).GetID(), out OpCode forceCallRelinked) ||
+                        ForceCallMap.TryGetValue((operand as MethodReference).GetID(simple: true), out forceCallRelinked)
                     ;
                     // If a relinked force call exists, prefer it over the existing forced call opcode.
                     // Otherwise keep the existing forced call opcode.
@@ -1631,7 +1631,7 @@ namespace MonoMod {
                     ((MethodReference) operand).FullName == method.FullName) {
                     // ((MethodReference) operand).Name = method.GetOriginalName();
                     // Above could be enough, but what about the metadata token?
-                    operand = method.DeclaringType.FindMethod(method.GetFindableID(name: method.GetOriginalName()));
+                    operand = method.DeclaringType.FindMethod(method.GetID(name: method.GetOriginalName()));
                 }
 
                 // .ctor -> static method reference fix: newobj -> call

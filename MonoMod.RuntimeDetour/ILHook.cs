@@ -33,10 +33,6 @@ namespace MonoMod.RuntimeDetour {
 
         private Context _Ctx => _Map.TryGetValue(Method, out Context ctx) ? ctx : null;
 
-        public static event Func<AssemblyName, ModuleDefinition> OnGenerateCecilModule;
-        public static ModuleDefinition GenerateCecilModule(AssemblyName name)
-            => OnGenerateCecilModule?.InvokeWhileNull<ModuleDefinition>(name);
-
         public bool IsValid => Index != -1;
         public bool IsApplied { get; private set; }
 
@@ -62,7 +58,7 @@ namespace MonoMod.RuntimeDetour {
             get => _ID;
             set {
                 if (string.IsNullOrEmpty(value))
-                    value = Manipulator.Method?.GetFindableID(simple: true) ?? GetHashCode().ToString();
+                    value = Manipulator.Method?.GetID(simple: true) ?? GetHashCode().ToString();
                 if (_ID == value)
                     return;
                 _ID = value;
@@ -243,7 +239,7 @@ namespace MonoMod.RuntimeDetour {
                     DetourSorter<ILHook>.Sort(hooks);
 
                     MethodBase dm;
-                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(Method, GenerateCecilModule)) {
+                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(Method)) {
                         MethodDefinition def = dmd.Definition;
                         foreach (ILHook cb in hooks)
                             InvokeManipulator(def, cb.Manipulator);

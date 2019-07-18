@@ -238,7 +238,7 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"Trampoline:Native<{Method?.GetFindableID(simple: true) ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}",
+                $"Trampoline:Native<{Method?.GetID(simple: true) ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}",
                 returnType, argTypes
             )) {
                 ILProcessor il = dmd.GetILProcessor();
