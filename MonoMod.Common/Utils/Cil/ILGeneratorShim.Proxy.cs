@@ -13,6 +13,10 @@ using TypeAttributes = Mono.Cecil.TypeAttributes;
 namespace MonoMod.Utils.Cil {
     public partial class ILGeneratorShim {
 
+        /// <summary>
+        /// Get a "real" ILGenerator for this ILGeneratorShim.
+        /// </summary>
+        /// <returns>A "real" ILGenerator.</returns>
         public System.Reflection.Emit.ILGenerator GetProxy() {
             return (System.Reflection.Emit.ILGenerator) ILGeneratorBuilder
                 .GenerateProxy()
@@ -21,8 +25,22 @@ namespace MonoMod.Utils.Cil {
                 .Invoke(new object[] { this });
         }
 
+        /// <summary>
+        /// Get the proxy type for a given ILGeneratorShim type. The proxy type implements ILGenerator.
+        /// </summary>
+        /// <typeparam name="TShim">The ILGeneratorShim type.</typeparam>
+        /// <returns>The "real" ILGenerator type.</returns>
         public static Type GetProxyType<TShim>() where TShim : ILGeneratorShim => GetProxyType(typeof(TShim));
+        /// <summary>
+        /// Get the proxy type for a given ILGeneratorShim type. The proxy type implements ILGenerator.
+        /// </summary>
+        /// <param name="tShim">The ILGeneratorShim type.</param>
+        /// <returns>The "real" ILGenerator type.</returns>
         public static Type GetProxyType(Type tShim) => ProxyType.MakeGenericType(tShim);
+        /// <summary>
+        /// Get the non-generic proxy type implementing ILGenerator.
+        /// </summary>
+        /// <returns>The "real" ILGenerator type, non-generic.</returns>
         public static Type ProxyType => ILGeneratorBuilder.GenerateProxy();
 
         static class ILGeneratorBuilder {

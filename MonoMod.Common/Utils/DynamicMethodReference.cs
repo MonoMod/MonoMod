@@ -1,0 +1,24 @@
+﻿using System;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Linq.Expressions;
+using MonoMod.Utils;
+using System.Collections.Generic;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using System.Linq;
+using System.Diagnostics;
+using System.ComponentModel;
+using System.IO;
+using System.Security;
+
+namespace MonoMod.Utils {
+    public class DynamicMethodReference : MethodReference {
+        public DynamicMethod DynamicMethod;
+
+        public DynamicMethodReference(ModuleDefinition module, DynamicMethod dm)
+            : base("", module.TypeSystem.Void) {
+            DynamicMethod = dm;
+        }
+    }
+}

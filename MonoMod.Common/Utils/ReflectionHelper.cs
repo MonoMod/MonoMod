@@ -64,6 +64,23 @@ namespace MonoMod.Utils {
             return asm;
         }
 
+        public static Type GetType(string name) {
+            if (string.IsNullOrEmpty(name))
+                return null;
+
+            Type type = Type.GetType(name);
+            if (type != null)
+                return type;
+
+            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies()) {
+                type = asm.GetType(name);
+                if (type != null)
+                    return type;
+            }
+
+            return null;
+        }
+
         public static Type ResolveReflection(this TypeReference mref)
             => _ResolveReflection(mref, null) as Type;
         public static MethodBase ResolveReflection(this MethodReference mref)
@@ -100,11 +117,11 @@ namespace MonoMod.Utils {
                 type = _ResolveReflection(mref.DeclaringType, modules) as Type;
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
-                string methodID = method.GetFindableID(withType: false);
+                string methodID = method.GetID(withType: false);
                 MethodBase found = 
                     type.GetMethods(_BindingFlagsAll).Cast<MethodBase>()
                     .Concat(type.GetConstructors(_BindingFlagsAll))
-                    .FirstOrDefault(m => m.GetFindableID(withType: false) == methodID);
+                    .FirstOrDefault(m => m.GetID(withType: false) == methodID);
                 if (found != null)
                     return _Cache(mref, found);
             }

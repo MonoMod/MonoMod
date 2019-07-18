@@ -6,6 +6,9 @@ using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Utils.Cil {
+    /// <summary>
+    /// Abstract version of System.Reflection.Emit.ILGenerator.
+    /// </summary>
     public abstract partial class ILGeneratorShim {
 
         public abstract int ILOffset { get; }

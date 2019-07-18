@@ -34,7 +34,7 @@ namespace MonoMod.Utils {
         }
 
         private void _CopyMethodToDefinition() {
-            MethodBase method = Method;
+            MethodBase method = OriginalMethod;
             Module moduleFrom = method.Module;
             System.Reflection.MethodBody bodyFrom = method.GetMethodBody();
             byte[] data = bodyFrom?.GetILAsByteArray();

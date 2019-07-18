@@ -606,18 +606,18 @@ namespace MonoMod.Utils {
                 // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
                 foreach (MethodDefinition method in type.Methods)
-                    if (method.GetFindableID(simple: true) == findableID) return method;
+                    if (method.GetID(simple: true) == findableID) return method;
                 // Second simple pass: Without type name (basically name only)
                 foreach (MethodDefinition method in type.Methods)
-                    if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
+                    if (method.GetID(withType: false, simple: true) == findableID) return method;
             }
 
             // First pass: With type name (f.e. global searches)
             foreach (MethodDefinition method in type.Methods)
-                if (method.GetFindableID() == findableID) return method;
+                if (method.GetID() == findableID) return method;
             // Second pass: Without type name (f.e. LinkTo)
             foreach (MethodDefinition method in type.Methods)
-                if (method.GetFindableID(withType: false) == findableID) return method;
+                if (method.GetID(withType: false) == findableID) return method;
 
             return null;
         }
@@ -631,10 +631,10 @@ namespace MonoMod.Utils {
             );
             // First pass: With type name (f.e. global searches)
             foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID() == findableID) return method;
+                if (method.GetID() == findableID) return method;
             // Second pass: Without type name (f.e. LinkTo)
             foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID(withType: false) == findableID) return method;
+                if (method.GetID(withType: false) == findableID) return method;
 
             if (!simple)
                 return null;
@@ -642,10 +642,10 @@ namespace MonoMod.Utils {
             // Those shouldn't be reached, unless you're defining a relink map dynamically, which may conflict with itself.
             // First simple pass: With type name (just "Namespace.Type::MethodName")
             foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID(simple: true) == findableID) return method;
+                if (method.GetID(simple: true) == findableID) return method;
             // Second simple pass: Without type name (basically name only)
             foreach (System.Reflection.MethodInfo method in methods)
-                if (method.GetFindableID(withType: false, simple: true) == findableID) return method;
+                if (method.GetID(withType: false, simple: true) == findableID) return method;
 
             return null;
         }
@@ -679,7 +679,7 @@ namespace MonoMod.Utils {
         }
 
         public static bool HasMethod(this TypeDefinition type, MethodDefinition method)
-            => type.FindMethod(method.GetFindableID(withType: false)) != null;
+            => type.FindMethod((string) method.GetID(withType: false)) != null;
         public static bool HasProperty(this TypeDefinition type, PropertyDefinition prop)
             => type.FindProperty(prop.Name) != null;
         public static bool HasField(this TypeDefinition type, FieldDefinition field)
@@ -758,8 +758,8 @@ namespace MonoMod.Utils {
                 if (mtp is TypeReference) {
                     name = ((TypeReference) mtp).FullName;
                 } else if (mtp is MethodReference) {
-                    name = ((MethodReference) mtp).GetFindableID(withType: true);
-                    nameAlt = ((MethodReference) mtp).GetFindableID(simple: true);
+                    name = ((MethodReference) mtp).GetID(withType: true);
+                    nameAlt = ((MethodReference) mtp).GetID(simple: true);
                 } else if (mtp is FieldReference) {
                     name = ((FieldReference) mtp).Name;
                 }
@@ -838,131 +838,6 @@ namespace MonoMod.Utils {
             } catch {
                 return null;
             }
-        }
-
-        public static string GetPatchName(this MemberReference mr) {
-            return (mr as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
-        }
-        public static string GetPatchFullName(this MemberReference mr) {
-            return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
-        }
-
-        private static string GetPatchName(this ICustomAttributeProvider cap) {
-            string name;
-
-            CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
-            if (patchAttrib != null) {
-                name = (string) patchAttrib.ConstructorArguments[0].Value;
-                int dotIndex = name.LastIndexOf('.');
-                if (dotIndex != -1 && dotIndex != name.Length - 1) {
-                    name = name.Substring(dotIndex + 1);
-                }
-                return name;
-            }
-
-            // Backwards-compatibility: Check for patch_
-            name = ((MemberReference) cap).Name;
-            return name.StartsWith("patch_") ? name.Substring(6) : name;
-        }
-        private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
-            if (cap is TypeReference type) {
-                CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
-                string name;
-
-                if (patchAttrib != null) {
-                    name = (string) patchAttrib.ConstructorArguments[0].Value;
-                } else {
-                    // Backwards-compatibility: Check for patch_
-                    name = ((MemberReference) cap).Name;
-                    name = name.StartsWith("patch_") ? name.Substring(6) : name;
-                }
-
-                if (name.StartsWith("global::"))
-                    name = name.Substring(8); // Patch name is refering to a global type.
-                else if (name.Contains(".") || name.Contains("/")) { } // Patch name is already a full name.
-                else if (!string.IsNullOrEmpty(type.Namespace))
-                    name = type.Namespace + "." + name;
-                else if (type.IsNested)
-                    name = type.DeclaringType.GetPatchFullName() + "/" + name;
-
-                if (mr is TypeSpecification) {
-                    // Collect TypeSpecifications and append formats back to front.
-                    List<TypeSpecification> formats = new List<TypeSpecification>();
-                    TypeSpecification ts = (TypeSpecification) mr;
-                    do {
-                        formats.Add(ts);
-                    } while ((ts = (ts.ElementType as TypeSpecification)) != null);
-
-                    StringBuilder builder = new StringBuilder(name.Length + formats.Count * 4);
-                    builder.Append(name);
-                    for (int formati = formats.Count - 1; formati > -1; --formati) {
-                        ts = formats[formati];
-
-                        if (ts.IsByReference)
-                            builder.Append("&");
-                        else if (ts.IsPointer)
-                            builder.Append("*");
-                        else if (ts.IsPinned) { } // FullName not overriden.
-                        else if (ts.IsSentinel) { } // FullName not overriden.
-                        else if (ts.IsArray) {
-                            ArrayType array = (ArrayType) ts;
-                            if (array.IsVector)
-                                builder.Append("[]");
-                            else {
-                                builder.Append("[");
-                                for (int i = 0; i < array.Dimensions.Count; i++) {
-                                    if (i > 0)
-                                        builder.Append(",");
-                                    builder.Append(array.Dimensions[i].ToString());
-                                }
-                                builder.Append("]");
-                            }
-                        } else if (ts.IsRequiredModifier)
-                            builder.Append("modreq(").Append(((RequiredModifierType) ts).ModifierType).Append(")");
-                        else if (ts.IsOptionalModifier)
-                            builder.Append("modopt(").Append(((OptionalModifierType) ts).ModifierType).Append(")");
-                        else if (ts.IsGenericInstance) {
-                            GenericInstanceType gen = (GenericInstanceType) ts;
-                            builder.Append("<");
-                            for (int i = 0; i < gen.GenericArguments.Count; i++) {
-                                if (i > 0)
-                                    builder.Append(",");
-                                builder.Append(gen.GenericArguments[i].GetPatchFullName());
-                            }
-                            builder.Append(">");
-                        } else if (ts.IsFunctionPointer) {
-                            FunctionPointerType fpt = (FunctionPointerType) ts;
-                            builder.Append(" ").Append(fpt.ReturnType.GetPatchFullName()).Append(" *(");
-                            if (fpt.HasParameters)
-                                for (int i = 0; i < fpt.Parameters.Count; i++) {
-                                    ParameterDefinition parameter = fpt.Parameters[i];
-                                    if (i > 0)
-                                        builder.Append(",");
-
-                                    if (parameter.ParameterType.IsSentinel)
-                                        builder.Append("...,");
-
-                                    builder.Append(parameter.ParameterType.FullName);
-                                }
-                            builder.Append(")");
-                        } else
-                            throw new NotSupportedException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
-                    }
-
-                    name = builder.ToString();
-                }
-
-                return name;
-            }
-
-            if (cap is FieldReference field) {
-                return $"{field.FieldType.GetPatchFullName()} {field.DeclaringType.GetPatchFullName()}::{cap.GetPatchName()}";
-            }
-
-            if (cap is MethodReference)
-                throw new InvalidOperationException("GetPatchFullName not supported on MethodReferences - use GetFindableID instead");
-
-            throw new InvalidOperationException($"GetPatchFullName not supported on type {cap.GetType()}");
         }
 
         public static bool IsBaseMethodCall(this MethodBody body, MethodReference called) {
@@ -1050,7 +925,7 @@ namespace MonoMod.Utils {
             for (int i = 0; i < method.Body.Instructions.Count; i++) {
                 Instruction instr = method.Body.Instructions[i];
                 if (instr.Operand is Instruction) {
-                    instr.OpCode = instr.OpCode.ShortToLongOp();
+                    instr.OpCode = instr.OpCode.ToLongOp();
                 }
             }
 
@@ -1068,7 +943,7 @@ namespace MonoMod.Utils {
                         int distance = target.Offset - (instr.Offset + instr.GetSize());
                         if (distance == (sbyte) distance) {
                             OpCode prev = instr.OpCode;
-                            instr.OpCode = instr.OpCode.LongToShortOp();
+                            instr.OpCode = instr.OpCode.ToShortOp();
                             optimized = prev != instr.OpCode;
                         }
                     }

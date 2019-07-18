@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace MonoMod.Utils {
     // The following mostly qualifies as r/badcode material.
-    public sealed partial class DynamicMethodDefinition {
+    internal static partial class _DMDEmit {
 
         // Mono
         private static readonly MethodInfo _ILGen_make_room =
@@ -75,7 +75,7 @@ namespace MonoMod.Utils {
             }
 #if !NETSTANDARD
             DynamicILInfo _info = null;
-            if (_IsMono) {
+            if (DynamicMethodDefinition._IsMono) {
                 // GetDynamicILInfo throws "invalid signature" in .NET - let's hope for the best for mono...
                 _info = dm.GetDynamicILInfo();
             } else {
@@ -104,7 +104,7 @@ namespace MonoMod.Utils {
             List<Type> modReq = new List<Type>();
             List<Type> modOpt = new List<Type>();
 
-            _EmitResolveWithModifiers(csite.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt, modReq, modOpt);
+            ResolveWithModifiers(csite.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt, modReq, modOpt);
             AddArgument(returnType, returnTypeModReq, returnTypeModOpt);
 
             foreach (ParameterDefinition param in csite.Parameters) {
@@ -117,7 +117,7 @@ namespace MonoMod.Utils {
                     // continue;
                 }
 
-                _EmitResolveWithModifiers(param.ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
+                ResolveWithModifiers(param.ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
                 AddArgument(paramType, paramTypeModReq, paramTypeModOpt);
             }
 

@@ -14,9 +14,10 @@ using OpCode = Mono.Cecil.Cil.OpCode;
 using Mono.Collections.Generic;
 
 namespace MonoMod.Utils.Cil {
+    /// <summary>
+    /// A variant of ILGenerator which uses Mono.Cecil under the hood.
+    /// </summary>
     public sealed class CecilILGenerator : ILGeneratorShim {
-
-        private static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
 
         // https://github.com/Unity-Technologies/mono/blob/unity-5.6/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
         // https://github.com/Unity-Technologies/mono/blob/unity-2018.3-mbe/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
@@ -36,6 +37,9 @@ namespace MonoMod.Utils.Cil {
             }
         }
 
+        /// <summary>
+        /// The underlying Mono.Cecil.Cil.ILProcessor.
+        /// </summary>
         public readonly ILProcessor IL;
 
         private readonly List<Instruction> _Labels = new List<Instruction>();

@@ -214,7 +214,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     argTypes.AddRange(from.GetParameters().Select(p => p.ParameterType));
 
                     using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                        $"Glue:ThiscallStructRetPtr<{from.GetFindableID(simple: true)},{to.GetFindableID(simple: true)}>",
+                        $"Glue:ThiscallStructRetPtr<{from.GetID(simple: true)},{to.GetID(simple: true)}>",
                         typeof(void), argTypes.ToArray()
                     )) {
                         ILProcessor il = dmd.GetILProcessor();

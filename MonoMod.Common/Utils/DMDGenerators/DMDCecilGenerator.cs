@@ -11,31 +11,31 @@ using System.ComponentModel;
 using System.IO;
 
 namespace MonoMod.Utils {
-    public sealed partial class DynamicMethodDefinition {
+    public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator> {
 
-        public MethodInfo GenerateViaCecil(TypeDefinition typeDef) {
-            MethodDefinition def = Definition;
+        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object context) {
+            MethodDefinition def = dmd.Definition;
+            TypeDefinition typeDef = context as TypeDefinition;
 
-            bool moduleIsPrivate = false;
+            bool moduleIsTemporary = false;
             ModuleDefinition module = typeDef?.Module;
             HashSet<string> accessChecksIgnored = null;
             if (typeDef == null) {
-                moduleIsPrivate = true;
+                moduleIsTemporary = true;
                 accessChecksIgnored = new HashSet<string>();
 
-                string name = GetDumpName("Cecil");
+                string name = dmd.GetDumpName("Cecil");
                 module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
                     Kind = ModuleKind.Dll,
-                    AssemblyResolver = new AssemblyCecilDefinitionResolver(_ModuleGen, new DefaultAssemblyResolver()),
 #if !CECIL0_9
-                    ReflectionImporterProvider = new ReflectionCecilImporterProvider(null)
+                    ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
 #endif
                 });
 
-                module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(c_UnverifiableCodeAttribute)));
+                module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_UnverifiableCodeAttribute)));
 
-                if (Debug) {
-                    CustomAttribute caDebug = new CustomAttribute(module.ImportReference(c_DebuggableAttribute));
+                if (dmd.Debug) {
+                    CustomAttribute caDebug = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_DebuggableAttribute));
                     caDebug.ConstructorArguments.Add(new CustomAttributeArgument(
                         module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
                         DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
@@ -45,7 +45,7 @@ namespace MonoMod.Utils {
 
                 typeDef = new TypeDefinition(
                     "",
-                    $"DMD<{Method?.Name?.Replace('.', '_')}>?{GetHashCode()}",
+                    $"DMD<{dmd.OriginalMethod?.Name?.Replace('.', '_')}>?{GetHashCode()}",
                     Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Abstract | Mono.Cecil.TypeAttributes.Sealed | Mono.Cecil.TypeAttributes.Class
                 ) {
                     BaseType = module.TypeSystem.Object
@@ -108,7 +108,7 @@ namespace MonoMod.Utils {
                         // TODO: Only do the following for inaccessible members.
                         IMetadataScope asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
                         if (!accessChecksIgnored.Contains(asmRef.Name)) {
-                            CustomAttribute caAccess = new CustomAttribute(module.ImportReference(c_IgnoresAccessChecksToAttribute));
+                            CustomAttribute caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
                             caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
                                 module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
                                 asmRef.Name
@@ -145,19 +145,12 @@ namespace MonoMod.Utils {
 
                 Assembly asm = ReflectionHelper.Load(module);
 
-                _DynModuleCache[module.Assembly.Name.FullName] = module.Assembly;
-                _DynModuleReflCache[asm.GetModules()[0]] = module;
-                _DynModuleIsPrivate = false;
-                moduleIsPrivate = false;
-
-                return _Postbuild(
-                    asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false)
-                    .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
-                );
+                return asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false)
+                    .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
 
             } finally {
 #if !CECIL0_9
-                if (moduleIsPrivate)
+                if (moduleIsTemporary)
                     module.Dispose();
 #endif
             }
