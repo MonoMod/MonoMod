@@ -584,8 +584,10 @@ namespace MonoMod {
             }
 
             caHandler = type.GetMMAttribute("CustomMethodAttributeAttribute");
-            if (caHandler != null)
-                CustomMethodAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).Invoke(self, args);
+            if (caHandler != null) {
+                CustomAttribute handler = caHandler;
+                CustomMethodAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value).Invoke(self, args);
+            }
 
             CustomAttribute hook;
 
