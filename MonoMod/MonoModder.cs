@@ -561,12 +561,17 @@ namespace MonoMod {
             CustomAttribute caHandler;
 
             caHandler = type.GetCustomAttribute("MonoMod.MonoModCustomAttributeAttribute");
-            if (caHandler != null)
-                CustomAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).Invoke(self, args);
+            if (caHandler != null) {
+                // Copy so that second assignment doesn't affect first closure.
+                CustomAttribute handler = caHandler;
+                CustomAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value).Invoke(self, args);
+            }
 
             caHandler = type.GetCustomAttribute("MonoMod.MonoModCustomMethodAttributeAttribute");
-            if (caHandler != null)
-                CustomMethodAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).Invoke(self, args);
+            if (caHandler != null) {
+                CustomAttribute handler = caHandler;
+                CustomMethodAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value).Invoke(self, args);
+            }
 
             CustomAttribute hook;
 
