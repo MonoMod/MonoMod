@@ -87,7 +87,7 @@ namespace MonoMod.DebugIL {
                 DebuggableAttribute.DebuggingModes.DisableOptimizations |
                 DebuggableAttribute.DebuggingModes.EnableEditAndContinue
             ));
-            Modder.Module.Assembly.AddAttribute(debuggable);
+            Modder.Module.Assembly.CustomAttributes.Add(debuggable);
 
             GenerateMetadata();
 
@@ -130,7 +130,8 @@ namespace MonoMod.DebugIL {
             if (type.DeclaringType == null && !string.IsNullOrEmpty(type.Namespace)) {
                 string[] namespacePath = type.Namespace.Split('.');
                 namespaceDepth = namespacePath.Length;
-                CurrentPath.PushRange(namespacePath);
+                foreach (string piece in namespacePath)
+                    CurrentPath.Push(piece);
             }
             CurrentPath.Push(PathVerifyRegex.Replace(type.Name, ""));
             Directory.CreateDirectory(FullPath);
@@ -171,7 +172,8 @@ namespace MonoMod.DebugIL {
                 GenerateFor(nested);
 
             CurrentPath.Pop();
-            CurrentPath.PopRange(namespaceDepth);
+            for (int i = 0; i < namespaceDepth; i++)
+                CurrentPath.Pop();
         }
 
         public void GenerateFor(MethodDefinition method) {

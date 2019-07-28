@@ -50,7 +50,7 @@ namespace MonoMod {
 
         public static readonly Version Version = typeof(MonoModder).Assembly.GetName().Version;
 
-        // WasIDictionary and the _ IDictionaries are used when upgrading mods.
+        public Dictionary<string, object> SharedData = new Dictionary<string, object>();
 
         public Dictionary<string, object> RelinkMap = new Dictionary<string, object>();
         public Dictionary<string, ModuleDefinition> RelinkModuleMap = new Dictionary<string, ModuleDefinition>();
@@ -308,12 +308,12 @@ namespace MonoMod {
             if (Module == null) {
                 if (Input != null) {
                     Log("Reading input stream into module.");
-                    Module = MonoModExt.ReadModule(Input, GenReaderParameters(true));
+                    Module = ModuleDefinition.ReadModule(Input, GenReaderParameters(true));
                 } else if (InputPath != null) {
                     Log("Reading input file into module.");
                     (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(Path.GetDirectoryName(InputPath));
                     DependencyDirs.Add(Path.GetDirectoryName(InputPath));
-                    Module = MonoModExt.ReadModule(InputPath, GenReaderParameters(true, InputPath));
+                    Module = ModuleDefinition.ReadModule(InputPath, GenReaderParameters(true, InputPath));
                 }
 
                 string modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
@@ -439,7 +439,7 @@ namespace MonoMod {
 
             if (dep == null) {
                 if (path != null && File.Exists(path)) {
-                    dep = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
+                    dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
                 } else if ((dep = MissingDependencyResolver?.Invoke(this, main, name, fullName)) == null) {
                     return;
                 }
@@ -522,7 +522,7 @@ namespace MonoMod {
             }
 
             Log($"[ReadMod] Loading mod: {path}");
-            ModuleDefinition mod = MonoModExt.ReadModule(path, GenReaderParameters(false, path));
+            ModuleDefinition mod = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
             string dir = Path.GetDirectoryName(path);
             if (!DependencyDirs.Contains(dir)) {
                 (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(dir);
@@ -533,7 +533,7 @@ namespace MonoMod {
         }
         public virtual void ReadMod(Stream stream) {
             Log($"[ReadMod] Loading mod: stream#{(uint) stream.GetHashCode()}");
-            ModuleDefinition mod = MonoModExt.ReadModule(stream, GenReaderParameters(false));
+            ModuleDefinition mod = ModuleDefinition.ReadModule(stream, GenReaderParameters(false));
             Mods.Add(mod);
             OnReadMod?.Invoke(this, mod);
         }
@@ -560,40 +560,40 @@ namespace MonoMod {
 
             CustomAttribute caHandler;
 
-            caHandler = type.GetMMAttribute("CustomAttributeAttribute");
+            caHandler = type.GetCustomAttribute("MonoMod.MonoModCustomAttributeAttribute");
             if (caHandler != null)
                 CustomAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).Invoke(self, args);
 
-            caHandler = type.GetMMAttribute("CustomMethodAttributeAttribute");
+            caHandler = type.GetCustomAttribute("MonoMod.MonoModCustomMethodAttributeAttribute");
             if (caHandler != null)
                 CustomMethodAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) caHandler.ConstructorArguments[0].Value).Invoke(self, args);
 
             CustomAttribute hook;
 
-            for (hook = type.GetMMAttribute("Hook"); hook != null; hook = type.GetNextMMAttribute("Hook"))
+            for (hook = type.GetCustomAttribute("MonoMod.MonoModHook"); hook != null; hook = type.GetNextCustomAttribute("MonoMod.MonoModHook"))
                 ParseLinkFrom(type, hook);
-            for (hook = type.GetMMAttribute("LinkFrom"); hook != null; hook = type.GetNextMMAttribute("LinkFrom"))
+            for (hook = type.GetCustomAttribute("MonoMod.MonoModLinkFrom"); hook != null; hook = type.GetNextCustomAttribute("MonoMod.MonoModLinkFrom"))
                 ParseLinkFrom(type, hook);
-            for (hook = type.GetMMAttribute("LinkTo"); hook != null; hook = type.GetNextMMAttribute("LinkTo"))
+            for (hook = type.GetCustomAttribute("MonoMod.MonoModLinkTo"); hook != null; hook = type.GetNextCustomAttribute("MonoMod.MonoModLinkTo"))
                 ParseLinkTo(type, hook);
 
-            if (type.HasMMAttribute("Ignore"))
+            if (type.HasCustomAttribute("MonoMod.MonoModIgnore"))
                 return;
 
             foreach (MethodDefinition method in type.Methods) {
                 if (!method.MatchingConditionals(Module))
                     continue;
 
-                for (hook = method.GetMMAttribute("Hook"); hook != null; hook = method.GetNextMMAttribute("Hook"))
+                for (hook = method.GetCustomAttribute("MonoMod.MonoModHook"); hook != null; hook = method.GetNextCustomAttribute("MonoMod.MonoModHook"))
                     ParseLinkFrom(method, hook);
-                for (hook = method.GetMMAttribute("LinkFrom"); hook != null; hook = method.GetNextMMAttribute("LinkFrom"))
+                for (hook = method.GetCustomAttribute("MonoMod.MonoModLinkFrom"); hook != null; hook = method.GetNextCustomAttribute("MonoMod.MonoModLinkFrom"))
                     ParseLinkFrom(method, hook);
-                for (hook = method.GetMMAttribute("LinkTo"); hook != null; hook = method.GetNextMMAttribute("LinkTo"))
+                for (hook = method.GetCustomAttribute("MonoMod.MonoModLinkTo"); hook != null; hook = method.GetNextCustomAttribute("MonoMod.MonoModLinkTo"))
                     ParseLinkTo(method, hook);
 
-                if (method.HasMMAttribute("ForceCall"))
+                if (method.HasCustomAttribute("MonoMod.MonoModForceCall"))
                     ForceCallMap[method.GetID()] = OpCodes.Call;
-                else if (method.HasMMAttribute("ForceCallvirt"))
+                else if (method.HasCustomAttribute("MonoMod.MonoModForceCallvirt"))
                     ForceCallMap[method.GetID()] = OpCodes.Callvirt;
             }
 
@@ -601,11 +601,11 @@ namespace MonoMod {
                 if (!field.MatchingConditionals(Module))
                     continue;
 
-                for (hook = field.GetMMAttribute("Hook"); hook != null; hook = field.GetNextMMAttribute("Hook"))
+                for (hook = field.GetCustomAttribute("MonoMod.MonoModHook"); hook != null; hook = field.GetNextCustomAttribute("MonoMod.MonoModHook"))
                     ParseLinkFrom(field, hook);
-                for (hook = field.GetMMAttribute("LinkFrom"); hook != null; hook = field.GetNextMMAttribute("LinkFrom"))
+                for (hook = field.GetCustomAttribute("MonoMod.MonoModLinkFrom"); hook != null; hook = field.GetNextCustomAttribute("MonoMod.MonoModLinkFrom"))
                     ParseLinkFrom(field, hook);
-                for (hook = field.GetMMAttribute("LinkTo"); hook != null; hook = field.GetNextMMAttribute("LinkTo"))
+                for (hook = field.GetCustomAttribute("MonoMod.MonoModLinkTo"); hook != null; hook = field.GetNextCustomAttribute("MonoMod.MonoModLinkTo"))
                     ParseLinkTo(field, hook);
             }
 
@@ -613,11 +613,11 @@ namespace MonoMod {
                 if (!prop.MatchingConditionals(Module))
                     continue;
 
-                for (hook = prop.GetMMAttribute("Hook"); hook != null; hook = prop.GetNextMMAttribute("Hook"))
+                for (hook = prop.GetCustomAttribute("MonoMod.MonoModHook"); hook != null; hook = prop.GetNextCustomAttribute("MonoMod.MonoModHook"))
                     ParseLinkFrom(prop, hook);
-                for (hook = prop.GetMMAttribute("LinkFrom"); hook != null; hook = prop.GetNextMMAttribute("LinkFrom"))
+                for (hook = prop.GetCustomAttribute("MonoMod.MonoModLinkFrom"); hook != null; hook = prop.GetNextCustomAttribute("MonoMod.MonoModLinkFrom"))
                     ParseLinkFrom(prop, hook);
-                for (hook = prop.GetMMAttribute("LinkTo"); hook != null; hook = prop.GetNextMMAttribute("LinkTo"))
+                for (hook = prop.GetCustomAttribute("MonoMod.MonoModLinkTo"); hook != null; hook = prop.GetNextCustomAttribute("MonoMod.MonoModLinkTo"))
                     ParseLinkTo(prop, hook);
             }
 
@@ -935,7 +935,7 @@ namespace MonoMod {
             string typeName = type.GetPatchFullName();
 
             // Fix legacy issue: Copy / inline any used modifiers.
-            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || SkipList.Contains(typeName) || !type.MatchingConditionals(Module))
+            if ((type.Namespace != "MonoMod" && type.HasCustomAttribute("MonoMod.MonoModIgnore")) || SkipList.Contains(typeName) || !type.MatchingConditionals(Module))
                 return;
             // ... Except MonoModRules
             if (type.FullName == "MonoMod.MonoModRules" && !forceAdd)
@@ -944,14 +944,14 @@ namespace MonoMod {
             // Check if type exists in target module or dependencies.
             TypeReference targetType = forceAdd ? null : Module.GetType(typeName, false); // For PrePatch, we need to check in the target assembly only
             TypeDefinition targetTypeDef = targetType?.SafeResolve();
-            if (type.HasMMAttribute("Replace") || type.HasMMAttribute("Remove")) {
+            if (type.HasCustomAttribute("MonoMod.MonoModReplace") || type.HasCustomAttribute("MonoMod.MonoModRemove")) {
                 if (targetTypeDef != null) {
                     if (targetTypeDef.DeclaringType == null)
                         Module.Types.Remove(targetTypeDef);
                     else
                         targetTypeDef.DeclaringType.NestedTypes.Remove(targetTypeDef);
                 }
-                if (type.HasMMAttribute("Remove"))
+                if (type.HasCustomAttribute("MonoMod.MonoModRemove"))
                     return;
             } else if (targetType != null) {
                 PrePatchNested(type);
@@ -981,7 +981,7 @@ namespace MonoMod {
             newType.SecurityDeclarations.AddRange(type.SecurityDeclarations);
 
             // When adding MonoModAdded, try to reuse the just added MonoModAdded.
-            newType.AddAttribute(GetMonoModAddedCtor());
+            newType.CustomAttributes.Add(new CustomAttribute(GetMonoModAddedCtor()));
 
             targetType = newType;
             
@@ -1027,11 +1027,11 @@ namespace MonoMod {
             if (targetType == null) return; // Type should've been added or removed accordingly.
             TypeDefinition targetTypeDef = targetType?.SafeResolve();
 
-            if ((type.Namespace != "MonoMod" && type.HasMMAttribute("Ignore")) || // Fix legacy issue: Copy / inline any used modifiers.
+            if ((type.Namespace != "MonoMod" && type.HasCustomAttribute("MonoMod.MonoModIgnore")) || // Fix legacy issue: Copy / inline any used modifiers.
                 SkipList.Contains(typeName) ||
                 !type.MatchingConditionals(Module)) {
 
-                if (type.HasMMAttribute("Ignore") && targetTypeDef != null) {
+                if (type.HasCustomAttribute("MonoMod.MonoModIgnore") && targetTypeDef != null) {
                     // MonoModIgnore is a special case, as registered custom attributes should still be applied.
                     foreach (CustomAttribute attrib in type.CustomAttributes)
                         if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
@@ -1064,7 +1064,7 @@ namespace MonoMod {
                 if (!propMethods.Contains(method) && !eventMethods.Contains(method))
                     PatchMethod(targetTypeDef, method);
 
-            if (type.HasMMAttribute("EnumReplace")) {
+            if (type.HasCustomAttribute("MonoMod.MonoModEnumReplace")) {
                 for (int ii = 0; ii < targetTypeDef.Fields.Count;) {
                     if (targetTypeDef.Fields[ii].Name == "value__") {
                         ii++;
@@ -1104,7 +1104,7 @@ namespace MonoMod {
                 foreach (CustomAttribute attrib in prop.CustomAttributes)
                     backing.CustomAttributes.Add(attrib.Clone());
 
-            if (prop.HasMMAttribute("Ignore")) {
+            if (prop.HasCustomAttribute("MonoMod.MonoModIgnore")) {
                 if (backing != null)
                     backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
                 if (prop.GetMethod != null)
@@ -1116,7 +1116,7 @@ namespace MonoMod {
                 return;
             }
 
-            if (prop.HasMMAttribute("Remove") || prop.HasMMAttribute("Replace")) {
+            if (prop.HasCustomAttribute("MonoMod.MonoModRemove") || prop.HasCustomAttribute("MonoMod.MonoModReplace")) {
                 if (targetProp != null) {
                     targetType.Properties.Remove(targetProp);
                     if (targetBacking != null)
@@ -1128,14 +1128,14 @@ namespace MonoMod {
                     foreach (MethodDefinition method in targetProp.OtherMethods)
                         targetType.Methods.Remove(method);
                 }
-                if (prop.HasMMAttribute("Remove"))
+                if (prop.HasCustomAttribute("MonoMod.MonoModRemove"))
                     return;
             }
 
             if (targetProp == null) {
                 // Add missing property
                 PropertyDefinition newProp = targetProp = new PropertyDefinition(prop.Name, prop.Attributes, prop.PropertyType);
-                newProp.AddAttribute(GetMonoModAddedCtor());
+                newProp.CustomAttributes.Add(new CustomAttribute(GetMonoModAddedCtor()));
 
                 foreach (ParameterDefinition param in prop.Parameters)
                     newProp.Parameters.Add(param.Clone());
@@ -1186,7 +1186,7 @@ namespace MonoMod {
                 foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
                     backing.CustomAttributes.Add(attrib.Clone());
 
-            if (srcEvent.HasMMAttribute("Ignore")) {
+            if (srcEvent.HasCustomAttribute("MonoMod.MonoModIgnore")) {
                 if (backing != null)
                     backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
                 if (srcEvent.AddMethod != null)
@@ -1200,7 +1200,7 @@ namespace MonoMod {
                 return;
             }
 
-            if (srcEvent.HasMMAttribute("Remove") || srcEvent.HasMMAttribute("Replace")) {
+            if (srcEvent.HasCustomAttribute("MonoMod.MonoModRemove") || srcEvent.HasCustomAttribute("MonoMod.MonoModReplace")) {
                 if (targetEvent != null) {
                     targetType.Events.Remove(targetEvent);
                     if (targetBacking != null)
@@ -1215,14 +1215,14 @@ namespace MonoMod {
                         foreach (MethodDefinition method in targetEvent.OtherMethods)
                             targetType.Methods.Remove(method);
                 }
-                if (srcEvent.HasMMAttribute("Remove"))
+                if (srcEvent.HasCustomAttribute("MonoMod.MonoModRemove"))
                     return;
             }
 
             if (targetEvent == null) {
                 // Add missing event
                 EventDefinition newEvent = targetEvent = new EventDefinition(srcEvent.Name, srcEvent.Attributes, srcEvent.EventType);
-                newEvent.AddAttribute(GetMonoModAddedCtor());
+                newEvent.CustomAttributes.Add(new CustomAttribute(GetMonoModAddedCtor()));
 
                 newEvent.DeclaringType = targetType;
                 targetType.Events.Add(newEvent);
@@ -1268,20 +1268,20 @@ namespace MonoMod {
         public virtual void PatchField(TypeDefinition targetType, FieldDefinition field) {
             string typeName = field.DeclaringType.GetPatchFullName();
 
-            if (field.HasMMAttribute("NoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals(Module))
+            if (field.HasCustomAttribute("MonoMod.MonoModNoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals(Module))
                 return;
 
-            if (field.HasMMAttribute("Remove") || field.HasMMAttribute("Replace")) {
+            if (field.HasCustomAttribute("MonoMod.MonoModRemove") || field.HasCustomAttribute("MonoMod.MonoModReplace")) {
                 FieldDefinition targetField = targetType.FindField(field.Name);
                 if (targetField != null)
                     targetType.Fields.Remove(targetField);
-                if (field.HasMMAttribute("Remove"))
+                if (field.HasCustomAttribute("MonoMod.MonoModRemove"))
                     return;
             }
 
             FieldDefinition existingField = targetType.FindField(field.Name);
 
-            if (field.HasMMAttribute("Ignore") && existingField != null) {
+            if (field.HasCustomAttribute("MonoMod.MonoModIgnore") && existingField != null) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
                 foreach (CustomAttribute attrib in field.CustomAttributes)
                     if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
@@ -1291,7 +1291,7 @@ namespace MonoMod {
 
             if (existingField == null) {
                 existingField = new FieldDefinition(field.Name, field.Attributes, field.FieldType);
-                existingField.AddAttribute(GetMonoModAddedCtor());
+                existingField.CustomAttributes.Add(new CustomAttribute(GetMonoModAddedCtor()));
                 existingField.InitialValue = field.InitialValue;
                 if (field.HasConstant)
                     existingField.Constant = field.Constant;
@@ -1303,7 +1303,7 @@ namespace MonoMod {
         }
 
         public virtual MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {
-            if (method.Name.StartsWith("orig_") || method.HasMMAttribute("Original"))
+            if (method.Name.StartsWith("orig_") || method.HasCustomAttribute("MonoMod.MonoModOriginal"))
                 // Ignore original method stubs
                 return null;
 
@@ -1317,12 +1317,12 @@ namespace MonoMod {
                 return null;
 
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
-            if (method.HasMMAttribute("Constructor")) {
+            if (method.HasCustomAttribute("MonoMod.MonoModConstructor")) {
                 // Add MonoModOriginalName as the orig name data gets lost otherwise.
-                if (!method.IsSpecialName && !method.HasMMAttribute("OriginalName")) {
+                if (!method.IsSpecialName && !method.HasCustomAttribute("MonoMod.MonoModOriginalName")) {
                     CustomAttribute origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
                     origNameAttrib.ConstructorArguments.Add(new CustomAttributeArgument(Module.TypeSystem.String, "orig_" + method.Name));
-                    method.AddAttribute(origNameAttrib);
+                    method.CustomAttributes.Add(origNameAttrib);
                 }
 
                 method.Name = method.IsStatic ? ".cctor" : ".ctor";
@@ -1333,7 +1333,7 @@ namespace MonoMod {
             MethodDefinition existingMethod = targetType.FindMethod(method.GetID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetID(type: typeName, name: method.GetOriginalName()));
 
-            if (method.HasMMAttribute("Ignore")) {
+            if (method.HasCustomAttribute("MonoMod.MonoModIgnore")) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
                 if (existingMethod != null)
                     foreach (CustomAttribute attrib in method.CustomAttributes)
@@ -1343,16 +1343,16 @@ namespace MonoMod {
                 return null;
             }
 
-            if (existingMethod == null && method.HasMMAttribute("NoNew"))
+            if (existingMethod == null && method.HasCustomAttribute("MonoMod.MonoModNoNew"))
                 return null;
 
-            if (method.HasMMAttribute("Remove")) {
+            if (method.HasCustomAttribute("MonoMod.MonoModRemove")) {
                 if (existingMethod != null)
                     targetType.Methods.Remove(existingMethod);
                 return null;
             }
 
-            if (method.HasMMAttribute("Replace")) {
+            if (method.HasCustomAttribute("MonoMod.MonoModReplace")) {
                 method.Name = method.GetPatchName();
                 if (existingMethod != null) {
                     existingMethod.CustomAttributes.Clear();
@@ -1372,7 +1372,7 @@ namespace MonoMod {
                 foreach (MethodReference @override in method.Overrides)
                     origMethod.Overrides.Add(@override);
 
-                origMethod.AddAttribute(GetMonoModOriginalCtor());
+                origMethod.CustomAttributes.Add(new CustomAttribute(GetMonoModOriginalCtor()));
 
                 // Check if we've got custom attributes on our own orig_ method.
                 MethodDefinition modOrigMethod = method.DeclaringType.FindMethod(method.GetID(name: method.GetOriginalName()));
@@ -1386,7 +1386,7 @@ namespace MonoMod {
             }
 
             // Fix for .cctor not linking to orig_.cctor
-            if (origMethod != null && method.IsConstructor && method.IsStatic && method.HasBody && !method.HasMMAttribute("Constructor")) {
+            if (origMethod != null && method.IsConstructor && method.IsStatic && method.HasBody && !method.HasCustomAttribute("MonoMod.MonoModConstructor")) {
                 Collection<Instruction> instructions = method.Body.Instructions;
                 ILProcessor ilProcessor = method.Body.GetILProcessor();
                 ilProcessor.InsertBefore(instructions[instructions.Count - 1], ilProcessor.Create(OpCodes.Call, origMethod));
@@ -1434,7 +1434,7 @@ namespace MonoMod {
                 foreach (MethodReference @override in method.Overrides)
                     clone.Overrides.Add(@override);
 
-                clone.AddAttribute(GetMonoModAddedCtor());
+                clone.CustomAttributes.Add(new CustomAttribute(GetMonoModAddedCtor()));
 
                 targetType.Methods.Add(clone);
 
@@ -1444,7 +1444,7 @@ namespace MonoMod {
             if (origMethod != null) {
                 CustomAttribute origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
                 origNameAttrib.ConstructorArguments.Add(new CustomAttributeArgument(Module.TypeSystem.String, origMethod.Name));
-                method.AddAttribute(origNameAttrib);
+                method.CustomAttributes.Add(origNameAttrib);
             }
 
             return method;
@@ -1569,7 +1569,7 @@ namespace MonoMod {
                 method.CustomAttributes[i] = method.CustomAttributes[i].Relink(Relinker, method);
 
             for (int i = 0; i < method.Overrides.Count; i++)
-                method.Overrides[i] = method.Overrides[i].Relink(Relinker, method);
+                method.Overrides[i] = (MethodReference) method.Overrides[i].Relink(Relinker, method);
 
             method.ReturnType = method.ReturnType.Relink(Relinker, method);
 
@@ -1762,13 +1762,13 @@ namespace MonoMod {
         }
 
         public virtual void DefaultPostProcessType(TypeDefinition type) {
-            if (PublicEverything || type.HasMMAttribute("Public"))
+            if (PublicEverything || type.HasCustomAttribute("MonoMod.MonoModPublic"))
                 type.SetPublic(true);
 
             RunCustomAttributeHandlers(type);
 
             foreach (EventDefinition eventDef in type.Events) {
-                if (PublicEverything || eventDef.HasMMAttribute("Public")) {
+                if (PublicEverything || eventDef.HasCustomAttribute("MonoMod.MonoModPublic")) {
                     eventDef.SetPublic(true);
                     eventDef.AddMethod?.SetPublic(true);
                     eventDef.RemoveMethod?.SetPublic(true);
@@ -1780,7 +1780,7 @@ namespace MonoMod {
             }
 
             foreach (PropertyDefinition prop in type.Properties) {
-                if (PublicEverything || prop.HasMMAttribute("Public")) {
+                if (PublicEverything || prop.HasCustomAttribute("MonoMod.MonoModPublic")) {
                     prop.SetPublic(true);
                     prop.GetMethod?.SetPublic(true);
                     prop.SetMethod?.SetPublic(true);
@@ -1792,7 +1792,7 @@ namespace MonoMod {
             }
 
             foreach (MethodDefinition method in type.Methods) {
-                if (PublicEverything || method.HasMMAttribute("Public"))
+                if (PublicEverything || method.HasCustomAttribute("MonoMod.MonoModPublic"))
                     method.SetPublic(true);
 
                 if (PreventInline && method.HasBody) {
@@ -1801,13 +1801,13 @@ namespace MonoMod {
                     method.ImplAttributes &= (MethodImplAttributes) 0x0100;
                 }
 
-                method.ConvertShortLongOps();
+                method.FixShortLongOps();
 
                 RunCustomAttributeHandlers(method);
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (PublicEverything || field.HasMMAttribute("Public"))
+                if (PublicEverything || field.HasCustomAttribute("MonoMod.MonoModPublic"))
                     field.SetPublic(true);
 
                 RunCustomAttributeHandlers(field);
@@ -2042,8 +2042,8 @@ namespace MonoMod {
         /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
         /// <param name="method">Method to check.</param>
         public virtual bool AllowedSpecialName(MethodDefinition method, TypeDefinition targetType = null) {
-            if (method.HasMMAttribute("Added") || method.DeclaringType.HasMMAttribute("Added") ||
-                (targetType?.HasMMAttribute("Added") ?? false)) {
+            if (method.HasCustomAttribute("MonoMod.MonoModAdded") || method.DeclaringType.HasCustomAttribute("MonoMod.MonoModAdded") ||
+                (targetType?.HasCustomAttribute("MonoMod.MonoModAdded") ?? false)) {
                 return true;
             }
 
@@ -2058,7 +2058,7 @@ namespace MonoMod {
                 if (method.IsStatic)
                     return true;
                 // Overriding the constructor manually is generally a horrible idea, but who knows where it may be used.
-                if (method.HasMMAttribute("Constructor")) return true;
+                if (method.HasCustomAttribute("MonoMod.MonoModConstructor")) return true;
             }
 
             if (method.IsGetter || method.IsSetter)

@@ -57,7 +57,7 @@ namespace MonoMod.Cil {
                     instr.Operand = targets.Select(l => l.Target).ToArray();
             }
 
-            Method.ConvertShortLongOps();
+            Method.FixShortLongOps();
         }
 
         /// <summary>

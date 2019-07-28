@@ -63,15 +63,15 @@ namespace MonoMod.InlineRT {
 
         public static class Flag {
 
-            public static bool Get(string k) => MonoModExt.SharedData[k] as bool? ?? false;
-            public static void Set(string k, bool v) => MonoModExt.SharedData[k] = v;
+            public static bool Get(string k) => Modder.SharedData[k] as bool? ?? false;
+            public static void Set(string k, bool v) => Modder.SharedData[k] = v;
 
         }
 
         public static class Data {
 
-            public static object Get(string k) => MonoModExt.SharedData[k];
-            public static void Set(string k, object v) => MonoModExt.SharedData[k] = v;
+            public static object Get(string k) => Modder.SharedData[k];
+            public static void Set(string k, object v) => Modder.SharedData[k] = v;
 
         }
 
