@@ -1,6 +1,4 @@
-﻿// FIXME: MERGE MonoModExt AND Extensions, KEEP ONLY WHAT'S NEEDED!
-
-using System;
+﻿using System;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil.Cil;
@@ -30,7 +28,7 @@ namespace MonoMod.Utils {
         private static string GetPatchName(this ICustomAttributeProvider cap) {
             string name;
 
-            CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
+            CustomAttribute patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
             if (patchAttrib != null) {
                 name = (string) patchAttrib.ConstructorArguments[0].Value;
                 int dotIndex = name.LastIndexOf('.');
@@ -46,7 +44,7 @@ namespace MonoMod.Utils {
         }
         private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
             if (cap is TypeReference type) {
-                CustomAttribute patchAttrib = cap.GetMMAttribute("Patch");
+                CustomAttribute patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
                 string name;
 
                 if (patchAttrib != null) {

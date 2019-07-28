@@ -55,12 +55,12 @@ namespace MonoMod.Utils {
                 Current = Platform.iOS;
             }
 
-            // Is64BitOperatingSystem has been added in .NET 4.0
+            // Is64BitOperatingSystem has been added in .NET Framework 4.0
             MethodInfo m_get_Is64BitOperatingSystem = typeof(Environment).GetProperty("Is64BitOperatingSystem")?.GetGetMethod();
             if (m_get_Is64BitOperatingSystem != null)
-                Current |= (((bool) m_get_Is64BitOperatingSystem.Invoke(null, new object[0])) ? Platform.Bits64 : Platform.Bits32);
+                Current |= (((bool) m_get_Is64BitOperatingSystem.Invoke(null, new object[0])) ? Platform.Bits64 : 0);
             else
-                Current |= (IntPtr.Size >= 8 ? Platform.Bits64 : Platform.Bits32);
+                Current |= (IntPtr.Size >= 8 ? Platform.Bits64 : 0);
 
 #if NETSTANDARD
             // Detect ARM based on RuntimeInformation.
@@ -89,7 +89,7 @@ namespace MonoMod.Utils {
                         Current |= Platform.ARM;
                 } catch (Exception) {
                     // Starting a process can fail for various reasons. One of them being...
-                    /* System.TypeInitializationException: The type initializer for 'MonoMod.Utils.PlatformHelper' threw an exception. ---> System.MissingMethodException: Method 'MonoIO.CreatePipe' not found.
+                    /* System.MissingMethodException: Method 'MonoIO.CreatePipe' not found.
                      * at System.Diagnostics.Process.StartWithCreateProcess (System.Diagnostics.ProcessStartInfo startInfo) <0x414ceb20 + 0x0061f> in <filename unknown>:0 
                      */
                 }
@@ -97,7 +97,7 @@ namespace MonoMod.Utils {
             } else {
                 // Detect ARM based on PE info or uname.
                 typeof(object).Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
-                if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET 4.5 */)
+                if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET Framework 4.5 */)
                     Current |= Platform.ARM;
             }
 #endif

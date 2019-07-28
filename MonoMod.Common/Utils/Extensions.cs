@@ -1,6 +1,4 @@
-﻿// FIXME: MERGE MonoModExt AND Extensions, KEEP ONLY WHAT'S NEEDED!
-
-using System;
+﻿using System;
 using System.Reflection;
 using SRE = System.Reflection.Emit;
 using CIL = Mono.Cecil.Cil;

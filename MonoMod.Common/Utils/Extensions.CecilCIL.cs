@@ -1,6 +1,4 @@
-﻿// FIXME: MERGE MonoModExt AND Extensions, KEEP ONLY WHAT'S NEEDED!
-
-using System;
+﻿using System;
 using System.Reflection;
 using SRE = System.Reflection.Emit;
 using CIL = Mono.Cecil.Cil;
@@ -51,6 +49,61 @@ namespace MonoMod.Utils {
                     return found;
                 return _ToShortOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
             }
+        }
+
+
+        /// <summary>
+        /// Calculate updated instruction offsets. Required for certain manual fixes.
+        /// </summary>
+        /// <param name="method">The method to recalculate the IL instruction offsets for.</param>
+        public static void RecalculateILOffsets(this MethodDefinition method) {
+            if (!method.HasBody)
+                return;
+
+            int offs = 0;
+            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                Instruction instr = method.Body.Instructions[i];
+                instr.Offset = offs;
+                offs += instr.GetSize();
+            }
+        }
+
+        /// <summary>
+        /// Fix (and optimize) any instructions which should use the long / short form opcodes instead.
+        /// </summary>
+        /// <param name="method">The method to apply the fixes to.</param>
+        public static void FixShortLongOps(this MethodDefinition method) {
+            if (!method.HasBody)
+                return;
+
+            // Convert short to long ops.
+            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                Instruction instr = method.Body.Instructions[i];
+                if (instr.Operand is Instruction) {
+                    instr.OpCode = instr.OpCode.ToLongOp();
+                }
+            }
+
+            method.RecalculateILOffsets();
+
+            // Optimize long to short ops.
+            bool optimized;
+            do {
+                optimized = false;
+                for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                    Instruction instr = method.Body.Instructions[i];
+                    // Change short <-> long operations as the method grows / shrinks.
+                    if (instr.Operand is Instruction target) {
+                        // Thanks to Chicken Bones for helping out with this!
+                        int distance = target.Offset - (instr.Offset + instr.GetSize());
+                        if (distance == (sbyte) distance) {
+                            OpCode prev = instr.OpCode;
+                            instr.OpCode = instr.OpCode.ToShortOp();
+                            optimized = prev != instr.OpCode;
+                        }
+                    }
+                }
+            } while (optimized);
         }
 
     }
