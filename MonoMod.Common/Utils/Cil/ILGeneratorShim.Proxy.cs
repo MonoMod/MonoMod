@@ -99,8 +99,6 @@ namespace MonoMod.Utils.Cil {
                     );
                     type.Fields.Add(fd_Target);
 
-                    ILProcessor il;
-
                     MethodDefinition ctor = new MethodDefinition(".ctor",
                         MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                         module.TypeSystem.Void
@@ -108,7 +106,7 @@ namespace MonoMod.Utils.Cil {
                     ctor.Parameters.Add(new ParameterDefinition(g_TTarget));
                     type.Methods.Add(ctor);
 
-                    il = ctor.Body.GetILProcessor();
+                    ILProcessor il = ctor.Body.GetILProcessor();
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Stfld, fd_Target);

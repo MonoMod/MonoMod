@@ -19,6 +19,8 @@ namespace MonoMod.Utils {
 
         // Use this source file for any extensions which don't deserve their own source files.
 
+        private static readonly object[] _NoArgs = new object[0];
+
         /// <summary>
         /// Determine if two types are compatible with each other (f.e. object with string, or enums with their underlying integer type).
         /// </summary>
