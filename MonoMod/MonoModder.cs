@@ -301,6 +301,28 @@ namespace MonoMod {
             Log(text);
         }
 
+        private static ModuleDefinition _ReadModule(Stream input, ReaderParameters args) {
+            if (args.ReadSymbols) {
+                try {
+                    return ModuleDefinition.ReadModule(input, args);
+                } catch {
+                    args.ReadSymbols = false;
+                }
+            }
+            return ModuleDefinition.ReadModule(input, args);
+        }
+
+        private static ModuleDefinition _ReadModule(string input, ReaderParameters args) {
+            if (args.ReadSymbols) {
+                try {
+                    return ModuleDefinition.ReadModule(input, args);
+                } catch {
+                    args.ReadSymbols = false;
+                }
+            }
+            return ModuleDefinition.ReadModule(input, args);
+        }
+
         /// <summary>
         /// Reads the main module from the Input stream / InputPath file to Module.
         /// </summary>
@@ -308,12 +330,12 @@ namespace MonoMod {
             if (Module == null) {
                 if (Input != null) {
                     Log("Reading input stream into module.");
-                    Module = ModuleDefinition.ReadModule(Input, GenReaderParameters(true));
+                    Module = _ReadModule(Input, GenReaderParameters(true));
                 } else if (InputPath != null) {
                     Log("Reading input file into module.");
                     (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(Path.GetDirectoryName(InputPath));
                     DependencyDirs.Add(Path.GetDirectoryName(InputPath));
-                    Module = ModuleDefinition.ReadModule(InputPath, GenReaderParameters(true, InputPath));
+                    Module = _ReadModule(InputPath, GenReaderParameters(true, InputPath));
                 }
 
                 string modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
@@ -439,7 +461,7 @@ namespace MonoMod {
 
             if (dep == null) {
                 if (path != null && File.Exists(path)) {
-                    dep = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
+                    dep = _ReadModule(path, GenReaderParameters(false, path));
                 } else if ((dep = MissingDependencyResolver?.Invoke(this, main, name, fullName)) == null) {
                     return;
                 }
@@ -522,7 +544,7 @@ namespace MonoMod {
             }
 
             Log($"[ReadMod] Loading mod: {path}");
-            ModuleDefinition mod = ModuleDefinition.ReadModule(path, GenReaderParameters(false, path));
+            ModuleDefinition mod = _ReadModule(path, GenReaderParameters(false, path));
             string dir = Path.GetDirectoryName(path);
             if (!DependencyDirs.Contains(dir)) {
                 (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(dir);
@@ -533,7 +555,7 @@ namespace MonoMod {
         }
         public virtual void ReadMod(Stream stream) {
             Log($"[ReadMod] Loading mod: stream#{(uint) stream.GetHashCode()}");
-            ModuleDefinition mod = ModuleDefinition.ReadModule(stream, GenReaderParameters(false));
+            ModuleDefinition mod = _ReadModule(stream, GenReaderParameters(false));
             Mods.Add(mod);
             OnReadMod?.Invoke(this, mod);
         }
