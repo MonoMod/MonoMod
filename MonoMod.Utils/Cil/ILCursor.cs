@@ -12,7 +12,7 @@ using System.ComponentModel;
 
 namespace MonoMod.Cil {
     /// <summary>
-    /// Specifies where a MMILCursor should be positioned in relation to the target of a search function
+    /// Specifies where a ILCursor should be positioned in relation to the target of a search function
     /// </summary>
     public enum MoveType {
         /// <summary>
@@ -32,7 +32,7 @@ namespace MonoMod.Cil {
     }
 
     /// <summary>
-    /// Indicates whether the position of a MMILCursor is the result of a search function and 
+    /// Indicates whether the position of a ILCursor is the result of a search function and 
     /// if the next search should ignore the instruction preceeding or following this cursor.
     /// <para />
     /// SearchTarget.Next is the result of searching with MoveType.Before, and SearchTarget.Prev from MoveType.After 
@@ -51,7 +51,13 @@ namespace MonoMod.Cil {
         Prev
     }
 
+    /// <summary>
+    /// A cursor used to manipulate a method body in an ILContext.
+    /// </summary>
     public class ILCursor {
+        /// <summary>
+        /// The context to which this cursor belongs to.
+        /// </summary>
         public ILContext Context { get; }
 
         // private state
@@ -114,10 +120,25 @@ namespace MonoMod.Cil {
         public IEnumerable<ILLabel> IncomingLabels => Context.GetIncomingLabels(Next);
 
         // Context convenience accessors
+        /// <summary>
+        /// See <see cref="ILContext.Method"/>
+        /// </summary>
         public MethodDefinition Method => Context.Method;
+        /// <summary>
+        /// See <see cref="ILContext.IL"/>
+        /// </summary>
         public ILProcessor IL => Context.IL;
+        /// <summary>
+        /// See <see cref="ILContext.Body"/>
+        /// </summary>
         public MethodBody Body => Context.Body;
+        /// <summary>
+        /// See <see cref="ILContext.Module"/>
+        /// </summary>
         public ModuleDefinition Module => Context.Module;
+        /// <summary>
+        /// See <see cref="ILContext.Instrs"/>
+        /// </summary>
         public InstrList Instrs => Context.Instrs;
 
         public ILCursor(ILContext context) {
@@ -132,13 +153,31 @@ namespace MonoMod.Cil {
             _afterLabels = c._afterLabels;
         }
 
+        /// <summary>
+        /// Create a clone of this cursor.
+        /// </summary>
+        /// <returns>The cloned cursor.</returns>
         public ILCursor Clone()
             => new ILCursor(this);
 
+        /// <summary>
+        /// Is this cursor before the given instruction?
+        /// </summary>
+        /// <param name="instr">The instruction to check.</param>
+        /// <returns>True if this cursor is before the given instruction, false otherwise.</returns>
         public bool IsBefore(Instruction instr) => Index <= Context.IndexOf(instr);
 
+        /// <summary>
+        /// Is this cursor after the given instruction?
+        /// </summary>
+        /// <param name="instr">The instruction to check.</param>
+        /// <returns>True if this cursor is after the given instruction, false otherwise.</returns>
         public bool IsAfter(Instruction instr) => Index > Context.IndexOf(instr);
 
+        /// <summary>
+        /// Obtain a string representation of this cursor (method ID, index, search target, surrounding instructions).
+        /// </summary>
+        /// <returns>A string representation of this cursor.</returns>
         public override string ToString() {
             StringBuilder builder = new StringBuilder();
 
@@ -152,7 +191,7 @@ namespace MonoMod.Cil {
         #region Movement functions
 
         /// <summary>
-        /// Moves the cursor to a target instruction. All other movements go through this.
+        /// Move the cursor to a target instruction. All other movements go through this.
         /// </summary>
         /// <param name="insn">The target instruction</param>
         /// <param name="moveType">Where to move in relation to the target instruction and incoming labels (branches)</param>
@@ -197,7 +236,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Moves the cursor to a target index. Supports negative indexing. See <see cref="Goto(Instruction, MoveType, bool)"/>
+        /// Move the cursor to a target index. Supports negative indexing. See <see cref="Goto(Instruction, MoveType, bool)"/>
         /// </summary>
         /// <returns>this</returns>
         public ILCursor Goto(int index, MoveType moveType = MoveType.Before, bool setTarget = false) {
@@ -215,7 +254,7 @@ namespace MonoMod.Cil {
         Goto(label.Target, moveType, setTarget);
 
         /// <summary>
-        /// Searches forward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="TryGotoNext"/>
+        /// Search forward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="TryGotoNext"/>
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
@@ -227,7 +266,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Searches forward and moves the cursor to the next sequence of instructions matching the corresponding predicates.
+        /// Search forward and moves the cursor to the next sequence of instructions matching the corresponding predicates.
         /// </summary>
         /// <returns>True if a match was found</returns>
         public bool TryGotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
@@ -251,7 +290,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Searches backward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="TryGotoPrev"/>
+        /// Search backward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="TryGotoPrev"/>
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
@@ -263,7 +302,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Searches backward and moves the cursor to the next sequence of instructions matching the corresponding predicates.
+        /// Search backward and moves the cursor to the next sequence of instructions matching the corresponding predicates.
         /// </summary>
         /// <returns>True if a match was found</returns>
         public bool TryGotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
@@ -326,7 +365,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Searches backwards for occurences of a series of instructions matching the given set of predicates with gaps permitted.
+        /// Search backwards for occurences of a series of instructions matching the given set of predicates with gaps permitted.
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
@@ -336,7 +375,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Searches backwards for occurences of a series of instructions matching the given set of predicates with gaps permitted.
+        /// Search backwards for occurences of a series of instructions matching the given set of predicates with gaps permitted.
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <returns>True if a match was found</returns>
@@ -358,7 +397,7 @@ namespace MonoMod.Cil {
         #region IL Manipulation
 
         /// <summary>
-        /// Sets the target of a label to the current position (<c>label.Target = Next</c>) and moves after it.
+        /// Set the target of a label to the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
         /// <param name="label">The label to mark</param>
         public void MarkLabel(ILLabel label) {
@@ -376,7 +415,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Creates a new label targetting the current position (<c>label.Target = Next</c>) and moves after it.
+        /// Create a new label targetting the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
         /// <returns>The newly created label</returns>
         public ILLabel MarkLabel() {
@@ -398,7 +437,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Removes the Next instruction
+        /// Remove the Next instruction
         /// </summary>
         public ILCursor Remove() {
             int index = Index;
@@ -408,7 +447,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Removes several instructions
+        /// Remove several instructions
         /// </summary>
         public ILCursor RemoveRange(int num) {
             int index = Index;
@@ -419,7 +458,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Moves the cursor and all labels the cursor is positioned after to a target instruction
+        /// Move the cursor and all labels the cursor is positioned after to a target instruction
         /// </summary>
         private void _Retarget(Instruction next, MoveType moveType) {
             if (_afterLabels != null)
@@ -428,47 +467,173 @@ namespace MonoMod.Cil {
             Goto(next, moveType);
         }
 
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="parameter">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, ParameterDefinition parameter)
             => _Insert(IL.Create(opcode, parameter));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="variable">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, VariableDefinition variable)
             => _Insert(IL.Create(opcode, variable));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="targets">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, Instruction[] targets)
             => _Insert(IL.Create(opcode, targets));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="target">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, Instruction target)
             => _Insert(IL.Create(opcode, target));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="value">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, double value)
             => _Insert(IL.Create(opcode, value));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="value">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, float value)
             => _Insert(IL.Create(opcode, value));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="value">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, long value)
             => _Insert(IL.Create(opcode, value));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="value">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, sbyte value)
             => _Insert(IL.Create(opcode, value));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="value">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, byte value)
             => _Insert(IL.Create(opcode, value));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="value">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, string value)
             => _Insert(IL.Create(opcode, value));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="field">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, FieldReference field)
             => _Insert(IL.Create(opcode, field));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="site">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, CallSite site)
             => _Insert(IL.Create(opcode, site));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="type">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, TypeReference type)
             => _Insert(IL.Create(opcode, type));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode)
             => _Insert(IL.Create(opcode));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="value">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, int value)
             => _Insert(IL.Create(opcode, value));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="method">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, MethodReference method)
             => _Insert(IL.Create(opcode, method));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="field">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, FieldInfo field)
             => _Insert(IL.Create(opcode, field));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="method">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, MethodBase method)
             => _Insert(IL.Create(opcode, method));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="type">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, Type type)
             => _Insert(IL.Create(opcode, type));
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position.
+        /// </summary>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="operand">The instruction operand.</param>
+        /// <returns>this</returns>
         public ILCursor Emit(OpCode opcode, object operand)
             => _Insert(IL.Create(opcode, operand));
 
+        /// <summary>
+        /// Emit a new instruction at this cursor's current position, accessing a given member.
+        /// </summary>
+        /// <typeparam name="T">The type in which the member is defined.</typeparam>
+        /// <param name="opcode">The instruction opcode.</param>
+        /// <param name="memberName">The accessed member name.</param>
+        /// <returns>this</returns>
         public ILCursor Emit<T>(OpCode opcode, string memberName)
             => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).FirstOrDefault()));
 
@@ -482,7 +647,7 @@ namespace MonoMod.Cil {
         public int AddReference<T>(T t) => Context.AddReference(t);
 
         /// <summary>
-        /// Emits the IL to retrieve a stored reference of type <typeparamref name="T"/> with the given <paramref name="id"/> and place it on the stack.
+        /// Emit the IL to retrieve a stored reference of type <typeparamref name="T"/> with the given <paramref name="id"/> and place it on the stack.
         /// </summary>
         public void EmitGetReference<T>(int id) {
             Emit(OpCodes.Ldc_I4, id);

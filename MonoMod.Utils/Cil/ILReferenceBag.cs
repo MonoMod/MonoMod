@@ -11,15 +11,48 @@ using MonoMod.Utils;
 using System.Text;
 
 namespace MonoMod.Cil {
+    /// <summary>
+    /// An IL inline reference bag used for ILContexts.
+    /// </summary>
     public interface IILReferenceBag {
+        /// <summary>
+        /// Get the object for the given ID.
+        /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
+        /// <param name="id">The object ID.</param>
+        /// <returns>The stored object.</returns>
         T Get<T>(int id);
+        /// <summary>
+        /// Get a MethodInfo for the getter.
+        /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
+        /// <returns>The getter method.</returns>
         MethodInfo GetGetter<T>();
+        /// <summary>
+        /// Store a new object.
+        /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
+        /// <param name="t">The object to be stored.</param>
+        /// <returns>An ID to be used for all further operations.</returns>
         int Store<T>(T t);
+        /// <summary>
+        /// Remove the object with the given ID from the bag, essentially clearing the ID's slot.
+        /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
+        /// <param name="id">The object ID.</param>
         void Clear<T>(int id);
+        /// <summary>
+        /// Get a MethodInfo invoking a delegate of the given type, with the delegate at the top of the stack. Used by <see cref="ILCursor.EmitDelegate{T}(T)"/>.
+        /// </summary>
+        /// <typeparam name="T">The delegate type.</typeparam>
+        /// <returns>A MethodInfo invoking a delegate of the given type.</returns>
         MethodInfo GetDelegateInvoker<T>() where T : Delegate;
     }
 
-    public class NopILReferenceBag : IILReferenceBag {
+    /// <summary>
+    /// The default IL reference bag. Throws NotSupportedException for every operation.
+    /// </summary>
+    public sealed class NopILReferenceBag : IILReferenceBag {
         public readonly static NopILReferenceBag Instance = new NopILReferenceBag();
 
         private Exception NOP() => new NotSupportedException("Inline references not supported in this context");
@@ -31,7 +64,10 @@ namespace MonoMod.Cil {
         public MethodInfo GetDelegateInvoker<T>() where T : Delegate => throw NOP();
     }
 
-    public class RuntimeILReferenceBag : IILReferenceBag {
+    /// <summary>
+    /// An IL reference bag implementation to be used for runtime-generated methods.
+    /// </summary>
+    public sealed class RuntimeILReferenceBag : IILReferenceBag {
         public readonly static RuntimeILReferenceBag Instance = new RuntimeILReferenceBag();
 
         public T Get<T>(int id) => InnerBag<T>.Get(id);
