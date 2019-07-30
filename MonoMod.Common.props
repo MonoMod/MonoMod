@@ -21,6 +21,8 @@
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateDocumentation Condition="'$(GenerateDocumentation)' == ''">true</GenerateDocumentation>
+    <DocumentationFile Condition="'$(DocumentationFile)' == ''">$(OutputPath)\$(AssemblyName).xml</DocumentationFile>
 
     <IsCecilLegacy>false</IsCecilLegacy>
 
@@ -88,7 +90,7 @@
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Repository>https://github.com/MonoMod/MonoMod</Repository>
-    <PackageProjectUrl>https://github.com/MonoMod/MonoMod</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/MonoMod</PackageProjectUrl>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
   </PropertyGroup>
 
