@@ -7,7 +7,7 @@ using System.Text;
 
 namespace MonoMod.Utils.Cil {
     /// <summary>
-    /// Abstract version of System.Reflection.Emit.ILGenerator.
+    /// Abstract version of System.Reflection.Emit.ILGenerator. See <see cref="System.Reflection.Emit.ILGenerator"/> for proper documentation.
     /// </summary>
     public abstract partial class ILGeneratorShim {
 

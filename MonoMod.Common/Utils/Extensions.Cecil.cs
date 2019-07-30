@@ -187,6 +187,11 @@ namespace MonoMod.Utils {
             return true;
         }
 
+        /// <summary>
+        /// Determine if the given method can be preferably called using callvirt.
+        /// </summary>
+        /// <param name="method">The called method.</param>
+        /// <returns>True if the called method can be called using callvirt, false otherwise.</returns>
         public static bool IsCallvirt(this MethodReference method) {
             if (!method.HasThis)
                 return false;
@@ -195,6 +200,11 @@ namespace MonoMod.Utils {
             return true;
         }
 
+        /// <summary>
+        /// Determine if the given type is a struct (also known as "value type") or struct-alike (f.e. primitive).
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>True if the type is a struct, primitive or similar, false otherwise.</returns>
         public static bool IsStruct(this TypeReference type) {
             if (!type.IsValueType)
                 return false;
