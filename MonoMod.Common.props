@@ -35,6 +35,8 @@
     <MonoModSharedShims Condition="'$(MonoModSharedShims)' == ''">true</MonoModSharedShims>
 
     <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
+
+    <NoWarn>CS1591,$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(MonoModSourceLink)">

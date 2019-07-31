@@ -490,7 +490,8 @@ namespace MonoMod {
         /// <summary>
         /// Write the modded module to the given stream or the default output.
         /// </summary>
-        /// <param name="output">Output stream. If none given, default Output will be used.</param>
+        /// <param name="output">Output stream. If none given, outputPath or default Output will be used.</param>
+        /// <param name="outputPath">Output path. If none given, output or default OutputPath will be used.</param>
         public virtual void Write(Stream output = null, string outputPath = null) {
             output = output ?? Output;
             outputPath = outputPath ?? OutputPath;
@@ -958,6 +959,7 @@ namespace MonoMod {
         /// Patches the type (adds new types).
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
+        /// <param name="forceAdd">Forcibly add the type, no matter if it already exists or if it's MonoModRules.</param>
         public virtual void PrePatchType(TypeDefinition type, bool forceAdd = false) {
             string typeName = type.GetPatchFullName();
 
@@ -2068,6 +2070,7 @@ namespace MonoMod {
         /// </summary>
         /// <returns><c>true</c> if the special name used in the method is allowed, <c>false</c> otherwise.</returns>
         /// <param name="method">Method to check.</param>
+        /// <param name="targetType">Type to which the method will be added.</param>
         public virtual bool AllowedSpecialName(MethodDefinition method, TypeDefinition targetType = null) {
             if (method.HasCustomAttribute("MonoMod.MonoModAdded") || method.DeclaringType.HasCustomAttribute("MonoMod.MonoModAdded") ||
                 (targetType?.HasCustomAttribute("MonoMod.MonoModAdded") ?? false)) {

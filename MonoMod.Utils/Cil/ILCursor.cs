@@ -10,6 +10,9 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 using System.ComponentModel;
 
+// Certain paramaters are self-explanatory (f.e. predicates in Goto*), while others are not (f.e. cursors in Find*).
+#pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
+
 namespace MonoMod.Cil {
     /// <summary>
     /// Specifies where a ILCursor should be positioned in relation to the target of a search function
@@ -102,7 +105,7 @@ namespace MonoMod.Cil {
         /// Indicates whether the position of a MMILCursor is the result of a search function and 
         /// if the next search should ignore the instruction preceeding or following this cursor.
         /// 
-        /// See <see cref="Utils.SearchTarget"/>
+        /// See <see cref="Cil.SearchTarget"/>
         /// </summary>
         public SearchTarget SearchTarget {
             get => _searchTarget;
@@ -254,7 +257,7 @@ namespace MonoMod.Cil {
         Goto(label.Target, moveType, setTarget);
 
         /// <summary>
-        /// Search forward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="TryGotoNext"/>
+        /// Search forward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="ILCursor.TryGotoNext(MoveType, Func{Instruction, bool}[])"/>
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
@@ -290,7 +293,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Search backward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="TryGotoPrev"/>
+        /// Search backward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="TryGotoPrev(MoveType, Func{Instruction, bool}[])"/>
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
@@ -425,7 +428,7 @@ namespace MonoMod.Cil {
         }
 
         /// <summary>
-        /// Create a new label for use with <see cref="MarkLabel"/>
+        /// Create a new label for use with <see cref="MarkLabel(ILLabel)"/>
         /// </summary>
         /// <returns>A new label with no target</returns>
         public ILLabel DefineLabel() => Context.DefineLabel();

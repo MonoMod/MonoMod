@@ -177,7 +177,7 @@ namespace MonoMod.Utils {
         /// Fill all instance delegate fields with the DynDllImport attribute.
         /// Call this early on in the constructor.
         /// </summary>
-        /// <param name="type">An instance of a type containing the DynDllImport delegate fields.</param>
+        /// <param name="instance">An instance of a type containing the DynDllImport delegate fields.</param>
         /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
         public static void ResolveDynDllImports(object instance, Dictionary<string, DynDllMapping> mappings = null) => _ResolveDynDllImports(instance.GetType(), instance, mappings);
 
