@@ -126,6 +126,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The name to use instead of the reference's own name.</param>
         /// <param name="type">The ID to use instead of the reference's declaring type ID.</param>
         /// <param name="withType">Whether the type ID should be included or not. System.Reflection avoids it by default.</param>
+        /// <param name="proxyMethod">Whether the method is regarded as a proxy method or not. Setting this paramater to true will skip the first parameter.</param>
         /// <param name="simple">Whether the ID should be "simple" (name only).</param>
         /// <returns>The ID.</returns>
         public static string GetID(this System.Reflection.MethodBase method, string name = null, string type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {

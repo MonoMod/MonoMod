@@ -441,7 +441,7 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Clone the given generic parameter.
         /// </summary>
-        /// <param name="attrib">The original generic parameter.</param>
+        /// <param name="param">The original generic parameter.</param>
         /// <returns>A clone of the original generic parameter.</returns>
         public static GenericParameter Clone(this GenericParameter param) {
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {

@@ -11,6 +11,9 @@ using System.ComponentModel;
 using System.IO;
 
 namespace MonoMod.Utils {
+    /// <summary>
+    /// A DMDGenerator implementation using Mono.Cecil to build an in-memory assembly.
+    /// </summary>
     public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator> {
 
         protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object context) {

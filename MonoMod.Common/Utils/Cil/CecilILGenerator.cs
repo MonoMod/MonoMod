@@ -46,7 +46,9 @@ namespace MonoMod.Utils.Cil {
         private readonly Dictionary<LocalBuilder, VariableDefinition> _Variables = new Dictionary<LocalBuilder, VariableDefinition>();
         private readonly Stack<ExceptionHandlerChain> _ExceptionHandlers = new Stack<ExceptionHandlerChain>();
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
         public CecilILGenerator(ILProcessor il) {
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
             IL = il;
         }
 
