@@ -1,4 +1,6 @@
-﻿using Mono.Cecil.Cil;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using MC = Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +10,8 @@ using System.Text;
 
 namespace MonoMod.Utils {
     public static class Extensions {
+
+        private static readonly object[] _NoArgs = new object[0];
 
         /// <summary>
         /// Create a hexadecimal string for the given bytes.
@@ -276,6 +280,7 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<Type, int> _GetManagedSizeCache = new Dictionary<Type, int>() {
             { typeof(void), 0 }
         };
+        private static MethodInfo _GetManagedSizeHelper;
         public static int GetManagedSize(this Type t) {
             if (_GetManagedSizeCache.TryGetValue(t, out int size))
                 return size;
@@ -283,17 +288,62 @@ namespace MonoMod.Utils {
             // Note: sizeof is more accurate for the "managed size" than Marshal.SizeOf (marshalled size)
             // It also returns a value for types of which the size cannot be determined otherwise.
 
-            DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"GetSize<{t.FullName}>",
-                typeof(int), Type.EmptyTypes
-            );
+            if (_GetManagedSizeHelper == null) {
+                Assembly asm;
 
-            ILProcessor il = dmd.GetILProcessor();
-            il.Emit(OpCodes.Sizeof, dmd.Definition.Module.ImportReference(t));
-            il.Emit(OpCodes.Ret);
+                const string @namespace = "MonoMod.Utils";
+                const string @name = "GetManagedSizeHelper";
+                const string @fullName = @namespace + "." + @name;
 
+#if !CECIL0_9
+                using (
+#endif
+                ModuleDefinition module = ModuleDefinition.CreateModule(
+                    @fullName,
+                    new ModuleParameters() {
+                        Kind = ModuleKind.Dll,
+#if !CECIL0_9 && MONOMOD_UTILS
+                        ReflectionImporterProvider = MMReflectionImporter.Provider
+#endif
+                    }
+                )
+#if CECIL0_9
+                ;
+#else
+                )
+#endif
+                {
+
+                    TypeDefinition type = new TypeDefinition(
+                        @namespace,
+                        @name,
+                        MC.TypeAttributes.Public | MC.TypeAttributes.Abstract | MC.TypeAttributes.Sealed
+                    ) {
+                        BaseType = module.TypeSystem.Object
+                    };
+                    module.Types.Add(type);
+
+                    MethodDefinition method = new MethodDefinition(@name,
+                        MC.MethodAttributes.Public | MC.MethodAttributes.Static | MC.MethodAttributes.HideBySig,
+                        module.TypeSystem.Int32
+                    );
+                    GenericParameter genParam = new GenericParameter("T", method);
+                    method.GenericParameters.Add(genParam);
+                    type.Methods.Add(method);
+
+                    ILProcessor il = method.Body.GetILProcessor();
+                    il.Emit(OpCodes.Sizeof, genParam);
+                    il.Emit(OpCodes.Ret);
+
+                    asm = ReflectionHelper.Load(module);
+                }
+
+                _GetManagedSizeHelper = asm.GetType(@fullName).GetMethod(@name);
+            }
+
+            size = (_GetManagedSizeHelper.MakeGenericMethod(t).CreateDelegate<Func<int>>() as Func<int>)();
             lock (_GetManagedSizeCache) {
-                return _GetManagedSizeCache[t] = (dmd.Generate().CreateDelegate(typeof(Func<int>)) as Func<int>)();
+                return _GetManagedSizeCache[t] = size;
             }
         }
 
