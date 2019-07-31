@@ -1,7 +1,14 @@
+$GitHubBotName=$args[0]
+$GitHubBotEmail=$args[1]
+$GitHubBotToken=$args[2]
+
 # PowerShell and git don't work well together.
 $ErrorActionPreference="Continue"
 
-$DocFXRepo="https://github.com/MonoMod/MonoMod.github.io.git"
+Write-Output "Setting up config"
+$DocFXRepo="https://$GitHubBotToken@github.com/MonoMod/MonoMod.github.io.git"
+git config --global user.name $GitHubBotName 2>&1 | ForEach-Object { "$_" }
+git config --global user.email $GitHubBotEmail 2>&1 | ForEach-Object { "$_" }
 
 Write-Output "Setting up file hierarchy"
 git clone --recursive --branch docfx $DocFXRepo docfx 2>&1 | ForEach-Object { "$_" }

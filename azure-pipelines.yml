@@ -161,3 +161,4 @@ steps:
   continueOnError: true
   inputs:
     filePath: 'azure-pipelines-docfx.ps1'
+    arguments: '$(GitHubBotName) $(GitHubBotEmail) $(GitHubBotToken)'
