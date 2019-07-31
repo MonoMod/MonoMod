@@ -1,4 +1,7 @@
-$DocFXRepo="git@github.com:MonoMod/MonoMod.github.io.git"
+# PowerShell and git don't work well together.
+$ErrorActionPreference="Continue"
+
+$DocFXRepo="https://github.com/MonoMod/MonoMod.github.io.git"
 
 Write-Output "Setting up file hierarchy"
 git clone --recursive --branch docfx $DocFXRepo docfx 2>&1
@@ -14,7 +17,7 @@ docfx build
 Write-Output "Pushing updated _site to master branch on GitHub"
 Set-Location _site
 git add . 2>&1
-git commit -m 'Rebuild (automatic commit via Azure Pipelines)' 2>&1
+git commit --allow-empty -m "Rebuild (automatic commit via Azure Pipelines)" 2>&1
 git push 2>&1
 
 Write-Output "Done"
