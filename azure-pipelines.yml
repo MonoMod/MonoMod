@@ -25,7 +25,7 @@ strategy:
       artifactSuffix: ''
       builder: 'mono'
       testers: ';mono;'
-      coreVersion: ''
+      coreVersion: '2.1.x'
       generateDocFX: 'false'
     macos:
       jobArchName: 'macOS'
