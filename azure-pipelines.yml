@@ -23,7 +23,7 @@ strategy:
       artifactSuffix: ''
       builder: 'mono'
       testers: ';mono;'
-      coreVersion: ''
+      coreVersion: '2.1.x'
     macos:
       jobArchName: 'macOS'
       imageName: 'macOS-10.14'
