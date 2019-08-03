@@ -64,8 +64,8 @@ namespace MonoMod {
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
-        public Dictionary<string, FastReflectionDelegate> CustomAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
-        public Dictionary<string, FastReflectionDelegate> CustomMethodAttributeHandlers = new Dictionary<string, FastReflectionDelegate>();
+        public Dictionary<string, Action<object, object[]>> CustomAttributeHandlers = new Dictionary<string, Action<object, object[]>>();
+        public Dictionary<string, Action<object, object[]>> CustomMethodAttributeHandlers = new Dictionary<string, Action<object, object[]>>();
 
         public MissingDependencyResolver MissingDependencyResolver;
 
@@ -696,10 +696,10 @@ namespace MonoMod {
                 return;
 
             foreach (CustomAttribute attrib in cap.CustomAttributes) {
-                if (CustomAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out FastReflectionDelegate handler))
-                    handler?.Invoke(null, cap, attrib);
+                if (CustomAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out Action<object, object[]> handler))
+                    handler?.Invoke(null, new object[] { cap, attrib });
                 if (cap is MethodReference && CustomMethodAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))
-                    handler?.Invoke(null, (MethodDefinition) cap, attrib);
+                    handler?.Invoke(null, new object[] { (MethodDefinition) cap, attrib });
             }
         }
 

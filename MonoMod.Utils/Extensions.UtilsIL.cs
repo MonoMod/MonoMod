@@ -5,7 +5,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 namespace MonoMod.Utils {
-    public static class ILExt {
+    public static partial class Extensions {
 
         #region Misc Helpers
 
