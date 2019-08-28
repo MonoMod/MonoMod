@@ -39,7 +39,6 @@ Mods / mod loaders for the following games are already using it in one way or an
 - Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding)
 - Celeste: [Everest](https://everestapi.github.io/)
 - Risk of Rain 2: [BepInExPack (BepInEx + MonoMod + R2API)](https://thunderstore.io/package/bbepis/BepInExPack/)
-- Cultist Simulator: [Frangiclave Mod Repository](https://mods.thefansus.com/)
 - Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
 - Rain World: [RainDB via Partiality](http://www.raindb.net/)
 - Totally Accurate Battle Simulator: [TABS-Multiplayer](https://github.com/Ceiridge/TABS-Multiplayer)
