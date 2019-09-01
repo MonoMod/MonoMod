@@ -124,9 +124,8 @@ namespace MonoMod.RuntimeDetour {
                 if (!_Map.TryGetValue(Method, out ctx))
                     _Map[Method] = ctx = new Context(Method);
             }
-            _Ctx.Add(this);
             lock (ctx) {
-                ctx.Chain.Add(this);
+                ctx.Add(this);
                 // The chain gets refreshed when the hook is applied.
             }
 
