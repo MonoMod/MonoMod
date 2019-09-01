@@ -239,6 +239,17 @@ namespace MonoMod.RuntimeDetour {
                     if (hooks.Count == 0)
                         return;
 
+                    bool hasApplied = false;
+                    foreach (ILHook cb in hooks) {
+                        if (cb.IsApplied) {
+                            hasApplied = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasApplied)
+                        return;
+
                     DetourSorter<ILHook>.Sort(hooks);
 
                     MethodBase dm;
