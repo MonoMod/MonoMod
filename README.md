@@ -24,6 +24,7 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 - [Sc2ad](https://github.com/sc2ad)
 - Raegous
 - Chaser6
+- [Harrison Clarke](https://twitter.com/hay_guise)
 - [KyleTheScientist](https://www.twitch.tv/kylethescientist)
 - [Renaud Bédard](https://twitter.com/renaudbedard)
 - [leo60228](https://leo60228.space)
