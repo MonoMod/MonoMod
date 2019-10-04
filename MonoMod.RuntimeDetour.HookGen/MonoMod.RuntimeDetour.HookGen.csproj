@@ -9,14 +9,14 @@
     <Description>Auto-generate hook helper .dlls, hook arbitrary methods via events: On.Namespace.Type.Method += YourHandlerHere;</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
-    <TargetFrameworks>net35;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net35;net40;netstandard2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.props" />
 
   <!-- Dependencies -->
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+    <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>

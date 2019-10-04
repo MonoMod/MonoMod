@@ -122,7 +122,9 @@
         <IsNETStandard>true</IsNETStandard>
         <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
         <DefineConstants Condition="$(IsCecilLegacy)">CECIL0_10;$(DefineConstants)</DefineConstants>
+        <DefineConstants Condition="!$(IsCecilLegacy)">CECIL0_11;$(DefineConstants)</DefineConstants>
         <CecilVersion Condition="$(IsCecilLegacy) And '$(CecilVersion)' == ''">0.10.0</CecilVersion>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
       <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. -->
@@ -138,13 +140,32 @@
         <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="$(NETShimVersion)" />
       </ItemGroup>
     </When>
-    <Otherwise>
-      <!-- .NET Framework -->
+
+    <When Condition="'$(TargetFramework)' != 'net35'">
+      <!-- .NET Framework 4.0+ -->
       <PropertyGroup>
         <IsNETFramework>true</IsNETFramework>
-        <DefineConstants>NETFRAMEWORK;$(DefineConstants)</DefineConstants>
+        <DefineConstants>NETFRAMEWORK;NETFRAMEWORK4;$(DefineConstants)</DefineConstants>
+        <DefineConstants Condition="$(IsCecilLegacy)">CECIL0_10;$(DefineConstants)</DefineConstants>
+        <DefineConstants Condition="!$(IsCecilLegacy)">CECIL0_11;$(DefineConstants)</DefineConstants>
+        <CecilVersion Condition="$(IsCecilLegacy) And '$(CecilVersion)' == ''">0.10.0</CecilVersion>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
+      </PropertyGroup>
+      <ItemGroup>
+        <!-- <Reference Include="mscorlib" /> -->
+        <Reference Include="System" />
+      </ItemGroup>
+    </When>
+
+    <Otherwise>
+      <!-- .NET Framework 3.5 -->
+      <PropertyGroup>
+        <IsNETFramework>true</IsNETFramework>
+        <DefineConstants>NETFRAMEWORK;NETFRAMEWORK3;$(DefineConstants)</DefineConstants>
         <DefineConstants Condition="$(IsCecilLegacy)">CECIL0_9;$(DefineConstants)</DefineConstants>
+        <DefineConstants Condition="!$(IsCecilLegacy)">CECIL0_10;$(DefineConstants)</DefineConstants>
         <CecilVersion Condition="$(IsCecilLegacy) And '$(CecilVersion)' == ''">0.9.6</CecilVersion>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">0.10.*</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
         <!-- <Reference Include="mscorlib" /> -->
@@ -156,7 +177,7 @@
   <!-- Mono.Cecil - added to each csproj manually for GitHub dependency graph. -->
   <!--
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+    <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>
