@@ -33,6 +33,7 @@ namespace MonoMod.Utils {
         private readonly DefaultReflectionImporter Default;
 
         private readonly Dictionary<AssemblyName, AssemblyNameReference> CachedAsms = new Dictionary<AssemblyName, AssemblyNameReference>();
+        private readonly Dictionary<Module, TypeReference> CachedModuleTypes = new Dictionary<Module, TypeReference>();
         private readonly Dictionary<Type, TypeReference> CachedTypes = new Dictionary<Type, TypeReference>();
         private readonly Dictionary<FieldInfo, FieldReference> CachedFields = new Dictionary<FieldInfo, FieldReference>();
         private readonly Dictionary<MethodBase, MethodReference> CachedMethods = new Dictionary<MethodBase, MethodReference>();
@@ -72,6 +73,19 @@ namespace MonoMod.Utils {
                 return asmRef;
 
             return CachedAsms[asm] = Default.ImportReference(asm);
+        }
+
+        public TypeReference ImportModuleType(Module module, IGenericParameterProvider context) {
+            if (CachedModuleTypes.TryGetValue(module, out TypeReference typeRef))
+                return typeRef;
+
+            // See https://github.com/jbevain/cecil/blob/06da31930ff100cef48aef677c4ceeee858e6c04/Mono.Cecil/ModuleDefinition.cs#L1018
+            return CachedModuleTypes[module] = new TypeReference(
+                string.Empty,
+                "<Module>",
+                Module,
+                ImportReference(module.Assembly.GetName())
+            );
         }
 
         public TypeReference ImportReference(Type type, IGenericParameterProvider context) {
@@ -187,10 +201,10 @@ namespace MonoMod.Utils {
                 return CachedFields[field] = Default.ImportReference(field, context);
 
             Type declType = field.DeclaringType;
-            TypeReference declaringType = ImportReference(declType, context);
+            TypeReference declaringType = declType != null ? ImportReference(declType, context) : ImportModuleType(field.Module, context);
 
             FieldInfo fieldOrig = field;
-            if (declType.IsGenericType) {
+            if (declType != null && declType.IsGenericType) {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
                 // Luckily the metadata tokens match up.
@@ -227,7 +241,7 @@ namespace MonoMod.Utils {
             methodRef = new MethodReference(
                 method.Name,
                 ImportReference(typeof(void), context),
-                ImportReference(declType, context)
+                declType != null ? ImportReference(declType, context) : ImportModuleType(method.Module, context)
             );
 
             methodRef.HasThis = (method.CallingConvention & CallingConventions.HasThis) != 0;
@@ -236,7 +250,7 @@ namespace MonoMod.Utils {
                 methodRef.CallingConvention = MethodCallingConvention.VarArg;
 
             MethodBase methodOrig = method;
-            if (declType.IsGenericType) {
+            if (declType != null && declType.IsGenericType) {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
                 // Luckily the metadata tokens match up.
