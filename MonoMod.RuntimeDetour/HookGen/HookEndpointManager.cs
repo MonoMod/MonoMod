@@ -97,9 +97,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public static event Func<MethodBase, Delegate, bool> OnModify;
-        public static event Action<MethodBase, Delegate> OnPostModify;
-        internal static void InvokeOnPostModify(MethodBase method, Delegate callback)
-            => OnPostModify?.Invoke(method, callback);
         public static void Modify<T>(MethodBase method, Delegate callback) where T : Delegate
             => Modify(method, callback);
         public static void Modify(MethodBase method, Delegate callback) {
