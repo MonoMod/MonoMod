@@ -90,6 +90,9 @@ steps:
     targetFramework: 'net35'
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
+    targetFramework: 'net40'
+- template: 'azure-pipelines-postbuild.yml'
+  parameters:
     targetFramework: 'netstandard2.0'
 
 # Create and "publish" nupkg artifacts.
