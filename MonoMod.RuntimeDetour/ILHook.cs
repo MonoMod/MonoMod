@@ -252,7 +252,8 @@ namespace MonoMod.RuntimeDetour {
                     using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(Method)) {
                         MethodDefinition def = dmd.Definition;
                         foreach (ILHook cb in hooks)
-                            InvokeManipulator(def, cb.Manipulator);
+                            if (cb.IsApplied)
+                                InvokeManipulator(def, cb.Manipulator);
 
                         dm = dmd.Generate();
                     }
