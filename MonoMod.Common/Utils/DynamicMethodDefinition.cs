@@ -46,10 +46,6 @@ namespace MonoMod.Utils {
         internal static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(new Type[] { });
         internal static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new Type[] { typeof(string) });
 
-        internal static readonly FieldInfo f_mono_assembly =
-            typeof(Assembly).GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Instance) ??
-            (typeof(Assembly).Assembly.GetType("System.Reflection.RuntimeAssembly")?.GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Instance));
-
         internal static readonly Type t__IDMDGenerator = typeof(_IDMDGenerator);
         internal static readonly Dictionary<string, _IDMDGenerator> _DMDGeneratorCache = new Dictionary<string, _IDMDGenerator>();
 
