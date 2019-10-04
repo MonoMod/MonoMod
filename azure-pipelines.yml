@@ -12,7 +12,7 @@ strategy:
     linux-core:
       jobArchName: 'Linux .NET Core'
       imageName: 'ubuntu-16.04'
-      artifactPrefix: '~dbg/linux-core/'
+      artifactPrefix: '~dbg.linux-core.'
       artifactSuffix: ''
       builder: 'core'
       testers: ';core2;'
@@ -21,7 +21,7 @@ strategy:
     linux-mono:
       jobArchName: 'Linux Mono'
       imageName: 'ubuntu-16.04'
-      artifactPrefix: '~dbg/linux-mono/'
+      artifactPrefix: '~dbg.linux-mono.'
       artifactSuffix: ''
       builder: 'mono'
       testers: ';mono;'
@@ -30,7 +30,7 @@ strategy:
     macos:
       jobArchName: 'macOS'
       imageName: 'macOS-10.14'
-      artifactPrefix: '~dbg/macos-core/'
+      artifactPrefix: '~dbg.macos-core.'
       artifactSuffix: ''
       builder: 'core'
       testers: ';mono;core2;'
