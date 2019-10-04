@@ -177,6 +177,9 @@ namespace MonoMod.Utils {
         /// <returns>A relinked reference.</returns>
         public static IMetadataTokenProvider Relink(this IMetadataTokenProvider mtp, Relinker relinker, IGenericParameterProvider context) {
             if (mtp is TypeReference) return ((TypeReference) mtp).Relink(relinker, context);
+#if !CECIL0_10
+            if (mtp is GenericParameterConstraint) return ((GenericParameterConstraint) mtp).Relink(relinker, context);
+#endif
             if (mtp is MethodReference) return ((MethodReference) mtp).Relink(relinker, context);
             if (mtp is FieldReference) return ((FieldReference) mtp).Relink(relinker, context);
             if (mtp is ParameterDefinition) return ((ParameterDefinition) mtp).Relink(relinker, context);
@@ -247,13 +250,34 @@ namespace MonoMod.Utils {
                 if (genParam == null)
                     throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
                 for (int i = 0; i < genParam.Constraints.Count; i++)
-                    if (!genParam.Constraints[i].IsGenericInstance) // That is somehow possible and causes a stack overflow.
+                    if (!genParam.Constraints[i].GetConstraintType().IsGenericInstance) // That is somehow possible and causes a stack overflow.
                         genParam.Constraints[i] = genParam.Constraints[i].Relink(relinker, context);
                 return genParam;
             }
 
             return (TypeReference) relinker(type, context);
         }
+
+#if !CECIL0_10
+        /// <summary>
+        /// Relink the given type reference.
+        /// </summary>
+        /// <param name="constraint">The reference to relink.</param>
+        /// <param name="relinker">The relinker to use during the relinking process.</param>
+        /// <param name="context">The generic context provided to relink generic references.</param>
+        /// <returns>A relinked reference.</returns>
+        public static GenericParameterConstraint Relink(this GenericParameterConstraint constraint, Relinker relinker, IGenericParameterProvider context) {
+            if (constraint == null)
+                return null;
+
+            GenericParameterConstraint relink = new GenericParameterConstraint(constraint.ConstraintType.Relink(relinker, context));
+
+            foreach (CustomAttribute attrib in constraint.CustomAttributes)
+                relink.CustomAttributes.Add(attrib.Relink(relinker, context));
+
+            return relink;
+        }
+#endif
 
         /// <summary>
         /// Relink the given method reference.
@@ -286,7 +310,9 @@ namespace MonoMod.Utils {
 
                 relink.GenericParameters.Add(paramN);
 
-                foreach (TypeReference constraint in param.Constraints) {
+#pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
+                foreach (var constraint in param.Constraints) {
+#pragma warning restore IDE0008
                     paramN.Constraints.Add(constraint.Relink(relinker, relink));
                 }
             }
@@ -433,7 +459,9 @@ namespace MonoMod.Utils {
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);
-            foreach (TypeReference constraint in param.Constraints)
+#pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
+            foreach (var constraint in param.Constraints)
+#pragma warning restore IDE0008
                 newParam.Constraints.Add(constraint.Relink(relinker, context));
             return newParam;
         }
@@ -447,7 +475,9 @@ namespace MonoMod.Utils {
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);
-            foreach (TypeReference constraint in param.Constraints)
+#pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
+            foreach (var constraint in param.Constraints)
+#pragma warning restore IDE0008
                 newParam.Constraints.Add(constraint);
             return newParam;
         }

@@ -89,7 +89,11 @@ namespace MonoMod.Utils.Cil {
                     TypeReference tr_ILGeneratorProxyTarget = module.ImportReference(t_ILGeneratorProxyTarget);
 
                     GenericParameter g_TTarget = new GenericParameter("TTarget", type);
+#if CECIL0_10
                     g_TTarget.Constraints.Add(tr_ILGeneratorProxyTarget);
+#else
+                    g_TTarget.Constraints.Add(new GenericParameterConstraint(tr_ILGeneratorProxyTarget));
+#endif
                     type.GenericParameters.Add(g_TTarget);
 
                     FieldDefinition fd_Target = new FieldDefinition(

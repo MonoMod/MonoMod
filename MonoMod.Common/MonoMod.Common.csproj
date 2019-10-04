@@ -9,7 +9,7 @@
     <Description>Common building blocks used by MonoMod which can be used to build your own libraries, f.e. RuntimeDetour's platform abstraction and Utils' DynamicMethodDefinition. Not to be confused with MonoMod.Utils, which is directed towards mods.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
 
-    <TargetFrameworks>net35;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net35;net40;netstandard2.0</TargetFrameworks>
     <OutputType>Library</OutputType>
 
     <MonoModSharedShims Condition="'$(MonoModSharedShims)' == ''">false</MonoModSharedShims>
@@ -18,7 +18,7 @@
 
   <!-- Dependencies -->
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" Version="0.10.*">
+    <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>
