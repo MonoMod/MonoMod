@@ -142,9 +142,17 @@ namespace MonoMod.Utils {
                 }
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i + offs] = args[i].ParameterType;
+
                 module = _CreateDynModule(orig.Name, (orig as MethodInfo)?.ReturnType, argTypes);
 
                 _CopyMethodToDefinition();
+
+                MethodDefinition def = Definition;
+                if (!orig.IsStatic) {
+                    def.Parameters[0].Name = "this";
+                }
+                for (int i = 0; i < args.Length; i++)
+                    def.Parameters[i + offs].Name = args[i].Name;
 
                 _Module = module;
                 module = null;
