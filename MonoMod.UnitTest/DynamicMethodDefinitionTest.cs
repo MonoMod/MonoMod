@@ -22,6 +22,8 @@ namespace MonoMod.UnitTest {
             MethodInfo original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
             MethodBase patched;
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(original)) {
+                Assert.Equal("i", dmd.Definition.Parameters[0].Name);
+
                 // Modify the MethodDefinition.
                 foreach (Instruction instr in dmd.Definition.Body.Instructions) {
                     if (instr.Operand as string == StringOriginal)
