@@ -70,10 +70,12 @@ namespace MonoMod.RuntimeDetour {
             : this(null, from, to) {
         }
         public NativeDetour(MethodBase from, IntPtr to, ref NativeDetourConfig config)
-            : this(from, from.GetNativeStart(), to, ref config) {
+            : this(from, from.Pin().GetNativeStart(), to, ref config) {
+            _Pinned.Add(from);
         }
         public NativeDetour(MethodBase from, IntPtr to, NativeDetourConfig config)
-            : this(from, from.GetNativeStart(), to, ref config) {
+            : this(from, from.Pin().GetNativeStart(), to, ref config) {
+            _Pinned.Add(from);
         }
         public NativeDetour(MethodBase from, IntPtr to)
             : this(from, from.Pin().GetNativeStart(), to) {
@@ -81,24 +83,28 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public NativeDetour(IntPtr from, MethodBase to, ref NativeDetourConfig config)
-            : this(from, to.GetNativeStart(), ref config) {
+            : this(from, to.Pin().GetNativeStart(), ref config) {
+            _Pinned.Add(to);
         }
         public NativeDetour(IntPtr from, MethodBase to, NativeDetourConfig config)
-            : this(from, to.GetNativeStart(), ref config) {
+            : this(from, to.Pin().GetNativeStart(), ref config) {
+            _Pinned.Add(to);
         }
         public NativeDetour(IntPtr from, MethodBase to)
             : this(from, to.Pin().GetNativeStart()) {
             _Pinned.Add(to);
         }
         public NativeDetour(MethodBase from, MethodBase to, ref NativeDetourConfig config)
-            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).GetNativeStart(), ref config) {
+            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart(), ref config) {
+            _Pinned.Add(to);
         }
         public NativeDetour(MethodBase from, MethodBase to, NativeDetourConfig config)
-            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).GetNativeStart(), ref config) {
+            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart(), ref config) {
+            _Pinned.Add(to);
         }
         public NativeDetour(MethodBase from, MethodBase to)
-            : this(from.Pin().GetNativeStart(), DetourHelper.Runtime.GetDetourTarget(from, to)) {
-            _Pinned.Add(from);
+            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart()) {
+            _Pinned.Add(to);
         }
 
         public NativeDetour(Delegate from, IntPtr to, ref NativeDetourConfig config)

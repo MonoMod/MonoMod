@@ -25,7 +25,7 @@ namespace MonoMod.RuntimeDetour {
         public static Func<ILHook, bool> OnUndo;
 
         private static DetourConfig ILDetourConfig = new DetourConfig() {
-            Priority = int.MinValue / 8
+            Before = new string[] { "*" }
         };
 
         private static Dictionary<MethodBase, Context> _Map = new Dictionary<MethodBase, Context>();

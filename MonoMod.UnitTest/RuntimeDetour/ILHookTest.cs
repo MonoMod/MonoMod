@@ -7,28 +7,28 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using MonoMod.Utils;
-using System.Reflection.Emit;
 using System.Text;
+using MonoMod.Cil;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DetourEmptyTest {
+    public class ILHookTest {
         private bool DidNothing = true;
 
         [Fact]
-        public void TestDetoursEmpty() {
-            // The following use cases are not meant to be usage examples.
-            // Please take a look at DetourTest and HookTest instead.
-
+        public void TestILHooks() {
             DoNothing();
             Assert.True(DidNothing);
 
-            using (Hook h = new Hook(
-                // .GetNativeStart() to enforce a native detour.
-                typeof(DetourEmptyTest).GetMethod("DoNothing"),
-                new Action<DetourEmptyTest>(self => {
-                    DidNothing = false;
-                })
+            using (ILHook h = new ILHook(
+                typeof(ILHookTest).GetMethod("DoNothing"),
+                il => {
+                    ILCursor c = new ILCursor(il);
+                    c.Emit(OpCodes.Ldarg_0);
+                    c.Emit(OpCodes.Ldc_I4_0);
+                    c.Emit(OpCodes.Stfld, typeof(ILHookTest).GetField("DidNothing", BindingFlags.NonPublic | BindingFlags.Instance));
+                }
             )) {
                 DoNothing();
                 Assert.False(DidNothing);
