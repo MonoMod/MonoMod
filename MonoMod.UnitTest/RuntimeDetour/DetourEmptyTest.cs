@@ -20,6 +20,7 @@ namespace MonoMod.UnitTest {
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.
 
+            DidNothing = true;
             DoNothing();
             Assert.True(DidNothing);
 
@@ -30,12 +31,14 @@ namespace MonoMod.UnitTest {
                     DidNothing = false;
                 })
             )) {
+                DidNothing = true;
                 DoNothing();
                 Assert.False(DidNothing);
             }
 
+            DidNothing = true;
             DoNothing();
-            Assert.False(DidNothing);
+            Assert.True(DidNothing);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

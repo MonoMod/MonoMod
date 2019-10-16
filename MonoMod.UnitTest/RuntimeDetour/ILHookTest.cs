@@ -18,6 +18,7 @@ namespace MonoMod.UnitTest {
 
         [Fact]
         public void TestILHooks() {
+            DidNothing = true;
             DoNothing();
             Assert.True(DidNothing);
 
@@ -30,12 +31,14 @@ namespace MonoMod.UnitTest {
                     c.Emit(OpCodes.Stfld, typeof(ILHookTest).GetField("DidNothing", BindingFlags.NonPublic | BindingFlags.Instance));
                 }
             )) {
+                DidNothing = true;
                 DoNothing();
                 Assert.False(DidNothing);
             }
 
+            DidNothing = true;
             DoNothing();
-            Assert.False(DidNothing);
+            Assert.True(DidNothing);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
