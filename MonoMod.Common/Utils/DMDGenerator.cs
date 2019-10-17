@@ -57,12 +57,18 @@ namespace MonoMod.Utils {
                         // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection/RuntimeAssembly.cs#L59
                         // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L247
 
-                        Assembly asm = mi.Module.Assembly;
-                        Type asmType = asm.GetType();
+                        Assembly asm = mi?.Module?.Assembly;
+                        Type asmType = asm?.GetType();
+                        if (asmType == null)
+                            return mi;
+
                         // _mono_assembly has changed places between Mono versions.
-                        if (!fmap_mono_assembly.TryGetValue(asmType, out FieldInfo f_mono_assembly)) {
-                            f_mono_assembly = asmType.GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-                            fmap_mono_assembly[asmType] = f_mono_assembly;
+                        FieldInfo f_mono_assembly;
+                        lock (fmap_mono_assembly) {
+                            if (!fmap_mono_assembly.TryGetValue(asmType, out f_mono_assembly)) {
+                                f_mono_assembly = asmType.GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                                fmap_mono_assembly[asmType] = f_mono_assembly;
+                            }
                         }
                         if (f_mono_assembly == null)
                             return mi;
