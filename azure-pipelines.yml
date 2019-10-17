@@ -24,7 +24,7 @@ strategy:
       artifactPrefix: '~dbg.linux-mono.'
       artifactSuffix: ''
       builder: 'mono'
-      testers: ';mono;'
+      testers: ';;'
       coreVersion: '2.1.x'
       generateDocFX: 'false'
     macos:
