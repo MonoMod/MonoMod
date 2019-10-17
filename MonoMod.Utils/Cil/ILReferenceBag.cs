@@ -134,7 +134,10 @@ namespace MonoMod.Cil {
             private static T[] array = new T[4];
             private static int count;
 
-            public static T Get(int id) => array[id];
+            public static T Get(int id) {
+                lock (_storeLock)
+                    return array[id];
+            }
             public static readonly MethodInfo Getter = typeof(InnerBag<T>).GetMethod("Get");
 
             private static readonly object _storeLock = new object();

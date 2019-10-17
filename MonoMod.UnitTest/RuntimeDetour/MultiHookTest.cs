@@ -22,22 +22,6 @@ namespace MonoMod.UnitTest {
             DoNothing();
             Assert.Equal(1, Counter);
 
-            using (ILHook hIL = new ILHook(
-                typeof(MultiHookTest).GetMethod("DoNothing"),
-                il => {
-                    ILCursor c = new ILCursor(il);
-                    FieldInfo f_Counter = typeof(MultiHookTest).GetField("Counter", BindingFlags.NonPublic | BindingFlags.Instance);
-                    c.Emit(OpCodes.Ldarg_0);
-                    c.Emit(OpCodes.Dup);
-                    c.Emit(OpCodes.Ldfld, f_Counter);
-                    c.Emit(OpCodes.Ldc_I4_3);
-                    c.Emit(OpCodes.Mul);
-                    c.Emit(OpCodes.Stfld, f_Counter);
-                },
-                new ILHookConfig {
-                    ManualApply = true
-                }
-            ))
             using (Hook h1 = new Hook(
                 typeof(MultiHookTest).GetMethod("DoNothing"),
                 new Action<Action<MultiHookTest>, MultiHookTest>((orig, self) => {
@@ -55,6 +39,22 @@ namespace MonoMod.UnitTest {
                     Counter *= 2;
                 }),
                 new HookConfig {
+                    ManualApply = true
+                }
+            ))
+            using (ILHook hIL = new ILHook(
+                typeof(MultiHookTest).GetMethod("DoNothing"),
+                il => {
+                    ILCursor c = new ILCursor(il);
+                    FieldInfo f_Counter = typeof(MultiHookTest).GetField("Counter", BindingFlags.NonPublic | BindingFlags.Instance);
+                    c.Emit(OpCodes.Ldarg_0);
+                    c.Emit(OpCodes.Dup);
+                    c.Emit(OpCodes.Ldfld, f_Counter);
+                    c.Emit(OpCodes.Ldc_I4_3);
+                    c.Emit(OpCodes.Mul);
+                    c.Emit(OpCodes.Stfld, f_Counter);
+                },
+                new ILHookConfig {
                     ManualApply = true
                 }
             )) {
