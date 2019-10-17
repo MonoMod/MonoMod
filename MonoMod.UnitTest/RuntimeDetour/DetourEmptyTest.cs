@@ -25,7 +25,6 @@ namespace MonoMod.UnitTest {
             Assert.True(DidNothing);
 
             using (Hook h = new Hook(
-                // .GetNativeStart() to enforce a native detour.
                 typeof(DetourEmptyTest).GetMethod("DoNothing"),
                 new Action<DetourEmptyTest>(self => {
                     DidNothing = false;
