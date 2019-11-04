@@ -1,106 +1,230 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
-using Xunit;
 using MonoMod.RuntimeDetour;
 using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Text;
 using MonoMod.Cil;
-using Mono.Cecil.Cil;
+using Xunit;
 
 namespace MonoMod.UnitTest {
-    [Collection("RuntimeDetour")]
-    public class MultiHookTest {
-        private int Counter = 0;
+    public class ManualMultiHookTest {
+        Hook h1;
+        Hook h2;
+        ILHook hIL;
 
-        [Fact]
-        public void TestMultiHooks() {
-            Counter = 1;
-            DoNothing();
-            Assert.Equal(1, Counter);
+        private bool h1Run;
+        private bool h2Run;
+        private bool hILRun;
 
-            using (Hook h1 = new Hook(
-                typeof(MultiHookTest).GetMethod("DoNothing"),
-                new Action<Action<MultiHookTest>, MultiHookTest>((orig, self) => {
+        private void Setup() {
+            h1 = new Hook(
+                typeof(ManualMultiHookTest).GetMethod("DoNothing"),
+                new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) => {
                     orig(self);
-                    Counter += 2;
+                    h1Run = true;
                 }),
                 new HookConfig {
                     ManualApply = true
                 }
-            ))
-            using (Hook h2 = new Hook(
-                typeof(MultiHookTest).GetMethod("DoNothing"),
-                new Action<Action<MultiHookTest>, MultiHookTest>((orig, self) => {
+            );
+            h2 = new Hook(
+                typeof(ManualMultiHookTest).GetMethod("DoNothing"),
+                new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) => {
                     orig(self);
-                    Counter *= 2;
+                    h2Run = true;
                 }),
                 new HookConfig {
                     ManualApply = true
                 }
-            ))
-            using (ILHook hIL = new ILHook(
-                typeof(MultiHookTest).GetMethod("DoNothing"),
+            );
+            hIL = new ILHook(
+                typeof(ManualMultiHookTest).GetMethod("DoNothing"),
                 il => {
                     ILCursor c = new ILCursor(il);
-                    FieldInfo f_Counter = typeof(MultiHookTest).GetField("Counter", BindingFlags.NonPublic | BindingFlags.Instance);
-                    c.Emit(OpCodes.Ldarg_0);
-                    c.Emit(OpCodes.Dup);
-                    c.Emit(OpCodes.Ldfld, f_Counter);
-                    c.Emit(OpCodes.Ldc_I4_3);
-                    c.Emit(OpCodes.Mul);
-                    c.Emit(OpCodes.Stfld, f_Counter);
+                    c.EmitDelegate<Action>(() => {
+                        hILRun = true;
+                    });
                 },
                 new ILHookConfig {
                     ManualApply = true
                 }
-            )) {
-                Counter = 1;
-                DoNothing();
-                Assert.Equal(1, Counter);
+            );
+            h1Run = false;
+            h2Run = false;
+            hILRun = false;
+        }
 
-                hIL.Apply();
-                h1.Apply();
-                Counter = 1;
-                DoNothing();
-                Assert.Equal((1 * 3) + 2, Counter);
-                h1.Undo();
-                hIL.Undo();
-
-                h2.Apply();
-                hIL.Apply();
-                Counter = 1;
-                DoNothing();
-                Assert.Equal((1 * 3) * 2, Counter);
-                hIL.Undo();
-                h2.Undo();
-
-                h1.Apply();
-                hIL.Apply();
-                h2.Apply();
-                Counter = 1;
-                DoNothing();
-                Assert.Equal(((1 * 3) + 2) * 2, Counter);
-                h2.Undo();
-                hIL.Undo();
-                h1.Undo();
-
-                Counter = 1;
-                DoNothing();
-                Assert.Equal(1, Counter);
-            }
-
-            Counter = 1;
+        [Fact]
+        public void DoNothingTest() {
+            Setup();
             DoNothing();
-            Assert.Equal(1, Counter);
+            Assert.False(h1Run);
+            Assert.False(h2Run);
+            Assert.False(hILRun);
+            TearDown();
+        }
+
+        [Fact]
+        public void H1() {
+            Setup();
+            h1.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.False(h2Run);
+            Assert.False(hILRun);
+            h1.Undo();
+            TearDown();
+        }
+
+        [Fact]
+        public void H2() {
+            Setup();
+            h2.Apply();
+            DoNothing();
+            Assert.False(h1Run);
+            Assert.True(h2Run);
+            Assert.False(hILRun);
+            TearDown();
+        }
+
+        [Fact]
+        public void HIL() {
+            Setup();
+            hIL.Apply();
+            DoNothing();
+            Assert.False(h1Run);
+            Assert.False(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+
+        [Fact]
+        public void HILH1() {
+            Setup();
+            hIL.Apply();
+            h1.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.False(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+
+        [Fact]
+        public void HILH1H2() {
+            Setup();
+            hIL.Apply();
+            h1.Apply();
+            h2.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.True(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+
+        [Fact]
+        public void HILH2H1() {
+            Setup();
+            hIL.Apply();
+            h2.Apply();
+            h1.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.True(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+        [Fact]
+        public void H1H2HIl() {
+            Setup();
+            h1.Apply();
+            h2.Apply();
+            hIL.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.True(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+        [Fact]
+        public void H2H1HIl() {
+            Setup();
+            h2.Apply();
+            h1.Apply();
+            hIL.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.True(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+        [Fact]
+        public void H2HIL() {
+            Setup();
+            h2.Apply();
+            hIL.Apply();
+            DoNothing();
+            Assert.False(h1Run);
+            Assert.True(h2Run);
+            Assert.True(hILRun);
+            hIL.Undo();
+            h2.Undo();
+            TearDown();
+        }
+
+        [Fact]
+        public void H1HILH2() {
+            Setup();
+            h1.Apply();
+            hIL.Apply();
+            h2.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.True(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+        [Fact]
+        public void H1HIL() {
+            Setup();
+            h1.Apply();
+            hIL.Apply();
+            DoNothing();
+            Assert.True(h1Run);
+            Assert.False(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+        [Fact]
+        public void HILH2() {
+            Setup();
+            hIL.Apply();
+            h2.Apply();
+            DoNothing();
+            Assert.False(h1Run);
+            Assert.True(h2Run);
+            Assert.True(hILRun);
+            TearDown();
+        }
+
+        private void TearDown() {
+            h1.Dispose();
+            h2.Dispose();
+            hIL.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void DoNothing() {
         }
-        
     }
 }
