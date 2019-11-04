@@ -139,6 +139,7 @@ namespace MonoMod.UnitTest {
                 Assert.True(h2Run);
                 Assert.True(hILRun);
                 h1.Dispose();
+                h2.Dispose();
                 hIL.Dispose();
             }
 
@@ -184,6 +185,7 @@ namespace MonoMod.UnitTest {
                 Assert.True(h2Run);
                 Assert.True(hILRun);
                 h1.Dispose();
+                h2.Dispose();
                 hIL.Dispose();
             }
 
@@ -229,6 +231,7 @@ namespace MonoMod.UnitTest {
                 Assert.True(h2Run);
                 Assert.True(hILRun);
                 h1.Dispose();
+                h2.Dispose();
                 hIL.Dispose();
             }
             [MethodImpl(MethodImplOptions.NoInlining)]
