@@ -141,7 +141,7 @@ namespace MonoMod.UnitTest {
         }
 
         [Fact]
-        public void H1H2HIl() {
+        public void H1H2HIL() {
             Setup();
             h1.Apply();
             h2.Apply();
@@ -154,7 +154,7 @@ namespace MonoMod.UnitTest {
         }
 
         [Fact]
-        public void H2H1HIl() {
+        public void H2H1HIL() {
             Setup();
             h2.Apply();
             h1.Apply();

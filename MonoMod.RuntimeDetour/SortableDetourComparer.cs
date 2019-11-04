@@ -50,7 +50,7 @@ namespace MonoMod.RuntimeDetour {
                 if (Items.Count <= 1)
                     return;
 
-                if (Items.Count == 2) {
+                if ((Items.Count == 2 && (step.IsFlat ?? true)) || (step.IsFlat ?? false)) {
                     Items.Sort(step);
                     return;
                 }
@@ -122,6 +122,8 @@ namespace MonoMod.RuntimeDetour {
             public abstract GroupComparer ForGroup { get; }
             public abstract int Compare(T x, T y);
 
+            public virtual bool? IsFlat => null;
+
             public bool Any(List<T> xlist, T y) {
                 foreach (T x in xlist)
                     if (Compare(x, y) != 0)
@@ -156,11 +158,16 @@ namespace MonoMod.RuntimeDetour {
             public static readonly BeforeAfterAll _ = new BeforeAfterAll();
             public static readonly GroupComparer Group = new GroupComparer(_);
             public override GroupComparer ForGroup => Group;
+            public override bool? IsFlat => false;
             public override int Compare(T a, T b) {
                 if (a.Before.Contains("*") && !b.Before.Contains("*"))
                     return -1;
+                if (!a.Before.Contains("*") && b.Before.Contains("*"))
+                    return 1;
                 if (a.After.Contains("*") && !b.After.Contains("*"))
                     return 1;
+                if (!a.After.Contains("*") && b.After.Contains("*"))
+                    return -1;
 
                 return 0;
             }

@@ -145,7 +145,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             _Detour = new Detour(Method, TargetReal, new DetourConfig() {
-                ManualApply = config.ManualApply,
+                ManualApply = true,
                 Priority = config.Priority,
                 ID = config.ID,
                 Before = config.Before,
@@ -153,6 +153,9 @@ namespace MonoMod.RuntimeDetour {
             });
 
             _UpdateOrig(null);
+
+            if (!config.ManualApply)
+                Apply();
         }
         public Hook(MethodBase from, MethodInfo to, object target, HookConfig config)
             : this(from, to, target, ref config) {
