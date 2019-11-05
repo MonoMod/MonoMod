@@ -57,7 +57,12 @@ namespace MonoMod.Utils {
                         // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection/RuntimeAssembly.cs#L59
                         // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L247
 
-                        Assembly asm = mi?.Module?.Assembly;
+                        // get_Assembly is virtual in some versions of Mono (notably older ones and the infamous Unity fork).
+                        // ?. results in a call instead of callvirt to skip a redundant nullcheck, which breaks this on ^...
+                        Module module = mi?.Module;
+                        if (module == null)
+                            return mi;
+                        Assembly asm = module.Assembly; // Let's hope that this doesn't get optimized into a call.
                         Type asmType = asm?.GetType();
                         if (asmType == null)
                             return mi;
