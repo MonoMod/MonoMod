@@ -29,6 +29,8 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 - [Renaud Bédard](https://twitter.com/renaudbedard)
 - [leo60228](https://leo60228.space)
 - [Rubydragon](https://www.twitch.tv/rubydrag0n)
+- Holly Magala
+- [Jimmy Londo (iamdadbod)](https://www.youtube.com/iamdadbod)
 - [Artus Elias Meyer-Toms](https://twitter.com/artuselias)
 
 ----

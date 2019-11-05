@@ -1,4 +1,6 @@
-﻿using MonoMod.Cil;
+﻿#pragma warning disable xUnit1013 // Public method should be marked as test
+
+using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using System;
 using System.Collections.Generic;
