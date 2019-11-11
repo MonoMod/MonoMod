@@ -71,6 +71,8 @@ namespace MonoMod.UnitTest {
                     TargetTest(array2d1[0][0], array2d2[0, 0], str);
                     TargetTest(array2d1[0][0], array2d2[0, 0]);
                     TargetTest(array2d1[0][0], ref array2d2[0, 0]);
+                    TargetTest<int>();
+                    TargetTest<int, int>();
                 }
 
                 switch (i) {
@@ -104,6 +106,14 @@ namespace MonoMod.UnitTest {
 
         public static int TargetTest<T>(string a, ref T b) {
             return (a + b).GetHashCode();
+        }
+
+        public static int TargetTest<TA>() {
+            return 1;
+        }
+
+        public static int TargetTest<TA, TB>() {
+            return 2;
         }
 
     }
