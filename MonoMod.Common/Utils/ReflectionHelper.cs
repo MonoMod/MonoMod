@@ -18,10 +18,10 @@ namespace MonoMod.Utils {
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
 
-        private static MemberInfo _Cache(MemberReference key, MemberInfo value) {
-            if (key != null && value != null) {
+        private static MemberInfo _Cache(string cacheKey, MemberInfo value) {
+            if (cacheKey != null && value != null) {
                 lock (ResolveReflectionCache) {
-                    ResolveReflectionCache[key.FullName] = value;
+                    ResolveReflectionCache[cacheKey] = value;
                 }
             }
             return value;
@@ -99,8 +99,10 @@ namespace MonoMod.Utils {
             if (mref == null)
                 return null;
 
+            string cacheKey = (mref as MethodReference)?.GetID() ?? mref.FullName;
+
             lock (ResolveReflectionCache) {
-                if (ResolveReflectionCache.TryGetValue(mref.FullName, out MemberInfo cached) && cached != null)
+                if (ResolveReflectionCache.TryGetValue(cacheKey, out MemberInfo cached) && cached != null)
                     return cached;
             }
 
@@ -123,7 +125,7 @@ namespace MonoMod.Utils {
                     .Concat(type.GetConstructors(_BindingFlagsAll))
                     .FirstOrDefault(m => m.GetID(withType: false) == methodID);
                 if (found != null)
-                    return _Cache(mref, found);
+                    return _Cache(cacheKey, found);
             }
 
             TypeReference tscope =
@@ -204,7 +206,7 @@ namespace MonoMod.Utils {
                             .FirstOrDefault(m => m != null);
                 }
 
-                return _Cache(mref, type);
+                return _Cache(cacheKey, type);
             }
 
             bool typeless = mref.DeclaringType.FullName == "<Module>";
@@ -245,7 +247,7 @@ namespace MonoMod.Utils {
                         .FirstOrDefault(m => mref.Is(m));
             }
 
-            return _Cache(mref, member);
+            return _Cache(cacheKey, member);
         }
 
         public static SignatureHelper ResolveReflection(this CallSite csite, Module context)
