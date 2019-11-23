@@ -47,7 +47,7 @@ IL.Celeste.Player.GetTrailColor += (il) => {
     c.Emit(OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) }));
 
     // After that, emit an inline delegate call.
-    c.EmitDelegate(() => {
+    c.EmitDelegate<Action>(() => {
         Console.WriteLine("3 - Hello, C# code in IL!");
     });
     
