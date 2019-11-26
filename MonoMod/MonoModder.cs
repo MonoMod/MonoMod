@@ -578,7 +578,7 @@ namespace MonoMod {
         public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
             string typeName = type.GetPatchFullName();
 
-            if (!type.MatchingConditionals(Module))
+            if (!MatchingConditionals(type, Module))
                 return;
 
             CustomAttribute caHandler;
@@ -609,7 +609,7 @@ namespace MonoMod {
                 return;
 
             foreach (MethodDefinition method in type.Methods) {
-                if (!method.MatchingConditionals(Module))
+                if (!MatchingConditionals(method, Module))
                     continue;
 
                 for (hook = method.GetCustomAttribute("MonoMod.MonoModHook"); hook != null; hook = method.GetNextCustomAttribute("MonoMod.MonoModHook"))
@@ -626,7 +626,7 @@ namespace MonoMod {
             }
 
             foreach (FieldDefinition field in type.Fields) {
-                if (!field.MatchingConditionals(Module))
+                if (!MatchingConditionals(field, Module))
                     continue;
 
                 for (hook = field.GetCustomAttribute("MonoMod.MonoModHook"); hook != null; hook = field.GetNextCustomAttribute("MonoMod.MonoModHook"))
@@ -638,7 +638,7 @@ namespace MonoMod {
             }
 
             foreach (PropertyDefinition prop in type.Properties) {
-                if (!prop.MatchingConditionals(Module))
+                if (!MatchingConditionals(prop, Module))
                     continue;
 
                 for (hook = prop.GetCustomAttribute("MonoMod.MonoModHook"); hook != null; hook = prop.GetNextCustomAttribute("MonoMod.MonoModHook"))
@@ -964,7 +964,7 @@ namespace MonoMod {
             string typeName = type.GetPatchFullName();
 
             // Fix legacy issue: Copy / inline any used modifiers.
-            if ((type.Namespace != "MonoMod" && type.HasCustomAttribute("MonoMod.MonoModIgnore")) || SkipList.Contains(typeName) || !type.MatchingConditionals(Module))
+            if ((type.Namespace != "MonoMod" && type.HasCustomAttribute("MonoMod.MonoModIgnore")) || SkipList.Contains(typeName) || !MatchingConditionals(type, Module))
                 return;
             // ... Except MonoModRules
             if (type.FullName == "MonoMod.MonoModRules" && !forceAdd)
@@ -1058,7 +1058,7 @@ namespace MonoMod {
 
             if ((type.Namespace != "MonoMod" && type.HasCustomAttribute("MonoMod.MonoModIgnore")) || // Fix legacy issue: Copy / inline any used modifiers.
                 SkipList.Contains(typeName) ||
-                !type.MatchingConditionals(Module)) {
+                !MatchingConditionals(type, Module)) {
 
                 if (type.HasCustomAttribute("MonoMod.MonoModIgnore") && targetTypeDef != null) {
                     // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1117,7 +1117,7 @@ namespace MonoMod {
         }
 
         public virtual void PatchProperty(TypeDefinition targetType, PropertyDefinition prop, HashSet<MethodDefinition> propMethods = null) {
-            if (!prop.MatchingConditionals(Module))
+            if (!MatchingConditionals(prop, Module))
                 return;
 
             MethodDefinition addMethod;
@@ -1297,7 +1297,7 @@ namespace MonoMod {
         public virtual void PatchField(TypeDefinition targetType, FieldDefinition field) {
             string typeName = field.DeclaringType.GetPatchFullName();
 
-            if (field.HasCustomAttribute("MonoMod.MonoModNoNew") || SkipList.Contains(typeName + "::" + field.Name) || !field.MatchingConditionals(Module))
+            if (field.HasCustomAttribute("MonoMod.MonoModNoNew") || SkipList.Contains(typeName + "::" + field.Name) || !MatchingConditionals(field, Module))
                 return;
 
             if (field.HasCustomAttribute("MonoMod.MonoModRemove") || field.HasCustomAttribute("MonoMod.MonoModReplace")) {
@@ -1336,7 +1336,7 @@ namespace MonoMod {
                 // Ignore original method stubs
                 return null;
 
-            if (!AllowedSpecialName(method, targetType) || !method.MatchingConditionals(Module))
+            if (!AllowedSpecialName(method, targetType) || !MatchingConditionals(method, Module))
                 // Ignore ignored methods
                 return null;
 
@@ -2098,6 +2098,52 @@ namespace MonoMod {
                 return true;
 
             return !method.IsRuntimeSpecialName; // Formerly SpecialName. If something breaks, blame UnderRail.
+        }
+
+        public virtual bool MatchingConditionals(ICustomAttributeProvider cap, ModuleDefinition module)
+            => MatchingConditionals(cap, module.Assembly.Name);
+        public virtual bool MatchingConditionals(ICustomAttributeProvider cap, AssemblyNameReference asmName = null) {
+            if (cap == null)
+                return true;
+            if (!cap.HasCustomAttributes)
+                return true;
+
+            bool status = true;
+            foreach (CustomAttribute attrib in cap.CustomAttributes) {
+                if (attrib.AttributeType.FullName == "MonoMod.MonoModOnPlatform") {
+                    CustomAttributeArgument[] plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
+                    for (int i = 0; i < plats.Length; i++) {
+                        if (PlatformHelper.Is((Platform) plats[i].Value)) {
+                            // status &= true;
+                            continue;
+                        }
+                    }
+                    status &= plats.Length == 0;
+                    continue;
+                }
+
+                if (attrib.AttributeType.FullName == "MonoMod.MonoModIfFlag") {
+                    string flag = (string) attrib.ConstructorArguments[0].Value;
+                    bool value;
+                    if (!SharedData.TryGetValue(flag, out object valueObj) || !(valueObj is bool))
+                        if (attrib.ConstructorArguments.Count == 2)
+                            value = (bool) attrib.ConstructorArguments[1].Value;
+                        else
+                            value = true;
+                    else
+                        value = (bool) valueObj;
+                    status &= value;
+                    continue;
+                }
+
+                if (attrib.AttributeType.FullName == "MonoMod.MonoModTargetModule") {
+                    string name = (string) attrib.ConstructorArguments[0].Value;
+                    status &= asmName.Name == name || asmName.FullName == name;
+                    continue;
+                }
+            }
+
+            return status;
         }
 #endregion
 

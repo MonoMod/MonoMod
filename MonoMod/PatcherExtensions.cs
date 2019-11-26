@@ -11,52 +11,7 @@ using Mono.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod {
-    internal static partial class PatcherExtensions {
-
-        public static bool MatchingConditionals(this ICustomAttributeProvider cap, ModuleDefinition module)
-            => cap.MatchingConditionals(module.Assembly.Name);
-        public static bool MatchingConditionals(this ICustomAttributeProvider cap, AssemblyNameReference asmName = null) {
-            if (cap == null)
-                return true;
-            if (!cap.HasCustomAttributes)
-                return true;
-            Platform plat = PlatformHelper.Current;
-            bool status = true;
-            foreach (CustomAttribute attrib in cap.CustomAttributes) {
-                if (attrib.AttributeType.FullName == "MonoMod.MonoModOnPlatform") {
-                    CustomAttributeArgument[] plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
-                    for (int i = 0; i < plats.Length; i++) {
-                        if (PlatformHelper.Is((Platform) plats[i].Value)) {
-                            // status &= true;
-                            continue;
-                        }
-                    }
-                    status &= plats.Length == 0;
-                    continue;
-                }
-
-                if (attrib.AttributeType.FullName == "MonoMod.MonoModIfFlag") {
-                    string flag = (string) attrib.ConstructorArguments[0].Value;
-                    bool value;
-                    if (!InlineRT.MonoModRule.Modder.SharedData.TryGetValue(flag, out object valueObj) || !(valueObj is bool))
-                        if (attrib.ConstructorArguments.Count == 2)
-                            value = (bool) attrib.ConstructorArguments[1].Value;
-                        else
-                            value = true;
-                    else
-                        value = (bool) valueObj;
-                    status &= value;
-                    continue;
-                }
-
-                if (attrib.AttributeType.FullName == "MonoMod.MonoModTargetModule") {
-                    string name = (string) attrib.ConstructorArguments[0].Value;
-                    status &= asmName.Name == name || asmName.FullName == name;
-                    continue;
-                }
-            }
-            return status;
-        }
+    public static partial class PatcherExtensions {
 
         public static void SetPublic(this IMetadataTokenProvider mtp, bool p) {
             if (mtp is TypeDefinition)
@@ -128,7 +83,7 @@ namespace MonoMod {
         }
 
         // Required for field -> call conversions where the original access was an address access.
-        public static void AppendGetAddr(this MethodBody body, Instruction instr, TypeReference type, IDictionary<TypeReference, VariableDefinition> localMap = null) {
+        internal static void AppendGetAddr(this MethodBody body, Instruction instr, TypeReference type, IDictionary<TypeReference, VariableDefinition> localMap = null) {
             if (localMap == null || !localMap.TryGetValue(type, out VariableDefinition local)) {
                 local = new VariableDefinition(type);
                 body.Variables.Add(local);
@@ -142,7 +97,7 @@ namespace MonoMod {
             il.InsertAfter(tmp, tmp = il.Create(OpCodes.Ldloca, local));
         }
 
-        public static CustomAttribute GetNextCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
+        internal static CustomAttribute GetNextCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
             if (cap == null || !cap.HasCustomAttributes)
                 return null;
             bool next = false;
