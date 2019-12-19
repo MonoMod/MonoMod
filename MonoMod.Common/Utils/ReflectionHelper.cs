@@ -101,6 +101,52 @@ namespace MonoMod.Utils {
 
             string cacheKey = (mref as MethodReference)?.GetID() ?? mref.FullName;
 
+            /* Even though member references are not supposed to exist more
+             * than once, some environments (f.e. tModLoader) reload updated
+             * versions of assemblies with differing assembly names.
+             * 
+             * Adding the assembly name should take care of preventing any further
+             * "accidental" collisions that would not occur "normally".
+             * 
+             * Ideally the mref hash code could be part of the cache key,
+             * but that part changes with every new Cecil reference context, if not
+             * even more often than that.
+             */
+
+            TypeReference tscope =
+                mref.DeclaringType ??
+                mref as TypeReference ??
+                null;
+
+            string asmName;
+            string moduleName;
+
+            switch (tscope?.Scope) {
+                case AssemblyNameReference asmNameRef:
+                    asmName = asmNameRef.FullName;
+                    moduleName = null;
+                    break;
+
+                case ModuleDefinition moduleDef:
+                    asmName = moduleDef.Assembly.FullName;
+                    moduleName = moduleDef.Name;
+                    break;
+
+                case ModuleReference moduleRef:
+                    // TODO: Is this correct? It's what cecil itself is doing...
+                    asmName = tscope.Module.Assembly.FullName;
+                    moduleName = tscope.Module.Name;
+                    break;
+
+                case null:
+                default:
+                    asmName = null;
+                    moduleName = null;
+                    break;
+            }
+
+            cacheKey = $"{cacheKey} | {asmName ?? "NOASSEMBLY"}, {moduleName ?? "NOMODULE"}";
+
             lock (ResolveReflectionCache) {
                 if (ResolveReflectionCache.TryGetValue(cacheKey, out MemberInfo cached) && cached != null)
                     return cached;
@@ -128,36 +174,14 @@ namespace MonoMod.Utils {
                     return _Cache(cacheKey, found);
             }
 
-            TypeReference tscope =
-                mref.DeclaringType ??
-                mref as TypeReference ??
+
+            // Typeless references aren't supported.
+            if (tscope == null)
                 throw new ArgumentException("MemberReference hasn't got a DeclaringType / isn't a TypeReference in itself");
+            if (asmName == null && moduleName == null)
+                throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
 
             if (modules == null) {
-                string asmName;
-                string moduleName;
-
-                switch (tscope.Scope) {
-                    case AssemblyNameReference asmNameRef:
-                        asmName = asmNameRef.FullName;
-                        moduleName = null;
-                        break;
-
-                    case ModuleDefinition moduleDef:
-                        asmName = moduleDef.Assembly.FullName;
-                        moduleName = moduleDef.Name;
-                        break;
-
-                    case ModuleReference moduleRef:
-                        // TODO: Is this correct? It's what cecil itself is doing...
-                        asmName = tscope.Module.Assembly.FullName;
-                        moduleName = tscope.Module.Name;
-                        break;
-
-                    default:
-                        throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
-                }
-
                 Assembly asm = null;
                 lock (AssemblyCache) {
                     if (!AssemblyCache.TryGetValue(asmName, out asm)) {
