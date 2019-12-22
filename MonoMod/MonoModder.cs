@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.Utils;
+using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 #if CECIL0_9
 using InterfaceImplementation = Mono.Cecil.TypeReference;

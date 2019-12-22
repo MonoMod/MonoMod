@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using MonoMod.Utils;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
+using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.RuntimeDetour {
     public struct NativeDetourConfig {
