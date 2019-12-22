@@ -12,6 +12,7 @@ using System.ComponentModel;
 using System.Security;
 using System.Security.Permissions;
 using System.Diagnostics.SymbolStore;
+using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition : IDisposable {

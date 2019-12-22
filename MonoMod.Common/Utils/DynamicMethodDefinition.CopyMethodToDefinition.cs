@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Security;
 using System.IO;
+using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition {

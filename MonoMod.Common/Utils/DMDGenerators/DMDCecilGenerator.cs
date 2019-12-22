@@ -9,6 +9,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.IO;
+using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
     /// <summary>

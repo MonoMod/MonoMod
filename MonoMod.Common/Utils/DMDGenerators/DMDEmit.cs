@@ -12,6 +12,7 @@ using System.ComponentModel;
 using System.Security.Permissions;
 using System.Security;
 using System.Diagnostics.SymbolStore;
+using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
     internal static partial class _DMDEmit {

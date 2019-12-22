@@ -12,6 +12,7 @@ using Mono.Cecil;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 using OpCode = Mono.Cecil.Cil.OpCode;
 using Mono.Collections.Generic;
+using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils.Cil {
     /// <summary>
