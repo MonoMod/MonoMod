@@ -106,11 +106,32 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override void Emit(SRE.OpCode opcode) => IL.Emit(_(opcode));
-        public override void Emit(SRE.OpCode opcode, byte arg) => IL.Emit(_(opcode), arg);
-        public override void Emit(SRE.OpCode opcode, sbyte arg) => IL.Emit(_(opcode), arg);
-        public override void Emit(SRE.OpCode opcode, short arg) => IL.Emit(_(opcode), arg);
+        public override void Emit(SRE.OpCode opcode, byte arg) {
+            if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
+                opcode.OperandType == SRE.OperandType.InlineVar)
+                _EmitInlineVar(_(opcode), arg);
+            else
+                IL.Emit(_(opcode), arg);
+        }
+        public override void Emit(SRE.OpCode opcode, sbyte arg) {
+            if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
+                opcode.OperandType == SRE.OperandType.InlineVar)
+                _EmitInlineVar(_(opcode), arg);
+            else
+                IL.Emit(_(opcode), arg);
+        }
+        public override void Emit(SRE.OpCode opcode, short arg) {
+            if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
+                opcode.OperandType == SRE.OperandType.InlineVar)
+                _EmitInlineVar(_(opcode), arg);
+            else
+                IL.Emit(_(opcode), arg);
+        }
         public override void Emit(SRE.OpCode opcode, int arg) {
-            if (opcode.Name.EndsWith(".s"))
+            if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
+                opcode.OperandType == SRE.OperandType.InlineVar)
+                _EmitInlineVar(_(opcode), arg);
+            else if (opcode.Name.EndsWith(".s"))
                 IL.Emit(_(opcode), (sbyte) arg);
             else
                 IL.Emit(_(opcode), arg);
@@ -127,6 +148,25 @@ namespace MonoMod.Utils.Cil {
         public override void Emit(SRE.OpCode opcode, Label[] labels) => IL.Emit(_(opcode), labels.Select(label => _(label)).ToArray());
         public override void Emit(SRE.OpCode opcode, LocalBuilder local) => IL.Emit(_(opcode), _(local));
         public override void Emit(SRE.OpCode opcode, SignatureHelper signature) => throw new NotSupportedException();
+
+        private void _EmitInlineVar(OpCode opcode, int index) {
+            // System.Reflection.Emit has only got (Short)InlineVar and allows index refs.
+            // Mono.Cecil has also got (Short)InlineArg and requires definition refs.
+            switch (opcode.OperandType) {
+                case MCC.OperandType.ShortInlineArg:
+                case MCC.OperandType.InlineArg:
+                    IL.Emit(opcode, IL.Body.Method.Parameters[index]);
+                    break;
+
+                case MCC.OperandType.ShortInlineVar:
+                case MCC.OperandType.InlineVar:
+                    IL.Emit(opcode, IL.Body.Variables[index]);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"Unsupported SRE InlineVar -> Cecil {opcode.OperandType} for {opcode} {index}");
+            }
+        }
 
         public override void EmitCall(SRE.OpCode opcode, MethodInfo methodInfo, Type[] optionalParameterTypes) => IL.Emit(_(opcode), _(methodInfo));
         public override void EmitCalli(SRE.OpCode opcode, CallingConventions callingConvention, Type returnType, Type[] parameterTypes, Type[] optionalParameterTypes) => throw new NotSupportedException();
