@@ -35,10 +35,8 @@ namespace MonoMod.Utils {
             => _Postbuild((_Instance ?? (_Instance = new TSelf()))._Generate(dmd, context));
 
         internal static readonly Dictionary<Type, FieldInfo> fmap_mono_assembly = new Dictionary<Type, FieldInfo>();
-        internal static readonly bool _MonoAssemblyNameHasArch =
-            typeof(object).Assembly.GetType("Mono.RuntimeStructs")
-            ?.GetNestedType("MonoAssemblyName", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
-            ?.GetField("arch") != null;
+        // Old versions of Mono which lack the arch field in MonoAssemblyName don't parse ProcessorArchitecture.
+        internal static readonly bool _MonoAssemblyNameHasArch = new AssemblyName("Dummy, ProcessorArchitecture=MSIL").ProcessorArchitecture == ProcessorArchitecture.MSIL;
 
         private static unsafe MethodInfo _Postbuild(MethodInfo mi) {
             if (mi == null)
@@ -109,7 +107,7 @@ namespace MonoMod.Utils {
 
                             // major, minor, build, revision[, arch] (10 framework / 20 core + padding)
                             (
-                                _MonoAssemblyNameHasArch ? (
+                                !_MonoAssemblyNameHasArch ? (
                                     typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? 16 :
                                     8
                                 ) : (
