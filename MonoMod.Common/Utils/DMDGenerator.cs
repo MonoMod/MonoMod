@@ -35,6 +35,10 @@ namespace MonoMod.Utils {
             => _Postbuild((_Instance ?? (_Instance = new TSelf()))._Generate(dmd, context));
 
         internal static readonly Dictionary<Type, FieldInfo> fmap_mono_assembly = new Dictionary<Type, FieldInfo>();
+        internal static readonly bool _MonoAssemblyNameHasArch =
+            typeof(object).Assembly.GetType("Mono.RuntimeStructs")
+            ?.GetNestedType("MonoAssemblyName", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+            ?.GetField("arch") != null;
 
         private static unsafe MethodInfo _Postbuild(MethodInfo mi) {
             if (mi == null)
@@ -103,10 +107,15 @@ namespace MonoMod.Utils {
                             // flags
                             4 +
 
-                            // major, minor, build, revision, arch (10 framework / 20 core + padding)
+                            // major, minor, build, revision[, arch] (10 framework / 20 core + padding)
                             (
-                                typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? (IntPtr.Size == 4 ? 20 : 24) :
-                                (IntPtr.Size == 4 ? 12 : 16)
+                                _MonoAssemblyNameHasArch ? (
+                                    typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? 16 :
+                                    8
+                                ) : (
+                                    typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? (IntPtr.Size == 4 ? 20 : 24) :
+                                    (IntPtr.Size == 4 ? 12 : 16)
+                                )
                             ) +
 
                             // image
