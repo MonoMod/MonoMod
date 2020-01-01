@@ -144,7 +144,7 @@ namespace MonoMod.Utils {
                 for (int i = 0; i < args.Length; i++)
                     argTypes[i + offs] = args[i].ParameterType;
 
-                module = _CreateDynModule(orig.Name, (orig as MethodInfo)?.ReturnType, argTypes);
+                module = _CreateDynModule(orig.GetID(simple: true), (orig as MethodInfo)?.ReturnType, argTypes);
 
                 _CopyMethodToDefinition();
 
