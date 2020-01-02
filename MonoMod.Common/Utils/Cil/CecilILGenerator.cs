@@ -25,8 +25,7 @@ namespace MonoMod.Utils.Cil {
         // Mono: Type, ILGenerator
         // .NET Framework matches .NET Core: int, Type, MethodInfo(, bool)
         private static readonly ConstructorInfo c_LocalBuilder =
-            typeof(LocalBuilder).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                [0];
+            typeof(LocalBuilder).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)[0];
 
         private static ParameterInfo[] c_LocalBuilder_params = c_LocalBuilder.GetParameters();
 
@@ -70,7 +69,7 @@ namespace MonoMod.Utils.Cil {
         private OpCode _(SRE.OpCode opcode) => _MCCOpCodes[opcode.Value];
 
         private LabelInfo _(Label handle) =>
-            _LabelInfos.TryGetValue(handle, out var labelInfo) ? labelInfo : null; //_Labels[*(int*) &handle];
+            _LabelInfos.TryGetValue(handle, out var labelInfo) ? labelInfo : null;
 
         private VariableDefinition _(LocalBuilder handle) => _Variables[handle];
 
@@ -95,7 +94,6 @@ namespace MonoMod.Utils.Cil {
                                         break;
                                     }
                                 }
-
                                 break;
                         }
                     }
