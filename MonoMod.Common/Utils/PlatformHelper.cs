@@ -21,6 +21,8 @@ namespace MonoMod.Utils {
                 string osType = File.ReadAllText("/proc/sys/kernel/ostype");
                 if (osType.StartsWith("Linux", StringComparison.OrdinalIgnoreCase)) {
                     Current = Platform.Linux;
+                } else {
+                    Current = Platform.Unix;
                 }
 
             } else if (File.Exists("/System/Library/CoreServices/SystemVersion.plist")) {
@@ -49,9 +51,9 @@ namespace MonoMod.Utils {
             }
 #endif
 
-            if (Directory.Exists("/data") && File.Exists("/system/build.prop")) {
+            if (Is(Platform.Linux) && Directory.Exists("/data") && File.Exists("/system/build.prop")) {
                 Current = Platform.Android;
-            } else if (Directory.Exists("/Applications") && Directory.Exists("/System")) {
+            } else if (Is(Platform.Unix) && Directory.Exists("/Applications") && Directory.Exists("/System")) {
                 Current = Platform.iOS;
             }
 
@@ -68,7 +70,7 @@ namespace MonoMod.Utils {
                 RuntimeInformation.OSArchitecture.HasFlag(Architecture.Arm))
                 Current |= Platform.ARM;
 #else
-            if (Is(Platform.Unix) && Type.GetType("Mono.Runtime") != null) {
+            if ((Is(Platform.Unix) || Is(Platform.Unknown)) && Type.GetType("Mono.Runtime") != null) {
                 /* I'd love to use RuntimeInformation, but it returns X64 up until...
                  * https://github.com/mono/mono/commit/396559769d0e4ca72837e44bcf837b7c91596414
                  * ... and that commit still hasn't reached Mono 5.16 on Debian, dated
