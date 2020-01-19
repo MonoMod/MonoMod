@@ -7,7 +7,7 @@ strategy:
       artifactSuffix: ''
       builder: 'core'
       testers: ';fx;core2;core3;core3.1;'
-      generateDocFX: 'true'
+      generateDocFX: 'false'
     linux-core:
       jobArchName: 'Linux .NET Core'
       imageName: 'ubuntu-latest'
@@ -188,7 +188,7 @@ steps:
     testResultsFiles: '**/testresults.core.netcoreapp3.1.trx'
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.1'
 
-# Create and "publish" nupkg artifacts.
+# Rebuild and publish the DocFX page.
 - task: PowerShell@2
   condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.generateDocFX, 'true'))
   displayName: 'DocFX'

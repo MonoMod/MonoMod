@@ -16,6 +16,13 @@ namespace MonoMod.UnitTest {
     public class DetourMemoryTest {
         [Fact]
         public void TestDetourMemory() {
+            if (Type.GetType("Mono.Runtime") != null) {
+                // GC.GetTotalMemory likes to die on Mono:
+                // * Assertion: should not be reached at sgen-scan-object.h:91
+                // at System.GC:GetTotalMemory <0x00061>
+                return;
+            }
+
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.
             HashSet<Hook> hooks = new HashSet<Hook>();
