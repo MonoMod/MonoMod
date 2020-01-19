@@ -22,7 +22,7 @@ strategy:
       artifactPrefix: '~dbg.linux-mono.'
       artifactSuffix: ''
       builder: 'mono'
-      testers: ';mono;'
+      testers: ';;'
       generateDocFX: 'false'
     macos:
       jobArchName: 'macOS'
