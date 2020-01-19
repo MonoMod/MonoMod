@@ -9,7 +9,7 @@
     <Description></Description>
     <PackageTags>$(PackageTags)</PackageTags>
 
-    <TargetFrameworks>net452;netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks>net452;netcoreapp2.0;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.props" />
