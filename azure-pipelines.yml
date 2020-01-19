@@ -2,7 +2,7 @@ strategy:
   matrix:
     windows:
       jobArchName: 'Windows'
-      imageName: 'windows-2019'
+      imageName: 'windows-latest'
       artifactPrefix: ''
       artifactSuffix: ''
       builder: 'core'
@@ -11,7 +11,7 @@ strategy:
       generateDocFX: 'true'
     linux-core:
       jobArchName: 'Linux .NET Core'
-      imageName: 'ubuntu-16.04'
+      imageName: 'ubuntu-latest'
       artifactPrefix: '~dbg.linux-core.'
       artifactSuffix: ''
       builder: 'core'
@@ -20,16 +20,16 @@ strategy:
       generateDocFX: 'false'
     linux-mono:
       jobArchName: 'Linux Mono'
-      imageName: 'ubuntu-16.04'
+      imageName: 'ubuntu-latest'
       artifactPrefix: '~dbg.linux-mono.'
       artifactSuffix: ''
       builder: 'mono'
-      testers: ';;'
+      testers: ';mono;'
       coreVersion: '2.1.x'
       generateDocFX: 'false'
     macos:
       jobArchName: 'macOS'
-      imageName: 'macOS-10.14'
+      imageName: 'macOS-latest'
       artifactPrefix: '~dbg.macos-core.'
       artifactSuffix: ''
       builder: 'core'
