@@ -74,7 +74,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Inner.MemFree(ptr);
         }
 
-        [DllImport("libc", SetLastError = true)]
+        [DllImport("libc", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mprotect(IntPtr start, IntPtr len, MmapProts prot);
 
         [Flags]
