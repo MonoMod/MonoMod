@@ -17,7 +17,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
         };
 
         private static bool Is32Bit(long to)
-            => (((ulong) to) & 0x00000000FFFFFFFFUL) == ((ulong) to);
+            // JMP rel32 is "sign extended to 64-bits"
+            => (((ulong) to) & 0x000000007FFFFFFFUL) == ((ulong) to);
 
         private static DetourType GetDetourType(IntPtr from, IntPtr to) {
             long rel = (long) to - ((long) from + 5);
