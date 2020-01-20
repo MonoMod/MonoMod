@@ -20,8 +20,6 @@
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
     <Reference Include="0Harmony" HintPath="lib\0Harmony.dll" />
-    <Reference Include="System.Runtime" />
-    <Reference Include="System.Runtime.Extensions" />
   </ItemGroup>
 
   <ItemGroup>
