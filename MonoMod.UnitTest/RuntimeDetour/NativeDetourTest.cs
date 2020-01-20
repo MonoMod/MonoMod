@@ -18,23 +18,34 @@ namespace MonoMod.UnitTest {
 
         [PlatformFact("Windows", "Unix")]
         public void TestNativeDetours() {
-            if (PlatformHelper.Is(Platform.Windows))
-                TestNativeDetoursWindows();
-            else if (PlatformHelper.Is(Platform.Unix))
-                TestNativeDetoursUnix();
-            else
-                throw new PlatformNotSupportedException();
+            // https://github.com/dotnet/coreclr/pull/8263
+            dt_rand d_not_rand = not_rand;
+            GCHandle gch_not_rand = GCHandle.Alloc(d_not_rand);
+            IntPtr ptr_not_rand = Marshal.GetFunctionPointerForDelegate(d_not_rand);
+
+            try {
+                if (PlatformHelper.Is(Platform.Windows))
+                    TestNativeDetoursWindows(d_not_rand, ptr_not_rand);
+                else if (PlatformHelper.Is(Platform.Unix))
+                    TestNativeDetoursUnix(d_not_rand, ptr_not_rand);
+                else
+                    throw new PlatformNotSupportedException();
+
+            } finally {
+                gch_not_rand.Free();
+            }
         }
 
-        private void TestNativeDetoursWindows() {
-            // The following use cases are not meant to be usage examples.
-            // Please take a look at DetourTest and HookTest instead.
-
+        private void TestNativeDetoursWindows(dt_rand d_not_rand, IntPtr ptr_not_rand) {
             DidNothing = true;
             msvcrt_rand();
             Assert.True(DidNothing);
 
-            using (NativeDetour d = new NativeDetour(
+            DidNothing = true;
+            Assert.Equal(-1, d_not_rand());
+            Assert.False(DidNothing);
+
+            using (new NativeDetour(
                 typeof(NativeDetourTest).GetMethod("msvcrt_rand"),
                 typeof(NativeDetourTest).GetMethod("not_rand")
             )) {
@@ -46,17 +57,33 @@ namespace MonoMod.UnitTest {
             DidNothing = true;
             msvcrt_rand();
             Assert.True(DidNothing);
+
+            NativeDetour d = new NativeDetour(
+                DynDll.OpenLibrary($"msvcrt.{PlatformHelper.LibrarySuffix}").GetFunction("rand"),
+                ptr_not_rand
+            );
+
+            DidNothing = true;
+            Assert.Equal(-1, msvcrt_rand());
+            Assert.False(DidNothing);
+
+            d.Dispose();
+
+            DidNothing = true;
+            msvcrt_rand();
+            Assert.True(DidNothing);
         }
 
-        private void TestNativeDetoursUnix() {
-            // The following use cases are not meant to be usage examples.
-            // Please take a look at DetourTest and HookTest instead.
-
+        private void TestNativeDetoursUnix(dt_rand d_not_rand, IntPtr ptr_not_rand) {
             DidNothing = true;
             libc_rand();
             Assert.True(DidNothing);
 
-            using (NativeDetour d = new NativeDetour(
+            DidNothing = true;
+            Assert.Equal(-1, d_not_rand());
+            Assert.False(DidNothing);
+
+            using (new NativeDetour(
                 typeof(NativeDetourTest).GetMethod("libc_rand"),
                 typeof(NativeDetourTest).GetMethod("not_rand")
             )) {
@@ -68,8 +95,22 @@ namespace MonoMod.UnitTest {
             DidNothing = true;
             libc_rand();
             Assert.True(DidNothing);
-        }
 
+            NativeDetour d = new NativeDetour(
+                DynDll.OpenLibrary($"libc.{PlatformHelper.LibrarySuffix}").GetFunction("rand"),
+                ptr_not_rand
+            );
+
+            DidNothing = true;
+            Assert.Equal(-1, libc_rand());
+            Assert.False(DidNothing);
+
+            d.Dispose();
+
+            DidNothing = true;
+            libc_rand();
+            Assert.True(DidNothing);
+        }
 
         [DllImport("msvcrt", EntryPoint = "rand", CallingConvention = CallingConvention.Cdecl)]
         public static extern int msvcrt_rand();
@@ -81,6 +122,9 @@ namespace MonoMod.UnitTest {
             DidNothing = false;
             return -1;
         }
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate int dt_rand();
 
     }
 }
