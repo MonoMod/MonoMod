@@ -96,8 +96,23 @@ namespace MonoMod.UnitTest {
             libc_rand();
             Assert.True(DidNothing);
 
+            /* dl's dlopen doesn't follow ld, meaning that we need to...
+             * - use libc.so.6 on Linux and hope that everyone is using glibc.
+             * - use /usr/lib/libc.dylib on macOS because macOS is macOS.
+             * If libc cannot be dlopened, skip the native -> managed detour test.
+             * - ade
+             */
+            IntPtr libc =
+               PlatformHelper.Is(Platform.Linux) ? DynDll.OpenLibrary("libc.so.6") :
+               PlatformHelper.Is(Platform.MacOS) ? DynDll.OpenLibrary("/usr/lib/libc.dylib") :
+               IntPtr.Zero;
+            if (libc == IntPtr.Zero)
+                libc = DynDll.OpenLibrary($"libc.{PlatformHelper.LibrarySuffix}");
+            if (libc == IntPtr.Zero)
+                return;
+
             NativeDetour d = new NativeDetour(
-                DynDll.OpenLibrary($"libc.{PlatformHelper.LibrarySuffix}").GetFunction("rand"),
+                libc.GetFunction("rand"),
                 ptr_not_rand
             );
 
