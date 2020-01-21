@@ -35,13 +35,13 @@ namespace MonoMod.Utils {
         private const int RTLD_NOW = 0x0002;
         private const int RTLD_LOCAL = 0x0000;
         private const int RTLD_GLOBAL = 0x0100;
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr dlopen([MarshalAs(UnmanagedType.LPTStr)] string filename, int flags);
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dlopen(string filename, int flags);
+        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private static extern bool dlclose(IntPtr handle);
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr dlsym(IntPtr handle, [MarshalAs(UnmanagedType.LPTStr)] string symbol);
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dlsym(IntPtr handle, string symbol);
+        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private static extern IntPtr dlerror();
 
         #endregion

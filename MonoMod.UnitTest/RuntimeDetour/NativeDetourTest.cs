@@ -102,13 +102,9 @@ namespace MonoMod.UnitTest {
              * If libc cannot be dlopened, skip the native -> managed detour test.
              * - ade
              */
-            IntPtr libc =
-               PlatformHelper.Is(Platform.Linux) ? DynDll.OpenLibrary("libc.so.6") :
-               PlatformHelper.Is(Platform.MacOS) ? DynDll.OpenLibrary("/usr/lib/libc.dylib") :
-               IntPtr.Zero;
-            if (libc == IntPtr.Zero)
-                libc = DynDll.OpenLibrary($"libc.{PlatformHelper.LibrarySuffix}");
-            if (libc == IntPtr.Zero)
+            if (!(PlatformHelper.Is(Platform.Linux) && DynDll.TryOpenLibrary("libc.so.6", out IntPtr libc)) &&
+                !(PlatformHelper.Is(Platform.MacOS) && DynDll.TryOpenLibrary("/usr/lib/libc.dylib", out libc)) &&
+                !DynDll.TryOpenLibrary($"libc.{PlatformHelper.LibrarySuffix}", out libc))
                 return;
 
             NativeDetour d = new NativeDetour(
