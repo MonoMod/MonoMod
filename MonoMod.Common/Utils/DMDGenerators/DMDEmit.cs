@@ -64,6 +64,19 @@ namespace MonoMod.Utils {
             MethodDebugInformation defInfo = dmd.Debug ? def.DebugInformation : null;
 #endif
 
+            if (dm != null) {
+                foreach (ParameterDefinition param in def.Parameters) {
+                    dm.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
+                }
+            }
+#if !NETSTANDARD
+            if (mb != null) {
+                foreach (ParameterDefinition param in def.Parameters) {
+                    mb.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
+                }
+            }
+#endif
+
             LocalBuilder[] locals = def.Body.Variables.Select(
                 var => {
                     LocalBuilder local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
