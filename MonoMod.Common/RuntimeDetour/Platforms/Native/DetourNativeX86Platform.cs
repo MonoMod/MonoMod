@@ -4,7 +4,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
-    public unsafe sealed class DetourNativeX86Platform : IDetourNativePlatform {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    unsafe sealed class DetourNativeX86Platform : IDetourNativePlatform {
         public enum DetourType : byte {
             Rel32,
             Abs32,

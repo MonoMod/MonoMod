@@ -13,7 +13,10 @@ using System.IO;
 using System.Security;
 
 namespace MonoMod.Utils {
-    public class DynamicMethodReference : MethodReference {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    class DynamicMethodReference : MethodReference {
         public DynamicMethod DynamicMethod;
 
         public DynamicMethodReference(ModuleDefinition module, DynamicMethod dm)

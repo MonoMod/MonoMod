@@ -4,7 +4,10 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
-    public unsafe sealed class DetourNativeWindowsPlatform : IDetourNativePlatform {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    unsafe sealed class DetourNativeWindowsPlatform : IDetourNativePlatform {
         private readonly IDetourNativePlatform Inner;
 
         public DetourNativeWindowsPlatform(IDetourNativePlatform inner) {

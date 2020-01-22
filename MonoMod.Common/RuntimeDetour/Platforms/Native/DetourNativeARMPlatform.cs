@@ -4,7 +4,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
-    public unsafe sealed class DetourNativeARMPlatform : IDetourNativePlatform {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    unsafe sealed class DetourNativeARMPlatform : IDetourNativePlatform {
         // TODO: Make use of possibly shorter near branches.
         public enum DetourType : byte {
             Thumb,

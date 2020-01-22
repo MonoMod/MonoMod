@@ -7,7 +7,10 @@ using MonoMod.Utils;
 using System.Linq;
 
 namespace MonoMod.RuntimeDetour.Platforms {
-    public sealed class DetourRuntimeMonoPlatform : DetourRuntimeILPlatform {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    sealed class DetourRuntimeMonoPlatform : DetourRuntimeILPlatform {
         private static readonly object[] _NoArgs = new object[0];
 
         private static readonly MethodInfo _DynamicMethod_CreateDynMethod =

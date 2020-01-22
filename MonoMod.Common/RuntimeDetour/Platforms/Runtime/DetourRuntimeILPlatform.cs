@@ -8,7 +8,10 @@ using Mono.Cecil.Cil;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour.Platforms {
-    public abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         // Prevent the GC from collecting those.

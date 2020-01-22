@@ -9,7 +9,10 @@ using System.Threading;
 using Mono.Cecil;
 
 namespace MonoMod.RuntimeDetour {
-    public static class DetourHelper {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static class DetourHelper {
 
         private static readonly object _RuntimeLock = new object();
         private static IDetourRuntimePlatform _Runtime;

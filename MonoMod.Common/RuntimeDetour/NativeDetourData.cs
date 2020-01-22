@@ -8,7 +8,10 @@ namespace MonoMod.RuntimeDetour {
     /// <summary>
     /// The data forming a "raw" native detour, created and consumed by DetourManager.Native.
     /// </summary>
-    public struct NativeDetourData {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    struct NativeDetourData {
         /// <summary>
         /// The method to detour from. Set when the structure is created by the IDetourNativePlatform.
         /// </summary>

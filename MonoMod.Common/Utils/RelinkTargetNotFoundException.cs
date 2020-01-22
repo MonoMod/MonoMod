@@ -5,7 +5,10 @@ using System.Text;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
-    public class RelinkTargetNotFoundException : RelinkFailedException {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    class RelinkTargetNotFoundException : RelinkFailedException {
 
         public new const string DefaultMessage = "MonoMod relinker failed finding";
 

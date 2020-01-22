@@ -6,7 +6,10 @@ using MonoMod.Utils;
 using System.Linq;
 
 namespace MonoMod.RuntimeDetour {
-    public interface IDetourRuntimePlatform {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    interface IDetourRuntimePlatform {
         IntPtr GetNativeStart(MethodBase method);
         MethodInfo CreateCopy(MethodBase method);
         bool TryCreateCopy(MethodBase method, out MethodInfo dm);

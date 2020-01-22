@@ -7,7 +7,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.RuntimeDetour.Platforms {
-    public unsafe sealed class DetourNativeLibcPlatform : IDetourNativePlatform {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    unsafe sealed class DetourNativeLibcPlatform : IDetourNativePlatform {
         private readonly IDetourNativePlatform Inner;
 
         private readonly long _Pagesize;
