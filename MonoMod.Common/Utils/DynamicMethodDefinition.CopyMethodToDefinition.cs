@@ -13,7 +13,10 @@ using System.IO;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
-    public sealed partial class DynamicMethodDefinition {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    sealed partial class DynamicMethodDefinition {
 
         private static OpCode[] _CecilOpCodes1X;
         private static OpCode[] _CecilOpCodes2X;

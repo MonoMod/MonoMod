@@ -11,7 +11,10 @@ using MethodAttributes = Mono.Cecil.MethodAttributes;
 using TypeAttributes = Mono.Cecil.TypeAttributes;
 
 namespace MonoMod.Utils.Cil {
-    public partial class ILGeneratorShim {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    partial class ILGeneratorShim {
 
         /// <summary>
         /// Get a "real" ILGenerator for this ILGeneratorShim.

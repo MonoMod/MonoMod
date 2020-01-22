@@ -6,7 +6,10 @@ using Mono.Cecil;
 using System.Text;
 
 namespace MonoMod.Utils {
-    public static partial class Extensions {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static partial class Extensions {
 
         /// <summary>
         /// Get the "patch name" - the name of the target to patch - for the given member.

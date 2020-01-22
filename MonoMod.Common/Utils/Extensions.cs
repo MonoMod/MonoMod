@@ -15,7 +15,10 @@ namespace MonoMod.Utils {
     /// <summary>
     /// Collection of extensions used by MonoMod and other projects.
     /// </summary>
-    public static partial class Extensions {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static partial class Extensions {
 
         // Use this source file for any extensions which don't deserve their own source files.
 

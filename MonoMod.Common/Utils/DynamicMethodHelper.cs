@@ -8,7 +8,10 @@ using System.Collections.Generic;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
-    public static class DynamicMethodHelper {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static class DynamicMethodHelper {
 
         // Used in EmitReference.
         private static List<object> References = new List<object>();

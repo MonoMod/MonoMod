@@ -9,7 +9,10 @@ namespace MonoMod.Utils.Cil {
     /// <summary>
     /// Abstract version of System.Reflection.Emit.ILGenerator. See <see cref="System.Reflection.Emit.ILGenerator"/> for proper documentation.
     /// </summary>
-    public abstract partial class ILGeneratorShim {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    abstract partial class ILGeneratorShim {
 
         public abstract int ILOffset { get; }
         public abstract void BeginCatchBlock(Type exceptionType);

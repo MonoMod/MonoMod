@@ -13,7 +13,10 @@ using System.Runtime.CompilerServices;
 using System.Collections;
 
 namespace MonoMod.Utils {
-    public static partial class Extensions {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static partial class Extensions {
 
         /// <summary>
         /// See <see cref="List{T}.AddRange(IEnumerable{T})"/>

@@ -16,7 +16,10 @@ using System.Diagnostics.SymbolStore;
 using System.IO;
 
 namespace MonoMod.Utils {
-    public sealed class DMDEmitMethodBuilderGenerator : DMDGenerator<DMDEmitMethodBuilderGenerator> {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    sealed class DMDEmitMethodBuilderGenerator : DMDGenerator<DMDEmitMethodBuilderGenerator> {
 
         private static readonly bool _MBCanRunAndCollect = Enum.IsDefined(typeof(AssemblyBuilderAccess), "RunAndCollect");
 

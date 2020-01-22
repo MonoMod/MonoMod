@@ -12,7 +12,10 @@ using Mono.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-    public static partial class Extensions {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static partial class Extensions {
 
         /// <summary>
         /// Get a reference ID that is similar to the full name, but consistent between System.Reflection and Mono.Cecil.

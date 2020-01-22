@@ -5,7 +5,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Utils {
-    public static class PlatformHelper {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static class PlatformHelper {
 
         static PlatformHelper() {
             Current = Platform.Unknown;

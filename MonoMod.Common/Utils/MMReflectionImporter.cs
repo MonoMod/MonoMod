@@ -14,7 +14,10 @@ using System.IO;
 using System.Security;
 
 namespace MonoMod.Utils {
-    public sealed class MMReflectionImporter : IReflectionImporter {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    sealed class MMReflectionImporter : IReflectionImporter {
 
         private class _Provider : IReflectionImporterProvider {
             public bool? UseDefault;

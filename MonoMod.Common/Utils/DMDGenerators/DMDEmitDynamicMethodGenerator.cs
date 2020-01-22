@@ -15,7 +15,10 @@ using System.Diagnostics.SymbolStore;
 using System.IO;
 
 namespace MonoMod.Utils {
-    public sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
 
         protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object context) {
             MethodBase orig = dmd.OriginalMethod;

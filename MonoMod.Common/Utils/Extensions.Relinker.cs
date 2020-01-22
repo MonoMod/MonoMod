@@ -18,7 +18,10 @@ namespace MonoMod.Utils {
     /// <param name="context">The generic context provided to relink generic references.</param>
     /// <returns>A relinked reference.</returns>
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
-    public static partial class Extensions {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static partial class Extensions {
 
         /// <summary>
         /// Clone the given method definition.

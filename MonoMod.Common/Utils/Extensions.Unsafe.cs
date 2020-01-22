@@ -12,7 +12,10 @@ using Mono.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-    public static partial class Extensions {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static partial class Extensions {
 
         private static readonly Dictionary<Type, int> _GetManagedSizeCache = new Dictionary<Type, int>() {
             { typeof(void), 0 }

@@ -11,7 +11,10 @@ using System.Runtime.InteropServices;
 using System.IO;
 
 namespace MonoMod.Utils {
-    public static class ReflectionHelper {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static class ReflectionHelper {
 
         private static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
         private static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();

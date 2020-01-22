@@ -11,7 +11,10 @@ using Mono.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-    public static partial class Extensions {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static partial class Extensions {
 
         /// <summary>
         /// Safely resolve a reference, silently discarding any exceptions.

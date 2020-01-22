@@ -21,7 +21,10 @@ namespace MonoMod.Utils {
     /// A DynamicMethodDefinition "generator", responsible for generating a runtime MethodInfo from a DMD MethodDefinition.
     /// </summary>
     /// <typeparam name="TSelf"></typeparam>
-    public abstract class DMDGenerator<TSelf> : _IDMDGenerator where TSelf : DMDGenerator<TSelf>, new() {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    abstract class DMDGenerator<TSelf> : _IDMDGenerator where TSelf : DMDGenerator<TSelf>, new() {
 
         private static TSelf _Instance;
 

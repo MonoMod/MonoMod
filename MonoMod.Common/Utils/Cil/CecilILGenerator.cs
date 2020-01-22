@@ -18,7 +18,10 @@ namespace MonoMod.Utils.Cil {
     /// <summary>
     /// A variant of ILGenerator which uses Mono.Cecil under the hood.
     /// </summary>
-    public sealed class CecilILGenerator : ILGeneratorShim {
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    sealed class CecilILGenerator : ILGeneratorShim {
         // https://github.com/Unity-Technologies/mono/blob/unity-5.6/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
         // https://github.com/Unity-Technologies/mono/blob/unity-2018.3-mbe/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
         // https://github.com/dotnet/coreclr/blob/master/src/System.Private.CoreLib/src/System/Reflection/Emit/LocalBuilder.cs
