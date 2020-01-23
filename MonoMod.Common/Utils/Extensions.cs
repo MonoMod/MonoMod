@@ -49,6 +49,19 @@ namespace MonoMod.Utils {
             return false;
         }
 
+        public static T GetDeclared<T>(this T member) where T : MemberInfo {
+            if (member.DeclaringType == member.ReflectedType)
+                return member;
+
+            int mt = member.MetadataToken;
+            foreach (MemberInfo other in member.DeclaringType.GetMembers()) {
+                if (other.MetadataToken == mt)
+                    return (T) other;
+            }
+
+            return member;
+        }
+
         public static unsafe void SetMonoCorlibInternal(this Assembly asm, bool value) {
             if (Type.GetType("Mono.Runtime") == null)
                 return;
