@@ -80,6 +80,10 @@ namespace MonoMod.Utils.Cil {
 #endif
                 {
 
+                    CustomAttribute ca_IACTA = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                    ca_IACTA.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.String, typeof(ILGeneratorShim).Assembly.GetName().Name));
+                    module.Assembly.CustomAttributes.Add(ca_IACTA);
+
                     TypeDefinition type = new TypeDefinition(
                         Namespace,
                         Name,
@@ -145,6 +149,7 @@ namespace MonoMod.Utils.Cil {
                     }
 
                     asm = ReflectionHelper.Load(module);
+                    asm.SetMonoCorlibInternal(true);
                 }
 
                 return ProxyType = asm.GetType(FullName);
