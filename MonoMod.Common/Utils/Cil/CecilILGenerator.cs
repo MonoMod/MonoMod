@@ -28,9 +28,14 @@ namespace MonoMod.Utils.Cil {
         // Mono: Type, ILGenerator
         // .NET Framework matches .NET Core: int, Type, MethodInfo(, bool)
         private static readonly ConstructorInfo c_LocalBuilder =
-            typeof(LocalBuilder).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)[0];
+            typeof(LocalBuilder).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length).First();
+        private static readonly FieldInfo f_LocalBuilder_position =
+            typeof(LocalBuilder).GetField("position", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo f_LocalBuilder_is_pinned =
+            typeof(LocalBuilder).GetField("is_pinned", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private static ParameterInfo[] c_LocalBuilder_params = c_LocalBuilder.GetParameters();
+        private static int c_LocalBuilder_params = c_LocalBuilder.GetParameters().Length;
 
         private static readonly Dictionary<short, OpCode> _MCCOpCodes = new Dictionary<short, OpCode>();
 
@@ -143,13 +148,17 @@ namespace MonoMod.Utils.Cil {
 
         public override LocalBuilder DeclareLocal(Type type, bool pinned) {
             // The handle itself is out of sync with the "backing" VariableDefinition.
+            int index = IL.Body.Variables.Count;
             LocalBuilder handle = (LocalBuilder) (
-                c_LocalBuilder_params.Length == 4 ? c_LocalBuilder.Invoke(new object[] {0, type, null, false}) :
-                c_LocalBuilder_params.Length == 3 ? c_LocalBuilder.Invoke(new object[] {0, type, null}) :
-                c_LocalBuilder_params.Length == 2 ? c_LocalBuilder.Invoke(new object[] {type, null}) :
-                c_LocalBuilder_params.Length == 0 ? c_LocalBuilder.Invoke(new object[] { }) :
+                c_LocalBuilder_params == 4 ? c_LocalBuilder.Invoke(new object[] { index, type, null, pinned }) :
+                c_LocalBuilder_params == 3 ? c_LocalBuilder.Invoke(new object[] { index, type, null }) :
+                c_LocalBuilder_params == 2 ? c_LocalBuilder.Invoke(new object[] { type, null }) :
+                c_LocalBuilder_params == 0 ? c_LocalBuilder.Invoke(new object[] { }) :
                 throw new NotSupportedException()
             );
+
+            f_LocalBuilder_position?.SetValue(handle, index);
+            f_LocalBuilder_is_pinned?.SetValue(handle, pinned);
 
             TypeReference typeRef = _(type);
             if (pinned)
