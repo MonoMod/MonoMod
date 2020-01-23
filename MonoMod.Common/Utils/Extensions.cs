@@ -49,12 +49,12 @@ namespace MonoMod.Utils {
             return false;
         }
 
-        public static T GetDeclared<T>(this T member) where T : MemberInfo {
+        public static T GetDeclaredMember<T>(this T member) where T : MemberInfo {
             if (member.DeclaringType == member.ReflectedType)
                 return member;
 
             int mt = member.MetadataToken;
-            foreach (MemberInfo other in member.DeclaringType.GetMembers()) {
+            foreach (MemberInfo other in member.DeclaringType.GetMembers((BindingFlags) (-1))) {
                 if (other.MetadataToken == mt)
                     return (T) other;
             }
