@@ -46,11 +46,12 @@ namespace MonoMod.Utils.Cil {
         /// <returns>The "real" ILGenerator type, non-generic.</returns>
         public static Type ProxyType => ILGeneratorBuilder.GenerateProxy();
 
-        static class ILGeneratorBuilder {
+        internal static class ILGeneratorBuilder {
 
             public const string Namespace = "MonoMod.Utils.Cil";
             public const string Name = "ILGeneratorProxy";
             public const string FullName = Namespace + "." + Name;
+            public const string TargetName = "Target";
             static Type ProxyType;
 
             public static Type GenerateProxy() {
@@ -104,7 +105,7 @@ namespace MonoMod.Utils.Cil {
                     type.GenericParameters.Add(g_TTarget);
 
                     FieldDefinition fd_Target = new FieldDefinition(
-                        "Target",
+                        TargetName,
                         FieldAttributes.Public,
                         g_TTarget
                     );
@@ -155,6 +156,67 @@ namespace MonoMod.Utils.Cil {
                 return ProxyType = asm.GetType(FullName);
             }
 
+        }
+
+    }
+
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    static class ILGeneratorShimExt {
+
+        private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
+        private static readonly Dictionary<Type, MethodInfo> _EmittersShim = new Dictionary<Type, MethodInfo>();
+
+        static ILGeneratorShimExt() {
+            foreach (MethodInfo method in typeof(System.Reflection.Emit.ILGenerator).GetMethods()) {
+                if (method.Name != "Emit")
+                    continue;
+
+                ParameterInfo[] args = method.GetParameters();
+                if (args.Length != 2)
+                    continue;
+
+                if (args[0].ParameterType != typeof(System.Reflection.Emit.OpCode))
+                    continue;
+                _Emitters[args[1].ParameterType] = method;
+            }
+
+            foreach (MethodInfo method in typeof(ILGeneratorShim).GetMethods()) {
+                if (method.Name != "Emit")
+                    continue;
+
+                ParameterInfo[] args = method.GetParameters();
+                if (args.Length != 2)
+                    continue;
+
+                if (args[0].ParameterType != typeof(System.Reflection.Emit.OpCode))
+                    continue;
+                _EmittersShim[args[1].ParameterType] = method;
+            }
+        }
+
+        public static ILGeneratorShim GetProxiedShim(this System.Reflection.Emit.ILGenerator il)
+            => il.GetType().GetField(
+                ILGeneratorShim.ILGeneratorBuilder.TargetName,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+            )?.GetValue(il) as ILGeneratorShim;
+
+        public static object DynEmit(this System.Reflection.Emit.ILGenerator il, System.Reflection.Emit.OpCode opcode, object operand)
+            => il.DynEmit(new object[] { opcode, operand });
+
+        public static object DynEmit(this System.Reflection.Emit.ILGenerator il, object[] emitArgs) {
+            Type operandType = emitArgs[1].GetType();
+
+            object target = il.GetProxiedShim() ?? (object) il;
+            Dictionary<Type, MethodInfo> emitters = target is ILGeneratorShim ? _EmittersShim : _Emitters;
+
+            if (!emitters.TryGetValue(operandType, out MethodInfo emit))
+                emit = emitters.FirstOrDefault(kvp => kvp.Key.IsAssignableFrom(operandType)).Value;
+            if (emit == null)
+                throw new InvalidOperationException($"Unexpected unemittable operand type {operandType.FullName}");
+
+            return emit.Invoke(target, emitArgs);
         }
 
     }

@@ -13,13 +13,13 @@ using System.Security.Permissions;
 using System.Security;
 using System.Diagnostics.SymbolStore;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
+using MonoMod.Utils.Cil;
 
 namespace MonoMod.Utils {
     internal static partial class _DMDEmit {
 
         private static readonly Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
-        private static readonly Dictionary<Type, MethodInfo> _Emitters = new Dictionary<Type, MethodInfo>();
 
         static _DMDEmit() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
@@ -30,19 +30,6 @@ namespace MonoMod.Utils {
             foreach (FieldInfo field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 Mono.Cecil.Cil.OpCode cecilOpCode = (Mono.Cecil.Cil.OpCode) field.GetValue(null);
                 _CecilOpCodes[cecilOpCode.Value] = cecilOpCode;
-            }
-
-            foreach (MethodInfo method in typeof(ILGenerator).GetMethods()) {
-                if (method.Name != "Emit")
-                    continue;
-
-                ParameterInfo[] args = method.GetParameters();
-                if (args.Length != 2)
-                    continue;
-
-                if (args[0].ParameterType != typeof(System.Reflection.Emit.OpCode))
-                    continue;
-                _Emitters[args[1].ParameterType] = method;
             }
         }
 
@@ -255,15 +242,7 @@ namespace MonoMod.Utils {
                     if (operand == null)
                         throw new NullReferenceException($"Unexpected null in {def} @ {instr}");
 
-                    Type operandType = operand.GetType();
-                    if (!_Emitters.TryGetValue(operandType, out MethodInfo emit))
-                        emit = _Emitters.FirstOrDefault(kvp => kvp.Key.IsAssignableFrom(operandType)).Value;
-                    if (emit == null)
-                        throw new InvalidOperationException($"Unexpected unemittable {operand.GetType().FullName} in {def} @ {instr}");
-
-                    emitArgs[0] = _ReflOpCodes[instr.OpCode.Value];
-                    emitArgs[1] = operand;
-                    emit.Invoke(il, emitArgs);
+                    il.DynEmit(_ReflOpCodes[instr.OpCode.Value], operand);
                 }
 
                 if (!checkTryEndEarly) {
