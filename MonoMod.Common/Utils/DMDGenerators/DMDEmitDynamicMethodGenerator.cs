@@ -20,6 +20,10 @@ namespace MonoMod.Utils {
 #endif
     sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
 
+        private static readonly FieldInfo _DynamicMethod_returnType =
+            typeof(DynamicMethod).GetField("returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
+            typeof(DynamicMethod).GetField("m_returnType", BindingFlags.NonPublic | BindingFlags.Instance);
+
         protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object context) {
             MethodBase orig = dmd.OriginalMethod;
             MethodDefinition def = dmd.Definition;
@@ -57,10 +61,14 @@ namespace MonoMod.Utils {
 
             DynamicMethod dm = new DynamicMethod(
                 $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>",
-                (orig as MethodInfo)?.ReturnType ?? def.ReturnType?.ResolveReflection() ?? typeof(void), argTypes,
+                typeof(void), argTypes,
                 orig?.DeclaringType ?? typeof(DynamicMethodDefinition),
                 true // If any random errors pop up, try setting this to false first.
             );
+
+            // DynamicMethods don't officially "support" certain return types, such as ByRef types.
+            _DynamicMethod_returnType.SetValue(dm, (orig as MethodInfo)?.ReturnType ?? def.ReturnType?.ResolveReflection());
+
             ILGenerator il = dm.GetILGenerator();
 
             _DMDEmit.Generate(dmd, dm, il);
