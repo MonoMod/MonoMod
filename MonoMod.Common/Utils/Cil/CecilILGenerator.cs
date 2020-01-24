@@ -157,7 +157,7 @@ namespace MonoMod.Utils.Cil {
                 throw new NotSupportedException()
             );
 
-            f_LocalBuilder_position?.SetValue(handle, f_LocalBuilder_position.FieldType == typeof(ushort) ? (short) index : index);
+            f_LocalBuilder_position?.SetValue(handle, (ushort) index : index);
             f_LocalBuilder_is_pinned?.SetValue(handle, pinned);
 
             TypeReference typeRef = _(type);
