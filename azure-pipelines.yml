@@ -8,6 +8,7 @@ strategy:
       builder: 'core'
       testers: ';fx;core2;core3;core3.1;'
       generateDocFX: 'false'
+      pushNuGet: 'true'
     linux-core:
       jobArchName: 'Linux .NET Core'
       imageName: 'ubuntu-latest'
@@ -16,6 +17,7 @@ strategy:
       builder: 'core'
       testers: ';core2;core3;core3.1;'
       generateDocFX: 'false'
+      pushNuGet: 'false'
     linux-mono:
       jobArchName: 'Linux Mono'
       imageName: 'ubuntu-latest'
@@ -24,6 +26,7 @@ strategy:
       builder: 'mono'
       testers: ';;'
       generateDocFX: 'false'
+      pushNuGet: 'false'
     macos:
       jobArchName: 'macOS'
       imageName: 'macOS-latest'
@@ -32,6 +35,7 @@ strategy:
       builder: 'core'
       testers: ';mono;core2;core3;core3.1;'
       generateDocFX: 'false'
+      pushNuGet: 'false'
   maxParallel: 4
 
 variables:
@@ -121,6 +125,7 @@ steps:
     artifactName: '$(artifactPrefix)nupkgs$(artifactSuffix)'
     publishLocation: 'Container'
 - task: NuGetCommand@2
+  condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.pushNuGet, 'true'))
   displayName: 'Artifacts: Push: nupkgs'
   inputs:
     command: push
