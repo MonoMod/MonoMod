@@ -36,9 +36,10 @@
 
     <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
 
-    <AssemblyOriginatorKeyFile>..\MonoMod.Common\MonoMod.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-    <PublicSign>true</PublicSign>
+    <AssemblyOriginatorKeyFile>..\MonoMod.Common\MonoMod.Pair.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly Condition="'$(SignAssembly)' != 'skip'">true</SignAssembly>
+    <PublicSign Condition="'$(OS)' != 'Windows_NT'">true</PublicSign>
+    <DelaySign>false</DelaySign>
 
     <NoWarn>CS1591,$(NoWarn)</NoWarn>
   </PropertyGroup>
