@@ -120,6 +120,12 @@ steps:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
     artifactName: '$(artifactPrefix)nupkgs$(artifactSuffix)'
     publishLocation: 'Container'
+- task: NuGetCommand@2
+  displayName: 'Artifacts: Push: nupkgs'
+  inputs:
+    command: push
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/*.nupkg'
+    publishVstsFeed: '572c97eb-dbaa-4a55-90e5-1d05431535bd/72ad568d-c548-4599-8b0a-9ea52b45bbbd'
 
 # Run tests.
 # I've tried to simplify this mess. It's impossible. --ade

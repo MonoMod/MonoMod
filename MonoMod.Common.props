@@ -36,7 +36,7 @@
 
     <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
 
-    <AssemblyOriginatorKeyFile>..\MonoMod.Common\MonoMod.Pair.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>..\MonoMod.Common\MonoMod.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' != 'skip'">true</SignAssembly>
     <PublicSign Condition="'$(OS)' != 'Windows_NT'">true</PublicSign>
     <DelaySign>false</DelaySign>
