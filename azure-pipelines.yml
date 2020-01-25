@@ -110,7 +110,7 @@ steps:
     nobuild: true
     configuration: '$(buildConfiguration)'
     versioningScheme: 'byBuildNumber'
-    packagesToPack: 'MonoMod@(|.Utils|.RuntimeDetour|.RuntimeDetour.HookGen)/*.csproj'
+    packagesToPack: 'MonoMod@(|.Common|.Utils|.RuntimeDetour|.RuntimeDetour.HookGen)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
 - task: PublishBuildArtifacts@1
   condition: and(succeeded(), ne(variables.Build.Reason, 'PullRequest'))
