@@ -6,7 +6,7 @@
 
     <AssemblyName>MonoMod.Common</AssemblyName>
     <PackageId>MonoMod.Common</PackageId>
-    <Description>Common building blocks used by MonoMod which can be used to build your own libraries, f.e. RuntimeDetour's platform abstraction and Utils' DynamicMethodDefinition. Not to be confused with MonoMod.Utils, which is directed towards mods.</Description>
+    <Description>Common building blocks used INTERNALLY by MonoMod and Harmony which can be used to build your own libraries, f.e. RuntimeDetour's platform abstraction and Utils' DynamicMethodDefinition. For code that is ready to use reliably, use MonoMod.Utils.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net35;net40;netstandard2.0</TargetFrameworks>
