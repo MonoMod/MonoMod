@@ -36,6 +36,10 @@
 
     <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
 
+    <AssemblyOriginatorKeyFile>..\MonoMod.Common\MonoMod.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+    <PublicSign>true</PublicSign>
+
     <NoWarn>CS1591,$(NoWarn)</NoWarn>
   </PropertyGroup>
 
