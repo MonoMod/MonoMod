@@ -122,6 +122,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected virtual void PrepareMethod(RuntimeMethodHandle handle)
             => RuntimeHelpers.PrepareMethod(handle);
 
+        protected virtual void PrepareMethod(RuntimeMethodHandle handle, RuntimeTypeHandle[] instantiation)
+            => RuntimeHelpers.PrepareMethod(handle, instantiation);
+
         public IntPtr GetNativeStart(MethodBase method) {
             bool pinGot;
             MethodPin pin;
@@ -141,7 +144,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 pin = new MethodPin();
                 pin.Count = 1;
-                PrepareMethod(pin.Handle = GetMethodHandle(method));
+                RuntimeMethodHandle handle = pin.Handle = GetMethodHandle(method);
+                if (method.DeclaringType?.IsGenericType ?? false) {
+                    PrepareMethod(handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
+                } else {
+                    PrepareMethod(handle);
+                }
                 PinnedMethods[method] = pin;
             }
         }
