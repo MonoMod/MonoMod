@@ -125,6 +125,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected virtual void PrepareMethod(RuntimeMethodHandle handle, RuntimeTypeHandle[] instantiation)
             => RuntimeHelpers.PrepareMethod(handle, instantiation);
 
+        protected virtual void DisableInlining(RuntimeMethodHandle handle) {
+            // no-op. Not supported on all platforms, but throwing an exception doesn't make sense.
+        }
+
         public IntPtr GetNativeStart(MethodBase method) {
             bool pinGot;
             MethodPin pin;
@@ -150,6 +154,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 } else {
                     PrepareMethod(handle);
                 }
+                DisableInlining(handle);
                 PinnedMethods[method] = pin;
             }
         }

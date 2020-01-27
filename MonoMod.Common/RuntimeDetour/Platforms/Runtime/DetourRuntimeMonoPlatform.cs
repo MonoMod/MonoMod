@@ -29,6 +29,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             return method.MethodHandle;
         }
+
+        protected override unsafe void DisableInlining(RuntimeMethodHandle handle) {
+            // https://github.com/mono/mono/blob/34dee0ea4e969d6d5b37cb842fc3b9f73f2dc2ae/mono/metadata/class-internals.h#L64
+            ushort* iflags = (ushort*) ((long) handle.Value + 2);
+            *iflags |= (ushort) MethodImplOptions.NoInlining;
+        }
     }
 
 }
