@@ -55,8 +55,6 @@ namespace MonoMod.Utils {
             if (method is System.Reflection.Emit.DynamicMethod dm)
                 return dm.CreateDelegate(delegateType, target);
 
-            // TODO: Check delegate Invoke parameters against method parameters.
-
 #if NETSTANDARD
             // Built-in CreateDelegate is available in .NET Standard
             if (method is System.Reflection.MethodInfo mi)

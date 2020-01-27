@@ -24,10 +24,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
             4 + 4 + 8
         };
 
-        // Disabled by default as it triggers an access error on armv7.
+        // Might be disabled manually when triggering access errors (especially on some armv7 chips).
         // Source: MonoMod Discord server, https://discordapp.com/channels/295566538981769216/295570965663055874/598536798666227712
-        // Left available for any environments which might need it in the future.
-        public bool ShouldFlushICache = false;
+        public bool ShouldFlushICache = true;
 
         private static DetourType GetDetourType(IntPtr from, IntPtr to) {
             if (IntPtr.Size >= 8)
@@ -193,7 +192,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // no-op.
         }
 
-        public void FlushICache(IntPtr src, uint size) {
+        public unsafe void FlushICache(IntPtr src, uint size) {
             // On ARM, we must flush the instruction cache.
             // Sadly, mono_arch_flush_icache isn't reliably exported.
             // This thus requires running native code to invoke the syscall.
@@ -201,18 +200,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
             if (!ShouldFlushICache)
                 return;
 
-            if (flushicache == null) {
-                // Emit a native delegate once. It lives as long as the application.
-                byte[] code = IntPtr.Size >= 8 ? _FlushCache64 : _FlushCache32;
-                IntPtr flushPtr = Marshal.AllocHGlobal(code.Length);
-                Marshal.Copy(code, 0, flushPtr, code.Length);
-                DetourHelper.Native.MakeExecutable(flushPtr, (uint) code.Length);
-
-                // It'd be ironic if the flush function would need to be flushed itself...
-                flushicache = Marshal.GetDelegateForFunctionPointer(flushPtr, typeof(d_flushicache)) as d_flushicache;
+            // Emit a native delegate once. It lives as long as the application.
+            // It'd be ironic if the flush function would need to be flushed itself...
+            byte[] code = IntPtr.Size >= 8 ? _FlushCache64 : _FlushCache32;
+            fixed (byte* ptr = code) {
+                DetourHelper.Native.MakeExecutable((IntPtr) ptr, (uint) code.Length);
+                (Marshal.GetDelegateForFunctionPointer((IntPtr) ptr, typeof(d_flushicache)) as d_flushicache)(src, size);
             }
-
-            flushicache(src, size);
         }
 
         public IntPtr MemAlloc(uint size) {
@@ -225,7 +219,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int d_flushicache(IntPtr code, ulong size);
-        private d_flushicache flushicache;
 
         // The following tools were used to obtain the shellcode.
         // https://godbolt.org/ ARM(64) gcc 8.2

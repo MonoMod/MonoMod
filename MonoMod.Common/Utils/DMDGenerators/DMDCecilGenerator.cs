@@ -112,7 +112,6 @@ namespace MonoMod.Utils {
                     }
 
                     if (accessChecksIgnored != null && operand is MemberReference mref) {
-                        // TODO: Only do the following for inaccessible members.
                         IMetadataScope asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
                         if (!accessChecksIgnored.Contains(asmRef.Name)) {
                             CustomAttribute caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));

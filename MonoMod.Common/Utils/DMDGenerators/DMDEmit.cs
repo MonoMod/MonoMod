@@ -187,7 +187,6 @@ namespace MonoMod.Utils {
                             MemberInfo member = mref.ResolveReflection();
                             operand = member;
 #if !NETSTANDARD
-                            // TODO: Only do the following for inaccessible members.
                             if (mb != null && member != null) {
                                 Assembly asm = member.Module.Assembly;
                                 if (!accessChecksIgnored.Contains(asm)) {

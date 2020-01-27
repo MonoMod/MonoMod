@@ -179,8 +179,6 @@ namespace MonoMod.Utils {
 
             if (context is TypeReference ctxTypeRef) {
                 while (ctxTypeRef != null) {
-                    // TODO: Possibly more lightweight type check!
-
                     TypeReference ctxTypeRefEl = ctxTypeRef.GetElementType();
                     if (ctxTypeRefEl.Is(dclType))
                         return ctxTypeRefEl.GenericParameters[type.GenericParameterPosition];
