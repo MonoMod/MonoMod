@@ -37,7 +37,8 @@
     <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
 
     <AssemblyOriginatorKeyFile>..\MonoMod.Common\MonoMod.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly Condition="'$(SignAssembly)' != 'skip'">true</SignAssembly>
+    <SignAssembly Condition="'$(SignAssembly)' == 'force'">true</SignAssembly>
+    <SignAssembly Condition="'$(SignAssembly)' != 'skip'">false</SignAssembly> <!-- default -->
     <DelaySign>false</DelaySign>
 
     <NoWarn>CS1591,$(NoWarn)</NoWarn>
