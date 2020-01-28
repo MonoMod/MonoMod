@@ -7,7 +7,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    unsafe sealed class DetourNativeWindowsPlatform : IDetourNativePlatform {
+    unsafe class DetourNativeWindowsPlatform : IDetourNativePlatform {
         private readonly IDetourNativePlatform Inner;
 
         public DetourNativeWindowsPlatform(IDetourNativePlatform inner) {

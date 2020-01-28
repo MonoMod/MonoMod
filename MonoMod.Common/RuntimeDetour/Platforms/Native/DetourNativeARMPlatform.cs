@@ -7,7 +7,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    unsafe sealed class DetourNativeARMPlatform : IDetourNativePlatform {
+    unsafe class DetourNativeARMPlatform : IDetourNativePlatform {
         // TODO: Make use of possibly shorter near branches.
         public enum DetourType : byte {
             Thumb,

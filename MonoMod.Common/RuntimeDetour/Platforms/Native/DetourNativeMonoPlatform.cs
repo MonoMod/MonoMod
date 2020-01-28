@@ -11,7 +11,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    unsafe sealed class DetourNativeMonoPlatform : IDetourNativePlatform {
+    unsafe class DetourNativeMonoPlatform : IDetourNativePlatform {
         private readonly IDetourNativePlatform Inner;
 
         private readonly long _Pagesize;

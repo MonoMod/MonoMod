@@ -10,7 +10,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    sealed class DetourRuntimeNETPlatform : DetourRuntimeILPlatform {
+    class DetourRuntimeNETPlatform : DetourRuntimeILPlatform {
         private static readonly object[] _NoArgs = new object[0];
 
         private static readonly FieldInfo _DynamicMethod_m_method =
@@ -58,6 +58,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
 
             return method.MethodHandle;
+        }
+
+        protected override void DisableInlining(RuntimeMethodHandle handle) {
+            // This is not needed for .NET Framework - see DisableInliningTest.
         }
     }
 }

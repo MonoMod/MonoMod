@@ -10,7 +10,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    sealed class DetourRuntimeMonoPlatform : DetourRuntimeILPlatform {
+    class DetourRuntimeMonoPlatform : DetourRuntimeILPlatform {
         private static readonly object[] _NoArgs = new object[0];
 
         private static readonly MethodInfo _DynamicMethod_CreateDynMethod =

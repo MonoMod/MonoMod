@@ -7,7 +7,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    unsafe sealed class DetourNativeX86Platform : IDetourNativePlatform {
+    unsafe class DetourNativeX86Platform : IDetourNativePlatform {
         public enum DetourType : byte {
             Rel32,
             Abs32,
@@ -121,7 +121,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // no-op.
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public void FlushICache(IntPtr src, uint size) {
             // On X86, apparently a call / ret is enough to flush the entire cache.
         }
