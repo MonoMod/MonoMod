@@ -26,7 +26,8 @@ namespace MonoMod.Utils {
 
         private static readonly Dictionary<Type, FieldInfo> fmap_mono_assembly = new Dictionary<Type, FieldInfo>();
         // Old versions of Mono which lack the arch field in MonoAssemblyName don't parse ProcessorArchitecture.
-        private static readonly bool _MonoAssemblyNameHasArch = new AssemblyName("Dummy, ProcessorArchitecture=MSIL").ProcessorArchitecture == ProcessorArchitecture.MSIL;
+        private static readonly bool _MonoAssemblyNameHasArch =
+            new AssemblyName("Dummy, ProcessorArchitecture=MSIL").ProcessorArchitecture == ProcessorArchitecture.MSIL;
 
         /// <summary>
         /// Determine if two types are compatible with each other (f.e. object with string, or enums with their underlying integer type).
@@ -84,12 +85,22 @@ namespace MonoMod.Utils {
             FieldInfo f_mono_assembly;
             lock (fmap_mono_assembly) {
                 if (!fmap_mono_assembly.TryGetValue(asmType, out f_mono_assembly)) {
-                    f_mono_assembly = asmType.GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                    f_mono_assembly =
+                        asmType.GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance) ??
+                        asmType.GetField("dynamic_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
                     fmap_mono_assembly[asmType] = f_mono_assembly;
                 }
             }
             if (f_mono_assembly == null)
                 return;
+
+            // Assemblies marked as corlib_internal are hidden from AppDomain.GetAssemblies()
+            // Make sure that at least the ReflectionHelper can find anything inside of them.
+            AssemblyName name = new AssemblyName(asm.FullName);
+            lock (ReflectionHelper.AssemblyCache) {
+                ReflectionHelper.AssemblyCache[name.FullName] = asm;
+                ReflectionHelper.AssemblyCache[name.Name] = asm;
+            }
 
             IntPtr asmPtr = (IntPtr) f_mono_assembly.GetValue(asm);
             int offs =
@@ -119,10 +130,12 @@ namespace MonoMod.Utils {
                 // major, minor, build, revision[, arch] (10 framework / 20 core + padding)
                 (
                     !_MonoAssemblyNameHasArch ? (
-                        typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? 16 :
+                        typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ?
+                        16 :
                         8
                     ) : (
-                        typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ? (IntPtr.Size == 4 ? 20 : 24) :
+                        typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ?
+                        (IntPtr.Size == 4 ? 20 : 24) :
                         (IntPtr.Size == 4 ? 12 : 16)
                     )
                 ) +

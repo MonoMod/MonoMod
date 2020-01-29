@@ -16,8 +16,8 @@ namespace MonoMod.Utils {
 #endif
     static class ReflectionHelper {
 
-        private static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
-        private static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
+        internal static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
+        internal static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
 
