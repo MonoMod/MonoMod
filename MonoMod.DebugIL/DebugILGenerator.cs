@@ -10,12 +10,11 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace MonoMod.DebugIL {
     public class DebugILGenerator {
 
-        public static readonly Regex PathVerifyRegex =
-            new Regex("[" + Regex.Escape(new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars())) + "]", RegexOptions.Compiled);
         public static readonly System.Reflection.ConstructorInfo m_DebuggableAttribute_ctor =
             typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
 
@@ -25,24 +24,6 @@ namespace MonoMod.DebugIL {
         public bool SkipMaxStack = false;
 
         public string OutputPath;
-        public Stack<string> CurrentPath = new Stack<string>();
-        public string FullPath {
-            get {
-                string path = OutputPath;
-                // Incorrect order
-                /*
-                foreach (string part in CurrentPath)
-                    path = Path.Combine(path, part);
-                */
-                string[] pathSplit = CurrentPath.ToArray();
-                for (int i = pathSplit.Length - 1; i >= 0; i--)
-                    path = Path.Combine(path, pathSplit[i]);
-                return path;
-            }
-        }
-
-        // Could be easily used to keep track of line # when printing all methods in one .il
-        public int Line;
 
         public DebugILGenerator(MonoModder modder) {
             Modder = modder;
@@ -54,28 +35,14 @@ namespace MonoMod.DebugIL {
             SkipMaxStack = Environment.GetEnvironmentVariable("MONOMOD_DEBUGIL_SKIP_MAXSTACK") == "1";
         }
 
-        public static void DeleteRecursive(string path) {
-            foreach (string dir in Directory.GetDirectories(path))
-                DeleteRecursive(dir);
-
-            foreach (string file in Directory.GetFiles(path))
-                File.Delete(file);
-
-            Directory.Delete(path);
-            Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
-        }
-
         public static void Generate(MonoModder modder)
             => new DebugILGenerator(modder).Generate();
 
         public void Generate() {
-            if (Directory.Exists(FullPath)) {
-                Modder.Log($"[DbgIlGen] Clearing {FullPath}");
-                DeleteRecursive(FullPath);
+            if (Directory.Exists(OutputPath)) {
+                Console.WriteLine($"[MonoMod] [DbgIlGen] Clearing {OutputPath}");
+                Directory.Delete(OutputPath, true);
             }
-
-            Directory.CreateDirectory(FullPath);
-            Thread.Sleep(0); // Required to stay in sync with filesystem... thanks, .NET Framework!
 
             CustomAttribute debuggable = Modder.Module.Assembly.GetCustomAttribute("System.Diagnostics.DebuggableAttribute");
             if (debuggable != null)
@@ -89,189 +56,174 @@ namespace MonoMod.DebugIL {
             ));
             Modder.Module.Assembly.CustomAttributes.Add(debuggable);
 
-            GenerateMetadata();
+            Console.WriteLine($"[MonoMod] [DbgIlGen] Enqueueing dumping tasks...");
 
-            foreach (TypeDefinition type in Modder.Module.Types)
-                GenerateFor(type);
+            List<Task> tasksL = new List<Task>();
+
+            tasksL.Add(Task.Factory.StartNew(() => {
+                DumpMetadata(OutputPath);
+            }));
+
+            Dictionary<string, int> indices = new Dictionary<string, int>();
+
+            // GetTypes includes nested types.
+            foreach (TypeDefinition type in Modder.Module.GetTypes()) {
+                // Modder.Log($"[DbgIlGen] Enqueueing {type.FullName}");
+
+                string path = Path.Combine(
+                    OutputPath,
+                    string.Join(
+                        Path.DirectorySeparatorChar.ToString(),
+                        type.FullName
+                            .Split('.', '/').Select(
+                                part => DebugILWriter.PathVerifyRegex.Replace(part, "_")
+                            ).ToArray()
+                    )
+                );
+                
+                tasksL.Add(Task.Factory.StartNew(() => {
+                    DumpType(path, type);
+                }));
+
+                foreach (MethodDefinition method in type.Methods) {
+                    if (indices.TryGetValue(method.Name, out int index)) {
+                        indices[method.Name] = ++index;
+                    } else {
+                        index = 0;
+                        indices[method.Name] = 0;
+                    }
+                    tasksL.Add(Task.Factory.StartNew(() => {
+                        DumpMethod(path, index, method);
+                    }));
+                }
+                indices.Clear();
+            }
+
+            Task[] tasksA = tasksL.ToArray();
+            int completed;
+            int all = tasksA.Length;
+            while ((completed = tasksL.Count(t => t.IsCompleted)) < all) {
+                Console.Write($"[MonoMod] [DbgIlGen] {completed} / {all} task{(all != 1 ? "s" : "")} finished        \r");
+                Task.WaitAny(tasksA, -1);
+            }
+            Console.Write($"[MonoMod] [DbgIlGen] {all} / {all} task{(all != 1 ? "s" : "")} finished        \r");
+            Console.WriteLine();
         }
 
-        public void GenerateMetadata() {
-            CurrentPath.Push("AssemblyInfo.il");
-            using (Stream stream = File.OpenWrite(FullPath))
-            using (StreamWriter writer = new StreamWriter(stream)) {
+        public void DumpMetadata(string path) {
+            using (DebugILWriter writer = new DebugILWriter(path, "__AssemblyInfo__")) {
                 writer.WriteLine("// MonoMod DebugILGenerator");
-                writer.Write("// MonoMod Version: ");
-                writer.WriteLine(MonoModder.Version);
+                writer.WriteLine($"// MonoMod Version: {MonoModder.Version}");
                 writer.WriteLine();
 
                 writer.WriteLine("// Input assembly:");
-                writer.Write("// ");
-                writer.WriteLine(Modder.Module.Assembly.Name.FullName);
-                writer.Write("// ");
-                writer.WriteLine(Modder.InputPath);
+                writer.WriteLine($"// {Modder.Module.Assembly.Name.FullName}");
+                writer.WriteLine($"// {Modder.InputPath}");
                 writer.WriteLine();
 
                 writer.WriteLine("// Assembly references:");
                 foreach (AssemblyNameReference dep in Modder.Module.AssemblyReferences) {
-                    writer.Write("// ");
-                    writer.WriteLine(dep.FullName);
+                    writer.WriteLine($"// {dep.FullName}");
                 }
                 writer.WriteLine();
 
                 // TODO: [DbgILGen] Other assembly metadata?
-
-                writer.WriteLine();
             }
-            CurrentPath.Pop();
         }
 
-        public void GenerateFor(TypeDefinition type) {
-            int namespaceDepth = 0;
-            if (type.DeclaringType == null && !string.IsNullOrEmpty(type.Namespace)) {
-                string[] namespacePath = type.Namespace.Split('.');
-                namespaceDepth = namespacePath.Length;
-                foreach (string piece in namespacePath)
-                    CurrentPath.Push(piece);
-            }
-            CurrentPath.Push(PathVerifyRegex.Replace(type.Name, ""));
-            Directory.CreateDirectory(FullPath);
-
-            Modder.Log($"[DbgIlGen] Generating for type {type.FullName}");
-
-            CurrentPath.Push("TypeInfo.il");
-            using (Stream stream = File.OpenWrite(FullPath))
-            using (StreamWriter writer = new StreamWriter(stream)) {
+        public void DumpType(string path, TypeDefinition type) {
+            using (DebugILWriter writer = new DebugILWriter(path, "__TypeInfo__")) {
                 writer.WriteLine("// MonoMod DebugILGenerator");
-                writer.Write("// Type: (");
-                writer.Write(type.Attributes);
-                writer.Write(") ");
-                writer.WriteLine(type.FullName);
+                writer.WriteLine($"// Type: ({type.Attributes.ToString()}) {type.FullName}");
                 writer.WriteLine();
 
                 writer.WriteLine("// Fields:");
-                foreach (FieldDefinition field in type.Fields) {
-                    writer.Write("// (");
-                    writer.Write(field.Attributes);
-                    writer.Write(") ");
-                    writer.Write(field.FieldType.FullName);
-                    writer.Write(" ");
-                    writer.WriteLine(field.Name);
+                foreach (FieldDefinition member in type.Fields) {
+                    writer.WriteLine($"// ({member.Attributes}) {member.FieldType.FullName} {member.Name}");
+                }
+                writer.WriteLine();
+
+                writer.WriteLine("// Properties:");
+                foreach (PropertyDefinition member in type.Properties) {
+                    writer.WriteLine($"// ({member.Attributes}) {member.PropertyType.FullName} {member.Name}");
+                }
+                writer.WriteLine();
+
+                writer.WriteLine("// Events:");
+                foreach (EventDefinition member in type.Events) {
+                    writer.WriteLine($"// ({member.Attributes}) {member.EventType.FullName} {member.Name}");
                 }
                 writer.WriteLine();
 
                 // TODO: [DbgILGen] Other type metadata?
-
-                writer.WriteLine();
             }
-            CurrentPath.Pop();
-
-            foreach (MethodDefinition method in type.Methods)
-                GenerateFor(method);
-
-            foreach (TypeDefinition nested in type.NestedTypes)
-                GenerateFor(nested);
-
-            CurrentPath.Pop();
-            for (int i = 0; i < namespaceDepth; i++)
-                CurrentPath.Pop();
         }
 
-        public void GenerateFor(MethodDefinition method) {
-            string nameEscaped = PathVerifyRegex.Replace(method.Name, "");
-            CurrentPath.Push(nameEscaped + ".il");
-            int pathCollision = 0;
-            while (File.Exists(FullPath)) {
-                pathCollision++;
-                CurrentPath.Pop();
-                CurrentPath.Push(nameEscaped + "." + pathCollision + ".il");
-            }
-
+        public void DumpMethod(string parent, int index, MethodDefinition method) {
             method.NoInlining = true;
             method.NoOptimization = true;
 
-            using (Stream stream = File.OpenWrite(FullPath))
-            using (StreamWriter writer = new StreamWriter(stream)) {
-                Line = 1;
-                writer.WriteLine("// MonoMod DebugILGenerator"); Line++;
-                writer.Write("// Method: (");
-                writer.Write(method.Attributes);
-                writer.Write(") ");
-                writer.WriteLine(method.GetID()); Line++;
-                writer.WriteLine(); Line++;
+            using (DebugILWriter writer = new DebugILWriter(parent, method.Name, index)) {
+                writer.WriteLine("// MonoMod DebugILGenerator");
+                writer.WriteLine($"// Method: ({method.Attributes}) {method.GetID()}");
+                writer.WriteLine();
 
                 // TODO: [DbgILGen] Other method metadata?
 
-                writer.WriteLine("// Body:"); Line++;
+                writer.WriteLine("// Body:");
                 if (!method.HasBody) {
-                    writer.WriteLine("// No body found."); Line++;
-                } else {
-                    // TODO: [DbgILGen] Method body metadata?
+                    writer.WriteLine("// No body found.");
+                    writer.WriteLine();
+                    return;
+                }
 
-                    if (!SkipMaxStack) {
-                        writer.Write(".maxstack ");
-                        writer.WriteLine(method.Body.MaxStackSize); Line++;
+                // TODO: [DbgILGen] Method body metadata?
+
+                if (!SkipMaxStack)
+                    writer.WriteLine($".maxstack {method.Body.MaxStackSize}");
+
+                // Always assure a debug scope exists!
+                method.DebugInformation.GetOrAddScope().Variables.Clear();
+                if (method.Body.HasVariables) {
+                    writer.WriteLine(method.Body.InitLocals ? ".locals init (" : ".locals (");
+
+                    for (int i = 0; i < method.Body.Variables.Count; i++) {
+                        VariableDefinition vd = method.Body.Variables[i];
+                        string name = vd.GenerateVariableName(method, i);
+                        method.DebugInformation.GetOrAddScope().Variables.Add(new VariableDebugInformation(vd, name));
+                        writer.WriteLine($"    [{i}] {(!vd.VariableType.IsPrimitive && !vd.VariableType.IsValueType ? "class " : "")} {vd.VariableType.FullName} {name} {(i < method.Body.Variables.Count - 1 ? "," : "")}");
                     }
+                    writer.WriteLine(")");
+                }
 
-                    // Always assure a debug scope exists!
-                    method.DebugInformation.GetOrAddScope().Variables.Clear();
-                    if (method.Body.HasVariables) {
-                        if (method.Body.InitLocals)
-                            writer.WriteLine(".locals init (");
-                        else
-                            writer.WriteLine(".locals (");
-                        Line++;
-                        for (int i = 0; i < method.Body.Variables.Count; i++) {
-                            VariableDefinition @var = method.Body.Variables[i];
-                            writer.Write("    [");
-                            writer.Write(i);
-                            writer.Write("] ");
-                            if (!@var.VariableType.IsPrimitive && !@var.VariableType.IsValueType)
-                                writer.Write("class ");
-                            writer.Write(@var.VariableType.FullName);
-                            string name = @var.GenerateVariableName(method, i);
-                            method.DebugInformation.GetOrAddScope().Variables.Add(new VariableDebugInformation(@var, name));
-                            writer.Write(" ");
-                            writer.Write(name);
-                            if (i < method.Body.Variables.Count - 1)
-                                writer.WriteLine(",");
-                            else
-                                writer.WriteLine();
-                            Line++;
+                writer.WriteLine("// Code:");
+                method.DebugInformation.SequencePoints.Clear();
+                Document symbolDoc = new Document(writer.FullPath) {
+                    LanguageVendor = DocumentLanguageVendor.Microsoft,
+                    Language = DocumentLanguage.CSharp, // Even Visual Studio can't deal with Cil!
+                    HashAlgorithm = DocumentHashAlgorithm.None,
+                    Type = DocumentType.Text
+                };
+
+                ILProcessor il = method.Body.GetILProcessor();
+                for (int instri = 0; instri < method.Body.Instructions.Count; instri++) {
+                    Instruction instr = method.Body.Instructions[instri];
+                    string instrStr = Relative ? instr.ToRelativeString() : instr.ToString();
+
+                    method.DebugInformation.SequencePoints.Add(
+                        new SequencePoint(instr, symbolDoc) {
+                            StartLine = writer.Line,
+                            StartColumn = 1,
+                            EndLine = writer.Line,
+                            EndColumn = instrStr.Length + 1
                         }
-                        writer.WriteLine(")"); Line++;
-                    }
+                    );
 
-                    writer.WriteLine("// Code:"); Line++;
-                    method.DebugInformation.SequencePoints.Clear();
-                    Document symbolDoc = new Document(FullPath) {
-                        LanguageVendor = DocumentLanguageVendor.Microsoft,
-                        Language = DocumentLanguage.CSharp, // Even Visual Studio can't deal with Cil!
-                        HashAlgorithm = DocumentHashAlgorithm.None,
-                        Type = DocumentType.Text
-                    };
-
-                    ILProcessor il = method.Body.GetILProcessor();
-                    for (int instri = 0; instri < method.Body.Instructions.Count; instri++) {
-                        Instruction instr = method.Body.Instructions[instri];
-                        string instrStr = Relative ? instr.ToRelativeString() : instr.ToString();
-
-                        method.DebugInformation.SequencePoints.Add(
-                            new SequencePoint(instr, symbolDoc) {
-                                StartLine = Line,
-                                StartColumn = 1,
-                                EndLine = Line,
-                                EndColumn = instrStr.Length + 1
-                            }
-                        );
-
-                        writer.WriteLine(instrStr); Line++;
-                    }
+                    writer.WriteLine(instrStr);
                 }
 
                 writer.WriteLine();
             }
-
-            CurrentPath.Pop();
         }
 
     }

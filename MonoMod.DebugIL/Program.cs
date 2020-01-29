@@ -55,7 +55,6 @@ namespace MonoMod.DebugIL {
             }) {
                 mm.Read();
 
-                mm.Log("[DbgILGen] DebugILGenerator.Generate(mm);");
                 DebugILGenerator.Generate(mm);
 
                 mm.Write();
