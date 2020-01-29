@@ -189,9 +189,9 @@ namespace MonoMod.DebugIL {
 
                     for (int i = 0; i < method.Body.Variables.Count; i++) {
                         VariableDefinition vd = method.Body.Variables[i];
-                        string name = vd.GenerateVariableName(method, i);
+                        string name = vd.GenerateVariableName();
                         method.DebugInformation.GetOrAddScope().Variables.Add(new VariableDebugInformation(vd, name));
-                        writer.WriteLine($"    [{i}] {(!vd.VariableType.IsPrimitive && !vd.VariableType.IsValueType ? "class " : "")} {vd.VariableType.FullName} {name} {(i < method.Body.Variables.Count - 1 ? "," : "")}");
+                        writer.WriteLine($"    [{i}] {(!vd.VariableType.IsPrimitive && !vd.VariableType.IsValueType ? "class " : "")}{vd.VariableType.FullName} {name}{(i < method.Body.Variables.Count - 1 ? "," : "")}");
                     }
                     writer.WriteLine(")");
                 }
@@ -205,9 +205,100 @@ namespace MonoMod.DebugIL {
                     Type = DocumentType.Text
                 };
 
-                ILProcessor il = method.Body.GetILProcessor();
+                // The exception block pretty printing is based off of
+                // https://github.com/BepInEx/HarmonyX/blob/a570001c568629d745c88fbc46e70cc7d0c9becf/Harmony/Internal/Util/MethodBodyLogExtensions.cs#L44
+                // Thanks to ghorsington (denikson) for allowing MonoMod to use it!
+
+                // Cache exception blocks for pretty printing
+                Dictionary<Instruction, List<ExceptionBlock>> handlerMap = new Dictionary<Instruction, List<ExceptionBlock>>();
+
+                ExceptionBlock AddBlock(Instruction instr, ExceptionBlockType t) {
+                    if (instr == null)
+                        return new ExceptionBlock();
+
+                    if (!handlerMap.TryGetValue(instr, out List<ExceptionBlock> list))
+                        handlerMap[instr] = list = new List<ExceptionBlock>();
+
+                    ExceptionBlock block = new ExceptionBlock() {
+                        BlockType = t
+                    };
+                    list.Add(block);
+                    return block;
+                }
+
+                foreach (ExceptionHandler handler in method.Body.ExceptionHandlers) {
+                    AddBlock(handler.TryStart, ExceptionBlockType.BeginExceptionBlock);
+                    AddBlock(handler.TryEnd, ExceptionBlockType.EndExceptionBlock);
+                    AddBlock(handler.HandlerEnd, ExceptionBlockType.EndExceptionBlock);
+                    switch (handler.HandlerType) {
+                        case ExceptionHandlerType.Catch:
+                            AddBlock(handler.HandlerStart, ExceptionBlockType.BeginCatchBlock).CatchType =
+                                handler.CatchType ?? Modder.Module.TypeSystem.Object;
+                            break;
+
+                        case ExceptionHandlerType.Filter:
+                            AddBlock(handler.FilterStart, ExceptionBlockType.BeginExceptFilterBlock);
+                            break;
+
+                        case ExceptionHandlerType.Finally:
+                            AddBlock(handler.HandlerStart, ExceptionBlockType.BeginFinallyBlock);
+                            break;
+
+                        case ExceptionHandlerType.Fault:
+                            AddBlock(handler.HandlerStart, ExceptionBlockType.BeginFaultBlock);
+                            break;
+
+                        default:
+                            throw new NotSupportedException($"Unsupported exception handler type ${handler.HandlerType}");
+                    }
+                }
+
+                var handlerStack = new Stack<string>();
+
                 for (int instri = 0; instri < method.Body.Instructions.Count; instri++) {
                     Instruction instr = method.Body.Instructions[instri];
+
+                    if (handlerMap.TryGetValue(instr, out List<ExceptionBlock> blocks)) {
+                        // Force exception close to the start for correct output
+                        blocks.Sort((a, b) => a.BlockType == ExceptionBlockType.EndExceptionBlock ? -1 : 0);
+
+                        foreach (ExceptionBlock block in blocks) {
+                            switch (block.BlockType) {
+                                case ExceptionBlockType.BeginExceptionBlock:
+                                    writer.WriteLine(".try {");
+                                    handlerStack.Push(".try");
+                                    break;
+
+                                case ExceptionBlockType.BeginCatchBlock:
+                                    writer.WriteLine($"catch {block.CatchType.FullName} {{");
+                                    handlerStack.Push("handler (catch)");
+                                    break;
+
+                                case ExceptionBlockType.BeginExceptFilterBlock:
+                                    writer.WriteLine("filter {");
+                                    handlerStack.Push("handler (filter)");
+                                    break;
+
+                                case ExceptionBlockType.BeginFaultBlock:
+                                    writer.WriteLine("fault {");
+                                    handlerStack.Push("handler (fault)");
+                                    break;
+
+                                case ExceptionBlockType.BeginFinallyBlock:
+                                    writer.WriteLine("finally {");
+                                    handlerStack.Push("handler (finally)");
+                                    break;
+
+                                case ExceptionBlockType.EndExceptionBlock:
+                                    writer.WriteLine($"}} // end {handlerStack.Pop()}");
+                                    break;
+
+                                default:
+                                    throw new NotSupportedException($"Unsupported exception handler type ${block.BlockType}");
+                            }
+                        }
+                    }
+
                     string instrStr = Relative ? instr.ToRelativeString() : instr.ToString();
 
                     method.DebugInformation.SequencePoints.Add(

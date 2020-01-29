@@ -23,7 +23,7 @@ namespace MonoMod.DebugIL {
             );
         }
 
-        public static string GenerateVariableName(this VariableDefinition @var, MethodDefinition method = null, int i = -1) {
+        public static string GenerateVariableName(this VariableDefinition @var) {
             TypeReference type = @var.VariableType;
             while (type is TypeSpecification)
                 type = ((TypeSpecification) type).ElementType;
@@ -35,14 +35,7 @@ namespace MonoMod.DebugIL {
             else if (type.IsPrimitive)
                 name = Enum.GetName(t_MetadataType, type.MetadataType);
 
-            name = name.Substring(0, 1).ToLowerInvariant() + name.Substring(1);
-
-            if (method == null)
-                return i < 0 ? name : (name + i);
-
-            // Check for usage as loop counter or similar?
-
-            return i < 0 ? name : (name + i);
+            return name.Substring(0, 1).ToLowerInvariant() + name.Substring(1) + @var.Index;
         }
 
         public static string ToRelativeString(this Instruction self) {
@@ -60,6 +53,7 @@ namespace MonoMod.DebugIL {
                 case OperandType.InlineBrTarget:
                     AppendRelativeLabel(instruction, self, (Instruction) self.Operand);
                     break;
+
                 case OperandType.InlineSwitch:
                     var labels = (Instruction[]) self.Operand;
                     for (int i = 0; i < labels.Length; i++) {
@@ -69,11 +63,13 @@ namespace MonoMod.DebugIL {
                         AppendRelativeLabel(instruction, self, labels[i]);
                     }
                     break;
+
                 case OperandType.InlineString:
                     instruction.Append('\"');
                     instruction.Append(self.Operand);
                     instruction.Append('\"');
                     break;
+
                 default:
                     instruction.Append(self.Operand);
                     break;
@@ -83,8 +79,9 @@ namespace MonoMod.DebugIL {
         }
 
         static void AppendRelativeLabel(StringBuilder builder, Instruction from, Instruction to) {
-            builder.Append("IL_RelInstr");
-            int offset = (to.Offset - from.Offset);
+            builder.Append("IL_Rel");
+
+            int offset = to.Offset - from.Offset;
             Instruction instr;
             if (offset < 0) {
                 builder.Append("-");
@@ -97,10 +94,24 @@ namespace MonoMod.DebugIL {
                 for (instr = from; instr != to && instr != null; instr = instr.Next)
                     offset++;
             }
-            if (instr == null)
+
+            if (instr == null) {
                 builder.Append("?(").Append((to.Offset - from.Offset).ToString("x4")).Append(")");
-            else
-                builder.Append(offset);
+                return;
+            }
+            
+            builder.Append(offset);
+
+            switch (instr.OpCode.OperandType) {
+                case OperandType.ShortInlineBrTarget:
+                case OperandType.InlineBrTarget:
+                case OperandType.InlineSwitch:
+                    break;
+
+                default:
+                    builder.Append(" // ").Append(instr.ToRelativeString());
+                    break;
+            }
         }
 
     }

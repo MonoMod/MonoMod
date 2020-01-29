@@ -39,10 +39,12 @@ namespace MonoMod.DebugIL {
         public void Write(string value) {
             Writer.Write(value);
         }
+
         public void WriteLine() {
             Writer.WriteLine();
             Line++;
         }
+
         public void WriteLine(string value) {
             Writer.WriteLine(value);
         }

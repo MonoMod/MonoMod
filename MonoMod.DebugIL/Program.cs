@@ -31,7 +31,13 @@ namespace MonoMod.DebugIL {
                 if (args[i] == "--relative") {
                     Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE", "1");
                     pathInI = i + 1;
+
                 } else if (args[i] == "--skip-maxstack") {
+                    Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_SKIP_MAXSTACK", "1");
+                    pathInI = i + 1;
+
+                } else if (args[i] == "--diff") {
+                    Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE", "1");
                     Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_SKIP_MAXSTACK", "1");
                     pathInI = i + 1;
                 }
