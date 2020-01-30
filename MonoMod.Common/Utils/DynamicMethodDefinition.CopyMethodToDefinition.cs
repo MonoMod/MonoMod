@@ -155,7 +155,8 @@ namespace MonoMod.Utils {
                         break;
 
                     case OperandType.InlineSig:
-                        throw new NotSupportedException("Parsing CallSites at runtime currently not supported");
+                        instr.Operand = moduleTo.ImportCallSite(moduleFrom, moduleFrom.ResolveSignature(reader.ReadInt32()));
+                        break;
 
                     case OperandType.InlineString:
                         instr.Operand = moduleFrom.ResolveString(reader.ReadInt32());

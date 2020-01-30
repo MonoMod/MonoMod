@@ -197,15 +197,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public MethodBase GetDetourTarget(MethodBase from, MethodBase to) {
-            MethodInfo fromInfo = from as MethodInfo;
-            MethodInfo toInfo = to as MethodInfo;
             Type context = to.DeclaringType;
 
             MethodInfo dm = null;
 
             if (GlueThiscallStructRetPtr != GlueThiscallStructRetPtrOrder.Original &&
-                fromInfo != null && !from.IsStatic &&
-                toInfo != null && to.IsStatic &&
+                from is MethodInfo fromInfo && !from.IsStatic &&
+                to is MethodInfo toInfo && to.IsStatic &&
                 fromInfo.ReturnType == toInfo.ReturnType &&
                 fromInfo.ReturnType.IsValueType) {
 

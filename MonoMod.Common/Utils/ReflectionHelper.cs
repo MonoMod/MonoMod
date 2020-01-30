@@ -14,7 +14,7 @@ namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    static class ReflectionHelper {
+    static partial class ReflectionHelper {
 
         internal static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
         internal static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
@@ -309,7 +309,7 @@ namespace MonoMod.Utils {
                 case MethodCallingConvention.ThisCall:
                 case MethodCallingConvention.FastCall:
                 case MethodCallingConvention.VarArg:
-                    throw new NotSupportedException("Unmanaged calling conventions for callsites not supported");
+                    throw new NotSupportedException("Unmanaged calling conventions for callsites not supported on .NET Standard");
 
 #endif
 

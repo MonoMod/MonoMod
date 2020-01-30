@@ -77,7 +77,7 @@ namespace MonoMod.Utils.Cil {
         private OpCode _(SRE.OpCode opcode) => _MCCOpCodes[opcode.Value];
 
         private LabelInfo _(Label handle) =>
-            _LabelInfos.TryGetValue(handle, out var labelInfo) ? labelInfo : null;
+            _LabelInfos.TryGetValue(handle, out LabelInfo labelInfo) ? labelInfo : null;
 
         private VariableDefinition _(LocalBuilder handle) => _Variables[handle];
 
@@ -139,7 +139,7 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override void MarkLabel(Label loc) {
-            if (!_LabelInfos.TryGetValue(loc, out var labelInfo) || labelInfo.Emitted)
+            if (!_LabelInfos.TryGetValue(loc, out LabelInfo labelInfo) || labelInfo.Emitted)
                 return;
             _LabelsToMark.Add(labelInfo);
         }
@@ -225,7 +225,7 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override void Emit(SRE.OpCode opcode, Label[] labels) {
-            var labelInfos = labels.Distinct().Select(_);
+            IEnumerable<LabelInfo> labelInfos = labels.Distinct().Select(_);
             Instruction ins = IL.Create(_(opcode), labelInfos.Select(labelInfo => labelInfo.Instruction).ToArray());
             foreach (LabelInfo labelInfo in labelInfos)
                 labelInfo.Branches.Add(ins);
@@ -233,7 +233,7 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override void Emit(SRE.OpCode opcode, LocalBuilder local) => Emit(IL.Create(_(opcode), _(local)));
-        public override void Emit(SRE.OpCode opcode, SignatureHelper signature) => throw new NotSupportedException();
+        public override void Emit(SRE.OpCode opcode, SignatureHelper signature) => Emit(IL.Create(_(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
 
         private void _EmitInlineVar(OpCode opcode, int index) {
             // System.Reflection.Emit has only got (Short)InlineVar and allows index refs.
