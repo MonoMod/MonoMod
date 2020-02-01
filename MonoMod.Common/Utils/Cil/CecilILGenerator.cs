@@ -234,6 +234,7 @@ namespace MonoMod.Utils.Cil {
 
         public override void Emit(SRE.OpCode opcode, LocalBuilder local) => Emit(IL.Create(_(opcode), _(local)));
         public override void Emit(SRE.OpCode opcode, SignatureHelper signature) => Emit(IL.Create(_(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
+        public void Emit(SRE.OpCode opcode, ICallSiteGenerator signature) => Emit(IL.Create(_(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
 
         private void _EmitInlineVar(OpCode opcode, int index) {
             // System.Reflection.Emit has only got (Short)InlineVar and allows index refs.

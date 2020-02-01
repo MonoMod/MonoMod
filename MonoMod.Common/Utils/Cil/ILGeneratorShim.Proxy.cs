@@ -202,6 +202,9 @@ namespace MonoMod.Utils.Cil {
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
             )?.GetValue(il) as ILGeneratorShim;
 
+        public static T GetProxiedShim<T>(this System.Reflection.Emit.ILGenerator il) where T : ILGeneratorShim
+            => il.GetProxiedShim() as T;
+
         public static object DynEmit(this System.Reflection.Emit.ILGenerator il, System.Reflection.Emit.OpCode opcode, object operand)
             => il.DynEmit(new object[] { opcode, operand });
 

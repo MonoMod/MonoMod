@@ -23,6 +23,8 @@ namespace MonoMod.Utils {
             typeof(SignatureHelper).GetField("m_module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance) ??
             typeof(SignatureHelper).GetField("module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
+        public static CallSite ImportCallSite(this ModuleDefinition moduleTo, ICallSiteGenerator signature)
+            => signature.ToCallSite(moduleTo);
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, SignatureHelper signature)
             => moduleTo.ImportCallSite(f_SignatureHelper_module.GetValue(signature) as Module, signature.GetSignature());
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, int token)
