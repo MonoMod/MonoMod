@@ -62,7 +62,7 @@ namespace MonoMod.Utils {
             DynamicMethod dm = new DynamicMethod(
                 $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>",
                 typeof(void), argTypes,
-                orig?.DeclaringType ?? typeof(DynamicMethodDefinition),
+                orig?.DeclaringType ?? dmd.OwnerType ?? typeof(DynamicMethodDefinition),
                 true // If any random errors pop up, try setting this to false first.
             );
 

@@ -61,6 +61,8 @@ namespace MonoMod.Utils {
         private ModuleDefinition _Module;
         public ModuleDefinition Module => _Module;
 
+        public Type OwnerType;
+
         public bool Debug = false;
 
         private Guid GUID = Guid.NewGuid();
