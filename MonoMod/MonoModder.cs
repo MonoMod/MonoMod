@@ -235,6 +235,15 @@ namespace MonoMod {
             MissingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0";
             RemovePatchReferences = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_REMOVE_PATCH") != "0";
 
+            var envDebugSymbolFormat = Environment.GetEnvironmentVariable("MONOMOD_DEBUG_FORMAT");
+            if (envDebugSymbolFormat != null) {
+                envDebugSymbolFormat = envDebugSymbolFormat.ToLowerInvariant();
+                if (envDebugSymbolFormat == "pdb")
+                    DebugSymbolOutputFormat = DebugSymbolFormat.PDB;
+                else if (envDebugSymbolFormat == "mdb")
+                    DebugSymbolOutputFormat = DebugSymbolFormat.MDB;
+            }
+
             string upgradeMSCORLIBStr = Environment.GetEnvironmentVariable("MONOMOD_MSCORLIB_UPGRADE");
             UpgradeMSCORLIB = string.IsNullOrEmpty(upgradeMSCORLIBStr) ? (bool?) null : (upgradeMSCORLIBStr != "0");
 
