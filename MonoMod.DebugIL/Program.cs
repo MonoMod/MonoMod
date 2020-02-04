@@ -40,7 +40,24 @@ namespace MonoMod.DebugIL {
                     Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE", "1");
                     Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_SKIP_MAXSTACK", "1");
                     pathInI = i + 1;
+                } else if (args[i] == "--pdb") {
+                    Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_FORMAT", "PDB");
+                    pathInI = i + 1;
+                } else if (args[i] == "--mdb") {
+                    Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_FORMAT", "MDB");
+                    pathInI = i + 1;
                 }
+            }
+
+            var debugFormat = DebugSymbolFormat.Auto;
+
+            var envDebugFormat = Environment.GetEnvironmentVariable("MONOMOD_DEBUGIL_FORMAT");
+            if (envDebugFormat != null) {
+                envDebugFormat = envDebugFormat.ToLowerInvariant();
+                if (envDebugFormat == "pdb")
+                    debugFormat = DebugSymbolFormat.PDB;
+                else if (envDebugFormat == "mdb")
+                    debugFormat = DebugSymbolFormat.MDB;
             }
 
             if (pathInI >= args.Length) {
@@ -56,6 +73,7 @@ namespace MonoMod.DebugIL {
             pathOut = pathOut ?? Path.Combine(Path.GetDirectoryName(pathIn), "MMDBGIL_" + Path.GetFileName(pathIn));
 
             using (MonoModder mm = new MonoModder() {
+                DebugSymbolOutputFormat = debugFormat,
                 InputPath = pathIn,
                 OutputPath = pathOut
             }) {
