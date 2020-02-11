@@ -215,7 +215,7 @@ namespace MonoMod.RuntimeDetour {
         public static DynamicMethodDefinition StubCriticalDetour(this DynamicMethodDefinition dm) {
             ILProcessor il = dm.GetILProcessor();
             ModuleDefinition ilModule = il.Body.Method.Module;
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 32; i++) {
                 // Prevent mono from inlining the DynamicMethod.
                 il.Emit(OpCodes.Nop);
             }

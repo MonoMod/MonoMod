@@ -33,7 +33,7 @@ namespace MonoMod.Utils {
         /// </summary>
         public static SRE.DynamicMethod Stub(this SRE.DynamicMethod dm) {
             SRE.ILGenerator il = dm.GetILGenerator();
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 32; i++) {
                 // Prevent mono from inlining the DynamicMethod.
                 il.Emit(SRE.OpCodes.Nop);
             }
@@ -52,7 +52,7 @@ namespace MonoMod.Utils {
         /// </summary>
         public static DynamicMethodDefinition Stub(this DynamicMethodDefinition dmd) {
             CIL.ILProcessor il = dmd.GetILProcessor();
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 32; i++) {
                 // Prevent mono from inlining the DynamicMethod.
                 il.Emit(CIL.OpCodes.Nop);
             }
