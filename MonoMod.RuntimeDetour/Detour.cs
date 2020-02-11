@@ -343,7 +343,7 @@ namespace MonoMod.RuntimeDetour {
             )) {
                 ILProcessor il = dmd.GetILProcessor();
 
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < 32; i++) {
                     // Prevent mono from inlining the DynamicMethod.
                     il.Emit(OpCodes.Nop);
                 }

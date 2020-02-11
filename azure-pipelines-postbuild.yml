@@ -3,7 +3,6 @@ parameters:
 
 steps:
 - task: CopyFiles@2
-  condition: and(succeeded(), ne(variables.Build.Reason, 'PullRequest'))
   displayName: 'Artifacts: Pack: ${{parameters.targetFramework}}'
   continueOnError: true
   inputs:
@@ -14,7 +13,6 @@ steps:
     overWrite: true
     flattenFolders: true
 - task: PublishBuildArtifacts@1
-  condition: and(succeeded(), ne(variables.Build.Reason, 'PullRequest'))
   displayName: 'Artifacts: Publish: ${{parameters.targetFramework}}'
   continueOnError: true
   inputs:

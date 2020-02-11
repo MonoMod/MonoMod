@@ -106,7 +106,6 @@ steps:
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
-  condition: and(succeeded(), ne(variables.Build.Reason, 'PullRequest'))
   displayName: 'Artifacts: Pack: nupkgs'
   continueOnError: true
   inputs:
@@ -117,7 +116,6 @@ steps:
     packagesToPack: 'MonoMod@(|.Common|.Utils|.RuntimeDetour|.RuntimeDetour.HookGen)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
 - task: PublishBuildArtifacts@1
-  condition: and(succeeded(), ne(variables.Build.Reason, 'PullRequest'))
   displayName: 'Artifacts: Publish: nupkgs'
   continueOnError: true
   inputs:
