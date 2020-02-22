@@ -5,6 +5,8 @@ using System.Reflection;
 namespace MonoMod.Utils {
     public sealed class DynData<TTarget> : IDisposable where TTarget : class {
 
+        private static int CreationsInProgress = 0;
+
         private static readonly object[] _NoArgs = new object[0];
 
         public static readonly HashSet<string> Disposable = new HashSet<string>();
@@ -30,14 +32,19 @@ namespace MonoMod.Utils {
 
         static DynData() {
             _DataHelper_.Collected += () => {
-                HashSet<WeakReference> dead = new HashSet<WeakReference>();
+                if (CreationsInProgress != 0)
+                    return;
 
-                foreach (WeakReference weak in _DataMap.Keys)
-                    if (!weak.IsAlive)
-                        dead.Add(weak);
+                lock (_DataMap) {
+                    HashSet<WeakReference> dead = new HashSet<WeakReference>();
 
-                foreach (WeakReference weak in dead)
-                    _DataMap.Remove(weak);
+                    foreach (WeakReference weak in _DataMap.Keys)
+                        if (!weak.IsAlive)
+                            dead.Add(weak);
+
+                    foreach (WeakReference weak in dead)
+                        _DataMap.Remove(weak);
+                }
             };
             
             foreach (FieldInfo field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
@@ -92,12 +99,15 @@ namespace MonoMod.Utils {
         public DynData(TTarget obj) {
             if (obj != null) {
                 WeakReference weak = new WeakReference(obj);
+                // Ideally this would be a "no GC region", but that's too new.
+                CreationsInProgress++;
                 lock (_DataMap) {
                     if (!_DataMap.TryGetValue(weak, out _Data)) {
                         _Data = new _Data_();
                         _DataMap.Add(weak, _Data);
                     }
                 }
+                CreationsInProgress--;
                 Weak = weak;
 
             } else {
