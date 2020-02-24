@@ -65,7 +65,10 @@ namespace MonoMod {
         public ModReadEventHandler OnReadMod;
         public PostProcessor PostProcessors;
 
-        public Dictionary<string, Action<object, object[]>> CustomAttributeHandlers = new Dictionary<string, Action<object, object[]>>();
+        public Dictionary<string, Action<object, object[]>> CustomAttributeHandlers = new Dictionary<string, Action<object, object[]>>() {
+            // Dummy handlers for modifiers which should be preserved until cleanup.
+            { "MonoMod.MonoModPublic", (_1, _2) => {} }
+        };
         public Dictionary<string, Action<object, object[]>> CustomMethodAttributeHandlers = new Dictionary<string, Action<object, object[]>>();
 
         public MissingDependencyResolver MissingDependencyResolver;
@@ -1144,6 +1147,11 @@ namespace MonoMod {
                     backing.CustomAttributes.Add(attrib.Clone());
 
             if (prop.HasCustomAttribute("MonoMod.MonoModIgnore")) {
+                // MonoModIgnore is a special case, as registered custom attributes should still be applied.
+                if (targetProp != null)
+                    foreach (CustomAttribute attrib in prop.CustomAttributes)
+                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                            targetProp.CustomAttributes.Add(attrib.Clone());
                 if (backing != null)
                     backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
                 if (prop.GetMethod != null)
@@ -1226,6 +1234,11 @@ namespace MonoMod {
                     backing.CustomAttributes.Add(attrib.Clone());
 
             if (srcEvent.HasCustomAttribute("MonoMod.MonoModIgnore")) {
+                // MonoModIgnore is a special case, as registered custom attributes should still be applied.
+                if (targetEvent != null)
+                    foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
+                        if (CustomAttributeHandlers.ContainsKey(attrib.AttributeType.FullName))
+                            targetEvent.CustomAttributes.Add(attrib.Clone());
                 if (backing != null)
                     backing.DeclaringType.Fields.Remove(backing); // Otherwise the backing field gets added anyway
                 if (srcEvent.AddMethod != null)
