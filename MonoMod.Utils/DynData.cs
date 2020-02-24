@@ -9,7 +9,6 @@ namespace MonoMod.Utils {
 
         private static readonly object[] _NoArgs = new object[0];
 
-        public static readonly HashSet<string> Disposable = new HashSet<string>();
         public static event Action<DynData<TTarget>, TTarget> OnInitialize;
 
         private static readonly _Data_ _DataStatic = new _Data_();
@@ -18,12 +17,28 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<string, Action<TTarget, object>> _SpecialSetters = new Dictionary<string, Action<TTarget, object>>();
 
         private readonly WeakReference Weak;
+        private TTarget KeepAlive;
         private readonly _Data_ _Data;
 
         private class _Data_ {
             public readonly Dictionary<string, Func<TTarget, object>> Getters = new Dictionary<string, Func<TTarget, object>>();
             public readonly Dictionary<string, Action<TTarget, object>> Setters = new Dictionary<string, Action<TTarget, object>>();
             public readonly Dictionary<string, object> Data = new Dictionary<string, object>();
+            public readonly HashSet<string> Disposable = new HashSet<string>();
+
+            public void Free() {
+                lock (Data) {
+                    if (Data.Count == 0)
+                        return;
+
+                    foreach (string name in Disposable)
+                        if (Data.TryGetValue(name, out object value) && value is IDisposable valueDisposable)
+                            valueDisposable.Dispose();
+                    Disposable.Clear();
+
+                    Data.Clear();
+                }
+            }
         }
 
         public Dictionary<string, Func<TTarget, object>> Getters => _Data.Getters;
@@ -38,12 +53,16 @@ namespace MonoMod.Utils {
                 lock (_DataMap) {
                     HashSet<WeakReference> dead = new HashSet<WeakReference>();
 
-                    foreach (WeakReference weak in _DataMap.Keys)
-                        if (!weak.IsAlive)
-                            dead.Add(weak);
+                    foreach (KeyValuePair<WeakReference, _Data_> kvp in _DataMap) {
+                        if (kvp.Key.IsAlive)
+                            continue;
+                        dead.Add(kvp.Key);
+                        kvp.Value.Free();
+                    }
 
-                    foreach (WeakReference weak in dead)
+                    foreach (WeakReference weak in dead) {
                         _DataMap.Remove(weak);
+                    }
                 }
             };
             
@@ -90,15 +109,24 @@ namespace MonoMod.Utils {
                 }
 
                 object prev;
-                if (Disposable.Contains(name) && (prev = this[name]) != null && prev is IDisposable prevDisposable)
+                if (_Data.Disposable.Contains(name) && (prev = this[name]) != null && prev is IDisposable prevDisposable)
                     prevDisposable.Dispose();
                 Data[name] = value;
             }
         }
 
-        public DynData(TTarget obj) {
+        public DynData()
+            : this(null, false) {
+        }
+
+        public DynData(TTarget obj)
+            : this(obj, true) {
+        }
+
+        public DynData(TTarget obj, bool keepAlive) {
             if (obj != null) {
                 WeakReference weak = new WeakReference(obj);
+                
                 // Ideally this would be a "no GC region", but that's too new.
                 CreationsInProgress++;
                 lock (_DataMap) {
@@ -108,11 +136,15 @@ namespace MonoMod.Utils {
                     }
                 }
                 CreationsInProgress--;
+                
                 Weak = weak;
+                if (keepAlive)
+                    KeepAlive = obj;
 
             } else {
                 _Data = _DataStatic;
             }
+
             OnInitialize?.Invoke(this, obj);
         }
 
@@ -133,10 +165,7 @@ namespace MonoMod.Utils {
         }
 
         private void Dispose(bool disposing) {
-            foreach (string name in Disposable)
-                if (Data.TryGetValue(name, out object value) && value is IDisposable valueDisposable)
-                    valueDisposable.Dispose();
-            Data.Clear();
+            KeepAlive = default;
         }
 
         ~DynData() {
