@@ -68,9 +68,7 @@ namespace MonoMod.Utils.Cil {
 
         private int labelCounter;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
         public CecilILGenerator(ILProcessor il) {
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
             IL = il;
         }
 
@@ -85,7 +83,8 @@ namespace MonoMod.Utils.Cil {
         private FieldReference _(FieldInfo info) => IL.Body.Method.Module.ImportReference(info);
         private MethodReference _(MethodBase info) => IL.Body.Method.Module.ImportReference(info);
 
-        public override int ILOffset => throw new NotSupportedException();
+        private int _ILOffset;
+        public override int ILOffset => _ILOffset;
 
         private Instruction ProcessLabels(Instruction ins) {
             if (_LabelsToMark.Count != 0) {
@@ -170,7 +169,11 @@ namespace MonoMod.Utils.Cil {
             return handle;
         }
 
-        private void Emit(Instruction ins) => IL.Append(ProcessLabels(ins));
+        private void Emit(Instruction ins) {
+            ins.Offset = _ILOffset;
+            _ILOffset += ins.GetSize();
+            IL.Append(ProcessLabels(ins));
+        }
 
         public override void Emit(SRE.OpCode opcode) => Emit(IL.Create(_(opcode)));
 
@@ -221,7 +224,7 @@ namespace MonoMod.Utils.Cil {
             LabelInfo info = _(label);
             Instruction ins = IL.Create(_(opcode), _(label).Instruction);
             info.Branches.Add(ins);
-            IL.Append(ProcessLabels(ins));
+            Emit(ProcessLabels(ins));
         }
 
         public override void Emit(SRE.OpCode opcode, Label[] labels) {
@@ -229,7 +232,7 @@ namespace MonoMod.Utils.Cil {
             Instruction ins = IL.Create(_(opcode), labelInfos.Select(labelInfo => labelInfo.Instruction).ToArray());
             foreach (LabelInfo labelInfo in labelInfos)
                 labelInfo.Branches.Add(ins);
-            IL.Append(ProcessLabels(ins));
+            Emit(ProcessLabels(ins));
         }
 
         public override void Emit(SRE.OpCode opcode, LocalBuilder local) => Emit(IL.Create(_(opcode), _(local)));
