@@ -129,6 +129,14 @@ steps:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/*.nupkg'
     publishVstsFeed: '572c97eb-dbaa-4a55-90e5-1d05431535bd/72ad568d-c548-4599-8b0a-9ea52b45bbbd'
+- task: NuGetCommand@2
+  condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.pushNuGet, 'true'))
+  displayName: 'Artifacts: Push: MonoMod.Common to nuget.org'
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/MonoMod.Common.*.nupkg'
+    nuGetFeedType: 'external'
+    publishFeedCredentials: 'NuGet MonoMod'
 
 # Run tests.
 # I've tried to simplify this mess. It's impossible. --ade
