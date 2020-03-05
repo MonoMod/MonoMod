@@ -347,7 +347,15 @@ namespace MonoMod.RuntimeDetour {
                     // Prevent mono from inlining the DynamicMethod.
                     il.Emit(OpCodes.Nop);
                 }
-                il.Emit(OpCodes.Jmp, _ChainedTrampoline);
+
+                // Jmp and older versions of mono don't work well together.
+                // il.Emit(OpCodes.Jmp, _ChainedTrampoline);
+
+                // Manually call the target method instead.
+                for (int i = 0; i < argTypes.Length; i++)
+                    il.Emit(OpCodes.Ldarg, i);
+                il.Emit(OpCodes.Call, _ChainedTrampoline);
+                il.Emit(OpCodes.Ret);
 
                 return dmd.Generate();
             }

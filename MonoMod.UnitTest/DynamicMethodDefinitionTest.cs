@@ -34,6 +34,11 @@ namespace MonoMod.UnitTest {
                 patched = dmd.Generate();
             }
 
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
+                Assert.Equal(0, ((Func<int>) dmd.Generate().CreateDelegate(typeof(Func<int>)))());
+                Assert.Equal(0, ((Func<int>) DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
+            }
+
             // Run the DynamicMethod.
             Assert.Equal(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 2 }));
 
@@ -90,6 +95,12 @@ namespace MonoMod.UnitTest {
                 return Tuple.Create("", -1);
             }
             return Tuple.Create(StringOriginal, Counter);
+        }
+
+        public class ExampleGenericClass<T> {
+            public static T ExampleMethod() {
+                return default;
+            }
         }
 
         public static int TargetTest<T>(string a, string b, string c) {
