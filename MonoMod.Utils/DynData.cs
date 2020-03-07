@@ -82,7 +82,7 @@ namespace MonoMod.Utils {
 
                 MethodInfo set = prop.GetSetMethod(true);
                 if (set != null) {
-                    _SpecialSetters[name] = (obj, value) => set.Invoke(obj, _NoArgs);
+                    _SpecialSetters[name] = (obj, value) => set.Invoke(obj, new object[] { value });
                 }
             }
         }
