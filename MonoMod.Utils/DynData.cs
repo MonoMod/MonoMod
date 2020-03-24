@@ -54,7 +54,7 @@ namespace MonoMod.Utils {
                     HashSet<WeakReference> dead = new HashSet<WeakReference>();
 
                     foreach (KeyValuePair<WeakReference, _Data_> kvp in _DataMap) {
-                        if (kvp.Key.IsAlive)
+                        if (kvp.Key.SafeGetIsAlive())
                             continue;
                         dead.Add(kvp.Key);
                         kvp.Value.Free();
@@ -87,14 +87,14 @@ namespace MonoMod.Utils {
             }
         }
 
-        public bool IsAlive => Weak.IsAlive;
-        public TTarget Target => Weak.Target as TTarget;
+        public bool IsAlive => Weak.SafeGetIsAlive();
+        public TTarget Target => Weak.SafeGetTarget() as TTarget;
 
         public object this[string name] {
             get {
                 if (_SpecialGetters.TryGetValue(name, out Func<TTarget, object> cb) ||
                     Getters.TryGetValue(name, out cb))
-                    return cb(Weak.Target as TTarget);
+                    return cb(Weak.SafeGetTarget() as TTarget);
 
                 if (Data.TryGetValue(name, out object value))
                     return value;
@@ -104,7 +104,7 @@ namespace MonoMod.Utils {
             set {
                 if (_SpecialSetters.TryGetValue(name, out Action<TTarget, object> cb) ||
                     Setters.TryGetValue(name, out cb)) {
-                    cb(Weak.Target as TTarget, value);
+                    cb(Weak.SafeGetTarget() as TTarget, value);
                     return;
                 }
 
@@ -179,10 +179,10 @@ namespace MonoMod.Utils {
 
         private sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
             public override bool Equals(WeakReference x, WeakReference y)
-                => ReferenceEquals(x.Target, y.Target) && x.IsAlive == y.IsAlive;
+                => ReferenceEquals(x.SafeGetTarget(), y.SafeGetTarget()) && x.SafeGetIsAlive() == y.SafeGetIsAlive();
 
             public override int GetHashCode(WeakReference obj)
-                => obj.Target?.GetHashCode() ?? 0;
+                => obj.SafeGetTarget()?.GetHashCode() ?? 0;
         }
     }
 
@@ -195,6 +195,28 @@ namespace MonoMod.Utils {
             ~CollectionDummy() {
                 GC.ReRegisterForFinalize(this);
                 Collected?.Invoke();
+            }
+        }
+
+        internal static object SafeGetTarget(this WeakReference weak) {
+            try {
+                return weak.Target;
+            } catch (InvalidOperationException) {
+                // FUCK OLD UNITY MONO
+                // https://github.com/Unity-Technologies/mono/blob/unity-2017.4/mcs/class/corlib/System/WeakReference.cs#L96
+                // https://github.com/Unity-Technologies/mono/blob/unity-2017.4-mbe/mcs/class/corlib/System/WeakReference.cs#L94
+                // https://docs.microsoft.com/en-us/archive/blogs/yunjin/trivial-debugging-note-using-weakreference-in-finalizer
+                // "So on CLR V2.0 offical released build, you could safely use WeakReference in finalizer."
+                return null;
+            }
+        }
+
+        internal static bool SafeGetIsAlive(this WeakReference weak) {
+            try {
+                return weak.IsAlive;
+            } catch (InvalidOperationException) {
+                // See above FUCK OLD UNITY MONO note.
+                return false;
             }
         }
     }
