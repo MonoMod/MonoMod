@@ -71,7 +71,9 @@ steps:
   displayName: 'Install .NET Core SDK 3.1.x'
   inputs:
     packageType: sdk
-    version: '3.1.x'
+# FIXME: Upgrade to 3.1.x once https://github.com/dotnet/sourcelink/issues/524 is fixed.
+# Example failing build with 3.1.200: https://dev.azure.com/MonoMod/MonoMod/_build/results?buildId=142&view=results
+    version: '3.1.102'
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Restore'
   inputs:
