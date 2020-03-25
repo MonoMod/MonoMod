@@ -159,7 +159,7 @@ namespace MonoMod.Utils.Cil {
                 ResolveEventHandler mmcResolver = (asmSender, asmArgs) => {
                     AssemblyName asmName = new AssemblyName(asmArgs.Name);
                     if (asmName.Name == typeof(ILGeneratorBuilder).Assembly.GetName().Name)
-                        return asm;
+                        return typeof(ILGeneratorBuilder).Assembly;
                     return null;
                 };
 
