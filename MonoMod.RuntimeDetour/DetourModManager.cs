@@ -43,7 +43,9 @@ namespace MonoMod.RuntimeDetour {
             Disposed = true;
 
             OwnedDetourLists.Clear();
-            
+
+            ILHook.OnDetour -= RegisterILHook;
+            ILHook.OnUndo -= UnregisterDetour;
             Hook.OnDetour -= RegisterHook;
             Hook.OnUndo -= UnregisterDetour;
             Detour.OnDetour -= RegisterDetour;
