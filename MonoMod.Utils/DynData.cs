@@ -188,12 +188,41 @@ namespace MonoMod.Utils {
 
     internal static class _DataHelper_ {
         public static event Action Collected;
+        private static bool Unloading;
+
         static _DataHelper_() {
             new CollectionDummy();
+
+#if NETSTANDARD
+            Type t_AssemblyLoadContext = typeof(Assembly).GetTypeInfo().Assembly.GetType("System.Runtime.Loader.AssemblyLoadContext");
+            if (t_AssemblyLoadContext != null) {
+                object alc = t_AssemblyLoadContext.GetMethod("GetLoadContext").Invoke(null, new object[] { typeof(_DataHelper_).Assembly });
+                EventInfo e_Unloading = t_AssemblyLoadContext.GetEvent("Unloading");
+                e_Unloading.AddEventHandler(alc, Delegate.CreateDelegate(
+                    e_Unloading.EventHandlerType,
+                    typeof(_DataHelper_).GetMethod("UnloadingALC", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(t_AssemblyLoadContext)
+                ));
+            }
+#endif
         }
+
+#if NETSTANDARD
+#pragma warning disable IDE0051 // Remove unused private members
+#pragma warning disable IDE0060 // Remove unused parameter
+        private static void UnloadingALC<T>(T alc) {
+#pragma warning restore IDE0051 // Remove unused private members
+#pragma warning restore IDE0060 // Remove unused parameter
+            Unloading = true;
+        }
+#endif
+
         private sealed class CollectionDummy {
             ~CollectionDummy() {
-                GC.ReRegisterForFinalize(this);
+                Unloading |= AppDomain.CurrentDomain.IsFinalizingForUnload();
+
+                if (!Unloading)
+                    GC.ReRegisterForFinalize(this);
+
                 Collected?.Invoke();
             }
         }
