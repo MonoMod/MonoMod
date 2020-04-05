@@ -25,4 +25,11 @@
   <ItemGroup>
     <Compile Include="..\MonoMod.Common\Utils\**\*.cs" />
   </ItemGroup>
+
+  <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>MonoMod.Utils.Cil.ILGeneratorProxy</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
