@@ -22,4 +22,11 @@
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>
+
+  <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>MonoMod.Utils.Cil.ILGeneratorProxy</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

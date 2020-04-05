@@ -48,6 +48,7 @@ namespace MonoMod.Utils.Cil {
 
         internal static class ILGeneratorBuilder {
 
+            // NOTE: If you plan on changing this, keep in mind that any InternalsVisibleToAttributes need to be updated as well!
             public const string Namespace = "MonoMod.Utils.Cil";
             public const string Name = "ILGeneratorProxy";
             public const string FullName = Namespace + "." + Name;
@@ -111,6 +112,12 @@ namespace MonoMod.Utils.Cil {
                     );
                     type.Fields.Add(fd_Target);
 
+
+                    GenericInstanceType git = new GenericInstanceType(type);
+                    git.GenericArguments.Add(g_TTarget);
+
+                    FieldReference fr_Target = new FieldReference(TargetName, g_TTarget, git);
+
                     MethodDefinition ctor = new MethodDefinition(".ctor",
                         MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                         module.TypeSystem.Void
@@ -121,7 +128,7 @@ namespace MonoMod.Utils.Cil {
                     ILProcessor il = ctor.Body.GetILProcessor();
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldarg_1);
-                    il.Emit(OpCodes.Stfld, fd_Target);
+                    il.Emit(OpCodes.Stfld, fr_Target);
                     il.Emit(OpCodes.Ret);
 
                     foreach (MethodInfo orig in t_ILGenerator.GetMethods(BindingFlags.Public | BindingFlags.Instance)) {
@@ -142,7 +149,7 @@ namespace MonoMod.Utils.Cil {
 
                         il = proxy.Body.GetILProcessor();
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, fd_Target);
+                        il.Emit(OpCodes.Ldfld, fr_Target);
                         foreach (ParameterDefinition param in proxy.Parameters)
                             il.Emit(OpCodes.Ldarg, param);
                         il.Emit(target.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, il.Body.Method.Module.ImportReference(target));
