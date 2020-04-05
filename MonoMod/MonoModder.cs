@@ -90,7 +90,6 @@ namespace MonoMod {
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
 
         public bool LogVerboseEnabled;
-        public bool RelinkerCacheEnabled;
         public bool CleanupEnabled;
         public bool PublicEverything;
 
@@ -230,7 +229,6 @@ namespace MonoMod {
                 }
             }
             LogVerboseEnabled = Environment.GetEnvironmentVariable("MONOMOD_LOG_VERBOSE") == "1";
-            RelinkerCacheEnabled = Environment.GetEnvironmentVariable("MONOMOD_RELINKER_CACHED") == "1";
             CleanupEnabled = Environment.GetEnvironmentVariable("MONOMOD_CLEANUP") != "0";
             PublicEverything = Environment.GetEnvironmentVariable("MONOMOD_PUBLIC_EVERYTHING") == "1";
             PreventInline = Environment.GetEnvironmentVariable("MONOMOD_PREVENTINLINE") == "1";
@@ -1909,8 +1907,14 @@ namespace MonoMod {
                 }
             }
             LogVerbose("[MonoModOriginal] Adding MonoMod.MonoModOriginal");
+            TypeReference tr_Attribute = FindType("System.Attribute");
+            if (tr_Attribute != null) {
+                tr_Attribute = Module.ImportReference(tr_Attribute);
+            } else {
+                tr_Attribute = Module.ImportReference(typeof(Attribute));
+            }
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModOriginal", TypeAttributes.Public | TypeAttributes.Class) {
-                BaseType = Module.ImportReference(typeof(Attribute))
+                BaseType = tr_Attribute
             };
             _mmOriginalCtor = new MethodDefinition(".ctor",
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
@@ -1918,9 +1922,10 @@ namespace MonoMod {
             );
             _mmOriginalCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
-            )));
+            _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, new MethodReference(
+                ".ctor", Module.TypeSystem.Void, tr_Attribute) {
+                HasThis = false
+            }));
             _mmOriginalCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmOriginalCtor);
             Module.Types.Add(attrType);
@@ -1949,8 +1954,14 @@ namespace MonoMod {
                 }
             }
             LogVerbose("[MonoModOriginalName] Adding MonoMod.MonoModOriginalName");
+            TypeReference tr_Attribute = FindType("System.Attribute");
+            if (tr_Attribute != null) {
+                tr_Attribute = Module.ImportReference(tr_Attribute);
+            } else {
+                tr_Attribute = Module.ImportReference(typeof(Attribute));
+            }
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModOriginalName", TypeAttributes.Public | TypeAttributes.Class) {
-                BaseType = Module.ImportReference(typeof(Attribute))
+                BaseType = tr_Attribute
             };
             _mmOriginalNameCtor = new MethodDefinition(".ctor",
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
@@ -1959,9 +1970,10 @@ namespace MonoMod {
             _mmOriginalNameCtor.Parameters.Add(new ParameterDefinition("n", ParameterAttributes.None, Module.TypeSystem.String));
             _mmOriginalNameCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-            _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
-            )));
+            _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, new MethodReference(
+                ".ctor", Module.TypeSystem.Void, tr_Attribute) {
+                HasThis = false
+            }));
             _mmOriginalNameCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmOriginalNameCtor);
             Module.Types.Add(attrType);
@@ -1990,8 +2002,14 @@ namespace MonoMod {
                 }
             }
             LogVerbose("[MonoModAdded] Adding MonoMod.MonoModAdded");
+            TypeReference tr_Attribute = FindType("System.Attribute");
+            if (tr_Attribute != null) {
+                tr_Attribute = Module.ImportReference(tr_Attribute);
+            } else {
+                tr_Attribute = Module.ImportReference(typeof(Attribute));
+            }
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModAdded", TypeAttributes.Public | TypeAttributes.Class) {
-                BaseType = Module.ImportReference(typeof(Attribute))
+                BaseType = tr_Attribute
             };
             _mmAddedCtor = new MethodDefinition(".ctor",
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
@@ -1999,9 +2017,10 @@ namespace MonoMod {
             );
             _mmAddedCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-            _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
-            )));
+            _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, new MethodReference(
+                ".ctor", Module.TypeSystem.Void, tr_Attribute) {
+                HasThis = false
+            }));
             _mmAddedCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmAddedCtor);
             Module.Types.Add(attrType);
@@ -2030,8 +2049,14 @@ namespace MonoMod {
                 }
             }
             LogVerbose("[MonoModPatch] Adding MonoMod.MonoModPatch");
+            TypeReference tr_Attribute = FindType("System.Attribute");
+            if (tr_Attribute != null) {
+                tr_Attribute = Module.ImportReference(tr_Attribute);
+            } else {
+                tr_Attribute = Module.ImportReference(typeof(Attribute));
+            }
             attrType = attrType ?? new TypeDefinition("MonoMod", "MonoModPatch", TypeAttributes.Public | TypeAttributes.Class) {
-                BaseType = Module.ImportReference(typeof(Attribute))
+                BaseType = tr_Attribute
             };
             _mmPatchCtor = new MethodDefinition(".ctor",
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
@@ -2040,9 +2065,10 @@ namespace MonoMod {
             _mmPatchCtor.Parameters.Add(new ParameterDefinition("name", ParameterAttributes.None, Module.TypeSystem.String));
             _mmPatchCtor.MetadataToken = GetMetadataToken(TokenType.Method);
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-            _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, Module.ImportReference(
-                typeof(Attribute).GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)[0]
-            )));
+            _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, new MethodReference(
+                ".ctor", Module.TypeSystem.Void, tr_Attribute) {
+                HasThis = false
+            }));
             _mmPatchCtor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
             attrType.Methods.Add(_mmPatchCtor);
             Module.Types.Add(attrType);
