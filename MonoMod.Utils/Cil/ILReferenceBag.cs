@@ -169,7 +169,8 @@ namespace MonoMod.Cil {
             }
 
             public static MethodInfo GetInvoker(MethodInfo signature) {
-                if ((signature.ReturnTypeCustomAttributes.GetCustomAttributes(true)?.Length ?? 0) > 0)
+                if ((signature.ReturnTypeCustomAttributes.GetCustomAttributes(true)?.Length ?? 0) > 0 ||
+                    signature.ReturnType.IsByRef || signature.ReturnType.IsMarshalByRef)
                     return null;
 
                 bool isFunc = signature.ReturnType != typeof(void);
@@ -182,7 +183,9 @@ namespace MonoMod.Cil {
                 for (int i = 0; i < numParams; i++) {
                     ParameterInfo sigParam = sigParams[i];
                     if (sigParam.Attributes != System.Reflection.ParameterAttributes.None ||
-                        (sigParam.GetCustomAttributes(true)?.Length ?? 0) > 0)
+                        (sigParam.GetCustomAttributes(true)?.Length ?? 0) > 0 ||
+                        // In, Out, Lcid and Retval are ParameterAttributes - ref isn't.
+                        sigParam.ParameterType.IsByRef || sigParam.ParameterType.IsMarshalByRef)
                         return null;
 
                     genericParams[i] = sigParam.ParameterType;
