@@ -1,14 +1,14 @@
 ﻿#if !NETFRAMEWORK3
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-    public sealed class DynamicData : DynamicObject {
-
-        private static int CreationsInProgress = 0;
+    public sealed class DynamicData : DynamicObject, IEnumerable<KeyValuePair<string, object>> {
 
         private static readonly object[] _NoArgs = new object[0];
 
@@ -16,7 +16,7 @@ namespace MonoMod.Utils {
 
         private static readonly Dictionary<Type, _Cache_> _CacheMap = new Dictionary<Type, _Cache_>();
         private static readonly Dictionary<Type, _Data_> _DataStaticMap = new Dictionary<Type, _Data_>();
-        private static readonly Dictionary<WeakReference, _Data_> _DataMap = new Dictionary<WeakReference, _Data_>(new WeakReferenceComparer());
+        private static readonly ConditionalWeakTable<object, _Data_> _DataMap = new ConditionalWeakTable<object, _Data_>();
 
         private readonly WeakReference Weak;
         private object KeepAlive;
@@ -90,27 +90,6 @@ namespace MonoMod.Utils {
         public Dictionary<string, Func<object, object[], object>> Methods => _Data.Methods;
         public Dictionary<string, object> Data => _Data.Data;
 
-        static DynamicData() {
-            _DataHelper_.Collected += () => {
-                if (CreationsInProgress != 0)
-                    return;
-
-                lock (_DataMap) {
-                    HashSet<WeakReference> dead = new HashSet<WeakReference>();
-
-                    foreach (KeyValuePair<WeakReference, _Data_> kvp in _DataMap) {
-                        if (kvp.Key.SafeGetIsAlive())
-                            continue;
-                        dead.Add(kvp.Key);
-                    }
-
-                    foreach (WeakReference weak in dead) {
-                        _DataMap.Remove(weak);
-                    }
-                }
-            };
-        }
-
         public bool IsAlive => Weak.SafeGetIsAlive();
         public object Target => Weak.SafeGetTarget();
         public Type TargetType { get; private set; }
@@ -138,19 +117,14 @@ namespace MonoMod.Utils {
             }
 
             if (obj != null) {
-                WeakReference weak = new WeakReference(obj);
-                
-                // Ideally this would be a "no GC region", but that's too new.
-                CreationsInProgress++;
                 lock (_DataMap) {
-                    if (!_DataMap.TryGetValue(weak, out _Data)) {
+                    if (!_DataMap.TryGetValue(obj, out _Data)) {
                         _Data = new _Data_(type);
-                        _DataMap.Add(weak, _Data);
+                        _DataMap.Add(obj, _Data);
                     }
                 }
-                CreationsInProgress--;
                 
-                Weak = weak;
+                Weak = new WeakReference(obj);
                 if (keepAlive)
                     KeepAlive = obj;
 
@@ -185,18 +159,8 @@ namespace MonoMod.Utils {
         }
 
         public object Get(string name) {
-            object target = Target;
-
-            if (_Data.Getters.TryGetValue(name, out Func<object, object> cb))
-                return cb(target);
-
-            if (_Cache.Getters.TryGetValue(name, out cb))
-                return cb(target);
-
-            if (_Data.Data.TryGetValue(name, out object value))
-                return value;
-
-            return null;
+            TryGet(name, out object value);
+            return value;
         }
 
         public bool TryGet(string name, out object value) {
@@ -245,8 +209,46 @@ namespace MonoMod.Utils {
             Data[name] = value;
         }
 
+        public void Add(KeyValuePair<string, object> kvp) {
+            Set(kvp.Key, kvp.Value);
+        }
+
+        public void Add(string key, object value) {
+            Set(key, value);
+        }
+
+        public object Invoke(string name, params object[] args) {
+            TryInvoke(name, args, out object result);
+            return result;
+        }
+
+        public bool TryInvoke(string name, object[] args, out object result) {
+            if (_Data.Methods.TryGetValue(name, out Func<object, object[], object> cb)) {
+                result = cb(Target, args);
+                return true;
+            }
+
+            if (_Cache.Methods.TryGetValue(name, out cb)) {
+                result = cb(Target, args);
+                return true;
+            }
+
+            result = null;
+            return false;
+        }
+
+        public T Invoke<T>(string name, params object[] args) {
+            return (T) Invoke(name, args);
+        }
+
+        public bool TryInvoke<T>(string name, object[] args, out T result) {
+            bool rv = TryInvoke(name, args, out object _result);
+            result = (T) _result;
+            return rv;
+        }
+
         private void Dispose(bool disposing) {
-            KeepAlive = default;
+            KeepAlive = null;
         }
 
         ~DynamicData() {
@@ -256,14 +258,6 @@ namespace MonoMod.Utils {
         public void Dispose() {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-        private sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
-            public override bool Equals(WeakReference x, WeakReference y)
-                => ReferenceEquals(x.SafeGetTarget(), y.SafeGetTarget()) && x.SafeGetIsAlive() == y.SafeGetIsAlive();
-
-            public override int GetHashCode(WeakReference obj)
-                => obj.SafeGetTarget()?.GetHashCode() ?? 0;
         }
 
 
@@ -310,18 +304,21 @@ namespace MonoMod.Utils {
         }
 
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
-            if (_Data.Methods.TryGetValue(binder.Name, out Func<object, object[], object> cb)) {
-                result = cb(Target, args);
-                return true;
-            }
+            return TryInvoke(binder.Name, args, out result);
+        }
 
-            if (_Cache.Methods.TryGetValue(binder.Name, out cb)) {
-                result = cb(Target, args);
-                return true;
-            }
+        public IEnumerator<KeyValuePair<string, object>> GetEnumerator() {
+            foreach (string name
+                in _Data.Data.Keys
+                .Union(_Data.Getters.Keys)
+                .Union(_Data.Setters.Keys)
+                .Union(_Cache.Getters.Keys)
+                .Union(_Cache.Setters.Keys))
+                yield return new KeyValuePair<string, object>(name, Get(name));
+        }
 
-            result = null;
-            return false;
+        IEnumerator IEnumerable.GetEnumerator() {
+            return GetEnumerator();
         }
 
     }

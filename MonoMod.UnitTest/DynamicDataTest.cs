@@ -33,6 +33,14 @@ namespace MonoMod.UnitTest {
             Assert.Equal(6, data.PublicMethod(4, 2));
             Assert.Equal(2, data.PrivateMethod(4, 2));
             Assert.Equal(8, data.NewMethod(4, 2));
+
+            Assert.Equal("ABC", new DynamicData(dummy).Get<string>("New"));
+            Assert.Equal(8, new DynamicData(dummy).Invoke<int>("NewMethod", 4, 2));
+
+            new DynamicData(dummy) {
+                { "Hello", "World!" }
+            };
+            Assert.Equal("World!", new DynamicData(dummy).Get<string>("Hello"));
         }
 
         public class Dummy {
