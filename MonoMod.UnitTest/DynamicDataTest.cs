@@ -41,6 +41,27 @@ namespace MonoMod.UnitTest {
                 { "Hello", "World!" }
             };
             Assert.Equal("World!", new DynamicData(dummy).Get<string>("Hello"));
+
+            Assert.Equal(dummy, DynamicData.Set(dummy, new {
+                A = 10,
+                Other = "New"
+            }));
+            Assert.Equal(10, dummy.A);
+            Assert.Equal("New", data.Other);
+
+            data.CopyFrom(new {
+                A = 20,
+                Other = "Newer"
+            });
+            Assert.Equal(20, dummy.A);
+            Assert.Equal("Newer", data.Other);
+
+            dummy = DynamicData.New<Dummy>()(new {
+                A = 30,
+                Other = "Newest"
+            });
+            Assert.Equal(30, dummy.A);
+            Assert.Equal("Newest", new DynamicData(dummy).Get<string>("Other"));
         }
 
         public class Dummy {

@@ -140,6 +140,42 @@ namespace MonoMod.Utils {
             OnInitialize?.Invoke(this, type, obj);
         }
 
+        public static Func<object, T> New<T>(params object[] args) {
+            T target = (T) Activator.CreateInstance(typeof(T), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null);
+            return other => Set(target, other);
+        }
+
+        public static Func<object, object> New(Type type, params object[] args) {
+            object target = Activator.CreateInstance(type, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null);
+            return other => Set(target, other);
+        }
+
+        public static Func<object, dynamic> NewWrap<T>(params object[] args) {
+            T target = (T) Activator.CreateInstance(typeof(T), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null);
+            return other => Wrap(target, other);
+        }
+
+        public static Func<object, dynamic> NewWrap(Type type, params object[] args) {
+            object target = Activator.CreateInstance(type, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null);
+            return other => Wrap(target, other);
+        }
+
+        public static dynamic Wrap(object target, object other = null) {
+            DynamicData data = new DynamicData(target);
+            data.CopyFrom(other);
+            return data;
+        }
+
+        public static T Set<T>(T target, object other = null) {
+            return (T) Set((object) target, other);
+        }
+
+        public static object Set(object target, object other = null) {
+            DynamicData data = new DynamicData(target);
+            data.CopyFrom(other);
+            return data.Target;
+        }
+
         public void RegisterProperty(string name, Func<object, object> getter, Action<object, object> setter) {
             Getters[name] = getter;
             Setters[name] = setter;
@@ -156,6 +192,13 @@ namespace MonoMod.Utils {
 
         public void UnregisterMethod(string name) {
             Methods.Remove(name);
+        }
+
+        public void CopyFrom(object other) {
+            if (other == null)
+                return;
+            foreach (PropertyInfo prop in other.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                Set(prop.Name, prop.GetValue(other, null));
         }
 
         public object Get(string name) {
@@ -273,7 +316,9 @@ namespace MonoMod.Utils {
 
         public override bool TryConvert(ConvertBinder binder, out object result) {
             if (TargetType.IsCompatible(binder.Type) ||
-                TargetType.IsCompatible(binder.ReturnType)) {
+                TargetType.IsCompatible(binder.ReturnType) ||
+                binder.Type == typeof(object) ||
+                binder.ReturnType == typeof(object)) {
                 result = Target;
                 return true;
             }
