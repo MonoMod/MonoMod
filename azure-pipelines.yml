@@ -15,7 +15,7 @@ strategy:
       artifactPrefix: '~dbg.linux-core.'
       artifactSuffix: ''
       builder: 'core'
-      testers: ';core2;core3;core3.1;'
+      testers: ';core2;core3;core3.1;core5;'
       generateDocFX: 'false'
       pushNuGet: 'false'
     linux-mono:
@@ -33,7 +33,7 @@ strategy:
       artifactPrefix: '~dbg.macos-core.'
       artifactSuffix: ''
       builder: 'core'
-      testers: ';mono;core2;core3;core3.1;'
+      testers: ';mono;core2;core3;core3.1;core5;'
       generateDocFX: 'false'
       pushNuGet: 'false'
   maxParallel: 4
@@ -74,6 +74,15 @@ steps:
 # FIXME: Upgrade to 3.1.x once https://github.com/dotnet/sourcelink/issues/524 is fixed.
 # Example failing build with 3.1.200: https://dev.azure.com/MonoMod/MonoMod/_build/results?buildId=142&view=results
     version: '3.1.102'
+- task: UseDotNet@2
+# FIXME: Always install .NET 5 once https://github.com/dotnet/sourcelink/issues/524 is fixed.
+  condition: contains(variables.testers, ';core5;')
+  displayName: 'Install .NET Core SDK 5.0.x'
+  inputs:
+    packageType: sdk
+    version: '5.0.x'
+# FIXME: Remove includePreviewVersions once .NET 5.0 releases.
+    includePreviewVersions: true
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Restore'
   inputs:
@@ -206,6 +215,19 @@ steps:
     testResultsFormat: 'VSTest'
     testResultsFiles: '**/testresults.core.netcoreapp3.1.trx'
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.1'
+
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core5;'))
+  displayName: 'Test: core: netcoreapp5.0'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp5.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp5.0.trx"'
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';core5;'))
+  displayName: 'Test: Publish: core: netcoreapp5.0'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.netcoreapp5.0.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp5.0'
 
 # Rebuild and publish the DocFX page.
 - task: PowerShell@2
