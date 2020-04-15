@@ -29,8 +29,9 @@
     <IsNETFramework>false</IsNETFramework>
     <IsNETStandard>false</IsNETStandard>
 
-    <MonoModSourceLink Condition="'$(MonoModSourceLink)' == '' And '$(MSBuildRuntimeType)' != 'Core'">false</MonoModSourceLink>
-    <MonoModSourceLink Condition="'$(MonoModSourceLink)' == ''">true</MonoModSourceLink>
+    <!-- FIXME: Remove MSBuildVersion check once https://github.com/dotnet/sourcelink/issues/524 is fixed. -->
+    <MonoModSourceLink Condition="'$(MonoModSourceLink)' == '' And '$(MSBuildRuntimeType)' == 'Core' And $(MSBuildVersion) &lt;= 16.4.0">true</MonoModSourceLink>
+    <MonoModSourceLink Condition="'$(MonoModSourceLink)' == ''">false</MonoModSourceLink>
 
     <MonoModSharedShims Condition="'$(MonoModSharedShims)' == ''">true</MonoModSharedShims>
 
