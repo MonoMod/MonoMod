@@ -74,6 +74,27 @@ namespace MonoMod.UnitTest {
             }
         }
 
+        [Fact]
+        public void TestStructToString() {
+            ColorRGBA c = new ColorRGBA() {
+                R = 1,
+                G = 2,
+                B = 3,
+                A = 4
+            };
+
+            IsHook = false;
+            Assert.Equal("1 2 3 4", c.ToString());
+
+            using (new Hook(
+                typeof(ColorRGBA).GetMethod("ToString"),
+                typeof(StructMagicTest).GetMethod("ToStringHook")
+            )) {
+                IsHook = true;
+                Assert.Equal("1 2 3 4 hooked", c.ToString());
+            }
+        }
+
         public static void CheckColor(Color c, byte r, byte g, byte b, byte a) {
             Assert.Equal(r, c.R);
             Assert.Equal(g, c.G);
@@ -126,6 +147,16 @@ namespace MonoMod.UnitTest {
             return !rv;
         }
 
+        public delegate string d_ToString(ref ColorRGBA self);
+        public static string ToStringHook(d_ToString orig, ref ColorRGBA self) {
+            Assert.True(IsHook);
+            IsHook = false;
+            string rv = orig(ref self);
+            IsHook = true;
+
+            return rv + " hooked";
+        }
+
         public struct Color {
             private uint packedValue;
 
@@ -165,6 +196,12 @@ namespace MonoMod.UnitTest {
                     R = A;
                     return A == 0;
                 }
+            }
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            public override string ToString() {
+                Assert.False(IsHook);
+                return $"{R} {G} {B} {A}";
             }
         }
 
