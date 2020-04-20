@@ -29,7 +29,7 @@ namespace MonoMod.UnitTest {
 #else
                         case Runtime.Core:
                             matchRuntime = true;
-                            return;
+                            break;
 #endif
 
                         default:

@@ -20,7 +20,7 @@ namespace MonoMod.UnitTest {
             private bool h1Run;
             private bool hILRun;
 
-            [Fact]
+            [SkipRemoteLinuxMonoFact]
             public void OnThenIL() {
                 h1 = new Hook(
                     typeof(OnIL).GetMethod("DoNothing"),
@@ -53,7 +53,7 @@ namespace MonoMod.UnitTest {
                 hIL.Dispose();
             }
 
-            [Fact]
+            [SkipRemoteLinuxMonoFact]
             public void ILThenOn() {
                 hIL = new ILHook(
                     typeof(OnIL).GetMethod("DoNothing"),
@@ -99,7 +99,7 @@ namespace MonoMod.UnitTest {
             private bool h2Run;
             private bool hILRun;
 
-            [Fact]
+            [SkipRemoteLinuxMonoFact]
             public void OnThenOnThenIL() {
                 h1 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -145,7 +145,7 @@ namespace MonoMod.UnitTest {
                 hIL.Dispose();
             }
 
-            [Fact]
+            [SkipRemoteLinuxMonoFact]
             public void OnThenILThenOn() {
                 h1 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -191,7 +191,7 @@ namespace MonoMod.UnitTest {
                 hIL.Dispose();
             }
 
-            [Fact]
+            [SkipRemoteLinuxMonoFact]
             public void ILThenOnThenOn() {
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),

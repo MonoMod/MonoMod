@@ -55,7 +55,7 @@ namespace MonoMod.UnitTest {
             hILRun = false;
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void DoNothingTest() {
             Setup();
             DoNothing();
@@ -65,7 +65,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void H1() {
             Setup();
             h1.Apply();
@@ -77,7 +77,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void H2() {
             Setup();
             h2.Apply();
@@ -88,7 +88,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void HIL() {
             Setup();
             hIL.Apply();
@@ -100,7 +100,7 @@ namespace MonoMod.UnitTest {
         }
 
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void HILH1() {
             Setup();
             hIL.Apply();
@@ -113,7 +113,7 @@ namespace MonoMod.UnitTest {
         }
 
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void HILH1H2() {
             Setup();
             hIL.Apply();
@@ -127,7 +127,7 @@ namespace MonoMod.UnitTest {
         }
 
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void HILH2H1() {
             Setup();
             hIL.Apply();
@@ -140,7 +140,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void H1H2HIL() {
             Setup();
             h1.Apply();
@@ -153,7 +153,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void H2H1HIL() {
             Setup();
             h2.Apply();
@@ -166,7 +166,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void H2HIL() {
             Setup();
             h2.Apply();
@@ -180,7 +180,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void H1HILH2() {
             Setup();
             h1.Apply();
@@ -193,7 +193,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void H1HIL() {
             Setup();
             h1.Apply();
@@ -205,7 +205,7 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        [Fact]
+        [SkipRemoteLinuxMonoFact]
         public void HILH2() {
             Setup();
             hIL.Apply();

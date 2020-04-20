@@ -24,7 +24,7 @@ strategy:
       artifactPrefix: '~dbg.linux-mono.'
       artifactSuffix: ''
       builder: 'mono'
-      testers: ';mono;'
+      testers: ';monoslow;'
       generateDocFX: 'false'
       pushNuGet: 'false'
     macos:
@@ -42,7 +42,7 @@ variables:
   solution: '**/*.sln'
   buildConfiguration: 'Release'
   buildPlatform: 'Any CPU'
-  xunit: '{0}{1}/.nuget/packages/xunit.runner.console/2.4.1/tools/{2}/xunit.console.{3} MonoMod.UnitTest/bin/Release/{2}/MonoMod.UnitTest.dll -xml testresults.{4}.{2}.xml'
+  xunit: '{0}{1}/.nuget/packages/xunit.runner.console/2.4.1/tools/{2}/xunit.console.{3} MonoMod.UnitTest/bin/Release/{2}/MonoMod.UnitTest.dll -xml testresults.{4}.{2}.xml {5}'
 
 name: '$(Date:yy.MM.dd)$(Rev:.rr)'
 
@@ -52,7 +52,7 @@ pool:
 steps:
 - checkout: self 
   clean: false
-  fetchDepth: 1
+  fetchDepth: 2
   lfs: false
   submodules: recursive
 
@@ -140,6 +140,13 @@ steps:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/*.nupkg'
     publishVstsFeed: '572c97eb-dbaa-4a55-90e5-1d05431535bd/72ad568d-c548-4599-8b0a-9ea52b45bbbd'
+- task: PowerShell@2
+  condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.pushNuGet, 'true'))
+  displayName: 'Artifacts: Prepare: MonoMod.Common to nuget.org'
+  continueOnError: true
+  inputs:
+    filePath: 'azure-pipelines-prepushcommon.ps1'
+    arguments: '$(Build.ArtifactStagingDirectory)/nupkgs/MonoMod.Common.*.nupkg'
 - task: NuGetCommand@2
   condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.pushNuGet, 'true'))
   displayName: 'Artifacts: Push: MonoMod.Common to nuget.org'
@@ -155,7 +162,7 @@ steps:
   condition: and(always(), contains(variables.testers, ';fx;'))
   displayName: 'Test: fx: net452'
   inputs:
-    script: ${{format(variables.xunit, '', '%userprofile%', 'net452', 'exe', 'fx')}}
+    script: ${{format(variables.xunit, '', '%userprofile%', 'net452', 'exe', 'fx', '')}}
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';fx;'))
   displayName: 'Test: Publish: fx: net452'
@@ -168,7 +175,7 @@ steps:
   condition: and(always(), contains(variables.testers, ';mono;'))
   displayName: 'Test: mono: net452'
   inputs:
-    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'mono')}}
+    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'mono', '')}}
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';mono;'))
   displayName: 'Test: Publish: mono: net452'
@@ -176,6 +183,19 @@ steps:
     testResultsFormat: 'xUnit'
     testResultsFiles: '**/testresults.mono.net452.xml'
     testRunTitle: 'Tests @ $(jobArchName) mono net452'
+
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';monoslow;'))
+  displayName: 'Test: monoslow: net452'
+  inputs:
+    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'monoslow', '-parallel none -appdomains denied -verbose')}}
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';monoslow;'))
+  displayName: 'Test: Publish: monoslow: net452'
+  inputs:
+    testResultsFormat: 'xUnit'
+    testResultsFiles: '**/testresults.monoslow.net452.xml'
+    testRunTitle: 'Tests @ $(jobArchName) monoslow net452'
 
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core2;'))
