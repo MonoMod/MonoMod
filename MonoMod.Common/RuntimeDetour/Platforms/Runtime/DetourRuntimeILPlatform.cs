@@ -116,16 +116,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         #endregion
 
-        protected virtual IntPtr GetFunctionPointer(RuntimeMethodHandle handle)
+        protected virtual IntPtr GetFunctionPointer(MethodBase method, RuntimeMethodHandle handle)
             => handle.GetFunctionPointer();
 
-        protected virtual void PrepareMethod(RuntimeMethodHandle handle)
+        protected virtual void PrepareMethod(MethodBase method, RuntimeMethodHandle handle)
             => RuntimeHelpers.PrepareMethod(handle);
 
-        protected virtual void PrepareMethod(RuntimeMethodHandle handle, RuntimeTypeHandle[] instantiation)
+        protected virtual void PrepareMethod(MethodBase method, RuntimeMethodHandle handle, RuntimeTypeHandle[] instantiation)
             => RuntimeHelpers.PrepareMethod(handle, instantiation);
 
-        protected virtual void DisableInlining(RuntimeMethodHandle handle) {
+        protected virtual void DisableInlining(MethodBase method, RuntimeMethodHandle handle) {
             // no-op. Not supported on all platforms, but throwing an exception doesn't make sense.
         }
 
@@ -135,8 +135,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
             lock (PinnedMethods)
                 pinGot = PinnedMethods.TryGetValue(method, out pin);
             if (pinGot)
-                return GetFunctionPointer(pin.Handle);
-            return GetFunctionPointer(GetMethodHandle(method));
+                return GetFunctionPointer(method, pin.Handle);
+            return GetFunctionPointer(method, GetMethodHandle(method));
         }
 
         public void Pin(MethodBase method) {
@@ -150,11 +150,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 pin.Count = 1;
                 RuntimeMethodHandle handle = pin.Handle = GetMethodHandle(method);
                 if (method.DeclaringType?.IsGenericType ?? false) {
-                    PrepareMethod(handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
+                    PrepareMethod(method, handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
                 } else {
-                    PrepareMethod(handle);
+                    PrepareMethod(method, handle);
                 }
-                DisableInlining(handle);
+                DisableInlining(method, handle);
                 PinnedMethods[method] = pin;
             }
         }

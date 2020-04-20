@@ -60,8 +60,27 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return method.MethodHandle;
         }
 
-        protected override void DisableInlining(RuntimeMethodHandle handle) {
+        protected override void DisableInlining(MethodBase method, RuntimeMethodHandle handle) {
             // This is not needed for .NET Framework - see DisableInliningTest.
+        }
+
+        protected override unsafe IntPtr GetFunctionPointer(MethodBase method, RuntimeMethodHandle handle) {
+            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
+                /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
+                 * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation
+                 *
+                 * Observations made so far:
+                 * - GetFunctionPointer ALWAYS returns a pointer to the unboxing stub handle.
+                 * - On x86, the "real" entry point is often found 8 bytes after the unboxing stub entry point.
+                 * - Methods WILL be called INDIRECTLY using the pointer found in the "real" MethodDesc.
+                 * - The "real" MethodDesc will be updated, which isn't an issue except that we can't patch the stub in time.
+                 * - The "real" stub will stay untouched.
+                 * - LDFTN RETURNS A POINTER TO THE "REAL" ENTRY POINT.
+                 */
+                return method.GetLdftnPointer();
+            }
+
+            return base.GetFunctionPointer(method, handle);
         }
     }
 }

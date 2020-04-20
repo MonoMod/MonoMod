@@ -107,8 +107,9 @@ namespace MonoMod.Utils {
         /// Get a native function pointer for a given method. This matches an IL-level ldftn.
         /// </summary>
         /// <remarks>
-        /// ldftn doesn't JIT-compile the method on mono, which thus keeps the class constructor untouched.
-        /// On the other hand, its result thus doesn't always match that of MethodHandle.GetFunctionPointer().
+        /// The result of ldftn doesn't always match that of MethodHandle.GetFunctionPointer().
+        /// For example, ldftn doesn't JIT-compile the method on mono, which thus keeps the class constructor untouched.
+        /// And on .NET, struct overrides (f.e. ToString) have got multiple entry points pointing towards the same code.
         /// </remarks>
         /// <param name="m">The method to get a native function pointer for.</param>
         /// <returns>The native function pointer.</returns>
@@ -118,7 +119,7 @@ namespace MonoMod.Utils {
 
             DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"GetLdftnPointer<{m.GetID(simple: true)}>",
-                typeof(int), Type.EmptyTypes
+                typeof(IntPtr), Type.EmptyTypes
             );
 
             ILProcessor il = dmd.GetILProcessor();
