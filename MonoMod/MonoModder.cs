@@ -1804,7 +1804,7 @@ namespace MonoMod {
 
 #region Default PostProcessor Pass
         public virtual void DefaultPostProcessor(MonoModder modder) {
-            foreach (TypeDefinition type in Module.Types)
+            foreach (TypeDefinition type in Module.Types.ToArray())
                 DefaultPostProcessType(type);
 
             if (CleanupEnabled)
@@ -1817,7 +1817,7 @@ namespace MonoMod {
 
             RunCustomAttributeHandlers(type);
 
-            foreach (EventDefinition eventDef in type.Events) {
+            foreach (EventDefinition eventDef in type.Events.ToArray()) {
                 if (PublicEverything || eventDef.HasCustomAttribute("MonoMod.MonoModPublic")) {
                     eventDef.SetPublic(true);
                     eventDef.AddMethod?.SetPublic(true);
@@ -1829,7 +1829,7 @@ namespace MonoMod {
                 RunCustomAttributeHandlers(eventDef);
             }
 
-            foreach (PropertyDefinition prop in type.Properties) {
+            foreach (PropertyDefinition prop in type.Properties.ToArray()) {
                 if (PublicEverything || prop.HasCustomAttribute("MonoMod.MonoModPublic")) {
                     prop.SetPublic(true);
                     prop.GetMethod?.SetPublic(true);
@@ -1841,7 +1841,7 @@ namespace MonoMod {
                 RunCustomAttributeHandlers(prop);
             }
 
-            foreach (MethodDefinition method in type.Methods) {
+            foreach (MethodDefinition method in type.Methods.ToArray()) {
                 if (PublicEverything || method.HasCustomAttribute("MonoMod.MonoModPublic"))
                     method.SetPublic(true);
 
@@ -1856,7 +1856,7 @@ namespace MonoMod {
                 RunCustomAttributeHandlers(method);
             }
 
-            foreach (FieldDefinition field in type.Fields) {
+            foreach (FieldDefinition field in type.Fields.ToArray()) {
                 if (PublicEverything || field.HasCustomAttribute("MonoMod.MonoModPublic"))
                     field.SetPublic(true);
 
@@ -1864,7 +1864,7 @@ namespace MonoMod {
             }
 
 
-            foreach (TypeDefinition nested in type.NestedTypes)
+            foreach (TypeDefinition nested in type.NestedTypes.ToArray())
                 DefaultPostProcessType(nested);
         }
 #endregion
