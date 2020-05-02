@@ -706,7 +706,7 @@ namespace MonoMod {
             if (!cap.HasCustomAttributes)
                 return;
 
-            foreach (CustomAttribute attrib in cap.CustomAttributes) {
+            foreach (CustomAttribute attrib in cap.CustomAttributes.ToArray()) {
                 if (CustomAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out Action<object, object[]> handler))
                     handler?.Invoke(null, new object[] { cap, attrib });
                 if (cap is MethodReference && CustomMethodAttributeHandlers.TryGetValue(attrib.AttributeType.FullName, out handler))
