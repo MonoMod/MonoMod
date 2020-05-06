@@ -486,8 +486,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 return OutputModule.TypeSystem.Object;
 
             // Check if the type and all of its parents are public.
+            // Generic return / param types are too complicated at the moment and will be simplified.
             for (TypeDefinition parent = type; parent != null; parent = parent.DeclaringType) {
-                if ((parent.IsNestedPublic || parent.IsPublic) && !parent.IsNotPublic)
+                if ((parent.IsNestedPublic || parent.IsPublic) && !parent.IsNotPublic && !parent.IsGenericInstance && !parent.HasGenericParameters)
                     continue;
                 // If it isn't public, ...
                 
