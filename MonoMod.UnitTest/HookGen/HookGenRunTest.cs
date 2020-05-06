@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using System.IO;
 using MonoMod.RuntimeDetour.HookGen;
+using System.Collections.Generic;
 
 namespace MonoMod.UnitTest {
     [Collection("HookGen")]
@@ -59,8 +60,18 @@ namespace MonoMod.UnitTest {
     }
 }
 
-namespace MonoMod.UnitTest.HookGenTrash {
-    // Taken from tModLoader.
+namespace MonoMod.UnitTest.HookGenTrash.Other {
+    class Dummy {
+        public List<int> A() => default;
+        public List<Dummy> B() => default;
+        public int C() => default;
+        public Dummy D() => default;
+        public T E<T>() => default;
+    }
+}
+
+// Taken from tModLoader. This just needs to not crash.
+namespace MonoMod.UnitTest.HookGenTrash.tModLoader {
     public class ItemDefinition {
     }
     class DefinitionOptionElement<T> where T : class {

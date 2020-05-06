@@ -476,19 +476,49 @@ namespace MonoMod.RuntimeDetour.HookGen {
             }
         }
 
+        bool IsPublic(TypeDefinition typeDef) {
+            return typeDef != null && (typeDef.IsNestedPublic || typeDef.IsPublic) && !typeDef.IsNotPublic;
+        }
+
+        bool HasPublicArgs(GenericInstanceType typeGen) {
+            foreach (TypeReference arg in typeGen.GenericArguments) {
+                // Generic parameter references are local.
+                if (arg.IsGenericParameter)
+                    return false;
+
+                if (arg is GenericInstanceType argGen && !HasPublicArgs(argGen))
+                    return false;
+
+                if (!IsPublic(arg.SafeResolve()))
+                    return false;
+            }
+
+            return true;
+        }
+
         TypeReference ImportVisible(TypeReference typeRef) {
             // Check if the declaring type is accessible.
             // If not, use its base type instead.
             // Note: This will break down with type specifications!
-            Retry:
             TypeDefinition type = typeRef?.SafeResolve();
+            goto Try;
+
+            Retry:
+            typeRef = type.BaseType;
+            type = typeRef?.SafeResolve();
+
+            Try:
             if (type == null) // Unresolvable - probably private anyway.
                 return OutputModule.TypeSystem.Object;
+
+            // Generic instance types are special. Try to match them exactly or baseify them.
+            if (typeRef is GenericInstanceType typeGen && !HasPublicArgs(typeGen))
+                goto Retry;
 
             // Check if the type and all of its parents are public.
             // Generic return / param types are too complicated at the moment and will be simplified.
             for (TypeDefinition parent = type; parent != null; parent = parent.DeclaringType) {
-                if ((parent.IsNestedPublic || parent.IsPublic) && !parent.IsNotPublic && !parent.IsGenericInstance && !parent.HasGenericParameters)
+                if (IsPublic(parent) && (parent == type || !parent.HasGenericParameters))
                     continue;
                 // If it isn't public, ...
                 
@@ -499,7 +529,6 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
 
                 // ... try the base type.
-                typeRef = type.BaseType;
                 goto Retry;
             }
 
