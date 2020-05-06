@@ -95,7 +95,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                  * Maybe this should be Native*Platform-ified in the future, but for now...
                  */
 
-                // FIXME: According to Azure, this works fine on .NET Core Linux and macOS up until .NET 5
+                // FIXME: .NET 5 introduces similar behavior on macOS and Linux, but this is incompatible.
 
                 long lptr = (long) ptr;
                 if (PlatformHelper.Is(Platform.ARM)) {
