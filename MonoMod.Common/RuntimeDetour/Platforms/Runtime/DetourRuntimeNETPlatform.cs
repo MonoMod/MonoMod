@@ -81,56 +81,62 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
 
 
-            /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
-             * When debugged using WinDbg, !dumpmd for the handle gives a different CodeAddr than ldftn or GetFunctionPointer.
-             * When using !ip2md on the ldftn / GetFunctionPointer result, no MD is found.
-             * There is only one MD, we're already accessing it, but we still can't access the "real" entry point.
-             * Luckily a jmp to it exists within the stub returned by GetFunctionPointer.
-             * Sadly detecting when to read it is... ugly, to say the least.
-             * This pretty much acts as the reverse of DetourNative*Platform.Apply
-             * Maybe this should be Native*Platform-ified in the future, but for now...
-             */
-
             IntPtr ptr = base.GetFunctionPointer(method, handle);
-            long lptr = (long) ptr;
-            if (PlatformHelper.Is(Platform.ARM)) {
-                // TODO: Debug detouring NGEN'd methods on ARM.
 
-            } else if (IntPtr.Size == 4) {
-                // x86
-                if (*(byte*) (lptr + 0x00) == 0xb8 && // mov ... (mscorlib_ni!???)
-                    *(byte*) (lptr + 0x05) == 0x90 && // nop
-                    *(byte*) (lptr + 0x06) == 0xe8 && // call ... (clr!PrecodeRemotingThunk)
-                    *(byte*) (lptr + 0x0b) == 0xe9 // jmp {DELTA}
-                ) {
-                    // delta = to - (from + 1 + sizeof(uint))
-                    // to = delta + (from + 1 + sizeof(uint))
-                    long from = lptr + 0x0b;
-                    long delta = *(uint*) (from + 1);
-                    long to = delta + (from + 1 + sizeof(uint));
-                    return (IntPtr) to;
-                }
 
-            } else {
-                // x64 .NET Framework
-                if (*(uint*) (lptr + 0x00) == 0x74___c9_85_48 && // in reverse order: test rcx, rcx | je ...
-                    *(uint*) (lptr + 0x05) == 0x49___01_8b_48 && // in reverse order: rax, qword ptr [rcx] | mov ...
-                    *(uint*) (lptr + 0x12) == 0x74___c2_3b_49 && // in reverse order: cmp rax, r10 | je ...
-                    *(ushort*) (lptr + 0x17) == 0xb8_48 // in reverse order: mov {TARGET}
-                ) {
-                    return (IntPtr) (*(ulong*) (lptr + 0x19));
-                }
+            if (PlatformHelper.Is(Platform.Windows)) {
+                /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
+                 * When debugged using WinDbg, !dumpmd for the handle gives a different CodeAddr than ldftn or GetFunctionPointer.
+                 * When using !ip2md on the ldftn / GetFunctionPointer result, no MD is found.
+                 * There is only one MD, we're already accessing it, but we still can't access the "real" entry point.
+                 * Luckily a jmp to it exists within the stub returned by GetFunctionPointer.
+                 * Sadly detecting when to read it is... ugly, to say the least.
+                 * This pretty much acts as the reverse of DetourNative*Platform.Apply
+                 * Maybe this should be Native*Platform-ified in the future, but for now...
+                 */
 
-                // x64 .NET Core
-                if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
-                    *(byte*) (lptr + 0x05) == 0x5f // pop rdi
-                ) {
-                    // delta = to - (from + 1 + sizeof(uint))
-                    // to = delta + (from + 1 + sizeof(uint))
-                    long from = lptr;
-                    long delta = *(uint*) (from + 1);
-                    long to = delta + (from + 1 + sizeof(uint));
-                    return (IntPtr) to;
+                // FIXME: According to Azure, this works fine on .NET Core Linux and macOS up until .NET 5
+
+                long lptr = (long) ptr;
+                if (PlatformHelper.Is(Platform.ARM)) {
+                    // TODO: Debug detouring NGEN'd methods on ARM.
+
+                } else if (IntPtr.Size == 4) {
+                    // x86
+                    if (*(byte*) (lptr + 0x00) == 0xb8 && // mov ... (mscorlib_ni!???)
+                        *(byte*) (lptr + 0x05) == 0x90 && // nop
+                        *(byte*) (lptr + 0x06) == 0xe8 && // call ... (clr!PrecodeRemotingThunk)
+                        *(byte*) (lptr + 0x0b) == 0xe9 // jmp {DELTA}
+                    ) {
+                        // delta = to - (from + 1 + sizeof(uint))
+                        // to = delta + (from + 1 + sizeof(uint))
+                        long from = lptr + 0x0b;
+                        long delta = *(uint*) (from + 1);
+                        long to = delta + (from + 1 + sizeof(uint));
+                        return (IntPtr) to;
+                    }
+
+                } else {
+                    // x64 .NET Framework
+                    if (*(uint*) (lptr + 0x00) == 0x74___c9_85_48 && // in reverse order: test rcx, rcx | je ...
+                        *(uint*) (lptr + 0x05) == 0x49___01_8b_48 && // in reverse order: rax, qword ptr [rcx] | mov ...
+                        *(uint*) (lptr + 0x12) == 0x74___c2_3b_49 && // in reverse order: cmp rax, r10 | je ...
+                        *(ushort*) (lptr + 0x17) == 0xb8_48 // in reverse order: mov {TARGET}
+                    ) {
+                        return (IntPtr) (*(ulong*) (lptr + 0x19));
+                    }
+
+                    // x64 .NET Core
+                    if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
+                        *(byte*) (lptr + 0x05) == 0x5f // pop rdi
+                    ) {
+                        // delta = to - (from + 1 + sizeof(uint))
+                        // to = delta + (from + 1 + sizeof(uint))
+                        long from = lptr;
+                        long delta = *(uint*) (from + 1);
+                        long to = delta + (from + 1 + sizeof(uint));
+                        return (IntPtr) to;
+                    }
                 }
             }
 
