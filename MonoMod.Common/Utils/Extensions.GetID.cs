@@ -30,7 +30,7 @@ namespace MonoMod.Utils {
             StringBuilder builder = new StringBuilder();
 
             if (simple) {
-                if (withType && method.DeclaringType != null)
+                if (withType && (type != null || method.DeclaringType != null))
                     builder.Append(type ?? method.DeclaringType.GetPatchFullName()).Append("::");
                 builder.Append(name ?? method.Name);
                 return builder.ToString();
@@ -40,7 +40,7 @@ namespace MonoMod.Utils {
                 .Append(method.ReturnType.GetPatchFullName())
                 .Append(" ");
 
-            if (withType)
+            if (withType && (type != null || method.DeclaringType != null))
                 builder.Append(type ?? method.DeclaringType.GetPatchFullName()).Append("::");
 
             builder
@@ -139,7 +139,7 @@ namespace MonoMod.Utils {
             StringBuilder builder = new StringBuilder();
 
             if (simple) {
-                if (withType && method.DeclaringType != null)
+                if (withType && (type != null || method.DeclaringType != null))
                     builder.Append(type ?? method.DeclaringType.FullName).Append("::");
                 builder.Append(name ?? method.Name);
                 return builder.ToString();
@@ -149,7 +149,7 @@ namespace MonoMod.Utils {
                 .Append((method as System.Reflection.MethodInfo)?.ReturnType?.FullName ?? "System.Void")
                 .Append(" ");
 
-            if (withType)
+            if (withType && (type != null || method.DeclaringType != null))
                 builder.Append(type ?? method.DeclaringType.FullName.Replace("+", "/")).Append("::");
 
             builder

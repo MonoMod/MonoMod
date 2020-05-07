@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
 using MonoMod.Utils;
 using System.Linq;
+using System.Diagnostics;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
@@ -12,6 +14,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #endif
     class DetourRuntimeNETPlatform : DetourRuntimeILPlatform {
         private static readonly object[] _NoArgs = new object[0];
+
+#pragma warning disable IDE0044 // Add readonly modifier
+#pragma warning disable CS0169 // The field is never used
+        private static bool Debugging;
+#pragma warning restore IDE0044 // Add readonly modifier
+#pragma warning restore CS0169 // The field is never used
+
 
         private static readonly FieldInfo _DynamicMethod_m_method =
             typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -83,6 +92,18 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             IntPtr ptr = base.GetFunctionPointer(method, handle);
 
+            // When in doubt, enable this debugging helper block, add Debugger.Break() where needed and attach WinDbg quickly.
+#if false
+            if (!Debugging) {
+                Debugging = true;
+                // WinDbg doesn't trigger Debugger.IsAttached
+                Thread.Sleep(6000);
+            }
+
+            Console.WriteLine($"mets: {method.GetID()}");
+            Console.WriteLine($"meth: 0x{(long) handle.Value:X16}");
+            Console.WriteLine($"getf: 0x{(long) handle.GetFunctionPointer():X16}");
+#endif
 
             if (PlatformHelper.Is(Platform.Windows)) {
                 /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
@@ -94,6 +115,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
                  * This pretty much acts as the reverse of DetourNative*Platform.Apply
                  * Maybe this should be Native*Platform-ified in the future, but for now...
                  */
+
+                // IMPORTANT: IN SOME CIRCUMSTANCES, THIS CAN FIND ThePreStub AS THE ENTRY POINT.
 
                 // FIXME: .NET 5 introduces similar behavior on macOS and Linux, but this is incompatible.
 
@@ -113,7 +136,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         long from = lptr + 0x0b;
                         long delta = *(uint*) (from + 1);
                         long to = delta + (from + 1 + sizeof(uint));
-                        return (IntPtr) to;
+                        return NotThePreStub(ptr, (IntPtr) to);
                     }
 
                 } else {
@@ -123,7 +146,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         *(uint*) (lptr + 0x12) == 0x74___c2_3b_49 && // in reverse order: cmp rax, r10 | je ...
                         *(ushort*) (lptr + 0x17) == 0xb8_48 // in reverse order: mov {TARGET}
                     ) {
-                        return (IntPtr) (*(ulong*) (lptr + 0x19));
+                        return NotThePreStub(ptr, (IntPtr) (*(ulong*) (lptr + 0x19)));
                     }
 
                     // x64 .NET Core
@@ -135,13 +158,34 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         long from = lptr;
                         long delta = *(uint*) (from + 1);
                         long to = delta + (from + 1 + sizeof(uint));
-                        return (IntPtr) to;
+                        return NotThePreStub(ptr, (IntPtr) to);
                     }
                 }
             }
 
 
             return ptr;
+        }
+
+        private static IntPtr ThePreStub = IntPtr.Zero;
+        private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed) {
+            if (ThePreStub == IntPtr.Zero) {
+                ThePreStub = (IntPtr) (-2);
+
+                // FIXME: Find a better less likely called NGEN'd candidate that points to ThePreStub.
+                // This was "found" by tModLoader.
+                MethodInfo mi = typeof(System.Net.HttpWebRequest).Assembly
+                    .GetType("System.Net.Connection")
+                    ?.GetMethod("SubmitRequest", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                if (mi != null) {
+                    ThePreStub = GetNativeStart(mi);
+                } else {
+                    ThePreStub = (IntPtr) (-1);
+                }
+            }
+
+            return (ptrParsed == ThePreStub || ThePreStub == (IntPtr) (-1)) ? ptrGot : ptrParsed;
         }
     }
 }
