@@ -11,6 +11,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using System.Data.SqlClient;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -76,10 +77,9 @@ namespace MonoMod.UnitTest {
 
                 // This was provided by a Harmony user.
                 // TextWriter's methods (including all overrides) were unable to be hooked on some runtimes.
-#if true
                 // FIXME: .NET 5 introduces similar behavior for macOS and Linux, but RD isn't ready for that. See DetourRuntimeNETPlatform for more info.
                 if (PlatformHelper.Is(Platform.Windows)) {
-
+#if true
                     using (MemoryStream ms = new MemoryStream()) {
 
                         using (StreamWriter writer = new StreamWriter(ms, Encoding.UTF8, 1024, true)) {
@@ -115,8 +115,24 @@ namespace MonoMod.UnitTest {
                         }
 
                     }
-                }
 #endif
+
+#if NETFRAMEWORK && true
+                    Assert.Equal("A", new SqlCommand("A").CommandText);
+
+                    using (Hook h = new Hook(
+                        typeof(SqlCommand).GetConstructor(new Type[] { typeof(string) }),
+                        new Action<Action<SqlCommand, string>, SqlCommand, string>((orig, self, value) => {
+                            orig(self, "-");
+                        })
+                    )) {
+                        Assert.Equal("-", new SqlCommand("B").CommandText);
+                    }
+
+                    Assert.Equal("C", new SqlCommand("C").CommandText);
+#endif
+
+                }
             }
         }
 
