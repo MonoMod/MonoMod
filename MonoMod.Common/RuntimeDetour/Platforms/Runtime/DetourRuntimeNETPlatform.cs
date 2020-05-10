@@ -131,11 +131,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         *(byte*) (lptr + 0x06) == 0xe8 && // call ... (clr!PrecodeRemotingThunk)
                         *(byte*) (lptr + 0x0b) == 0xe9 // jmp {DELTA}
                     ) {
-                        // delta = to - (from + 1 + sizeof(uint))
-                        // to = delta + (from + 1 + sizeof(uint))
+                        // delta = to - (from + 1 + sizeof(int))
+                        // to = delta + (from + 1 + sizeof(int))
                         long from = lptr + 0x0b;
-                        long delta = *(uint*) (from + 1);
-                        long to = delta + (from + 1 + sizeof(uint));
+                        long delta = *(int*) (from + 1);
+                        long to = delta + (from + 1 + sizeof(int));
                         return NotThePreStub(ptr, (IntPtr) to);
                     }
 
@@ -153,11 +153,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
                         *(byte*) (lptr + 0x05) == 0x5f // pop rdi
                     ) {
-                        // delta = to - (from + 1 + sizeof(uint))
-                        // to = delta + (from + 1 + sizeof(uint))
+                        // delta = to - (from + 1 + sizeof(int))
+                        // to = delta + (from + 1 + sizeof(int))
                         long from = lptr;
-                        long delta = *(uint*) (from + 1);
-                        long to = delta + (from + 1 + sizeof(uint));
+                        long delta = *(int*) (from + 1);
+                        long to = delta + (from + 1 + sizeof(int));
                         return NotThePreStub(ptr, (IntPtr) to);
                     }
                 }
