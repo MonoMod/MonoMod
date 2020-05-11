@@ -105,61 +105,57 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Console.WriteLine($"getf: 0x{(long) handle.GetFunctionPointer():X16}");
 #endif
 
-            if (PlatformHelper.Is(Platform.Windows)) {
-                /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
-                 * When debugged using WinDbg, !dumpmd for the handle gives a different CodeAddr than ldftn or GetFunctionPointer.
-                 * When using !ip2md on the ldftn / GetFunctionPointer result, no MD is found.
-                 * There is only one MD, we're already accessing it, but we still can't access the "real" entry point.
-                 * Luckily a jmp to it exists within the stub returned by GetFunctionPointer.
-                 * Sadly detecting when to read it is... ugly, to say the least.
-                 * This pretty much acts as the reverse of DetourNative*Platform.Apply
-                 * Maybe this should be Native*Platform-ified in the future, but for now...
-                 */
+            /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
+             * When debugged using WinDbg, !dumpmd for the handle gives a different CodeAddr than ldftn or GetFunctionPointer.
+             * When using !ip2md on the ldftn / GetFunctionPointer result, no MD is found.
+             * There is only one MD, we're already accessing it, but we still can't access the "real" entry point.
+             * Luckily a jmp to it exists within the stub returned by GetFunctionPointer.
+             * Sadly detecting when to read it is... ugly, to say the least.
+             * This pretty much acts as the reverse of DetourNative*Platform.Apply
+             * Maybe this should be Native*Platform-ified in the future, but for now...
+             */
 
-                // IMPORTANT: IN SOME CIRCUMSTANCES, THIS CAN FIND ThePreStub AS THE ENTRY POINT.
+            // IMPORTANT: IN SOME CIRCUMSTANCES, THIS CAN FIND ThePreStub AS THE ENTRY POINT.
 
-                // FIXME: .NET 5 introduces similar behavior on macOS and Linux, but this is incompatible.
+            long lptr = (long) ptr;
+            if (PlatformHelper.Is(Platform.ARM)) {
+                // TODO: Debug detouring NGEN'd methods on ARM.
 
-                long lptr = (long) ptr;
-                if (PlatformHelper.Is(Platform.ARM)) {
-                    // TODO: Debug detouring NGEN'd methods on ARM.
+            } else if (IntPtr.Size == 4) {
+                // x86
+                if (*(byte*) (lptr + 0x00) == 0xb8 && // mov ... (mscorlib_ni!???)
+                    *(byte*) (lptr + 0x05) == 0x90 && // nop
+                    *(byte*) (lptr + 0x06) == 0xe8 && // call ... (clr!PrecodeRemotingThunk)
+                    *(byte*) (lptr + 0x0b) == 0xe9 // jmp {DELTA}
+                ) {
+                    // delta = to - (from + 1 + sizeof(int))
+                    // to = delta + (from + 1 + sizeof(int))
+                    long from = lptr + 0x0b;
+                    long delta = *(int*) (from + 1);
+                    long to = delta + (from + 1 + sizeof(int));
+                    return NotThePreStub(ptr, (IntPtr) to);
+                }
 
-                } else if (IntPtr.Size == 4) {
-                    // x86
-                    if (*(byte*) (lptr + 0x00) == 0xb8 && // mov ... (mscorlib_ni!???)
-                        *(byte*) (lptr + 0x05) == 0x90 && // nop
-                        *(byte*) (lptr + 0x06) == 0xe8 && // call ... (clr!PrecodeRemotingThunk)
-                        *(byte*) (lptr + 0x0b) == 0xe9 // jmp {DELTA}
-                    ) {
-                        // delta = to - (from + 1 + sizeof(int))
-                        // to = delta + (from + 1 + sizeof(int))
-                        long from = lptr + 0x0b;
-                        long delta = *(int*) (from + 1);
-                        long to = delta + (from + 1 + sizeof(int));
-                        return NotThePreStub(ptr, (IntPtr) to);
-                    }
+            } else {
+                // x64 .NET Framework
+                if (*(uint*) (lptr + 0x00) == 0x74___c9_85_48 && // in reverse order: test rcx, rcx | je ...
+                    *(uint*) (lptr + 0x05) == 0x49___01_8b_48 && // in reverse order: rax, qword ptr [rcx] | mov ...
+                    *(uint*) (lptr + 0x12) == 0x74___c2_3b_49 && // in reverse order: cmp rax, r10 | je ...
+                    *(ushort*) (lptr + 0x17) == 0xb8_48 // in reverse order: mov {TARGET}
+                ) {
+                    return NotThePreStub(ptr, (IntPtr) (*(ulong*) (lptr + 0x19)));
+                }
 
-                } else {
-                    // x64 .NET Framework
-                    if (*(uint*) (lptr + 0x00) == 0x74___c9_85_48 && // in reverse order: test rcx, rcx | je ...
-                        *(uint*) (lptr + 0x05) == 0x49___01_8b_48 && // in reverse order: rax, qword ptr [rcx] | mov ...
-                        *(uint*) (lptr + 0x12) == 0x74___c2_3b_49 && // in reverse order: cmp rax, r10 | je ...
-                        *(ushort*) (lptr + 0x17) == 0xb8_48 // in reverse order: mov {TARGET}
-                    ) {
-                        return NotThePreStub(ptr, (IntPtr) (*(ulong*) (lptr + 0x19)));
-                    }
-
-                    // x64 .NET Core
-                    if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
-                        *(byte*) (lptr + 0x05) == 0x5f // pop rdi
-                    ) {
-                        // delta = to - (from + 1 + sizeof(int))
-                        // to = delta + (from + 1 + sizeof(int))
-                        long from = lptr;
-                        long delta = *(int*) (from + 1);
-                        long to = delta + (from + 1 + sizeof(int));
-                        return NotThePreStub(ptr, (IntPtr) to);
-                    }
+                // x64 .NET Core
+                if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
+                    *(byte*) (lptr + 0x05) == 0x5f // pop rdi
+                ) {
+                    // delta = to - (from + 1 + sizeof(int))
+                    // to = delta + (from + 1 + sizeof(int))
+                    long from = lptr;
+                    long delta = *(int*) (from + 1);
+                    long to = delta + (from + 1 + sizeof(int));
+                    return NotThePreStub(ptr, (IntPtr) to);
                 }
             }
 
@@ -174,13 +170,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 // FIXME: Find a better less likely called NGEN'd candidate that points to ThePreStub.
                 // This was "found" by tModLoader.
+                // Can be missing in .NET 5.0 outside of Windows for some reason.
                 MethodInfo mi = typeof(System.Net.HttpWebRequest).Assembly
                     .GetType("System.Net.Connection")
                     ?.GetMethod("SubmitRequest", BindingFlags.NonPublic | BindingFlags.Instance);
 
                 if (mi != null) {
                     ThePreStub = GetNativeStart(mi);
-                } else {
+                } else if (PlatformHelper.Is(Platform.Windows)) {
+                    // FIXME: This should be -1 (always return ptrGot) on all plats, but SubmitRequest is Windows-only?
                     ThePreStub = (IntPtr) (-1);
                 }
             }
