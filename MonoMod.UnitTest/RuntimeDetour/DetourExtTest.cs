@@ -78,61 +78,59 @@ namespace MonoMod.UnitTest {
                 // This was provided by a Harmony user.
                 // TextWriter's methods (including all overrides) were unable to be hooked on some runtimes.
                 // FIXME: .NET 5 introduces similar behavior for macOS and Linux, but RD isn't ready for that. See DetourRuntimeNETPlatform for more info.
-                if (PlatformHelper.Is(Platform.Windows)) {
 #if true
-                    using (MemoryStream ms = new MemoryStream()) {
+                using (MemoryStream ms = new MemoryStream()) {
 
-                        using (StreamWriter writer = new StreamWriter(ms, Encoding.UTF8, 1024, true)) {
-                            // In case anyone needs to debug this mess anytime in the future ever again:
-                            /*
-                            MethodBase m = typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) });
-                            Console.WriteLine($"meth: 0x{(long) m?.MethodHandle.Value:X16}");
-                            Console.WriteLine($"getf: 0x{(long) m?.MethodHandle.GetFunctionPointer():X16}");
-                            Console.WriteLine($"fptr: 0x{(long) m?.GetLdftnPointer():X16}");
-                            Console.WriteLine($"nats: 0x{(long) m?.GetNativeStart():X16}");
-                            */
+                    using (StreamWriter writer = new StreamWriter(ms, Encoding.UTF8, 1024, true)) {
+                        // In case anyone needs to debug this mess anytime in the future ever again:
+                        /*/
+                        MethodBase m = typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) });
+                        Console.WriteLine($"meth: 0x{(long) m?.MethodHandle.Value:X16}");
+                        Console.WriteLine($"getf: 0x{(long) m?.MethodHandle.GetFunctionPointer():X16}");
+                        Console.WriteLine($"fptr: 0x{(long) m?.GetLdftnPointer():X16}");
+                        Console.WriteLine($"nats: 0x{(long) m?.GetNativeStart():X16}");
+                        /**/
 
+                        // Debugger.Break();
+                        writer.Write("A");
+
+                        using (Hook h = new Hook(
+                            typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) }),
+                            new Action<Action<StreamWriter, string>, StreamWriter, string>((orig, self, value) => {
+                                orig(self, "-");
+                            })
+                        )) {
                             // Debugger.Break();
-                            writer.Write("A");
-
-                            using (Hook h = new Hook(
-                                typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) }),
-                                new Action<Action<StreamWriter, string>, StreamWriter, string>((orig, self, value) => {
-                                    orig(self, "-");
-                                })
-                            )) {
-                                // Debugger.Break();
-                                writer.Write("B");
-                            }
-
-                            writer.Write("C");
+                            writer.Write("B");
                         }
 
-                        ms.Seek(0, SeekOrigin.Begin);
-
-                        using (StreamReader reader = new StreamReader(ms, Encoding.UTF8, false, 1024, true)) {
-                            Assert.Equal("A-C", reader.ReadToEnd());
-                        }
-
+                        writer.Write("C");
                     }
+
+                    ms.Seek(0, SeekOrigin.Begin);
+
+                    using (StreamReader reader = new StreamReader(ms, Encoding.UTF8, false, 1024, true)) {
+                        Assert.Equal("A-C", reader.ReadToEnd());
+                    }
+
+                }
 #endif
 
 #if NETFRAMEWORK && true
-                    Assert.Equal("A", new SqlCommand("A").CommandText);
+                Assert.Equal("A", new SqlCommand("A").CommandText);
 
-                    using (Hook h = new Hook(
-                        typeof(SqlCommand).GetConstructor(new Type[] { typeof(string) }),
-                        new Action<Action<SqlCommand, string>, SqlCommand, string>((orig, self, value) => {
-                            orig(self, "-");
-                        })
-                    )) {
-                        Assert.Equal("-", new SqlCommand("B").CommandText);
-                    }
+                using (Hook h = new Hook(
+                    typeof(SqlCommand).GetConstructor(new Type[] { typeof(string) }),
+                    new Action<Action<SqlCommand, string>, SqlCommand, string>((orig, self, value) => {
+                        orig(self, "-");
+                    })
+                )) {
+                    Assert.Equal("-", new SqlCommand("B").CommandText);
+                }
 
-                    Assert.Equal("C", new SqlCommand("C").CommandText);
+                Assert.Equal("C", new SqlCommand("C").CommandText);
 #endif
 
-                }
             }
         }
 
