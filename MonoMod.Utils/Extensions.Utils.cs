@@ -221,5 +221,29 @@ namespace MonoMod.Utils {
             }
         }
 
+        // This only exists in .NET Framework 4.5+ and .NET Standard 1.0+,
+        // but it's scientifically proven that .NET Framework 4.0 doesn't really exist.
+        private static readonly Type t_StateMachineAttribute =
+            typeof(object).Assembly
+            .GetType("System.Runtime.CompilerServices.StateMachineAttribute");
+        private static readonly PropertyInfo p_StateMachineType =
+            t_StateMachineAttribute?.GetProperty("StateMachineType");
+
+        /// <summary>
+        /// Get the method of interest for a given state machine method.
+        /// </summary>
+        /// <param name="method">The method creating the state machine.</param>
+        /// <returns>The "main" method in the state machine.</returns>
+        public static MethodInfo GetStateMachineTarget(this MethodInfo method) {
+            if (p_StateMachineType == null)
+                return null;
+
+            foreach (Attribute attrib in method.GetCustomAttributes(false))
+                if (t_StateMachineAttribute.IsCompatible(attrib.GetType()))
+                    return (p_StateMachineType.GetValue(attrib, null) as Type)?.GetMethod("MoveNext", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            return null;
+        }
+
     }
 }
