@@ -131,6 +131,51 @@ namespace MonoMod.UnitTest {
                 Assert.Equal("C", new SqlCommand("C").CommandText);
 #endif
 
+
+                // This was provided by tModLoader.
+                // The .NET Framework codepath failed on making the method writable the for a single user.
+#if NETFRAMEWORK && true
+                try {
+                    throw new Exception();
+                } catch (Exception e) {
+                    Assert.NotEqual("", e.StackTrace.Trim());
+                }
+
+                using (Hook h = Type.GetType("Mono.Runtime") != null ?
+                    // Mono
+                    new Hook(
+                        typeof(Exception).GetMethod("GetStackTrace", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance),
+                        new Func<Func<Exception, bool, string>, Exception, bool, string>((orig, self, fNeedFileInfo) => {
+                            return "";
+                        })
+                    ) :
+                    // .NET
+                    new Hook(
+                        typeof(StackTrace).GetConstructor(new[] { typeof(Exception), typeof(bool) }),
+                        new Action<Action<StackTrace, Exception, bool>, StackTrace, Exception, bool>((orig, self, e, fNeedFileInfo) => {
+                            orig(self, e, fNeedFileInfo);
+                            DynamicData.Set(self, new {
+                                frames = new StackFrame[0],
+                                m_iNumOfFrames = 0,
+                                m_iMethodsToSkip = 0
+                            });
+                        })
+                    )) {
+
+                    try {
+                        throw new Exception();
+                    } catch (Exception e) {
+                        Assert.Equal("", e.StackTrace.Trim());
+                    }
+                }
+
+                try {
+                    throw new Exception();
+                } catch (Exception e) {
+                    Assert.NotEqual("", e.StackTrace.Trim());
+                }
+#endif
+
             }
         }
 

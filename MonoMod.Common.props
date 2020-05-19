@@ -5,7 +5,7 @@
     <OutputType Condition="'$(OutputType)' == ''">Library</OutputType>
     <RootNamespace Condition="'$(RootNamespace)' == ''">$(AssemblyName)</RootNamespace>
 
-    <Configurations>Debug;Release;DebugLegacy;ReleaseLegacy</Configurations>
+    <Configurations>Debug;Release;DebugLegacy;ReleaseLegacy;DebugTrace;ReleaseTrace</Configurations>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Any CPU</Platform>
     <DebugType Condition="'$(DebugType)' == ''">portable</DebugType>
@@ -67,16 +67,21 @@
   </PropertyGroup>
 
   <!-- Debug -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'DebugLegacy'">
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'DebugLegacy' Or '$(Configuration)' == 'DebugTrace'">
     <DebugSymbols>true</DebugSymbols>
     <Optimize>false</Optimize>
     <DefineConstants>DEBUG;TRACE;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <!-- Release -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Release' Or '$(Configuration)' == 'ReleaseLegacy'">
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' Or '$(Configuration)' == 'ReleaseLegacy' Or '$(Configuration)' == 'ReleaseTrace'">
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Trace -->
+  <PropertyGroup Condition="'$(Configuration)' == 'DebugTrace' Or '$(Configuration)' == 'ReleaseTrace'">
+    <DefineConstants>MONOMOD_DBGLOG;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <!-- Legacy -->
