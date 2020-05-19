@@ -74,6 +74,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         protected override unsafe IntPtr GetFunctionPointer(MethodBase method, RuntimeMethodHandle handle) {
+            MMDbgLog.Log($"mets: {method.GetID()}");
+            MMDbgLog.Log($"meth: 0x{(long) handle.Value:X16}");
+            MMDbgLog.Log($"getf: 0x{(long) handle.GetFunctionPointer():X16}");
+
             if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
                 /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
                  * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation
@@ -86,6 +90,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                  * - The "real" stub will stay untouched.
                  * - LDFTN RETURNS A POINTER TO THE "REAL" ENTRY POINT.
                  */
+                MMDbgLog.Log($"ldfn: 0x{(long) method.GetLdftnPointer():X16}");
                 return method.GetLdftnPointer();
             }
 
@@ -99,10 +104,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 // WinDbg doesn't trigger Debugger.IsAttached
                 Thread.Sleep(6000);
             }
-
-            Console.WriteLine($"mets: {method.GetID()}");
-            Console.WriteLine($"meth: 0x{(long) handle.Value:X16}");
-            Console.WriteLine($"getf: 0x{(long) handle.GetFunctionPointer():X16}");
 #endif
 
             /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
@@ -133,7 +134,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     long from = lptr + 0x0b;
                     long delta = *(int*) (from + 1);
                     long to = delta + (from + 1 + sizeof(int));
-                    return NotThePreStub(ptr, (IntPtr) to);
+                    ptr = NotThePreStub(ptr, (IntPtr) to);
+                    MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
+                    return ptr;
                 }
 
             } else {
@@ -143,7 +146,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     *(uint*) (lptr + 0x12) == 0x74___c2_3b_49 && // in reverse order: cmp rax, r10 | je ...
                     *(ushort*) (lptr + 0x17) == 0xb8_48 // in reverse order: mov {TARGET}
                 ) {
-                    return NotThePreStub(ptr, (IntPtr) (*(ulong*) (lptr + 0x19)));
+                    ptr = NotThePreStub(ptr, (IntPtr) (*(ulong*) (lptr + 0x19)));
+                    MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
+                    return ptr;
                 }
 
                 // x64 .NET Core
@@ -155,7 +160,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     long from = lptr;
                     long delta = *(int*) (from + 1);
                     long to = delta + (from + 1 + sizeof(int));
-                    return NotThePreStub(ptr, (IntPtr) to);
+                    ptr = NotThePreStub(ptr, (IntPtr) to);
+                    MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
+                    return ptr;
                 }
             }
 
@@ -177,6 +184,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 if (mi != null) {
                     ThePreStub = GetNativeStart(mi);
+                    MMDbgLog.Log($"ThePreStub: 0x{(long) ThePreStub:X16}");
                 } else if (PlatformHelper.Is(Platform.Windows)) {
                     // FIXME: This should be -1 (always return ptrGot) on all plats, but SubmitRequest is Windows-only?
                     ThePreStub = (IntPtr) (-1);

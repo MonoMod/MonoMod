@@ -59,15 +59,23 @@ namespace MonoMod.Utils {
                     argTypes[i + offs] = def.Parameters[i].ParameterType.ResolveReflection();
             }
 
+            string name = $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>";
+            Type retType = (orig as MethodInfo)?.ReturnType ?? def.ReturnType?.ResolveReflection();
+
+            MMDbgLog.Log($"new DynamicMethod: {retType} {name}({string.Join(",", argTypes.Select(type => type.ToString()).ToArray())})");
+            if (orig != null)
+                MMDbgLog.Log($"orig: {(orig as MethodInfo)?.ReturnType} {orig.Name}({string.Join(",", orig.GetParameters().Select(arg => arg.ParameterType.ToString()).ToArray())})");
+            MMDbgLog.Log($"mdef: {def.ReturnType} {name}({string.Join(",", def.Parameters.Select(arg => arg.ParameterType.ToString()).ToArray())})");
+
             DynamicMethod dm = new DynamicMethod(
-                $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>",
+                name,
                 typeof(void), argTypes,
                 orig?.DeclaringType ?? dmd.OwnerType ?? typeof(DynamicMethodDefinition),
                 true // If any random errors pop up, try setting this to false first.
             );
 
             // DynamicMethods don't officially "support" certain return types, such as ByRef types.
-            _DynamicMethod_returnType.SetValue(dm, (orig as MethodInfo)?.ReturnType ?? def.ReturnType?.ResolveReflection());
+            _DynamicMethod_returnType.SetValue(dm, retType);
 
             ILGenerator il = dm.GetILGenerator();
 
