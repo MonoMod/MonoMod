@@ -38,7 +38,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         private void LogAllSections(string from, IntPtr src, uint size) {
-            MMDbgLog.Log($"{from} failed for {(long) src:X16} + {size} - logging all memory sections");
+            MMDbgLog.Log($"{from} failed for 0x{(long) src:X16} + {size} - logging all memory sections");
 
             IntPtr proc = Process.GetCurrentProcess().Handle;
             IntPtr addr = (IntPtr) 0x00000000000010000;
@@ -47,18 +47,34 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 if (VirtualQueryEx(proc, addr, out MemInfo info, sizeof(MemInfo)) == 0)
                     break;
 
+                ulong srcL = (ulong) src;
+                ulong srcR = srcL + size;
+                ulong infoL = (ulong) info.BaseAddress;
+                ulong infoR = infoL + (ulong) info.RegionSize;
+                bool overlap = infoL <= srcR && srcL <= infoR;
+
+                MMDbgLog.Log($"{(overlap ? "*" : "-")} #{i++}: addr: 0x{(long) info.BaseAddress:X16}; protect: 0x{info.Protect:X8}; state: 0x{info.State:X8}; type: 0x{info.Type:X8}; size: 0x{(long) info.RegionSize:X16}");
+
                 long regionSize = (long) info.RegionSize;
                 if (regionSize <= 0 || (int) regionSize != regionSize) {
                     if (IntPtr.Size == 8) {
-                        addr = (IntPtr) ((ulong) info.BaseAddress + (ulong) info.RegionSize);
+                        try {
+                            addr = (IntPtr) ((ulong) info.BaseAddress + (ulong) info.RegionSize);
+                        } catch (OverflowException) {
+                            MMDbgLog.Log("overflow");
+                            break;
+                        }
                         continue;
                     }
                     break;
                 }
 
-                MMDbgLog.Log($"#{i++}: addr: 0x{(long) info.BaseAddress:X16}; protect: 0x{info.Protect:X8}; state: 0x{info.State:X8}; type: 0x{info.Type:X8}; size: 0x{(long) info.RegionSize:X16}");
-
-                addr = (IntPtr) ((long) info.BaseAddress + regionSize);
+                try {
+                    addr = (IntPtr) ((uint) info.BaseAddress + (uint) info.RegionSize);
+                } catch (OverflowException) {
+                    MMDbgLog.Log("overflow");
+                    break;
+                }
             }
         }
 

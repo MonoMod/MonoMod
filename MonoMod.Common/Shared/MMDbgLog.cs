@@ -55,7 +55,22 @@ namespace MonoMod {
         }
 
         public static void Log(string str) {
-            Writer?.WriteLine(str);
+            TextWriter w = Writer;
+            if (w == null)
+                return;
+
+            w.WriteLine(str);
+            w.Flush();
+        }
+
+        public static T Log<T>(string str, T value) {
+            TextWriter w = Writer;
+            if (w == null)
+                return value;
+
+            w.WriteLine(string.Format(str, value));
+            w.Flush();
+            return value;
         }
 
     }
