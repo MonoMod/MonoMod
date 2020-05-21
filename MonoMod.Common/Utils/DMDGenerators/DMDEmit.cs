@@ -180,26 +180,21 @@ namespace MonoMod.Utils {
                         operand = param.Index + paramOffs;
 
                     } else if (operand is MemberReference mref) {
-                        if (mref is DynamicMethodReference dmref) {
-                            operand = dmref.DynamicMethod;
-
-                        } else {
-                            MemberInfo member = mref.ResolveReflection();
-                            operand = member;
+                        MemberInfo member = mref.ResolveReflection();
+                        operand = member;
 #if !NETSTANDARD
-                            if (mb != null && member != null) {
-                                Assembly asm = member.Module.Assembly;
-                                if (!accessChecksIgnored.Contains(asm)) {
-                                    // while (member.DeclaringType != null)
-                                    //     member = member.DeclaringType;
-                                    assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, new object[] {
-                                        asm.GetName().Name
-                                    }));
-                                    accessChecksIgnored.Add(asm);
-                                }
+                        if (mb != null && member != null) {
+                            Assembly asm = member.Module?.Assembly;
+                            if (asm != null && !accessChecksIgnored.Contains(asm)) {
+                                // while (member.DeclaringType != null)
+                                //     member = member.DeclaringType;
+                                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, new object[] {
+                                    asm.GetName().Name
+                                }));
+                                accessChecksIgnored.Add(asm);
                             }
-#endif
                         }
+#endif
 
                     } else if (operand is CallSite csite) {
                         if (dm != null) {

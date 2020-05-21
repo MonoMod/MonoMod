@@ -72,6 +72,8 @@ namespace MonoMod.Utils {
         }
 
         public AssemblyNameReference ImportReference(AssemblyName asm) {
+            // It's possible to load multiple assemblies with the same name but different contents!
+            // Sadly the AssemblyNames match up perfectly...
             if (CachedAsms.TryGetValue(asm, out AssemblyNameReference asmRef))
                 return asmRef;
 

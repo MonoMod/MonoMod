@@ -16,15 +16,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public void MakeWritable(IntPtr src, uint size) {
-            // PAGE_READWRITE causes an AccessViolationException / TargetInvocationException.
-            if (!VirtualProtect(src, (IntPtr) size, Protection.PAGE_EXECUTE_READWRITE, out _)) {
+            // READWRITE causes an AccessViolationException / TargetInvocationException.
+            if (!VirtualProtect(src, (IntPtr) size, PAGE.EXECUTE_READWRITE, out _)) {
                 LogAllSections("MakeWriteable", src, size);
                 throw new Win32Exception();
             }
         }
 
         public void MakeExecutable(IntPtr src, uint size) {
-            if (!VirtualProtect(src, (IntPtr) size, Protection.PAGE_EXECUTE_READWRITE, out _)) {
+            if (!VirtualProtect(src, (IntPtr) size, PAGE.EXECUTE_READWRITE, out _)) {
                 LogAllSections("MakeExecutable", src, size);
                 throw new Win32Exception();
             }
@@ -39,42 +39,56 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         private void LogAllSections(string from, IntPtr src, uint size) {
             MMDbgLog.Log($"{from} failed for 0x{(long) src:X16} + {size} - logging all memory sections");
+            Exception ex = new Win32Exception();
+            MMDbgLog.Log($"reason: {ex.Message}");
 
-            IntPtr proc = Process.GetCurrentProcess().Handle;
-            IntPtr addr = (IntPtr) 0x00000000000010000;
-            int i = 0;
-            while (true) {
-                if (VirtualQueryEx(proc, addr, out MemInfo info, sizeof(MemInfo)) == 0)
-                    break;
+            try {
+                IntPtr proc = GetCurrentProcess();
+                IntPtr addr = (IntPtr) 0x00000000000010000;
+                int i = 0;
+                while (true) {
+                    if (VirtualQueryEx(proc, addr, out MEMORY_BASIC_INFORMATION infoBasic, sizeof(MEMORY_BASIC_INFORMATION)) == 0)
+                        break;
 
-                ulong srcL = (ulong) src;
-                ulong srcR = srcL + size;
-                ulong infoL = (ulong) info.BaseAddress;
-                ulong infoR = infoL + (ulong) info.RegionSize;
-                bool overlap = infoL <= srcR && srcL <= infoR;
+                    ulong srcL = (ulong) src;
+                    ulong srcR = srcL + size;
+                    ulong infoL = (ulong) infoBasic.BaseAddress;
+                    ulong infoR = infoL + (ulong) infoBasic.RegionSize;
+                    bool overlap = infoL <= srcR && srcL <= infoR;
 
-                MMDbgLog.Log($"{(overlap ? "*" : "-")} #{i++}: addr: 0x{(long) info.BaseAddress:X16}; protect: 0x{info.Protect:X8}; state: 0x{info.State:X8}; type: 0x{info.Type:X8}; size: 0x{(long) info.RegionSize:X16}");
+                    MMDbgLog.Log($"{(overlap ? "*" : "-")} #{i++}");
+                    MMDbgLog.Log($"addr: 0x{(long) infoBasic.BaseAddress:X16}");
+                    MMDbgLog.Log($"size: 0x{(long) infoBasic.RegionSize:X16}");
+                    MMDbgLog.Log($"aaddr: 0x{(long) infoBasic.AllocationBase:X16}");
+                    MMDbgLog.Log($"state: {infoBasic.State}");
+                    MMDbgLog.Log($"type: {infoBasic.Type}");
+                    MMDbgLog.Log($"protect: {infoBasic.Protect}");
+                    MMDbgLog.Log($"aprotect: {infoBasic.AllocationProtect}");
 
-                long regionSize = (long) info.RegionSize;
-                if (regionSize <= 0 || (int) regionSize != regionSize) {
-                    if (IntPtr.Size == 8) {
-                        try {
-                            addr = (IntPtr) ((ulong) info.BaseAddress + (ulong) info.RegionSize);
-                        } catch (OverflowException) {
-                            MMDbgLog.Log("overflow");
-                            break;
+                    long regionSize = (long) infoBasic.RegionSize;
+                    if (regionSize <= 0 || (int) regionSize != regionSize) {
+                        if (IntPtr.Size == 8) {
+                            try {
+                                addr = (IntPtr) ((ulong) infoBasic.BaseAddress + (ulong) infoBasic.RegionSize);
+                            } catch (OverflowException) {
+                                MMDbgLog.Log("overflow");
+                                break;
+                            }
+                            continue;
                         }
-                        continue;
+                        break;
                     }
-                    break;
+
+                    try {
+                        addr = (IntPtr) ((uint) infoBasic.BaseAddress + (uint) infoBasic.RegionSize);
+                    } catch (OverflowException) {
+                        MMDbgLog.Log("overflow");
+                        break;
+                    }
                 }
 
-                try {
-                    addr = (IntPtr) ((uint) info.BaseAddress + (uint) info.RegionSize);
-                } catch (OverflowException) {
-                    MMDbgLog.Log("overflow");
-                    break;
-                }
+            } finally {
+                throw ex;
             }
         }
 
@@ -103,41 +117,70 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool VirtualProtect(IntPtr lpAddress, IntPtr dwSize, Protection flNewProtect, out Protection lpflOldProtect);
+        private static extern bool VirtualProtect(IntPtr lpAddress, IntPtr dwSize, PAGE flNewProtect, out PAGE lpflOldProtect);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr GetCurrentProcess();
+        private static extern IntPtr GetCurrentProcess();
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool FlushInstructionCache(IntPtr hProcess, IntPtr lpBaseAddress, UIntPtr dwSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern int VirtualQueryEx(IntPtr hProcess, IntPtr lpAddress, out MemInfo lpBuffer, int dwLength);
+        private static extern int VirtualQueryEx(IntPtr hProcess, IntPtr lpAddress, out MEMORY_BASIC_INFORMATION lpBuffer, int dwLength);
 
         [Flags]
-        private enum Protection : uint {
-            PAGE_NOACCESS = 0x01,
-            PAGE_READONLY = 0x02,
-            PAGE_READWRITE = 0x04,
-            PAGE_WRITECOPY = 0x08,
-            PAGE_EXECUTE = 0x10,
-            PAGE_EXECUTE_READ = 0x20,
-            PAGE_EXECUTE_READWRITE = 0x40,
-            PAGE_EXECUTE_WRITECOPY = 0x80,
-            PAGE_GUARD = 0x100,
-            PAGE_NOCACHE = 0x200,
-            PAGE_WRITECOMBINE = 0x400
+        private enum PAGE : uint {
+            UNSET,
+            NOACCESS =
+                0b00000000000000000000000000000001,
+            READONLY =
+                0b00000000000000000000000000000010,
+            READWRITE =
+                0b00000000000000000000000000000100,
+            WRITECOPY =
+                0b00000000000000000000000000001000,
+            EXECUTE =
+                0b00000000000000000000000000010000,
+            EXECUTE_READ =
+                0b00000000000000000000000000100000,
+            EXECUTE_READWRITE =
+                0b00000000000000000000000001000000,
+            EXECUTE_WRITECOPY =
+                0b00000000000000000000000010000000,
+            GUARD =
+                0b00000000000000000000000100000000,
+            NOCACHE =
+                0b00000000000000000000001000000000,
+            WRITECOMBINE =
+                0b00000000000000000000010000000000,
+        }
+
+        private enum MEM : uint {
+            UNSET,
+            MEM_COMMIT =
+                0b00000000000000000001000000000000,
+            MEM_RESERVE =
+                0b00000000000000000010000000000000,
+            MEM_FREE =
+                0b00000000000000010000000000000000,
+            MEM_PRIVATE =
+                0b00000000000000100000000000000000,
+            MEM_MAPPED =
+                0b00000000000001000000000000000000,
+            MEM_IMAGE =
+                0b00000001000000000000000000000000,
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct MemInfo {
+        private struct MEMORY_BASIC_INFORMATION {
             public IntPtr BaseAddress;
             public IntPtr AllocationBase;
-            public uint AllocationProtect;
+            public PAGE AllocationProtect;
             public IntPtr RegionSize;
-            public uint State;
-            public uint Protect;
-            public uint Type;
+            public MEM State;
+            public PAGE Protect;
+            public MEM Type;
         }
+
     }
 }

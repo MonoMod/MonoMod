@@ -17,11 +17,15 @@ namespace MonoMod.Utils {
     static partial class ReflectionHelper {
 
         internal static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
+        internal static readonly Dictionary<string, Assembly[]> AssembliesCache = new Dictionary<string, Assembly[]>();
         internal static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
 
         private static MemberInfo _Cache(string cacheKey, MemberInfo value) {
+            if (cacheKey != null && value == null) {
+                MMDbgLog.Log($"ResolveRefl failure: {cacheKey}");
+            }
             if (cacheKey != null && value != null) {
                 lock (ResolveReflectionCache) {
                     ResolveReflectionCache[cacheKey] = value;
@@ -101,6 +105,9 @@ namespace MonoMod.Utils {
         private static MemberInfo _ResolveReflection(MemberReference mref, Module[] modules) {
             if (mref == null)
                 return null;
+
+            if (mref is DynamicMethodReference dmref)
+                return dmref.DynamicMethod;
 
             string cacheKey = (mref as MethodReference)?.GetID() ?? mref.FullName;
 
@@ -184,22 +191,58 @@ namespace MonoMod.Utils {
             if (asmName == null && moduleName == null)
                 throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
 
+            bool tryAssemblyCache = true;
+            bool refetchingModules = false;
+            bool nullifyModules = false;
+
+            RefetchModules:
+            if (nullifyModules)
+                modules = null;
+            nullifyModules = true;
+
             if (modules == null) {
-                Assembly asm = null;
-                lock (AssemblyCache) {
-                    if (!AssemblyCache.TryGetValue(asmName, out asm)) {
-                        asm =
+                Assembly[] asms = null;
+
+                if (tryAssemblyCache && refetchingModules) {
+                    refetchingModules = false;
+                    tryAssemblyCache = false;
+                }
+
+                if (tryAssemblyCache)
+                    lock (AssemblyCache)
+                        if (AssemblyCache.TryGetValue(asmName, out Assembly asm))
+                            asms = new Assembly[] { asm };
+
+                if (asms == null) {
+                    if (!refetchingModules)
+                        lock (AssembliesCache)
+                            AssembliesCache.TryGetValue(asmName, out asms);
+
+                    if (asms == null) {
+                        asms =
                             AppDomain.CurrentDomain.GetAssemblies()
-                            .FirstOrDefault(other => {
+                            .Where(other => {
                                 AssemblyName name = other.GetName();
                                 return name.Name == asmName || name.FullName == asmName;
-                            });
-                        if (asm == null)
-                            asm = Assembly.Load(new AssemblyName(asmName));
-                        AssemblyCache[asmName] = asm;
+                            }).ToArray();
+
+                        if (asms.Length == 0 && Assembly.Load(new AssemblyName(asmName)) is Assembly loaded)
+                            asms = new Assembly[] { loaded };
+
+                        if (asms.Length != 0)
+                            lock (AssembliesCache)
+                                AssembliesCache[asmName] = asms;
                     }
                 }
-                modules = string.IsNullOrEmpty(moduleName) ? asm.GetModules() : new Module[] { asm.GetModule(moduleName) };
+
+                modules =
+                    (string.IsNullOrEmpty(moduleName) ?
+                        asms.SelectMany(asm => asm.GetModules()) :
+                        asms.Select(asm => asm.GetModule(moduleName))
+                    ).Where(mod => mod != null).ToArray();
+
+                if (modules.Length == 0)
+                    throw new Exception($"Cannot resolve assembly / module {asmName} / {moduleName}");
             }
 
             if (mref is TypeReference tref) {
@@ -212,16 +255,16 @@ namespace MonoMod.Utils {
                         return null;
 
                     if (ts.IsByReference)
-                        return ResolveReflectionCache[mref.FullName] = type.MakeByRefType();
+                        return _Cache(cacheKey, type.MakeByRefType());
 
                     if (ts.IsPointer)
-                        return ResolveReflectionCache[mref.FullName] = type.MakePointerType();
+                        return _Cache(cacheKey, type.MakePointerType());
 
                     if (ts.IsArray)
-                        return ResolveReflectionCache[mref.FullName] = (ts as ArrayType).IsVector ? type.MakeArrayType() : type.MakeArrayType((ts as ArrayType).Dimensions.Count);
+                        return _Cache(cacheKey, (ts as ArrayType).IsVector ? type.MakeArrayType() : type.MakeArrayType((ts as ArrayType).Dimensions.Count));
 
                     if (ts.IsGenericInstance)
-                        return ResolveReflectionCache[mref.FullName] = type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
+                        return _Cache(cacheKey, type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray()));
 
                 } else {
                     type = modules
@@ -231,6 +274,8 @@ namespace MonoMod.Utils {
                         type = modules
                             .Select(module => module.GetTypes().FirstOrDefault(m => mref.Is(m)))
                             .FirstOrDefault(m => m != null);
+                    if (type == null && !refetchingModules)
+                        goto RefetchModules;
                 }
 
                 return _Cache(cacheKey, type);
@@ -273,6 +318,9 @@ namespace MonoMod.Utils {
                         .GetMembers(_BindingFlagsAll)
                         .FirstOrDefault(m => mref.Is(m));
             }
+
+            if (member == null && !refetchingModules)
+                goto RefetchModules;
 
             return _Cache(cacheKey, member);
         }
