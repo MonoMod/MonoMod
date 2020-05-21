@@ -20,9 +20,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Inner = inner;
 
 #if MONOMOD_RUNTIMEDETOUR
-            Dictionary<string, DynDllMapping> mappings = new Dictionary<string, DynDllMapping>();
+            Dictionary<string, List<DynDllMapping>> mappings = new Dictionary<string, List<DynDllMapping>>();
             if (!string.IsNullOrEmpty(libmono))
-                mappings.Add("mono", new DynDllMapping { ResolveAs = libmono });
+                mappings.Add("mono", new List<DynDllMapping>() { libmono });
             DynDll.ResolveDynDllImports(this, mappings);
 #endif
 
