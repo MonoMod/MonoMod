@@ -10,11 +10,10 @@ using System.Linq;
 
 namespace MonoMod.Utils {
     public static class DynDll {
-
         /// <summary>
         /// Allows you to remap library paths / names and specify loading flags. Useful for cross-platform compatibility. Applies only to DynDll.
         /// </summary>
-        public static Dictionary<string, DynDllMapping> Mappings = new Dictionary<string, DynDllMapping>();
+        public static Dictionary<string, List<DynDllMapping>> Mappings = new Dictionary<string, List<DynDllMapping>>();
 
         #region kernel32 imports
 
@@ -31,10 +30,6 @@ namespace MonoMod.Utils {
 
         #region dl imports
 
-        private const int RTLD_LAZY = 0x0001;
-        private const int RTLD_NOW = 0x0002;
-        private const int RTLD_LOCAL = 0x0000;
-        private const int RTLD_GLOBAL = 0x0100;
         [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private static extern IntPtr dlopen(string filename, int flags);
         [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
@@ -46,28 +41,22 @@ namespace MonoMod.Utils {
 
         #endregion
 
-        private static T _CheckError<T>(T valueIn)
-            => _CheckError(valueIn, out T valueOut, out Exception e) ? valueOut : throw e;
-        private static bool _CheckError<T>(T valueIn, out T valueOut, out Exception e) {
+        private static bool CheckError(out Exception exception) {
             if (PlatformHelper.Is(Platform.Windows)) {
-                int err = Marshal.GetLastWin32Error();
-                if (err != 0) {
-                    valueOut = default;
-                    e = new Win32Exception(err);
+                int errorCode = Marshal.GetLastWin32Error();
+                if (errorCode != 0) {
+                    exception = new Win32Exception(errorCode);
                     return false;
                 }
-
             } else {
-                IntPtr err = dlerror();
-                if (err != IntPtr.Zero) {
-                    valueOut = default;
-                    e = new Win32Exception(Marshal.PtrToStringAnsi(err));
+                IntPtr errorCode = dlerror();
+                if (errorCode != IntPtr.Zero) {
+                    exception = new Win32Exception(Marshal.PtrToStringAnsi(errorCode));
                     return false;
                 }
             }
 
-            valueOut = valueIn;
-            e = null;
+            exception = null;
             return true;
         }
 
@@ -78,40 +67,59 @@ namespace MonoMod.Utils {
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
         /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>The library handle.</returns>
-        public static IntPtr OpenLibrary(string name, bool skipMapping = false, int? flags = null)
-            => _CheckError(_OpenLibrary(name, skipMapping, flags), out IntPtr lib, out Exception _e) ? lib : throw _e;
+        public static IntPtr OpenLibrary(string name, bool skipMapping = false, int? flags = null) {
+            if (!InternalTryOpenLibrary(name, out var libraryPtr, skipMapping, flags))
+                throw new DllNotFoundException($"Unable to load library '{name}'");
+
+            if (!CheckError(out var exception))
+                throw exception;
+
+            return libraryPtr;
+        }
 
         /// <summary>
         /// Try to open a given library and get its handle.
         /// </summary>
         /// <param name="name">The library name.</param>
-        /// <param name="lib">The library handle, or null if it failed loading.</param>
+		/// <param name="libraryPtr">The library handle, or null if it failed loading.</param>
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
         /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>True if the handle was obtained, false otherwise.</returns>
-        public static bool TryOpenLibrary(string name, out IntPtr lib, bool skipMapping = false, int? flags = null)
-            => _CheckError(_OpenLibrary(name, skipMapping, flags), out lib, out _);
+        public static bool TryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping = false, int? flags = null) {
+            if (!InternalTryOpenLibrary(name, out libraryPtr, skipMapping, flags))
+                return false;
 
-        public static IntPtr _OpenLibrary(string name, bool skipMapping, int? flags) {
-            if (name != null && !skipMapping && Mappings.TryGetValue(name, out DynDllMapping mapping)) {
-                name = mapping.ResolveAs ?? name;
-                flags = mapping.Flags ?? flags;
+            if (!CheckError(out _))
+                return false;
+
+            return true;
+        }
+
+        private static bool InternalTryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping, int? flags) {
+            if (name != null && !skipMapping && Mappings.TryGetValue(name, out List<DynDllMapping> mappingList)) {
+                foreach (var mapping in mappingList) {
+                    if (InternalTryOpenLibrary(mapping.LibraryName, out libraryPtr, true, mapping.Flags))
+                        return true;
+                }
+
+                libraryPtr = IntPtr.Zero;
+                return true;
             }
 
             if (PlatformHelper.Is(Platform.Windows)) {
-                if (name == null)
-                    return GetModuleHandle(name);
-                return LoadLibrary(name);
-
+                libraryPtr = name == null
+                    ? GetModuleHandle(name)
+                    : LoadLibrary(name);
             } else {
-                int _flags = flags ?? (RTLD_NOW | RTLD_GLOBAL); // Default should match LoadLibrary.
+                int _flags = flags ?? (DlopenFlags.RTLD_NOW | DlopenFlags.RTLD_GLOBAL); // Default should match LoadLibrary.
 
-                IntPtr lib = dlopen(name, _flags);
-                if (lib == IntPtr.Zero && File.Exists(name))
-                    lib = dlopen(Path.GetFullPath(name), _flags);
+                libraryPtr = dlopen(name, _flags);
 
-                return lib;
+                if (libraryPtr == IntPtr.Zero && File.Exists(name))
+                    libraryPtr = dlopen(Path.GetFullPath(name), _flags);
             }
+
+            return libraryPtr != IntPtr.Zero;
         }
 
         /// <summary>
@@ -119,41 +127,56 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="lib">The library handle.</param>
         public static bool CloseLibrary(IntPtr lib) {
-            if (PlatformHelper.Is(Platform.Windows)) {
-                return _CheckError(CloseLibrary(lib));
-            } else {
-                return _CheckError(dlclose(lib));
-            }
+            if (PlatformHelper.Is(Platform.Windows))
+                CloseLibrary(lib);
+            else
+                dlclose(lib);
+
+            return CheckError(out _);
         }
 
         /// <summary>
         /// Get a function pointer for a function in the given library.
         /// </summary>
-        /// <param name="lib">The library handle.</param>
+        /// <param name="libraryPtr">The library handle.</param>
         /// <param name="name">The function name.</param>
         /// <returns>The function pointer.</returns>
-        public static IntPtr GetFunction(this IntPtr lib, string name)
-            => _CheckError(_GetFunction(lib, name), out IntPtr ptr, out Exception _e) ? ptr : throw _e;
+        public static IntPtr GetFunction(this IntPtr libraryPtr, string name) {
+            if (!InternalTryGetFunction(libraryPtr, name, out var functionPtr))
+                throw new MissingMethodException($"Unable to load function '{name}'");
+
+            if (!CheckError(out var exception))
+                throw exception;
+
+            return functionPtr;
+        }
 
         /// <summary>
         /// Get a function pointer for a function in the given library.
         /// </summary>
-        /// <param name="lib">The library handle.</param>
+        /// <param name="libraryPtr">The library handle.</param>
         /// <param name="name">The function name.</param>
-        /// <param name="ptr">The function pointer, or null if it wasn't found.</param>
+        /// <param name="functionPtr">The function pointer, or null if it wasn't found.</param>
         /// <returns>True if the function pointer was obtained, false otherwise.</returns>
-        public static bool TryGetFunction(this IntPtr lib, string name, out IntPtr ptr)
-            => _CheckError(_GetFunction(lib, name), out ptr, out _);
+        public static bool TryGetFunction(this IntPtr libraryPtr, string name, out IntPtr functionPtr) {
+            if (!InternalTryGetFunction(libraryPtr, name, out functionPtr))
+                return false;
 
-        private static IntPtr _GetFunction(IntPtr lib, string name) {
-            if (lib == IntPtr.Zero)
-                throw new ArgumentNullException(nameof(lib));
+            if (!CheckError(out _))
+                return false;
 
-            if (PlatformHelper.Is(Platform.Windows)) {
-                return GetProcAddress(lib, name);
-            } else {
-                return dlsym(lib, name);
-            }
+            return true;
+        }
+
+        private static bool InternalTryGetFunction(IntPtr libraryPtr, string name, out IntPtr functionPtr) {
+            if (libraryPtr == IntPtr.Zero)
+                throw new ArgumentNullException(nameof(libraryPtr));
+
+            functionPtr = PlatformHelper.Is(Platform.Windows)
+                ? GetProcAddress(libraryPtr, name)
+                : dlsym(libraryPtr, name);
+
+            return functionPtr != IntPtr.Zero;
         }
 
         /// <summary>
@@ -171,7 +194,8 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="type">The type containing the DynDllImport delegate fields.</param>
         /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
-        public static void ResolveDynDllImports(this Type type, Dictionary<string, DynDllMapping> mappings = null) => _ResolveDynDllImports(type, null, mappings);
+        public static void ResolveDynDllImports(this Type type, Dictionary<string, List<DynDllMapping>> mappings = null)
+            => InternalResolveDynDllImports(type, null, mappings);
 
         /// <summary>
         /// Fill all instance delegate fields with the DynDllImport attribute.
@@ -179,9 +203,10 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="instance">An instance of a type containing the DynDllImport delegate fields.</param>
         /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
-        public static void ResolveDynDllImports(object instance, Dictionary<string, DynDllMapping> mappings = null) => _ResolveDynDllImports(instance.GetType(), instance, mappings);
+        public static void ResolveDynDllImports(object instance, Dictionary<string, List<DynDllMapping>> mappings = null)
+            => InternalResolveDynDllImports(instance.GetType(), instance, mappings);
 
-        private static void _ResolveDynDllImports(Type type, object instance, Dictionary<string, DynDllMapping> mappings) {
+        private static void InternalResolveDynDllImports(Type type, object instance, Dictionary<string, List<DynDllMapping>> mappings) {
             BindingFlags fieldFlags = BindingFlags.Public | BindingFlags.NonPublic;
             if (instance == null)
                 fieldFlags |= BindingFlags.Static;
@@ -194,23 +219,34 @@ namespace MonoMod.Utils {
                 foreach (DynDllImportAttribute attrib in field.GetCustomAttributes(typeof(DynDllImportAttribute), true)) {
                     found = false;
 
-                    bool skipMapping = false;
-                    string name = attrib.DLL;
-                    int? flags = null;
-                    if (mappings != null && (skipMapping = mappings.TryGetValue(name, out DynDllMapping mapping))) {
-                        name = mapping.ResolveAs ?? name;
-                        flags = mapping.Flags ?? flags;
+                    IntPtr libraryPtr = IntPtr.Zero;
+
+                    if (mappings != null && mappings.TryGetValue(attrib.LibraryName, out List<DynDllMapping> mappingList)) {
+                        bool mappingFound = false;
+
+                        foreach (var mapping in mappingList) {
+                            if (TryOpenLibrary(mapping.LibraryName, out libraryPtr, true, mapping.Flags)) {
+                                mappingFound = true;
+                                break;
+                            }
+                        }
+
+                        if (!mappingFound)
+                            continue;
+                    } else {
+                        if (!TryOpenLibrary(attrib.LibraryName, out libraryPtr))
+                            continue;
                     }
 
-                    if (!TryOpenLibrary(name, out IntPtr asm, skipMapping, flags))
-                        continue;
 
-                    foreach (string ep in attrib.EntryPoints.Concat(new string[] { field.Name, field.FieldType.Name })) {
-                        if (!asm.TryGetFunction(ep, out IntPtr func))
+                    foreach (string entryPoint in attrib.EntryPoints.Concat(new[] { field.Name, field.FieldType.Name })) {
+                        if (!libraryPtr.TryGetFunction(entryPoint, out IntPtr functionPtr))
                             continue;
+
 #pragma warning disable CS0618 // Type or member is obsolete
-                        field.SetValue(instance, Marshal.GetDelegateForFunctionPointer(func, field.FieldType));
+                        field.SetValue(instance, Marshal.GetDelegateForFunctionPointer(functionPtr, field.FieldType));
 #pragma warning restore CS0618 // Type or member is obsolete
+
                         found = true;
                         break;
                     }
@@ -224,6 +260,12 @@ namespace MonoMod.Utils {
             }
         }
 
+        public static class DlopenFlags {
+            public const int RTLD_LAZY = 0x0001;
+            public const int RTLD_NOW = 0x0002;
+            public const int RTLD_LOCAL = 0x0000;
+            public const int RTLD_GLOBAL = 0x0100;
+        }
     }
 
     /// <summary>
@@ -231,27 +273,47 @@ namespace MonoMod.Utils {
     /// </summary>
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public class DynDllImportAttribute : Attribute {
-        public string DLL;
-        public string[] EntryPoints;
-        [Obsolete("Pass the entry points as parameters instead.")]
-        public string EntryPoint {
-            set => EntryPoints = new string[] { value };
-        }
-        public DynDllImportAttribute(string dll, params string[] entryPoints) {
-            DLL = dll;
+        /// <summary>
+        /// The library or library alias to use.
+        /// </summary>
+        public string LibraryName { get; set; }
+
+        /// <summary>
+        /// A list of possible entrypoints that the function can be resolved to. Implicitly includes the field name and delegate name.
+        /// </summary>
+        public string[] EntryPoints { get; set; }
+
+        /// <param name="libraryName">The library or library alias to use.</param>
+        /// <param name="entryPoints">A list of possible entrypoints that the function can be resolved to. Implicitly includes the field name and delegate name.</param>
+        public DynDllImportAttribute(string libraryName, params string[] entryPoints) {
+            LibraryName = libraryName;
             EntryPoints = entryPoints;
         }
     }
 
+    /// <summary>
+    /// A mapping entry, to be used by <see cref="DynDllImportAttribute"/>.
+    /// </summary>
     public sealed class DynDllMapping {
         /// <summary>
         /// The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.
         /// </summary>
-        public string ResolveAs;
+        public string LibraryName { get; set; }
 
         /// <summary>
-        /// Platform-dependant loading flags.
+        /// Platform-dependent loading flags.
         /// </summary>
-        public int? Flags;
+        public int? Flags { get; set; }
+
+        /// <param name="libraryName">The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.</param>
+        /// <param name="flags">Platform-dependent loading flags.</param>
+		public DynDllMapping(string libraryName, int? flags = null) {
+            LibraryName = libraryName ?? throw new ArgumentNullException(nameof(libraryName));
+            Flags = flags;
+        }
+
+        public static implicit operator DynDllMapping(string libraryName) {
+            return new DynDllMapping(libraryName);
+        }
     }
 }
