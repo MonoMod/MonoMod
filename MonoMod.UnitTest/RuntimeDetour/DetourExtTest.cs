@@ -12,6 +12,7 @@ using System.Text;
 using System.IO;
 using System.Diagnostics;
 using System.Data.SqlClient;
+using Mono.Cecil;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]

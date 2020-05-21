@@ -37,6 +37,50 @@ namespace MonoMod.UnitTest {
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
                 Assert.Equal(0, ((Func<int>) dmd.Generate().CreateDelegate(typeof(Func<int>)))());
                 Assert.Equal(0, ((Func<int>) DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
+
+                // This was indirectly provided by Pathoschild (SMAPI).
+                // Microsoft.GeneratedCode can be loaded multiple times and have different contents.
+                // This tries to recreate that scenario... and this is the best place to test it at the time of writing.
+#if NETFRAMEWORK && true
+                AssemblyBuilder abDupeA = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                    new AssemblyName() {
+                        Name = "MonoMod.UnitTest.AssemblyDupe"
+                    },
+                    AssemblyBuilderAccess.RunAndSave
+                );
+                ModuleBuilder mbDupeA = abDupeA.DefineDynamicModule($"{abDupeA.GetName().Name}.dll");
+                TypeBuilder tbDupeA = mbDupeA.DefineType(
+                    "DupeA",
+                    System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
+                );
+                Type tDupeA = tbDupeA.CreateType();
+
+                AssemblyBuilder abDupeB = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                    new AssemblyName() {
+                        Name = abDupeA.GetName().Name
+                    },
+                    AssemblyBuilderAccess.RunAndSave
+                );
+                ModuleBuilder mbDupeB = abDupeB.DefineDynamicModule($"{abDupeB.GetName().Name}.dll");
+                TypeBuilder tbDupeB = mbDupeB.DefineType(
+                    "DupeB",
+                    System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
+                );
+                Type tDupeB = tbDupeB.CreateType();
+
+                Assert.Equal(tDupeA.Assembly.FullName, tDupeB.Assembly.FullName);
+                Assert.NotEqual(tDupeA.Assembly, tDupeB.Assembly);
+
+                TypeReference trDupeA = dmd.Module.ImportReference(tDupeA);
+                TypeReference trDupeB = dmd.Module.ImportReference(tDupeB);
+                Assert.Equal(trDupeA.Scope.Name, trDupeB.Scope.Name);
+                // "Fun" fact: both share matching AssemblyNames, so the first scope gets reused!
+                // Assert.NotEqual(trDupeA.Scope, trDupeB.Scope);
+
+                Assert.Equal(tDupeA, trDupeA.ResolveReflection());
+                Assert.Equal(tDupeB, trDupeB.ResolveReflection());
+#endif
+
             }
 
             // Run the DynamicMethod.
