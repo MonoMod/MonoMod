@@ -5,34 +5,22 @@ strategy:
       imageName: 'windows-latest'
       artifactPrefix: ''
       artifactSuffix: ''
-      builder: 'core'
       testers: ';fx;core2;core3;core3.1;'
       generateDocFX: 'false'
       pushNuGet: 'true'
-    linux-core:
-      jobArchName: 'Linux .NET Core'
+    linux:
+      jobArchName: 'Linux'
       imageName: 'ubuntu-latest'
-      artifactPrefix: '~dbg.linux-core.'
+      artifactPrefix: '~dbg.linux.'
       artifactSuffix: ''
-      builder: 'core'
-      testers: ';core2;core3;core3.1;core5;'
-      generateDocFX: 'false'
-      pushNuGet: 'false'
-    linux-mono:
-      jobArchName: 'Linux Mono'
-      imageName: 'ubuntu-latest'
-      artifactPrefix: '~dbg.linux-mono.'
-      artifactSuffix: ''
-      builder: 'mono'
-      testers: ';monoslow;'
+      testers: ';mono;core2;core3;core3.1;core5;'
       generateDocFX: 'false'
       pushNuGet: 'false'
     macos:
       jobArchName: 'macOS'
       imageName: 'macOS-latest'
-      artifactPrefix: '~dbg.macos-core.'
+      artifactPrefix: '~dbg.macos.'
       artifactSuffix: ''
-      builder: 'core'
       testers: ';mono;core2;core3;core3.1;core5;'
       generateDocFX: 'false'
       pushNuGet: 'false'
@@ -50,7 +38,7 @@ pool:
   vmImage: '$(imageName)'
 
 steps:
-- checkout: self 
+- checkout: self
   clean: false
   fetchDepth: 2
   lfs: false
@@ -89,20 +77,13 @@ steps:
     command: 'restore'
     projects: 'MonoMod*/*.csproj'
 
-# Build using core.
+# Build using core. Mono's msbuild started to cause too many issues.
 - task: DotNetCoreCLI@2
-  condition: and(succeeded(), eq(variables.builder, 'core'))
   displayName: 'dotnet: Build'
   inputs:
     command: 'build'
     projects: 'MonoMod*/*.csproj'
     arguments: '--configuration $(buildConfiguration) "/p:Configuration=$(buildConfiguration)"'
-# Build using mono.
-- task: CmdLine@2
-  condition: and(succeeded(), eq(variables.builder, 'mono'))
-  displayName: 'mono: Build'
-  inputs:
-    script: 'msbuild MonoMod.sln "/p:Configuration=$(buildConfiguration)" "/p:Platform=$(buildPlatform)"'
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
