@@ -195,7 +195,13 @@ namespace MonoMod.Utils {
             bool refetchingModules = false;
             bool nullifyModules = false;
 
+            goto FetchModules;
+
             RefetchModules:
+            refetchingModules = true;
+
+            FetchModules:
+
             if (nullifyModules)
                 modules = null;
             nullifyModules = true;
