@@ -318,6 +318,7 @@ namespace MonoMod {
                     return ModuleDefinition.ReadModule(input, args);
                 } catch {
                     args.ReadSymbols = false;
+                    input.Seek(0, SeekOrigin.Begin);
                 }
             }
             return ModuleDefinition.ReadModule(input, args);
