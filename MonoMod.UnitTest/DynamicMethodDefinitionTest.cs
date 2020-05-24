@@ -37,6 +37,7 @@ namespace MonoMod.UnitTest {
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
                 Assert.Equal(0, ((Func<int>) dmd.Generate().CreateDelegate(typeof(Func<int>)))());
                 Assert.Equal(0, ((Func<int>) DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
+                Assert.Equal(dmd.Name = "SomeManualDMDName", dmd.Generate().Name);
 
                 // This was indirectly provided by Pathoschild (SMAPI).
                 // Microsoft.GeneratedCode can be loaded multiple times and have different contents.
