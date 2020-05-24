@@ -59,7 +59,7 @@ namespace MonoMod.Utils {
                     argTypes[i + offs] = def.Parameters[i].ParameterType.ResolveReflection();
             }
 
-            string name = $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>";
+            string name = dmd.Name ?? $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>";
             Type retType = (orig as MethodInfo)?.ReturnType ?? def.ReturnType?.ResolveReflection();
 
             MMDbgLog.Log($"new DynamicMethod: {retType} {name}({string.Join(",", argTypes.Select(type => type?.ToString()).ToArray())})");

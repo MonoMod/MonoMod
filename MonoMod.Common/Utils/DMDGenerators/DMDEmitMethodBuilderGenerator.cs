@@ -141,7 +141,7 @@ namespace MonoMod.Utils {
             _DMDEmit.ResolveWithModifiers(def.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt);
 
             MethodBuilder mb = typeBuilder.DefineMethod(
-                (orig?.Name ?? def.Name).Replace('.', '_'),
+                dmd.Name ?? (orig?.Name ?? def.Name).Replace('.', '_'),
                 System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                 CallingConventions.Standard,
                 returnType, returnTypeModReq, returnTypeModOpt,

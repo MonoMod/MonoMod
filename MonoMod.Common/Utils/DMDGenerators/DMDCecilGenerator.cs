@@ -69,7 +69,7 @@ namespace MonoMod.Utils {
                 };
 #pragma warning restore IDE0039 // Use local function
 
-                MethodDefinition clone = new MethodDefinition("_" + def.Name.Replace('.', '_'), def.Attributes, module.TypeSystem.Void) {
+                MethodDefinition clone = new MethodDefinition(dmd.Name ?? "_" + def.Name.Replace('.', '_'), def.Attributes, module.TypeSystem.Void) {
                     MethodReturnType = def.MethodReturnType,
                     Attributes = Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
                     ImplAttributes = Mono.Cecil.MethodImplAttributes.IL | Mono.Cecil.MethodImplAttributes.Managed,

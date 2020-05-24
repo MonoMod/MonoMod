@@ -61,6 +61,8 @@ namespace MonoMod.Utils {
         private ModuleDefinition _Module;
         public ModuleDefinition Module => _Module;
 
+        public string Name;
+
         public Type OwnerType;
 
         public bool Debug = false;
@@ -81,6 +83,7 @@ namespace MonoMod.Utils {
 
         public DynamicMethodDefinition(string name, Type returnType, Type[] parameterTypes)
             : this() {
+            Name = name;
             OriginalMethod = null;
 
             _CreateDynModule(name, returnType, parameterTypes);
