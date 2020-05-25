@@ -118,28 +118,29 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             // IMPORTANT: IN SOME CIRCUMSTANCES, THIS CAN FIND ThePreStub AS THE ENTRY POINT.
 
-            long lptr = (long) ptr;
             if (PlatformHelper.Is(Platform.ARM)) {
                 // TODO: Debug detouring NGEN'd methods on ARM.
 
             } else if (IntPtr.Size == 4) {
+                int iptr = (int) ptr;
                 // x86
-                if (*(byte*) (lptr + 0x00) == 0xb8 && // mov ... (mscorlib_ni!???)
-                    *(byte*) (lptr + 0x05) == 0x90 && // nop
-                    *(byte*) (lptr + 0x06) == 0xe8 && // call ... (clr!PrecodeRemotingThunk)
-                    *(byte*) (lptr + 0x0b) == 0xe9 // jmp {DELTA}
+                if (*(byte*) (iptr + 0x00) == 0xb8 && // mov ... (mscorlib_ni!???)
+                    *(byte*) (iptr + 0x05) == 0x90 && // nop
+                    *(byte*) (iptr + 0x06) == 0xe8 && // call ... (clr!PrecodeRemotingThunk)
+                    *(byte*) (iptr + 0x0b) == 0xe9 // jmp {DELTA}
                 ) {
                     // delta = to - (from + 1 + sizeof(int))
                     // to = delta + (from + 1 + sizeof(int))
-                    long from = lptr + 0x0b;
-                    long delta = *(int*) (from + 1);
-                    long to = delta + (from + 1 + sizeof(int));
+                    int from = iptr + 0x0b;
+                    int delta = *(int*) (from + 1);
+                    int to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
                     return ptr;
                 }
 
             } else {
+                long lptr = (long) ptr;
                 // x64 .NET Framework
                 if (*(uint*) (lptr + 0x00) == 0x74___c9_85_48 && // in reverse order: test rcx, rcx | je ...
                     *(uint*) (lptr + 0x05) == 0x49___01_8b_48 && // in reverse order: rax, qword ptr [rcx] | mov ...
@@ -158,7 +159,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     // delta = to - (from + 1 + sizeof(int))
                     // to = delta + (from + 1 + sizeof(int))
                     long from = lptr;
-                    long delta = *(int*) (from + 1);
+                    int delta = *(int*) (from + 1);
                     long to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
