@@ -50,6 +50,8 @@ namespace MonoMod.Utils {
             Mono.Cecil.Cil.MethodBody bodyTo = def.Body;
             ILProcessor processor = bodyTo.GetILProcessor();
 
+            TypeReference tr_IsVolatile = new TypeReference("System.Runtime.CompilerServices", "IsVolatile", moduleTo, moduleTo.TypeSystem.CoreLibrary);
+
             Type[] typeArguments = null;
             if (method.DeclaringType.IsGenericType)
                 typeArguments = method.DeclaringType.GetGenericArguments();
@@ -169,7 +171,14 @@ namespace MonoMod.Utils {
                                 break;
 
                             case FieldInfo i:
-                                instr.Operand = moduleTo.ImportReference(i);
+                                FieldReference fref = moduleTo.ImportReference(i);
+                                // System.Reflection doesn't contain any volatility info.
+                                // System.Reflection.Emit presumably does something similar to this.
+                                // Mono.Cecil isn't aware of the volatility as part of the field reference.
+                                // The modifier is still necessary though.
+                                if (instr.Previous?.OpCode == OpCodes.Volatile)
+                                    fref.FieldType = new OptionalModifierType(tr_IsVolatile, fref.FieldType);
+                                instr.Operand = fref;
                                 break;
 
                             case MethodBase i:
