@@ -163,31 +163,19 @@ namespace MonoMod.Utils {
                         break;
 
                     case OperandType.InlineTok:
-                        switch (moduleFrom.ResolveMember(reader.ReadInt32(), typeArguments, methodArguments)) {
-                            case Type i:
-                                instr.Operand = moduleTo.ImportReference(i);
-                                break;
-
-                            case FieldInfo i:
-                                instr.Operand = moduleTo.ImportReference(i);
-                                break;
-
-                            case MethodBase i:
-                                instr.Operand = moduleTo.ImportReference(i);
-                                break;
-                        }
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Any);
                         break;
 
                     case OperandType.InlineType:
-                        instr.Operand = moduleTo.ImportReference(moduleFrom.ResolveType(reader.ReadInt32(), typeArguments, methodArguments));
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Type);
                         break;
 
                     case OperandType.InlineMethod:
-                        instr.Operand = moduleTo.ImportReference(moduleFrom.ResolveMethod(reader.ReadInt32(), typeArguments, methodArguments));
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Method);
                         break;
 
                     case OperandType.InlineField:
-                        instr.Operand = moduleTo.ImportReference(moduleFrom.ResolveField(reader.ReadInt32(), typeArguments, methodArguments));
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Field);
                         break;
 
                     case OperandType.ShortInlineVar:
@@ -205,6 +193,59 @@ namespace MonoMod.Utils {
                     case OperandType.InlinePhi: // No opcode seems to use this
                     default:
                         throw new NotSupportedException($"Unsupported opcode ${instr.OpCode.Name}");
+                }
+            }
+
+            MemberReference ResolveTokenAs(int token, TokenResolutionMode resolveMode) {
+                try { 
+                    // the normal case
+                    switch (resolveMode) {
+                        case TokenResolutionMode.Type:
+                            return moduleTo.ImportReference(moduleFrom.ResolveType(token, typeArguments, methodArguments));
+                        case TokenResolutionMode.Method:
+                            return moduleTo.ImportReference(moduleFrom.ResolveMethod(token, typeArguments, methodArguments));
+                        case TokenResolutionMode.Field:
+                            return moduleTo.ImportReference(moduleFrom.ResolveField(token, typeArguments, methodArguments));
+                        case TokenResolutionMode.Any:
+                            switch (moduleFrom.ResolveMember(token, typeArguments, methodArguments)) {
+                                case Type i:
+                                    return moduleTo.ImportReference(i);
+                                case FieldInfo i:
+                                    return moduleTo.ImportReference(i);
+                                case MethodBase i:
+                                    return moduleTo.ImportReference(i);
+                                case var resolved:
+                                    throw new NotSupportedException($"Invalid resolved member type {resolved.GetType()}");
+                            }
+                        default:
+                            throw new NotSupportedException($"Invalid TokenResolutionMode {resolveMode}");
+                    }
+                } catch (MissingMemberException) {
+                    // we could not resolve the method normally, so lets read the import table
+                    // but we can only do that if the module was loaded from disk
+                    // this can still throw if the assembly is a dynamic one, but if that's broken, you have bigger issues
+                    string filePath = moduleFrom.Assembly.Location;
+                    if (!File.Exists(filePath))
+                        throw; // in this case, the fallback cannot be followed, and so throwing the original error gives the user information
+                    // TODO: make this cached somehow so its not read and re-opened a bunch
+                    using (AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(filePath, new ReaderParameters {
+                        ReadingMode = ReadingMode.Deferred
+                    })) {
+                        ModuleDefinition module = assembly.Modules.First(m => m.Name == moduleFrom.Name);
+                        MemberReference reference = (MemberReference)module.LookupToken(token); // this should only fail if the token itself is somehow wrong
+                        switch (resolveMode) { // the explicit casts here are to throw if they are incorrect
+                            case TokenResolutionMode.Type:
+                                return (TypeReference) reference;
+                            case TokenResolutionMode.Method:
+                                return (MethodReference) reference;
+                            case TokenResolutionMode.Field:
+                                return (FieldReference) reference;
+                            case TokenResolutionMode.Any:
+                                return reference;
+                            default:
+                                throw new NotSupportedException($"Invalid TokenResolutionMode {resolveMode}");
+                        }
+                    }
                 }
             }
 
@@ -231,6 +272,13 @@ namespace MonoMod.Utils {
                 return null;
             }
 
+        }
+
+        private enum TokenResolutionMode { 
+            Any,
+            Type,
+            Method,
+            Field
         }
 
     }
