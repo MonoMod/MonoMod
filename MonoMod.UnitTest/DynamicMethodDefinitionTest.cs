@@ -38,6 +38,7 @@ namespace MonoMod.UnitTest {
                 Assert.Equal(0, ((Func<int>) dmd.Generate().CreateDelegate(typeof(Func<int>)))());
                 Assert.Equal(0, ((Func<int>) DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
                 Assert.Equal(dmd.Name = "SomeManualDMDName", dmd.Generate().Name);
+                Counter -= 2;
 
                 // This was indirectly provided by Pathoschild (SMAPI).
                 // Microsoft.GeneratedCode can be loaded multiple times and have different contents.
@@ -100,7 +101,7 @@ namespace MonoMod.UnitTest {
         public const string StringOriginal = "Hello from ExampleMethod!";
         public const string StringPatched = "Hello from DynamicMethodDefinition!";
 
-        public static int Counter;
+        public static volatile int Counter;
 
         public static Tuple<string, int> ExampleMethod(int i) {
             TestObjectGeneric<string> test = new TestObjectGeneric<string>();
@@ -144,6 +145,7 @@ namespace MonoMod.UnitTest {
 
         public class ExampleGenericClass<T> {
             public static T ExampleMethod() {
+                Counter++;
                 return default;
             }
         }
