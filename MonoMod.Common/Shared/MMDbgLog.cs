@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 
 // This class is included in every MonoMod assembly.
 namespace MonoMod {
@@ -14,6 +15,8 @@ namespace MonoMod {
         public static readonly string Tag = typeof(MMDbgLog).Assembly.GetName().Name;
 
         public static TextWriter Writer;
+
+        public static bool Debugging;
 
         static MMDbgLog() {
             bool enabled =
@@ -26,6 +29,17 @@ namespace MonoMod {
 
             if (enabled)
                 Start();
+        }
+
+        public static void WaitForDebugger() {
+            // When in doubt, enable this debugging helper block, add Debugger.Break() where needed and attach WinDbg quickly.
+            if (!Debugging) {
+                Debugging = true;
+                // WinDbg doesn't trigger Debugger.IsAttached
+                Debugger.Launch();
+                Thread.Sleep(6000);
+                Debugger.Break();
+            }
         }
 
         public static void Start() {

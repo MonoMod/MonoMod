@@ -15,13 +15,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
     class DetourRuntimeNETPlatform : DetourRuntimeILPlatform {
         private static readonly object[] _NoArgs = new object[0];
 
-#pragma warning disable IDE0044 // Add readonly modifier
-#pragma warning disable CS0169 // The field is never used
-        private static bool Debugging;
-#pragma warning restore IDE0044 // Add readonly modifier
-#pragma warning restore CS0169 // The field is never used
-
-
         private static readonly FieldInfo _DynamicMethod_m_method =
             typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -96,15 +89,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
 
             IntPtr ptr = base.GetFunctionPointer(method, handle);
-
-            // When in doubt, enable this debugging helper block, add Debugger.Break() where needed and attach WinDbg quickly.
-#if false
-            if (!Debugging) {
-                Debugging = true;
-                // WinDbg doesn't trigger Debugger.IsAttached
-                Thread.Sleep(6000);
-            }
-#endif
 
             /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
              * When debugged using WinDbg, !dumpmd for the handle gives a different CodeAddr than ldftn or GetFunctionPointer.

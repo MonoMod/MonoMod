@@ -286,6 +286,7 @@ namespace MonoMod.Utils {
                 // System.Reflection.Emit presumably does something similar to this.
                 // Mono.Cecil isn't aware of the volatility as part of the field reference.
                 // The modifier is still necessary though.
+                // This is done here in addition to the Cecil generator as this info is still relevant otherwise.
                 if (instr.Previous?.OpCode == OpCodes.Volatile && (fref.FieldType as RequiredModifierType)?.ModifierType != tr_IsVolatile)
                     fref.FieldType = new RequiredModifierType(tr_IsVolatile, fref.FieldType);
 
