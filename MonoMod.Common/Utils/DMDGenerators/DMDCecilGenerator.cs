@@ -111,9 +111,9 @@ namespace MonoMod.Utils {
 
                     // System.Reflection doesn't contain any volatility info.
                     // System.Reflection.Emit presumably does something similar to this.
-                    // Mono.Cecil isn't aware of the volatility as part of the field reference.
+                    // Mono.Cecil thus isn't aware of the volatility as part of the imported field reference.
                     // The modifier is still necessary though.
-                    // This is done here in addition to the copier as Harmony can't keep track of volatility due to ^
+                    // This is done here instead of the copier as Harmony and other users can't track modreqs
                     if (instr.Previous?.OpCode == OpCodes.Volatile &&
                         operand is FieldReference fref &&
                         (fref.FieldType as RequiredModifierType)?.ModifierType != tr_IsVolatile) {

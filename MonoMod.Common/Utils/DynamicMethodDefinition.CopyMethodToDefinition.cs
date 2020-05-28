@@ -50,8 +50,6 @@ namespace MonoMod.Utils {
             Mono.Cecil.Cil.MethodBody bodyTo = def.Body;
             ILProcessor processor = bodyTo.GetILProcessor();
 
-            TypeReference tr_IsVolatile = new TypeReference("System.Runtime.CompilerServices", "IsVolatile", moduleTo, moduleTo.TypeSystem.CoreLibrary);
-
             Type[] typeArguments = null;
             if (method.DeclaringType.IsGenericType)
                 typeArguments = method.DeclaringType.GetGenericArguments();
@@ -168,19 +166,19 @@ namespace MonoMod.Utils {
                         break;
 
                     case OperandType.InlineTok:
-                        instr.Operand = ResolveTokenAs(instr, reader.ReadInt32(), TokenResolutionMode.Any);
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Any);
                         break;
 
                     case OperandType.InlineType:
-                        instr.Operand = ResolveTokenAs(instr, reader.ReadInt32(), TokenResolutionMode.Type);
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Type);
                         break;
 
                     case OperandType.InlineMethod:
-                        instr.Operand = ResolveTokenAs(instr, reader.ReadInt32(), TokenResolutionMode.Method);
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Method);
                         break;
 
                     case OperandType.InlineField:
-                        instr.Operand = ResolveTokenAs(instr, reader.ReadInt32(), TokenResolutionMode.Field);
+                        instr.Operand = ResolveTokenAs(reader.ReadInt32(), TokenResolutionMode.Field);
                         break;
 
                     case OperandType.ShortInlineVar:
@@ -201,28 +199,28 @@ namespace MonoMod.Utils {
                 }
             }
 
-            MemberReference ResolveTokenAs(Instruction instr, int token, TokenResolutionMode resolveMode) {
+            MemberReference ResolveTokenAs(int token, TokenResolutionMode resolveMode) {
                 try {
                     switch (resolveMode) {
                         case TokenResolutionMode.Type:
-                            return ImportType(instr, moduleFrom.ResolveType(token, typeArguments, methodArguments));
+                            return moduleTo.ImportReference(moduleFrom.ResolveType(token, typeArguments, methodArguments));
 
                         case TokenResolutionMode.Method:
-                            return ImportMethod(instr, moduleFrom.ResolveMethod(token, typeArguments, methodArguments));
+                            return moduleTo.ImportReference(moduleFrom.ResolveMethod(token, typeArguments, methodArguments));
 
                         case TokenResolutionMode.Field:
-                            return ImportField(instr, moduleFrom.ResolveField(token, typeArguments, methodArguments));
+                            return moduleTo.ImportReference(moduleFrom.ResolveField(token, typeArguments, methodArguments));
 
                         case TokenResolutionMode.Any:
                             switch (moduleFrom.ResolveMember(token, typeArguments, methodArguments)) {
                                 case Type i:
-                                    return ImportType(instr, i);
+                                    return moduleTo.ImportReference(i);
 
                                 case MethodBase i:
-                                    return ImportMethod(instr, i);
+                                    return moduleTo.ImportReference(i);
 
                                 case FieldInfo i:
-                                    return ImportField(instr, i);
+                                    return moduleTo.ImportReference(i);
 
                                 case var resolved:
                                     throw new NotSupportedException($"Invalid resolved member type {resolved.GetType()}");
@@ -269,28 +267,6 @@ namespace MonoMod.Utils {
                         }
                     }
                 }
-            }
-
-            TypeReference ImportType(Instruction instr, Type info) {
-                return moduleTo.ImportReference(info);
-            }
-
-            MethodReference ImportMethod(Instruction instr, MethodBase info) {
-                return moduleTo.ImportReference(info);
-            }
-
-            FieldReference ImportField(Instruction instr, FieldInfo info) {
-                FieldReference fref = moduleTo.ImportReference(info);
-
-                // System.Reflection doesn't contain any volatility info.
-                // System.Reflection.Emit presumably does something similar to this.
-                // Mono.Cecil isn't aware of the volatility as part of the field reference.
-                // The modifier is still necessary though.
-                // This is done here in addition to the Cecil generator as this info is still relevant otherwise.
-                if (instr.Previous?.OpCode == OpCodes.Volatile && (fref.FieldType as RequiredModifierType)?.ModifierType != tr_IsVolatile)
-                    fref.FieldType = new RequiredModifierType(tr_IsVolatile, fref.FieldType);
-
-                return fref;
             }
 
             Instruction GetInstruction(int offset) {
