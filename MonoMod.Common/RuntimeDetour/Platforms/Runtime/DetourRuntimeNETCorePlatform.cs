@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.IO;
+using MonoMod.Common.RuntimeDetour.Platforms.Runtime;
 
 namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
@@ -31,7 +32,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 if (clrjitModule == null)
                     throw new PlatformNotSupportedException();
 
-                if (!DynDll.TryOpenLibrary(clrjitModule.FileName, out IntPtr clrjitPtr) || clrjitPtr == IntPtr.Zero)
+                if (!DynDll.TryOpenLibrary(clrjitModule.FileName, out IntPtr clrjitPtr))
                     throw new PlatformNotSupportedException();
 
                 try {
@@ -82,35 +83,42 @@ namespace MonoMod.RuntimeDetour.Platforms {
             => *GetVTableEntry(@object, index);
 #endif
 
-        protected override unsafe void DisableInlining(MethodBase method, RuntimeMethodHandle handle) {
+        protected override void DisableInlining(MethodBase method, RuntimeMethodHandle handle) {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
             // mdcNotInline = 0x2000
             // References to RuntimeMethodHandle (CORINFO_METHOD_HANDLE) pointing to MethodDesc
             // can be traced as far back as https://ntcore.com/files/netint_injection.htm
 
             // FIXME: Take a very educated guess regarding the offset to m_wFlags in MethodDesc.
-
-            const int offset =
-                2 // UINT16 m_wFlags3AndTokenRemainder
-              + 1 // BYTE m_chunkIndex
-              + 1 // BYTE m_chunkIndex
-              + 2 // WORD m_wSlotNumber
-              ;
-            ushort* m_wFlags = (ushort*)(((byte*) handle.Value) + offset);
-            *m_wFlags |= 0x2000;
         }
+
+        public static readonly Guid Core31Jit = new Guid("d609bed1-7831-49fc-bd49-b6f054dd4d46");
+
+        protected virtual void InstallJitHooks(IntPtr jitObject) => throw new PlatformNotSupportedException();
 
         public static DetourRuntimeNETCorePlatform Create() {
             // This only needs to have a specialized method when working in RuntimeDetour, because
             //   it needs the JIT hooks that the specializations look for and install.
-#if MONOMOD_RUNTIMEDETOUR
-            IntPtr jit = GetJitObject();
-            Guid jitGuid = GetJitGuid(jit);
 
-            throw new NotImplementedException();
-#else
-            return new DetourRuntimeNETCorePlatform();
+#if MONOMOD_RUNTIMEDETOUR
+            try {
+                IntPtr jit = GetJitObject();
+                Guid jitGuid = GetJitGuid(jit);
+
+                DetourRuntimeNETCorePlatform platform = null;
+
+                if (jitGuid == Core31Jit) {
+                    platform = new DetourRuntimeNETCore31Platform();
+                }
+                // TODO: add more known JIT GUIDs
+
+                platform?.InstallJitHooks(jit);
+                return platform;
+            } catch {
+                MMDbgLog.Log("Could not get JIT information for the runtime, falling out to the version without JIT hooks");
+            }
 #endif
+            return new DetourRuntimeNETCorePlatform();
         }
     }
 }
