@@ -53,35 +53,20 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return guid;
         }
 
-        protected enum CorJitResult { 
-            CORJIT_OK = 0,
-            // There are more, but I don't particularly care about them
-        }
-
-        protected const int vtableIndex_ICorJitCompiler_compileMethod = 0;
-        private   const int vtableIndex_ICorJitCompiler_getVersionIdentifier = 4;
-
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        protected unsafe delegate CorJitResult d_compileMethod(
-            IntPtr thisPtr, // ICorJitCompiler
-            IntPtr corJitInfo, // ICorJitInfo*
-            IntPtr methodInfo, // CORINFO_METHOD_INFO*
-            uint flags,
-            out byte* nativeEntry,
-            out ulong nativeSizeOfCode
-            );
-
+        private const int vtableIndex_ICorJitCompiler_getVersionIdentifier = 4;
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate void d_getVersionIdentifier(
-            IntPtr thisPtr, // ICorJitCompiler
+            IntPtr thisPtr, // ICorJitCompiler*
             out Guid versionIdentifier
             );
+#endif
 
-        protected static unsafe IntPtr* GetVTableEntry(IntPtr @object, int index) 
-            => (*(IntPtr**)@object) + index;
+        protected const int vtableIndex_ICorJitCompiler_compileMethod = 0;
+
+        protected static unsafe IntPtr* GetVTableEntry(IntPtr @object, int index)
+            => (*(IntPtr**) @object) + index;
         protected static unsafe IntPtr ReadObjectVTable(IntPtr @object, int index)
             => *GetVTableEntry(@object, index);
-#endif
 
         protected override void DisableInlining(MethodBase method, RuntimeMethodHandle handle) {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
