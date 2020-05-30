@@ -90,7 +90,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 IntPtr jit = GetJitObject();
                 Guid jitGuid = GetJitGuid(jit);
 
-                DetourRuntimeNETCorePlatform platform = null;
+                DetourRuntimeNETCorePlatform platform = new DetourRuntimeNETCorePlatform();
 
                 if (jitGuid == Core31Jit) {
                     platform = new DetourRuntimeNETCore31Platform();
