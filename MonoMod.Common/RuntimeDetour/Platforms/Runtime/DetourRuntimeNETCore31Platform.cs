@@ -32,22 +32,8 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
         }
 
 #if MONOMOD_RUNTIMEDETOUR
-        protected enum CorJitResult {
-            CORJIT_OK = 0,
-            // There are more, but I don't particularly care about them
-        }
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        protected unsafe delegate CorJitResult d_compileMethod(
-            IntPtr thisPtr, // ICorJitCompiler*
-            IntPtr corJitInfo, // ICorJitInfo*
-            IntPtr methodInfo, // CORINFO_METHOD_INFO*
-            uint flags,
-            out byte* nativeEntry,
-            out ulong nativeSizeOfCode
-            );
-
-        protected static d_compileMethod GetCompileMethod(IntPtr jit)
+        private static d_compileMethod GetCompileMethod(IntPtr jit)
             => ReadObjectVTable(jit, vtableIndex_ICorJitCompiler_compileMethod).AsDelegate<d_compileMethod>();
 
         private static unsafe readonly d_compileMethod our_compileMethod = CompileMethodHook;
@@ -62,7 +48,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             {
                 NativeDetourData trampolineData = CreateNativeTrampolineTo(our_compileMethodPtr);
                 d_compileMethod trampoline = trampolineData.Method.AsDelegate<d_compileMethod>();
-                trampoline(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, out _, out _);
+                trampoline(IntPtr.Zero, IntPtr.Zero, new CORINFO_METHOD_INFO(), 0, out _, out _);
                 FreeNativeTrampoline(trampolineData);
             }
 
@@ -86,13 +72,65 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             DetourHelper.Native.MemFree(data.Method);
             DetourHelper.Native.Free(data);
         }
+        private enum CorJitResult {
+            CORJIT_OK = 0,
+            // There are more, but I don't particularly care about them
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private unsafe struct CORINFO_SIG_INST {
+            public uint classInstCount;
+            public IntPtr* classInst; // CORINFO_CLASS_HANDLE* // (representative, not exact) instantiation for class type variables in signature
+            public uint methInstCount;
+            public IntPtr* methInst; // CORINFO_CLASS_HANDLE* // (representative, not exact) instantiation for method type variables in signature
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct CORINFO_SIG_INFO {
+            public int callConv; // CorInfoCallConv
+            public IntPtr retTypeClass; // CORINFO_CLASS_HANDLE // if the return type is a value class, this is its handle (enums are normalized)
+            public IntPtr retTypeSigClass; // CORINFO_CLASS_HANDLE // returns the value class as it is in the sig (enums are not converted to primitives)
+            public byte retType; // CorInfoType : 8
+            public byte flags; // unsigned : 8 // used by IL stubs code
+            public ushort numArgs; // unsigned : 16 
+            public CORINFO_SIG_INST sigInst; // information about how type variables are being instantiated in generic code
+            public IntPtr args; // CORINFO_ARG_LIST_HANDLE
+            public IntPtr pSig; // COR_SIGNATURE*
+            public uint sbSig;
+            public IntPtr scope; // CORINFO_MODULE_HANDLE // passed to getArgClass
+            public uint token; // mdToken (aka ULONG32 aka unsigned int)
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private unsafe struct CORINFO_METHOD_INFO {
+            public IntPtr ftn;   // CORINFO_METHOD_HANDLE
+            public IntPtr scope; // CORINFO_MODULE_HANDLE
+            public byte* ILCode;
+            public uint ILCodeSize;
+            public uint maxStack;
+            public uint EHcount;
+            public int options; // CorInfoOptions
+            public int regionKind; // CorInfoRegionKind
+            public CORINFO_SIG_INFO args;
+            public CORINFO_SIG_INFO locals;
+        }
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private unsafe delegate CorJitResult d_compileMethod(
+            IntPtr thisPtr, // ICorJitCompiler*
+            IntPtr corJitInfo, // ICorJitInfo*
+            in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
+            uint flags,
+            out byte* nativeEntry,
+            out ulong nativeSizeOfCode
+            );
 
         [ThreadStatic]
         private static int hookEntrancy = 0;
         private static unsafe CorJitResult CompileMethodHook(
             IntPtr jit, // ICorJitCompiler*
             IntPtr corJitInfo, // ICorJitInfo*
-            IntPtr methodInfo, // CORINFO_METHOD_INFO*
+            in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
             uint flags, 
             out byte* nativeEntry, 
             out ulong nativeSizeOfCode) {
