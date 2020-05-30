@@ -63,6 +63,8 @@ namespace MonoMod.Utils {
 
             try {
 
+                TypeReference tr_IsVolatile = new TypeReference("System.Runtime.CompilerServices", "IsVolatile", module, module.TypeSystem.CoreLibrary);
+
 #pragma warning disable IDE0039 // Use local function
                 Relinker relinker = (mtp, ctx) => {
                     return module.ImportReference(mtp);
@@ -105,6 +107,17 @@ namespace MonoMod.Utils {
                     } else if (operand is IMetadataTokenProvider mtp) {
                         operand = mtp.Relink(relinker, clone);
 
+                    }
+
+                    // System.Reflection doesn't contain any volatility info.
+                    // System.Reflection.Emit presumably does something similar to this.
+                    // Mono.Cecil thus isn't aware of the volatility as part of the imported field reference.
+                    // The modifier is still necessary though.
+                    // This is done here instead of the copier as Harmony and other users can't track modreqs
+                    if (instr.Previous?.OpCode == OpCodes.Volatile &&
+                        operand is FieldReference fref &&
+                        (fref.FieldType as RequiredModifierType)?.ModifierType != tr_IsVolatile) {
+                        fref.FieldType = new RequiredModifierType(tr_IsVolatile, fref.FieldType);
                     }
 
                     if (operand is DynamicMethodReference dmref) {

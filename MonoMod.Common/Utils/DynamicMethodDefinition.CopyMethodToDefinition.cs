@@ -66,12 +66,15 @@ namespace MonoMod.Utils {
             }
 
             using (BinaryReader reader = new BinaryReader(new MemoryStream(data))) {
-                while (reader.BaseStream.Position < reader.BaseStream.Length) {
+                for (Instruction instr = null, prev = null; reader.BaseStream.Position < reader.BaseStream.Length; prev = instr) {
                     int offset = (int) reader.BaseStream.Position;
-                    Instruction instr = Instruction.Create(OpCodes.Nop);
+                    instr = Instruction.Create(OpCodes.Nop);
                     byte op = reader.ReadByte();
                     instr.OpCode = op != 0xfe ? _CecilOpCodes1X[op] : _CecilOpCodes2X[reader.ReadByte()];
                     instr.Offset = offset;
+                    if (prev != null)
+                        prev.Next = instr;
+                    instr.Previous = prev;
                     ReadOperand(reader, instr);
                     bodyTo.Instructions.Add(instr);
                 }
@@ -197,51 +200,68 @@ namespace MonoMod.Utils {
             }
 
             MemberReference ResolveTokenAs(int token, TokenResolutionMode resolveMode) {
-                try { 
-                    // the normal case
+                try {
                     switch (resolveMode) {
                         case TokenResolutionMode.Type:
                             return moduleTo.ImportReference(moduleFrom.ResolveType(token, typeArguments, methodArguments));
+
                         case TokenResolutionMode.Method:
                             return moduleTo.ImportReference(moduleFrom.ResolveMethod(token, typeArguments, methodArguments));
+
                         case TokenResolutionMode.Field:
                             return moduleTo.ImportReference(moduleFrom.ResolveField(token, typeArguments, methodArguments));
+
                         case TokenResolutionMode.Any:
                             switch (moduleFrom.ResolveMember(token, typeArguments, methodArguments)) {
                                 case Type i:
                                     return moduleTo.ImportReference(i);
-                                case FieldInfo i:
-                                    return moduleTo.ImportReference(i);
+
                                 case MethodBase i:
                                     return moduleTo.ImportReference(i);
+
+                                case FieldInfo i:
+                                    return moduleTo.ImportReference(i);
+
                                 case var resolved:
                                     throw new NotSupportedException($"Invalid resolved member type {resolved.GetType()}");
                             }
+
                         default:
                             throw new NotSupportedException($"Invalid TokenResolutionMode {resolveMode}");
                     }
+
                 } catch (MissingMemberException) {
                     // we could not resolve the method normally, so lets read the import table
                     // but we can only do that if the module was loaded from disk
                     // this can still throw if the assembly is a dynamic one, but if that's broken, you have bigger issues
                     string filePath = moduleFrom.Assembly.Location;
-                    if (!File.Exists(filePath))
-                        throw; // in this case, the fallback cannot be followed, and so throwing the original error gives the user information
+                    if (!File.Exists(filePath)) {
+                        // in this case, the fallback cannot be followed, and so throwing the original error gives the user information
+                        throw;
+                    }
+
                     // TODO: make this cached somehow so its not read and re-opened a bunch
                     using (AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(filePath, new ReaderParameters {
                         ReadingMode = ReadingMode.Deferred
                     })) {
                         ModuleDefinition module = assembly.Modules.First(m => m.Name == moduleFrom.Name);
-                        MemberReference reference = (MemberReference)module.LookupToken(token); // this should only fail if the token itself is somehow wrong
-                        switch (resolveMode) { // the explicit casts here are to throw if they are incorrect
+                        // this should only fail if the token itself is somehow wrong
+                        MemberReference reference = (MemberReference) module.LookupToken(token);
+                        // the explicit casts here are to throw if they are incorrect
+                        // normally the references would need to be imported, but moduleTo isn't written to anywhere
+                        switch (resolveMode) {
                             case TokenResolutionMode.Type:
                                 return (TypeReference) reference;
+
                             case TokenResolutionMode.Method:
                                 return (MethodReference) reference;
+
                             case TokenResolutionMode.Field:
                                 return (FieldReference) reference;
+
                             case TokenResolutionMode.Any:
                                 return reference;
+
                             default:
                                 throw new NotSupportedException($"Invalid TokenResolutionMode {resolveMode}");
                         }
