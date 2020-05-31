@@ -19,12 +19,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public DetourNativeMonoPlatform(IDetourNativePlatform inner, string libmono) {
             Inner = inner;
 
-#if MONOMOD_RUNTIMEDETOUR
             Dictionary<string, List<DynDllMapping>> mappings = new Dictionary<string, List<DynDllMapping>>();
             if (!string.IsNullOrEmpty(libmono))
                 mappings.Add("mono", new List<DynDllMapping>() { libmono });
             DynDll.ResolveDynDllImports(this, mappings);
-#endif
 
             _Pagesize = mono_pagesize();
         }
@@ -84,7 +82,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Inner.MemFree(ptr);
         }
 
-#if MONOMOD_RUNTIMEDETOUR
 #pragma warning disable IDE0044 // Add readonly modifier
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value null
 
@@ -100,15 +97,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
 #pragma warning restore IDE0044 // Add readonly modifier
 #pragma warning restore CS0649 // Field is never assigned to, and will always have its default value null
-
-#else
-
-        [DllImport("libmonosgen-2.0", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-        private static extern int mono_pagesize();
-        [DllImport("libmonosgen-2.0", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-        private static extern int mono_mprotect(IntPtr addr, IntPtr length, int flags);
-
-#endif
 
         [Flags]
         private enum MmapProts : int {
