@@ -81,9 +81,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // can be traced as far back as https://ntcore.com/files/netint_injection.htm
         }
 
-        public static readonly Guid Core31Jit = new Guid("d609bed1-7831-49fc-bd49-b6f054dd4d46");
-        public static readonly Guid Net50p4Jit = new Guid("6ae798bf-44bd-4e8a-b8fc-dbe1d1f4029e");
-
         protected virtual void InstallJitHooks(IntPtr jitObject) => throw new PlatformNotSupportedException();
 
         public static DetourRuntimeNETCorePlatform Create() {
@@ -93,9 +90,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 DetourRuntimeNETCorePlatform platform = null;
 
-                if (jitGuid == Net50p4Jit) {
+                if (jitGuid == DetourRuntimeNET50p4Platform.JitVersionGuid) {
                     platform = new DetourRuntimeNET50p4Platform();
-                } else if (jitGuid == Core31Jit) {
+                } else if (jitGuid == DetourRuntimeNETCore31Platform.JitVersionGuid) {
                     platform = new DetourRuntimeNETCore31Platform();
                 }
                 // TODO: add more known JIT GUIDs
@@ -105,8 +102,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 platform?.InstallJitHooks(jit);
                 return platform;
-            } catch {
+            } catch (Exception e) {
                 MMDbgLog.Log("Could not get JIT information for the runtime, falling out to the version without JIT hooks");
+                MMDbgLog.Log($"Error: {e}");
             }
 
             return new DetourRuntimeNETCorePlatform();

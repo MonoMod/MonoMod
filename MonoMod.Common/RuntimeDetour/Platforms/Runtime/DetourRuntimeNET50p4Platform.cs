@@ -14,6 +14,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
     public
 #endif
     class DetourRuntimeNET50p4Platform : DetourRuntimeNETCore31Platform {
+        public static new readonly Guid JitVersionGuid = new Guid("6ae798bf-44bd-4e8a-b8fc-dbe1d1f4029e");
 
         // TODO: Override the implementations to make it work on NET5
     }

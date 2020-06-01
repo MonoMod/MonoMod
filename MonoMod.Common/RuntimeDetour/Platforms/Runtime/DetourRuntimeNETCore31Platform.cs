@@ -13,6 +13,8 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
     public
 #endif
     class DetourRuntimeNETCore31Platform : DetourRuntimeNETCorePlatform {
+        public static readonly Guid JitVersionGuid = new Guid("d609bed1-7831-49fc-bd49-b6f054dd4d46");
+
         protected override unsafe void DisableInlining(MethodBase method, RuntimeMethodHandle handle) {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
             // mdcNotInline = 0x2000
