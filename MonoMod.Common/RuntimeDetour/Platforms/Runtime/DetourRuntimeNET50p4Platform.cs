@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
+namespace MonoMod.RuntimeDetour.Platforms {
     // This is based on the Core 3.1 implementation for now
 #if !MONOMOD_INTERNAL
     public
