@@ -31,8 +31,6 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             *m_wFlags |= 0x2000;
         }
 
-#if MONOMOD_RUNTIMEDETOUR
-
         private static d_compileMethod GetCompileMethod(IntPtr jit)
             => ReadObjectVTable(jit, vtableIndex_ICorJitCompiler_compileMethod).AsDelegate<d_compileMethod>();
 
@@ -157,7 +155,5 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
                 hookEntrancy--;
             }
         }
-
-#endif
     }
 }

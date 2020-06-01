@@ -16,7 +16,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #endif
     class DetourRuntimeNETCorePlatform : DetourRuntimeNETPlatform {
 
-#if MONOMOD_RUNTIMEDETOUR
         // All of this stuff is for JIT hooking in RuntimeDetour so we can update hooks when a method is re-jitted
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate IntPtr d_getJit();
@@ -53,13 +52,14 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return guid;
         }
 
+        // FIXME: .NET 5 has this method at index 2; how do we identify this?
         private const int vtableIndex_ICorJitCompiler_getVersionIdentifier = 4;
+        private const int vtableIndex_ICorJitCompiler_getVersionIdentifier_net5 = 2;
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate void d_getVersionIdentifier(
             IntPtr thisPtr, // ICorJitCompiler*
             out Guid versionIdentifier
             );
-#endif
 
         protected const int vtableIndex_ICorJitCompiler_compileMethod = 0;
 
@@ -78,22 +78,21 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public static readonly Guid Core31Jit = new Guid("d609bed1-7831-49fc-bd49-b6f054dd4d46");
+        public static readonly Guid Net50p4Jit = new Guid("8b2226a2-ac30-4f5c-ae5c-926c792ecdb9");
 
         protected virtual void InstallJitHooks(IntPtr jitObject) => throw new PlatformNotSupportedException();
 
         public static DetourRuntimeNETCorePlatform Create() {
-            // This only needs to have a specialized method when working in RuntimeDetour, because
-            //   it needs the JIT hooks that the specializations look for and install.
-
-#if MONOMOD_RUNTIMEDETOUR
             try {
                 IntPtr jit = GetJitObject();
                 Guid jitGuid = GetJitGuid(jit);
 
                 DetourRuntimeNETCorePlatform platform = new DetourRuntimeNETCorePlatform();
 
-                if (jitGuid == Core31Jit) {
-                    platform = new DetourRuntimeNETCore31Platform();
+                if (jitGuid == Net50p4Jit) {
+                    platform = new DetourRuntimeNET50p4Platform();
+                } if (jitGuid == Core31Jit) {
+                    platform = new DetourRuntimeNET50p4Platform();
                 }
                 // TODO: add more known JIT GUIDs
 
@@ -102,7 +101,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             } catch {
                 MMDbgLog.Log("Could not get JIT information for the runtime, falling out to the version without JIT hooks");
             }
-#endif
+
             return new DetourRuntimeNETCorePlatform();
         }
     }
