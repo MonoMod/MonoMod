@@ -90,6 +90,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 RuntimeTypeHandle[] genericClassArguments,
                 RuntimeTypeHandle[] genericMethodArguments
             ) {
+            MethodBase method = MethodBase.GetMethodFromHandle(methodHandle);
 
         }
 

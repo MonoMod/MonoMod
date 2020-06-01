@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -39,6 +41,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
         private d_compileMethod real_compileMethod;
 
         protected override unsafe void InstallJitHooks(IntPtr jit) {
+            SetupJitHookHelpers();
             real_compileMethod = GetCompileMethod(jit);
 
             our_compileMethod = CompileMethodHook;
@@ -65,6 +68,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             DetourHelper.Native.MakeWritable(data);
             DetourHelper.Native.Apply(data);
             DetourHelper.Native.MakeExecutable(data);
+            DetourHelper.Native.FlushICache(data);
             return data;
         }
 
@@ -147,9 +151,11 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             try {
                 if (hookEntrancy == 1) {
                     // This is the top level JIT entry point, do our custom stuff
-                    // TODO: implement cool hooking magic
-                    return real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
-                    // TODO: call JitHookCore
+                    CorJitResult result = real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+
+                    JitHookCore(CreateHandleForHandlePointer(methodInfo.ftn), (IntPtr) nativeEntry, nativeSizeOfCode, null, null);
+
+                    return result;
                 } else {
                     return real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
                 }
@@ -159,6 +165,105 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             } finally {
                 hookEntrancy--;
             }
+        }
+
+        private delegate object d_MethodHandle_GetLoaderAllocator(IntPtr methodHandle);
+        private delegate object d_CreateRuntimeMethodInfoStub(IntPtr methodHandle, object loaderAllocator);
+        private delegate RuntimeMethodHandle d_CreateRuntimeMethodHandle(object runtimeMethodInfo);
+
+        protected static RuntimeMethodHandle CreateHandleForHandlePointer(IntPtr handle)
+            => CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        protected static object MethodHandle_GetLoaderAllocator(IntPtr methodHandle) {
+            _ = methodHandle;
+            throw new InvalidOperationException();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        protected static object CreateRuntimeMethodInfoStub(IntPtr methodHandle, object keepalive) {
+            _ = methodHandle;
+            _ = keepalive;
+            throw new InvalidOperationException();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        protected static RuntimeMethodHandle CreateRuntimeMethodHandle(object runtimeMethodInfo) {
+            _ = runtimeMethodInfo;
+            throw new InvalidOperationException();
+        }
+
+        protected virtual void SetupJitHookHelpers() {
+            Type genericFunc = typeof(Func<,>);
+
+            { //  set up GetLoaderAllocator
+                MethodInfo our_getLoaderAllocator = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(MethodHandle_GetLoaderAllocator), BindingFlags.Static | BindingFlags.NonPublic);
+
+                MethodInfo getLoaderAllocator = typeof(RuntimeMethodHandle).GetMethod("GetLoaderAllocator", BindingFlags.Static | BindingFlags.NonPublic);
+
+                HookPermanent(our_getLoaderAllocator, getLoaderAllocator);
+            }
+
+            { // set up CreateRuntimeMethodInfoStub
+                MethodInfo our_createRuntimeMethodInfoStub = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodInfoStub), BindingFlags.Static | BindingFlags.NonPublic);
+
+                Type[] runtimeMethodInfoStubCtorArgs = new Type[] { typeof(IntPtr), typeof(object) };
+                Type runtimeMethodInfoStub = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodInfoStub");
+                ConstructorInfo runtimeMethodInfoStubCtor = runtimeMethodInfoStub.GetConstructor(runtimeMethodInfoStubCtorArgs);
+
+                MethodInfo runtimeMethodInfoStubCtorWrapper;
+                using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                        "new RuntimeMethodInfoStub", runtimeMethodInfoStub, runtimeMethodInfoStubCtorArgs
+                    )) {
+                    ILGenerator il = dmd.GetILGenerator();
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Newobj, runtimeMethodInfoStubCtor);
+                    il.Emit(OpCodes.Ret);
+
+                    runtimeMethodInfoStubCtorWrapper = dmd.Generate();
+                }
+
+                HookPermanent(our_createRuntimeMethodInfoStub, runtimeMethodInfoStubCtorWrapper);
+            }
+
+            {
+                MethodInfo our_createRuntimeMethodHandle = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodHandle), BindingFlags.Static | BindingFlags.NonPublic);
+
+                Type iRuntimeMethodInfo = typeof(RuntimeMethodHandle).Assembly.GetType("System.IRuntimeMethodInfo");
+                ConstructorInfo ctor = typeof(RuntimeMethodHandle).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).First();
+
+                MethodInfo ctorWrapper;
+                using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                        "new RuntimeMethodHandle", typeof(RuntimeMethodHandle), new Type[] { typeof(object) }
+                    )) {
+                    ILGenerator il = dmd.GetILGenerator();
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Newobj, ctor);
+                    il.Emit(OpCodes.Ret);
+
+                    ctorWrapper = dmd.Generate();
+                }
+
+                HookPermanent(our_createRuntimeMethodHandle, ctorWrapper);
+            }
+        }
+
+        protected void HookPermanent(MethodBase from, MethodBase to) {
+            Pin(from);
+            Pin(to);
+            HookPermanent(GetNativeStart(from), GetNativeStart(to));
+        }
+        protected void HookPermanent(IntPtr from, IntPtr to) {
+            NativeDetourData detour = DetourHelper.Native.Create(
+                from, to, null
+            );
+            DetourHelper.Native.MakeWritable(detour);
+            DetourHelper.Native.Apply(detour);
+            DetourHelper.Native.MakeExecutable(detour);
+            DetourHelper.Native.FlushICache(detour);
+            DetourHelper.Native.Free(detour);
+            // No need to undo the detour.
         }
     }
 }
