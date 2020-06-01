@@ -45,11 +45,36 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return getJit();
         }
 
+        private static bool? isNet5Jit = null;
+
         protected static Guid GetJitGuid(IntPtr jit) {
-            d_getVersionIdentifier getVersionIdentifier = ReadObjectVTable(jit, vtableIndex_ICorJitCompiler_getVersionIdentifier)
-                .AsDelegate<d_getVersionIdentifier>();
-            getVersionIdentifier(jit, out Guid guid);
+            Guid guid;
+            if (isNet5Jit == null) {
+                // if we don't know, we first try index 2, because it is harmless on .NET 3, even passing a pointer
+                CallGetJitGuid(jit, vtableIndex_ICorJitCompiler_getVersionIdentifier_net5, out guid);
+                if (guid != Guid.Empty) {
+                    // if we get a valid GUID, then we got the right method, and we're on .NET 5
+                    isNet5Jit = true;
+                    return guid;
+                } else {
+                    // otherwise, we're still pre-.NET 5 and need to use the other index
+                    isNet5Jit = false;
+                    CallGetJitGuid(jit, vtableIndex_ICorJitCompiler_getVersionIdentifier, out guid);
+                    return guid;
+                }
+            } else {
+                int getVersionIdentIndex = isNet5Jit.Value ? vtableIndex_ICorJitCompiler_getVersionIdentifier_net5
+                                                           : vtableIndex_ICorJitCompiler_getVersionIdentifier;
+                CallGetJitGuid(jit, getVersionIdentIndex, out guid);
+            }
+
             return guid;
+        }
+
+        private static void CallGetJitGuid(IntPtr jit, int index, out Guid guid) {
+            d_getVersionIdentifier getVersionIdentifier = ReadObjectVTable(jit, index)
+                .AsDelegate<d_getVersionIdentifier>();
+            getVersionIdentifier(jit, out guid);
         }
 
         // FIXME: .NET 5 has this method at index 2; how do we identify this?
@@ -87,14 +112,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 IntPtr jit = GetJitObject();
                 Guid jitGuid = GetJitGuid(jit);
 
-                DetourRuntimeNETCorePlatform platform = new DetourRuntimeNETCorePlatform();
+                DetourRuntimeNETCorePlatform platform = null;
 
                 if (jitGuid == Net50p4Jit) {
                     platform = new DetourRuntimeNET50p4Platform();
                 } if (jitGuid == Core31Jit) {
-                    platform = new DetourRuntimeNET50p4Platform();
+                    platform = new DetourRuntimeNETCore31Platform();
                 }
                 // TODO: add more known JIT GUIDs
+
+                if (platform == null)
+                    return new DetourRuntimeNETCorePlatform();
 
                 platform?.InstallJitHooks(jit);
                 return platform;
