@@ -50,7 +50,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected static Guid GetJitGuid(IntPtr jit) {
             Guid guid;
             if (isNet5Jit == null) {
-                // if we don't know, we first try index 2, because it is harmless on .NET 3, even passing a pointer
+                // if we don't know, we first try index 2, because it is harmless on .NET Core 3, even passing a pointer
+                // on second thought, it probably isn't on x86 because of callee stack cleanup, but idk how to make this work otherwise
                 CallGetJitGuid(jit, vtableIndex_ICorJitCompiler_getVersionIdentifier_net5, out guid);
                 if (guid != Guid.Empty) {
                     // if we get a valid GUID, then we got the right method, and we're on .NET 5
@@ -71,6 +72,28 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return guid;
         }
 
+        //
+        // To make this safe on x86, we need to call a wrapper instead of the VTable method directly when we're figuring out if we're running
+        //   on .NET 5 or not. This wrapper needs to look something like this (in dest,src notation):
+        //
+        //      pop     eax           ; pop return adress
+        //      pop     ecx           ; pop first arg
+        //      xchg    [esp+4], eax  ; exchange return adress with second arg (leaving return address under the parameters)
+        //      push    eax           ; push second arg
+        //      push    ecx           ; push first arg
+        //      lea     ebx, [esp+8]  ; store expected resulting stack pointer in nonvolatile register
+        //      call    <fptr>        ; call the function
+        //      cmp     esp, ebx      ; check if the stack pointer matches what we expected for a 2 arg call
+        //      je      .ret          ; if it matched, we're done so return
+        //      pop     ebx           ; otherwise it failed, so pop the other argument before returning
+        //    .ret:
+        //      ret
+        //
+        // This is to compensate for the fact that thiscall (and stdcall) on MSVC requires that the callee cleans up the stack according to its
+        //   arguments, so if a method takes only the this pointer as an argument, it will fail to pop the other argument and leave the stack
+        //   in a broken state.
+        //
+
         private static void CallGetJitGuid(IntPtr jit, int index, out Guid guid) {
             d_getVersionIdentifier getVersionIdentifier = ReadObjectVTable(jit, index)
                 .AsDelegate<d_getVersionIdentifier>();
@@ -80,7 +103,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         // FIXME: .NET 5 has this method at index 2; how do we identify this?
         private const int vtableIndex_ICorJitCompiler_getVersionIdentifier = 4;
         private const int vtableIndex_ICorJitCompiler_getVersionIdentifier_net5 = 2;
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
         private delegate void d_getVersionIdentifier(
             IntPtr thisPtr, // ICorJitCompiler*
             out Guid versionIdentifier
@@ -103,7 +126,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public static readonly Guid Core31Jit = new Guid("d609bed1-7831-49fc-bd49-b6f054dd4d46");
-        public static readonly Guid Net50p4Jit = new Guid("8b2226a2-ac30-4f5c-ae5c-926c792ecdb9");
+        public static readonly Guid Net50p4Jit = new Guid("6ae798bf-44bd-4e8a-b8fc-dbe1d1f4029e");
 
         protected virtual void InstallJitHooks(IntPtr jitObject) => throw new PlatformNotSupportedException();
 
@@ -116,7 +139,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 if (jitGuid == Net50p4Jit) {
                     platform = new DetourRuntimeNET50p4Platform();
-                } if (jitGuid == Core31Jit) {
+                } else if (jitGuid == Core31Jit) {
                     platform = new DetourRuntimeNETCore31Platform();
                 }
                 // TODO: add more known JIT GUIDs
