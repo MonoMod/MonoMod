@@ -19,8 +19,6 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             // References to RuntimeMethodHandle (CORINFO_METHOD_HANDLE) pointing to MethodDesc
             // can be traced as far back as https://ntcore.com/files/netint_injection.htm
 
-            // FIXME: Take a very educated guess regarding the offset to m_wFlags in MethodDesc.
-
             const int offset =
                 2 // UINT16 m_wFlags3AndTokenRemainder
               + 1 // BYTE m_chunkIndex
@@ -70,6 +68,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             DetourHelper.Native.MemFree(data.Method);
             DetourHelper.Native.Free(data);
         }
+
         private enum CorJitResult {
             CORJIT_OK = 0,
             // There are more, but I don't particularly care about them
@@ -121,7 +120,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             uint flags,
             out byte* nativeEntry,
             out ulong nativeSizeOfCode
-            );
+        );
 
         [ThreadStatic]
         private static int hookEntrancy = 0;

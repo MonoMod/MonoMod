@@ -77,6 +77,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         //   on .NET 5 or not. This wrapper needs to look something like this (in dest,src notation):
         //
         //      ; in thiscall, at least on Windows, ecx has the this pointer
+        //      ; on GCC however, the this pointer is a phantom "first" argument, passed on the stack
         //      pop     eax           ; pop return adress
         //      xchg    [esp+4], eax  ; exchange return adress with second arg (leaving return address under the parameters)
         //      push    eax           ; push arg
@@ -120,8 +121,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // mdcNotInline = 0x2000
             // References to RuntimeMethodHandle (CORINFO_METHOD_HANDLE) pointing to MethodDesc
             // can be traced as far back as https://ntcore.com/files/netint_injection.htm
-
-            // FIXME: Take a very educated guess regarding the offset to m_wFlags in MethodDesc.
         }
 
         public static readonly Guid Core31Jit = new Guid("d609bed1-7831-49fc-bd49-b6f054dd4d46");
