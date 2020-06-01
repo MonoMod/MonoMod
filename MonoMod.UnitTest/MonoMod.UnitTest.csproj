@@ -10,7 +10,7 @@
     <PackageTags>$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net452;netcoreapp2.0;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
-    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);netcoreapp5.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
     <OutputType>Library</OutputType>
     <SignAssembly>skip</SignAssembly>
     <!-- FIXME: RE-ENABLE TESTS WITH TIERED COMPILATION -->

@@ -91,7 +91,7 @@
 
   <!-- Common references. -->
   <Choose>
-    <When Condition="$(TargetFramework.StartsWith('netstandard')) Or $(TargetFramework.StartsWith('netcoreapp'))">
+    <When Condition="$(TargetFramework.StartsWith('netstandard')) Or $(TargetFramework.StartsWith('netcoreapp')) Or $(TargetFramework.Contains('.'))">
       <!-- .NET Standard -->
       <PropertyGroup>
         <IsNETStandard>true</IsNETStandard>
