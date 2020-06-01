@@ -34,6 +34,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 if (!DynDll.TryOpenLibrary(clrjitModule.FileName, out IntPtr clrjitPtr))
                     throw new PlatformNotSupportedException();
 
+                isNet5Jit = clrjitModule.FileVersionInfo.ProductMajorPart >= 5;
+
                 try {
                     getJit = clrjitPtr.GetFunction(nameof(getJit)).AsDelegate<d_getJit>();
                 } catch {
@@ -45,62 +47,18 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return getJit();
         }
 
-        private static bool? isNet5Jit = null;
+        private static bool isNet5Jit;
 
         protected static Guid GetJitGuid(IntPtr jit) {
-            Guid guid;
-            if (isNet5Jit == null) {
-                // if we don't know, we first try index 2, because it is harmless on .NET Core 3, even passing a pointer
-                // on second thought, it probably isn't on x86 because of callee stack cleanup, but idk how to make this work otherwise
-                CallGetJitGuid(jit, vtableIndex_ICorJitCompiler_getVersionIdentifier_net5, out guid);
-                if (guid != Guid.Empty) {
-                    // if we get a valid GUID, then we got the right method, and we're on .NET 5
-                    isNet5Jit = true;
-                    return guid;
-                } else {
-                    // otherwise, we're still pre-.NET 5 and need to use the other index
-                    isNet5Jit = false;
-                    CallGetJitGuid(jit, vtableIndex_ICorJitCompiler_getVersionIdentifier, out guid);
-                    return guid;
-                }
-            } else {
-                int getVersionIdentIndex = isNet5Jit.Value ? vtableIndex_ICorJitCompiler_getVersionIdentifier_net5
-                                                           : vtableIndex_ICorJitCompiler_getVersionIdentifier;
-                CallGetJitGuid(jit, getVersionIdentIndex, out guid);
-            }
-
+            int getVersionIdentIndex = isNet5Jit ? vtableIndex_ICorJitCompiler_getVersionIdentifier_net5
+                                                 : vtableIndex_ICorJitCompiler_getVersionIdentifier;
+            d_getVersionIdentifier getVersionIdentifier = ReadObjectVTable(jit, getVersionIdentIndex)
+                .AsDelegate<d_getVersionIdentifier>();
+            getVersionIdentifier(jit, out Guid guid);
             return guid;
         }
 
-        //
-        // To make this safe on x86, we need to call a wrapper instead of the VTable method directly when we're figuring out if we're running
-        //   on .NET 5 or not. This wrapper needs to look something like this (in dest,src notation):
-        //
-        //      ; in thiscall, at least on Windows, ecx has the this pointer
-        //      ; on GCC however, the this pointer is a phantom "first" argument, passed on the stack
-        //      pop     eax           ; pop return adress
-        //      xchg    [esp+4], eax  ; exchange return adress with second arg (leaving return address under the parameters)
-        //      push    eax           ; push arg
-        //      lea     ebx, [esp+4]  ; store expected resulting stack pointer in nonvolatile register
-        //      call    <fptr>        ; call the function
-        //      cmp     esp, ebx      ; check if the stack pointer matches what we expected for a 2 arg call
-        //      je      .ret          ; if it matched, we're done so return
-        //      pop     ebx           ; otherwise it failed, so pop the other argument before returning
-        //    .ret:
-        //      ret     0
-        //
-        // This is to compensate for the fact that thiscall (and stdcall) on MSVC requires that the callee cleans up the stack according to its
-        //   arguments, so if a method takes only the this pointer as an argument, it will fail to pop the other argument and leave the stack
-        //   in a broken state.
-        //
-
-        private static void CallGetJitGuid(IntPtr jit, int index, out Guid guid) {
-            d_getVersionIdentifier getVersionIdentifier = ReadObjectVTable(jit, index)
-                .AsDelegate<d_getVersionIdentifier>();
-            getVersionIdentifier(jit, out guid);
-        }
-
-        // FIXME: .NET 5 has this method at index 2; how do we identify this?
+        // The offset to use is determined in GetJitObject where other properties of the JIT are determined
         private const int vtableIndex_ICorJitCompiler_getVersionIdentifier = 4;
         private const int vtableIndex_ICorJitCompiler_getVersionIdentifier_net5 = 2;
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
