@@ -67,7 +67,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             out Guid versionIdentifier
             );
 
-        protected const int vtableIndex_ICorJitCompiler_compileMethod = 0;
+        protected virtual int VTableIndex_ICorJitCompiler_compileMethod => 0;
 
         protected static unsafe IntPtr* GetVTableEntry(IntPtr @object, int index)
             => (*(IntPtr**) @object) + index;
@@ -82,6 +82,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         protected virtual void InstallJitHooks(IntPtr jitObject) => throw new PlatformNotSupportedException();
+
+        protected virtual void JitHookCore(
+                RuntimeMethodHandle methodHandle, 
+                IntPtr methodBodyStart, 
+                ulong methodBodySize,
+                RuntimeTypeHandle[] genericClassArguments,
+                RuntimeTypeHandle[] genericMethodArguments
+            ) {
+
+        }
 
         public static DetourRuntimeNETCorePlatform Create() {
             try {

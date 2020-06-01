@@ -31,15 +31,17 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             *m_wFlags |= 0x2000;
         }
 
-        private static d_compileMethod GetCompileMethod(IntPtr jit)
-            => ReadObjectVTable(jit, vtableIndex_ICorJitCompiler_compileMethod).AsDelegate<d_compileMethod>();
+        private d_compileMethod GetCompileMethod(IntPtr jit)
+            => ReadObjectVTable(jit, VTableIndex_ICorJitCompiler_compileMethod).AsDelegate<d_compileMethod>();
 
-        private static unsafe readonly d_compileMethod our_compileMethod = CompileMethodHook;
-        private static d_compileMethod real_compileMethod;
+        private unsafe d_compileMethod our_compileMethod;
+        private IntPtr real_compileMethodPtr;
+        private d_compileMethod real_compileMethod;
 
         protected override unsafe void InstallJitHooks(IntPtr jit) {
             real_compileMethod = GetCompileMethod(jit);
 
+            our_compileMethod = CompileMethodHook;
             IntPtr our_compileMethodPtr = Marshal.GetFunctionPointerForDelegate(our_compileMethod);
 
             // Create a native trampoline to pre-JIT the hook itself
@@ -51,8 +53,9 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
             }
 
             // Install the JIT hook
-            IntPtr* vtableEntry = GetVTableEntry(jit, vtableIndex_ICorJitCompiler_compileMethod);
+            IntPtr* vtableEntry = GetVTableEntry(jit, VTableIndex_ICorJitCompiler_compileMethod);
             DetourHelper.Native.MakeWritable((IntPtr) vtableEntry, (uint)IntPtr.Size);
+            real_compileMethodPtr = *vtableEntry;
             *vtableEntry = our_compileMethodPtr;
         }
 
@@ -126,7 +129,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
 
         [ThreadStatic]
         private static int hookEntrancy = 0;
-        private static unsafe CorJitResult CompileMethodHook(
+        private unsafe CorJitResult CompileMethodHook(
             IntPtr jit, // ICorJitCompiler*
             IntPtr corJitInfo, // ICorJitInfo*
             in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
@@ -146,6 +149,7 @@ namespace MonoMod.Common.RuntimeDetour.Platforms.Runtime {
                     // This is the top level JIT entry point, do our custom stuff
                     // TODO: implement cool hooking magic
                     return real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                    // TODO: call JitHookCore
                 } else {
                     return real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
                 }
