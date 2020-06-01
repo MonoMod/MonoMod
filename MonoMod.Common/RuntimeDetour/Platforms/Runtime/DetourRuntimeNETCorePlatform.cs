@@ -76,18 +76,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
         // To make this safe on x86, we need to call a wrapper instead of the VTable method directly when we're figuring out if we're running
         //   on .NET 5 or not. This wrapper needs to look something like this (in dest,src notation):
         //
+        //      ; in thiscall, at least on Windows, ecx has the this pointer
         //      pop     eax           ; pop return adress
-        //      pop     ecx           ; pop first arg
         //      xchg    [esp+4], eax  ; exchange return adress with second arg (leaving return address under the parameters)
-        //      push    eax           ; push second arg
-        //      push    ecx           ; push first arg
-        //      lea     ebx, [esp+8]  ; store expected resulting stack pointer in nonvolatile register
+        //      push    eax           ; push arg
+        //      lea     ebx, [esp+4]  ; store expected resulting stack pointer in nonvolatile register
         //      call    <fptr>        ; call the function
         //      cmp     esp, ebx      ; check if the stack pointer matches what we expected for a 2 arg call
         //      je      .ret          ; if it matched, we're done so return
         //      pop     ebx           ; otherwise it failed, so pop the other argument before returning
         //    .ret:
-        //      ret
+        //      ret     0
         //
         // This is to compensate for the fact that thiscall (and stdcall) on MSVC requires that the callee cleans up the stack according to its
         //   arguments, so if a method takes only the this pointer as an argument, it will fail to pop the other argument and leave the stack
