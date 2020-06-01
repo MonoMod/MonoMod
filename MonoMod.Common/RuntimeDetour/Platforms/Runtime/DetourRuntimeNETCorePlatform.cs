@@ -8,7 +8,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.IO;
-using MonoMod.Common.RuntimeDetour.Platforms.Runtime;
 
 namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
