@@ -55,6 +55,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 FreeNativeTrampoline(trampolineData);
             }
 
+            // Make sure we run the cctor before the hook to avoid wierdness
+            _ = hookEntrancy;
+
             // Install the JIT hook
             IntPtr* vtableEntry = GetVTableEntry(jit, VTableIndex_ICorJitCompiler_compileMethod);
             DetourHelper.Native.MakeWritable((IntPtr) vtableEntry, (uint)IntPtr.Size);
@@ -169,7 +172,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         }
                     }
 
-                    JitHookCore(CreateHandleForHandlePointer(methodInfo.ftn), (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
+                    RuntimeTypeHandle declaringType = GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
+                    RuntimeMethodHandle method = CreateHandleForHandlePointer(methodInfo.ftn);
+
+                    JitHookCore(declaringType, method, (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
 
                     return result;
                 } else {
@@ -210,6 +216,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
+        protected static Type GetDeclaringTypeOfMethodHandle(IntPtr methodHandle) {
+            _ = methodHandle;
+            throw new InvalidOperationException();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
         protected static Type GetTypeFromNativeHandle(IntPtr handle) {
             _ = handle;
             throw new InvalidOperationException();
@@ -228,12 +240,21 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 HookPermanent(our_getLoaderAllocator, getLoaderAllocator);
             }
 
-            { // set up _GetTypeFromNativeHandle
+            { // set up GetTypeFromNativeHandle
                 MethodInfo our_getTypeFromNativeHandle = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(GetTypeFromNativeHandle), StaticNonPublic);
 
                 MethodInfo getTypeFromHandleUnsafe = typeof(Type).GetMethod("GetTypeFromHandleUnsafe", StaticNonPublic);
 
                 HookPermanent(our_getTypeFromNativeHandle, getTypeFromHandleUnsafe);
+            }
+
+            { // set up GetDeclaringTypeOfMethodHandle
+                MethodInfo our_getDeclaringType = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(GetDeclaringTypeOfMethodHandle), StaticNonPublic);
+
+                Type methodHandleInternal = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodHandleInternal");
+                MethodInfo getDeclaringType = typeof(RuntimeMethodHandle).GetMethod("GetDeclaringType", StaticNonPublic, null, new Type[] { methodHandleInternal }, null);
+
+                HookPermanent(our_getDeclaringType, getDeclaringType);
             }
 
             { // set up CreateRuntimeMethodInfoStub

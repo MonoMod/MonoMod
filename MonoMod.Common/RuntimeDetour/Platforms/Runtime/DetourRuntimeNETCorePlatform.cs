@@ -83,14 +83,19 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected virtual void InstallJitHooks(IntPtr jitObject) => throw new PlatformNotSupportedException();
 
         protected virtual void JitHookCore(
-                RuntimeMethodHandle methodHandle, 
+                RuntimeTypeHandle declaringType,
+                RuntimeMethodHandle methodHandle,
                 IntPtr methodBodyStart, 
                 ulong methodBodySize,
                 RuntimeTypeHandle[] genericClassArguments,
                 RuntimeTypeHandle[] genericMethodArguments
             ) {
             try {
-                MethodBase method = MethodBase.GetMethodFromHandle(methodHandle);
+                Type declType = Type.GetTypeFromHandle(declaringType);
+                if (genericClassArguments != null && declType.IsGenericTypeDefinition) {
+                    declType = declType.MakeGenericType(genericClassArguments.Select(Type.GetTypeFromHandle).ToArray());
+                }
+                MethodBase method = MethodBase.GetMethodFromHandle(methodHandle, declType.TypeHandle);
                 _ = method;
             } catch (Exception e) {
                 _ = e;
