@@ -153,7 +153,23 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     // This is the top level JIT entry point, do our custom stuff
                     CorJitResult result = real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
 
-                    JitHookCore(CreateHandleForHandlePointer(methodInfo.ftn), (IntPtr) nativeEntry, nativeSizeOfCode, null, null);
+                    RuntimeTypeHandle[] genericClassArgs = null;
+                    RuntimeTypeHandle[] genericMethodArgs = null;
+
+                    if (methodInfo.args.sigInst.classInst != null) {
+                        genericClassArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.classInstCount];
+                        for (int i = 0; i < genericClassArgs.Length; i++) {
+                            genericClassArgs[i] = GetTypeFromNativeHandle(methodInfo.args.sigInst.classInst[i]).TypeHandle;
+                        }
+                    }
+                    if (methodInfo.args.sigInst.methInst != null) {
+                        genericMethodArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.methInstCount];
+                        for (int i = 0; i < genericMethodArgs.Length; i++) {
+                            genericMethodArgs[i] = GetTypeFromNativeHandle(methodInfo.args.sigInst.methInst[i]).TypeHandle;
+                        }
+                    }
+
+                    JitHookCore(CreateHandleForHandlePointer(methodInfo.ftn), (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
 
                     return result;
                 } else {
@@ -193,19 +209,35 @@ namespace MonoMod.RuntimeDetour.Platforms {
             throw new InvalidOperationException();
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        protected static Type GetTypeFromNativeHandle(IntPtr handle) {
+            _ = handle;
+            throw new InvalidOperationException();
+        }
+
         protected virtual void SetupJitHookHelpers() {
             Type genericFunc = typeof(Func<,>);
 
-            { //  set up GetLoaderAllocator
-                MethodInfo our_getLoaderAllocator = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(MethodHandle_GetLoaderAllocator), BindingFlags.Static | BindingFlags.NonPublic);
+            const BindingFlags StaticNonPublic = BindingFlags.Static | BindingFlags.NonPublic;
 
-                MethodInfo getLoaderAllocator = typeof(RuntimeMethodHandle).GetMethod("GetLoaderAllocator", BindingFlags.Static | BindingFlags.NonPublic);
+            { // set up GetLoaderAllocator
+                MethodInfo our_getLoaderAllocator = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(MethodHandle_GetLoaderAllocator), StaticNonPublic);
+
+                MethodInfo getLoaderAllocator = typeof(RuntimeMethodHandle).GetMethod("GetLoaderAllocator", StaticNonPublic);
 
                 HookPermanent(our_getLoaderAllocator, getLoaderAllocator);
             }
 
+            { // set up _GetTypeFromNativeHandle
+                MethodInfo our_getTypeFromNativeHandle = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(GetTypeFromNativeHandle), StaticNonPublic);
+
+                MethodInfo getTypeFromHandleUnsafe = typeof(Type).GetMethod("GetTypeFromHandleUnsafe", StaticNonPublic);
+
+                HookPermanent(our_getTypeFromNativeHandle, getTypeFromHandleUnsafe);
+            }
+
             { // set up CreateRuntimeMethodInfoStub
-                MethodInfo our_createRuntimeMethodInfoStub = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodInfoStub), BindingFlags.Static | BindingFlags.NonPublic);
+                MethodInfo our_createRuntimeMethodInfoStub = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodInfoStub), StaticNonPublic);
 
                 Type[] runtimeMethodInfoStubCtorArgs = new Type[] { typeof(IntPtr), typeof(object) };
                 Type runtimeMethodInfoStub = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodInfoStub");
@@ -228,7 +260,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
 
             {
-                MethodInfo our_createRuntimeMethodHandle = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodHandle), BindingFlags.Static | BindingFlags.NonPublic);
+                MethodInfo our_createRuntimeMethodHandle = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodHandle), StaticNonPublic);
 
                 Type iRuntimeMethodInfo = typeof(RuntimeMethodHandle).Assembly.GetType("System.IRuntimeMethodInfo");
                 ConstructorInfo ctor = typeof(RuntimeMethodHandle).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).First();

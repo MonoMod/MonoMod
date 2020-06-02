@@ -89,8 +89,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 RuntimeTypeHandle[] genericClassArguments,
                 RuntimeTypeHandle[] genericMethodArguments
             ) {
-            MethodBase method = MethodBase.GetMethodFromHandle(methodHandle);
-
+            try {
+                MethodBase method = MethodBase.GetMethodFromHandle(methodHandle);
+                _ = method;
+            } catch (Exception e) {
+                _ = e;
+            }
         }
 
         public static DetourRuntimeNETCorePlatform Create() {
