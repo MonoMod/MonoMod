@@ -19,6 +19,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
 
+        public abstract event OnMethodCompiledEvent OnMethodCompiled;
+
         public DetourRuntimeILPlatform() {
             // Perform a selftest if this runtime requires special handling for instance methods returning structs.
             // This is documented behavior for coreclr, but affects other runtimes (i.e. mono) as well!

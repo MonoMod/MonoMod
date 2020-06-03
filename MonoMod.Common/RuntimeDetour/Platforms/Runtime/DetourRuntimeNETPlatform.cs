@@ -156,6 +156,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         private static IntPtr ThePreStub = IntPtr.Zero;
+
+        public override event OnMethodCompiledEvent OnMethodCompiled;
+
         private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed) {
             if (ThePreStub == IntPtr.Zero) {
                 ThePreStub = (IntPtr) (-2);
