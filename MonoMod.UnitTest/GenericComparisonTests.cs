@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -86,7 +87,133 @@ namespace MonoMod.UnitTest {
             IEqualityComparer<Type> comparer = new GenericTypeInstantiationComparer();
             Assert.False(comparer.Equals(a, b));
         }
-        private class GenericA<T> { }
-        private struct ValueGenericA<T> { }
+
+        [Theory]
+        [InlineData(typeof(object), nameof(Object.ToString), null, typeof(object), nameof(Object.ToString), null)]
+        [InlineData(typeof(string), nameof(string.ToString), null, typeof(string), nameof(string.ToString), null)]
+        [InlineData(typeof(int), nameof(int.TryParse), null, typeof(int), nameof(int.TryParse), null)]
+        [InlineData(typeof(int?), nameof(Nullable<int>.GetValueOrDefault), null, typeof(int?), nameof(Nullable<int>.GetValueOrDefault), null)]
+        [InlineData(typeof(GenericA<object>), "NG", null, typeof(GenericA<object>), "NG", null)]
+        [InlineData(typeof(GenericA<string>), "NG", null, typeof(GenericA<string>), "NG", null)]
+        [InlineData(typeof(GenericA<object>), "NG", null, typeof(GenericA<string>), "NG", null)]
+        [InlineData(typeof(GenericA<string>), "NG", null, typeof(GenericA<object>), "NG", null)]
+        [InlineData(typeof(GenericA<int>), "NG", null, typeof(GenericA<int>), "NG", null)]
+        [InlineData(typeof(GenericA<int?>), "NG", null, typeof(GenericA<int?>), "NG", null)]
+        [InlineData(typeof(GenericA<object>), "G", null, typeof(GenericA<object>), "G", null)]
+        [InlineData(typeof(GenericA<string>), "G", null, typeof(GenericA<string>), "G", null)]
+        [InlineData(typeof(GenericA<object>), "G", null, typeof(GenericA<string>), "G", null)]
+        [InlineData(typeof(GenericA<string>), "G", null, typeof(GenericA<object>), "G", null)]
+        [InlineData(typeof(GenericA<int>), "G", null, typeof(GenericA<int>), "G", null)]
+        [InlineData(typeof(GenericA<int?>), "G", null, typeof(GenericA<int?>), "G", null)]
+        [InlineData(typeof(GenericA<object>), "G", typeof(object), typeof(GenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(object), typeof(GenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(object), typeof(GenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(object), typeof(GenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<int>), "G", typeof(object), typeof(GenericA<int>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<int?>), "G", typeof(object), typeof(GenericA<int?>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(string), typeof(GenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(string), typeof(GenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(string), typeof(GenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(string), typeof(GenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<int>), "G", typeof(string), typeof(GenericA<int>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<int?>), "G", typeof(string), typeof(GenericA<int?>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(object), typeof(GenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(object), typeof(GenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(object), typeof(GenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(object), typeof(GenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<int>), "G", typeof(object), typeof(GenericA<int>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<int?>), "G", typeof(object), typeof(GenericA<int?>), "G", typeof(string))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(string), typeof(GenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(string), typeof(GenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(string), typeof(GenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(string), typeof(GenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<int>), "G", typeof(string), typeof(GenericA<int>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<int?>), "G", typeof(string), typeof(GenericA<int?>), "G", typeof(object))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(int), typeof(GenericA<object>), "G", typeof(int))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(int), typeof(GenericA<string>), "G", typeof(int))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(int), typeof(GenericA<string>), "G", typeof(int))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(int), typeof(GenericA<object>), "G", typeof(int))]
+        [InlineData(typeof(GenericA<int>), "G", typeof(int), typeof(GenericA<int>), "G", typeof(int))]
+        [InlineData(typeof(GenericA<int?>), "G", typeof(int), typeof(GenericA<int?>), "G", typeof(int))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(int?), typeof(GenericA<object>), "G", typeof(int?))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(int?), typeof(GenericA<string>), "G", typeof(int?))]
+        [InlineData(typeof(GenericA<object>), "G", typeof(int?), typeof(GenericA<string>), "G", typeof(int?))]
+        [InlineData(typeof(GenericA<string>), "G", typeof(int?), typeof(GenericA<object>), "G", typeof(int?))]
+        [InlineData(typeof(GenericA<int>), "G", typeof(int?), typeof(GenericA<int>), "G", typeof(int?))]
+        [InlineData(typeof(GenericA<int?>), "G", typeof(int?), typeof(GenericA<int?>), "G", typeof(int?))]
+        [InlineData(typeof(ValueGenericA<object>), "NG", null, typeof(ValueGenericA<object>), "NG", null)]
+        [InlineData(typeof(ValueGenericA<string>), "NG", null, typeof(ValueGenericA<string>), "NG", null)]
+        [InlineData(typeof(ValueGenericA<object>), "NG", null, typeof(ValueGenericA<string>), "NG", null)]
+        [InlineData(typeof(ValueGenericA<string>), "NG", null, typeof(ValueGenericA<object>), "NG", null)]
+        [InlineData(typeof(ValueGenericA<int>), "NG", null, typeof(ValueGenericA<int>), "NG", null)]
+        [InlineData(typeof(ValueGenericA<int?>), "NG", null, typeof(ValueGenericA<int?>), "NG", null)]
+        [InlineData(typeof(ValueGenericA<object>), "G", null, typeof(ValueGenericA<object>), "G", null)]
+        [InlineData(typeof(ValueGenericA<string>), "G", null, typeof(ValueGenericA<string>), "G", null)]
+        [InlineData(typeof(ValueGenericA<object>), "G", null, typeof(ValueGenericA<string>), "G", null)]
+        [InlineData(typeof(ValueGenericA<string>), "G", null, typeof(ValueGenericA<object>), "G", null)]
+        [InlineData(typeof(ValueGenericA<int>), "G", null, typeof(ValueGenericA<int>), "G", null)]
+        [InlineData(typeof(ValueGenericA<int?>), "G", null, typeof(ValueGenericA<int?>), "G", null)]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(object), typeof(ValueGenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(object), typeof(ValueGenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(object), typeof(ValueGenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(object), typeof(ValueGenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<int>), "G", typeof(object), typeof(ValueGenericA<int>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<int?>), "G", typeof(object), typeof(ValueGenericA<int?>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(string), typeof(ValueGenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(string), typeof(ValueGenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(string), typeof(ValueGenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(string), typeof(ValueGenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<int>), "G", typeof(string), typeof(ValueGenericA<int>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<int?>), "G", typeof(string), typeof(ValueGenericA<int?>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(object), typeof(ValueGenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(object), typeof(ValueGenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(object), typeof(ValueGenericA<string>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(object), typeof(ValueGenericA<object>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<int>), "G", typeof(object), typeof(ValueGenericA<int>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<int?>), "G", typeof(object), typeof(ValueGenericA<int?>), "G", typeof(string))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(string), typeof(ValueGenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(string), typeof(ValueGenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(string), typeof(ValueGenericA<string>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(string), typeof(ValueGenericA<object>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<int>), "G", typeof(string), typeof(ValueGenericA<int>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<int?>), "G", typeof(string), typeof(ValueGenericA<int?>), "G", typeof(object))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(int), typeof(ValueGenericA<object>), "G", typeof(int))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(int), typeof(ValueGenericA<string>), "G", typeof(int))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(int), typeof(ValueGenericA<string>), "G", typeof(int))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(int), typeof(ValueGenericA<object>), "G", typeof(int))]
+        [InlineData(typeof(ValueGenericA<int>), "G", typeof(int), typeof(ValueGenericA<int>), "G", typeof(int))]
+        [InlineData(typeof(ValueGenericA<int?>), "G", typeof(int), typeof(ValueGenericA<int?>), "G", typeof(int))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(int?), typeof(ValueGenericA<object>), "G", typeof(int?))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(int?), typeof(ValueGenericA<string>), "G", typeof(int?))]
+        [InlineData(typeof(ValueGenericA<object>), "G", typeof(int?), typeof(ValueGenericA<string>), "G", typeof(int?))]
+        [InlineData(typeof(ValueGenericA<string>), "G", typeof(int?), typeof(ValueGenericA<object>), "G", typeof(int?))]
+        [InlineData(typeof(ValueGenericA<int>), "G", typeof(int?), typeof(ValueGenericA<int>), "G", typeof(int?))]
+        [InlineData(typeof(ValueGenericA<int?>), "G", typeof(int?), typeof(ValueGenericA<int?>), "G", typeof(int?))]
+        // TODO: add cases that mix GenericA and ValueGenericA
+        public void MethodsCompareEqual(Type aDecl, string aName, Type aParam, Type bDecl, string bName, Type bParam) {
+            MethodInfo Method(Type decl, string name, Type genParam) {
+                MethodInfo info = decl.GetMethods().First(m => m.Name == name);
+                if (genParam != null)
+                    info = info.MakeGenericMethod(genParam);
+                return info;
+            }
+
+            MethodBase a = Method(aDecl, aName, aParam);
+            MethodBase b = Method(bDecl, bName, bParam);
+
+            IEqualityComparer<MethodBase> comparer = new GenericMethodInstantiationComparer();
+            Assert.True(comparer.Equals(a, b));
+            Assert.Equal(comparer.GetHashCode(a), comparer.GetHashCode(b));
+        }
+
+
+        private class GenericA<T> {
+            public static void NG(T _) { }
+            public static U G<U>(T _) => default;
+        }
+        private struct ValueGenericA<T> {
+            public static void NG(T _) { }
+            public static U G<U>(T _) => default;
+        }
     }
 }

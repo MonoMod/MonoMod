@@ -22,11 +22,11 @@ namespace MonoMod.Utils {
             if (x is null || y is null)
                 return false;
 
-            bool xNotGeneric = !x.IsGenericMethod || x.ContainsGenericParameters;
-            bool yNotGeneric = !y.IsGenericMethod || y.ContainsGenericParameters;
-            if (xNotGeneric != yNotGeneric)
+            bool xGeneric = (x.IsGenericMethod && !x.ContainsGenericParameters) || x.DeclaringType.IsGenericType;
+            bool yGeneric = (y.IsGenericMethod && !y.ContainsGenericParameters) || y.DeclaringType.IsGenericType;
+            if (xGeneric != yGeneric)
                 return false; // they're clearly different
-            if (xNotGeneric) // if we get here, they're the same so we only test one
+            if (!xGeneric) // if we get here, they're the same so we only test one
                 return x.Equals(y);
 
             // here we're looking at 2 generic methods
@@ -77,7 +77,7 @@ namespace MonoMod.Utils {
         }
 
         public int GetHashCode(MethodBase method) {
-            if (!method.IsGenericMethod || method.ContainsGenericParameters)
+            if ((!method.IsGenericMethod || method.ContainsGenericParameters) && !method.DeclaringType.IsGenericType)
                 return method.GetHashCode();
 
             unchecked {
