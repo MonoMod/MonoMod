@@ -405,7 +405,7 @@ namespace MonoMod.RuntimeDetour {
         private static object compileMethodSubscribeLock = new object();
         private static bool compileMethodSubscribed = false;
         private static void _OnCompileMethod(MethodBase method, IntPtr codeStart) {
-            if (_DetourMap.TryGetValue(method, out List<Detour> detours)) {
+            if (method != null && _DetourMap.TryGetValue(method, out List<Detour> detours)) {
                 _ = detours;
             }
         }
