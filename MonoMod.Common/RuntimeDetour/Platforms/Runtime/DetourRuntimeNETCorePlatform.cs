@@ -98,6 +98,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     declType = declType.MakeGenericType(genericClassArguments.Select(Type.GetTypeFromHandle).ToArray());
                 }
                 MethodBase method = MethodBase.GetMethodFromHandle(methodHandle, declType.TypeHandle);
+                // methood may be null if its a P/Invoke call i think (or something, its honestly hard to tell)
 
                 OnMethodCompiled?.Invoke(method, methodBodyStart);
             } catch (Exception e) {
