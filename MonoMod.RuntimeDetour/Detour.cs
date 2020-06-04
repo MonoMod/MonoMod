@@ -26,9 +26,9 @@ namespace MonoMod.RuntimeDetour {
     /// </summary>
     public class Detour : ISortableDetour {
 #if NET35
-        private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
-#else.
-        private static ConcurrentDictionary<MethodBase, List<Detour>> _DetourMap = new ConcurrentDictionary<MethodBase, List<Detour>>();
+        private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>(new GenericMethodInstantiationComparer());
+#else
+        private static ConcurrentDictionary<MethodBase, List<Detour>> _DetourMap = new ConcurrentDictionary<MethodBase, List<Detour>>(new GenericMethodInstantiationComparer());
 #endif
         private static Dictionary<MethodBase, MethodInfo> _BackupMethods = new Dictionary<MethodBase, MethodInfo>();
         private static uint _GlobalIndexNext = uint.MinValue;
