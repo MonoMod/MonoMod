@@ -22,8 +22,8 @@ namespace MonoMod.Utils {
             if (x is null || y is null)
                 return false;
 
-            bool xGeneric = (x.IsGenericMethod && !x.ContainsGenericParameters) || x.DeclaringType.IsGenericType;
-            bool yGeneric = (y.IsGenericMethod && !y.ContainsGenericParameters) || y.DeclaringType.IsGenericType;
+            bool xGeneric = (x.IsGenericMethod && !x.ContainsGenericParameters) || (x.DeclaringType?.IsGenericType ?? false);
+            bool yGeneric = (y.IsGenericMethod && !y.ContainsGenericParameters) || (y.DeclaringType?.IsGenericType ?? false);
             if (xGeneric != yGeneric)
                 return false; // they're clearly different
             if (!xGeneric) // if we get here, they're the same so we only test one
@@ -34,13 +34,16 @@ namespace MonoMod.Utils {
             if (!genericTypeComparer.Equals(x.DeclaringType, y.DeclaringType))
                 return false;
 
-            if (!(x is MethodInfo xi))
-                throw new InvalidOperationException("There are non-MethodInfo generic methods!?!?!?");
-            if (!(y is MethodInfo yi))
-                throw new InvalidOperationException("There are non-MethodInfo generic methods!?!?!?");
-
-            MethodBase xDef = xi.GetActualGenericMethodDefinition();
-            MethodBase yDef = yi.GetActualGenericMethodDefinition();
+            MethodBase xDef;// = xi.GetActualGenericMethodDefinition();
+            MethodBase yDef;// = yi.GetActualGenericMethodDefinition();
+            if (x is MethodInfo xi)
+                xDef = xi.GetActualGenericMethodDefinition();
+            else
+                xDef = x.GetUnfilledMethodOnGenericType();
+            if (y is MethodInfo yi)
+                yDef = yi.GetActualGenericMethodDefinition();
+            else
+                yDef = y.GetUnfilledMethodOnGenericType();
 
             if (!xDef.Equals(yDef))
                 return false;
@@ -48,8 +51,8 @@ namespace MonoMod.Utils {
             if (xDef.Name != yDef.Name)
                 return false;
 
-            ParameterInfo[] xParams = xi.GetParameters();
-            ParameterInfo[] yParams = yi.GetParameters();
+            ParameterInfo[] xParams = x.GetParameters();
+            ParameterInfo[] yParams = y.GetParameters();
 
             if (xParams.Length != yParams.Length)
                 return false;
@@ -77,14 +80,16 @@ namespace MonoMod.Utils {
         }
 
         public int GetHashCode(MethodBase method) {
-            if ((!method.IsGenericMethod || method.ContainsGenericParameters) && !method.DeclaringType.IsGenericType)
+            if ((!method.IsGenericMethod || method.ContainsGenericParameters) && !(method.DeclaringType?.IsGenericType ?? false))
                 return method.GetHashCode();
 
             unchecked {
                 int code = unchecked((int) 0xdeadbeef);
                 // ok lets do some magic
-                code ^= method.DeclaringType.Assembly.GetHashCode();
-                code ^= genericTypeComparer.GetHashCode(method.DeclaringType);
+                if (method.DeclaringType != null) { // yes, DeclaringType can be null
+                    code ^= method.DeclaringType.Assembly.GetHashCode();
+                    code ^= genericTypeComparer.GetHashCode(method.DeclaringType);
+                }
                 code ^= method.Name.GetHashCode();
                 ParameterInfo[] parameters = method.GetParameters();
                 int paramCount = parameters.Length;
@@ -93,36 +98,41 @@ namespace MonoMod.Utils {
                 paramCount ^= paramCount << 16;
                 code ^= paramCount;
 
-                // type arguments, and here is where we do special treatment
-                Type[] typeArgs = method.GetGenericArguments();
-                for (int i = 0; i < typeArgs.Length; i++) {
-                    int offs = i % 32;
-                    Type type = typeArgs[i];
-                    // this magic is to treat all reference types like System.__Canon, because that's what we care about
-                    int typeCode = type.IsValueType ? genericTypeComparer.GetHashCode(type)
-                                                    : CannonicalFillType?.GetHashCode() ?? 0x55555555;
-                    typeCode = (typeCode << offs) | (typeCode >> (32 - offs)); // this is a rol i believe
-                    code ^= typeCode;
+                if (method.IsGenericMethod) { // we can get here if only the type is generic
+                    // type arguments, and here is where we do special treatment
+                    Type[] typeArgs = method.GetGenericArguments();
+                    for (int i = 0; i < typeArgs.Length; i++) {
+                        int offs = i % 32;
+                        Type type = typeArgs[i];
+                        // this magic is to treat all reference types like System.__Canon, because that's what we care about
+                        int typeCode = type.IsValueType ? genericTypeComparer.GetHashCode(type)
+                                                        : CannonicalFillType?.GetHashCode() ?? 0x55555555;
+                        typeCode = (typeCode << offs) | (typeCode >> (32 - offs)); // this is a rol i believe
+                        code ^= typeCode;
+                    }
                 }
 
                 // parameter types
+                MethodBase definition;
                 if (method is MethodInfo info) {
-                    MethodBase definition = info.GetActualGenericMethodDefinition();
-                    ParameterInfo[] definitionParams = definition.GetParameters();
-                    // amusingly, this requires the actual definition to behave
-                    for (int i = 0; i < parameters.Length; i++) {
-                        int offs = i % 32;
-                        Type type = parameters[i].ParameterType;
-                        int typeCode = genericTypeComparer.GetHashCode(type);
-                        // we only normalize when the parameter in question is a generic parameter
-                        if (definitionParams[i].ParameterType.IsGenericParameter && !type.IsValueType) {
-                            typeCode = CannonicalFillType?.GetHashCode() ?? 0x55555555;
-                        }
-                        typeCode = (typeCode >> offs) | (typeCode << (32 - offs)); // this is a ror i believe
-                        code ^= typeCode;
-                    }
+                    definition = info.GetActualGenericMethodDefinition();
                 } else {
-                    throw new InvalidOperationException("There's a generic MethodBase thats not a MethodInfo!?!?!?");
+                    // its probably a constructorinfo or something, so lets use a different method here
+                    definition = method.GetUnfilledMethodOnGenericType();
+                }
+
+                ParameterInfo[] definitionParams = definition.GetParameters();
+                // amusingly, this requires the actual definition to behave
+                for (int i = 0; i < parameters.Length; i++) {
+                    int offs = i % 32;
+                    Type type = parameters[i].ParameterType;
+                    int typeCode = genericTypeComparer.GetHashCode(type);
+                    // we only normalize when the parameter in question is a generic parameter
+                    if (definitionParams[i].ParameterType.IsGenericParameter && !type.IsValueType) {
+                        typeCode = CannonicalFillType?.GetHashCode() ?? 0x55555555;
+                    }
+                    typeCode = (typeCode >> offs) | (typeCode << (32 - offs)); // this is a ror i believe
+                    code ^= typeCode;
                 }
 
                 return code;
