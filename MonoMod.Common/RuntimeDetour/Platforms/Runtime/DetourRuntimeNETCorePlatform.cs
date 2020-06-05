@@ -99,8 +99,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 }
                 MethodBase method = MethodBase.GetMethodFromHandle(methodHandle, declType.TypeHandle);
                 // methood may be null if its a P/Invoke call i think (or something, its honestly hard to tell)
-
-                OnMethodCompiled?.Invoke(method, methodBodyStart);
+                try {
+                    OnMethodCompiled?.Invoke(method, methodBodyStart);
+                } catch (Exception e) {
+                    MMDbgLog.Log($"Error executing OnMethodCompiled event: {e}");
+                }
             } catch (Exception e) {
                 MMDbgLog.Log($"Error in JitHookCore: {e}");
             }
