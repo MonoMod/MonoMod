@@ -136,6 +136,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     return ptr;
                 }
 
+                // FIXME: on Core, it seems that *every* method has this stub, not just NGEN'd methods
+                //        It also seems to correctly find the body, but because ThePreStub is always -1,
+                //          it never returns that.
+                //        One consequence of this seems to be that re-JITting a method calling a patched
+                //          method causes it to use a new stub, except not patched.
+
                 // x64 .NET Core
                 if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
                     *(byte*) (lptr + 0x05) == 0x5f // pop rdi
