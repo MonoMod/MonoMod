@@ -4,6 +4,7 @@ using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -189,77 +190,77 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
         }
 
-        private delegate object d_MethodHandle_GetLoaderAllocator(IntPtr methodHandle);
-        private delegate object d_CreateRuntimeMethodInfoStub(IntPtr methodHandle, object loaderAllocator);
-        private delegate RuntimeMethodHandle d_CreateRuntimeMethodHandle(object runtimeMethodInfo);
+        protected delegate object d_MethodHandle_GetLoaderAllocator(IntPtr methodHandle);
+        protected delegate object d_CreateRuntimeMethodInfoStub(IntPtr methodHandle, object loaderAllocator);
+        protected delegate RuntimeMethodHandle d_CreateRuntimeMethodHandle(object runtimeMethodInfo);
+        protected delegate Type d_GetDeclaringTypeOfMethodHandle(IntPtr methodHandle);
+        protected delegate Type d_GetTypeFromNativeHandle(IntPtr handle);
 
-        protected static RuntimeMethodHandle CreateHandleForHandlePointer(IntPtr handle)
+        protected RuntimeMethodHandle CreateHandleForHandlePointer(IntPtr handle)
             => CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        protected static object MethodHandle_GetLoaderAllocator(IntPtr methodHandle) {
-            _ = methodHandle;
-            throw new InvalidOperationException();
-        }
+        private readonly List<object> keepalive = new List<object>();
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        protected static object CreateRuntimeMethodInfoStub(IntPtr methodHandle, object keepalive) {
-            _ = methodHandle;
-            _ = keepalive;
-            throw new InvalidOperationException();
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        protected static RuntimeMethodHandle CreateRuntimeMethodHandle(object runtimeMethodInfo) {
-            _ = runtimeMethodInfo;
-            throw new InvalidOperationException();
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        protected static Type GetDeclaringTypeOfMethodHandle(IntPtr methodHandle) {
-            _ = methodHandle;
-            throw new InvalidOperationException();
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        protected static Type GetTypeFromNativeHandle(IntPtr handle) {
-            _ = handle;
-            throw new InvalidOperationException();
-        }
+        protected d_MethodHandle_GetLoaderAllocator MethodHandle_GetLoaderAllocator;
+        protected d_CreateRuntimeMethodInfoStub CreateRuntimeMethodInfoStub;
+        protected d_CreateRuntimeMethodHandle CreateRuntimeMethodHandle;
+        protected d_GetDeclaringTypeOfMethodHandle GetDeclaringTypeOfMethodHandle;
+        protected d_GetTypeFromNativeHandle GetTypeFromNativeHandle;
 
         protected virtual void SetupJitHookHelpers() {
-            Type genericFunc = typeof(Func<,>);
+            Type Unsafe = typeof(object).Assembly.GetType("Internal.Runtime.CompilerServices.Unsafe");
+            MethodInfo Unsafe_As = Unsafe.GetMethods().First(m => m.Name == "As" && m.ReturnType.IsByRef);
 
             const BindingFlags StaticNonPublic = BindingFlags.Static | BindingFlags.NonPublic;
 
             { // set up GetLoaderAllocator
-                MethodInfo our_getLoaderAllocator = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(MethodHandle_GetLoaderAllocator), StaticNonPublic);
-
                 MethodInfo getLoaderAllocator = typeof(RuntimeMethodHandle).GetMethod("GetLoaderAllocator", StaticNonPublic);
 
-                HookPermanent(our_getLoaderAllocator, getLoaderAllocator);
+                MethodInfo invokeWrapper;
+                using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                        "MethodHandle_GetLoaderAllocator", typeof(object), new Type[] { typeof(IntPtr) }
+                    )) {
+                    ILGenerator il = dmd.GetILGenerator();
+                    Type paramType = getLoaderAllocator.GetParameters().First().ParameterType;
+                    il.Emit(OpCodes.Ldarga_S, 0);
+                    il.Emit(OpCodes.Call, Unsafe_As.MakeGenericMethod(typeof(IntPtr), paramType));
+                    il.Emit(OpCodes.Ldobj, paramType);
+                    il.Emit(OpCodes.Call, getLoaderAllocator);
+                    il.Emit(OpCodes.Ret);
+
+                    invokeWrapper = dmd.Generate();
+                }
+                // this might not actually work
+                MethodHandle_GetLoaderAllocator = invokeWrapper.CreateDelegate<d_MethodHandle_GetLoaderAllocator>();
             }
 
             { // set up GetTypeFromNativeHandle
-                MethodInfo our_getTypeFromNativeHandle = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(GetTypeFromNativeHandle), StaticNonPublic);
-
                 MethodInfo getTypeFromHandleUnsafe = typeof(Type).GetMethod("GetTypeFromHandleUnsafe", StaticNonPublic);
-
-                HookPermanent(our_getTypeFromNativeHandle, getTypeFromHandleUnsafe);
+                GetTypeFromNativeHandle = getTypeFromHandleUnsafe.CreateDelegate<d_GetTypeFromNativeHandle>();
             }
 
             { // set up GetDeclaringTypeOfMethodHandle
-                MethodInfo our_getDeclaringType = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(GetDeclaringTypeOfMethodHandle), StaticNonPublic);
-
                 Type methodHandleInternal = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodHandleInternal");
                 MethodInfo getDeclaringType = typeof(RuntimeMethodHandle).GetMethod("GetDeclaringType", StaticNonPublic, null, new Type[] { methodHandleInternal }, null);
 
-                HookPermanent(our_getDeclaringType, getDeclaringType);
+                MethodInfo invokeWrapper;
+                using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                        "GetDeclaringTypeOfMethodHandle", typeof(Type), new Type[] { typeof(IntPtr) }
+                    )) {
+                    ILGenerator il = dmd.GetILGenerator();
+                    il.Emit(OpCodes.Ldarga_S, 0);
+                    il.Emit(OpCodes.Call, Unsafe_As.MakeGenericMethod(typeof(IntPtr), methodHandleInternal));
+                    il.Emit(OpCodes.Ldobj, methodHandleInternal);
+                    il.Emit(OpCodes.Call, getDeclaringType);
+                    il.Emit(OpCodes.Ret);
+
+                    invokeWrapper = dmd.Generate();
+                }
+                // this might not actually work
+                GetDeclaringTypeOfMethodHandle = invokeWrapper.CreateDelegate<d_GetDeclaringTypeOfMethodHandle>();
             }
 
             { // set up CreateRuntimeMethodInfoStub
-                MethodInfo our_createRuntimeMethodInfoStub = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodInfoStub), StaticNonPublic);
-
                 Type[] runtimeMethodInfoStubCtorArgs = new Type[] { typeof(IntPtr), typeof(object) };
                 Type runtimeMethodInfoStub = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodInfoStub");
                 ConstructorInfo runtimeMethodInfoStubCtor = runtimeMethodInfoStub.GetConstructor(runtimeMethodInfoStubCtorArgs);
@@ -277,13 +278,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     runtimeMethodInfoStubCtorWrapper = dmd.Generate();
                 }
 
-                HookPermanent(our_createRuntimeMethodInfoStub, runtimeMethodInfoStubCtorWrapper);
+                CreateRuntimeMethodInfoStub = runtimeMethodInfoStubCtorWrapper.CreateDelegate<d_CreateRuntimeMethodInfoStub>();
             }
 
-            {
-                MethodInfo our_createRuntimeMethodHandle = typeof(DetourRuntimeNETCore31Platform).GetMethod(nameof(CreateRuntimeMethodHandle), StaticNonPublic);
-
-                Type iRuntimeMethodInfo = typeof(RuntimeMethodHandle).Assembly.GetType("System.IRuntimeMethodInfo");
+            { // set up CreateRuntimeMethodHandle
                 ConstructorInfo ctor = typeof(RuntimeMethodHandle).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).First();
 
                 MethodInfo ctorWrapper;
@@ -298,7 +296,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     ctorWrapper = dmd.Generate();
                 }
 
-                HookPermanent(our_createRuntimeMethodHandle, ctorWrapper);
+                CreateRuntimeMethodHandle = ctorWrapper.CreateDelegate<d_CreateRuntimeMethodHandle>();
             }
         }
 
