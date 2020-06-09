@@ -14,8 +14,7 @@
     <OutputType>Library</OutputType>
     <SignAssembly>skip</SignAssembly>
     <!-- FIXME: RE-ENABLE TESTS WITH TIERED COMPILATION -->
-    <!--<TieredCompilation>false</TieredCompilation>
-	<TieredCompilationQuickJit>false</TieredCompilationQuickJit>-->
+    <!--<TieredCompilation>false</TieredCompilation>-->
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.props" />
 

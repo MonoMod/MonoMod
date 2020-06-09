@@ -1,11 +1,14 @@
 ﻿using MonoMod.RuntimeDetour;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     public class TieredCompilationTests {
@@ -20,12 +23,15 @@ namespace MonoMod.UnitTest {
 
         [Fact]
         public void WithTieredCompilation() {
+            Environment.SetEnvironmentVariable("MONOMOD_DBGLOG", "1");
+
             using (new Detour(() => From(), () => To())) {
                 TestFrom();
             }
         }
 
         private static void TestFrom() {
+            Stopwatch sw = new Stopwatch();
             for (int loop = 0; loop < 5; loop++) {
                 // first we make sure From qualifies for recomp
                 for (int i = 0; i < 1000; i++) {
@@ -33,18 +39,45 @@ namespace MonoMod.UnitTest {
                     From();
                     Assert.True(TargetHit, $"iteration {i} of loop {loop}");
                 }
-                // then we wait for it
-                Thread.Sleep(1000);
+                // then we wait for it by spinning
+                sw.Start();
+                while (sw.ElapsedMilliseconds < 1000)
+                    Empty();
+                sw.Reset();
                 // and then try again
             }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void Empty() { }
+
+        // Importantly, the quick JIT is disabled when it contains loops (in 3, seemingly not in 5)
         private static void From() {
+            Empty();
+            Empty();
+            Empty();
+            Empty();
+            Empty();
             TargetHit = false;
+            Empty();
+            Empty();
+            Empty();
+            Empty();
+            Empty();
         }
 
         private static void To() {
+            Empty();
+            Empty();
+            Empty();
+            Empty();
+            Empty();
             TargetHit = true;
+            Empty();
+            Empty();
+            Empty();
+            Empty();
+            Empty();
         }
     }
 }
