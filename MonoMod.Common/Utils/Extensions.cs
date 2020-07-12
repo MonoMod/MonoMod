@@ -76,7 +76,8 @@ namespace MonoMod.Utils {
             // https://github.com/mono/mono/blob/83fc1456dbbd3a789c68fe0f3875820c901b1bd6/mcs/class/corlib/System.Reflection/Assembly.cs#L96
             // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection/RuntimeAssembly.cs#L59
             // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L247
-
+            // https://github.com/mono/mono/blob/ee3a669dc30689af8c8919afc61d226683a1aaa3/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L258
+            
             Type asmType = asm?.GetType();
             if (asmType == null)
                 return;
@@ -101,8 +102,18 @@ namespace MonoMod.Utils {
                 ReflectionHelper.AssemblyCache[name.FullName] = asm;
                 ReflectionHelper.AssemblyCache[name.Name] = asm;
             }
-
-            IntPtr asmPtr = (IntPtr) f_mono_assembly.GetValue(asm);
+            
+            long asmPtr = 0L;
+            // For AssemblyBuilders, dynamic_assembly is of type UIntPtr which doesn't cast to IntPtr
+            switch (f_mono_assembly.GetValue(asm)) {
+                case IntPtr i:
+                    asmPtr = (long) i;
+                    break;
+                case UIntPtr u:
+                    asmPtr = (long) u;
+                    break;
+            }
+            
             int offs =
                 // ref_count (4 + padding)
                 IntPtr.Size +
@@ -150,7 +161,7 @@ namespace MonoMod.Utils {
                 1 +
                 // dynamic
                 1;
-            byte* corlibInternalPtr = (byte*) ((long) asmPtr + offs);
+            byte* corlibInternalPtr = (byte*) (asmPtr + offs);
             *corlibInternalPtr = value ? (byte) 1 : (byte) 0;
         }
 
