@@ -246,10 +246,9 @@ namespace MonoMod.Utils {
                 field = field.Module.ResolveField(field.MetadataToken);
             }
 
-            var type = _ImportReference(field.FieldType, declaringType);
             return CachedFields[fieldOrig] = new FieldReference(
                 field.Name,
-                type,
+                _ImportReference(field.FieldType, declaringType),
                 declaringType
             );
         }
