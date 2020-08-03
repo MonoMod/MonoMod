@@ -89,6 +89,22 @@ namespace MonoMod.Utils {
             };
         }
 
+        private bool TryGetCachedType(Type type, out TypeReference typeRef, GenericImportKind importKind) {
+            if (importKind == GenericImportKind.Definition) {
+                typeRef = null;
+                return false;
+            }
+
+            return CachedTypes.TryGetValue(type, out typeRef);
+        }
+
+        private TypeReference SetCachedType(Type type, TypeReference typeRef, GenericImportKind importKind) {
+            if (importKind == GenericImportKind.Definition)
+                return typeRef;
+
+            return CachedTypes[type] = typeRef;
+        }
+
         public AssemblyNameReference ImportReference(AssemblyName asm) {
             // It's possible to load multiple assemblies with the same name but different contents!
             // Sadly the AssemblyNames match up perfectly...
@@ -128,19 +144,19 @@ namespace MonoMod.Utils {
         }
 
         private TypeReference _ImportReference(Type type, IGenericParameterProvider context, GenericImportKind importKind = GenericImportKind.Open) {
-            if (CachedTypes.TryGetValue(type, out TypeReference typeRef)) {
+            if (TryGetCachedType(type, out TypeReference typeRef, importKind)) {
                 return _IsGenericInstance(type, importKind) ? _ImportGenericInstance(type, context, typeRef) : typeRef;
             }
 
             if (UseDefault)
-                return CachedTypes[type] = Default.ImportReference(type, context);
+                return SetCachedType(type, Default.ImportReference(type, context), importKind);
 
             if (type.HasElementType) {
                 if (type.IsByRef)
-                    return CachedTypes[type] = new ByReferenceType(_ImportReference(type.GetElementType(), context));
+                    return SetCachedType(type, new ByReferenceType(_ImportReference(type.GetElementType(), context)), importKind);
 
                 if (type.IsPointer)
-                    return CachedTypes[type] = new PointerType(_ImportReference(type.GetElementType(), context));
+                    return SetCachedType(type, new PointerType(_ImportReference(type.GetElementType(), context)), importKind);
 
                 if (type.IsArray) {
                     ArrayType at = new ArrayType(_ImportReference(type.GetElementType(), context), type.GetArrayRank());
@@ -172,10 +188,10 @@ namespace MonoMod.Utils {
             }
 
             if (type.IsGenericParameter)
-                return CachedTypes[type] = ImportGenericParameter(type, context);
+                return SetCachedType(type, ImportGenericParameter(type, context), importKind);
 
             if (ElementTypes.TryGetValue(type, out typeRef))
-                return CachedTypes[type] = typeRef;
+                return SetCachedType(type, typeRef, importKind);
 
             typeRef = new TypeReference(
 				string.Empty,
@@ -194,7 +210,7 @@ namespace MonoMod.Utils {
                 foreach (Type param in type.GetGenericArguments())
                     typeRef.GenericParameters.Add(new GenericParameter(param.Name, typeRef));
 
-            return CachedTypes[type] = typeRef;
+            return SetCachedType(type, typeRef, importKind);
         }
 
         private static TypeReference ImportGenericParameter(Type type, IGenericParameterProvider context) {
@@ -259,7 +275,7 @@ namespace MonoMod.Utils {
         }
 
         private MethodReference _ImportReference(MethodBase method, IGenericParameterProvider context, GenericImportKind importKind) {
-            if (CachedMethods.TryGetValue(method, out MethodReference methodRef))
+            if (CachedMethods.TryGetValue(method, out MethodReference methodRef) && importKind == GenericImportKind.Open)
                 return methodRef;
 
             if (method is DynamicMethod dm)
