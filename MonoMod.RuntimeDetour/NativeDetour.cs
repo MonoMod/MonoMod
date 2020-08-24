@@ -27,7 +27,8 @@ namespace MonoMod.RuntimeDetour {
         public bool IsValid { get; private set; }
         public bool IsApplied { get; private set; }
 
-        public readonly NativeDetourData Data;
+        private NativeDetourData _Data;
+        public NativeDetourData Data => _Data;
         public readonly MethodBase Method;
 
         private readonly MethodInfo _BackupMethod;
@@ -42,14 +43,14 @@ namespace MonoMod.RuntimeDetour {
                 return;
             IsValid = true;
 
-            Data = DetourHelper.Native.Create(from, to, null);
+            _Data = DetourHelper.Native.Create(from, to, null);
 
             // Backing up the original function only needs to happen once.
             if (!config.SkipILCopy)
                 method?.TryCreateILCopy(out _BackupMethod);
 
             // BackupNative is required even if BackupMethod is present to undo the detour.
-            _BackupNative = DetourHelper.Native.MemAlloc(Data.Size);
+            _BackupNative = DetourHelper.Native.MemAlloc(_Data.Size);
 
             if (!config.ManualApply)
                 Apply();
@@ -147,12 +148,12 @@ namespace MonoMod.RuntimeDetour {
                 return;
             IsApplied = true;
 
-            DetourHelper.Native.Copy(Data.Method, _BackupNative, Data.Type);
+            DetourHelper.Native.Copy(_Data.Method, _BackupNative, _Data.Type);
 
-            DetourHelper.Native.MakeWritable(Data);
-            DetourHelper.Native.Apply(Data);
-            DetourHelper.Native.MakeExecutable(Data);
-            DetourHelper.Native.FlushICache(Data);
+            DetourHelper.Native.MakeWritable(_Data);
+            DetourHelper.Native.Apply(_Data);
+            DetourHelper.Native.MakeExecutable(_Data);
+            DetourHelper.Native.FlushICache(_Data);
         }
 
         /// <summary>
@@ -169,10 +170,34 @@ namespace MonoMod.RuntimeDetour {
                 return;
             IsApplied = false;
 
-            DetourHelper.Native.MakeWritable(Data);
-            DetourHelper.Native.Copy(_BackupNative, Data.Method, Data.Type);
-            DetourHelper.Native.MakeExecutable(Data);
-            DetourHelper.Native.FlushICache(Data);
+            DetourHelper.Native.MakeWritable(_Data);
+            DetourHelper.Native.Copy(_BackupNative, _Data.Method, _Data.Type);
+            DetourHelper.Native.MakeExecutable(_Data);
+            DetourHelper.Native.FlushICache(_Data);
+        }
+
+        /// <summary>
+        /// Changes the source of this native detour to a new source address. This does not repair the old source location.
+        /// </summary>
+        /// <param name="newSource">The new source location.</param>
+        public void ChangeSource(IntPtr newSource) {
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(NativeDetour));
+            _Data.Method = newSource;
+            IsApplied = false;
+            Apply();
+        }
+
+        /// <summary>
+        /// Changed the target of this native detour to a new target.
+        /// </summary>
+        /// <param name="newTarget">The new target address.</param>
+        public void ChangeTarget(IntPtr newTarget) {
+            if (!IsValid)
+                throw new ObjectDisposedException(nameof(NativeDetour));
+            _Data.Target = newTarget;
+            IsApplied = false;
+            Apply();
         }
 
         /// <summary>
@@ -184,7 +209,7 @@ namespace MonoMod.RuntimeDetour {
             IsValid = false;
 
             DetourHelper.Native.MemFree(_BackupNative);
-            DetourHelper.Native.Free(Data);
+            DetourHelper.Native.Free(_Data);
 
             if (!IsApplied) {
                 foreach (MethodBase method in _Pinned)
@@ -234,7 +259,7 @@ namespace MonoMod.RuntimeDetour {
 
             MethodBase methodCallable = Method;
             if (methodCallable == null) {
-                methodCallable = DetourHelper.GenerateNativeProxy(Data.Method, signature);
+                methodCallable = DetourHelper.GenerateNativeProxy(_Data.Method, signature);
             }
 
             Type returnType = (signature as MethodInfo)?.ReturnType ?? typeof(void);
@@ -245,7 +270,7 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"Trampoline:Native<{Method?.GetID(simple: true) ?? ((long) Data.Method).ToString("X16")}>?{GetHashCode()}",
+                $"Trampoline:Native<{Method?.GetID(simple: true) ?? ((long) _Data.Method).ToString("X16")}>?{GetHashCode()}",
                 returnType, argTypes
             )) {
                 ILProcessor il = dmd.GetILProcessor();
@@ -253,7 +278,7 @@ namespace MonoMod.RuntimeDetour {
                 ExceptionHandler eh = new ExceptionHandler(ExceptionHandlerType.Finally);
                 il.Body.ExceptionHandlers.Add(eh);
 
-                il.EmitDetourCopy(_BackupNative, Data.Method, Data.Type);
+                il.EmitDetourCopy(_BackupNative, _Data.Method, _Data.Type);
 
                 // Store the return value in a local as we can't preserve the stack across exception block boundaries.
                 VariableDefinition localResult = null;
@@ -284,7 +309,7 @@ namespace MonoMod.RuntimeDetour {
                 int instriFinallyStart = il.Body.Instructions.Count;
 
                 // Reapply the detour even if the method threw an exception.
-                il.EmitDetourApply(Data);
+                il.EmitDetourApply(_Data);
 
                 // il.EndExceptionBlock();
                 int instriFinallyEnd = il.Body.Instructions.Count;
