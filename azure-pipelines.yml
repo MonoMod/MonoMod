@@ -5,7 +5,7 @@ strategy:
       imageName: 'windows-latest'
       artifactPrefix: ''
       artifactSuffix: ''
-      testers: ';fx;core2;core3;core3.1;'
+      testers: ';fx;core2.1;core3;core3.1;'
       generateDocFX: 'false'
       pushNuGet: 'true'
     linux:
@@ -13,7 +13,7 @@ strategy:
       imageName: 'ubuntu-latest'
       artifactPrefix: '~dbg.linux.'
       artifactSuffix: ''
-      testers: ';mono;core2;core3;core3.1;core5;'
+      testers: ';mono;core2.1;core3;core3.1;core5;'
       generateDocFX: 'false'
       pushNuGet: 'false'
     macos:
@@ -21,7 +21,7 @@ strategy:
       imageName: 'macOS-latest'
       artifactPrefix: '~dbg.macos.'
       artifactSuffix: ''
-      testers: ';mono;core2;core3;core3.1;core5;'
+      testers: ';mono;core2.1;core3;core3.1;core5;'
       generateDocFX: 'false'
       pushNuGet: 'false'
   maxParallel: 4
@@ -46,10 +46,10 @@ steps:
 
 # Run pre-build steps.
 - task: UseDotNet@2
-  displayName: 'Install .NET Core SDK 2.0.x'
+  displayName: 'Install .NET Core SDK 2.1.x'
   inputs:
     packageType: sdk
-    version: '2.0.x'
+    version: '2.1.x'
 - task: UseDotNet@2
   displayName: 'Install .NET Core SDK 3.0.x'
   inputs:
@@ -115,21 +115,21 @@ steps:
     artifactName: '$(artifactPrefix)nupkgs$(artifactSuffix)'
     publishLocation: 'Container'
 - task: NuGetCommand@2
-  condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.pushNuGet, 'true'))
+  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
   displayName: 'Artifacts: Push: nupkgs'
   inputs:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/*.nupkg'
     publishVstsFeed: '572c97eb-dbaa-4a55-90e5-1d05431535bd/72ad568d-c548-4599-8b0a-9ea52b45bbbd'
 - task: PowerShell@2
-  condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.pushNuGet, 'true'))
+  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
   displayName: 'Artifacts: Prepare: MonoMod.Common to nuget.org'
   continueOnError: true
   inputs:
     filePath: 'azure-pipelines-prepushcommon.ps1'
     arguments: '$(Build.ArtifactStagingDirectory)/nupkgs/MonoMod.Common.*.nupkg'
 - task: NuGetCommand@2
-  condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.pushNuGet, 'true'))
+  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
   displayName: 'Artifacts: Push: MonoMod.Common to nuget.org'
   inputs:
     command: 'push'
@@ -179,17 +179,17 @@ steps:
     testRunTitle: 'Tests @ $(jobArchName) monoslow net452'
 
 - task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core2;'))
-  displayName: 'Test: core: netcoreapp2.0'
+  condition: and(always(), contains(variables.testers, ';core2.1;'))
+  displayName: 'Test: core: netcoreapp2.1'
   inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp2.0.trx"'
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.1 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp2.1.trx"'
 - task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core2;'))
-  displayName: 'Test: Publish: core: netcoreapp2.0'
+  condition: and(always(), contains(variables.testers, ';core2.1;'))
+  displayName: 'Test: Publish: core: netcoreapp2.1'
   inputs:
     testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp2.0.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.0'
+    testResultsFiles: '**/testresults.core.netcoreapp2.1.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.1'
 
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core3;'))
@@ -232,7 +232,7 @@ steps:
 
 # Rebuild and publish the DocFX page.
 - task: PowerShell@2
-  condition: and(always(), ne(variables.Build.Reason, 'PullRequest'), eq(variables.generateDocFX, 'true'))
+  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.generateDocFX, 'true'))
   displayName: 'DocFX'
   continueOnError: true
   inputs:
