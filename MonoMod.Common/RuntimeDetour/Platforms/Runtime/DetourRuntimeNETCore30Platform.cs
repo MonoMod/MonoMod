@@ -15,7 +15,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    class DetourRuntimeNETCore31Platform : DetourRuntimeNETCorePlatform {
+    class DetourRuntimeNETCore30Platform : DetourRuntimeNETCorePlatform {
+        // The JitVersionGuid is the same for Core 3.0 and 3.1
         public static readonly Guid JitVersionGuid = new Guid("d609bed1-7831-49fc-bd49-b6f054dd4d46");
 
         protected override unsafe void DisableInlining(MethodBase method, RuntimeMethodHandle handle) {
