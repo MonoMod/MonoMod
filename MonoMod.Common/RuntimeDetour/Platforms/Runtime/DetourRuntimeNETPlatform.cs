@@ -142,6 +142,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 //        One consequence of this seems to be that re-JITting a method calling a patched
                 //          method causes it to use a new stub, except not patched.
 
+                // It seems that if there is *any* pause between the method being prepared, and this being
+                //   called, there is a chance that the JIT will do something funky and reset the thunk for
+                //   the method (which is what GetFunctionPointer gives) back to a call to PrecodeFixupThunk.
+                // This can be observed by checking for the first byte being 0xe8 instead of 0xe9.
+                // If this happens at the wrong moment, we won't get the opportunity to patch the actual method
+                //   body because our only pointer to it will have been deleted.
+                
+                // In conclusion: *Do we need to disable re-JITing while patching?*
+
                 // x64 .NET Core
                 if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
                     *(byte*) (lptr + 0x05) == 0x5f // pop rdi
@@ -185,7 +194,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 }
             }
 
-            return (ptrParsed == ThePreStub || ThePreStub == (IntPtr) (-1)) ? ptrGot : ptrParsed;
+            return (ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/) ? ptrGot : ptrParsed;
         }
     }
 }
