@@ -28,6 +28,24 @@ namespace MonoMod.Utils {
                 return importer;
             }
         }
+        
+        // Not all generics are equal: in some cases a type with a generic parameter should be 
+        // considered as a TypeReference with GenericParameters. For instance Bar<T> in
+        //
+        // class Foo<T> : Bar<T>
+        //
+        // In other cases, a type should be considered as a GenericInstanceType.
+        // For instance `self` in
+        //
+        // class Foo<T> { static Foo<T> self; }
+        //
+        // Because in Reflection API both cases yield technically the same TypeInfo, we
+        // differentiate then during resolving to allow proper resolving of the second example
+        // The same thing is done in Cecil, so we port a simplified version of it
+        private enum GenericImportKind {
+            Open,
+            Definition
+        }
 
         public static readonly IReflectionImporterProvider Provider = new _Provider();
         public static readonly IReflectionImporterProvider ProviderNoDefault = new _Provider() { UseDefault = false };
@@ -71,6 +89,22 @@ namespace MonoMod.Utils {
             };
         }
 
+        private bool TryGetCachedType(Type type, out TypeReference typeRef, GenericImportKind importKind) {
+            if (importKind == GenericImportKind.Definition) {
+                typeRef = null;
+                return false;
+            }
+
+            return CachedTypes.TryGetValue(type, out typeRef);
+        }
+
+        private TypeReference SetCachedType(Type type, TypeReference typeRef, GenericImportKind importKind) {
+            if (importKind == GenericImportKind.Definition)
+                return typeRef;
+
+            return CachedTypes[type] = typeRef;
+        }
+
         public AssemblyNameReference ImportReference(AssemblyName asm) {
             // It's possible to load multiple assemblies with the same name but different contents!
             // Sadly the AssemblyNames match up perfectly...
@@ -94,21 +128,38 @@ namespace MonoMod.Utils {
         }
 
         public TypeReference ImportReference(Type type, IGenericParameterProvider context) {
-            if (CachedTypes.TryGetValue(type, out TypeReference typeRef))
-                return typeRef;
+            return _ImportReference(type, context, context != null ? GenericImportKind.Open : GenericImportKind.Definition);
+        }
+
+        private bool _IsGenericInstance(Type type, GenericImportKind importKind) {
+            return type.IsGenericType && !type.IsGenericTypeDefinition ||
+                   type.IsGenericType && type.IsGenericTypeDefinition && importKind == GenericImportKind.Open;
+        }
+
+        private GenericInstanceType _ImportGenericInstance(Type type, IGenericParameterProvider context, TypeReference typeRef) {
+            GenericInstanceType git = new GenericInstanceType(typeRef);
+            foreach (Type arg in type.GetGenericArguments())
+                git.GenericArguments.Add(_ImportReference(arg, context));
+            return git;
+        }
+
+        private TypeReference _ImportReference(Type type, IGenericParameterProvider context, GenericImportKind importKind = GenericImportKind.Open) {
+            if (TryGetCachedType(type, out TypeReference typeRef, importKind)) {
+                return _IsGenericInstance(type, importKind) ? _ImportGenericInstance(type, context, typeRef) : typeRef;
+            }
 
             if (UseDefault)
-                return CachedTypes[type] = Default.ImportReference(type, context);
+                return SetCachedType(type, Default.ImportReference(type, context), importKind);
 
             if (type.HasElementType) {
                 if (type.IsByRef)
-                    return CachedTypes[type] = new ByReferenceType(ImportReference(type.GetElementType(), context));
+                    return SetCachedType(type, new ByReferenceType(_ImportReference(type.GetElementType(), context)), importKind);
 
                 if (type.IsPointer)
-                    return CachedTypes[type] = new PointerType(ImportReference(type.GetElementType(), context));
+                    return SetCachedType(type, new PointerType(_ImportReference(type.GetElementType(), context)), importKind);
 
                 if (type.IsArray) {
-                    ArrayType at = new ArrayType(ImportReference(type.GetElementType(), context), type.GetArrayRank());
+                    ArrayType at = new ArrayType(_ImportReference(type.GetElementType(), context), type.GetArrayRank());
                     if (type != type.GetElementType().MakeArrayType()) {
                         // Non-SzArray
                         // TODO: Find a way to get the bounds without instantiating the array type!
@@ -130,20 +181,17 @@ namespace MonoMod.Utils {
                     return CachedTypes[type] = at;
                 }
             }
-
-            bool isGeneric = type.IsGenericType;
-            if (isGeneric && !type.IsGenericTypeDefinition) {
-                GenericInstanceType git = new GenericInstanceType(ImportReference(type.GetGenericTypeDefinition(), context));
-                foreach (Type arg in type.GetGenericArguments())
-                    git.GenericArguments.Add(ImportReference(arg, context));
-                return git;
+            
+            if (_IsGenericInstance(type, importKind)) {
+                return _ImportGenericInstance(type, context,
+                    _ImportReference(type.GetGenericTypeDefinition(), context, GenericImportKind.Definition));
             }
 
             if (type.IsGenericParameter)
-                return CachedTypes[type] = ImportGenericParameter(type, context);
+                return SetCachedType(type, ImportGenericParameter(type, context), importKind);
 
             if (ElementTypes.TryGetValue(type, out typeRef))
-                return CachedTypes[type] = typeRef;
+                return SetCachedType(type, typeRef, importKind);
 
             typeRef = new TypeReference(
 				string.Empty,
@@ -154,7 +202,7 @@ namespace MonoMod.Utils {
             );
 
             if (type.IsNested)
-                typeRef.DeclaringType = ImportReference(type.DeclaringType, context);
+                typeRef.DeclaringType = _ImportReference(type.DeclaringType, context, importKind);
             else if (type.Namespace != null)
                 typeRef.Namespace = type.Namespace;
 
@@ -162,7 +210,7 @@ namespace MonoMod.Utils {
                 foreach (Type param in type.GetGenericArguments())
                     typeRef.GenericParameters.Add(new GenericParameter(param.Name, typeRef));
 
-            return CachedTypes[type] = typeRef;
+            return SetCachedType(type, typeRef, importKind);
         }
 
         private static TypeReference ImportGenericParameter(Type type, IGenericParameterProvider context) {
@@ -216,13 +264,18 @@ namespace MonoMod.Utils {
 
             return CachedFields[fieldOrig] = new FieldReference(
                 field.Name,
-                ImportReference(field.FieldType, declaringType),
+                _ImportReference(field.FieldType, declaringType),
                 declaringType
             );
         }
 
         public MethodReference ImportReference(MethodBase method, IGenericParameterProvider context) {
-            if (CachedMethods.TryGetValue(method, out MethodReference methodRef))
+            return _ImportReference(method, context,
+                context != null ? GenericImportKind.Open : GenericImportKind.Definition);
+        }
+
+        private MethodReference _ImportReference(MethodBase method, IGenericParameterProvider context, GenericImportKind importKind) {
+            if (CachedMethods.TryGetValue(method, out MethodReference methodRef) && importKind == GenericImportKind.Open)
                 return methodRef;
 
             if (method is DynamicMethod dm)
@@ -231,11 +284,12 @@ namespace MonoMod.Utils {
             if (UseDefault)
                 return CachedMethods[method] = Default.ImportReference(method, context);
 
-            if (method.IsGenericMethod && !method.IsGenericMethodDefinition) {
-                GenericInstanceMethod gim = new GenericInstanceMethod(ImportReference((method as MethodInfo).GetGenericMethodDefinition(), context));
+            if (method.IsGenericMethod && !method.IsGenericMethodDefinition ||
+                method.IsGenericMethod && method.IsGenericMethodDefinition && importKind == GenericImportKind.Open) {
+                GenericInstanceMethod gim = new GenericInstanceMethod(_ImportReference((method as MethodInfo).GetGenericMethodDefinition(), context, GenericImportKind.Definition));
                 foreach (Type arg in method.GetGenericArguments())
                     // Generic arguments for the generic instance are often given by the next higher provider.
-                    gim.GenericArguments.Add(ImportReference(arg, context));
+                    gim.GenericArguments.Add(_ImportReference(arg, context));
 
                 return CachedMethods[method] = gim;
             }
@@ -243,8 +297,8 @@ namespace MonoMod.Utils {
             Type declType = method.DeclaringType;
             methodRef = new MethodReference(
                 method.Name,
-                ImportReference(typeof(void), context),
-                declType != null ? ImportReference(declType, context) : ImportModuleType(method.Module, context)
+                _ImportReference(typeof(void), context),
+                declType != null ? _ImportReference(declType, context, GenericImportKind.Definition) : ImportModuleType(method.Module, context)
             );
 
             methodRef.HasThis = (method.CallingConvention & CallingConventions.HasThis) != 0;
@@ -264,13 +318,13 @@ namespace MonoMod.Utils {
                 foreach (Type param in method.GetGenericArguments())
                     methodRef.GenericParameters.Add(new GenericParameter(param.Name, methodRef));
 
-            methodRef.ReturnType = ImportReference((method as MethodInfo)?.ReturnType ?? typeof(void), methodRef);
+            methodRef.ReturnType = _ImportReference((method as MethodInfo)?.ReturnType ?? typeof(void), methodRef);
 
             foreach (ParameterInfo param in method.GetParameters())
                 methodRef.Parameters.Add(new ParameterDefinition(
                     param.Name,
                     (Mono.Cecil.ParameterAttributes) param.Attributes,
-                    ImportReference(param.ParameterType, methodRef)
+                    _ImportReference(param.ParameterType, methodRef)
                 ));
 
             return CachedMethods[methodOrig] = methodRef;

@@ -89,13 +89,7 @@ namespace MonoMod.Utils {
         /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>True if the handle was obtained, false otherwise.</returns>
         public static bool TryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping = false, int? flags = null) {
-            if (!InternalTryOpenLibrary(name, out libraryPtr, skipMapping, flags))
-                return false;
-
-            if (!CheckError(out _))
-                return false;
-
-            return true;
+            return InternalTryOpenLibrary(name, out libraryPtr, skipMapping, flags) || CheckError(out _);
         }
 
         private static bool InternalTryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping, int? flags) {
@@ -162,13 +156,7 @@ namespace MonoMod.Utils {
         /// <param name="functionPtr">The function pointer, or null if it wasn't found.</param>
         /// <returns>True if the function pointer was obtained, false otherwise.</returns>
         public static bool TryGetFunction(this IntPtr libraryPtr, string name, out IntPtr functionPtr) {
-            if (!InternalTryGetFunction(libraryPtr, name, out functionPtr))
-                return false;
-
-            if (!CheckError(out _))
-                return false;
-
-            return true;
+            return InternalTryGetFunction(libraryPtr, name, out functionPtr) || CheckError(out _);
         }
 
         private static bool InternalTryGetFunction(IntPtr libraryPtr, string name, out IntPtr functionPtr) {
