@@ -27,8 +27,6 @@ namespace MonoMod.UnitTest {
         [Fact]
 #endif
         public void WithTieredCompilation() {
-            Environment.SetEnvironmentVariable("MONOMOD_DBGLOG", "1");
-
             using (new Detour(() => From(), () => To())) {
                 TestFrom();
             }
