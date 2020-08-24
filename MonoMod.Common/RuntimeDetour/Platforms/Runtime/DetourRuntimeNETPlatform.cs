@@ -87,6 +87,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 return method.GetLdftnPointer();
             }
 
+            ReloadFuncPtr:
 
             IntPtr ptr = base.GetFunctionPointer(method, handle);
 
@@ -163,6 +164,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     ptr = NotThePreStub(ptr, (IntPtr) to);
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
                     return ptr;
+                }
+
+                // x64 .NET Core, but the thunk was reset
+                if (*(byte*) (lptr + 0x00) == 0xe8) { // call 
+                    MMDbgLog.Log($"Method thunk reset; regenerating");
+                    int precodeThunkOffset = *(int*) (lptr + 1);
+                    long precodeThunk = precodeThunkOffset + (lptr + 1 + sizeof(int));
+                    MMDbgLog.Log($"PrecodeFixupThunk: 0x{precodeThunk:X16}");
+                    PrepareMethod(method, handle);
+                    goto ReloadFuncPtr;
                 }
             }
 
