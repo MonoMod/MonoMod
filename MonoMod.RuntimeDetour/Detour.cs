@@ -404,15 +404,16 @@ namespace MonoMod.RuntimeDetour {
 
         private static object compileMethodSubscribeLock = new object();
         private static bool compileMethodSubscribed = false;
-        private static void _OnCompileMethod(MethodBase method, IntPtr codeStart) {
+        private static void _OnCompileMethod(MethodBase method, IntPtr codeStart, ulong codeLen) {
             if (method == null)
                 return;
 
             MMDbgLog.Log("compiling: " + method.GetID());
             if (_DetourMap.TryGetValue(method, out List<Detour> detours)) {
                 Detour top = detours.FindLast(d => d.IsTop);
-                top?._TopUndo();
-                top?._TopApply();
+                /*top?._TopUndo();
+                top?._TopApply();*/
+                top?._TopDetour?.ChangeSource(codeStart);
             }
         }
 

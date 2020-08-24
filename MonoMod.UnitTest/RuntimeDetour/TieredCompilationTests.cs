@@ -47,7 +47,7 @@ namespace MonoMod.UnitTest {
                 }
                 // then we wait for it by spinning
                 sw.Start();
-                while (sw.ElapsedMilliseconds < 1000)
+                while (sw.ElapsedMilliseconds < 100)
                     Empty();
                 sw.Reset();
                 // and then try again
