@@ -21,7 +21,11 @@ namespace MonoMod.UnitTest {
         //   in release mode. In debug mode, it will never fail.
         //
 
+#if DEBUG
+        [Fact(Skip = "This test will ONLY fail in Release builds")]
+#else
         [Fact]
+#endif
         public void WithTieredCompilation() {
             Environment.SetEnvironmentVariable("MONOMOD_DBGLOG", "1");
 
@@ -37,7 +41,9 @@ namespace MonoMod.UnitTest {
                 for (int i = 0; i < 1000; i++) {
                     TargetHit = false;
                     From();
-                    Assert.True(TargetHit, $"iteration {i} of loop {loop}");
+                    if (!TargetHit) {
+                        Assert.True(TargetHit, $"iteration {i} of loop {loop}");
+                    }
                 }
                 // then we wait for it by spinning
                 sw.Start();
