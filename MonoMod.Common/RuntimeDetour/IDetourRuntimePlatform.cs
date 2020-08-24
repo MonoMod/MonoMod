@@ -22,5 +22,5 @@ namespace MonoMod.RuntimeDetour {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    delegate void OnMethodCompiledEvent(MethodBase method, IntPtr codeStart);
+    delegate void OnMethodCompiledEvent(MethodBase method, IntPtr codeStart, ulong codeSize);
 }

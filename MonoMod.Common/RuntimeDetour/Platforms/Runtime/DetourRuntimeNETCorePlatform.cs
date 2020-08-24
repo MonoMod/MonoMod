@@ -100,7 +100,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 MethodBase method = MethodBase.GetMethodFromHandle(methodHandle, declType.TypeHandle);
                 // methood may be null if its a P/Invoke call i think (or something, its honestly hard to tell)
                 try {
-                    OnMethodCompiled?.Invoke(method, methodBodyStart);
+                    OnMethodCompiled?.Invoke(method, methodBodyStart, methodBodySize);
                 } catch (Exception e) {
                     MMDbgLog.Log($"Error executing OnMethodCompiled event: {e}");
                 }
