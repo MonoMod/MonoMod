@@ -10,7 +10,7 @@ namespace MonoMod.Utils {
 #endif
     static class PlatformHelper {
 
-        static PlatformHelper() {
+        private static void DeterminePlatform() {
             Current = Platform.Unknown;
 
 #if NETSTANDARD
@@ -106,16 +106,47 @@ namespace MonoMod.Utils {
                     Current |= Platform.ARM;
             }
 #endif
-
-            LibrarySuffix =
-                Is(Platform.MacOS) ? "dylib" :
-                Is(Platform.Unix) ? "so" :
-                "dll";
-
         }
 
-        public static Platform Current { get; private set; }
-        public static string LibrarySuffix { get; private set; }
+        private static Platform _current = Platform.Unknown;
+
+        private static bool _currentLocked = false;
+
+        public static Platform Current {
+            get {
+                if (!_currentLocked) {
+                    if (_current == Platform.Unknown) {
+                        DeterminePlatform();
+                    }
+
+                    _currentLocked = true;
+                }
+
+                return _current;
+            }
+            set {
+                if (_currentLocked)
+                    throw new InvalidOperationException("Cannot set the value of PlatformHelper.Current once it has been accessed.");
+
+                _current = value;
+            }
+        }
+
+
+        private static string _librarySuffix;
+
+        public static string LibrarySuffix {
+            get {
+                if (_librarySuffix == null) {
+                    _librarySuffix =
+                        Is(Platform.MacOS) ? "dylib" :
+                        Is(Platform.Unix) ? "so" :
+                        "dll";
+                }
+
+                return _librarySuffix;
+            }
+        }
 
         public static bool Is(Platform platform)
             => (Current & platform) == platform;
