@@ -11,25 +11,25 @@ namespace MonoMod.Utils {
     static class PlatformHelper {
 
         private static void DeterminePlatform() {
-            Current = Platform.Unknown;
+            _current = Platform.Unknown;
 
 #if NETSTANDARD
             // RuntimeInformation.IsOSPlatform is lying: https://github.com/dotnet/corefx/issues/3032
             // Determine the platform based on the path.
             string windir = Environment.GetEnvironmentVariable("windir");
             if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\") && Directory.Exists(windir)) {
-                Current = Platform.Windows;
+                _current = Platform.Windows;
 
             } else if (File.Exists("/proc/sys/kernel/ostype")) {
                 string osType = File.ReadAllText("/proc/sys/kernel/ostype");
                 if (osType.StartsWith("Linux", StringComparison.OrdinalIgnoreCase)) {
-                    Current = Platform.Linux;
+                    _current = Platform.Linux;
                 } else {
-                    Current = Platform.Unix;
+                    _current = Platform.Unix;
                 }
 
             } else if (File.Exists("/System/Library/CoreServices/SystemVersion.plist")) {
-                Current = Platform.MacOS;
+                _current = Platform.MacOS;
             }
 
 #else
@@ -46,32 +46,32 @@ namespace MonoMod.Utils {
             platID = platID.ToLowerInvariant();
 
             if (platID.Contains("win")) {
-                Current = Platform.Windows;
+                _current = Platform.Windows;
             } else if (platID.Contains("mac") || platID.Contains("osx")) {
-                Current = Platform.MacOS;
+                _current = Platform.MacOS;
             } else if (platID.Contains("lin") || platID.Contains("unix")) {
-                Current = Platform.Linux;
+                _current = Platform.Linux;
             }
 #endif
 
             if (Is(Platform.Linux) && Directory.Exists("/data") && File.Exists("/system/build.prop")) {
-                Current = Platform.Android;
+                _current = Platform.Android;
             } else if (Is(Platform.Unix) && Directory.Exists("/Applications") && Directory.Exists("/System")) {
-                Current = Platform.iOS;
+                _current = Platform.iOS;
             }
 
             // Is64BitOperatingSystem has been added in .NET Framework 4.0
             MethodInfo m_get_Is64BitOperatingSystem = typeof(Environment).GetProperty("Is64BitOperatingSystem")?.GetGetMethod();
             if (m_get_Is64BitOperatingSystem != null)
-                Current |= (((bool) m_get_Is64BitOperatingSystem.Invoke(null, new object[0])) ? Platform.Bits64 : 0);
+                _current |= (((bool) m_get_Is64BitOperatingSystem.Invoke(null, new object[0])) ? Platform.Bits64 : 0);
             else
-                Current |= (IntPtr.Size >= 8 ? Platform.Bits64 : 0);
+                _current |= (IntPtr.Size >= 8 ? Platform.Bits64 : 0);
 
 #if NETSTANDARD
             // Detect ARM based on RuntimeInformation.
             if (RuntimeInformation.ProcessArchitecture.HasFlag(Architecture.Arm) ||
                 RuntimeInformation.OSArchitecture.HasFlag(Architecture.Arm))
-                Current |= Platform.ARM;
+                _current |= Platform.ARM;
 #else
             if ((Is(Platform.Unix) || Is(Platform.Unknown)) && Type.GetType("Mono.Runtime") != null) {
                 /* I'd love to use RuntimeInformation, but it returns X64 up until...
@@ -91,7 +91,7 @@ namespace MonoMod.Utils {
                     }
 
                     if (arch.StartsWith("aarch") || arch.StartsWith("arm"))
-                        Current |= Platform.ARM;
+                        _current |= Platform.ARM;
                 } catch (Exception) {
                     // Starting a process can fail for various reasons. One of them being...
                     /* System.MissingMethodException: Method 'MonoIO.CreatePipe' not found.
@@ -103,7 +103,7 @@ namespace MonoMod.Utils {
                 // Detect ARM based on PE info or uname.
                 typeof(object).Module.GetPEKind(out PortableExecutableKinds peKind, out ImageFileMachine machine);
                 if (machine == (ImageFileMachine) 0x01C4 /* ARM, .NET Framework 4.5 */)
-                    Current |= Platform.ARM;
+                    _current |= Platform.ARM;
             }
 #endif
         }
