@@ -13,9 +13,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
     public
 #endif
-    class DetourRuntimeNET50p7Platform : DetourRuntimeNETCore30Platform {
+    class DetourRuntimeNET50p8Platform : DetourRuntimeNETCore30Platform {
         // As of .NET 5 preview 7, this GUID is found at src/coreclr/src/inc/corinfo.h as JITEEVersionIdentifier
-        public static new readonly Guid JitVersionGuid = new Guid("2ca8d539-5db9-4831-8f1b-ade425f036bd");
+        public static new readonly Guid JitVersionGuid = new Guid("7af97117-55be-4c76-afb2-e26261cb140e");
 
         // TODO: Override the implementations to make it work on NET5
     }

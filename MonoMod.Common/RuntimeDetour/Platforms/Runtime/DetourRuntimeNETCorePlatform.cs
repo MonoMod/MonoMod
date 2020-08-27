@@ -116,8 +116,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 DetourRuntimeNETCorePlatform platform = null;
 
-                if (jitGuid == DetourRuntimeNET50p7Platform.JitVersionGuid) {
-                    platform = new DetourRuntimeNET50p7Platform();
+                if (jitGuid == DetourRuntimeNET50p8Platform.JitVersionGuid) {
+                    platform = new DetourRuntimeNET50p8Platform();
                 } else if (jitGuid == DetourRuntimeNETCore30Platform.JitVersionGuid) {
                     platform = new DetourRuntimeNETCore30Platform();
                 }
