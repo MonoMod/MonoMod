@@ -15,7 +15,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         // Prevent the GC from collecting those.
-        protected Dictionary<MethodBase, MethodPin> PinnedMethods = new Dictionary<MethodBase, MethodPin>();
+        //protected Dictionary<MethodBase, MethodPin> PinnedMethods = new Dictionary<MethodBase, MethodPin>();
 
         private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
 
@@ -132,17 +132,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public IntPtr GetNativeStart(MethodBase method) {
-            bool pinGot;
+            /*bool pinGot;
             MethodPin pin;
             lock (PinnedMethods)
                 pinGot = PinnedMethods.TryGetValue(method, out pin);
             if (pinGot)
-                return GetFunctionPointer(method, pin.Handle);
+                return GetFunctionPointer(method, pin.Handle);*/
             return GetFunctionPointer(method, GetMethodHandle(method));
         }
 
         public void Pin(MethodBase method) {
-            lock (PinnedMethods) {
+            /*lock (PinnedMethods) {
                 if (PinnedMethods.TryGetValue(method, out MethodPin pin)) {
                     pin.Count++;
                     return;
@@ -158,11 +158,18 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 }
                 DisableInlining(method, handle);
                 PinnedMethods[method] = pin;
+            }*/
+            RuntimeMethodHandle handle = GetMethodHandle(method);
+            if (method.DeclaringType?.IsGenericType ?? false) {
+                PrepareMethod(method, handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
+            } else {
+                PrepareMethod(method, handle);
             }
+            DisableInlining(method, handle);
         }
 
         public void Unpin(MethodBase method) {
-            lock (PinnedMethods) {
+            /*lock (PinnedMethods) {
                 if (!PinnedMethods.TryGetValue(method, out MethodPin pin))
                     return;
 
@@ -171,7 +178,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     return;
                 }
                 pin.Count--;
-            }
+            }*/
         }
 
         public MethodInfo CreateCopy(MethodBase method) {
