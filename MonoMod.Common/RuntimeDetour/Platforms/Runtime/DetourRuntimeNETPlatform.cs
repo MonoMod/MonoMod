@@ -120,7 +120,21 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     int delta = *(int*) (from + 1);
                     int to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
-                    MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
+                    MMDbgLog.Log($"ngen: 0x{(long) ptr:X8}");
+                    return ptr;
+                }
+                
+                // .NET Core
+                if (*(byte*) (iptr + 0x00) == 0xe9 && // jmp {DELTA}
+                    *(byte*) (iptr + 0x05) == 0x5f // pop rdi
+                ) {
+                    // delta = to - (from + 1 + sizeof(int))
+                    // to = delta + (from + 1 + sizeof(int))
+                    int from = iptr;
+                    int delta = *(int*) (from + 1);
+                    int to = delta + (from + 1 + sizeof(int));
+                    ptr = NotThePreStub(ptr, (IntPtr) to);
+                    MMDbgLog.Log($"ngen: 0x{(int) ptr:X8}");
                     return ptr;
                 }
 
@@ -151,6 +165,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 //   body because our only pointer to it will have been deleted.
                 
                 // In conclusion: *Do we need to disable re-JITing while patching?*
+
+                // Correction for the above: It seems that .NET Core ALWAYS has one indirection before the method
+                //   body, and that indirection is used as an easy way to call into the JIT when necessary. Also,
+                //   the JIT never generates a call directly to ThePreStub, but instead generates a call to
+                //   PrecodeFixupThunk which then calls ThePreStub.
 
                 // x64 .NET Core
                 if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
