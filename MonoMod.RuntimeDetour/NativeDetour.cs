@@ -178,14 +178,19 @@ namespace MonoMod.RuntimeDetour {
 
         /// <summary>
         /// Changes the source of this native detour to a new source address. This does not repair the old source location.
+        /// This also assumes that <paramref name="newSource"/> is simply a new address for the same method as this was constructed with.
         /// </summary>
         /// <param name="newSource">The new source location.</param>
         public void ChangeSource(IntPtr newSource) {
             if (!IsValid)
                 throw new ObjectDisposedException(nameof(NativeDetour));
-            _Data.Method = newSource;
+
+            NativeDetourData oldData = _Data;
+            _Data = DetourHelper.Native.Create(newSource, _Data.Target);
             IsApplied = false;
             Apply();
+
+            DetourHelper.Native.Free(oldData);
         }
 
         /// <summary>
@@ -195,9 +200,13 @@ namespace MonoMod.RuntimeDetour {
         public void ChangeTarget(IntPtr newTarget) {
             if (!IsValid)
                 throw new ObjectDisposedException(nameof(NativeDetour));
-            _Data.Target = newTarget;
+
+            NativeDetourData oldData = _Data;
+            _Data = DetourHelper.Native.Create(_Data.Method, newTarget);
             IsApplied = false;
             Apply();
+
+            DetourHelper.Native.Free(oldData);
         }
 
         /// <summary>

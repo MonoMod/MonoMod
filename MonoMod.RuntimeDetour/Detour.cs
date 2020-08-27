@@ -6,6 +6,7 @@ using MonoMod.Utils;
 using Mono.Cecil.Cil;
 using System.Linq;
 using System.Collections.ObjectModel;
+using System.Threading;
 #if !NET35
 using System.Collections.Concurrent;
 #endif
@@ -114,9 +115,9 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _ChainedTrampoline;
 
         public Detour(MethodBase from, MethodBase to, ref DetourConfig config) {
-            Method = from.Pin();
-            Target = to.Pin();
-            TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to).Pin();
+            Method = from/*.Pin()*/;
+            Target = to/*.Pin()*/;
+            TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to)/*.Pin()*/;
 
             _GlobalIndex = _GlobalIndexNext++;
 
@@ -132,7 +133,7 @@ namespace MonoMod.RuntimeDetour {
             lock (_BackupMethods) {
                 if ((!_BackupMethods.TryGetValue(Method, out MethodInfo backup) || backup == null) &&
                     (backup = Method.CreateILCopy()) != null)
-                    _BackupMethods[Method] = backup.Pin();
+                    _BackupMethods[Method] = backup/*.Pin()*/;
             }
 
             // Generate a "chained trampoline" DynamicMethod.
@@ -399,11 +400,10 @@ namespace MonoMod.RuntimeDetour {
                 return;
 
             // GetNativeStart to avoid repins and managed copies.
-            _TopDetour = new NativeDetour(Method.GetNativeStart(), TargetReal.GetNativeStart());
+            _TopDetour = new NativeDetour(Method.Pin().GetNativeStart(), TargetReal.Pin().GetNativeStart());
         }
 
-        private static object compileMethodSubscribeLock = new object();
-        private static bool compileMethodSubscribed = false;
+        private static int compileMethodSubscribed = 0;
         private static void _OnCompileMethod(MethodBase method, IntPtr codeStart, ulong codeLen) {
             if (method == null)
                 return;
@@ -418,6 +418,11 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private static void _RefreshChain(MethodBase method) {
+            // ensure we're subscribed to the event before doing anything
+            if (Interlocked.CompareExchange(ref compileMethodSubscribed, 1, 0) == 0) {
+                DetourHelper.Runtime.OnMethodCompiled += _OnCompileMethod;
+            }
+
             List<Detour> detours = _DetourMap[method];
             lock (detours) {
                 DetourSorter<Detour>.Sort(detours);
@@ -433,17 +438,7 @@ namespace MonoMod.RuntimeDetour {
                 if (detours.Count == 0)
                     return;
 
-                // ensure we're subscribed to the event before applying the trampolines
-                if (!compileMethodSubscribed) {
-                    lock (compileMethodSubscribeLock) {
-                        if (!compileMethodSubscribed) {
-                            compileMethodSubscribed = true;
-                            DetourHelper.Runtime.OnMethodCompiled += _OnCompileMethod;
-                        }
-                    }
-                }
-
-                MethodBase prev = _BackupMethods[method];
+                MethodBase prev = _BackupMethods[method].Pin();
                 foreach (Detour detour in detours) {
                     if (!detour.IsApplied)
                         continue;
@@ -458,7 +453,7 @@ namespace MonoMod.RuntimeDetour {
                         link.Free(); // Dispose will no longer undo.
                     }
 
-                    prev = detour.Target;
+                    prev = detour.Target.Pin();
                 }
             }
         }
