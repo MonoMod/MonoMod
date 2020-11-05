@@ -44,6 +44,12 @@ namespace MonoMod.Utils {
 
         #endregion
 
+        static DynDll() {
+            // Run a dummy dlerror to resolve it so that it won't interfere with the first call
+            if (!PlatformHelper.Is(Platform.Windows))
+                dlerror();
+        }
+
         private static bool CheckError(out Exception exception) {
             if (PlatformHelper.Is(Platform.Windows)) {
                 int errorCode = Marshal.GetLastWin32Error();
