@@ -396,10 +396,8 @@ namespace MonoMod.RuntimeDetour {
                 Detour topOld = detours.FindLast(d => d.IsTop);
                 Detour topNew = detours.FindLast(d => d.IsApplied);
 
-                if (topOld != topNew) {
+                if (topOld != topNew)
                     topOld?._TopUndo();
-                    topNew?._TopApply();
-                }
 
                 if (detours.Count == 0)
                     return;
@@ -421,6 +419,9 @@ namespace MonoMod.RuntimeDetour {
 
                     prev = detour.Target;
                 }
+
+                if (topOld != topNew)
+                    topNew?._TopApply();
             }
         }
     }
