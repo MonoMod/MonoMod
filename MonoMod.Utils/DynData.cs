@@ -137,13 +137,19 @@ namespace MonoMod.Utils {
         public DynData(TTarget obj, bool keepAlive) {
             if (obj != null) {
                 WeakReference weak = new WeakReference(obj);
-                
+
+#if NETFRAMEWORK3
+                WeakReference key = weak;
+#else
+                object key = obj;
+#endif
+
                 // Ideally this would be a "no GC region", but that's too new.
                 CreationsInProgress++;
                 lock (_DataMap) {
-                    if (!_DataMap.TryGetValue(weak, out _Data)) {
+                    if (!_DataMap.TryGetValue(key, out _Data)) {
                         _Data = new _Data_();
-                        _DataMap.Add(weak, _Data);
+                        _DataMap.Add(key, _Data);
                     }
                 }
                 CreationsInProgress--;
