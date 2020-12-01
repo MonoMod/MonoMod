@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
     public sealed class DynData<TTarget> : IDisposable where TTarget : class {
@@ -12,7 +13,11 @@ namespace MonoMod.Utils {
         public static event Action<DynData<TTarget>, TTarget> OnInitialize;
 
         private static readonly _Data_ _DataStatic = new _Data_();
+#if !NETFRAMEWORK3
+        private static readonly ConditionalWeakTable<object, _Data_> _DataMap = new ConditionalWeakTable<object, _Data_>();
+#else
         private static readonly Dictionary<WeakReference, _Data_> _DataMap = new Dictionary<WeakReference, _Data_>(new WeakReferenceComparer());
+#endif
         private static readonly Dictionary<string, Func<TTarget, object>> _SpecialGetters = new Dictionary<string, Func<TTarget, object>>();
         private static readonly Dictionary<string, Action<TTarget, object>> _SpecialSetters = new Dictionary<string, Action<TTarget, object>>();
 
@@ -20,13 +25,17 @@ namespace MonoMod.Utils {
         private TTarget KeepAlive;
         private readonly _Data_ _Data;
 
-        private class _Data_ {
+        private class _Data_ : IDisposable {
             public readonly Dictionary<string, Func<TTarget, object>> Getters = new Dictionary<string, Func<TTarget, object>>();
             public readonly Dictionary<string, Action<TTarget, object>> Setters = new Dictionary<string, Action<TTarget, object>>();
             public readonly Dictionary<string, object> Data = new Dictionary<string, object>();
             public readonly HashSet<string> Disposable = new HashSet<string>();
 
-            public void Free() {
+            ~_Data_() {
+                Dispose();
+            }
+
+            public void Dispose() {
                 lock (Data) {
                     if (Data.Count == 0)
                         return;
@@ -46,6 +55,7 @@ namespace MonoMod.Utils {
         public Dictionary<string, object> Data => _Data.Data;
 
         static DynData() {
+#if NETFRAMEWORK3
             _DataHelper_.Collected += () => {
                 if (CreationsInProgress != 0)
                     return;
@@ -57,7 +67,7 @@ namespace MonoMod.Utils {
                         if (kvp.Key.SafeGetIsAlive())
                             continue;
                         dead.Add(kvp.Key);
-                        kvp.Value.Free();
+                        kvp.Value.Dispose();
                     }
 
                     foreach (WeakReference weak in dead) {
@@ -65,7 +75,8 @@ namespace MonoMod.Utils {
                     }
                 }
             };
-            
+#endif
+
             foreach (FieldInfo field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                 string name = field.Name;
                 _SpecialGetters[name] = (obj) => field.GetValue(obj);
@@ -126,13 +137,19 @@ namespace MonoMod.Utils {
         public DynData(TTarget obj, bool keepAlive) {
             if (obj != null) {
                 WeakReference weak = new WeakReference(obj);
-                
+
+#if NETFRAMEWORK3
+                WeakReference key = weak;
+#else
+                object key = obj;
+#endif
+
                 // Ideally this would be a "no GC region", but that's too new.
                 CreationsInProgress++;
                 lock (_DataMap) {
-                    if (!_DataMap.TryGetValue(weak, out _Data)) {
+                    if (!_DataMap.TryGetValue(key, out _Data)) {
                         _Data = new _Data_();
-                        _DataMap.Add(weak, _Data);
+                        _DataMap.Add(key, _Data);
                     }
                 }
                 CreationsInProgress--;
@@ -177,6 +194,7 @@ namespace MonoMod.Utils {
             GC.SuppressFinalize(this);
         }
 
+#if NETFRAMEWORK3
         private sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
             public override bool Equals(WeakReference x, WeakReference y)
                 => ReferenceEquals(x.SafeGetTarget(), y.SafeGetTarget()) && x.SafeGetIsAlive() == y.SafeGetIsAlive();
@@ -184,6 +202,7 @@ namespace MonoMod.Utils {
             public override int GetHashCode(WeakReference obj)
                 => obj.SafeGetTarget()?.GetHashCode() ?? 0;
         }
+#endif
     }
 
     internal static class _DataHelper_ {
