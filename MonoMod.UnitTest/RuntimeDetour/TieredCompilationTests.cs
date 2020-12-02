@@ -27,6 +27,8 @@ namespace MonoMod.UnitTest {
         [Fact]
 #endif
         public void WithTieredCompilation() {
+            Console.ReadLine();
+
             using (new Detour(() => From(), () => To())) {
                 TestFrom();
             }
