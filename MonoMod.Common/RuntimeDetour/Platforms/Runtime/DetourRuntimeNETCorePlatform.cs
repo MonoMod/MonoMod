@@ -33,7 +33,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 if (!DynDll.TryOpenLibrary(clrjitModule.FileName, out IntPtr clrjitPtr))
                     throw new PlatformNotSupportedException();
 
-                isNet5Jit = clrjitModule.FileVersionInfo.ProductMajorPart >= 5;
+                if (PlatformHelper.Is(Platform.Windows)) {
+                    // we can use this chekc only on Windows, because only Windows actually has FilveVersionInfo
+                    // this is preferred because it checks the version of the JIT, rather than the runtime library
+                    //   which is what actually determines the layout.
+                    isNet5Jit = clrjitModule.FileVersionInfo.ProductMajorPart >= 5;
+                } else {
+                    // this gets System.Private.CorLib's major version, which *should* match the runtime version
+                    // it is the only method we have at the moment to detect it on non-Windows platforms
+                    isNet5Jit = typeof(object).Assembly.GetName().Version.Major >= 5;
+                }
 
                 try {
                     getJit = clrjitPtr.GetFunction(nameof(getJit)).AsDelegate<d_getJit>();
