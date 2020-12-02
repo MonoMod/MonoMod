@@ -21,11 +21,7 @@ namespace MonoMod.UnitTest {
         //   in release mode. In debug mode, it will never fail.
         //
 
-#if DEBUG
-        [Fact(Skip = "This test will ONLY fail in Release builds")]
-#else
         [Fact]
-#endif
         public void WithTieredCompilation() {
             if (Environment.GetEnvironmentVariable("MM_TEST_DEBUG_TIERED_COMP") != null) {
                 Console.WriteLine("Attach the debugger then press enter");
