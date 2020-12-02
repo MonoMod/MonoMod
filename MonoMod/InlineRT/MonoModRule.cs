@@ -53,14 +53,6 @@ namespace MonoMod.InlineRT {
         }
 
 
-        public static void RegisterCustomAttribute(string attribName, string handlerName) {
-            Modder.CustomAttributeHandlers[attribName] = (self, args) => MonoModRulesManager.RuleType.GetMethod(handlerName).Invoke(self, args);
-        }
-
-        public static void RegisterCustomMethodAttribute(string attribName, string handlerName) {
-            Modder.CustomMethodAttributeHandlers[attribName] = (self, args) => MonoModRulesManager.RuleType.GetMethod(handlerName).Invoke(self, args);
-        }
-
         public static class Flag {
 
             public static bool Get(string k) => Modder.SharedData[k] as bool? ?? false;

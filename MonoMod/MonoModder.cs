@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.Utils;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
+using MonoMod.Cil;
 
 #if CECIL0_9
 using InterfaceImplementation = Mono.Cecil.TypeReference;
@@ -593,19 +594,26 @@ namespace MonoMod {
             if (!MatchingConditionals(type, Module))
                 return;
 
-            CustomAttribute caHandler;
+            CustomAttribute handler;
 
-            caHandler = type.GetCustomAttribute("MonoMod.MonoModCustomAttributeAttribute");
-            if (caHandler != null) {
-                // Copy so that second assignment doesn't affect first closure.
-                CustomAttribute handler = caHandler;
-                CustomAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value).Invoke(self, args);
+            handler = type.GetCustomAttribute("MonoMod.MonoModCustomAttributeAttribute");
+            if (handler != null) {
+                System.Reflection.MethodInfo method = rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value);
+                CustomAttributeHandlers[type.FullName] = (self, args) => method.Invoke(self, args);
             }
 
-            caHandler = type.GetCustomAttribute("MonoMod.MonoModCustomMethodAttributeAttribute");
-            if (caHandler != null) {
-                CustomAttribute handler = caHandler;
-                CustomMethodAttributeHandlers[type.FullName] = (self, args) => rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value).Invoke(self, args);
+            handler = type.GetCustomAttribute("MonoMod.MonoModCustomMethodAttributeAttribute");
+            if (handler != null) {
+                System.Reflection.MethodInfo method = rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value);
+                System.Reflection.ParameterInfo[] argInfos = method.GetParameters();
+                if (argInfos.Length == 2 && argInfos[0].ParameterType.IsCompatible(typeof(ILContext))) {
+                    CustomMethodAttributeHandlers[type.FullName] = (self, args) => method.Invoke(self, new object[] {
+                        new ILContext((MethodDefinition) args[0]),
+                        args[1]
+                    });
+                } else {
+                    CustomMethodAttributeHandlers[type.FullName] = (self, args) => method.Invoke(self, args);
+                }
             }
 
             CustomAttribute hook;
