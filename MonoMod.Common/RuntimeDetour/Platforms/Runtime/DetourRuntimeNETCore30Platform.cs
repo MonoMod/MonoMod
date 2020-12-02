@@ -1,4 +1,5 @@
-﻿using MonoMod.RuntimeDetour;
+﻿using Mono.Cecil;
+using MonoMod.RuntimeDetour;
 using MonoMod.RuntimeDetour.Platforms;
 using MonoMod.Utils;
 using System;
@@ -10,6 +11,8 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using MC = Mono.Cecil;
+using CIL = Mono.Cecil.Cil;
 
 namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
@@ -214,6 +217,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             const BindingFlags StaticNonPublic = BindingFlags.Static | BindingFlags.NonPublic;
 
+            // GetLoaderAllocator should always be present
             { // set up GetLoaderAllocator
                 MethodInfo getLoaderAllocator = typeof(RuntimeMethodHandle).GetMethod("GetLoaderAllocator", StaticNonPublic);
 
@@ -236,7 +240,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
 
             { // set up GetTypeFromNativeHandle
-                MethodInfo getTypeFromHandleUnsafe = typeof(Type).GetMethod("GetTypeFromHandleUnsafe", StaticNonPublic);
+                MethodInfo getTypeFromHandleUnsafe = GetOrCreateGetTypeFromHandleUnsafe();
                 GetTypeFromNativeHandle = getTypeFromHandleUnsafe.CreateDelegate<d_GetTypeFromNativeHandle>();
             }
 
@@ -299,6 +303,61 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                 CreateRuntimeMethodHandle = ctorWrapper.CreateDelegate<d_CreateRuntimeMethodHandle>();
             }
+        }
+
+        private MethodInfo _getTypeFromHandleUnsafeMethod;
+        private MethodInfo GetOrCreateGetTypeFromHandleUnsafe() {
+            if (_getTypeFromHandleUnsafeMethod != null)
+                return _getTypeFromHandleUnsafeMethod;
+
+            Assembly assembly;
+
+            const string MethodName = "GetTypeFromHandleUnsafe";
+
+#if !CECIL0_9
+            using (
+#endif
+            ModuleDefinition module = ModuleDefinition.CreateModule(
+                "MonoMod.RuntimeDetour.Runtime.NETCore3+Helpers",
+                new ModuleParameters() {
+                    Kind = ModuleKind.Dll,
+                }
+            )
+#if CECIL0_9
+            ;
+#else
+            )
+#endif
+            {
+                TypeDefinition type = new TypeDefinition(
+                    "System",
+                    "Type",
+                    MC.TypeAttributes.Public | MC.TypeAttributes.Abstract
+                ) {
+                    BaseType = module.TypeSystem.Object
+                };
+                module.Types.Add(type);
+
+                MethodDefinition method = new MethodDefinition(
+                    MethodName,
+                    MC.MethodAttributes.Static | MC.MethodAttributes.Public,
+                    module.ImportReference(typeof(Type))
+                ) {
+                    IsInternalCall = true
+                };
+                method.Parameters.Add(new ParameterDefinition(module.ImportReference(typeof(IntPtr))));
+                type.Methods.Add(method);
+
+                assembly = ReflectionHelper.Load(module);
+            }
+
+            MakeAssemblySystemAssembly(assembly);
+
+            return _getTypeFromHandleUnsafeMethod = assembly.GetType("System.Type").GetMethod(MethodName);
+        }
+
+        protected virtual void MakeAssemblySystemAssembly(Assembly assembly) {
+            throw new NotImplementedException();
         }
 
         protected void HookPermanent(MethodBase from, MethodBase to) {
