@@ -27,7 +27,10 @@ namespace MonoMod.UnitTest {
         [Fact]
 #endif
         public void WithTieredCompilation() {
-            Console.ReadLine();
+            if (Environment.GetEnvironmentVariable("MM_TEST_DEBUG_TIERED_COMP") != null) {
+                Console.WriteLine("Attach the debugger then press enter");
+                Console.ReadLine();
+            }
 
             using (new Detour(() => From(), () => To())) {
                 TestFrom();
