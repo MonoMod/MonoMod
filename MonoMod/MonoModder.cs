@@ -607,10 +607,17 @@ namespace MonoMod {
                 System.Reflection.MethodInfo method = rulesTypeMMILRT.GetMethod((string) handler.ConstructorArguments[0].Value);
                 System.Reflection.ParameterInfo[] argInfos = method.GetParameters();
                 if (argInfos.Length == 2 && argInfos[0].ParameterType.IsCompatible(typeof(ILContext))) {
-                    CustomMethodAttributeHandlers[type.FullName] = (self, args) => method.Invoke(self, new object[] {
-                        new ILContext((MethodDefinition) args[0]),
-                        args[1]
-                    });
+                    CustomMethodAttributeHandlers[type.FullName] = (self, args) => {
+                        ILContext il = new ILContext((MethodDefinition) args[0]);
+                        il.Invoke(_ => {
+                            method.Invoke(self, new object[] {
+                                il,
+                                args[1]
+                            });
+                        });
+                        if (il.IsReadOnly)
+                            il.Dispose();
+                    };
                 } else {
                     CustomMethodAttributeHandlers[type.FullName] = (self, args) => method.Invoke(self, args);
                 }
