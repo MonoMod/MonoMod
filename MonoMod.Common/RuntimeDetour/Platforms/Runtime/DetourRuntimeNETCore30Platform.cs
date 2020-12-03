@@ -45,6 +45,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private IntPtr real_compileMethodPtr;
         private d_compileMethod real_compileMethod;
 
+        public override bool OnMethodCompiledWillBeCalled => true;
+
         protected override unsafe void InstallJitHooks(IntPtr jit) {
             SetupJitHookHelpers();
             real_compileMethod = GetCompileMethod(jit);

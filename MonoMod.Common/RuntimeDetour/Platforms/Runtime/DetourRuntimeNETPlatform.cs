@@ -202,6 +202,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         private static IntPtr ThePreStub = IntPtr.Zero;
 
+        public override bool OnMethodCompiledWillBeCalled => false;
         public override event OnMethodCompiledEvent OnMethodCompiled;
 
         private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed) {

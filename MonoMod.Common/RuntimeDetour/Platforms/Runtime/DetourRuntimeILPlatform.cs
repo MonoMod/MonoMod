@@ -19,6 +19,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
 
+        public abstract bool OnMethodCompiledWillBeCalled { get; }
         public abstract event OnMethodCompiledEvent OnMethodCompiled;
 
         public DetourRuntimeILPlatform() {

@@ -91,6 +91,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         protected virtual void InstallJitHooks(IntPtr jitObject) => throw new PlatformNotSupportedException();
 
+        public override bool OnMethodCompiledWillBeCalled => false;
         public override event OnMethodCompiledEvent OnMethodCompiled;
 
         protected virtual void JitHookCore(

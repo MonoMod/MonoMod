@@ -19,6 +19,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private static readonly FieldInfo _DynamicMethod_mhandle =
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        public override bool OnMethodCompiledWillBeCalled => false;
         public override event OnMethodCompiledEvent OnMethodCompiled;
 
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
