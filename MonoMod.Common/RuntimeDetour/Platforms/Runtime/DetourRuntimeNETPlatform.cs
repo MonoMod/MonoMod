@@ -87,6 +87,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 return method.GetLdftnPointer();
             }
 
+            ReloadFuncPtr:
 
             IntPtr ptr = base.GetFunctionPointer(method, handle);
 
@@ -119,7 +120,21 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     int delta = *(int*) (from + 1);
                     int to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
-                    MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
+                    MMDbgLog.Log($"ngen: 0x{(long) ptr:X8}");
+                    return ptr;
+                }
+                
+                // .NET Core
+                if (*(byte*) (iptr + 0x00) == 0xe9 && // jmp {DELTA}
+                    *(byte*) (iptr + 0x05) == 0x5f // pop rdi
+                ) {
+                    // delta = to - (from + 1 + sizeof(int))
+                    // to = delta + (from + 1 + sizeof(int))
+                    int from = iptr;
+                    int delta = *(int*) (from + 1);
+                    int to = delta + (from + 1 + sizeof(int));
+                    ptr = NotThePreStub(ptr, (IntPtr) to);
+                    MMDbgLog.Log($"ngen: 0x{(int) ptr:X8}");
                     return ptr;
                 }
 
@@ -136,6 +151,26 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     return ptr;
                 }
 
+                // FIXME: on Core, it seems that *every* method has this stub, not just NGEN'd methods
+                //        It also seems to correctly find the body, but because ThePreStub is always -1,
+                //          it never returns that.
+                //        One consequence of this seems to be that re-JITting a method calling a patched
+                //          method causes it to use a new stub, except not patched.
+
+                // It seems that if there is *any* pause between the method being prepared, and this being
+                //   called, there is a chance that the JIT will do something funky and reset the thunk for
+                //   the method (which is what GetFunctionPointer gives) back to a call to PrecodeFixupThunk.
+                // This can be observed by checking for the first byte being 0xe8 instead of 0xe9.
+                // If this happens at the wrong moment, we won't get the opportunity to patch the actual method
+                //   body because our only pointer to it will have been deleted.
+                
+                // In conclusion: *Do we need to disable re-JITing while patching?*
+
+                // Correction for the above: It seems that .NET Core ALWAYS has one indirection before the method
+                //   body, and that indirection is used as an easy way to call into the JIT when necessary. Also,
+                //   the JIT never generates a call directly to ThePreStub, but instead generates a call to
+                //   PrecodeFixupThunk which then calls ThePreStub.
+
                 // x64 .NET Core
                 if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
                     *(byte*) (lptr + 0x05) == 0x5f // pop rdi
@@ -149,6 +184,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
                     return ptr;
                 }
+
+                // x64 .NET Core, but the thunk was reset
+                if (*(byte*) (lptr + 0x00) == 0xe8) { // call 
+                    MMDbgLog.Log($"Method thunk reset; regenerating");
+                    int precodeThunkOffset = *(int*) (lptr + 1);
+                    long precodeThunk = precodeThunkOffset + (lptr + 1 + sizeof(int));
+                    MMDbgLog.Log($"PrecodeFixupThunk: 0x{precodeThunk:X16}");
+                    PrepareMethod(method, handle);
+                    goto ReloadFuncPtr;
+                }
             }
 
 
@@ -156,6 +201,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         private static IntPtr ThePreStub = IntPtr.Zero;
+
+        public override bool OnMethodCompiledWillBeCalled => false;
+        public override event OnMethodCompiledEvent OnMethodCompiled;
+
         private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed) {
             if (ThePreStub == IntPtr.Zero) {
                 ThePreStub = (IntPtr) (-2);
@@ -176,7 +225,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 }
             }
 
-            return (ptrParsed == ThePreStub || ThePreStub == (IntPtr) (-1)) ? ptrGot : ptrParsed;
+            return (ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/) ? ptrGot : ptrParsed;
         }
     }
 }

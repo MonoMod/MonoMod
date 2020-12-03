@@ -16,5 +16,13 @@ namespace MonoMod.RuntimeDetour {
         void Pin(MethodBase method);
         void Unpin(MethodBase method);
         MethodBase GetDetourTarget(MethodBase from, MethodBase to);
+
+        bool OnMethodCompiledWillBeCalled { get; }
+        event OnMethodCompiledEvent OnMethodCompiled;
     }
+
+#if !MONOMOD_INTERNAL
+    public
+#endif
+    delegate void OnMethodCompiledEvent(MethodBase method, IntPtr codeStart, ulong codeSize);
 }

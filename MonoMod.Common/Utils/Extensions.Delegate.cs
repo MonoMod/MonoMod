@@ -23,8 +23,8 @@ namespace MonoMod.Utils {
         /// <param name="method">The method to create the delegate from.</param>
         /// <typeparam name="T">The type of the delegate to create.</typeparam>
         /// <returns>The delegate for this method.</returns>
-        public static Delegate CreateDelegate<T>(this MethodBase method) where T : class
-            => CreateDelegate(method, typeof(T), null);
+        public static T CreateDelegate<T>(this MethodBase method) where T : Delegate
+            => (T) CreateDelegate(method, typeof(T), null);
         /// <summary>
         /// Creates a delegate of the specified type with the specified target from this method.
         /// </summary>
@@ -32,8 +32,8 @@ namespace MonoMod.Utils {
         /// <typeparam name="T">The type of the delegate to create.</typeparam>
         /// <param name="target">The object targeted by the delegate.</param>
         /// <returns>The delegate for this method.</returns>
-        public static Delegate CreateDelegate<T>(this MethodBase method, object target) where T : class
-            => CreateDelegate(method, typeof(T), target);
+        public static T CreateDelegate<T>(this MethodBase method, object target) where T : Delegate
+            => (T) CreateDelegate(method, typeof(T), target);
         /// <summary>
         /// Creates a delegate of the specified type from this method.
         /// </summary>

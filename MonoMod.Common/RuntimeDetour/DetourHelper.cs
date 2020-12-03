@@ -28,7 +28,7 @@ namespace MonoMod.RuntimeDetour {
                     if (Type.GetType("Mono.Runtime") != null) {
                         _Runtime = new DetourRuntimeMonoPlatform();
                     } else if (typeof(object).Assembly.GetName().Name == "System.Private.CoreLib") {
-                        _Runtime = new DetourRuntimeNETCorePlatform();
+                        _Runtime = DetourRuntimeNETCorePlatform.Create();
                     } else {
                         _Runtime = new DetourRuntimeNETPlatform();
                     }

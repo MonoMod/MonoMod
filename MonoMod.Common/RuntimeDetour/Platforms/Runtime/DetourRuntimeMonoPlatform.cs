@@ -19,6 +19,55 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private static readonly FieldInfo _DynamicMethod_mhandle =
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        // Prevent the GC from collecting those.
+        protected Dictionary<MethodBase, MethodPin> PinnedMethods = new Dictionary<MethodBase, MethodPin>();
+
+        public override IntPtr GetNativeStart(MethodBase method) {
+            bool pinGot;
+            MethodPin pin;
+            lock (PinnedMethods)
+                pinGot = PinnedMethods.TryGetValue(method, out pin);
+            if (pinGot)
+                return GetFunctionPointer(method, pin.Handle);
+            return GetFunctionPointer(method, GetMethodHandle(method));
+        }
+
+        public override void Pin(MethodBase method) {
+            lock (PinnedMethods) {
+                if (PinnedMethods.TryGetValue(method, out MethodPin pin)) {
+                    pin.Count++;
+                    return;
+                }
+
+                pin = new MethodPin();
+                pin.Count = 1;
+                RuntimeMethodHandle handle = pin.Handle = GetMethodHandle(method);
+                if (method.DeclaringType?.IsGenericType ?? false) {
+                    PrepareMethod(method, handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
+                } else {
+                    PrepareMethod(method, handle);
+                }
+                DisableInlining(method, handle);
+                PinnedMethods[method] = pin;
+            }
+        }
+
+        public override void Unpin(MethodBase method) {
+            lock (PinnedMethods) {
+                if (!PinnedMethods.TryGetValue(method, out MethodPin pin))
+                    return;
+
+                if (pin.Count <= 1) {
+                    PinnedMethods.Remove(method);
+                    return;
+                }
+                pin.Count--;
+            }
+        }
+
+        public override bool OnMethodCompiledWillBeCalled => false;
+        public override event OnMethodCompiledEvent OnMethodCompiled;
+
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             if (method is DynamicMethod) {
                 // Compile the method handle before getting our hands on the final method handle.
