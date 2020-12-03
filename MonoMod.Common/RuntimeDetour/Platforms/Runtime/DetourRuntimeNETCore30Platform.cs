@@ -159,7 +159,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             try {
                 if (hookEntrancy == 1) {
                     // This is the top level JIT entry point, do our custom stuff
-                    CorJitResult result = real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                    CorJitResult result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
 
                     RuntimeTypeHandle[] genericClassArgs = null;
                     RuntimeTypeHandle[] genericMethodArgs = null;
@@ -184,7 +184,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                     return result;
                 } else {
-                    return real_compileMethod.Invoke(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                    return real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
                 }
             } catch {
                 // eat the exception so we don't accidentally bubble up to native code
@@ -202,8 +202,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         protected RuntimeMethodHandle CreateHandleForHandlePointer(IntPtr handle)
             => CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
-
-        private readonly List<object> keepalive = new List<object>();
 
         protected d_MethodHandle_GetLoaderAllocator MethodHandle_GetLoaderAllocator;
         protected d_CreateRuntimeMethodInfoStub CreateRuntimeMethodInfoStub;
