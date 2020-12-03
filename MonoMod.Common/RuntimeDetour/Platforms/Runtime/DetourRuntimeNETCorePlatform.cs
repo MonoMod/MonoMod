@@ -23,7 +23,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected static IntPtr GetJitObject() {
             if (getJit == null) {
                 // To make sure we get the right clrjit, we enumerate the process's modules and find the one 
-                //   with the name we care aboutm, then use its full path to gat a handle and load symbols.
+                //   with the name we care about, then use its full path to gat a handle and load symbols.
                 Process currentProc = Process.GetCurrentProcess();
                 ProcessModule clrjitModule = currentProc.Modules.Cast<ProcessModule>()
                     .FirstOrDefault(m => Path.GetFileNameWithoutExtension(m.FileName).EndsWith("clrjit"));
@@ -34,7 +34,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     throw new PlatformNotSupportedException();
 
                 if (PlatformHelper.Is(Platform.Windows)) {
-                    // we can use this chekc only on Windows, because only Windows actually has FilveVersionInfo
+                    // we can use this check only on Windows, because only Windows actually has FilveVersionInfo
                     // this is preferred because it checks the version of the JIT, rather than the runtime library
                     //   which is what actually determines the layout.
                     isNet5Jit = clrjitModule.FileVersionInfo.ProductMajorPart >= 5;
