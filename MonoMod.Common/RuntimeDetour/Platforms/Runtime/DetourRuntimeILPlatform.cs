@@ -14,9 +14,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
     abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
-        // Prevent the GC from collecting those.
-        //protected Dictionary<MethodBase, MethodPin> PinnedMethods = new Dictionary<MethodBase, MethodPin>();
-
         private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
 
         public abstract bool OnMethodCompiledWillBeCalled { get; }
@@ -132,34 +129,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // no-op. Not supported on all platforms, but throwing an exception doesn't make sense.
         }
 
-        public IntPtr GetNativeStart(MethodBase method) {
-            /*bool pinGot;
-            MethodPin pin;
-            lock (PinnedMethods)
-                pinGot = PinnedMethods.TryGetValue(method, out pin);
-            if (pinGot)
-                return GetFunctionPointer(method, pin.Handle);*/
+        public virtual IntPtr GetNativeStart(MethodBase method) {
             return GetFunctionPointer(method, GetMethodHandle(method));
         }
 
-        public void Pin(MethodBase method) {
-            /*lock (PinnedMethods) {
-                if (PinnedMethods.TryGetValue(method, out MethodPin pin)) {
-                    pin.Count++;
-                    return;
-                }
-
-                pin = new MethodPin();
-                pin.Count = 1;
-                RuntimeMethodHandle handle = pin.Handle = GetMethodHandle(method);
-                if (method.DeclaringType?.IsGenericType ?? false) {
-                    PrepareMethod(method, handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
-                } else {
-                    PrepareMethod(method, handle);
-                }
-                DisableInlining(method, handle);
-                PinnedMethods[method] = pin;
-            }*/
+        public virtual void Pin(MethodBase method) {
             RuntimeMethodHandle handle = GetMethodHandle(method);
             if (method.DeclaringType?.IsGenericType ?? false) {
                 PrepareMethod(method, handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
@@ -169,17 +143,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
             DisableInlining(method, handle);
         }
 
-        public void Unpin(MethodBase method) {
-            /*lock (PinnedMethods) {
-                if (!PinnedMethods.TryGetValue(method, out MethodPin pin))
-                    return;
-
-                if (pin.Count <= 1) {
-                    PinnedMethods.Remove(method);
-                    return;
-                }
-                pin.Count--;
-            }*/
+        public virtual void Unpin(MethodBase method) {
+            // No-op. Pinning, by default, does nothing particularly special.
         }
 
         public MethodInfo CreateCopy(MethodBase method) {
