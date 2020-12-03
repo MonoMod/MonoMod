@@ -73,7 +73,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private delegate void d_getVersionIdentifier(
             IntPtr thisPtr, // ICorJitCompiler*
             out Guid versionIdentifier
-            );
+        );
 
         protected virtual int VTableIndex_ICorJitCompiler_compileMethod => 0;
 
@@ -94,13 +94,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public override event OnMethodCompiledEvent OnMethodCompiled;
 
         protected virtual void JitHookCore(
-                RuntimeTypeHandle declaringType,
-                RuntimeMethodHandle methodHandle,
-                IntPtr methodBodyStart, 
-                ulong methodBodySize,
-                RuntimeTypeHandle[] genericClassArguments,
-                RuntimeTypeHandle[] genericMethodArguments
-            ) {
+            RuntimeTypeHandle declaringType,
+            RuntimeMethodHandle methodHandle,
+            IntPtr methodBodyStart, 
+            ulong methodBodySize,
+            RuntimeTypeHandle[] genericClassArguments,
+            RuntimeTypeHandle[] genericMethodArguments
+        ) {
             try {
                 Type declType = Type.GetTypeFromHandle(declaringType);
                 if (genericClassArguments != null && declType.IsGenericTypeDefinition) {
