@@ -235,7 +235,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                     invokeWrapper = dmd.Generate();
                 }
-                // this might not actually work
+
                 MethodHandle_GetLoaderAllocator = invokeWrapper.CreateDelegate<d_MethodHandle_GetLoaderAllocator>();
             }
 
@@ -261,7 +261,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
                     invokeWrapper = dmd.Generate();
                 }
-                // this might not actually work
+
                 GetDeclaringTypeOfMethodHandle = invokeWrapper.CreateDelegate<d_GetDeclaringTypeOfMethodHandle>();
             }
 
