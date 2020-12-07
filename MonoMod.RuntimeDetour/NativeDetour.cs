@@ -97,16 +97,16 @@ namespace MonoMod.RuntimeDetour {
             _Pinned.Add(to);
         }
         public NativeDetour(MethodBase from, MethodBase to, ref NativeDetourConfig config)
-            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart(), ref config) {
-            _Pinned.Add(to);
+            : this(from.Pin().GetNativeStart(), DetourHelper.Runtime.GetDetourTarget(from, to), ref config) {
+            _Pinned.Add(from);
         }
         public NativeDetour(MethodBase from, MethodBase to, NativeDetourConfig config)
-            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart(), ref config) {
-            _Pinned.Add(to);
+            : this(from.Pin().GetNativeStart(), DetourHelper.Runtime.GetDetourTarget(from, to), ref config) {
+            _Pinned.Add(from);
         }
         public NativeDetour(MethodBase from, MethodBase to)
-            : this(from, DetourHelper.Runtime.GetDetourTarget(from, to).Pin().GetNativeStart()) {
-            _Pinned.Add(to);
+            : this(from.Pin().GetNativeStart(), DetourHelper.Runtime.GetDetourTarget(from, to)) {
+            _Pinned.Add(from);
         }
 
         public NativeDetour(Delegate from, IntPtr to, ref NativeDetourConfig config)

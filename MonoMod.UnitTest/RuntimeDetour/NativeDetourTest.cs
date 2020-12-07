@@ -37,6 +37,11 @@ namespace MonoMod.UnitTest {
         }
 
         private void TestNativeDetoursWindows(dt_rand d_not_rand, IntPtr ptr_not_rand) {
+            if (!DynDll.TryOpenLibrary($"msvcrt.{PlatformHelper.LibrarySuffix}", out IntPtr msvcrt)) {
+                Console.WriteLine("NativeDetourTest skipped - msvcrt not found!");
+                return;
+            }
+
             DidNothing = true;
             msvcrt_rand();
             Assert.True(DidNothing);
@@ -59,7 +64,7 @@ namespace MonoMod.UnitTest {
             Assert.True(DidNothing);
 
             NativeDetour d = new NativeDetour(
-                DynDll.OpenLibrary($"msvcrt.{PlatformHelper.LibrarySuffix}").GetFunction("rand"),
+                msvcrt.GetFunction("rand"),
                 ptr_not_rand
             );
 

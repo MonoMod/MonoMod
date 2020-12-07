@@ -9,6 +9,9 @@ using System.Runtime.CompilerServices;
 using MonoMod.Utils;
 using System.Reflection.Emit;
 using System.Text;
+using MonoMod.RuntimeDetour.Platforms;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -18,6 +21,11 @@ namespace MonoMod.UnitTest {
             lock (TestObject.Lock) {
                 // The following use cases are not meant to be usage examples.
                 // Please take a look at DetourTest and HookTest instead.
+
+                DetourRuntimeILPlatform runtimeIL = DetourHelper.Runtime as DetourRuntimeILPlatform;
+                DetourRuntimeILPlatform.MethodPinInfo[] pinnedPrev = null;
+                if (runtimeIL != null)
+                    pinnedPrev = runtimeIL.GetPins();
 
                 Step(new NativeDetour(
                     typeof(TestObject).GetMethod("TestStaticMethod"),
@@ -33,6 +41,17 @@ namespace MonoMod.UnitTest {
                     typeof(TestObject).GetMethod("TestStaticMethod"),
                     typeof(DetourRedoTest).GetMethod("TestStaticMethod_A")
                 ));
+
+                if (runtimeIL != null) {
+                    DetourRuntimeILPlatform.MethodPinInfo[] pinned = runtimeIL.GetPins();
+                    Assert.Equal(pinnedPrev.Length, pinned.Length);
+                    for (int i = 0; i < pinned.Length; i++) {
+                        DetourRuntimeILPlatform.MethodPinInfo pinPrev = pinnedPrev[i];
+                        DetourRuntimeILPlatform.MethodPinInfo pin = pinned[i];
+                        Assert.Equal(pinPrev.Handle.Value, pin.Handle.Value);
+                        Assert.Equal(pinPrev.Count, pin.Count);
+                    }
+                }
 
                 void Step(IDetour d) {
                     using (d) {

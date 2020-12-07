@@ -116,7 +116,7 @@ namespace MonoMod.RuntimeDetour {
 
         public Detour(MethodBase from, MethodBase to, ref DetourConfig config) {
             Method = from/*.Pin()*/;
-            Target = to/*.Pin()*/;
+            Target = to.Pin(); // Only pin once, unpin on Free!
             TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to)/*.Pin()*/;
 
             _GlobalIndex = _GlobalIndexNext++;
@@ -133,7 +133,7 @@ namespace MonoMod.RuntimeDetour {
             lock (_BackupMethods) {
                 if ((!_BackupMethods.TryGetValue(Method, out MethodInfo backup) || backup == null) &&
                     (backup = Method.CreateILCopy()) != null)
-                    _BackupMethods[Method] = backup/*.Pin()*/;
+                    _BackupMethods[Method] = backup.Pin(); // Only pin once, unpin on Free!
             }
 
             // Generate a "chained trampoline" DynamicMethod.
@@ -314,9 +314,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             _ChainedTrampoline.Unpin();
-            Method.Unpin();
             Target.Unpin();
-            TargetReal.Unpin();
         }
 
         /// <summary>
@@ -439,7 +437,7 @@ namespace MonoMod.RuntimeDetour {
                 if (detours.Count == 0)
                     return;
 
-                MethodBase prev = _BackupMethods[method].Pin();
+                MethodBase prev = _BackupMethods[method];
                 foreach (Detour detour in detours) {
                     if (!detour.IsApplied)
                         continue;
@@ -454,7 +452,7 @@ namespace MonoMod.RuntimeDetour {
                         link.Free(); // Dispose will no longer undo.
                     }
 
-                    prev = detour.Target.Pin();
+                    prev = detour.Target;
                 }
 
                 if (topOld != topNew)
