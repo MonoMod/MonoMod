@@ -6,6 +6,10 @@ using MonoMod.Utils;
 using Mono.Cecil.Cil;
 using System.Linq;
 using System.Collections.ObjectModel;
+using System.Threading;
+#if !NET35
+using System.Collections.Concurrent;
+#endif
 
 namespace MonoMod.RuntimeDetour {
     public struct DetourConfig {
@@ -22,8 +26,11 @@ namespace MonoMod.RuntimeDetour {
     /// If you're writing your own detour manager or need to detour native functions, it's better to create instances of NativeDetour instead.
     /// </summary>
     public class Detour : ISortableDetour {
-
-        private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>();
+#if NET35
+        private static Dictionary<MethodBase, List<Detour>> _DetourMap = new Dictionary<MethodBase, List<Detour>>(new GenericMethodInstantiationComparer());
+#else
+        private static ConcurrentDictionary<MethodBase, List<Detour>> _DetourMap = new ConcurrentDictionary<MethodBase, List<Detour>>(new GenericMethodInstantiationComparer());
+#endif
         private static Dictionary<MethodBase, MethodInfo> _BackupMethods = new Dictionary<MethodBase, MethodInfo>();
         private static uint _GlobalIndexNext = uint.MinValue;
 
@@ -108,9 +115,9 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _ChainedTrampoline;
 
         public Detour(MethodBase from, MethodBase to, ref DetourConfig config) {
-            Method = from.Pin();
-            Target = to.Pin();
-            TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to).Pin();
+            Method = from/*.Pin()*/;
+            Target = to.Pin(); // Only pin once, unpin on Free!
+            TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to)/*.Pin()*/;
 
             _GlobalIndex = _GlobalIndexNext++;
 
@@ -126,7 +133,7 @@ namespace MonoMod.RuntimeDetour {
             lock (_BackupMethods) {
                 if ((!_BackupMethods.TryGetValue(Method, out MethodInfo backup) || backup == null) &&
                     (backup = Method.CreateILCopy()) != null)
-                    _BackupMethods[Method] = backup.Pin();
+                    _BackupMethods[Method] = backup.Pin(); // Only pin once, unpin on Free!
             }
 
             // Generate a "chained trampoline" DynamicMethod.
@@ -151,10 +158,14 @@ namespace MonoMod.RuntimeDetour {
 
             // Add the detour to the detour map.
             List<Detour> detours;
+#if NET35
             lock (_DetourMap) {
                 if (!_DetourMap.TryGetValue(Method, out detours))
                     _DetourMap[Method] = detours = new List<Detour>();
             }
+#else
+            detours = _DetourMap.GetOrAdd(Method, m => new List<Detour>());
+#endif
             lock (detours) {
                 detours.Add(this);
                 // The chain gets refreshed when the detour is applied.
@@ -292,16 +303,18 @@ namespace MonoMod.RuntimeDetour {
                             _BackupMethods.Remove(Method);
                         }
                     }
+#if NET35
                     lock (_DetourMap) {
                         _DetourMap.Remove(Method);
                     }
+#else
+                    _DetourMap.TryRemove(Method, out _);
+#endif
                 }
             }
 
             _ChainedTrampoline.Unpin();
-            Method.Unpin();
             Target.Unpin();
-            TargetReal.Unpin();
         }
 
         /// <summary>
@@ -378,6 +391,9 @@ namespace MonoMod.RuntimeDetour {
             _TopDetour.Undo();
             _TopDetour.Free();
             _TopDetour = null;
+
+            Method.Unpin();
+            TargetReal.Unpin();
         }
 
         private void _TopApply() {
@@ -385,10 +401,29 @@ namespace MonoMod.RuntimeDetour {
                 return;
 
             // GetNativeStart to avoid repins and managed copies.
-            _TopDetour = new NativeDetour(Method.GetNativeStart(), TargetReal.GetNativeStart());
+            _TopDetour = new NativeDetour(Method.Pin().GetNativeStart(), TargetReal.Pin().GetNativeStart());
+        }
+
+        private static int compileMethodSubscribed = 0;
+        private static void _OnCompileMethod(MethodBase method, IntPtr codeStart, ulong codeLen) {
+            if (method == null)
+                return;
+
+            MMDbgLog.Log("compiling: " + method.GetID());
+            if (_DetourMap.TryGetValue(method, out List<Detour> detours)) {
+                Detour top = detours.FindLast(d => d.IsTop);
+                /*top?._TopUndo();
+                top?._TopApply();*/
+                top?._TopDetour?.ChangeSource(codeStart);
+            }
         }
 
         private static void _RefreshChain(MethodBase method) {
+            // ensure we're subscribed to the event before doing anything
+            if (Interlocked.CompareExchange(ref compileMethodSubscribed, 1, 0) == 0) {
+                DetourHelper.Runtime.OnMethodCompiled += _OnCompileMethod;
+            }
+
             List<Detour> detours = _DetourMap[method];
             lock (detours) {
                 DetourSorter<Detour>.Sort(detours);

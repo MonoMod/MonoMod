@@ -245,5 +245,26 @@ namespace MonoMod.Utils {
             return null;
         }
 
+        /// <summary>
+        /// Gets the <i>actual</i> generic method definition of a method, as defined on the fully open type.
+        /// </summary>
+        /// <param name="method">The potentially instantiated method to find the definition of.</param>
+        /// <returns>The original method definition, with no generic arguments filled in.</returns>
+        public static MethodBase GetActualGenericMethodDefinition(this MethodInfo method) {
+            MethodInfo genericDefinition = method.IsGenericMethod ? method.GetGenericMethodDefinition()
+                                                                  : method;
+            return genericDefinition.GetUnfilledMethodOnGenericType();
+        }
+
+        public static MethodBase GetUnfilledMethodOnGenericType(this MethodBase method) {
+            if (method.DeclaringType != null && method.DeclaringType.IsGenericType) {
+                Type type = method.DeclaringType.GetGenericTypeDefinition();
+                RuntimeMethodHandle handle = method.MethodHandle;
+                method = MethodBase.GetMethodFromHandle(handle, type.TypeHandle);
+            }
+
+            return method;
+        }
+
     }
 }
