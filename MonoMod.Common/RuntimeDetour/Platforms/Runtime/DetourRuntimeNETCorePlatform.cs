@@ -108,7 +108,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     declType = declType.MakeGenericType(genericClassArguments.Select(Type.GetTypeFromHandle).ToArray());
                 }
                 MethodBase method = MethodBase.GetMethodFromHandle(methodHandle, declType.TypeHandle);
-                // methood may be null if its a P/Invoke call i think (or something, its honestly hard to tell)
+                // method is null for P/Invokes, ComImports and other dynamic interop methods.
+                // Just to be 100% sure that it ISN'T an already known-but-"hidden" pinned method though...
+                if (method == null) {
+                    method = GetPin(methodHandle).Method;
+                }
                 try {
                     OnMethodCompiled?.Invoke(method, methodBodyStart, methodBodySize);
                 } catch (Exception e) {

@@ -6,6 +6,9 @@ using MonoMod.Utils;
 using System.Linq;
 using Mono.Cecil.Cil;
 using System.Threading;
+#if !NET35
+using System.Collections.Concurrent;
+#endif
 
 namespace MonoMod.RuntimeDetour.Platforms {
 #if !MONOMOD_INTERNAL
@@ -15,6 +18,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
+
+        // The following dicts are needed to prevent the GC from collecting DynamicMethods without any visible references.
+        // PinnedHandles is also used in certain situations as a fallback when getting a method from a handle may not work normally.
+#if NET35
+        protected Dictionary<MethodBase, PrivateMethodPin> PinnedMethods = new Dictionary<MethodBase, PrivateMethodPin>();
+        protected Dictionary<RuntimeMethodHandle, PrivateMethodPin> PinnedHandles = new Dictionary<RuntimeMethodHandle, PrivateMethodPin>();
+#else
+        protected ConcurrentDictionary<MethodBase, PrivateMethodPin> PinnedMethods = new ConcurrentDictionary<MethodBase, PrivateMethodPin>();
+        protected ConcurrentDictionary<RuntimeMethodHandle, PrivateMethodPin> PinnedHandles = new ConcurrentDictionary<RuntimeMethodHandle, PrivateMethodPin>();
+#endif
 
         public abstract bool OnMethodCompiledWillBeCalled { get; }
         public abstract event OnMethodCompiledEvent OnMethodCompiled;
@@ -60,9 +73,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // No need to undo the detour.
         }
 
-        #region Selftests
+#region Selftests
 
-        #region Selftest: Get reference ptr
+#region Selftest: Get reference ptr
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private IntPtr _SelftestGetRefPtr() {
@@ -75,9 +88,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return self;
         }
 
-        #endregion
+#endregion
 
-        #region Selftest: Struct
+#region Selftest: Struct
 
         // Struct must be 3, 5, 6, 7 or 9+ bytes big.
 #pragma warning disable CS0169
@@ -112,9 +125,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
         }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
         protected virtual IntPtr GetFunctionPointer(MethodBase method, RuntimeMethodHandle handle)
             => handle.GetFunctionPointer();
@@ -129,22 +142,106 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // no-op. Not supported on all platforms, but throwing an exception doesn't make sense.
         }
 
+        public virtual MethodPinInfo GetPin(MethodBase method) {
+#if NET35
+            lock (PinnedMethods)
+                return PinnedMethods.TryGetValue(method, out PrivateMethodPin pin) ? pin.Pin : default;
+#else
+            return PinnedMethods.TryGetValue(method, out PrivateMethodPin pin) ? pin.Pin : default;
+#endif
+        }
+
+        public virtual MethodPinInfo GetPin(RuntimeMethodHandle handle) {
+#if NET35
+            lock (PinnedMethods)
+                return PinnedHandles.TryGetValue(handle, out PrivateMethodPin pin) ? pin.Pin : default;
+#else
+            return PinnedHandles.TryGetValue(handle, out PrivateMethodPin pin) ? pin.Pin : default;
+#endif
+        }
+
+        public virtual MethodPinInfo[] GetPins() {
+#if NET35
+            lock (PinnedMethods)
+                return PinnedHandles.Values.Select(p => p.Pin).ToArray();
+#else
+            return PinnedHandles.Values.ToArray().Select(p => p.Pin).ToArray();
+#endif
+        }
+
         public virtual IntPtr GetNativeStart(MethodBase method) {
+            bool pinGot;
+            PrivateMethodPin pin;
+#if NET35
+            lock (PinnedMethods)
+#endif
+            {
+                pinGot = PinnedMethods.TryGetValue(method, out pin);
+            }
+            if (pinGot)
+                return GetFunctionPointer(method, pin.Pin.Handle);
             return GetFunctionPointer(method, GetMethodHandle(method));
         }
 
         public virtual void Pin(MethodBase method) {
-            RuntimeMethodHandle handle = GetMethodHandle(method);
-            if (method.DeclaringType?.IsGenericType ?? false) {
-                PrepareMethod(method, handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
-            } else {
-                PrepareMethod(method, handle);
+#if NET35
+            lock (PinnedMethods) {
+                if (PinnedMethods.TryGetValue(method, out PrivateMethodPin pin)) {
+                    pin.Pin.Count++;
+                    return;
+                }
+
+                MethodBase m = method;
+                pin = new PrivateMethodPin();
+                pin.Pin.Count = 1;
+
+#else
+            Interlocked.Increment(ref PinnedMethods.GetOrAdd(method, m => {
+                PrivateMethodPin pin = new PrivateMethodPin();
+#endif
+
+                pin.Pin.Method = m;
+                RuntimeMethodHandle handle = pin.Pin.Handle = GetMethodHandle(m);
+                PinnedHandles[handle] = pin;
+
+                DisableInlining(method, handle);
+                if (method.DeclaringType?.IsGenericType ?? false) {
+                    PrepareMethod(method, handle, method.DeclaringType.GetGenericArguments().Select(type => type.TypeHandle).ToArray());
+                } else {
+                    PrepareMethod(method, handle);
+                }
+
+#if !NET35
+                return pin;
+#endif
             }
-            DisableInlining(method, handle);
+#if !NET35
+            ).Pin.Count);
+#endif
         }
 
         public virtual void Unpin(MethodBase method) {
-            // No-op. Pinning, by default, does nothing particularly special.
+#if NET35
+            lock (PinnedMethods) {
+                if (!PinnedMethods.TryGetValue(method, out PrivateMethodPin pin))
+                    return;
+
+                if (pin.Pin.Count <= 1) {
+                    PinnedMethods.Remove(method);
+                    PinnedHandles.Remove(pin.Pin.Handle);
+                    return;
+                }
+                pin.Pin.Count--;
+            }
+#else
+            if (!PinnedMethods.TryGetValue(method, out PrivateMethodPin pin))
+                return;
+
+            if (Interlocked.Decrement(ref pin.Pin.Count) <= 0) {
+                PinnedMethods.TryRemove(method, out _);
+                PinnedHandles.TryRemove(pin.Pin.Handle, out _);
+            }
+#endif
         }
 
         public MethodInfo CreateCopy(MethodBase method) {
@@ -231,9 +328,18 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return dm ?? to;
         }
 
-        protected class MethodPin {
+        protected class PrivateMethodPin {
+            public MethodPinInfo Pin = new MethodPinInfo();
+        }
+
+        public struct MethodPinInfo {
             public int Count;
+            public MethodBase Method;
             public RuntimeMethodHandle Handle;
+
+            public override string ToString() {
+                return $"(MethodPinInfo: {Count}, {Method}, 0x{(long) Handle.Value:X})";
+            }
         }
 
         private enum GlueThiscallStructRetPtrOrder {

@@ -158,10 +158,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 return CorJitResult.CORJIT_OK;
 
             hookEntrancy++;
+
+            CorJitResult result = CorJitResult.CORJIT_OK;
             try {
                 if (hookEntrancy == 1) {
                     // This is the top level JIT entry point, do our custom stuff
-                    CorJitResult result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                    result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
 
                     RuntimeTypeHandle[] genericClassArgs = null;
                     RuntimeTypeHandle[] genericMethodArgs = null;
@@ -190,7 +192,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 }
             } catch {
                 // eat the exception so we don't accidentally bubble up to native code
-                return CorJitResult.CORJIT_OK;
+                return result;
             } finally {
                 hookEntrancy--;
             }
