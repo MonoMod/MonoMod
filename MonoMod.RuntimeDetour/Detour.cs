@@ -393,6 +393,9 @@ namespace MonoMod.RuntimeDetour {
             _TopDetour.Undo();
             _TopDetour.Free();
             _TopDetour = null;
+
+            Method.Unpin();
+            TargetReal.Unpin();
         }
 
         private void _TopApply() {
