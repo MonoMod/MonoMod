@@ -13,8 +13,6 @@
     <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
     <OutputType>Library</OutputType>
     <SignAssembly>skip</SignAssembly>
-    <!-- FIXME: RE-ENABLE TESTS WITH TIERED COMPILATION -->
-    <!--<TieredCompilation>false</TieredCompilation>-->
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.props" />
 
