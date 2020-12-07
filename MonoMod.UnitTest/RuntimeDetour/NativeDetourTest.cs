@@ -42,6 +42,11 @@ namespace MonoMod.UnitTest {
                 return;
             }
 
+            if (!msvcrt.TryGetFunction("rand", out IntPtr ptr_msvcrt_rand)) {
+                Console.WriteLine("NativeDetourTest skipped - rand not found in msvcrt!");
+                return;
+            }
+
             DidNothing = true;
             msvcrt_rand();
             Assert.True(DidNothing);
@@ -64,7 +69,7 @@ namespace MonoMod.UnitTest {
             Assert.True(DidNothing);
 
             NativeDetour d = new NativeDetour(
-                msvcrt.GetFunction("rand"),
+                ptr_msvcrt_rand,
                 ptr_not_rand
             );
 
