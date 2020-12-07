@@ -390,7 +390,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 IntPtr.Size + // LOADERHANDLE                            m_hExposedAssemblyObject;
                 0; // here is our Assembly*
 
-            if (PlatformHelper.Is(Platform.Bits64)) {
+            if (IntPtr.Size == 8) {
                 domOffset +=
                     sizeof(int); // padding to align the next TADDR (which is a void*) (m_hExposedModuleObject)
             }
