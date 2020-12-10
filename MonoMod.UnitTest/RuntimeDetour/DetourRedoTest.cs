@@ -22,11 +22,8 @@ namespace MonoMod.UnitTest {
                 // The following use cases are not meant to be usage examples.
                 // Please take a look at DetourTest and HookTest instead.
 
-                DetourRuntimeILPlatform runtimeIL = DetourHelper.Runtime as DetourRuntimeILPlatform;
-                if (!PlatformHelper.Is(Platform.Windows)) {
-                    // TODO: xunit runs all relevant RuntimeDetour tests sequentially on Windows only.
-                    runtimeIL = null;
-                }
+                // Uncomment the following line when you want to run this test isolated and make sure that pins aren't being leaked.
+                DetourRuntimeILPlatform runtimeIL = null; // DetourHelper.Runtime as DetourRuntimeILPlatform;
 
                 DetourRuntimeILPlatform.MethodPinInfo[] pinnedPrev = null;
                 if (runtimeIL != null)
