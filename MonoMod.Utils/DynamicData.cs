@@ -90,8 +90,8 @@ namespace MonoMod.Utils {
         public Dictionary<string, Func<object, object[], object>> Methods => _Data.Methods;
         public Dictionary<string, object> Data => _Data.Data;
 
-        public bool IsAlive => Weak.SafeGetIsAlive();
-        public object Target => Weak.SafeGetTarget();
+        public bool IsAlive => Weak == null || Weak.SafeGetIsAlive();
+        public object Target => Weak?.SafeGetTarget();
         public Type TargetType { get; private set; }
 
         public DynamicData(Type type)

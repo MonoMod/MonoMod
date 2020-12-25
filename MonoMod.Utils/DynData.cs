@@ -98,14 +98,14 @@ namespace MonoMod.Utils {
             }
         }
 
-        public bool IsAlive => Weak.SafeGetIsAlive();
-        public TTarget Target => Weak.SafeGetTarget() as TTarget;
+        public bool IsAlive => Weak == null || Weak.SafeGetIsAlive();
+        public TTarget Target => Weak?.SafeGetTarget() as TTarget;
 
         public object this[string name] {
             get {
                 if (_SpecialGetters.TryGetValue(name, out Func<TTarget, object> cb) ||
                     Getters.TryGetValue(name, out cb))
-                    return cb(Weak.SafeGetTarget() as TTarget);
+                    return cb(Weak?.SafeGetTarget() as TTarget);
 
                 if (Data.TryGetValue(name, out object value))
                     return value;
@@ -115,7 +115,7 @@ namespace MonoMod.Utils {
             set {
                 if (_SpecialSetters.TryGetValue(name, out Action<TTarget, object> cb) ||
                     Setters.TryGetValue(name, out cb)) {
-                    cb(Weak.SafeGetTarget() as TTarget, value);
+                    cb(Weak?.SafeGetTarget() as TTarget, value);
                     return;
                 }
 
