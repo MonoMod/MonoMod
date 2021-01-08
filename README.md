@@ -17,7 +17,7 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 - [Using MonoMod](#using-monomod)
 - [Using ModInterop (ext)](/README-ModInterop.md)
 - [Using RuntimeDetour & HookGen (ext)](/README-RuntimeDetour.md)
-- [FAQ](#using-monomod)
+- [FAQ](#faq)
 
 ### Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
 - [Chad Yates](https://twitter.com/ChadCYates)
