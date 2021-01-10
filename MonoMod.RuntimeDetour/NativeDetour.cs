@@ -37,6 +37,9 @@ namespace MonoMod.RuntimeDetour {
         private HashSet<MethodBase> _Pinned = new HashSet<MethodBase>();
 
         public NativeDetour(MethodBase method, IntPtr from, IntPtr to, ref NativeDetourConfig config) {
+            if (from == to)
+                throw new InvalidOperationException($"Cannot detour from a location to itself! (from: {from:X16} to: {to:X16} method: {method})");
+
             Method = method;
 
             if (!(OnDetour?.InvokeWhileTrue(this, method, from, to) ?? true))
