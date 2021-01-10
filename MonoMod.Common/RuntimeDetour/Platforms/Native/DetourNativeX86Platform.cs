@@ -63,6 +63,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     detour.Method.Write(ref offs, (uint) (int) (
                         (long) detour.Target - ((long) detour.Method + offs + sizeof(uint))
                     ));
+                    detour.Method.Write(ref offs, (byte) 0xCC); // this has to be anything other than 0x5F
                     break;
 
                 case DetourType.Abs32:
