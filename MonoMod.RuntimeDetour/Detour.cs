@@ -115,6 +115,11 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _ChainedTrampoline;
 
         public Detour(MethodBase from, MethodBase to, ref DetourConfig config) {
+            if (from.Equals(to))
+                throw new ArgumentException("Cannot detour a method to itself!");
+
+            MMDbgLog.Log($"detour from {from.GetID()} to {to.GetID()}");
+
             Method = from/*.Pin()*/;
             Target = to.Pin(); // Only pin once, unpin on Free!
             TargetReal = DetourHelper.Runtime.GetDetourTarget(from, to)/*.Pin()*/;
@@ -423,6 +428,8 @@ namespace MonoMod.RuntimeDetour {
             if (Interlocked.CompareExchange(ref compileMethodSubscribed, 1, 0) == 0) {
                 DetourHelper.Runtime.OnMethodCompiled += _OnCompileMethod;
             }
+
+            MMDbgLog.Log($"detours applying for {method.GetID()}");
 
             List<Detour> detours = _DetourMap[method];
             lock (detours) {
