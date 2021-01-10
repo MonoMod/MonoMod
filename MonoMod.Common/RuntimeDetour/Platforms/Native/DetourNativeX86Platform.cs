@@ -14,7 +14,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Abs64
         }
         private static readonly uint[] DetourSizes = {
-            1 + 4,
+            1 + 4 + 1,
             1 + 4 + 1,
             1 + 1 + 4 + 8
         };
@@ -95,7 +95,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             switch ((DetourType) type) {
                 case DetourType.Rel32:
                     *(uint*) ((long) dst) = *(uint*) ((long) src);
-                    *(byte*) ((long) dst + 4) = *(byte*) ((long) src + 4);
+                    *(ushort*) ((long) dst + 4) = *(ushort*) ((long) src + 4);
                     break;
 
                 case DetourType.Abs32:
