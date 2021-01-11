@@ -33,14 +33,101 @@ namespace MonoMod.Utils {
 
         #region dl imports
 
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        private static extern IntPtr dlopen(string filename, int flags);
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        private static extern bool dlclose(IntPtr handle);
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        private static extern IntPtr dlsym(IntPtr handle, string symbol);
-        [DllImport("dl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        private static extern IntPtr dlerror();
+        [DllImport("dl", EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dl_dlopen(string filename, int flags);
+        [DllImport("dl", EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern bool dl_dlclose(IntPtr handle);
+        [DllImport("dl", EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dl_dlsym(IntPtr handle, string symbol);
+        [DllImport("dl", EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dl_dlerror();
+
+        #endregion
+
+        #region libdl.so.2 imports
+
+        [DllImport("libdl.so.2", EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dl2_dlopen(string filename, int flags);
+        [DllImport("libdl.so.2", EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern bool dl2_dlclose(IntPtr handle);
+        [DllImport("libdl.so.2", EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dl2_dlsym(IntPtr handle, string symbol);
+        [DllImport("libdl.so.2", EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern IntPtr dl2_dlerror();
+
+        #endregion
+
+        #region dl wrappers
+
+        private static int dlVersion = 1;
+
+        private static IntPtr dlopen(string filename, int flags) {
+            while (true) {
+                try {
+                    switch (dlVersion) {
+                        case 1:
+                            return dl2_dlopen(filename, flags);
+
+                        case 0:
+                        default:
+                            return dl_dlopen(filename, flags);
+                    }
+                } catch (DllNotFoundException) when (dlVersion > 0) {
+                    dlVersion--;
+                }
+            }
+        }
+
+        private static bool dlclose(IntPtr handle) {
+            while (true) {
+                try {
+                    switch (dlVersion) {
+                        case 1:
+                            return dl2_dlclose(handle);
+
+                        case 0:
+                        default:
+                            return dl_dlclose(handle);
+                    }
+                } catch (DllNotFoundException) when (dlVersion > 0) {
+                    dlVersion--;
+                }
+            }
+        }
+
+        private static IntPtr dlsym(IntPtr handle, string symbol) {
+            while (true) {
+                try {
+                    switch (dlVersion) {
+                        case 1:
+                            return dl2_dlsym(handle, symbol);
+
+                        case 0:
+                        default:
+                            return dl_dlsym(handle, symbol);
+                    }
+                } catch (DllNotFoundException) when (dlVersion > 0) {
+                    dlVersion--;
+                }
+            }
+        }
+
+        private static IntPtr dlerror() {
+            while (true) {
+                try {
+                    switch (dlVersion) {
+                        case 1:
+                            return dl2_dlerror();
+
+                        case 0:
+                        default:
+                            return dl_dlerror();
+                    }
+                } catch (DllNotFoundException) when (dlVersion > 0) {
+                    dlVersion--;
+                }
+            }
+        }
 
         #endregion
 
