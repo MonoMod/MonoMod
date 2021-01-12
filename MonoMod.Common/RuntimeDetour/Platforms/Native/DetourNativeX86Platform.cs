@@ -14,7 +14,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             Abs64
         }
         private static readonly uint[] DetourSizes = {
-            1 + 4 + 1,
+            1 + 4,
             1 + 4 + 1,
             1 + 1 + 4 + 8
         };
@@ -29,8 +29,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
              * This is critical for some 32-bit environments, as in that case, an Abs64 detour gets emitted on x86 instead!
              * Checking for -rel ensures that backwards jumps are handled properly as well, using Rel32 detours.
              */
-            if (Is32Bit(rel) || Is32Bit(-rel))
-                return DetourType.Rel32;
+            if (Is32Bit(rel) || Is32Bit(-rel)) {
+                unsafe {
+                    if (*((byte*)from + 5) != 0x5f) // because Rel32 uses an E9 jump, the byte that would be immediately following the jump
+                        return DetourType.Rel32;            //   must not be 0x5f, otherwise it would be picked up by DetourRuntimeNETPlatform line 130
+                }
+            }
 
             if (Is32Bit((long) to))
                 return DetourType.Abs32;
@@ -63,7 +67,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     detour.Method.Write(ref offs, (uint) (int) (
                         (long) detour.Target - ((long) detour.Method + offs + sizeof(uint))
                     ));
-                    detour.Method.Write(ref offs, (byte) 0xCC); // this has to be anything other than 0x5F
                     break;
 
                 case DetourType.Abs32:
@@ -95,7 +98,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             switch ((DetourType) type) {
                 case DetourType.Rel32:
                     *(uint*) ((long) dst) = *(uint*) ((long) src);
-                    *(ushort*) ((long) dst + 4) = *(ushort*) ((long) src + 4);
+                    *(byte*) ((long) dst + 4) = *(byte*) ((long) src + 4);
                     break;
 
                 case DetourType.Abs32:
