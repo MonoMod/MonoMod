@@ -177,7 +177,14 @@ namespace MonoMod.Utils {
 #if NETSTANDARD
                 if (System.Reflection.CustomAttributeExtensions.IsDefined(parameter, t_ParamArrayAttribute, false))
 #else
-                if (parameter.GetCustomAttributes(t_ParamArrayAttribute, false).Length != 0)
+                object[] parameterAttribs;
+                try {
+                    parameterAttribs = parameter.GetCustomAttributes(t_ParamArrayAttribute, false);
+                } catch {
+                    // Newer versions of Mono are stupidly strict and like to throw a NotSupportedException on DynamicMethod args.
+                    parameterAttribs = null;
+                }
+                if (parameterAttribs != null && parameterAttribs.Length != 0)
 #endif
                     builder.Append("...,");
 
