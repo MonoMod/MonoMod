@@ -32,7 +32,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             if (Is32Bit(rel) || Is32Bit(-rel)) {
                 unsafe {
                     if (*((byte*)from + 5) != 0x5f) // because Rel32 uses an E9 jump, the byte that would be immediately following the jump
-                        return DetourType.Rel32;            //   must not be 0x5f, otherwise it would be picked up by DetourRuntimeNETPlatform line 130
+                        return DetourType.Rel32;    //   must not be 0x5f, otherwise it would be picked up by DetourRuntimeNETPlatform line 130
                 }
             }
 
