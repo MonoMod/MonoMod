@@ -5,7 +5,7 @@ strategy:
       imageName: 'windows-latest'
       artifactPrefix: ''
       artifactSuffix: ''
-      testers: ';fx;core2.1;core3;core3.1;'
+      testers: ';fx;core2.1;core3;core3.1;core5;'
       generateDocFX: 'false'
       pushNuGet: 'true'
     linux:
