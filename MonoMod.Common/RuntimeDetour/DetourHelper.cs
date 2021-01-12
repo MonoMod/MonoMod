@@ -50,20 +50,22 @@ namespace MonoMod.RuntimeDetour {
                     if (_Native != null)
                         return _Native;
 
+                    IDetourNativePlatform native;
+
                     if (PlatformHelper.Is(Platform.ARM)) {
-                        _Native = new DetourNativeARMPlatform();
+                        native = new DetourNativeARMPlatform();
                     } else {
-                        _Native = new DetourNativeX86Platform();
+                        native = new DetourNativeX86Platform();
                     }
 
                     if (PlatformHelper.Is(Platform.Windows)) {
-                        return _Native = new DetourNativeWindowsPlatform(_Native);
+                        return _Native = new DetourNativeWindowsPlatform(native);
                     }
 
                     if (Type.GetType("Mono.Runtime") != null) {
                         try {
                             // It's prefixed with lib on every platform.
-                            return _Native = new DetourNativeMonoPlatform(_Native, $"libmonosgen-2.0.{PlatformHelper.LibrarySuffix}");
+                            return _Native = new DetourNativeMonoPlatform(native, $"libmonosgen-2.0.{PlatformHelper.LibrarySuffix}");
                         } catch {
                             // Fall back to another native platform wrapper.
                         }
@@ -73,7 +75,7 @@ namespace MonoMod.RuntimeDetour {
 
                     // MonoPosixHelper is available outside of Unix and even outside of Mono.
                     try {
-                        _Native = new DetourNativeMonoPosixPlatform(_Native);
+                        return _Native = new DetourNativeMonoPosixPlatform(native);
                     } catch {
                         // Good job, your copy of Mono doesn't ship with MonoPosixHelper.
                         // https://www.youtube.com/watch?v=l60MnDJklnM
@@ -81,12 +83,12 @@ namespace MonoMod.RuntimeDetour {
 
                     // Might as well try libc...
                     try {
-                        _Native = new DetourNativeLibcPlatform(_Native);
+                        return _Native = new DetourNativeLibcPlatform(native);
                     } catch {
                         // Oh well.
                     }
 
-                    return _Native;
+                    return native;
                 }
             }
             set => _Native = value;
