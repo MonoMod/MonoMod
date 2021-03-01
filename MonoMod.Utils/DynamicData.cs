@@ -66,6 +66,9 @@ namespace MonoMod.Utils {
                     if (kvp.Value == null)
                         continue;
 
+                    if (kvp.Value.IsGenericMethod)
+                        continue;
+
                     FastReflectionDelegate cb = kvp.Value.GetFastDelegate();
                     Methods[kvp.Key] = (target, args) => cb(target, args);
                 }
