@@ -27,6 +27,49 @@ namespace MonoMod.Utils {
             return member.DeclaringType.FullName.Replace("+", "/") == type.FullName.Replace("+", "/") && member.Name == name;
         }
 
+        public static bool Is(this MethodReference method, string fullName) {
+            if (method == null)
+                return false;
+
+            if (fullName.Contains(" ")) {
+                // Namespace.Type::MethodName
+                if (method.GetID(withType: true, simple: true).Replace("+", "/") == fullName.Replace("+", "/"))
+                    return true;
+
+                // ReturnType Namespace.Type::MethodName(ArgType,ArgType)
+                if (method.GetID().Replace("+", "/") == fullName.Replace("+", "/"))
+                    return true;
+            }
+
+            return method.FullName.Replace("+", "/") == fullName.Replace("+", "/");
+        }
+
+        public static bool Is(this MethodReference method, string typeFullName, string name) {
+            if (method == null)
+                return false;
+
+            if (name.Contains(" ")) {
+                // ReturnType MethodName(ArgType,ArgType)
+                if (method.DeclaringType.FullName.Replace("+", "/") == typeFullName.Replace("+", "/") && method.GetID(withType: false).Replace("+", "/") == name.Replace("+", "/"))
+                    return true;
+            }
+
+            return method.DeclaringType.FullName.Replace("+", "/") == typeFullName.Replace("+", "/") && method.Name == name;
+        }
+
+        public static bool Is(this MethodReference method, Type type, string name) {
+            if (method == null)
+                return false;
+
+            if (name.Contains(" ")) {
+                // ReturnType MethodName(ArgType,ArgType)
+                if (method.DeclaringType.FullName.Replace("+", "/") == type.FullName.Replace("+", "/") && method.GetID(withType: false).Replace("+", "/") == name.Replace("+", "/"))
+                    return true;
+            }
+
+            return method.DeclaringType.FullName.Replace("+", "/") == type.FullName.Replace("+", "/") && method.Name == name;
+        }
+
         #endregion
 
         #region Misc IL Helpers
