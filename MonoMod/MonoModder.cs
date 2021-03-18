@@ -526,8 +526,11 @@ namespace MonoMod {
             rp.AssemblyResolver = _rp.AssemblyResolver;
             rp.MetadataResolver = _rp.MetadataResolver;
 #if !CECIL0_9
+            rp.InMemory = _rp.InMemory;
             rp.MetadataImporterProvider = _rp.MetadataImporterProvider;
             rp.ReflectionImporterProvider = _rp.ReflectionImporterProvider;
+            rp.ThrowIfSymbolsAreNotMatching = _rp.ThrowIfSymbolsAreNotMatching;
+            rp.ApplyWindowsRuntimeProjections = _rp.ApplyWindowsRuntimeProjections;
 #endif
             rp.SymbolStream = _rp.SymbolStream;
             rp.SymbolReaderProvider = _rp.SymbolReaderProvider;
