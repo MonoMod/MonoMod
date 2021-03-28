@@ -55,7 +55,10 @@ namespace MonoMod.Utils {
                 int code = unchecked((int) 0xdeadbeef);
                 code ^= (code << 16) | (code >> 16);
                 code ^= type.Assembly.GetHashCode();
-                code ^= type.Namespace.GetHashCode();
+
+                if (type.Namespace != null)
+                    code ^= type.Namespace.GetHashCode();
+
                 code ^= type.Name.GetHashCode();
 
                 Type[] genericParams = type.GetGenericArguments();
