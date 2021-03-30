@@ -200,20 +200,21 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (!HookPrivate && method.IsPrivate)
                 return false;
 
-            string suffix = null;
+            string name = GetFriendlyName(method);
+            bool suffix = true;
             if (method.Parameters.Count == 0) {
-                suffix = "";
+                suffix = false;
             }
 
             IEnumerable<MethodDefinition> overloads = null;
-            if (suffix == null) {
-                overloads = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name && other != method);
+            if (suffix) {
+                overloads = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && GetFriendlyName(other) == name && other != method);
                 if (overloads.Count() == 0) {
-                    suffix = "";
+                    suffix = false;
                 }
             }
 
-            if (suffix == null) {
+            if (suffix) {
                 StringBuilder builder = new StringBuilder();
                 for (int parami = 0; parami < method.Parameters.Count; parami++) {
                     ParameterDefinition param = method.Parameters[parami];
@@ -232,13 +233,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     builder.Append("_");
                     builder.Append(typeName.Replace(".", "").Replace("`", ""));
                 }
-                suffix = builder.ToString();
+                name += builder.ToString();
             }
-
-            string name = method.Name;
-            if (name.StartsWith("."))
-                name = name.Substring(1);
-            name = name + suffix;
 
             if (hookType.FindEvent(name) != null) {
                 string nameTmp;
@@ -363,18 +359,15 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public TypeDefinition GenerateDelegateFor(MethodDefinition method) {
-            int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && other.Name == method.Name).ToList().IndexOf(method);
-            string suffix = "";
+            string name = GetFriendlyName(method);
+            int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && GetFriendlyName(other) == name).ToList().IndexOf(method);
             if (index != 0) {
-                suffix = index.ToString();
+                string suffix = index.ToString();
                 do {
-                    suffix = "_" + suffix;
-                } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && other.Name == (method.Name + suffix)));
+                    name = name + "_" + suffix;
+                } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && GetFriendlyName(other) == (name + suffix)));
             }
-            string name = method.Name;
-            if (name.StartsWith("."))
-                name = name.Substring(1);
-            name = "d_" + name+ suffix;
+            name = "d_" + name;
 
             TypeDefinition del = new TypeDefinition(
                 null, null,
@@ -446,6 +439,14 @@ namespace MonoMod.RuntimeDetour.HookGen {
             del.Methods.Add(invokeEnd);
 
             return del;
+        }
+
+        string GetFriendlyName(MethodReference method) {
+            string name = method.Name;
+            if (name.StartsWith("."))
+                name = name.Substring(1);
+            name = name.Replace('.', '_');
+            return name;
         }
 
         string GetFriendlyName(TypeReference type, bool full) {
