@@ -159,12 +159,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             hookEntrancy++;
 
-            CorJitResult result = CorJitResult.CORJIT_OK;
-            try {
-                if (hookEntrancy == 1) {
-                    // This is the top level JIT entry point, do our custom stuff
-                    result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+            /* We've caught any exceptions thrown by this in the past but it turns out this can throw?!
+             * Let's hope that all runtimes we're hooking the JIT of know how to deal with this...
+             * -ade
+             */
+            CorJitResult result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
 
+            if (hookEntrancy == 1) {
+                try {
+                    // This is the top level JIT entry point, do our custom stuff
                     RuntimeTypeHandle[] genericClassArgs = null;
                     RuntimeTypeHandle[] genericMethodArgs = null;
 
@@ -185,17 +188,14 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     RuntimeMethodHandle method = CreateHandleForHandlePointer(methodInfo.ftn);
 
                     JitHookCore(declaringType, method, (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
-
-                    return result;
-                } else {
-                    return real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                } catch {
+                    // eat the exception so we don't accidentally bubble up to native code
+                } finally {
+                    hookEntrancy--;
                 }
-            } catch {
-                // eat the exception so we don't accidentally bubble up to native code
-                return result;
-            } finally {
-                hookEntrancy--;
             }
+
+            return result;
         }
 
         protected delegate object d_MethodHandle_GetLoaderAllocator(IntPtr methodHandle);
