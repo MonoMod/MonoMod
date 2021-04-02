@@ -23,7 +23,7 @@ namespace MonoMod.UnitTest {
         [Fact]
         public void TestJitHookMissingMethod() {
             // ... except for .NET Core on Linux. Doesn't pass locally at all, passes on Azure only with 5.0.
-#if NETCORE
+#if !NETFRAMEWORK
             if (PlatformHelper.Is(Platform.Linux))
                 return;
 #endif
