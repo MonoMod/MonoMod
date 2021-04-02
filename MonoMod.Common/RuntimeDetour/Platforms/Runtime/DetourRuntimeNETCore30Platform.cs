@@ -158,44 +158,47 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 return CorJitResult.CORJIT_OK;
 
             hookEntrancy++;
+            try {
 
-            /* We've caught any exceptions thrown by this in the past but it turns out this can throw?!
-             * Let's hope that all runtimes we're hooking the JIT of know how to deal with this...
-             * -ade
-             */
-            CorJitResult result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                /* We've silenced any exceptions thrown by this in the past but it turns out this can throw?!
+                 * Let's hope that all runtimes we're hooking the JIT of know how to deal with this - oh wait, not all do!
+                 * FIXME: Linux .NET Core pre-5.0 (and sometimes even 5.0) can die in real_compileMethod on invalid IL?!
+                 * -ade
+                 */
+                CorJitResult result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
 
-            if (hookEntrancy == 1) {
-                try {
-                    // This is the top level JIT entry point, do our custom stuff
-                    RuntimeTypeHandle[] genericClassArgs = null;
-                    RuntimeTypeHandle[] genericMethodArgs = null;
+                if (hookEntrancy == 1) {
+                    try {
+                        // This is the top level JIT entry point, do our custom stuff
+                        RuntimeTypeHandle[] genericClassArgs = null;
+                        RuntimeTypeHandle[] genericMethodArgs = null;
 
-                    if (methodInfo.args.sigInst.classInst != null) {
-                        genericClassArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.classInstCount];
-                        for (int i = 0; i < genericClassArgs.Length; i++) {
-                            genericClassArgs[i] = GetTypeFromNativeHandle(methodInfo.args.sigInst.classInst[i]).TypeHandle;
+                        if (methodInfo.args.sigInst.classInst != null) {
+                            genericClassArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.classInstCount];
+                            for (int i = 0; i < genericClassArgs.Length; i++) {
+                                genericClassArgs[i] = GetTypeFromNativeHandle(methodInfo.args.sigInst.classInst[i]).TypeHandle;
+                            }
                         }
-                    }
-                    if (methodInfo.args.sigInst.methInst != null) {
-                        genericMethodArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.methInstCount];
-                        for (int i = 0; i < genericMethodArgs.Length; i++) {
-                            genericMethodArgs[i] = GetTypeFromNativeHandle(methodInfo.args.sigInst.methInst[i]).TypeHandle;
+                        if (methodInfo.args.sigInst.methInst != null) {
+                            genericMethodArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.methInstCount];
+                            for (int i = 0; i < genericMethodArgs.Length; i++) {
+                                genericMethodArgs[i] = GetTypeFromNativeHandle(methodInfo.args.sigInst.methInst[i]).TypeHandle;
+                            }
                         }
+
+                        RuntimeTypeHandle declaringType = GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
+                        RuntimeMethodHandle method = CreateHandleForHandlePointer(methodInfo.ftn);
+
+                        JitHookCore(declaringType, method, (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
+                    } catch {
+                        // eat the exception so we don't accidentally bubble up to native code
                     }
-
-                    RuntimeTypeHandle declaringType = GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
-                    RuntimeMethodHandle method = CreateHandleForHandlePointer(methodInfo.ftn);
-
-                    JitHookCore(declaringType, method, (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
-                } catch {
-                    // eat the exception so we don't accidentally bubble up to native code
-                } finally {
-                    hookEntrancy--;
                 }
-            }
 
-            return result;
+                return result;
+            } finally {
+                hookEntrancy--;
+            }
         }
 
         protected delegate object d_MethodHandle_GetLoaderAllocator(IntPtr methodHandle);
