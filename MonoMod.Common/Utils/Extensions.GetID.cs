@@ -174,18 +174,18 @@ namespace MonoMod.Utils {
                 if (i > (proxyMethod ? 1 : 0))
                     builder.Append(",");
 
-#if NETSTANDARD
-                if (System.Reflection.CustomAttributeExtensions.IsDefined(parameter, t_ParamArrayAttribute, false))
-#else
-                object[] parameterAttribs;
+                bool defined;
                 try {
-                    parameterAttribs = parameter.GetCustomAttributes(t_ParamArrayAttribute, false);
-                } catch {
-                    // Newer versions of Mono are stupidly strict and like to throw a NotSupportedException on DynamicMethod args.
-                    parameterAttribs = null;
-                }
-                if (parameterAttribs != null && parameterAttribs.Length != 0)
+#if NETSTANDARD
+                    defined = System.Reflection.CustomAttributeExtensions.IsDefined(parameter, t_ParamArrayAttribute, false);
+#else
+                    defined = parameter.GetCustomAttributes(t_ParamArrayAttribute, false).Length != 0;
 #endif
+                } catch (NotSupportedException) {
+                    // Newer versions of Mono are stupidly strict and like to throw a NotSupportedException on DynamicMethod args.
+                    defined = false;
+                }
+                if (defined)
                     builder.Append("...,");
 
                 builder.Append(parameter.ParameterType.FullName);
