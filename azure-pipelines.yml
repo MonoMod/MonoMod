@@ -71,6 +71,10 @@ steps:
     version: '5.0.x'
 # FIXME: Remove includePreviewVersions once .NET 5.0 releases.
     includePreviewVersions: true
+- task: NuGetToolInstaller@1
+  displayName: 'Update NuGet'
+  inputs:
+    checkLatest: true
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Restore'
   inputs:
