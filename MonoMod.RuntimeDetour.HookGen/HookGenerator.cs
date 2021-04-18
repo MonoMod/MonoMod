@@ -85,6 +85,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 Runtime = modder.Module.Runtime
             });
 
+            // Copy all assembly references from the input module.
+            // Cecil + .NET Standard libraries + .NET 5.0 = weirdness.
+            modder.MapDependencies();
+            OutputModule.AssemblyReferences.AddRange(modder.Module.AssemblyReferences);
+            modder.DependencyMap[OutputModule] = new List<ModuleDefinition>(modder.DependencyMap[modder.Module]);
+
             Namespace = Environment.GetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE");
             if (string.IsNullOrEmpty(Namespace))
                 Namespace = "On";
