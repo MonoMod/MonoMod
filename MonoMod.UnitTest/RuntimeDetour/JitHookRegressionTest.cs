@@ -28,11 +28,12 @@ namespace MonoMod.UnitTest {
                 return;
 #endif
 
-            // The JIT hook might already be set up thanks to previ
+            // The JIT hook might already be set up thanks to previous tests.
             TestJitHookMissingMethodStep();
 
             Assert.NotNull(DetourHelper.Runtime);
 
+            // The JIT hook is definitely applied at this point.
             TestJitHookMissingMethodStep();
         }
 
