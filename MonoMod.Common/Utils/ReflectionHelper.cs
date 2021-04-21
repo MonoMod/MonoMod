@@ -9,6 +9,7 @@ using Mono.Cecil.Cil;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Text;
 
 namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
@@ -19,6 +20,9 @@ namespace MonoMod.Utils {
         internal static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
         internal static readonly Dictionary<string, Assembly[]> AssembliesCache = new Dictionary<string, Assembly[]>();
         internal static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
+
+        public readonly static byte[] AssemblyHashPrefix = new UTF8Encoding(false).GetBytes("MonoModRefl").Concat(new byte[1]).ToArray();
+        public readonly static string AssemblyHashNameTag = "@#";
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
 
@@ -88,6 +92,30 @@ namespace MonoMod.Utils {
             return null;
         }
 
+        public static void ApplyRuntimeHash(this AssemblyNameReference asmRef, Assembly asm) {
+            // Mono.Cecil ignores the hash for the most part, allowing us to store whatever we want in it.
+            byte[] hash = new byte[AssemblyHashPrefix.Length + 4];
+            Array.Copy(AssemblyHashPrefix, 0, hash, 0, AssemblyHashPrefix.Length);
+            Array.Copy(BitConverter.GetBytes(asm.GetHashCode()), 0, hash, AssemblyHashPrefix.Length, 4);
+            asmRef.HashAlgorithm = unchecked((AssemblyHashAlgorithm) (-1));
+            asmRef.Hash = hash;
+        }
+
+        public static string GetRuntimeHashedFullName(this AssemblyNameReference asm) {
+            if (asm.HashAlgorithm != unchecked((AssemblyHashAlgorithm) (-1)))
+                return asm.FullName;
+
+            byte[] hash = asm.Hash;
+            if (hash.Length != AssemblyHashPrefix.Length + 4)
+                return asm.FullName;
+
+            for (int i = 0; i < AssemblyHashPrefix.Length; i++)
+                if (hash[i] != AssemblyHashPrefix[i])
+                    return asm.FullName;
+
+            return $"{asm.FullName}{AssemblyHashNameTag}{BitConverter.ToInt32(hash, AssemblyHashPrefix.Length)}";
+        }
+
         public static Type ResolveReflection(this TypeReference mref)
             => _ResolveReflection(mref, null) as Type;
         public static MethodBase ResolveReflection(this MethodReference mref)
@@ -133,18 +161,18 @@ namespace MonoMod.Utils {
 
             switch (tscope?.Scope) {
                 case AssemblyNameReference asmNameRef:
-                    asmName = asmNameRef.FullName;
+                    asmName = asmNameRef.GetRuntimeHashedFullName();
                     moduleName = null;
                     break;
 
                 case ModuleDefinition moduleDef:
-                    asmName = moduleDef.Assembly.FullName;
+                    asmName = moduleDef.Assembly.Name.GetRuntimeHashedFullName();
                     moduleName = moduleDef.Name;
                     break;
 
                 case ModuleReference moduleRef:
                     // TODO: Is this correct? It's what cecil itself is doing...
-                    asmName = tscope.Module.Assembly.FullName;
+                    asmName = tscope.Module.Assembly.Name.GetRuntimeHashedFullName();
                     moduleName = tscope.Module.Name;
                     break;
 
@@ -223,22 +251,66 @@ namespace MonoMod.Utils {
                     if (!refetchingModules)
                         lock (AssembliesCache)
                             AssembliesCache.TryGetValue(asmName, out asms);
+                }
+
+                if (asms == null) {
+                    /* Assembly load contexts are pain.
+                     * Let's try things in the following order:
+                     * - If a possible embedded hash code exists, check by hash code.
+                     * - If a possible embedded hash code exists, use the "long" name before the short name.
+                     * - Check by full name.
+                     * - Check by short name.
+                     * - Try to load the assembly.
+                     * - Give up.
+                     *
+                     * The hash code could be extracted from the cecil assembly name reference's Hash property,
+                     * but maybe it'll be necessary to be passed via the name in the future once ^ gets used by Cecil.
+                     * In addition to that, the hash must become part of the cache key string anyway.
+                     * This can be microoptimized when necessary.
+                     * - ade
+                     */
+
+                    int split = asmName.IndexOf(AssemblyHashNameTag);
+                    if (split != -1 && int.TryParse(asmName.Substring(split + 2), out int hash)) {
+                        asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetHashCode() == hash).ToArray();
+
+                        string asmNameLong = asmName;
+                        asmName = asmName.Substring(0, split);
+
+                        if (asms.Length == 0) {
+                            asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().FullName == asmNameLong).ToArray();
+                            if (asms.Length == 0)
+                                asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().Name == asmNameLong).ToArray();
+                        }
+
+                        // .NET Framework hates certain special symbols. Mono and .NET Core don't mind.
+#if !NETFRAMEWORK
+                        AssemblyName asmNameLongName;
+                        try {
+                            asmNameLongName = new AssemblyName(asmNameLong);
+                        } catch {
+                            asmNameLongName = null;
+                        }
+                        if (asmNameLongName != null && asms.Length == 0 && Assembly.Load(asmNameLongName) is Assembly loaded)
+                            asms = new Assembly[] { loaded };
+#endif
+
+                        if (asms.Length == 0)
+                            asms = null;
+                    }
 
                     if (asms == null) {
-                        asms =
-                            AppDomain.CurrentDomain.GetAssemblies()
-                            .Where(other => {
-                                AssemblyName name = other.GetName();
-                                return name.Name == asmName || name.FullName == asmName;
-                            }).ToArray();
+                        asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().FullName == asmName).ToArray();
+                        if (asms.Length == 0)
+                            asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().Name == asmName).ToArray();
 
                         if (asms.Length == 0 && Assembly.Load(new AssemblyName(asmName)) is Assembly loaded)
                             asms = new Assembly[] { loaded };
-
-                        if (asms.Length != 0)
-                            lock (AssembliesCache)
-                                AssembliesCache[asmName] = asms;
                     }
+
+                    if (asms.Length != 0)
+                        lock (AssembliesCache)
+                            AssembliesCache[asmName] = asms;
                 }
 
                 modules =

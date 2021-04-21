@@ -53,7 +53,7 @@ namespace MonoMod.Utils {
         private readonly ModuleDefinition Module;
         private readonly DefaultReflectionImporter Default;
 
-        private readonly Dictionary<AssemblyName, AssemblyNameReference> CachedAsms = new Dictionary<AssemblyName, AssemblyNameReference>();
+        private readonly Dictionary<Assembly, AssemblyNameReference> CachedAsms = new Dictionary<Assembly, AssemblyNameReference>();
         private readonly Dictionary<Module, TypeReference> CachedModuleTypes = new Dictionary<Module, TypeReference>();
         private readonly Dictionary<Type, TypeReference> CachedTypes = new Dictionary<Type, TypeReference>();
         private readonly Dictionary<FieldInfo, FieldReference> CachedFields = new Dictionary<FieldInfo, FieldReference>();
@@ -105,13 +105,21 @@ namespace MonoMod.Utils {
             return CachedTypes[type] = typeRef;
         }
 
+        [Obsolete("Please use the Assembly overload instead.")]
         public AssemblyNameReference ImportReference(AssemblyName asm) {
-            // It's possible to load multiple assemblies with the same name but different contents!
-            // Sadly the AssemblyNames match up perfectly...
+            // Multiple ALCs are pain and you should feel bad if you're not using the Assembly overload. - ade
+            return Default.ImportReference(asm);
+        }
+
+        public AssemblyNameReference ImportReference(Assembly asm) {
             if (CachedAsms.TryGetValue(asm, out AssemblyNameReference asmRef))
                 return asmRef;
 
-            return CachedAsms[asm] = Default.ImportReference(asm);
+            asmRef = Default.ImportReference(asm.GetName());
+            // It's possible to load multiple assemblies with the same name but different contents!
+            // Assembly load contexts are pain. (And this can even happen without ALCs!)
+            asmRef.ApplyRuntimeHash(asm);
+            return CachedAsms[asm] = asmRef;
         }
 
         public TypeReference ImportModuleType(Module module, IGenericParameterProvider context) {
@@ -123,7 +131,7 @@ namespace MonoMod.Utils {
                 string.Empty,
                 "<Module>",
                 Module,
-                ImportReference(module.Assembly.GetName())
+                ImportReference(module.Assembly)
             );
         }
 
@@ -197,7 +205,7 @@ namespace MonoMod.Utils {
 				string.Empty,
 				type.Name,
 				Module,
-				ImportReference(type.Assembly.GetName()),
+				ImportReference(type.Assembly),
                 type.IsValueType
             );
 
