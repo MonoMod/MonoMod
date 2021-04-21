@@ -35,8 +35,8 @@ namespace MonoMod.UnitTest {
         }
 
         private void WaitForWeakReferenceToDie(WeakReference weakref) {
-            // FIXME: Figure out why the reference stays alive with .NET Core 3.1
-#if !NETCOREAPP3_1
+            // FIXME: Figure out why the reference stays alive with .NET Core 3.1, sometimes 3.0
+#if NET5_0_OR_GREATER
             for (int i = 0; i < 30 && weakref.IsAlive; i++) {
                 GC.Collect();
                 GC.Collect();
