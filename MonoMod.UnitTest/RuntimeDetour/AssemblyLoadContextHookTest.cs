@@ -35,12 +35,14 @@ namespace MonoMod.UnitTest {
         }
 
         private void WaitForWeakReferenceToDie(WeakReference weakref) {
-            for (int i = 0; i < 10 && weakref.IsAlive; i++) {
+            // FIXME: Figure out why the reference stays alive with .NET Core 3.1
+#if !NETCOREAPP3_1
+            for (int i = 0; i < 30 && weakref.IsAlive; i++) {
                 GC.Collect();
                 GC.Collect();
             }
-            // FIXME: Fix assembly load context (un)loadability!
-            // Assert.False(weakref.IsAlive);
+            Assert.False(weakref.IsAlive);
+#endif
         }
 
         public void Verify(object loader, int id1, int id2) {
