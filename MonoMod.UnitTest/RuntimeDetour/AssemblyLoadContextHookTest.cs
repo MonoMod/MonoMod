@@ -21,8 +21,9 @@ namespace MonoMod.UnitTest {
     public class AssemblyLoadContextHookTest {
 
         public static bool IsNonALC;
-        public static int LastID1;
-        public static int LastID2;
+        public static object LastLoader;
+        public static int LastID1 = -1;
+        public static int LastID2 = -1;
 
         [Fact]
         public void TestAssemblyLoadContextHook() {
@@ -42,6 +43,16 @@ namespace MonoMod.UnitTest {
             // Assert.False(weakref.IsAlive);
         }
 
+        public void Verify(object loader, int id1, int id2) {
+            Assert.Equal(loader, LastLoader);
+            Assert.Equal(id1, LastID1);
+            Assert.Equal(id2, LastID2);
+
+            LastLoader = null;
+            LastID1 = -1;
+            LastID2 = -1;
+        }
+
         private WeakReference TestAssemblyLoadContextHookStep(int id1, int id2) {
             AssemblyLoadContext alc = new TestAssemblyLoadContext($"Test Context #{id1}");
 
@@ -50,13 +61,12 @@ namespace MonoMod.UnitTest {
             Type type = asm.GetType(typeOrig.FullName);
             Assert.NotEqual(typeOrig, type);
 
+            Verify(null, -1, -1);
+
             type.GetMethod("TestAssemblyLoadContextHookLoaded", BindingFlags.Public | BindingFlags.Static)
                 .Invoke(null, new object[] { this, id1, id2 });
 
             alc.Unload();
-
-            Assert.Equal(id1, LastID1);
-            Assert.Equal(id2, LastID2);
 
             return new WeakReference(alc);
         }
@@ -79,7 +89,14 @@ namespace MonoMod.UnitTest {
         public static void TestAssemblyLoadContextHookLoaded(object loader, int id1, int id2) {
             Assert.NotEqual(typeof(AssemblyLoadContextHookTest), loader.GetType());
             MethodInfo method = loader.GetType().GetMethod("TestStaticMethod");
-            using (Hook h = new Hook(
+            MethodInfo verify = loader.GetType().GetMethod("Verify");
+
+            object[] argsEmpty = { null, -1, -1 };
+            object[] argsSet = { loader, id1, id2 };
+
+            verify.Invoke(loader, argsEmpty);
+
+            using (new Hook(
                 method,
                 new Action<Action<object, int, int>, object, int, int>((orig, hloader, hid1, hid2) => {
                     orig(loader, id1, id2);
@@ -87,15 +104,82 @@ namespace MonoMod.UnitTest {
             )) {
                 method.Invoke(null, new object[] { null, -1, -1 });
             }
+            verify.Invoke(loader, argsSet);
+
+            using (new Hook(
+                method,
+                new Action<Action<object, int, int>, object, int, int>((orig, hloader, hid1, hid2) => {
+                    orig(loader, id1, id2);
+                })
+            )) {
+                method.Invoke(null, new object[] { null, -1, -1 });
+            }
+            verify.Invoke(loader, argsSet);
+
+            verify.Invoke(loader, argsEmpty);
+            LastLoader = loader;
+            LastID1 = id1;
+            LastID2 = id2;
+            verify.Invoke(loader, argsEmpty);
+
+            ((Action<Action<object, int, int>, object, int, int>) ((orig, hloader, hid1, hid2) => TestStaticMethodTarget(orig, hloader, hid1, hid2)))
+                .Invoke((oloader, oid1, oid2) => method.Invoke(null, new object[] { oloader, oid1, oid2 }), null, -1, -1);
+            verify.Invoke(loader, argsSet);
+
+            using (new Hook(
+                method,
+                (Action<Action<object, int, int>, object, int, int>) ((orig, hloader, hid1, hid2) => TestStaticMethodTarget(orig, hloader, hid1, hid2))
+            )) {
+                method.Invoke(null, new object[] { null, -1, -1 });
+            }
+            verify.Invoke(loader, argsSet);
+
+            using (new Hook(
+                method,
+                new Action<Action<object, int, int>, object, int, int>((orig, hloader, hid1, hid2) => TestStaticMethodTarget(orig, hloader, hid1, hid2))
+            )) {
+                method.Invoke(null, new object[] { null, -1, -1 });
+            }
+            verify.Invoke(loader, argsSet);
+
+            using (new Hook(
+                method,
+                (Action<Action<object, int, int>, object, int, int>) TestStaticMethodTarget
+            )) {
+                method.Invoke(null, new object[] { null, -1, -1 });
+            }
+            verify.Invoke(loader, argsSet);
+
+            using (new Hook(
+                method,
+                new Action<Action<object, int, int>, object, int, int>(TestStaticMethodTarget)
+            )) {
+                method.Invoke(null, new object[] { null, -1, -1 });
+            }
+            verify.Invoke(loader, argsSet);
+
+            using (new Hook(
+                method,
+                typeof(AssemblyLoadContextHookTest).GetMethod("TestStaticMethodTarget")
+            )) {
+                method.Invoke(null, new object[] { null, -1, -1 });
+            }
+            verify.Invoke(loader, argsSet);
+        }
+
+        public static void TestStaticMethodTarget(Action<object, int, int> orig, object loader, int id1, int id2) {
+            orig(LastLoader, LastID1, LastID2);
         }
 
         // Only the non-ALC variant of this should be hooked and invoked.
         public static void TestStaticMethod(AssemblyLoadContextHookTest loader, int id1, int id2) {
+            Assert.True(IsNonALC);
             Assert.NotNull(loader);
             Assert.Equal(typeof(AssemblyLoadContextHookTest), loader.GetType());
-            Assert.True(IsNonALC);
             Assert.NotEqual(-1, id1);
             Assert.NotEqual(-1, id2);
+            loader.Verify(null, -1, -1);
+            LastLoader = loader;
             LastID1 = id1;
             LastID2 = id2;
         }
