@@ -17,9 +17,9 @@ namespace MonoMod.Utils {
 #endif
     static partial class ReflectionHelper {
 
-        internal static readonly Dictionary<string, Assembly> AssemblyCache = new Dictionary<string, Assembly>();
-        internal static readonly Dictionary<string, Assembly[]> AssembliesCache = new Dictionary<string, Assembly[]>();
-        internal static readonly Dictionary<string, MemberInfo> ResolveReflectionCache = new Dictionary<string, MemberInfo>();
+        internal static readonly Dictionary<string, WeakReference/*<Assembly>*/> AssemblyCache = new Dictionary<string, WeakReference>();
+        internal static readonly Dictionary<string, WeakReference/*<Assembly>*/[]> AssembliesCache = new Dictionary<string, WeakReference[]>();
+        internal static readonly Dictionary<string, WeakReference/*<MemberInfo>*/> ResolveReflectionCache = new Dictionary<string, WeakReference>();
 
         public readonly static byte[] AssemblyHashPrefix = new UTF8Encoding(false).GetBytes("MonoModRefl").Concat(new byte[1]).ToArray();
         public readonly static string AssemblyHashNameTag = "@#";
@@ -32,7 +32,7 @@ namespace MonoMod.Utils {
             }
             if (cacheKey != null && value != null) {
                 lock (ResolveReflectionCache) {
-                    ResolveReflectionCache[cacheKey] = value;
+                    ResolveReflectionCache[cacheKey] = new WeakReference(value);
                 }
             }
             return value;
@@ -99,6 +99,10 @@ namespace MonoMod.Utils {
             Array.Copy(BitConverter.GetBytes(asm.GetHashCode()), 0, hash, AssemblyHashPrefix.Length, 4);
             asmRef.HashAlgorithm = unchecked((AssemblyHashAlgorithm) (-1));
             asmRef.Hash = hash;
+        }
+
+        public static string GetRuntimeHashedFullName(this Assembly asm) {
+            return $"{asm.FullName}{AssemblyHashNameTag}{asm.GetHashCode()}";
         }
 
         public static string GetRuntimeHashedFullName(this AssemblyNameReference asm) {
@@ -186,7 +190,8 @@ namespace MonoMod.Utils {
             cacheKey = $"{cacheKey} | {asmName ?? "NOASSEMBLY"}, {moduleName ?? "NOMODULE"}";
 
             lock (ResolveReflectionCache) {
-                if (ResolveReflectionCache.TryGetValue(cacheKey, out MemberInfo cached) && cached != null)
+                if (ResolveReflectionCache.TryGetValue(cacheKey, out WeakReference cachedRef) &&
+                    cachedRef != null && cachedRef.SafeGetTarget() is MemberInfo cached)
                     return cached;
             }
 
@@ -244,20 +249,24 @@ namespace MonoMod.Utils {
 
                 if (tryAssemblyCache)
                     lock (AssemblyCache)
-                        if (AssemblyCache.TryGetValue(asmName, out Assembly asm))
+                        if (AssemblyCache.TryGetValue(asmName, out WeakReference asmRef) &&
+                            asmRef.SafeGetTarget() is Assembly asm)
                             asms = new Assembly[] { asm };
 
                 if (asms == null) {
                     if (!refetchingModules)
                         lock (AssembliesCache)
-                            AssembliesCache.TryGetValue(asmName, out asms);
+                            if (AssembliesCache.TryGetValue(asmName, out WeakReference[] asmRefs))
+                                asms = asmRefs
+                                    .Select(asmRef => asmRef.SafeGetTarget() as Assembly)
+                                    .Where(asm => asm != null)
+                                    .ToArray();
                 }
 
                 if (asms == null) {
                     /* Assembly load contexts are pain.
                      * Let's try things in the following order:
                      * - If a possible embedded hash code exists, check by hash code.
-                     * - If a possible embedded hash code exists, use the "long" name before the short name.
                      * - Check by full name.
                      * - Check by short name.
                      * - Try to load the assembly.
@@ -273,30 +282,9 @@ namespace MonoMod.Utils {
                     int split = asmName.IndexOf(AssemblyHashNameTag);
                     if (split != -1 && int.TryParse(asmName.Substring(split + 2), out int hash)) {
                         asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetHashCode() == hash).ToArray();
-
-                        string asmNameLong = asmName;
-                        asmName = asmName.Substring(0, split);
-
-                        if (asms.Length == 0) {
-                            asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().FullName == asmNameLong).ToArray();
-                            if (asms.Length == 0)
-                                asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().Name == asmNameLong).ToArray();
-                        }
-
-                        // .NET Framework hates certain special symbols. Mono and .NET Core don't mind.
-#if !NETFRAMEWORK
-                        AssemblyName asmNameLongName;
-                        try {
-                            asmNameLongName = new AssemblyName(asmNameLong);
-                        } catch {
-                            asmNameLongName = null;
-                        }
-                        if (asmNameLongName != null && asms.Length == 0 && Assembly.Load(asmNameLongName) is Assembly loaded)
-                            asms = new Assembly[] { loaded };
-#endif
-
                         if (asms.Length == 0)
                             asms = null;
+                        asmName = asmName.Substring(0, split);
                     }
 
                     if (asms == null) {
@@ -310,7 +298,7 @@ namespace MonoMod.Utils {
 
                     if (asms.Length != 0)
                         lock (AssembliesCache)
-                            AssembliesCache[asmName] = asms;
+                            AssembliesCache[asmName] = asms.Select(asm => new WeakReference(asm)).ToArray();
                 }
 
                 modules =

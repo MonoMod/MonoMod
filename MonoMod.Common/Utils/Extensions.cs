@@ -99,8 +99,10 @@ namespace MonoMod.Utils {
             // Make sure that at least the ReflectionHelper can find anything inside of them.
             AssemblyName name = new AssemblyName(asm.FullName);
             lock (ReflectionHelper.AssemblyCache) {
-                ReflectionHelper.AssemblyCache[name.FullName] = asm;
-                ReflectionHelper.AssemblyCache[name.Name] = asm;
+                WeakReference asmRef = new WeakReference(asm);
+                ReflectionHelper.AssemblyCache[asm.GetRuntimeHashedFullName()] = asmRef;
+                ReflectionHelper.AssemblyCache[name.FullName] = asmRef;
+                ReflectionHelper.AssemblyCache[name.Name] = asmRef;
             }
             
             long asmPtr = 0L;
@@ -163,6 +165,28 @@ namespace MonoMod.Utils {
                 1;
             byte* corlibInternalPtr = (byte*) (asmPtr + offs);
             *corlibInternalPtr = value ? (byte) 1 : (byte) 0;
+        }
+
+        public static object SafeGetTarget(this WeakReference weak) {
+            try {
+                return weak.Target;
+            } catch (InvalidOperationException) {
+                // FUCK OLD UNITY MONO
+                // https://github.com/Unity-Technologies/mono/blob/unity-2017.4/mcs/class/corlib/System/WeakReference.cs#L96
+                // https://github.com/Unity-Technologies/mono/blob/unity-2017.4-mbe/mcs/class/corlib/System/WeakReference.cs#L94
+                // https://docs.microsoft.com/en-us/archive/blogs/yunjin/trivial-debugging-note-using-weakreference-in-finalizer
+                // "So on CLR V2.0 offical released build, you could safely use WeakReference in finalizer."
+                return null;
+            }
+        }
+
+        public static bool SafeGetIsAlive(this WeakReference weak) {
+            try {
+                return weak.IsAlive;
+            } catch (InvalidOperationException) {
+                // See above FUCK OLD UNITY MONO note.
+                return false;
+            }
         }
 
     }
