@@ -74,11 +74,15 @@ namespace MonoMod.RuntimeDetour {
                     }
 
                     // MonoPosixHelper is available outside of Unix and even outside of Mono.
-                    try {
-                        return _Native = new DetourNativeMonoPosixPlatform(native);
-                    } catch {
-                        // Good job, your copy of Mono doesn't ship with MonoPosixHelper.
-                        // https://www.youtube.com/watch?v=l60MnDJklnM
+                    // ... yet the available version might be incompatible with the current runtime for unknown reasons.
+                    string isMonoPosixPreferred = Environment.GetEnvironmentVariable("MONOMOD_RUNTIMEDETOUR_MONOPOSIXHELPER");
+                    if ((Type.GetType("Mono.Runtime") != null && isMonoPosixPreferred != "0") || isMonoPosixPreferred == "1") {
+                        try {
+                            return _Native = new DetourNativeMonoPosixPlatform(native);
+                        } catch {
+                            // Good job, your copy of Mono doesn't ship with MonoPosixHelper.
+                            // https://www.youtube.com/watch?v=l60MnDJklnM (Michael Jordan: Stop It, Get Some Help)
+                        }
                     }
 
                     // Might as well try libc...
