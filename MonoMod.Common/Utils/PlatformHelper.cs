@@ -54,9 +54,15 @@ namespace MonoMod.Utils {
             }
 #endif
 
-            if (Is(Platform.Linux) && Directory.Exists("/data") && File.Exists("/system/build.prop")) {
+            if (Is(Platform.Linux) &&
+                Directory.Exists("/data") && File.Exists("/system/build.prop")
+            ) {
                 _current = Platform.Android;
-            } else if (Is(Platform.Unix) && Directory.Exists("/Applications") && Directory.Exists("/System")) {
+
+            } else if (Is(Platform.Unix) &&
+                Directory.Exists("/Applications") && Directory.Exists("/System") &&
+                Directory.Exists("/User") && !Directory.Exists("/Users")
+            ) {
                 _current = Platform.iOS;
             }
 
