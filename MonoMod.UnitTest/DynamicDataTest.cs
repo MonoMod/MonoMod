@@ -5,6 +5,7 @@ using MonoMod.Utils;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 
 namespace MonoMod.UnitTest {
     public class DynamicDataTest {
@@ -58,10 +59,27 @@ namespace MonoMod.UnitTest {
 
             dummy = DynamicData.New<Dummy>()(new {
                 A = 30,
+                B = 60L,
+                C = "90",
                 Other = "Newest"
             });
             Assert.Equal(30, dummy.A);
+            Assert.Equal(60L, dummy._B);
+            Assert.Equal("90", dummy._C);
             Assert.Equal("Newest", new DynamicData(dummy).Get<string>("Other"));
+
+            Dummy dummyTo = new Dummy();
+            Assert.Equal(69, dummyTo.A);
+            Assert.Equal(420L, dummyTo._B);
+            Assert.Equal("XYZ", dummyTo._C);
+
+            DynamicData dataTo = new DynamicData(dummyTo);
+            foreach (KeyValuePair<string, object> kvp in new DynamicData(dummy))
+                dataTo.Set(kvp.Key, kvp.Value);
+            Assert.Equal(30, dummyTo.A);
+            Assert.Equal(60L, dummyTo._B);
+            Assert.Equal("90", dummyTo._C);
+            Assert.Equal("Newest", new DynamicData(dummyTo).Get<string>("Other"));
         }
 
         public class Dummy {
