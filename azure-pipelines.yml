@@ -99,6 +99,9 @@ steps:
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'netstandard2.0'
+- template: 'azure-pipelines-postbuild.yml'
+  parameters:
+    targetFramework: 'net5.0'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
