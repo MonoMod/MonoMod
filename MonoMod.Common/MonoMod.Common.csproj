@@ -10,12 +10,13 @@
     <PackageTags>$(PackageTags)</PackageTags>
 
     <TargetFrameworks>net35;net40;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
     <OutputType>Library</OutputType>
 
     <MonoModSharedShims Condition="'$(MonoModSharedShims)' == ''">false</MonoModSharedShims>
   </PropertyGroup>
   <Import Project="..\MonoMod.Common.props" />
-  
+
   <!-- Dependencies -->
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
