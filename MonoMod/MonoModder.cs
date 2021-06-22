@@ -164,15 +164,29 @@ namespace MonoMod {
             set => _writerParameters = value;
         }
 
+        public bool GACEnabled;
+
+        private string[] _GACPathsNone = new string[0];
         protected string[] _GACPaths;
         public string[] GACPaths {
             get {
+                // .NET Core doesn't have a GAC.
+                // .NET Framework does have a GAC but only on Windows.
+                // The GAC might still be relevant when patching a Framework assembly with Core.
+                if (!GACEnabled)
+                    return _GACPathsNone;
+
                 if (_GACPaths != null)
                     return _GACPaths;
 
+
                 if (!IsMono) {
                     // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
-                    string path = Path.Combine(Environment.GetEnvironmentVariable("windir"), "Microsoft.NET");
+                    string path = Environment.GetEnvironmentVariable("windir");
+                    if (string.IsNullOrEmpty(path))
+                        return _GACPaths = _GACPathsNone;
+
+                    path = Path.Combine(path, "Microsoft.NET");
                     path = Path.Combine(path, "assembly");
                     _GACPaths = new string[] {
                         Path.Combine(path, "GAC_32"),
@@ -212,7 +226,10 @@ namespace MonoMod {
 
                 return _GACPaths;
             }
-            set => _GACPaths = value;
+            set {
+                GACEnabled = true;
+                _GACPaths = value;
+            }
         }
 
         public MonoModder() {
@@ -248,6 +265,13 @@ namespace MonoMod {
 
             string upgradeMSCORLIBStr = Environment.GetEnvironmentVariable("MONOMOD_MSCORLIB_UPGRADE");
             UpgradeMSCORLIB = string.IsNullOrEmpty(upgradeMSCORLIBStr) ? (bool?) null : (upgradeMSCORLIBStr != "0");
+
+            GACEnabled =
+#if NETFRAMEWORK
+                Environment.GetEnvironmentVariable("MONOMOD_GAC_ENABLED") != "0";
+#else
+                Environment.GetEnvironmentVariable("MONOMOD_GAC_ENABLED") == "1";
+#endif
 
             MonoModRulesManager.Register(this);
         }
