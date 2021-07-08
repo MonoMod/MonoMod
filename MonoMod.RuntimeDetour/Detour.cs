@@ -115,6 +115,7 @@ namespace MonoMod.RuntimeDetour {
         private MethodInfo _ChainedTrampoline;
 
         public Detour(MethodBase from, MethodBase to, ref DetourConfig config) {
+            from = from.GetIdentifiable();
             if (from.Equals(to))
                 throw new ArgumentException("Cannot detour a method to itself!");
 

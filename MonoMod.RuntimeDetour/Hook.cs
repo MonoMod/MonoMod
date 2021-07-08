@@ -40,6 +40,7 @@ namespace MonoMod.RuntimeDetour {
         private int? _RefTrampolineTmp;
 
         public Hook(MethodBase from, MethodInfo to, object target, ref HookConfig config) {
+            from = from.GetIdentifiable();
             Method = from;
             Target = to;
             DelegateTarget = target;

@@ -101,6 +101,7 @@ namespace MonoMod.RuntimeDetour {
         public readonly ILContext.Manipulator Manipulator;
 
         public ILHook(MethodBase from, ILContext.Manipulator manipulator, ref ILHookConfig config) {
+            from = from.GetIdentifiable();
             Method = from.Pin();
             Manipulator = manipulator;
 
