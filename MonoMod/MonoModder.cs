@@ -1174,18 +1174,14 @@ namespace MonoMod {
             if (!MatchingConditionals(prop, Module))
                 return;
 
+            prop.Name = prop.GetPatchName();
+
             MethodDefinition addMethod;
 
             PropertyDefinition targetProp = targetType.FindProperty(prop.Name);
             string backingName = $"<{prop.Name}>__BackingField";
             FieldDefinition backing = prop.DeclaringType.FindField(backingName);
             FieldDefinition targetBacking = targetType.FindField(backingName);
-
-            // Cheap fix: Apply the mod property attributes on the mod backing field.
-            // Causes the field to be ignored / replaced / ... in its own patch pass further below.
-            if (backing != null)
-                foreach (CustomAttribute attrib in prop.CustomAttributes)
-                    backing.CustomAttributes.Add(attrib.Clone());
 
             if (prop.HasCustomAttribute("MonoMod.MonoModIgnore")) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1262,17 +1258,13 @@ namespace MonoMod {
         }
 
         public virtual void PatchEvent(TypeDefinition targetType, EventDefinition srcEvent, HashSet<MethodDefinition> propMethods = null) {
+            srcEvent.Name = srcEvent.GetPatchName();
+
             MethodDefinition patched;
             EventDefinition targetEvent = targetType.FindEvent(srcEvent.Name);
             string backingName = $"<{srcEvent.Name}>__BackingField";
             FieldDefinition backing = srcEvent.DeclaringType.FindField(backingName);
             FieldDefinition targetBacking = targetType.FindField(backingName);
-
-            // Cheap fix: Apply the mod property attributes on the mod backing field.
-            // Causes the field to be ignored / replaced / ... in its own patch pass further below.
-            if (backing != null)
-                foreach (CustomAttribute attrib in srcEvent.CustomAttributes)
-                    backing.CustomAttributes.Add(attrib.Clone());
 
             if (srcEvent.HasCustomAttribute("MonoMod.MonoModIgnore")) {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1364,6 +1356,8 @@ namespace MonoMod {
             if (field.HasCustomAttribute("MonoMod.MonoModNoNew") || SkipList.Contains(typeName + "::" + field.Name) || !MatchingConditionals(field, Module))
                 return;
 
+            field.Name = field.GetPatchName();
+
             if (field.HasCustomAttribute("MonoMod.MonoModRemove") || field.HasCustomAttribute("MonoMod.MonoModReplace")) {
                 FieldDefinition targetField = targetType.FindField(field.Name);
                 if (targetField != null)
@@ -1409,6 +1403,9 @@ namespace MonoMod {
             if (SkipList.Contains(method.GetID(type: typeName)))
                 return null;
 
+            // Back in the day when patch_ was the only available alternative, this only affected replacements.
+            method.Name = method.GetPatchName();
+
             // If the method's a MonoModConstructor method, just update its attributes to make it look like one.
             if (method.HasCustomAttribute("MonoMod.MonoModConstructor")) {
                 // Add MonoModOriginalName as the orig name data gets lost otherwise.
@@ -1446,7 +1443,6 @@ namespace MonoMod {
             }
 
             if (method.HasCustomAttribute("MonoMod.MonoModReplace")) {
-                method.Name = method.GetPatchName();
                 if (existingMethod != null) {
                     existingMethod.CustomAttributes.Clear();
                     existingMethod.Attributes = method.Attributes;
