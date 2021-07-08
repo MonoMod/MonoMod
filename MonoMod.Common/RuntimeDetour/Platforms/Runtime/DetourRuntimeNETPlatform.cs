@@ -15,6 +15,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
     class DetourRuntimeNETPlatform : DetourRuntimeILPlatform {
         private static readonly object[] _NoArgs = new object[0];
 
+        private static readonly Type _RTDynamicMethod =
+            typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic);
+        private static readonly FieldInfo _RTDynamicMethod_m_owner =
+            _RTDynamicMethod?.GetField("m_owner", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
         private static readonly FieldInfo _DynamicMethod_m_method =
             typeof(DynamicMethod).GetField("m_method", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -26,11 +31,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private static readonly MethodInfo _RuntimeHelpers__CompileMethod =
             typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesIntPtr =
-            _RuntimeHelpers__CompileMethod != null &&
-            _RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IntPtr";
+            _RuntimeHelpers__CompileMethod?.GetParameters()[0].ParameterType.FullName == "System.IntPtr";
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo =
-            _RuntimeHelpers__CompileMethod != null &&
-            _RuntimeHelpers__CompileMethod.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
+            _RuntimeHelpers__CompileMethod?.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
+
+        public override MethodBase GetIdentifiable(MethodBase method) {
+            if (_RTDynamicMethod_m_owner != null && method.GetType() == _RTDynamicMethod)
+                return (MethodBase) _RTDynamicMethod_m_owner.GetValue(method);
+            return base.GetIdentifiable(method);
+        }
 
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             // Compile the method handle before getting our hands on the final method handle.

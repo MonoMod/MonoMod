@@ -10,6 +10,7 @@ namespace MonoMod.RuntimeDetour {
     public
 #endif
     interface IDetourRuntimePlatform {
+        MethodBase GetIdentifiable(MethodBase method);
         IntPtr GetNativeStart(MethodBase method);
         MethodInfo CreateCopy(MethodBase method);
         bool TryCreateCopy(MethodBase method, out MethodInfo dm);

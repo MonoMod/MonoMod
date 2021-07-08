@@ -142,6 +142,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // no-op. Not supported on all platforms, but throwing an exception doesn't make sense.
         }
 
+        public virtual MethodBase GetIdentifiable(MethodBase method) {
+#if NET35
+            lock (PinnedMethods)
+                return PinnedHandles.TryGetValue(GetMethodHandle(method), out PrivateMethodPin pin) ? pin.Pin.Method : method;
+#else
+            return PinnedHandles.TryGetValue(GetMethodHandle(method), out PrivateMethodPin pin) ? pin.Pin.Method : method;
+#endif
+        }
+
         public virtual MethodPinInfo GetPin(MethodBase method) {
 #if NET35
             lock (PinnedMethods)
@@ -170,6 +179,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public virtual IntPtr GetNativeStart(MethodBase method) {
+            method = GetIdentifiable(method);
             bool pinGot;
             PrivateMethodPin pin;
 #if NET35
@@ -184,6 +194,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public virtual void Pin(MethodBase method) {
+            method = GetIdentifiable(method);
 #if NET35
             lock (PinnedMethods) {
                 if (PinnedMethods.TryGetValue(method, out PrivateMethodPin pin)) {
@@ -221,6 +232,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public virtual void Unpin(MethodBase method) {
+            method = GetIdentifiable(method);
 #if NET35
             lock (PinnedMethods) {
                 if (!PinnedMethods.TryGetValue(method, out PrivateMethodPin pin))
@@ -245,6 +257,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public MethodInfo CreateCopy(MethodBase method) {
+            method = GetIdentifiable(method);
             if (method == null || (method.GetMethodImplementationFlags() & (MethodImplAttributes.OPTIL | MethodImplAttributes.Native | MethodImplAttributes.Runtime)) != 0) {
                 throw new InvalidOperationException($"Uncopyable method: {method?.ToString() ?? "NULL"}");
             }
@@ -254,6 +267,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public bool TryCreateCopy(MethodBase method, out MethodInfo dm) {
+            method = GetIdentifiable(method);
             if (method == null || (method.GetMethodImplementationFlags() & (MethodImplAttributes.OPTIL | MethodImplAttributes.Native | MethodImplAttributes.Runtime)) != 0) {
                 dm = null;
                 return false;
@@ -269,7 +283,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public MethodBase GetDetourTarget(MethodBase from, MethodBase to) {
-            Type context = to.DeclaringType;
+            to = GetIdentifiable(to);
 
             MethodInfo dm = null;
 

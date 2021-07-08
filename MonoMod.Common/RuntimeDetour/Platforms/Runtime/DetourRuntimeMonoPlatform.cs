@@ -20,11 +20,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
             typeof(DynamicMethod).GetField("mhandle", BindingFlags.NonPublic | BindingFlags.Instance);
 
         public override bool OnMethodCompiledWillBeCalled => false;
+#pragma warning disable CS0067 // Event never fired
         public override event OnMethodCompiledEvent OnMethodCompiled;
+#pragma warning restore CS0067
 
         protected override RuntimeMethodHandle GetMethodHandle(MethodBase method) {
+            // Compile the method handle before getting our hands on the final method handle.
+            // Note that Mono can return RuntimeMethodInfo instead of DynamicMethod in some places, thus bypassing this.
+            // Let's assume that the method was already compiled ahead of this method call if that is the case.
             if (method is DynamicMethod) {
-                // Compile the method handle before getting our hands on the final method handle.
                 _DynamicMethod_CreateDynMethod?.Invoke(method, _NoArgs);
                 if (_DynamicMethod_mhandle != null)
                     return (RuntimeMethodHandle) _DynamicMethod_mhandle.GetValue(method);

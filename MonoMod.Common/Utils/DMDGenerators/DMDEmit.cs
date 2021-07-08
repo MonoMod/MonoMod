@@ -213,7 +213,7 @@ namespace MonoMod.Utils {
                     if (mb != null && operand is MethodBase called && called.DeclaringType == null) {
                         // "Global" methods (f.e. DynamicMethods) cannot be tokenized.
                         if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Call) {
-                            if (operand is DynamicMethod target) {
+                            if (called is MethodInfo target && target.IsDynamicMethod()) {
                                 // This should be heavily optimizable.
                                 operand = _CreateMethodProxy(mb, target);
 

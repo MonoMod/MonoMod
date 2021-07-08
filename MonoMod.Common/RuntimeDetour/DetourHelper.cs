@@ -141,6 +141,9 @@ namespace MonoMod.RuntimeDetour {
 
         #region Method-related helpers
 
+        public static MethodBase GetIdentifiable(this MethodBase method)
+            => Runtime.GetIdentifiable(method);
+
         public static IntPtr GetNativeStart(this MethodBase method)
             => Runtime.GetNativeStart(method);
         public static IntPtr GetNativeStart(this Delegate method)

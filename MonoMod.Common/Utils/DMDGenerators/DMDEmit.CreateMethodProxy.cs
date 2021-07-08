@@ -19,7 +19,7 @@ namespace MonoMod.Utils {
             null
         );
 
-        private static MethodBuilder _CreateMethodProxy(MethodBuilder context, DynamicMethod target) {
+        private static MethodBuilder _CreateMethodProxy(MethodBuilder context, MethodInfo target) {
             TypeBuilder tb = (TypeBuilder) context.DeclaringType;
             string name = $".dmdproxy<{target.Name.Replace('.', '_')}>?{target.GetHashCode()}";
             MethodBuilder mb;

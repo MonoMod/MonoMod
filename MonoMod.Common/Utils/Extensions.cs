@@ -10,6 +10,7 @@ using Mono.Cecil;
 using System.Text;
 using Mono.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Reflection.Emit;
 
 namespace MonoMod.Utils {
     /// <summary>
@@ -28,6 +29,9 @@ namespace MonoMod.Utils {
         // Old versions of Mono which lack the arch field in MonoAssemblyName don't parse ProcessorArchitecture.
         private static readonly bool _MonoAssemblyNameHasArch =
             new AssemblyName("Dummy, ProcessorArchitecture=MSIL").ProcessorArchitecture == ProcessorArchitecture.MSIL;
+
+        private static readonly Type _RTDynamicMethod =
+            typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic | BindingFlags.Public);
 
         /// <summary>
         /// Determine if two types are compatible with each other (f.e. object with string, or enums with their underlying integer type).
@@ -165,6 +169,14 @@ namespace MonoMod.Utils {
                 1;
             byte* corlibInternalPtr = (byte*) (asmPtr + offs);
             *corlibInternalPtr = value ? (byte) 1 : (byte) 0;
+        }
+
+        public static bool IsDynamicMethod(this MethodBase method) {
+            // .NET throws when trying to get metadata like the token / handle, but has got RTDynamicMethod.
+            if (_RTDynamicMethod != null)
+                return method is DynamicMethod || method.GetType() == _RTDynamicMethod;
+            // Mono doesn't throw and instead returns 0 on its fake RuntimeMethodInfo.
+            return method is DynamicMethod || method.MetadataToken == 0;
         }
 
         public static object SafeGetTarget(this WeakReference weak) {

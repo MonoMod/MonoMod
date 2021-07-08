@@ -286,8 +286,8 @@ namespace MonoMod.Utils {
             if (CachedMethods.TryGetValue(method, out MethodReference methodRef) && importKind == GenericImportKind.Open)
                 return methodRef;
 
-            if (method is DynamicMethod dm)
-                return new DynamicMethodReference(Module, dm);
+            if (method is MethodInfo target && target.IsDynamicMethod())
+                return new DynamicMethodReference(Module, target);
 
             if (UseDefault)
                 return CachedMethods[method] = Default.ImportReference(method, context);

@@ -42,6 +42,7 @@ namespace MonoMod.Utils {
                 return null;
 
             if (DynamicMethodDefinition._IsMono) {
+                // Luckily we're guaranteed to be safe from DynamicMethod -> RuntimeMethodInfo conversions.
                 if (!(mi is DynamicMethod) && mi.DeclaringType != null) {
                     // get_Assembly is virtual in some versions of Mono (notably older ones and the infamous Unity fork).
                     // ?. results in a call instead of callvirt to skip a redundant nullcheck, which breaks this on ^...

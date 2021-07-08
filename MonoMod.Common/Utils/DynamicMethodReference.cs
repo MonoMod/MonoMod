@@ -17,9 +17,9 @@ namespace MonoMod.Utils {
     public
 #endif
     class DynamicMethodReference : MethodReference {
-        public DynamicMethod DynamicMethod;
+        public MethodInfo DynamicMethod;
 
-        public DynamicMethodReference(ModuleDefinition module, DynamicMethod dm)
+        public DynamicMethodReference(ModuleDefinition module, MethodInfo dm)
             : base("", module.TypeSystem.Void) {
             DynamicMethod = dm;
         }
