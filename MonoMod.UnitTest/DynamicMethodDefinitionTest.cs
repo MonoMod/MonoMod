@@ -12,6 +12,8 @@ using System.Collections.Generic;
 using System.Text;
 using MonoMod.Cil;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
+using System.Diagnostics;
+using System.Linq;
 
 namespace MonoMod.UnitTest {
     public class DynamicMethodDefinitionTest {
@@ -37,16 +39,20 @@ namespace MonoMod.UnitTest {
                 patched = dmd.Generate();
             }
 
-            // Generate an entirely new method that just throws.
-            DynamicMethod thrower;
-            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition("Thrower", typeof(void), new Type[0])) {
+            // Generate an entirely new method that just returns a stack trace for further testing.
+            DynamicMethod stacker;
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition("Stacker", typeof(StackTrace), new Type[0])) {
                 using (ILContext il = new ILContext(dmd.Definition))
                     il.Invoke(_ => {
                         ILCursor c = new ILCursor(il);
-                        c.Emit(OpCodes.Newobj, typeof(Exception).GetConstructor(new Type[0]));
-                        c.Emit(OpCodes.Throw);
+                        for (int i = 0; i < 32; i++)
+                            c.Emit(OpCodes.Nop);
+                        c.Emit(OpCodes.Newobj, typeof(StackTrace).GetConstructor(new Type[0]));
+                        for (int i = 0; i < 32; i++)
+                            c.Emit(OpCodes.Nop);
+                        c.Emit(OpCodes.Ret);
                     });
-                thrower = (DynamicMethod) DMDEmitDynamicMethodGenerator.Generate(dmd, null);
+                stacker = (DynamicMethod) DMDEmitDynamicMethodGenerator.Generate(dmd, null);
             }
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
@@ -116,15 +122,16 @@ namespace MonoMod.UnitTest {
             // .NET uses a wrapping RTDynamicMethod to avoid leaking the mutable DynamicMethod.
             // Mono uses RuntimeMethodInfo without any link to the original DynamicMethod.
             if (Type.GetType("Mono.Runtime") != null)
-                thrower.Pin();
-            Exception thrown = Assert.Throws<Exception>(thrower.CreateDelegate(typeof(Action)) as Action);
-            Assert.NotEqual(thrower, thrown.TargetSite);
-            Assert.Equal(thrower, thrown.TargetSite.GetIdentifiable());
-            Assert.Equal(thrower.GetNativeStart(), thrown.TargetSite.GetNativeStart());
+                stacker.Pin();
+            StackTrace stack = ((Func<StackTrace>) stacker.CreateDelegate(typeof(Func<StackTrace>)))();
+            MethodBase stacked = stack.GetFrames().First(f => f.GetMethod()?.IsDynamicMethod() ?? false).GetMethod();
+            Assert.NotEqual(stacker, stacked);
+            Assert.Equal(stacker, stacked.GetIdentifiable());
+            Assert.Equal(stacker.GetNativeStart(), stacked.GetNativeStart());
             // This will always be true on .NET and only be true on Mono if the method is still pinned.
-            Assert.IsAssignableFrom<DynamicMethod>(thrown.TargetSite.GetIdentifiable());
+            Assert.IsAssignableFrom<DynamicMethod>(stacked.GetIdentifiable());
             if (Type.GetType("Mono.Runtime") != null)
-                thrower.Unpin();
+                stacker.Unpin();
         }
 
         public const string StringOriginal = "Hello from ExampleMethod!";
