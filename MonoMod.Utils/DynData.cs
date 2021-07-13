@@ -17,6 +17,7 @@ namespace MonoMod.Utils {
         private static readonly ConditionalWeakTable<object, _Data_> _DataMap = new ConditionalWeakTable<object, _Data_>();
 #else
         private static readonly Dictionary<WeakReference, _Data_> _DataMap = new Dictionary<WeakReference, _Data_>(new WeakReferenceComparer());
+        private static readonly HashSet<WeakReference> _DataMapDead = new HashSet<WeakReference>();
 #endif
         private static readonly Dictionary<string, Func<TTarget, object>> _SpecialGetters = new Dictionary<string, Func<TTarget, object>>();
         private static readonly Dictionary<string, Action<TTarget, object>> _SpecialSetters = new Dictionary<string, Action<TTarget, object>>();
@@ -56,23 +57,23 @@ namespace MonoMod.Utils {
 
         static DynData() {
 #if NETFRAMEWORK3
-            _DataHelper_.Collected += () => {
+            GCListener.OnCollect += () => {
                 if (CreationsInProgress != 0)
                     return;
 
                 lock (_DataMap) {
-                    HashSet<WeakReference> dead = new HashSet<WeakReference>();
-
                     foreach (KeyValuePair<WeakReference, _Data_> kvp in _DataMap) {
                         if (kvp.Key.SafeGetIsAlive())
                             continue;
-                        dead.Add(kvp.Key);
+                        _DataMapDead.Add(kvp.Key);
                         kvp.Value.Dispose();
                     }
 
-                    foreach (WeakReference weak in dead) {
+                    foreach (WeakReference weak in _DataMapDead) {
                         _DataMap.Remove(weak);
                     }
+
+                    _DataMapDead.Clear();
                 }
             };
 #endif
@@ -192,58 +193,6 @@ namespace MonoMod.Utils {
         public void Dispose() {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-#if NETFRAMEWORK3
-        private sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
-            public override bool Equals(WeakReference x, WeakReference y)
-                => ReferenceEquals(x.SafeGetTarget(), y.SafeGetTarget()) && x.SafeGetIsAlive() == y.SafeGetIsAlive();
-
-            public override int GetHashCode(WeakReference obj)
-                => obj.SafeGetTarget()?.GetHashCode() ?? 0;
-        }
-#endif
-    }
-
-    internal static class _DataHelper_ {
-        public static event Action Collected;
-        private static bool Unloading;
-
-        static _DataHelper_() {
-            new CollectionDummy();
-
-#if NETSTANDARD
-            Type t_AssemblyLoadContext = typeof(Assembly).GetTypeInfo().Assembly.GetType("System.Runtime.Loader.AssemblyLoadContext");
-            if (t_AssemblyLoadContext != null) {
-                object alc = t_AssemblyLoadContext.GetMethod("GetLoadContext").Invoke(null, new object[] { typeof(_DataHelper_).Assembly });
-                EventInfo e_Unloading = t_AssemblyLoadContext.GetEvent("Unloading");
-                e_Unloading.AddEventHandler(alc, Delegate.CreateDelegate(
-                    e_Unloading.EventHandlerType,
-                    typeof(_DataHelper_).GetMethod("UnloadingALC", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(t_AssemblyLoadContext)
-                ));
-            }
-#endif
-        }
-
-#if NETSTANDARD
-#pragma warning disable IDE0051 // Remove unused private members
-#pragma warning disable IDE0060 // Remove unused parameter
-        private static void UnloadingALC<T>(T alc) {
-#pragma warning restore IDE0051 // Remove unused private members
-#pragma warning restore IDE0060 // Remove unused parameter
-            Unloading = true;
-        }
-#endif
-
-        private sealed class CollectionDummy {
-            ~CollectionDummy() {
-                Unloading |= AppDomain.CurrentDomain.IsFinalizingForUnload();
-
-                if (!Unloading)
-                    GC.ReRegisterForFinalize(this);
-
-                Collected?.Invoke();
-            }
         }
 
     }
