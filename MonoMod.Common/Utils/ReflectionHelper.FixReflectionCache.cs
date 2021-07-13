@@ -26,17 +26,17 @@ namespace MonoMod.Utils {
         private static PropertyInfo p_RuntimeType_Cache =
             typeof(Type).Assembly
             .GetType("System.RuntimeType")
-            .GetProperty("Cache", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            ?.GetProperty("Cache", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
         private static MethodInfo m_RuntimeTypeCache_GetFieldList =
             typeof(Type).Assembly
             .GetType("System.RuntimeType+RuntimeTypeCache")
-            .GetMethod("GetFieldList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            ?.GetMethod("GetFieldList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
         private static MethodInfo m_RuntimeTypeCache_GetPropertyList =
             typeof(Type).Assembly
             .GetType("System.RuntimeType+RuntimeTypeCache")
-            .GetMethod("GetPropertyList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            ?.GetMethod("GetPropertyList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
 #if !NETFRAMEWORK3
         private static readonly ConditionalWeakTable<Type, object> _CacheFixed = new ConditionalWeakTable<Type, object>();
