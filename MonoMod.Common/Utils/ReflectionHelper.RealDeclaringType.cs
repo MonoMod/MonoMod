@@ -40,7 +40,7 @@ namespace MonoMod.Utils {
         public static Type GetModuleType(this Module module) {
             // Sadly we can't blindly resolve type 0x02000001 as the runtime throws ArgumentException.
 
-            if (module == null || !t_RuntimeModule.IsInstanceOfType(module))
+            if (module == null || t_RuntimeModule == null || !t_RuntimeModule.IsInstanceOfType(module))
                 return null;
 
             // .NET
