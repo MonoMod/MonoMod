@@ -20,8 +20,11 @@ namespace MonoMod.Utils {
 
         // .NET Framework can break member ordering if using Module.Resolve* on certain members.
 
-        private static object[] _NoArgs = new object[0];
-        private static object[] _CacheGetterArgs = { /* MemberListType.All */ 0, /* name apparently always null? */ null };
+        private static readonly object[] _CacheGetterArgs = { /* MemberListType.All */ 0, /* name apparently always null? */ null };
+
+        private static Type t_RuntimeType =
+            typeof(Type).Assembly
+            .GetType("System.RuntimeType");
 
         private static PropertyInfo p_RuntimeType_Cache =
             typeof(Type).Assembly
@@ -72,34 +75,43 @@ namespace MonoMod.Utils {
         }
 
         public static void FixReflectionCache(this Type type) {
-            if (p_RuntimeType_Cache == null ||
+            if (t_RuntimeType == null ||
+                p_RuntimeType_Cache == null ||
                 m_RuntimeTypeCache_GetFieldList == null ||
                 m_RuntimeTypeCache_GetPropertyList == null)
                 return;
 
+            for (; type != null; type = type.DeclaringType) {
+                // All types SHOULD inherit RuntimeType, including those built at runtime.
+                // One might never know what awaits us in the depths of reflection hell though.
+                if (!t_RuntimeType.IsInstanceOfType(type))
+                    continue;
+
 #if NETFRAMEWORK3
-            WeakReference key = new WeakReference(type);
-            lock (_CacheFixed) {
-                if (_CacheFixed.ContainsKey(key))
-                    return;
-                _CacheFixed.Add(key, new object());
-            }
-            Type rt = type;
-            {
+                WeakReference key = new WeakReference(type);
+                lock (_CacheFixed) {
+                    if (_CacheFixed.ContainsKey(key))
+                        continue;
+                    _CacheFixed.Add(key, new object());
+                }
+                Type rt = type;
+                {
 #else
-            _CacheFixed.GetValue(type, rt => {
+                _CacheFixed.GetValue(type, rt => {
 #endif
 
-                object cache = p_RuntimeType_Cache.GetValue(rt, _NoArgs);
-                _FixReflectionCacheOrder<PropertyInfo>(cache, m_RuntimeTypeCache_GetPropertyList);
-                _FixReflectionCacheOrder<FieldInfo>(cache, m_RuntimeTypeCache_GetFieldList);
+                    // All RuntimeTypes MUST have a cache, the getter is non-virtual, it creates on demand and asserts non-null.
+                    object cache = p_RuntimeType_Cache.GetValue(rt, _NoArgs);
+                    _FixReflectionCacheOrder<PropertyInfo>(cache, m_RuntimeTypeCache_GetPropertyList);
+                    _FixReflectionCacheOrder<FieldInfo>(cache, m_RuntimeTypeCache_GetFieldList);
 
 #if !NETFRAMEWORK3
-                return new object();
-            });
+                    return new object();
+                });
 #else
-            }
+                }
 #endif
+            }
         }
 
         private static void _FixReflectionCacheOrder<T>(object cache, MethodInfo getter) where T : MemberInfo {

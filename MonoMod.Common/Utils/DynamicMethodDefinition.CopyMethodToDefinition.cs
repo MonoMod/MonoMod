@@ -209,23 +209,26 @@ namespace MonoMod.Utils {
 
                         case TokenResolutionMode.Method:
                             MethodBase resolvedMethod = moduleFrom.ResolveMethod(token, typeArguments, methodArguments);
-                            resolvedMethod.DeclaringType?.FixReflectionCacheAuto();
+                            resolvedMethod.GetRealDeclaringType()?.FixReflectionCacheAuto();
                             return moduleTo.ImportReference(resolvedMethod);
 
                         case TokenResolutionMode.Field:
                             FieldInfo resolvedField = moduleFrom.ResolveField(token, typeArguments, methodArguments);
-                            resolvedField.DeclaringType?.FixReflectionCacheAuto();
+                            resolvedField.GetRealDeclaringType()?.FixReflectionCacheAuto();
                             return moduleTo.ImportReference(resolvedField);
 
                         case TokenResolutionMode.Any:
                             switch (moduleFrom.ResolveMember(token, typeArguments, methodArguments)) {
                                 case Type i:
+                                    i.FixReflectionCacheAuto();
                                     return moduleTo.ImportReference(i);
 
                                 case MethodBase i:
+                                    i.GetRealDeclaringType()?.FixReflectionCacheAuto();
                                     return moduleTo.ImportReference(i);
 
                                 case FieldInfo i:
+                                    i.GetRealDeclaringType()?.FixReflectionCacheAuto();
                                     return moduleTo.ImportReference(i);
 
                                 case var resolved:

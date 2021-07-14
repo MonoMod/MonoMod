@@ -18,6 +18,8 @@ namespace MonoMod.Utils {
 #endif
     static partial class ReflectionHelper {
 
+        private static readonly object[] _NoArgs = new object[0];
+
         internal static readonly Dictionary<string, WeakReference/*<Assembly>*/> AssemblyCache = new Dictionary<string, WeakReference>();
         internal static readonly Dictionary<string, WeakReference/*<Assembly>*/[]> AssembliesCache = new Dictionary<string, WeakReference[]>();
         internal static readonly Dictionary<string, WeakReference/*<MemberInfo>*/> ResolveReflectionCache = new Dictionary<string, WeakReference>();
