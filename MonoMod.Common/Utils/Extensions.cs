@@ -176,7 +176,9 @@ namespace MonoMod.Utils {
             if (_RTDynamicMethod != null)
                 return method is DynamicMethod || method.GetType() == _RTDynamicMethod;
             // Mono doesn't throw and instead returns 0 on its fake RuntimeMethodInfo.
-            return method is DynamicMethod || method.MetadataToken == 0;
+            // Note that other runtime-internal methods (such as int[,].Get) are still resolvable yet have a token of 0.
+            // "Luckily" all MonoMethod-ified DynamicMethods *should* have a declaring type of typeof(object)
+            return method is DynamicMethod || (method.DeclaringType == typeof(object) && method.MetadataToken == 0);
         }
 
         public static object SafeGetTarget(this WeakReference weak) {
