@@ -175,10 +175,25 @@ namespace MonoMod.Utils {
             // .NET throws when trying to get metadata like the token / handle, but has got RTDynamicMethod.
             if (_RTDynamicMethod != null)
                 return method is DynamicMethod || method.GetType() == _RTDynamicMethod;
+
             // Mono doesn't throw and instead returns 0 on its fake RuntimeMethodInfo.
             // Note that other runtime-internal methods (such as int[,].Get) are still resolvable yet have a token of 0.
-            // "Luckily" all MonoMethod-ified DynamicMethods *should* have a declaring type of typeof(object)
-            return method is DynamicMethod || (method.DeclaringType == typeof(object) && method.MetadataToken == 0);
+            if (method is DynamicMethod)
+                return true;
+
+            // Fake DynamicMethods MUST have those.
+            if (method.MetadataToken != 0 ||
+                !method.IsStatic ||
+                !method.IsPublic ||
+                (method.Attributes & System.Reflection.MethodAttributes.ReuseSlot) != System.Reflection.MethodAttributes.ReuseSlot)
+                return false;
+
+            // Fake DynamicMethods aren't part of their declaring type.
+            // Sounds obvious, but seems like the only real method to verify that it's a fake DynamicMethod.
+            foreach (MethodInfo other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                if (method == other)
+                    return false;
+            return true;
         }
 
         public static object SafeGetTarget(this WeakReference weak) {
