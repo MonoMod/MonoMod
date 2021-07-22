@@ -177,11 +177,51 @@ namespace MonoMod.UnitTest {
                 }
 #endif
 
+                // This was provided by a Harmony user.
+                // Theoretically this should be a DynamicMethodDefinition test but who knows what else this will unearth.
+#if true
+                try {
+                    new Thrower(1);
+                } catch (Exception e) {
+                    Assert.Equal("1", e.Message);
+                }
+
+                using (Hook h = new Hook(
+                    typeof(Thrower).GetConstructor(new Type[] { typeof(int) }),
+                    new Action<Action<Thrower, int>, Thrower, int>((orig, self, a) => {
+                        try {
+                            orig(self, a + 2);
+                        } catch (Exception e) {
+                            throw new Exception($"{a} + 2 = {e.Message}");
+                        }
+                    })
+                )) {
+                    try {
+                        new Thrower(1);
+                    } catch (Exception e) {
+                        Assert.Equal("1 + 2 = 3", e.Message);
+                    }
+                }
+
+                try {
+                    new Thrower(1);
+                } catch (Exception e) {
+                    Assert.Equal("1", e.Message);
+                }
+#endif
+
             }
         }
 
         public static int TestStaticMethod_A(int a, int b) {
             return a * b * 2;
+        }
+
+        public class Thrower {
+            int b;
+            public Thrower(int a) {
+                throw new Exception(a.ToString());
+            }
         }
 
     }
