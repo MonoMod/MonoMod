@@ -17,6 +17,7 @@ namespace MonoMod.RuntimeDetour {
         void Pin(MethodBase method);
         void Unpin(MethodBase method);
         MethodBase GetDetourTarget(MethodBase from, MethodBase to);
+        uint TryMemAllocScratchCloseTo(IntPtr target, out IntPtr ptr, int size);
 
         bool OnMethodCompiledWillBeCalled { get; }
         event OnMethodCompiledEvent OnMethodCompiled;

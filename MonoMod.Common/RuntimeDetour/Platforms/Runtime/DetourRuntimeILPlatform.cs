@@ -32,6 +32,9 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public abstract bool OnMethodCompiledWillBeCalled { get; }
         public abstract event OnMethodCompiledEvent OnMethodCompiled;
 
+        private IntPtr ReferenceNonDynamicPoolPtr;
+        private IntPtr ReferenceDynamicPoolPtr;
+
         public DetourRuntimeILPlatform() {
             // Perform a selftest if this runtime requires special handling for instance methods returning structs.
             // This is documented behavior for coreclr, but affects other runtimes (i.e. mono) as well!
@@ -54,6 +57,20 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 fixed (GlueThiscallStructRetPtrOrder* orderPtr = &GlueThiscallStructRetPtr) {
                     ((Func<IntPtr, IntPtr, IntPtr, _SelftestStruct>) Delegate.CreateDelegate(typeof(Func<IntPtr, IntPtr, IntPtr, _SelftestStruct>), this, selftestGetStruct))((IntPtr) orderPtr, (IntPtr) orderPtr, selfPtr);
                 }
+            }
+
+            // Get some reference (not reference as in ref but reference as in "to compare against") dyn and non-dyn method pointers.
+            Pin(selftestGetRefPtr);
+            ReferenceNonDynamicPoolPtr = GetNativeStart(selftestGetRefPtr);
+
+            if (DynamicMethodDefinition.IsDynamicILAvailable) {
+                MethodBase scratch;
+                using (DynamicMethodDefinition copy = new DynamicMethodDefinition(_MemAllocScratchDummy)) {
+                    copy.Name = $"MemAllocScratch<Reference>";
+                    scratch = DMDEmitDynamicMethodGenerator.Generate(copy);
+                }
+                Pin(scratch);
+                ReferenceDynamicPoolPtr = GetNativeStart(scratch);
             }
         }
 
@@ -340,6 +357,69 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
 
             return dm ?? to;
+        }
+
+        public uint TryMemAllocScratchCloseTo(IntPtr target, out IntPtr ptr, int size) {
+            /* We can create a new method that is of the same type (dynamic or non-dynamic) as the target method,
+             * assume that it will be closer to it than a new method of the opposite type, and use it as a pseudo-malloc.
+             *
+             * This is only (kinda?) documented on mono so far.
+             * See https://www.mono-project.com/docs/advanced/runtime/docs/memory-management/#memory-management-for-executable-code
+             * It seems to also be observed on .NET Framework to some extent, although no pattern is determined yet. Maybe x86 debug?
+             *
+             * In the future, this might end up requiring and calling new native platform methods.
+             * Ideally this should be moved into the native platform which then uses some form of VirtualAlloc / mmap hackery.
+             *
+             * This is quite ugly, especially because we have no direct control over the allocated memory location nor size.
+             * -ade
+             */
+
+            if (size == 0 ||
+                size > _MemAllocScratchDummySafeSize) {
+                ptr = IntPtr.Zero;
+                return 0;
+            }
+
+            const long GB = 1024 * 1024 * 1024;
+            bool isNonDynamic = Math.Abs((long) target - (long) ReferenceNonDynamicPoolPtr) < GB;
+            bool isDynamic = Math.Abs((long) target - (long) ReferenceDynamicPoolPtr) < GB;
+            if (!isNonDynamic && !isDynamic) {
+                ptr = IntPtr.Zero;
+                return 0;
+            }
+
+            MethodBase scratch;
+            using (DynamicMethodDefinition copy = new DynamicMethodDefinition(_MemAllocScratchDummy)) {
+                copy.Name = $"MemAllocScratch<{(long) target:X16}>";
+                
+                // On some versions of mono it is also possible to get dynamics close to non-dynamics by invoking before force-JITing.
+                if (isDynamic)
+                    scratch = DMDEmitDynamicMethodGenerator.Generate(copy);
+                else
+                    scratch = DMDCecilGenerator.Generate(copy);
+            }
+
+            Pin(scratch);
+            ptr = GetNativeStart(scratch);
+            DetourHelper.Native.MakeWritable(ptr, _MemAllocScratchDummySafeSize);
+            return _MemAllocScratchDummySafeSize;
+        }
+
+        /* Random garbage method that should JIT into enough memory for us to write arbitrary data to,
+         * but not too much for it to become wasteful once it's called often.
+         * Use https://sharplab.io/ to estimate the footprint of the dummy when modifying it.
+         * Make sure to measure both release and debug mode AND both x86 and x64 JIT results!
+         * Neither mono nor ARM are options on sharplab.io, but hopefully it'll be enough as well...
+         * -ade
+         */
+        // Lowest measured so far: ret @ 0x19 on .NET Core x64 Release.
+        protected static readonly uint _MemAllocScratchDummySafeSize = 16;
+        protected static readonly MethodInfo _MemAllocScratchDummy =
+            typeof(DetourRuntimeILPlatform).GetMethod(nameof(MemAllocScratchDummy), BindingFlags.NonPublic | BindingFlags.Static);
+        private static int MemAllocScratchDummy(int a, int b) {
+            if (a >= 1024 && b >= 1024)
+                return a + b;
+            return MemAllocScratchDummy(a + b, b + 1);
         }
 
         protected class PrivateMethodPin {
