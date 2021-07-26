@@ -13,6 +13,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Data.SqlClient;
 using Mono.Cecil;
+using MonoMod.RuntimeDetour.Platforms;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -57,6 +58,32 @@ namespace MonoMod.UnitTest {
                     Console.WriteLine($"TestStaticMethod(2, 3): {staticResult}");
                     Assert.Equal(12, staticResult);
                 }
+#endif
+
+                // This wasn't provided by anyone and instead is just an internal test.
+#if true
+                MethodInfo dummyA = typeof(DetourExtTest).GetMethod("DummyA").Pin();
+                MethodInfo dummyB = typeof(DetourExtTest).GetMethod("DummyB").Pin();
+                MethodInfo dummyC = (MethodInfo) dm;
+                IntPtr dummyAPtr = dummyA.GetNativeStart();
+                Assert.True(DetourHelper.Runtime.TryMemAllocScratchCloseTo(dummyAPtr, out IntPtr allocAPtr, -1) != 0);
+                Assert.NotEqual(IntPtr.Zero, allocAPtr);
+                IntPtr dummyBPtr = dummyB.GetNativeStart();
+                Assert.True(DetourHelper.Runtime.TryMemAllocScratchCloseTo(dummyBPtr, out IntPtr allocBPtr, -1) != 0);
+                Assert.NotEqual(IntPtr.Zero, allocBPtr);
+                IntPtr dummyCPtr = dummyC.GetNativeStart();
+                Assert.True(DetourHelper.Runtime.TryMemAllocScratchCloseTo(dummyCPtr, out IntPtr allocCPtr, -1) != 0);
+                Assert.NotEqual(IntPtr.Zero, allocCPtr);
+                Console.WriteLine($"dummyAPtr: 0x{(long) dummyAPtr:X16}");
+                Console.WriteLine($"allocAPtr: 0x{(long) allocAPtr:X16}");
+                Console.WriteLine($"dummyBPtr: 0x{(long) dummyBPtr:X16}");
+                Console.WriteLine($"allocBPtr: 0x{(long) allocBPtr:X16}");
+                Console.WriteLine($"dummyCPtr: 0x{(long) dummyCPtr:X16}");
+                Console.WriteLine($"allocCPtr: 0x{(long) allocCPtr:X16}");
+                // Close scratch allocs should ideally be within a 1 GiB range of the original method.
+                Assert.True(Math.Abs((long) dummyAPtr - (long) allocAPtr) < 1024 * 1024 * 1024, "dummyAPtr and allocAPtr are too far apart.");
+                Assert.True(Math.Abs((long) dummyBPtr - (long) allocBPtr) < 1024 * 1024 * 1024, "dummyBPtr and allocBPtr are too far apart.");
+                Assert.True(Math.Abs((long) dummyCPtr - (long) allocCPtr) < 1024 * 1024 * 1024, "dummyCPtr and allocCPtr are too far apart.");
 #endif
 
                 // This was provided by Chicken Bones (tModLoader).
@@ -222,6 +249,16 @@ namespace MonoMod.UnitTest {
             public Thrower(int a) {
                 throw new Exception(a.ToString());
             }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
+        public static int DummyA(int a, int b) {
+            return a * b * 2;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
+        public static int DummyB(int a, int b) {
+            return a * b * 2;
         }
 
     }
