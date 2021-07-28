@@ -102,6 +102,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                             (long) detour.Extra - ((long) detour.Method + offs + sizeof(uint))
                         ));
                         // <to>
+                        offs = 0;
                         detour.Extra.Write(ref offs, (ulong) detour.Target);
                     } else {
                         detour.Method.Write(ref offs, (uint) 0x00000000);
