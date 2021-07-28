@@ -401,7 +401,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             Pin(scratch);
             ptr = GetNativeStart(scratch);
-            DetourHelper.Native.MakeWritable(ptr, _MemAllocScratchDummySafeSize);
+            DetourHelper.Native.MakeReadWriteExecutable(ptr, _MemAllocScratchDummySafeSize);
             return _MemAllocScratchDummySafeSize;
         }
 

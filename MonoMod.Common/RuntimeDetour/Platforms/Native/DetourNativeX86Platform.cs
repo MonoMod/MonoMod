@@ -97,14 +97,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     // JMP [rip+0]
                     detour.Method.Write(ref offs, (byte) 0xFF);
                     detour.Method.Write(ref offs, (byte) 0x25);
-                    if ((DetourType) detour.Type == DetourType.Abs64Split)
+                    if ((DetourType) detour.Type == DetourType.Abs64Split) {
                         detour.Method.Write(ref offs, (uint) (int) (
                             (long) detour.Extra - ((long) detour.Method + offs + sizeof(uint))
                         ));
-                    else
+                        // <to>
+                        detour.Extra.Write(ref offs, (ulong) detour.Target);
+                    } else {
                         detour.Method.Write(ref offs, (uint) 0x00000000);
-                    // <to>
-                    detour.Method.Write(ref offs, (ulong) detour.Target);
+                        // <to>
+                        detour.Method.Write(ref offs, (ulong) detour.Target);
+                    }
                     break;
 
                 default:
@@ -141,6 +144,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         public void MakeExecutable(IntPtr src, uint size) {
+            // no-op.
+        }
+
+        public void MakeReadWriteExecutable(IntPtr src, uint size) {
             // no-op.
         }
 

@@ -30,6 +30,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
         }
 
+        public void MakeReadWriteExecutable(IntPtr src, uint size) {
+            if (!VirtualProtect(src, (IntPtr) size, PAGE.EXECUTE_READWRITE, out _)) {
+                LogAllSections("MakeExecutable", src, size);
+                throw new Win32Exception();
+            }
+        }
+
         public void FlushICache(IntPtr src, uint size) {
             if (!FlushInstructionCache(GetCurrentProcess(), src, (UIntPtr) size)) {
                 LogAllSections("FlushICache", src, size);

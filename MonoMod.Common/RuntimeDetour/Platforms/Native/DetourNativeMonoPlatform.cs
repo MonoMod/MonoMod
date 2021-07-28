@@ -53,6 +53,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
             SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
         }
 
+        public void MakeReadWriteExecutable(IntPtr src, uint size) {
+            SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
+        }
+
         public void FlushICache(IntPtr src, uint size) {
             // mono_arch_flush_icache isn't reliably exported.
             Inner.FlushICache(src, size);

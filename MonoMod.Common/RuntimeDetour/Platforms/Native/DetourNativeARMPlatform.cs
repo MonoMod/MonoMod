@@ -192,6 +192,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // no-op.
         }
 
+        public void MakeReadWriteExecutable(IntPtr src, uint size) {
+            // no-op.
+        }
+
         public unsafe void FlushICache(IntPtr src, uint size) {
             // On ARM, we must flush the instruction cache.
             // Sadly, mono_arch_flush_icache isn't reliably exported.

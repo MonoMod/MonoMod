@@ -46,6 +46,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
             SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
         }
 
+        public void MakeReadWriteExecutable(IntPtr src, uint size) {
+            SetMemPerms(src, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE | MmapProts.PROT_EXEC);
+        }
+
         public void FlushICache(IntPtr src, uint size) {
             // There is no cache flushing function in MPH.
             Inner.FlushICache(src, size);
