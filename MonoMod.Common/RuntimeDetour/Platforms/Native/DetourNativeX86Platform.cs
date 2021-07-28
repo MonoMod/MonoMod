@@ -43,7 +43,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             // Sometimes we can use runtime-specific tricks to allocate some memory close to the from pointer.
             // This only works for managed methods, but it helps with avoiding overwriting adjacent memory.
-            if (DetourHelper.Runtime.TryMemAllocScratchCloseTo(from, out extra, 8) >= 8) {
+            if ((DetourHelper.Runtime?.TryMemAllocScratchCloseTo(from, out extra, 8) ?? 0) >= 8) {
                 rel = (long) extra - ((long) from + 6);
                 if (Is32Bit(rel) || Is32Bit(-rel))
                     return DetourType.Abs64Split;

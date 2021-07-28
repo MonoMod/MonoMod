@@ -15,6 +15,7 @@ namespace MonoMod.RuntimeDetour {
     static class DetourHelper {
 
         private static readonly object _RuntimeLock = new object();
+        private static bool _RuntimeInit = false;
         private static IDetourRuntimePlatform _Runtime;
         public static IDetourRuntimePlatform Runtime {
             get {
@@ -24,6 +25,10 @@ namespace MonoMod.RuntimeDetour {
                 lock (_RuntimeLock) {
                     if (_Runtime != null)
                         return _Runtime;
+
+                    if (_RuntimeInit)
+                        return null;
+                    _RuntimeInit = true;
 
                     if (Type.GetType("Mono.Runtime") != null) {
                         _Runtime = new DetourRuntimeMonoPlatform();
@@ -40,6 +45,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private static readonly object _NativeLock = new object();
+        private static bool _NativeInit = false;
         private static IDetourNativePlatform _Native;
         public static IDetourNativePlatform Native {
             get {
@@ -49,6 +55,10 @@ namespace MonoMod.RuntimeDetour {
                 lock (_NativeLock) {
                     if (_Native != null)
                         return _Native;
+
+                    if (_NativeInit)
+                        return null;
+                    _NativeInit = true;
 
                     IDetourNativePlatform native;
 
