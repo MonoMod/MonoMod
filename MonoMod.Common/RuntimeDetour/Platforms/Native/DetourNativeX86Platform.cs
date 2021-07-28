@@ -45,7 +45,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // This only works for managed methods, but it helps with avoiding overwriting adjacent memory.
             if (DetourHelper.Runtime.TryMemAllocScratchCloseTo(from, out extra, 8) >= 8) {
                 rel = (long) extra - ((long) from + 6);
-                if (Is32Bit(rel) && !Is32Bit(rel))
+                if (Is32Bit(rel) || Is32Bit(-rel))
                     return DetourType.Abs64Split;
             }
 
