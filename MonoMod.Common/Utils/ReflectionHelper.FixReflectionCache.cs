@@ -97,7 +97,7 @@ namespace MonoMod.Utils {
                         object cache;
                         entry.Cache = cache = p_RuntimeType_Cache.GetValue(type, _NoArgs);
                         entry.Properties = _GetArray(cache, m_RuntimeTypeCache_GetPropertyList);
-                        entry.Fields = _GetArray(cache, m_RuntimeTypeCache_GetPropertyList);
+                        entry.Fields = _GetArray(cache, m_RuntimeTypeCache_GetFieldList);
                     } else if (!_Verify(entry, type)) {
                         continue;
                     }
