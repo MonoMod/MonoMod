@@ -24,6 +24,9 @@ namespace MonoMod.UnitTest {
                 // The following use cases are not meant to be usage examples.
                 // Please take a look at DetourTest and HookTest instead.
 
+                // Just to verify that having a first chance exception handler doesn't introduce any conflicts.
+                AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
+
 #if true
                 using (NativeDetour d = new NativeDetour(
                     // .GetNativeStart() to enforce a native detour.
@@ -237,7 +240,24 @@ namespace MonoMod.UnitTest {
                 }
 #endif
 
+                // This was provided by tModLoader.
+#if true
+                using (Hook h = new Hook(
+                    typeof(Process).GetMethod("Start", BindingFlags.Public | BindingFlags.Instance),
+                    new Func<Func<Process, bool>, Process, bool>((orig, self) => {
+                        return orig(self);
+                    })
+                )) {
+                }
+#endif
+
+                AppDomain.CurrentDomain.FirstChanceException -= OnFirstChanceException;
+
             }
+        }
+
+        private void OnFirstChanceException(object sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e) {
+            // nop
         }
 
         public static int TestStaticMethod_A(int a, int b) {
