@@ -41,7 +41,7 @@ namespace MonoMod.Utils {
 
         private sealed class CollectionDummy {
             ~CollectionDummy() {
-                Unloading |= AppDomain.CurrentDomain.IsFinalizingForUnload();
+                Unloading |= Environment.HasShutdownStarted;
 
                 if (!Unloading)
                     GC.ReRegisterForFinalize(this);
