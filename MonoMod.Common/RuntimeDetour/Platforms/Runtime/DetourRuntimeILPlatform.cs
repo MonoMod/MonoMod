@@ -410,13 +410,14 @@ namespace MonoMod.RuntimeDetour.Platforms {
          * Use https://sharplab.io/ to estimate the footprint of the dummy when modifying it.
          * Make sure to measure both release and debug mode AND both x86 and x64 JIT results!
          * Neither mono nor ARM are options on sharplab.io, but hopefully it'll be enough as well...
+         * Note that it MUST be public as there have been reported cases of visibility checks kicking in!
          * -ade
          */
         // Lowest measured so far: ret @ 0x19 on .NET Core x64 Release.
         protected static readonly uint _MemAllocScratchDummySafeSize = 16;
         protected static readonly MethodInfo _MemAllocScratchDummy =
             typeof(DetourRuntimeILPlatform).GetMethod(nameof(MemAllocScratchDummy), BindingFlags.NonPublic | BindingFlags.Static);
-        private static int MemAllocScratchDummy(int a, int b) {
+        public static int MemAllocScratchDummy(int a, int b) {
             if (a >= 1024 && b >= 1024)
                 return a + b;
             return MemAllocScratchDummy(a + b, b + 1);
