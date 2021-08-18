@@ -33,6 +33,8 @@ namespace MonoMod.UnitTest {
                 foreach (Instruction instr in dmd.Definition.Body.Instructions) {
                     if (instr.Operand as string == StringOriginal)
                         instr.Operand = StringPatched;
+                    else if (instr.MatchCallOrCallvirt<DynamicMethodDefinitionTest>(nameof(ExampleMethod)))
+                        instr.Operand = dmd.Definition;
                 }
 
                 // Generate a DynamicMethod from the modified MethodDefinition.
@@ -108,6 +110,7 @@ namespace MonoMod.UnitTest {
 
             // Run the DynamicMethod.
             Assert.Equal(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 2 }));
+            Assert.Equal(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 1337 }));
 
             // Detour the original method to the patched DynamicMethod, then run the patched method.
             using (new Detour(original, patched)) {
@@ -140,6 +143,9 @@ namespace MonoMod.UnitTest {
         public static volatile int Counter;
 
         public static Tuple<string, int> ExampleMethod(int i) {
+            if (i == 1337)
+                return ExampleMethod(0);
+
             TestObjectGeneric<string> test = new TestObjectGeneric<string>();
             try {
                 Console.WriteLine(StringOriginal);
