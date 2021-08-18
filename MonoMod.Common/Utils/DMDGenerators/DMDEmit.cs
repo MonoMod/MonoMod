@@ -180,7 +180,7 @@ namespace MonoMod.Utils {
                         operand = param.Index + paramOffs;
 
                     } else if (operand is MemberReference mref) {
-                        MemberInfo member = mref.ResolveReflection();
+                        MemberInfo member = mref == def ? _mb : mref.ResolveReflection();
                         operand = member;
 #if !NETSTANDARD
                         if (mb != null && member != null) {

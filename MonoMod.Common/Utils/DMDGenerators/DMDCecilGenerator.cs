@@ -63,15 +63,19 @@ namespace MonoMod.Utils {
 
             try {
 
+                MethodDefinition clone = null;
+
                 TypeReference tr_IsVolatile = new TypeReference("System.Runtime.CompilerServices", "IsVolatile", module, module.TypeSystem.CoreLibrary);
 
 #pragma warning disable IDE0039 // Use local function
                 Relinker relinker = (mtp, ctx) => {
+                    if (mtp == def)
+                        return clone;
                     return module.ImportReference(mtp);
                 };
 #pragma warning restore IDE0039 // Use local function
 
-                MethodDefinition clone = new MethodDefinition(dmd.Name ?? "_" + def.Name.Replace('.', '_'), def.Attributes, module.TypeSystem.Void) {
+                clone = new MethodDefinition(dmd.Name ?? "_" + def.Name.Replace('.', '_'), def.Attributes, module.TypeSystem.Void) {
                     MethodReturnType = def.MethodReturnType,
                     Attributes = Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
                     ImplAttributes = Mono.Cecil.MethodImplAttributes.IL | Mono.Cecil.MethodImplAttributes.Managed,

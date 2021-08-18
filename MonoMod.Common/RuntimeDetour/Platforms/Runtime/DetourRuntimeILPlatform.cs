@@ -416,7 +416,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         // Lowest measured so far: ret @ 0x19 on .NET Core x64 Release.
         protected static readonly uint _MemAllocScratchDummySafeSize = 16;
         protected static readonly MethodInfo _MemAllocScratchDummy =
-            typeof(DetourRuntimeILPlatform).GetMethod(nameof(MemAllocScratchDummy), BindingFlags.NonPublic | BindingFlags.Static);
+            typeof(DetourRuntimeILPlatform).GetMethod(nameof(MemAllocScratchDummy), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
         public static int MemAllocScratchDummy(int a, int b) {
             if (a >= 1024 && b >= 1024)
                 return a + b;
