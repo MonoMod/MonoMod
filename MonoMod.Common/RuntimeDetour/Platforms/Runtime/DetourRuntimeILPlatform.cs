@@ -109,7 +109,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
 #region Selftest: Struct
 
-        // Struct must be 3, 5, 6, 7 or 9+ bytes big.
+        // In 32-bit envs, struct must be 3 or 4+ bytes big.
+        // In 64-bit envs, struct must be 3, 5, 6, 7 or 9+ bytes big.
 #pragma warning disable CS0169
         private struct _SelftestStruct {
             private readonly byte A, B, C;
@@ -311,7 +312,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 fromInfo.ReturnType.IsValueType) {
 
                 int size = fromInfo.ReturnType.GetManagedSize();
-                if (size == 3 || size == 5 || size == 6 || size == 7 || size >= 9) {
+                // This assumes that 8 bytes long structs work fine in 64-bit envs but not 32-bit envs.
+                if (size == 3 || size == 5 || size == 6 || size == 7 || size > IntPtr.Size) {
                     Type thisType = from.GetThisParamType();
                     Type retType = fromInfo.ReturnType.MakeByRefType(); // Refs are shiny pointers.
 
