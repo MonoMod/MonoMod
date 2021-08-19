@@ -251,6 +251,34 @@ namespace MonoMod.UnitTest {
                 }
 #endif
 
+                // This was provided by WEGFan from the Everest team.
+                // It should be preferably tested on x86, as it's where the struct size caused problems.
+#if true
+                Assert.Equal(new TwoInts() {
+                    A = 0x11111111,
+                    B = 0x22222222
+                }, DummyTwoInts());
+                using (Hook h = new Hook(
+                    typeof(DetourExtTest).GetMethod("DummyTwoInts", BindingFlags.NonPublic | BindingFlags.Instance),
+                    new Func<Func<DetourExtTest, TwoInts>, DetourExtTest, TwoInts>((orig, self) => {
+                        TwoInts rv = orig(self);
+                        rv.A *= 2;
+                        rv.B *= 3;
+                        return rv;
+                    })
+                )) {
+                    Assert.Equal(new TwoInts() {
+                        A = 0x11111111 * 2,
+                        B = 0x22222222 * 3
+                    }, DummyTwoInts());
+                }
+
+                Assert.Equal(new TwoInts() {
+                    A = 0x11111111,
+                    B = 0x22222222
+                }, DummyTwoInts());
+#endif
+
                 AppDomain.CurrentDomain.FirstChanceException -= OnFirstChanceException;
 
             }
@@ -279,6 +307,21 @@ namespace MonoMod.UnitTest {
         [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
         public static int DummyB(int a, int b) {
             return a * b * 2;
+        }
+
+        public struct TwoInts {
+            public int A;
+            public int B;
+            public override string ToString()
+                => $"({A}, {B})";
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private TwoInts DummyTwoInts() {
+            return new TwoInts() {
+                A = 0x11111111,
+                B = 0x22222222
+            };
         }
 
     }
