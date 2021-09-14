@@ -7,6 +7,7 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using Mono.Cecil;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace MonoMod.RuntimeDetour {
     public struct ILHookConfig {
@@ -59,7 +60,7 @@ namespace MonoMod.RuntimeDetour {
             get => _ID;
             set {
                 if (string.IsNullOrEmpty(value))
-                    value = Manipulator.Method?.GetID(simple: true) ?? GetHashCode().ToString();
+                    value = Manipulator.Method?.GetID(simple: true) ?? GetHashCode().ToString(CultureInfo.InvariantCulture);
                 if (_ID == value)
                     return;
                 _ID = value;

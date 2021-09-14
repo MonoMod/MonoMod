@@ -15,7 +15,7 @@ namespace MonoMod.Utils {
         /// <param name="data">The input bytes.</param>
         /// <returns>The output hexadecimal string.</returns>
         public static string ToHexadecimalString(this byte[] data)
-            => BitConverter.ToString(data).Replace("-", string.Empty);
+            => BitConverter.ToString(data).Replace("-", string.Empty, StringComparison.Ordinal);
 
         /// <summary>
         /// Invokes all delegates in the invocation list, passing on the result to the next.

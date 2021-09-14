@@ -4,6 +4,7 @@ using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -35,7 +36,7 @@ namespace MonoMod.DebugIL {
             else if (type.IsPrimitive)
                 name = Enum.GetName(t_MetadataType, type.MetadataType);
 
-            return name.Substring(0, 1).ToLowerInvariant() + name.Substring(1) + @var.Index;
+            return name.Substring(0, 1).ToLower(CultureInfo.InvariantCulture) + name.Substring(1) + @var.Index;
         }
 
         public static string ToRelativeString(this Instruction self) {
@@ -96,7 +97,7 @@ namespace MonoMod.DebugIL {
             }
 
             if (instr == null) {
-                builder.Append("?(").Append((to.Offset - from.Offset).ToString("x4")).Append(")");
+                builder.Append("?(").Append((to.Offset - from.Offset).ToString("x4", CultureInfo.InvariantCulture)).Append(")");
                 return;
             }
             

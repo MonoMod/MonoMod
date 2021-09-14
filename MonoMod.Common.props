@@ -172,6 +172,19 @@
   <ItemGroup Condition="$(MonoModSourceLink)">
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19270-01" PrivateAssets="All" />
   </ItemGroup>
+  
+  <!-- Code analyzers. See .editorconfig file for more info on when to use this. -->
+  <!--
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="5.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+  </PropertyGroup>
+  -->
 
   <!-- Shared source files. -->
   <ItemGroup Condition="$(MonoModSharedShims)">

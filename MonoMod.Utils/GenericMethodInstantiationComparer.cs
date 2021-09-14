@@ -90,7 +90,7 @@ namespace MonoMod.Utils {
                     code ^= method.DeclaringType.Assembly.GetHashCode();
                     code ^= genericTypeComparer.GetHashCode(method.DeclaringType);
                 }
-                code ^= method.Name.GetHashCode();
+                code ^= method.Name.GetHashCode(StringComparison.Ordinal);
                 ParameterInfo[] parameters = method.GetParameters();
                 int paramCount = parameters.Length;
                 paramCount ^= paramCount << 4;

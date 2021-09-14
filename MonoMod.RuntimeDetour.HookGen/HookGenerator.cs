@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -154,7 +155,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             if (type.HasGenericParameters ||
                 type.IsRuntimeSpecialName ||
-                type.Name.StartsWith("<"))
+                type.Name.StartsWith("<", StringComparison.Ordinal))
                 return;
 
             if (!HookPrivate && type.IsNotPublic)
@@ -201,7 +202,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 (method.IsSpecialName && !method.IsConstructor))
                 return false;
 
-            if (!HookOrig && method.Name.StartsWith("orig_"))
+            if (!HookOrig && method.Name.StartsWith("orig_", StringComparison.Ordinal))
                 return false;
             if (!HookPrivate && method.IsPrivate)
                 return false;
@@ -237,7 +238,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                         typeName = GetFriendlyName(param.ParameterType, true);
 
                     builder.Append("_");
-                    builder.Append(typeName.Replace(".", "").Replace("`", ""));
+                    builder.Append(typeName.Replace(".", "", StringComparison.Ordinal).Replace("`", "", StringComparison.Ordinal));
                 }
                 name += builder.ToString();
             }
@@ -368,7 +369,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             string name = GetFriendlyName(method);
             int index = method.DeclaringType.Methods.Where(other => !other.HasGenericParameters && GetFriendlyName(other) == name).ToList().IndexOf(method);
             if (index != 0) {
-                string suffix = index.ToString();
+                string suffix = index.ToString(CultureInfo.InvariantCulture);
                 do {
                     name = name + "_" + suffix;
                 } while (method.DeclaringType.Methods.Any(other => !other.HasGenericParameters && GetFriendlyName(other) == (name + suffix)));
@@ -449,7 +450,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
         string GetFriendlyName(MethodReference method) {
             string name = method.Name;
-            if (name.StartsWith("."))
+            if (name.StartsWith(".", StringComparison.Ordinal))
                 name = name.Substring(1);
             name = name.Replace('.', '_');
             return name;
@@ -466,7 +467,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
         void BuildFriendlyName(StringBuilder builder, TypeReference type, bool full) {
             if (!(type is TypeSpecification)) {
-                builder.Append((full ? type.FullName : type.Name).Replace("_", ""));
+                builder.Append((full ? type.FullName : type.Name).Replace("_", "", StringComparison.Ordinal));
                 return;
             }
 

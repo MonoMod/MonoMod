@@ -194,7 +194,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             return new DynamicMethodDefinition(
-                (original.Name + suffix).Replace("<>", ""),
+                (original.Name + suffix).Replace("<>", "", StringComparison.Ordinal),
                 (original as MethodInfo)?.ReturnType ?? typeof(void),
                 argTypes
             );

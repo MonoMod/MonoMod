@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using MonoMod.Utils;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 using MonoMod.Cil;
+using System.Globalization;
 
 #if CECIL0_9
 using InterfaceImplementation = Mono.Cecil.TypeReference;
@@ -256,7 +257,7 @@ namespace MonoMod {
 
             string envDebugSymbolFormat = Environment.GetEnvironmentVariable("MONOMOD_DEBUG_FORMAT");
             if (envDebugSymbolFormat != null) {
-                envDebugSymbolFormat = envDebugSymbolFormat.ToLowerInvariant();
+                envDebugSymbolFormat = envDebugSymbolFormat.ToLower(CultureInfo.InvariantCulture);
                 if (envDebugSymbolFormat == "pdb")
                     DebugSymbolOutputFormat = DebugSymbolFormat.PDB;
                 else if (envDebugSymbolFormat == "mdb")
@@ -424,7 +425,7 @@ namespace MonoMod {
             }
 
             // Used to fix Mono.Cecil.pdb being loaded instead of Mono.Cecil.Pdb.dll
-            string ext = Path.GetExtension(name).ToLowerInvariant();
+            string ext = Path.GetExtension(name).ToLower(CultureInfo.InvariantCulture);
             bool nameRisky = ext == "pdb" || ext == "mdb";
 
             string path = null;
@@ -462,13 +463,13 @@ namespace MonoMod {
                         int highestIndex = 0;
                         for (int i = 0; i < versions.Length; i++) {
                             string versionPath = versions[i];
-                            if (versionPath.StartsWith(path))
+                            if (versionPath.StartsWith(path, StringComparison.Ordinal))
                                 versionPath = versionPath.Substring(path.Length + 1);
                             Match versionMatch = Regex.Match(versionPath, "\\d+");
                             if (!versionMatch.Success) {
                                 continue;
                             }
-                            int version = int.Parse(versionMatch.Value);
+                            int version = int.Parse(versionMatch.Value, CultureInfo.InvariantCulture);
                             if (version > highest) {
                                 highest = version;
                                 highestIndex = i;
@@ -571,15 +572,15 @@ namespace MonoMod {
             if (Directory.Exists(path)) {
                 Log($"[ReadMod] Loading mod dir: {path}");
                 string mainName = Module.Name.Substring(0, Module.Name.Length - 3);
-                string mainNameSpaceless = mainName.Replace(" ", "");
+                string mainNameSpaceless = mainName.Replace(" ", "", StringComparison.Ordinal);
                 if (!DependencyDirs.Contains(path)) {
                     (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(path);
                     DependencyDirs.Add(path);
                 }
                 foreach (string modFile in Directory.GetFiles(path))
-                    if ((Path.GetFileName(modFile).StartsWith(mainName) ||
-                        Path.GetFileName(modFile).StartsWith(mainNameSpaceless)) &&
-                        modFile.ToLower().EndsWith(".mm.dll"))
+                    if ((Path.GetFileName(modFile).StartsWith(mainName, StringComparison.Ordinal) ||
+                        Path.GetFileName(modFile).StartsWith(mainNameSpaceless, StringComparison.Ordinal)) &&
+                        modFile.ToLower(CultureInfo.InvariantCulture).EndsWith(".mm.dll", StringComparison.Ordinal))
                         ReadMod(modFile);
                 return;
             }
@@ -954,13 +955,13 @@ namespace MonoMod {
             TypeReference type;
             if ((type = main.GetType(fullName, false)) != null)
                 return type;
-            if (fullName.StartsWith("<PrivateImplementationDetails>/"))
+            if (fullName.StartsWith("<PrivateImplementationDetails>/", StringComparison.Ordinal))
                 return null;
             if (crawled.Contains(main))
                 return null;
             crawled.Push(main);
             foreach (ModuleDefinition dep in DependencyMap[main])
-                if (!(RemovePatchReferences && dep.Assembly.Name.Name.EndsWith(".mm")) && (type = FindType(dep, fullName, crawled)) != null)
+                if (!(RemovePatchReferences && dep.Assembly.Name.Name.EndsWith(".mm", StringComparison.Ordinal)) && (type = FindType(dep, fullName, crawled)) != null)
                     return type;
             return null;
         }
@@ -1001,7 +1002,7 @@ namespace MonoMod {
             foreach (Resource res in mod.Resources)
                 if (res is EmbeddedResource) 
                     Module.Resources.Add(new EmbeddedResource(
-                        res.Name.StartsWith(mod.Assembly.Name.Name) ?
+                        res.Name.StartsWith(mod.Assembly.Name.Name, StringComparison.Ordinal) ?
                             Module.Assembly.Name.Name + res.Name.Substring(mod.Assembly.Name.Name.Length) :
                             res.Name,
                         res.Attributes,
@@ -1086,14 +1087,14 @@ namespace MonoMod {
         public virtual void PatchModule(ModuleDefinition mod) {
             foreach (TypeDefinition type in mod.Types)
                 if (
-                    (type.Namespace == "MonoMod" || type.Namespace.StartsWith("MonoMod.")) &&
+                    (type.Namespace == "MonoMod" || type.Namespace.StartsWith("MonoMod.", StringComparison.Ordinal)) &&
                     type.BaseType.FullName == "System.Attribute"
                    )
                     PatchType(type);
 
             foreach (TypeDefinition type in mod.Types)
                 if (!(
-                    (type.Namespace == "MonoMod" || type.Namespace.StartsWith("MonoMod.")) &&
+                    (type.Namespace == "MonoMod" || type.Namespace.StartsWith("MonoMod.", StringComparison.Ordinal)) &&
                     type.BaseType.FullName == "System.Attribute"
                    ))
                     PatchType(type);
@@ -1390,7 +1391,7 @@ namespace MonoMod {
         }
 
         public virtual MethodDefinition PatchMethod(TypeDefinition targetType, MethodDefinition method) {
-            if (method.Name.StartsWith("orig_") || method.HasCustomAttribute("MonoMod.MonoModOriginal"))
+            if (method.Name.StartsWith("orig_", StringComparison.Ordinal) || method.HasCustomAttribute("MonoMod.MonoModOriginal"))
                 // Ignore original method stubs
                 return null;
 
@@ -1789,7 +1790,7 @@ namespace MonoMod {
         public virtual void Cleanup(bool all = false) {
             for (int i = 0; i < Module.Types.Count; i++) {
                 TypeDefinition type = Module.Types[i];
-                if (all && (type.Namespace.StartsWith("MonoMod") || type.Name.StartsWith("MonoMod"))) {
+                if (all && (type.Namespace.StartsWith("MonoMod", StringComparison.Ordinal) || type.Name.StartsWith("MonoMod", StringComparison.Ordinal))) {
                     Log($"[Cleanup] Removing type {type.Name}");
                     Module.Types.RemoveAt(i);
                     i--;
@@ -1800,8 +1801,8 @@ namespace MonoMod {
 
             Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
             for (int i = deps.Count - 1; i > -1; --i)
-                if ((all && deps[i].Name.StartsWith("MonoMod")) ||
-                    (RemovePatchReferences && deps[i].Name.EndsWith(".mm")))
+                if ((all && deps[i].Name.StartsWith("MonoMod", StringComparison.Ordinal)) ||
+                    (RemovePatchReferences && deps[i].Name.EndsWith(".mm", StringComparison.Ordinal)))
                     deps.RemoveAt(i);
         }
 
@@ -1832,7 +1833,7 @@ namespace MonoMod {
                 TypeReference attribType = attribs[i].AttributeType;
                 if (ShouldCleanupAttrib?.Invoke(cap, attribType) ?? (
                     (attribType.Scope.Name == "MonoMod" || attribType.Scope.Name == "MonoMod.exe" || attribType.Scope.Name == "MonoMod.dll") ||
-                    (attribType.FullName.StartsWith("MonoMod.MonoMod"))
+                    (attribType.FullName.StartsWith("MonoMod.MonoMod", StringComparison.Ordinal))
                 )) {
                     attribs.RemoveAt(i);
                 }
@@ -2182,7 +2183,7 @@ namespace MonoMod {
             if (method.IsGetter || method.IsSetter)
                 return true;
 
-            if (method.Name.StartsWith("op_"))
+            if (method.Name.StartsWith("op_", StringComparison.Ordinal))
                 return true;
 
             return !method.IsRuntimeSpecialName; // Formerly SpecialName. If something breaks, blame UnderRail.

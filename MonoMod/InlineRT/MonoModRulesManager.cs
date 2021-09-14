@@ -67,11 +67,11 @@ namespace MonoMod.InlineRT {
 
         public static MonoModder GetModder(string asmName) {
             string idString = asmName;
-            int idIndex = idString.IndexOf("[MMILRT, ID:");
+            int idIndex = idString.IndexOf("[MMILRT, ID:", StringComparison.Ordinal);
             if (idIndex == -1)
                 return null;
             idString = idString.Substring(idIndex + 12);
-            idString = idString.Substring(0, idString.IndexOf(']'));
+            idString = idString.Substring(0, idString.IndexOf(']', StringComparison.Ordinal));
             if (!long.TryParse(idString, out long id))
                 throw new InvalidOperationException($"Cannot get MonoModder ID from assembly name {asmName}");
             if (!ModderMap.TryGetValue(id, out WeakReference modder) || !modder.IsAlive)

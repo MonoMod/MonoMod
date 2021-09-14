@@ -57,9 +57,9 @@ namespace MonoMod.Utils {
                 code ^= type.Assembly.GetHashCode();
 
                 if (type.Namespace != null)
-                    code ^= type.Namespace.GetHashCode();
+                    code ^= type.Namespace.GetHashCode(StringComparison.Ordinal);
 
-                code ^= type.Name.GetHashCode();
+                code ^= type.Name.GetHashCode(StringComparison.Ordinal);
 
                 Type[] genericParams = type.GetGenericArguments();
 

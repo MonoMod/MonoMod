@@ -92,11 +92,11 @@ namespace MonoMod.UnitTest {
         }
 
         public static int TargetTest<T>(string a, string b, string c) {
-            return (a + b + c).GetHashCode();
+            return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
         public static int TargetTest(string a, string b, string c) {
-            return (a + b + c).GetHashCode();
+            return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
         public struct Counter<T> where T : struct {

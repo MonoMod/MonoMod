@@ -193,19 +193,19 @@ namespace MonoMod.UnitTest {
         }
 
         public static int TargetTest<T>(string a, string b, string c) {
-            return (a + b + c).GetHashCode();
+            return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
         public static int TargetTest(string a, string b, string c) {
-            return (a + b + c).GetHashCode();
+            return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
         public static int TargetTest<T>(string a, T b) {
-            return (a + b).GetHashCode();
+            return (a + b).GetHashCode(StringComparison.Ordinal);
         }
 
         public static int TargetTest<T>(string a, ref T b) {
-            return (a + b).GetHashCode();
+            return (a + b).GetHashCode(StringComparison.Ordinal);
         }
 
         public static int TargetTest<TA>() {

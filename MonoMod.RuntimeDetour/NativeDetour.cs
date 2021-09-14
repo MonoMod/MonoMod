@@ -5,6 +5,7 @@ using MonoMod.Utils;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
+using System.Globalization;
 
 namespace MonoMod.RuntimeDetour {
     public struct NativeDetourConfig {
@@ -283,7 +284,7 @@ namespace MonoMod.RuntimeDetour {
                 argTypes[i] = args[i].ParameterType;
 
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"Trampoline:Native<{Method?.GetID(simple: true) ?? ((long) _Data.Method).ToString("X16")}>?{GetHashCode()}",
+                $"Trampoline:Native<{Method?.GetID(simple: true) ?? ((long) _Data.Method).ToString("X16", CultureInfo.InvariantCulture)}>?{GetHashCode()}",
                 returnType, argTypes
             )) {
                 ILProcessor il = dmd.GetILProcessor();

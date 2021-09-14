@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Data.SqlClient;
 using Mono.Cecil;
 using MonoMod.RuntimeDetour.Platforms;
+using System.Globalization;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -295,7 +296,7 @@ namespace MonoMod.UnitTest {
         public class Thrower {
             int b;
             public Thrower(int a) {
-                throw new Exception(a.ToString());
+                throw new Exception(a.ToString(CultureInfo.InvariantCulture));
             }
         }
 

@@ -5,6 +5,18 @@ indent_style = space
 indent_size = 4
 end_of_line = lf
 
+# Globalization rules should be "in your face" as the system culture info has actually caused problems!
+# See https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/globalization-warnings
+# Make sure to toggle this and the analyzer in MonoMod.Common.Props off as soon as MultiTargetShims is the only class that violates these rules.
+## dotnet_diagnostic.CA1303.severity = error # Fun fact: Console.WriteLine(string) acts as a localized method!
+#dotnet_diagnostic.CA1304.severity = error
+#dotnet_diagnostic.CA1305.severity = error
+#dotnet_diagnostic.CA1307.severity = error
+## dotnet_diagnostic.CA1308.severity = error # .ToLower() has got its uses.
+#dotnet_diagnostic.CA1309.severity = error
+#dotnet_diagnostic.CA1310.severity = error
+## dotnet_diagnostic.CA2101.severity = error # P/Invoke is magic.
+
 # https://kent-boogaart.com/blog/editorconfig-reference-for-c-developers
 
 csharp_indent_block_contents = true
