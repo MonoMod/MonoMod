@@ -205,7 +205,7 @@ namespace MonoMod.Utils.Cil {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
                 _EmitInlineVar(_(opcode), arg);
-            else if (opcode.Name.EndsWith(".s"))
+            else if (opcode.Name.EndsWith(".s", StringComparison.Ordinal))
                 Emit(IL.Create(_(opcode), (sbyte) arg));
             else
                 Emit(IL.Create(_(opcode), arg));

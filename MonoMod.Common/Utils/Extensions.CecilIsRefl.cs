@@ -151,7 +151,7 @@ namespace MonoMod.Utils {
                 // Avoid converting nested type separators between + (.NET) and / (cecil)
                 if (mrefDecl != null)
                     return mref.Name == typeInfo.Name;
-                return mref.FullName == typeInfo.FullName.Replace("+", "/");
+                return mref.FullName == typeInfo.FullName.Replace("+", "/", StringComparison.Ordinal);
 
             } else if (minfo is Type)
                 return false;

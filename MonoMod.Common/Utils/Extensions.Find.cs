@@ -25,7 +25,7 @@ namespace MonoMod.Utils {
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
         public static MethodDefinition FindMethod(this TypeDefinition type, string id, bool simple = true) {
-            if (simple && !id.Contains(" ")) {
+            if (simple && !id.Contains(" ", StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
                 foreach (MethodDefinition method in type.Methods)
                     if (method.GetID(simple: true) == id)
@@ -71,7 +71,7 @@ namespace MonoMod.Utils {
                 BindingFlags.Public | BindingFlags.NonPublic
             );
 
-            if (simple && !id.Contains(" ")) {
+            if (simple && !id.Contains(" ", StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
                 foreach (MethodInfo method in methods)
                     if (method.GetID(simple: true) == id)

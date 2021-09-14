@@ -7,6 +7,7 @@ using MonoMod.RuntimeDetour.Platforms;
 using Mono.Cecil.Cil;
 using System.Threading;
 using Mono.Cecil;
+using System.Globalization;
 
 namespace MonoMod.RuntimeDetour {
 #if !MONOMOD_INTERNAL
@@ -196,7 +197,7 @@ namespace MonoMod.RuntimeDetour {
 
             MethodInfo dm;
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
-                $"Native<{((long) target).ToString("X16")}>",
+                $"Native<{((long) target).ToString("X16", CultureInfo.InvariantCulture)}>",
                 returnType, argTypes
             ))
                 dm = dmd.StubCriticalDetour().Generate().Pin();

@@ -16,6 +16,26 @@ static class MultiTargetShims {
 
     private static readonly object[] _NoArgs = new object[0];
 
+    // Can't use the globalization-aware overloads on old .NET targets...
+    // Weirdly enough this is very spotty, and the compiler will only *fall back* to extension methods,
+    // thus keeping this un-#if'd is zero perf cost and zero maintenance cost.
+
+    public static string Replace(this string self, string oldValue, string newValue, StringComparison comparison)
+        => self.Replace(oldValue, newValue);
+
+    public static bool Contains(this string self, string value, StringComparison comparison)
+        => self.Contains(value);
+
+    public static int GetHashCode(this string self, StringComparison comparison)
+        => self.GetHashCode();
+
+    public static int IndexOf(this string self, char value, StringComparison comparison)
+        => self.IndexOf(value);
+
+    public static int IndexOf(this string self, string value, StringComparison comparison)
+        => self.IndexOf(value);
+
+
 #if NETSTANDARD
 
     public static Module[] GetModules(this Assembly asm)

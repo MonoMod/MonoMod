@@ -43,7 +43,7 @@ namespace MonoMod.Utils {
 
             // Backwards-compatibility: Check for patch_
             name = ((MemberReference) cap).Name;
-            return name.StartsWith("patch_") ? name.Substring(6) : name;
+            return name.StartsWith("patch_", StringComparison.Ordinal) ? name.Substring(6) : name;
         }
         private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
             if (cap is TypeReference type) {
@@ -55,12 +55,12 @@ namespace MonoMod.Utils {
                 } else {
                     // Backwards-compatibility: Check for patch_
                     name = ((MemberReference) cap).Name;
-                    name = name.StartsWith("patch_") ? name.Substring(6) : name;
+                    name = name.StartsWith("patch_", StringComparison.Ordinal) ? name.Substring(6) : name;
                 }
 
-                if (name.StartsWith("global::"))
+                if (name.StartsWith("global::", StringComparison.Ordinal))
                     name = name.Substring(8); // Patch name is refering to a global type.
-                else if (name.Contains(".") || name.Contains("/")) { } // Patch name is already a full name.
+                else if (name.Contains(".", StringComparison.Ordinal) || name.Contains("/", StringComparison.Ordinal)) { } // Patch name is already a full name.
                 else if (!string.IsNullOrEmpty(type.Namespace))
                     name = type.Namespace + "." + name;
                 else if (type.IsNested)

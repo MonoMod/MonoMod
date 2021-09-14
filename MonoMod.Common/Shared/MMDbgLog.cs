@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -24,7 +25,7 @@ namespace MonoMod {
                 true;
 #else
                 Environment.GetEnvironmentVariable("MONOMOD_DBGLOG") == "1" ||
-                (Environment.GetEnvironmentVariable("MONOMOD_DBGLOG")?.ToLowerInvariant()?.Contains(Tag.ToLowerInvariant()) ?? false);
+                (Environment.GetEnvironmentVariable("MONOMOD_DBGLOG")?.ToLower(CultureInfo.InvariantCulture)?.Contains(Tag.ToLower(CultureInfo.InvariantCulture), StringComparison.Ordinal) ?? false);
 #endif
 
             if (enabled)
@@ -82,7 +83,7 @@ namespace MonoMod {
             if (w == null)
                 return value;
 
-            w.WriteLine(string.Format(str, value));
+            w.WriteLine(string.Format(CultureInfo.InvariantCulture, str, value));
             w.Flush();
             return value;
         }

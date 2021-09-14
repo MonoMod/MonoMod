@@ -28,7 +28,7 @@ namespace MonoMod.Utils {
         /// <returns>The long form opcode.</returns>
         public static OpCode ToLongOp(this OpCode op) {
             string name = Enum.GetName(t_Code, op.Code);
-            if (!name.EndsWith("_S"))
+            if (!name.EndsWith("_S", StringComparison.Ordinal))
                 return op;
             lock (_ToLongOp) {
                 if (_ToLongOp.TryGetValue((int) op.Code, out OpCode found))
@@ -45,7 +45,7 @@ namespace MonoMod.Utils {
         /// <returns>The short form opcode.</returns>
         public static OpCode ToShortOp(this OpCode op) {
             string name = Enum.GetName(t_Code, op.Code);
-            if (name.EndsWith("_S"))
+            if (name.EndsWith("_S", StringComparison.Ordinal))
                 return op;
             lock (_ToShortOp) {
                 if (_ToShortOp.TryGetValue((int) op.Code, out OpCode found))

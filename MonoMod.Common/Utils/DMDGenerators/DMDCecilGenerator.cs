@@ -168,7 +168,7 @@ namespace MonoMod.Utils {
 
                 Assembly asm = ReflectionHelper.Load(module);
 
-                return asm.GetType(typeDef.FullName.Replace("+", "\\+"), false, false)
+                return asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false)
                     .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
 
             } finally {

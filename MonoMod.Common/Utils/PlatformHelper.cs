@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -17,7 +18,7 @@ namespace MonoMod.Utils {
             // RuntimeInformation.IsOSPlatform is lying: https://github.com/dotnet/corefx/issues/3032
             // Determine the platform based on the path.
             string windir = Environment.GetEnvironmentVariable("windir");
-            if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\") && Directory.Exists(windir)) {
+            if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\", StringComparison.Ordinal) && Directory.Exists(windir)) {
                 _current = Platform.Windows;
 
             } else if (File.Exists("/proc/sys/kernel/ostype")) {
@@ -43,7 +44,7 @@ namespace MonoMod.Utils {
                 // For .NET and newer Mono, use the usual value.
                 platID = Environment.OSVersion.Platform.ToString();
             }
-            platID = platID.ToLowerInvariant();
+            platID = platID.ToLower(CultureInfo.InvariantCulture);
 
             if (platID.Contains("win")) {
                 _current = Platform.Windows;
@@ -96,7 +97,7 @@ namespace MonoMod.Utils {
                         arch = uname.StandardOutput.ReadLine().Trim();
                     }
 
-                    if (arch.StartsWith("aarch") || arch.StartsWith("arm"))
+                    if (arch.StartsWith("aarch", StringComparison.Ordinal) || arch.StartsWith("arm", StringComparison.Ordinal))
                         _current |= Platform.ARM;
                 } catch (Exception) {
                     // Starting a process can fail for various reasons. One of them being...

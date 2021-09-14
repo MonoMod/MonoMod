@@ -26,7 +26,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 //   with the name we care about, then use its full path to gat a handle and load symbols.
                 Process currentProc = Process.GetCurrentProcess();
                 ProcessModule clrjitModule = currentProc.Modules.Cast<ProcessModule>()
-                    .FirstOrDefault(m => Path.GetFileNameWithoutExtension(m.FileName).EndsWith("clrjit"));
+                    .FirstOrDefault(m => Path.GetFileNameWithoutExtension(m.FileName).EndsWith("clrjit", StringComparison.Ordinal));
                 if (clrjitModule == null)
                     throw new PlatformNotSupportedException();
 

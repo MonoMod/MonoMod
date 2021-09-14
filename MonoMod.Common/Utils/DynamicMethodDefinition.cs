@@ -13,6 +13,7 @@ using System.Security;
 using System.Security.Permissions;
 using System.Diagnostics.SymbolStore;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
+using System.Globalization;
 
 namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
@@ -180,7 +181,7 @@ namespace MonoMod.Utils {
         public MethodInfo Generate(object context) {
             string typeName = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
 
-            switch (typeName?.ToLowerInvariant()) {
+            switch (typeName?.ToLower(CultureInfo.InvariantCulture)) {
                 case "dynamicmethod":
                 case "dm":
                     return DMDEmitDynamicMethodGenerator.Generate(this, context);

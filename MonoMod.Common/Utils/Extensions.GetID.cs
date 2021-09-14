@@ -150,7 +150,7 @@ namespace MonoMod.Utils {
                 .Append(" ");
 
             if (withType && (type != null || method.DeclaringType != null))
-                builder.Append(type ?? method.DeclaringType.FullName.Replace("+", "/")).Append("::");
+                builder.Append(type ?? method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal)).Append("::");
 
             builder
                 .Append(name ?? method.Name);
