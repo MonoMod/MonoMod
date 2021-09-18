@@ -18,35 +18,34 @@ namespace MonoMod.RuntimeDetour.Platforms {
         public void MakeWritable(IntPtr src, uint size) {
             // READWRITE causes an AccessViolationException / TargetInvocationException.
             if (!VirtualProtect(src, (IntPtr) size, PAGE.EXECUTE_READWRITE, out _)) {
-                LogAllSections("MakeWriteable", src, size);
-                throw new Win32Exception();
+                throw LogAllSections(Marshal.GetLastWin32Error(), "MakeWriteable", src, size);
             }
         }
 
         public void MakeExecutable(IntPtr src, uint size) {
             if (!VirtualProtect(src, (IntPtr) size, PAGE.EXECUTE_READWRITE, out _)) {
-                LogAllSections("MakeExecutable", src, size);
-                throw new Win32Exception();
+                throw LogAllSections(Marshal.GetLastWin32Error(), "MakeExecutable", src, size);
             }
         }
 
         public void MakeReadWriteExecutable(IntPtr src, uint size) {
             if (!VirtualProtect(src, (IntPtr) size, PAGE.EXECUTE_READWRITE, out _)) {
-                LogAllSections("MakeExecutable", src, size);
-                throw new Win32Exception();
+                throw LogAllSections(Marshal.GetLastWin32Error(), "MakeExecutable", src, size);
             }
         }
 
         public void FlushICache(IntPtr src, uint size) {
             if (!FlushInstructionCache(GetCurrentProcess(), src, (UIntPtr) size)) {
-                LogAllSections("FlushICache", src, size);
-                throw new Win32Exception();
+                throw LogAllSections(Marshal.GetLastWin32Error(), "FlushICache", src, size);
             }
         }
 
-        private void LogAllSections(string from, IntPtr src, uint size) {
+        private Exception LogAllSections(int error, string from, IntPtr src, uint size) {
+            Exception ex = new Win32Exception(error);
+            if (MMDbgLog.Writer == null)
+                return ex;
+
             MMDbgLog.Log($"{from} failed for 0x{(long) src:X16} + {size} - logging all memory sections");
-            Exception ex = new Win32Exception();
             MMDbgLog.Log($"reason: {ex.Message}");
 
             try {
@@ -72,31 +71,21 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     MMDbgLog.Log($"protect: {infoBasic.Protect}");
                     MMDbgLog.Log($"aprotect: {infoBasic.AllocationProtect}");
 
-                    long regionSize = (long) infoBasic.RegionSize;
-                    if (regionSize <= 0 || (int) regionSize != regionSize) {
-                        if (IntPtr.Size == 8) {
-                            try {
-                                addr = (IntPtr) ((ulong) infoBasic.BaseAddress + (ulong) infoBasic.RegionSize);
-                            } catch (OverflowException) {
-                                MMDbgLog.Log("overflow");
-                                break;
-                            }
-                            continue;
-                        }
-                        break;
-                    }
-
                     try {
-                        addr = (IntPtr) ((uint) infoBasic.BaseAddress + (uint) infoBasic.RegionSize);
+                        IntPtr addrPrev = addr;
+                        addr = (IntPtr) ((ulong) infoBasic.BaseAddress + (ulong) infoBasic.RegionSize);
+                        if ((ulong) addr <= (ulong) addrPrev)
+                            break;
                     } catch (OverflowException) {
                         MMDbgLog.Log("overflow");
                         break;
                     }
                 }
 
-            } finally {
+            } catch {
                 throw ex;
             }
+            return ex;
         }
 
         public NativeDetourData Create(IntPtr from, IntPtr to, byte? type) {
