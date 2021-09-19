@@ -192,6 +192,21 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     int delta = *(int*) (from + 1);
                     long to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
+                    // This ain't enough though! Turns out if we stop here, ptr is in a region that can be free'd,
+                    // while the *actual actual* method body can still remain in memory. What even is this limbo?
+                    // Let's try to navigate out of here by using further guesswork.
+                    lptr = ((long) ptr) + 0x0D;
+                    if (*(byte*) (lptr + 0x00) == 0x0f &&
+                        *(byte*) (lptr + 0x01) == 0x85 // jne {DELTA}
+                    ) {
+                        from = lptr;
+                        delta = *(int*) (from + 2);
+                        to = delta + (from + 2 + sizeof(int));
+                        // Noticed this by sheer luck. Maybe a link to the coreclr source would be neat in the future tho.
+                        long ptrFromHandle = *(long*) ((long) handle.Value + 0x10);
+                        if (ptrFromHandle == to)
+                            ptr = NotThePreStub(ptr, (IntPtr) to);
+                    }
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
                     return ptr;
                 }
