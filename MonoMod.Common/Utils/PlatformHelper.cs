@@ -65,6 +65,12 @@ namespace MonoMod.Utils {
                 Directory.Exists("/User") && !Directory.Exists("/Users")
             ) {
                 _current = Platform.iOS;
+
+            } else if (Is(Platform.Windows) &&
+                CheckWine()
+            ) {
+                // Sorry, Wine devs, but you might want to look at DetourRuntimeNETPlatform.
+                _current |= Platform.Wine;
             }
 
             // Is64BitOperatingSystem has been added in .NET Framework 4.0
@@ -157,6 +163,17 @@ namespace MonoMod.Utils {
 
         public static bool Is(Platform platform)
             => (Current & platform) == platform;
+
+        private static bool CheckWine() {
+            // Separated method so that this P/Invoke mess doesn't error out on non-Windows.
+            IntPtr ntdll = GetModuleHandle("ntdll.dll");
+            return ntdll != IntPtr.Zero && GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero;
+        }
+
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
+        [DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
 
     }
 }

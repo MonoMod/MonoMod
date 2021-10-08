@@ -31,6 +31,11 @@ namespace MonoMod.Utils {
         ARM = 1 << 16,
 
         /// <summary>
+        /// On demand Wine bit. DON'T RELY ON THIS.
+        /// </summary>
+        Wine = 1 << 17,
+
+        /// <summary>
         /// Unknown OS.
         /// </summary>
         Unknown = OS | (1 << 4),

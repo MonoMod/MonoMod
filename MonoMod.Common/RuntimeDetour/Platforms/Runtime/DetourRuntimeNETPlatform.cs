@@ -207,6 +207,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         if (ptrFromHandle == to)
                             ptr = NotThePreStub(ptr, (IntPtr) to);
                     }
+                    // And apparently if we're on wine, it likes to fool us really hard.
+                    // HEY WINE DEVS: Feel free to poke me about this. I'm hating this too.
+                    // HEY VALVE: If you're seeing this, thanks for lying about "everything works~"
+                    lptr = (long) ptr;
+                    if (PlatformHelper.Is(Platform.Wine) &&
+                        *(ushort*) (lptr + 0x00) == 0xb8_48 && // movabs rax, {PTR}
+                        *(ushort*) (lptr + 0x0A) == 0xe0_ff // jmp rax
+                    ) {
+                        to = *(long*) (lptr + 0x02);
+                        ptr = NotThePreStub(ptr, (IntPtr) to);
+                    }
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
                     return ptr;
                 }
