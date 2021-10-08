@@ -7,13 +7,13 @@ strategy:
       artifactSuffix: ''
       testers: ';fx;core2.1;core3;core3.1;core5;'
       generateDocFX: 'false'
-      pushNuGet: 'true'
+      pushNuGet: 'false'
     linux:
       jobArchName: 'Linux'
       imageName: 'ubuntu-latest'
       artifactPrefix: '~dbg.linux.'
       artifactSuffix: ''
-      testers: ';mono;core2.1;core3;core3.1;core5;'
+      testers: ';mono;core2.1;core3;core3.1;core5;wine-linux;'
       generateDocFX: 'false'
       pushNuGet: 'false'
     macos:
@@ -236,6 +236,24 @@ steps:
     testResultsFormat: 'VSTest'
     testResultsFiles: '**/testresults.core.netcoreapp5.0.trx'
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp5.0'
+
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';wine-linux;'))
+  displayName: 'Test: Wine on Linux'
+  continueOnError: true
+  env:
+    BUILD_CONFIGURATION: '$(buildConfiguration)'
+  inputs:
+    script: |
+      chmod a+x ./azure-pipelines-test-wine-linux.sh
+      ./azure-pipelines-test-wine-linux.sh
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';wine-linux;'))
+  displayName: 'Test: Publish: Wine on Linux'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.wine.linux.trx'
+    testRunTitle: 'Tests @ $(jobArchName) wine-linux'
 
 # Rebuild and publish the DocFX page.
 - task: PowerShell@2
