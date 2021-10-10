@@ -164,20 +164,27 @@ namespace MonoMod.Utils {
         public static bool Is(Platform platform)
             => (Current & platform) == platform;
 
+        // Separated method so that this P/Invoke mess doesn't error out on non-Windows.
         private static bool CheckWine() {
-            // Separated method so that this P/Invoke mess doesn't error out on non-Windows.
+            // wine_get_version can be missing because of course it can.
+            // General purpose env var.
+            string env = Environment.GetEnvironmentVariable("MONOMOD_WINE");
+            if (env == "1")
+                return true;
+            if (env == "0")
+                return false;
+
+            // The "Dalamud" plugin loader for FFXIV uses Harmony, coreclr and wine. What a nice combo!
+            // At least they went ahead and provide an environment variable for everyone to check.
+            // See https://github.com/goatcorp/FFXIVQuickLauncher/blob/8685db4a0e8ec53235fb08cd88aded7c7061d9fb/src/XIVLauncher/Settings/EnvironmentSettings.cs
+            env = Environment.GetEnvironmentVariable("XL_WINEONLINUX")?.ToLower(CultureInfo.InvariantCulture);
+            if (env == "true")
+                return true;
+            if (env == "false")
+                return false;
+
             IntPtr ntdll = GetModuleHandle("ntdll.dll");
             if (ntdll != IntPtr.Zero && GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero)
-                return true;
-
-            // wine_get_version can be missing because of course it can.
-            if (// General purpose env var.
-                Environment.GetEnvironmentVariable("MONOMOD_WINE") == "1" ||
-                // The "Dalamud" plugin loader for FFXIV uses Harmony, coreclr and wine. What a nice combo!
-                // At least they went ahead and provide an environment variable for everyone to check.
-                // See https://github.com/goatcorp/FFXIVQuickLauncher/blob/8685db4a0e8ec53235fb08cd88aded7c7061d9fb/src/XIVLauncher/Settings/EnvironmentSettings.cs
-                Environment.GetEnvironmentVariable("XL_WINEONLINUX").ToLower(CultureInfo.InvariantCulture) == "true"
-            )
                 return true;
 
             return false;
