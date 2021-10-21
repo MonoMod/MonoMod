@@ -80,6 +80,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
             MMDbgLog.Log($"meth: 0x{(long) handle.Value:X16}");
             MMDbgLog.Log($"getf: 0x{(long) handle.GetFunctionPointer():X16}");
 
+            bool regenerated = false;
+
+            ReloadFuncPtr:
+
+            IntPtr ptr;
+
             if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
                 /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
                  * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation
@@ -91,16 +97,28 @@ namespace MonoMod.RuntimeDetour.Platforms {
                  * - The "real" MethodDesc will be updated, which isn't an issue except that we can't patch the stub in time.
                  * - The "real" stub will stay untouched.
                  * - LDFTN RETURNS A POINTER TO THE "REAL" ENTRY POINT.
+                 *
+                 * Exceptions so far:
+                 * - SOME interface methods seem to follow similar rules, but ldftn isn't enough.
+                 * - Can't use GetBaseDefinition to check for interface methods as that holds up ALC unloading. (Mapping info is fine though...)
                  */
                 MMDbgLog.Log($"ldfn: 0x{(long) method.GetLdftnPointer():X16}");
-                return method.GetLdftnPointer();
+                bool interfaced = false;
+                foreach (Type intf in method.DeclaringType.GetInterfaces()) {
+                    if (method.DeclaringType.GetInterfaceMap(intf).TargetMethods.Contains(method)) {
+                        interfaced = true;
+                        break;
+                    }
+                }
+                ptr = method.GetLdftnPointer();
+                if (!interfaced) {
+                    return ptr;
+                }
+
+            } else {
+                // Your typical method.
+                ptr = base.GetFunctionPointer(method, handle);
             }
-
-            bool regenerated = false;
-
-            ReloadFuncPtr:
-
-            IntPtr ptr = base.GetFunctionPointer(method, handle);
 
             /* Many (if not all) NGEN'd methods (f.e. those from mscorlib.ni.dll) are handled in a special manner.
              * When debugged using WinDbg, !dumpmd for the handle gives a different CodeAddr than ldftn or GetFunctionPointer.
@@ -195,16 +213,29 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     // This ain't enough though! Turns out if we stop here, ptr is in a region that can be free'd,
                     // while the *actual actual* method body can still remain in memory. What even is this limbo?
                     // Let's try to navigate out of here by using further guesswork.
-                    lptr = ((long) ptr) + 0x0D;
-                    if (*(byte*) (lptr + 0x00) == 0x0f &&
-                        *(byte*) (lptr + 0x01) == 0x85 // jne {DELTA}
+                    lptr = (long) ptr;
+                    if (*(ushort*) (lptr + 0x00) == 0xb8_48 && // movabs rax, ???
+                        ((*(uint*) (lptr + 0x0A)) & 0x00ffffff) == 0x__08ff66 && // dec WORD PTR [rax]
+                        *(ushort*) (lptr + 0x0D) == 0x85_0f // jne {DELTA}
                     ) {
                         from = lptr;
-                        delta = *(int*) (from + 2);
-                        to = delta + (from + 2 + sizeof(int));
+                        delta = *(int*) (from + 0x0D + 2);
+                        to = delta + (from + 0x0D + 2 + sizeof(int));
                         // Noticed this by sheer luck. Maybe a link to the coreclr source would be neat in the future tho.
-                        long ptrFromHandle = *(long*) ((long) handle.Value + 0x10);
-                        if (ptrFromHandle == to)
+                        if ((*(long*) ((long) handle.Value + 0x10)) == to ||
+                            (*(long*) ((long) handle.Value + 0x18)) == to)
+                            ptr = NotThePreStub(ptr, (IntPtr) to);
+                    }
+                    // Apparently there's a variant similar to the one above when dealing with f.e. Dictionary<string, int>.Enumerator.get_Current on .NET Core 3.0+?
+                    if (*(ushort*) (lptr + 0x00) == 0xb8_49 && // movabs r8, ???
+                        *(ushort*) (lptr + 0x0A) == 0xb8_48 && // movabs rax, {TARGET}
+                        *(ushort*) (lptr + 0x14) == 0xe0_ff // jmp rax
+                    ) {
+                        from = lptr;
+                        long typeHandle = *(long*) (from + 0x00 + 2);
+                        to = *(long*) (from + 0x0A + 2);
+                        // Yet another coincidence to add to the "find in coreclr src please" list.
+                        if (method.DeclaringType.TypeHandle.Value == (IntPtr) typeHandle)
                             ptr = NotThePreStub(ptr, (IntPtr) to);
                     }
                     // And apparently if we're on wine, it likes to fool us really hard.
