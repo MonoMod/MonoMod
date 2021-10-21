@@ -215,7 +215,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     // Let's try to navigate out of here by using further guesswork.
                     lptr = (long) ptr;
                     if (*(ushort*) (lptr + 0x00) == 0xb8_48 && // movabs rax, ???
-                        ((*(uint*) (lptr + 0x0A)) & 0x00ffffff) == 0x__08ff66 && // dec WORD PTR [rax]
+                        ((*(uint*) (lptr + 0x0A)) & 0x00ffffff) == 0x__08_ff_66 && // dec WORD PTR [rax]
                         *(ushort*) (lptr + 0x0D) == 0x85_0f // jne {DELTA}
                     ) {
                         from = lptr;
@@ -227,7 +227,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                             ptr = NotThePreStub(ptr, (IntPtr) to);
                     }
                     // Apparently there's a variant similar to the one above when dealing with f.e. Dictionary<string, int>.Enumerator.get_Current on .NET Core 3.0+?
-                    if (*(ushort*) (lptr + 0x00) == 0xb8_49 && // movabs r8, ???
+                    if (*(ushort*) (lptr + 0x00) == 0xb8_49 && // movabs r8, {type handle}
                         *(ushort*) (lptr + 0x0A) == 0xb8_48 && // movabs rax, {TARGET}
                         *(ushort*) (lptr + 0x14) == 0xe0_ff // jmp rax
                     ) {
