@@ -15,6 +15,7 @@ using System.Data.SqlClient;
 using Mono.Cecil;
 using MonoMod.RuntimeDetour.Platforms;
 using System.Globalization;
+using System.Collections.Generic;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -259,6 +260,7 @@ namespace MonoMod.UnitTest {
                     A = 0x11111111,
                     B = 0x22222222
                 }, DummyTwoInts());
+
                 using (Hook h = new Hook(
                     typeof(DetourExtTest).GetMethod("DummyTwoInts", BindingFlags.NonPublic | BindingFlags.Instance),
                     new Func<Func<DetourExtTest, TwoInts>, DetourExtTest, TwoInts>((orig, self) => {
@@ -279,6 +281,52 @@ namespace MonoMod.UnitTest {
                     B = 0x22222222
                 }, DummyTwoInts());
 #endif
+
+                // This was provided by a Harmony user.
+                // The "struct virtual override" edge case fix itself has got a weird edge case with "struct interface implementations".
+                // Note that .NET Framework differs too heavily and .NET Core 2.1 and older inline the getter.
+#if NETCOREAPP3_0_OR_GREATER
+                Assert.Equal(
+                    new KeyValuePair<int, int>(default, default),
+                    new Dictionary<int, int>().GetEnumerator().Current
+                );
+
+                using (Hook h = new Hook(
+                    typeof(Dictionary<int, int>.Enumerator).GetMethod("get_Current"),
+                    new hook_DictionaryEnumeratorCurrentIntInt(DictionaryEnumeratorCurrentIntInt)
+                )) {
+                    Assert.Equal(
+                        new KeyValuePair<int, int>(1, 1),
+                        new Dictionary<int, int>().GetEnumerator().Current
+                    );
+                }
+
+                Assert.Equal(
+                    new KeyValuePair<int, int>(default, default),
+                    new Dictionary<int, int>().GetEnumerator().Current
+                );
+
+                Assert.Equal(
+                    new KeyValuePair<string, int>(default, default),
+                    new Dictionary<string, int>().GetEnumerator().Current
+                );
+
+                using (Hook h = new Hook(
+                    typeof(Dictionary<string, int>.Enumerator).GetMethod("get_Current"),
+                    new hook_DictionaryEnumeratorCurrentStringInt(DictionaryEnumeratorCurrentStringInt)
+                )) {
+                    Assert.Equal(
+                        new KeyValuePair<string, int>("1", 1),
+                        new Dictionary<string, int>().GetEnumerator().Current
+                    );
+                }
+
+                Assert.Equal(
+                    new KeyValuePair<string, int>(default, default),
+                    new Dictionary<string, int>().GetEnumerator().Current
+                );
+#endif
+
 
                 AppDomain.CurrentDomain.FirstChanceException -= OnFirstChanceException;
 
@@ -323,6 +371,18 @@ namespace MonoMod.UnitTest {
                 A = 0x11111111,
                 B = 0x22222222
             };
+        }
+
+        private delegate KeyValuePair<int, int> orig_DictionaryEnumeratorCurrentIntInt(ref Dictionary<int, int>.Enumerator self);
+        private delegate KeyValuePair<int, int> hook_DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self); 
+        private static KeyValuePair<int, int> DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self) {
+            return new KeyValuePair<int, int>(1, 1);
+        }
+
+        private delegate KeyValuePair<string, int> orig_DictionaryEnumeratorCurrentStringInt(ref Dictionary<string, int>.Enumerator self);
+        private delegate KeyValuePair<string, int> hook_DictionaryEnumeratorCurrentStringInt(orig_DictionaryEnumeratorCurrentStringInt orig, ref Dictionary<string, int>.Enumerator self);
+        private static KeyValuePair<string, int> DictionaryEnumeratorCurrentStringInt(orig_DictionaryEnumeratorCurrentStringInt orig, ref Dictionary<string, int>.Enumerator self) {
+            return new KeyValuePair<string, int>("1", 1);
         }
 
     }
