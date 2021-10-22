@@ -1,4 +1,13 @@
-﻿using System;
+﻿// These should be defined as part of your build process,
+// but if you want to test them quickly...
+// #define MONOMOD_RUNTIMEDETOUR_NET_SCAN_MANUAL
+// #define MONOMOD_RUNTIMEDETOUR_NET_SCAN_AUTO
+// Default to automatic only.
+#if !MONOMOD_RUNTIMEDETOUR_NET_SCAN_MANUAL && !MONOMOD_RUNTIMEDETOUR_NET_SCAN_AUTO
+#define MONOMOD_RUNTIMEDETOUR_NET_SCAN_AUTO
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -201,8 +210,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 //   PrecodeFixupThunk which then calls ThePreStub.
 
                 // x64 .NET Core
-                if (*(byte*) (lptr + 0x00) == 0xe9 && // jmp {DELTA}
-                    *(byte*) (lptr + 0x05) == 0x5f // pop rdi
+                if (*(byte*) (lptr + 0x00) == 0xe9 &&   // jmp {DELTA}
+                    *(byte*) (lptr + 0x05) == 0x5f      // pop rdi
                 ) {
                     // delta = to - (from + 1 + sizeof(int))
                     // to = delta + (from + 1 + sizeof(int))
@@ -210,13 +219,14 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     int delta = *(int*) (from + 1);
                     long to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
+#if MONOMOD_RUNTIMEDETOUR_NET_SCAN_MANUAL
                     // This ain't enough though! Turns out if we stop here, ptr is in a region that can be free'd,
                     // while the *actual actual* method body can still remain in memory. What even is this limbo?
                     // Let's try to navigate out of here by using further guesswork.
                     lptr = (long) ptr;
-                    if (*(ushort*) (lptr + 0x00) == 0xb8_48 && // movabs rax, ???
-                        ((*(uint*) (lptr + 0x0A)) & 0x00ffffff) == 0x__08_ff_66 && // dec WORD PTR [rax]
-                        *(ushort*) (lptr + 0x0D) == 0x85_0f // jne {DELTA}
+                    if (*(ushort*) (lptr + 0x00)                == 0xb8_48 &&       // movabs rax, ???
+                        ((*(uint*) (lptr + 0x0A)) & 0x00ffffff) == 0x__08_ff_66 &&  // dec WORD PTR [rax]
+                        *(ushort*) (lptr + 0x0D)                == 0x85_0f          // jne {DELTA}
                     ) {
                         from = lptr;
                         delta = *(int*) (from + 0x0D + 2);
@@ -226,10 +236,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
                             (*(long*) ((long) handle.Value + 0x18)) == to)
                             ptr = NotThePreStub(ptr, (IntPtr) to);
                     }
-                    // Apparently there's a variant similar to the one above when dealing with f.e. Dictionary<string, int>.Enumerator.get_Current on .NET Core 3.0+?
-                    if (*(ushort*) (lptr + 0x00) == 0xb8_49 && // movabs r8, {type handle}
-                        *(ushort*) (lptr + 0x0A) == 0xb8_48 && // movabs rax, {TARGET}
-                        *(ushort*) (lptr + 0x14) == 0xe0_ff // jmp rax
+                    // Generics are pain.
+                    if (*(byte*) (lptr + 0x01)      == 0xb8 &&      // movabs {last arg + 1}, {generic type handle}
+                        *(ushort*) (lptr + 0x0A)    == 0xb8_48 &&   // movabs rax, {TARGET}
+                        *(ushort*) (lptr + 0x14)    == 0xe0_ff      // jmp rax
                     ) {
                         from = lptr;
                         long typeHandle = *(long*) (from + 0x00 + 2);
@@ -238,9 +248,38 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         if (method.DeclaringType.TypeHandle.Value == (IntPtr) typeHandle)
                             ptr = NotThePreStub(ptr, (IntPtr) to);
                     }
+#endif
+#if MONOMOD_RUNTIMEDETOUR_NET_SCAN_AUTO
+                    // And because we don't know what else awaits us, let's auto-scan!
+                    for (int scan = 0; scan < 16; scan++) {
+                        lptr = (long) ptr + scan;
+                        if (*(ushort*) (lptr + 0x00)    == 0xb8_48 &&   // movabs rax, {PTR}
+                            *(ushort*) (lptr + 0x0A)    == 0xe0_ff      // jmp rax
+                        ) {
+                            to = *(long*) (lptr + 0x02);
+                            ptr = NotThePreStub(ptr, (IntPtr) to);
+                            scan = -1;
+                            continue;
+                        }
+                        if ((*(ushort*) (lptr + 0x00) & 0xfff0)     == 0xb8_40      &&  // movabs ??1, ???
+                            ((*(uint*) (lptr + 0x0A)) & 0x00f0ffff) == 0x__00_ff_66 &&  // dec WORD PTR [??1]
+                            *(ushort*) (lptr + 0x0D)                == 0x85_0f      &&  // jne {DELTA}
+                            (*(byte*) (lptr + 0x00) & 0x0f) == (*(byte*) (lptr + 0x0C) & 0x0f) // ??1 == ??1
+                        ) {
+                            from = lptr;
+                            delta = *(int*) (from + 0x0D + 2);
+                            to = delta + (from + 0x0D + 2 + sizeof(int));
+                            ptr = NotThePreStub(ptr, (IntPtr) to);
+                            scan = -1;
+                            continue;
+                        }
+                    }
+#endif
+#if MONOMOD_RUNTIMEDETOUR_NET_SCAN_MANUAL && !MONOMOD_RUNTIMEDETOUR_NET_SCAN_AUTO
                     // And apparently if we're on wine, it likes to fool us really hard.
                     // HEY WINE DEVS: Feel free to poke me about this. I'm hating this too.
                     // HEY VALVE: If you're seeing this, thanks for lying about "everything works~"
+                    // Check for this when *only* scanning manually, as auto-scanning finds this too.
                     lptr = (long) ptr;
                     if (PlatformHelper.Is(Platform.Wine) &&
                         *(ushort*) (lptr + 0x00) == 0xb8_48 && // movabs rax, {PTR}
@@ -249,6 +288,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                         to = *(long*) (lptr + 0x02);
                         ptr = NotThePreStub(ptr, (IntPtr) to);
                     }
+#endif
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X16}");
                     return ptr;
                 }
