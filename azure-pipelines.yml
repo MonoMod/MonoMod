@@ -95,7 +95,7 @@ steps:
     targetFramework: 'net35'
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
-    targetFramework: 'net40'
+    targetFramework: 'net452'
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'netstandard2.0'

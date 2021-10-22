@@ -285,7 +285,7 @@ namespace MonoMod.UnitTest {
                 // This was provided by a Harmony user.
                 // The "struct virtual override" edge case fix itself has got a weird edge case with "struct interface implementations".
                 // Note that .NET Framework differs too heavily and .NET Core 2.1 and older inline the getter.
-#if NETCOREAPP3_0_OR_GREATER
+#if NET5_0_OR_GREATER
                 Assert.Equal(
                     new KeyValuePair<int, int>(default, default),
                     new Dictionary<int, int>().GetEnumerator().Current
