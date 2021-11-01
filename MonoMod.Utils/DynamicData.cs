@@ -17,6 +17,7 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<Type, _Cache_> _CacheMap = new Dictionary<Type, _Cache_>();
         private static readonly Dictionary<Type, _Data_> _DataStaticMap = new Dictionary<Type, _Data_>();
         private static readonly ConditionalWeakTable<object, _Data_> _DataMap = new ConditionalWeakTable<object, _Data_>();
+        private static readonly ConditionalWeakTable<object, DynamicData> _DynamicDataMap = new ConditionalWeakTable<object, DynamicData>();
 
         private readonly WeakReference Weak;
         private object KeepAlive;
@@ -29,48 +30,54 @@ namespace MonoMod.Utils {
             public readonly Dictionary<string, Func<object, object[], object>> Methods = new Dictionary<string, Func<object, object[], object>>();
 
             public _Cache_(Type targetType) {
-                if (targetType == null)
-                    return;
-
-                foreach (FieldInfo field in targetType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
-                    string name = field.Name;
-                    Getters[name] = (obj) => field.GetValue(obj);
-                    Setters[name] = (obj, value) => field.SetValue(obj, value);
-                }
-
-                foreach (PropertyInfo prop in targetType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
-                    string name = prop.Name;
-
-                    MethodInfo get = prop.GetGetMethod(true);
-                    if (get != null) {
-                        Getters[name] = (obj) => get.Invoke(obj, _NoArgs);
+                bool first = true;
+                for (; targetType != null && targetType != targetType.BaseType; targetType = targetType.BaseType) {
+                    foreach (FieldInfo field in targetType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                        string name = field.Name;
+                        if (!Getters.ContainsKey(name) && !Setters.ContainsKey(name)) {
+                            Getters[name] = (obj) => field.GetValue(obj);
+                            Setters[name] = (obj, value) => field.SetValue(obj, value);
+                        }
                     }
 
-                    MethodInfo set = prop.GetSetMethod(true);
-                    if (set != null) {
-                        Setters[name] = (obj, value) => set.Invoke(obj, new object[] { value });
+                    foreach (PropertyInfo prop in targetType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                        string name = prop.Name;
+
+                        MethodInfo get = prop.GetGetMethod(true);
+                        if (get != null && !Getters.ContainsKey(name)) {
+                            Getters[name] = (obj) => get.Invoke(obj, _NoArgs);
+                        }
+
+                        MethodInfo set = prop.GetSetMethod(true);
+                        if (set != null && !Setters.ContainsKey(name)) {
+                            Setters[name] = (obj, value) => set.Invoke(obj, new object[] { value });
+                        }
                     }
-                }
 
-                Dictionary<string, MethodInfo> methods = new Dictionary<string, MethodInfo>();
-                foreach (MethodInfo method in targetType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
-                    string name = method.Name;
-                    if (methods.ContainsKey(name)) {
-                        methods[name] = null;
-                    } else {
-                        methods[name] = method;
+                    Dictionary<string, MethodInfo> methods = new Dictionary<string, MethodInfo>();
+                    foreach (MethodInfo method in targetType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                        string name = method.Name;
+                        if (first || !Methods.ContainsKey(name)) {
+                            if (methods.ContainsKey(name)) {
+                                methods[name] = null;
+                            } else {
+                                methods[name] = method;
+                            }
+                        }
                     }
-                }
 
-                foreach (KeyValuePair<string, MethodInfo> kvp in methods) {
-                    if (kvp.Value == null)
-                        continue;
+                    foreach (KeyValuePair<string, MethodInfo> kvp in methods) {
+                        if (kvp.Value == null)
+                            continue;
 
-                    if (kvp.Value.IsGenericMethod)
-                        continue;
+                        if (kvp.Value.IsGenericMethod)
+                            continue;
 
-                    FastReflectionDelegate cb = kvp.Value.GetFastDelegate();
-                    Methods[kvp.Key] = (target, args) => cb(target, args);
+                        FastReflectionDelegate cb = kvp.Value.GetFastDelegate();
+                        Methods[kvp.Key] = (target, args) => cb(target, args);
+                    }
+
+                    first = false;
                 }
             }
         }
@@ -141,6 +148,16 @@ namespace MonoMod.Utils {
             }
 
             OnInitialize?.Invoke(this, type, obj);
+        }
+
+        public static DynamicData For(object obj) {
+            lock (_DynamicDataMap) {
+                if (!_DynamicDataMap.TryGetValue(obj, out DynamicData data)) {
+                    data = new DynamicData(obj);
+                    _DynamicDataMap.Add(obj, data);
+                }
+                return data;
+            }
         }
 
         public static Func<object, T> New<T>(params object[] args) {

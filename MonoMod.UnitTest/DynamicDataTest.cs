@@ -33,6 +33,7 @@ namespace MonoMod.UnitTest {
             data.RegisterMethod("NewMethod", new Func<object, object[], object>((target, args) => (int) args[0] * (int) args[1]));
             Assert.Equal(6, data.PublicMethod(4, 2));
             Assert.Equal(2, data.PrivateMethod(4, 2));
+            Assert.Equal(16, data.PrivateBaseMethod(4, 2));
             Assert.Equal(8, data.NewMethod(4, 2));
 
             Assert.Equal("ABC", new DynamicData(dummy).Get<string>("New"));
@@ -73,7 +74,8 @@ namespace MonoMod.UnitTest {
             Assert.Equal(420L, dummyTo._B);
             Assert.Equal("XYZ", dummyTo._C);
 
-            DynamicData dataTo = new DynamicData(dummyTo);
+            DynamicData dataTo = DynamicData.For(dummyTo);
+            Assert.Equal(dataTo, DynamicData.For(dummyTo));
             foreach (KeyValuePair<string, object> kvp in new DynamicData(dummy))
                 dataTo.Set(kvp.Key, kvp.Value);
             Assert.Equal(30, dummyTo.A);
@@ -82,7 +84,13 @@ namespace MonoMod.UnitTest {
             Assert.Equal("Newest", new DynamicData(dummyTo).Get<string>("Other"));
         }
 
-        public class Dummy {
+        public class DummyBase {
+
+            private int PrivateBaseMethod(int a, int b) => a * b * b;
+
+        }
+
+        public class Dummy : DummyBase {
 
             public int A = 69;
             private long B = 420L;
