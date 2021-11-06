@@ -39,7 +39,7 @@ namespace MonoMod.Utils {
             c.ReturnType = o.ReturnType;
             c.DeclaringType = o.DeclaringType;
             c.MetadataToken = c.MetadataToken;
-            c.Body = o.Body.Clone(c);
+            c.Body = o.Body?.Clone(c);
             c.Attributes = o.Attributes;
             c.ImplAttributes = o.ImplAttributes;
             c.PInvokeInfo = o.PInvokeInfo;
@@ -50,13 +50,24 @@ namespace MonoMod.Utils {
                 c.GenericParameters.Add(genParam.Clone());
 
             foreach (ParameterDefinition param in o.Parameters)
-                c.Parameters.Add(param);
+                c.Parameters.Add(param.Clone());
 
             foreach (CustomAttribute attrib in o.CustomAttributes)
                 c.CustomAttributes.Add(attrib.Clone());
 
             foreach (MethodReference @override in o.Overrides)
                 c.Overrides.Add(@override);
+
+            if (c.Body != null) {
+                int foundIndex;
+                foreach (Instruction ci in c.Body.Instructions) {
+                    if (ci.Operand is GenericParameter genParam && (foundIndex = o.GenericParameters.IndexOf(genParam)) != -1) {
+                        ci.Operand = c.GenericParameters[foundIndex];
+                    } else if (ci.Operand is ParameterDefinition param && (foundIndex = o.Parameters.IndexOf(param)) != -1) {
+                        ci.Operand = c.Parameters[foundIndex];
+                    }
+                }
+            }
 
             return c;
         }
