@@ -11,6 +11,7 @@
 
     <TargetFrameworks>net452;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
     <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 17.0.0 And $(NETCoreAppMaximumVersion) &gt;= 6.0">$(TargetFrameworks);net6.0</TargetFrameworks>
     <OutputType>Library</OutputType>
     <SignAssembly>skip</SignAssembly>
   </PropertyGroup>
