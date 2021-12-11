@@ -159,10 +159,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     int to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
                     MMDbgLog.Log($"ngen: 0x{(long) ptr:X8}");
-                    return ptr;
                 }
-                
-                // .NET Core
+
+                // .NET Core and .NET Framework 4.8..?
+                iptr = (int) ptr;
                 if (*(byte*) (iptr + 0x00) == 0xe9 && // jmp {DELTA}
                     *(byte*) (iptr + 0x05) == 0x5f // pop rdi
                 ) {
@@ -173,7 +173,6 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     int to = delta + (from + 1 + sizeof(int));
                     ptr = NotThePreStub(ptr, (IntPtr) to);
                     MMDbgLog.Log($"ngen: 0x{(int) ptr:X8}");
-                    return ptr;
                 }
 
             } else {
