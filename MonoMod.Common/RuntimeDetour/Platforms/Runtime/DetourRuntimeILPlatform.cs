@@ -128,7 +128,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             private readonly short Value;
             private readonly byte Extra1;
             [MethodImpl(MethodImplOptions.NoInlining)]
-            public long _SelftestGetInStruct() {
+            public short _SelftestGetInStruct() {
                 Console.Error.WriteLine("If you're reading this, the MonoMod.RuntimeDetour selftest failed.");
                 throw new Exception("This method should've been detoured!");
             }
