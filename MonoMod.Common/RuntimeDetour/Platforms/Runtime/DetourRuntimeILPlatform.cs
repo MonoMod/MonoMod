@@ -18,6 +18,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
+        private readonly GlueThiscallStructRetPtrOrder GlueThiscallInStructRetPtr;
 
         // The following dicts are needed to prevent the GC from collecting DynamicMethods without any visible references.
         // PinnedHandles is also used in certain situations as a fallback when getting a method from a handle may not work normally.
@@ -56,6 +57,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
             unsafe {
                 fixed (GlueThiscallStructRetPtrOrder* orderPtr = &GlueThiscallStructRetPtr) {
                     ((Func<IntPtr, IntPtr, IntPtr, _SelftestStruct>) Delegate.CreateDelegate(typeof(Func<IntPtr, IntPtr, IntPtr, _SelftestStruct>), this, selftestGetStruct))((IntPtr) orderPtr, (IntPtr) orderPtr, selfPtr);
+                }
+            }
+
+            MethodInfo selftestGetInStruct = typeof(DetourRuntimeILPlatform._SelftestStruct).GetMethod("_SelftestGetInStruct", BindingFlags.Public | BindingFlags.Instance);
+            MethodInfo selftestGetInStructHook = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetInStructHook", BindingFlags.NonPublic | BindingFlags.Static);
+            _HookSelftest(selftestGetInStruct, selftestGetInStructHook);
+
+            unsafe {
+                fixed (GlueThiscallStructRetPtrOrder* orderPtr = &GlueThiscallInStructRetPtr) {
+                    object box = new _SelftestStruct();
+                    GlueThiscallInStructRetPtr = (GlueThiscallStructRetPtrOrder) ((Func<short>) Delegate.CreateDelegate(typeof(Func<short>), box, selftestGetInStruct))();
                 }
             }
 
@@ -113,7 +125,13 @@ namespace MonoMod.RuntimeDetour.Platforms {
         // In 64-bit envs, struct must be 3, 5, 6, 7 or 9+ bytes big.
 #pragma warning disable CS0169
         private struct _SelftestStruct {
-            private readonly byte A, B, C;
+            private readonly short Value;
+            private readonly byte Extra1;
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            public long _SelftestGetInStruct() {
+                Console.Error.WriteLine("If you're reading this, the MonoMod.RuntimeDetour selftest failed.");
+                throw new Exception("This method should've been detoured!");
+            }
         }
 #pragma warning restore CS0169
 
@@ -141,6 +159,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 *((GlueThiscallStructRetPtrOrder*) c) = GlueThiscallStructRetPtrOrder.ThisRetArgs;
 
             }
+        }
+
+        private static unsafe void _SelftestGetInStructHook(IntPtr a, IntPtr b, IntPtr c) {
+            // I don't know what's supposed to be normal and what's special anymore. -ade
+            *(short*) a = (short) GlueThiscallStructRetPtrOrder.RetThisArgs;
+            *(short*) b = (short) GlueThiscallStructRetPtrOrder.Original;
         }
 
 #endregion
@@ -304,12 +328,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
             to = GetIdentifiable(to);
 
             MethodInfo dm = null;
+            GlueThiscallStructRetPtrOrder glueThiscallStructRetPtr;
 
-            if (GlueThiscallStructRetPtr != GlueThiscallStructRetPtrOrder.Original &&
-                from is MethodInfo fromInfo && !from.IsStatic &&
+            if (from is MethodInfo fromInfo && !from.IsStatic &&
                 to is MethodInfo toInfo && to.IsStatic &&
                 fromInfo.ReturnType == toInfo.ReturnType &&
-                fromInfo.ReturnType.IsValueType) {
+                fromInfo.ReturnType.IsValueType &&
+                (glueThiscallStructRetPtr =
+                    from.DeclaringType?.IsValueType ?? false && from.GetParameters().Length == 0 ? GlueThiscallInStructRetPtr :
+                    GlueThiscallStructRetPtr
+                ) != GlueThiscallStructRetPtrOrder.Original) {
 
                 int size = fromInfo.ReturnType.GetManagedSize();
                 // This assumes that 8 bytes long structs work fine in 64-bit envs but not 32-bit envs.
@@ -320,7 +348,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                     int thisPos = 0;
                     int retPos = 1;
 
-                    if (GlueThiscallStructRetPtr == GlueThiscallStructRetPtrOrder.RetThisArgs) {
+                    if (glueThiscallStructRetPtr == GlueThiscallStructRetPtrOrder.RetThisArgs) {
                         thisPos = 1;
                         retPos = 0;
                     }
