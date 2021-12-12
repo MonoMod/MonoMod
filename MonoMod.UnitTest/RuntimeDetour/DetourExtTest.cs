@@ -19,7 +19,7 @@ using System.Collections.Generic;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DetourExtTest {
+    public unsafe class DetourExtTest {
         [Fact]
         public void TestDetoursExt() {
             lock (TestObject.Lock) {
@@ -327,6 +327,43 @@ namespace MonoMod.UnitTest {
                 );
 #endif
 
+                // This is based off of something provided by a Harmony user.
+                // It should be preferably tested on x86, as it's where the edge case with this certain return size occurred.
+#if true
+                Assert.Equal(
+                    0x11111111,
+                    new TwoInts() {
+                        A = 0x11111111,
+                        B = 0x22222222
+                    }.Magic
+                );
+
+                using (Hook h = new Hook(
+                    typeof(TwoInts).GetMethod("get_Magic", BindingFlags.Public | BindingFlags.Instance),
+                    new Func<Func<IntPtr, int>, IntPtr, int>((orig, self) => {
+                        int rv = orig(self);
+                        rv = rv * 2 + ((TwoInts*) self)->B;
+                        return rv;
+                    })
+                )) {
+                    Assert.Equal(
+                        0x11111111 * 2 + 0x22222222,
+                        new TwoInts() {
+                            A = 0x11111111,
+                            B = 0x22222222
+                        }.Magic
+                    );
+                }
+
+                Assert.Equal(
+                    0x11111111,
+                    new TwoInts() {
+                        A = 0x11111111,
+                        B = 0x22222222
+                    }.Magic
+                );
+#endif
+
 
                 AppDomain.CurrentDomain.FirstChanceException -= OnFirstChanceException;
 
@@ -361,6 +398,11 @@ namespace MonoMod.UnitTest {
         public struct TwoInts {
             public int A;
             public int B;
+            public int Magic {
+                get {
+                    return A;
+                }
+            }
             public override string ToString()
                 => $"({A}, {B})";
         }
