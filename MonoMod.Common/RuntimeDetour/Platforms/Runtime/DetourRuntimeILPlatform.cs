@@ -17,8 +17,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
     abstract class DetourRuntimeILPlatform : IDetourRuntimePlatform {
         protected abstract RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
-        private readonly GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
-        private readonly GlueThiscallStructRetPtrOrder GlueThiscallInStructRetPtr;
+        protected GlueThiscallStructRetPtrOrder GlueThiscallStructRetPtr;
+        protected GlueThiscallStructRetPtrOrder GlueThiscallInStructRetPtr;
 
         // The following dicts are needed to prevent the GC from collecting DynamicMethods without any visible references.
         // PinnedHandles is also used in certain situations as a fallback when getting a method from a handle may not work normally.
@@ -60,14 +60,16 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 }
             }
 
-            MethodInfo selftestGetInStruct = typeof(DetourRuntimeILPlatform._SelftestStruct).GetMethod("_SelftestGetInStruct", BindingFlags.Public | BindingFlags.Instance);
+            MethodInfo selftestGetInStruct = typeof(_SelftestStruct).GetMethod("_SelftestGetInStruct", BindingFlags.Public | BindingFlags.Instance);
             MethodInfo selftestGetInStructHook = typeof(DetourRuntimeILPlatform).GetMethod("_SelftestGetInStructHook", BindingFlags.NonPublic | BindingFlags.Static);
             _HookSelftest(selftestGetInStruct, selftestGetInStructHook);
 
             unsafe {
                 fixed (GlueThiscallStructRetPtrOrder* orderPtr = &GlueThiscallInStructRetPtr) {
                     object box = new _SelftestStruct();
-                    GlueThiscallInStructRetPtr = (GlueThiscallStructRetPtrOrder) ((Func<short>) Delegate.CreateDelegate(typeof(Func<short>), box, selftestGetInStruct))();
+                    *orderPtr = (GlueThiscallStructRetPtrOrder) ((Func<short>) Delegate.CreateDelegate(typeof(Func<short>), box, selftestGetInStruct))();
+                    if ((int) *orderPtr == -1)
+                        throw new Exception("_SelftestGetInStruct failed!");
                 }
             }
 
@@ -126,11 +128,11 @@ namespace MonoMod.RuntimeDetour.Platforms {
 #pragma warning disable CS0169
         private struct _SelftestStruct {
             private readonly short Value;
-            private readonly byte Extra1;
+            private readonly byte E1, E2, E3;
             [MethodImpl(MethodImplOptions.NoInlining)]
             public short _SelftestGetInStruct() {
                 Console.Error.WriteLine("If you're reading this, the MonoMod.RuntimeDetour selftest failed.");
-                throw new Exception("This method should've been detoured!");
+                return -1;
             }
         }
 #pragma warning restore CS0169
@@ -138,7 +140,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         [MethodImpl(MethodImplOptions.NoInlining)]
         private _SelftestStruct _SelftestGetStruct(IntPtr x, IntPtr y, IntPtr thisPtr) {
             Console.Error.WriteLine("If you're reading this, the MonoMod.RuntimeDetour selftest failed.");
-            throw new Exception("This method should've been detoured!");
+            throw new Exception("_SelftestGetStruct failed!");
         }
 
         private static unsafe void _SelftestGetStructHook(IntPtr a, IntPtr b, IntPtr c, IntPtr d, IntPtr e) {
@@ -161,15 +163,15 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
         }
 
-        private static unsafe void _SelftestGetInStructHook(IntPtr a, IntPtr b, IntPtr c) {
+        private static unsafe short _SelftestGetInStructHook(IntPtr a) {
             // I don't know what's supposed to be normal and what's special anymore. -ade
             *(short*) a = (short) GlueThiscallStructRetPtrOrder.RetThisArgs;
-            *(short*) b = (short) GlueThiscallStructRetPtrOrder.Original;
+            return (short) GlueThiscallStructRetPtrOrder.Original;
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
         protected virtual IntPtr GetFunctionPointer(MethodBase method, RuntimeMethodHandle handle)
             => handle.GetFunctionPointer();
@@ -467,7 +469,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             }
         }
 
-        private enum GlueThiscallStructRetPtrOrder {
+        protected enum GlueThiscallStructRetPtrOrder {
             Original,
             ThisRetArgs,
             RetThisArgs

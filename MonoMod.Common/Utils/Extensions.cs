@@ -51,6 +51,9 @@ namespace MonoMod.Utils {
             if (other.IsEnum && IsCompatible(type, Enum.GetUnderlyingType(other)))
                 return true;
 
+            if ((other.IsPointer || other.IsByRef) && type == typeof(IntPtr))
+                return true;
+
             return false;
         }
 

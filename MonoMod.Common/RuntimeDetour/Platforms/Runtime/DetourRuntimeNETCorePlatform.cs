@@ -20,6 +20,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private delegate IntPtr d_getJit();
         private static d_getJit getJit;
 
+        public DetourRuntimeNETCorePlatform() {
+            // Apparently no dirty additionally separate call convention hackery is necessary on .NET Core..?
+            // Would be great if someone actually had the time to verify this.
+            GlueThiscallInStructRetPtr = GlueThiscallStructRetPtr;
+        }
+
         protected static IntPtr GetJitObject() {
             if (getJit == null) {
                 // To make sure we get the right clrjit, we enumerate the process's modules and find the one 
