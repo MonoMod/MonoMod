@@ -257,8 +257,8 @@ namespace MonoMod.UnitTest {
                 // It should be preferably tested on x86, as it's where the struct size caused problems.
 #if true
                 Assert.Equal(new TwoInts() {
-                    A = 0x11111111,
-                    B = 0x22222222
+                    A = 11111111,
+                    B = 22222222
                 }, DummyTwoInts());
 
                 using (Hook h = new Hook(
@@ -271,14 +271,14 @@ namespace MonoMod.UnitTest {
                     })
                 )) {
                     Assert.Equal(new TwoInts() {
-                        A = 0x11111111 * 2,
-                        B = 0x22222222 * 3
+                        A = 11111111 * 2,
+                        B = 22222222 * 3
                     }, DummyTwoInts());
                 }
 
                 Assert.Equal(new TwoInts() {
-                    A = 0x11111111,
-                    B = 0x22222222
+                    A = 11111111,
+                    B = 22222222
                 }, DummyTwoInts());
 #endif
 
@@ -331,10 +331,10 @@ namespace MonoMod.UnitTest {
                 // It should be preferably tested on x86, as it's where the edge case with this certain return size occurred.
 #if true
                 Assert.Equal(
-                    0x11111111,
+                    11111111,
                     new TwoInts() {
-                        A = 0x11111111,
-                        B = 0x22222222
+                        A = 11111111,
+                        B = 22222222
                     }.Magic
                 );
 
@@ -347,19 +347,19 @@ namespace MonoMod.UnitTest {
                     })
                 )) {
                     Assert.Equal(
-                        0x11111111 * 2 + 0x22222222,
+                        11111111 * 2 + 22222222,
                         new TwoInts() {
-                            A = 0x11111111,
-                            B = 0x22222222
+                            A = 11111111,
+                            B = 22222222
                         }.Magic
                     );
                 }
 
                 Assert.Equal(
-                    0x11111111,
+                    11111111,
                     new TwoInts() {
-                        A = 0x11111111,
-                        B = 0x22222222
+                        A = 11111111,
+                        B = 22222222
                     }.Magic
                 );
 #endif
@@ -399,10 +399,12 @@ namespace MonoMod.UnitTest {
             public int A;
             public int B;
             public int Magic {
+                [MethodImpl(MethodImplOptions.NoInlining)]
                 get {
                     return A;
                 }
             }
+            [MethodImpl(MethodImplOptions.NoInlining)]
             public override string ToString()
                 => $"({A}, {B})";
         }
@@ -410,8 +412,8 @@ namespace MonoMod.UnitTest {
         [MethodImpl(MethodImplOptions.NoInlining)]
         private TwoInts DummyTwoInts() {
             return new TwoInts() {
-                A = 0x11111111,
-                B = 0x22222222
+                A = 11111111,
+                B = 22222222
             };
         }
 
