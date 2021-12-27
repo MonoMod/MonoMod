@@ -414,7 +414,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
             const long GB = 1024 * 1024 * 1024;
             bool isNonDynamic = Math.Abs((long) target - (long) ReferenceNonDynamicPoolPtr) < GB;
-            bool isDynamic = Math.Abs((long) target - (long) ReferenceDynamicPoolPtr) < GB;
+            bool isDynamic = DynamicMethodDefinition.IsDynamicILAvailable && Math.Abs((long) target - (long) ReferenceDynamicPoolPtr) < GB;
             if (!isNonDynamic && !isDynamic) {
                 ptr = IntPtr.Zero;
                 return 0;
