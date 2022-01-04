@@ -1593,8 +1593,11 @@ namespace MonoMod {
                 type.BaseType = type.BaseType.Relink(Relinker, type);
 
             // Don't foreach when modifying the collection
-            for (int i = 0; i < type.GenericParameters.Count; i++)
+            for (int i = 0; i < type.GenericParameters.Count; i++) {
                 type.GenericParameters[i] = type.GenericParameters[i].Relink(Relinker, type);
+                for (int j = 0; j < type.GenericParameters[i].CustomAttributes.Count; j++)
+                    PatchRefsInCustomAttribute(type.GenericParameters[i].CustomAttributes[j]);
+            }
 
             // Don't foreach when modifying the collection
             for (int i = 0; i < type.Interfaces.Count; i++) {
@@ -1612,8 +1615,8 @@ namespace MonoMod {
             }
 
             // Don't foreach when modifying the collection
-            for (int i = 0; i < type.CustomAttributes.Count; i++)
-                type.CustomAttributes[i] = type.CustomAttributes[i].Relink(Relinker, type);
+            for (int i = 0; i < type.CustomAttributes.Count; i++) 
+                PatchRefsInCustomAttribute(type.CustomAttributes[i] = type.CustomAttributes[i].Relink(Relinker, type));
 
             foreach (PropertyDefinition prop in type.Properties) {
                 prop.PropertyType = prop.PropertyType.Relink(Relinker, type);
@@ -1652,11 +1655,11 @@ namespace MonoMod {
             foreach (ParameterDefinition param in method.Parameters) {
                 param.ParameterType = param.ParameterType.Relink(Relinker, method);
                 for (int i = 0; i < param.CustomAttributes.Count; i++)
-                    param.CustomAttributes[i] = param.CustomAttributes[i].Relink(Relinker, method);
+                    PatchRefsInCustomAttribute(param.CustomAttributes[i] = param.CustomAttributes[i].Relink(Relinker, method));
             }
 
             for (int i = 0; i < method.CustomAttributes.Count; i++)
-                method.CustomAttributes[i] = method.CustomAttributes[i].Relink(Relinker, method);
+                PatchRefsInCustomAttribute(method.CustomAttributes[i] = method.CustomAttributes[i].Relink(Relinker, method));
 
             for (int i = 0; i < method.Overrides.Count; i++)
                 method.Overrides[i] = (MethodReference) method.Overrides[i].Relink(Relinker, method);
@@ -1781,6 +1784,15 @@ namespace MonoMod {
                 instr.Operand = operand;
 
                 MethodBodyRewriter?.Invoke(this, body, instr, instri);
+            }
+        }
+
+        public virtual void PatchRefsInCustomAttribute(CustomAttribute attr) {
+            // Try to resolve the method reference to work around Mono weirdness
+            if (attr.Constructor.DeclaringType?.Scope == Module) {
+                TypeDefinition resolvedType = attr.Constructor.DeclaringType?.SafeResolve();
+                if (resolvedType != null)
+                    attr.Constructor = resolvedType.FindMethod(attr.Constructor.GetID());
             }
         }
 
