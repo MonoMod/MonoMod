@@ -1,4 +1,4 @@
-﻿using Mono.Cecil;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
 using System;
@@ -169,14 +169,14 @@ namespace MonoMod.Utils {
                 if (index < provider.GenericParameters.Count)
                     return provider.GenericParameters[index];
                 else
-                    return new GenericParameter(orig.Name, provider).Update(index, GenericParameterType.Method);
+                    return orig.Clone().Update(index, GenericParameterType.Method);
             }
 
             if (provider is TypeReference && orig.DeclaringType != null)
                 if (index < provider.GenericParameters.Count)
                     return provider.GenericParameters[index];
                 else
-                    return new GenericParameter(orig.Name, provider).Update(index, GenericParameterType.Type);
+                    return orig.Clone().Update(index, GenericParameterType.Type);
 
             return
                 (provider as TypeSpecification)?.ElementType.ResolveGenericParameter(orig) ??
@@ -318,19 +318,8 @@ namespace MonoMod.Utils {
             relink.ExplicitThis = method.ExplicitThis;
             relink.HasThis = method.HasThis;
 
-            foreach (GenericParameter param in method.GenericParameters) {
-                GenericParameter paramN = new GenericParameter(param.Name, param.Owner) {
-                    Attributes = param.Attributes
-                }.Update(param.Position, param.Type);
-
-                relink.GenericParameters.Add(paramN);
-
-#pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
-                foreach (var constraint in param.Constraints) {
-#pragma warning restore IDE0008
-                    paramN.Constraints.Add(constraint.Relink(relinker, relink));
-                }
-            }
+            foreach (GenericParameter param in method.GenericParameters)
+                relink.GenericParameters.Add(param.Relink(relinker, context));
 
             relink.ReturnType = relink.ReturnType?.Relink(relinker, relink);
 
@@ -474,6 +463,8 @@ namespace MonoMod.Utils {
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);
+            foreach (CustomAttribute attr in param.CustomAttributes)
+                newParam.CustomAttributes.Add(attr.Relink(relinker, context));
 #pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
             foreach (var constraint in param.Constraints)
 #pragma warning restore IDE0008
@@ -490,6 +481,8 @@ namespace MonoMod.Utils {
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);
+            foreach (CustomAttribute attr in param.CustomAttributes)
+                newParam.CustomAttributes.Add(attr.Clone());
 #pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
             foreach (var constraint in param.Constraints)
 #pragma warning restore IDE0008
