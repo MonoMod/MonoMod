@@ -21,6 +21,9 @@ namespace MonoMod.Utils {
             if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\", StringComparison.Ordinal) && Directory.Exists(windir)) {
                 _current = Platform.Windows;
 
+            } else if (Directory.Exists("/data") && File.Exists("/system/build.prop")) {   // Android Device
+                _current = Platform.Android;  // We cannot directly use /proc/sys/kernel/ostype to determine an Android Device
+                                              // because of the strict SELinux policies after Lollipop
             } else if (File.Exists("/proc/sys/kernel/ostype")) {
                 string osType = File.ReadAllText("/proc/sys/kernel/ostype");
                 if (osType.StartsWith("Linux", StringComparison.OrdinalIgnoreCase)) {
@@ -55,12 +58,7 @@ namespace MonoMod.Utils {
             }
 #endif
 
-            if (Is(Platform.Linux) &&
-                Directory.Exists("/data") && File.Exists("/system/build.prop")
-            ) {
-                _current = Platform.Android;
-
-            } else if (Is(Platform.Unix) &&
+            if (Is(Platform.Unix) &&
                 Directory.Exists("/Applications") && Directory.Exists("/System") &&
                 Directory.Exists("/User") && !Directory.Exists("/Users")
             ) {
