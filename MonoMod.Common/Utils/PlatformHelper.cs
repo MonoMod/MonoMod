@@ -21,9 +21,12 @@ namespace MonoMod.Utils {
             if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\", StringComparison.Ordinal) && Directory.Exists(windir)) {
                 _current = Platform.Windows;
 
-            } else if (Directory.Exists("/etc/selinux")){   // SELinux enabled, access to /proc/sys/kernel/ostype might fail
-                _current = Platform.Linux;  // We cannot directly use /proc/sys/kernel/ostype to determine an Android Device
-                                              // because of the strict SELinux policies after Lollipop
+            } else if (Directory.Exists("/etc/selinux")) {
+                // SELinux enabled, access to /proc/sys/kernel/ostype might fail
+                // We cannot directly use /proc/sys/kernel/ostype to determine an Android Device
+                // because of the strict SELinux policies after Lollipop
+                _current = Platform.Linux;
+
             } else if (File.Exists("/proc/sys/kernel/ostype")) {
                 string osType = File.ReadAllText("/proc/sys/kernel/ostype");
                 if (osType.StartsWith("Linux", StringComparison.OrdinalIgnoreCase)) {
@@ -64,13 +67,13 @@ namespace MonoMod.Utils {
                 _current = Platform.Android;
 
             } else if (Is(Platform.Unix) &&
-              Directory.Exists("/Applications") && Directory.Exists("/System") &&
-              Directory.Exists("/User") && !Directory.Exists("/Users")
+                Directory.Exists("/Applications") && Directory.Exists("/System") &&
+                Directory.Exists("/User") && !Directory.Exists("/Users")
             ) {
                 _current = Platform.iOS;
 
             } else if (Is(Platform.Windows) &&
-              CheckWine()
+                CheckWine()
             ) {
                 // Sorry, Wine devs, but you might want to look at DetourRuntimeNETPlatform.
                 _current |= Platform.Wine;
