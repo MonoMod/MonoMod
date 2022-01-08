@@ -22,7 +22,7 @@ namespace MonoMod.Cil {
         public static bool Match<T>(this Instruction instr, OpCode opcode, out T value) {
             if (instr.OpCode == opcode) {
                 value = (T) instr.Operand;
-                return false;
+                return true;
             }
             value = default;
             return false;
