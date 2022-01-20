@@ -18,7 +18,7 @@ namespace MonoMod.Utils {
             // RuntimeInformation.IsOSPlatform is lying: https://github.com/dotnet/corefx/issues/3032
             // Determine the platform based on the path.
             string windir = Environment.GetEnvironmentVariable("windir");
-            if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\", StringComparison.Ordinal) && Directory.Exists(windir)) {
+            if (!string.IsNullOrEmpty(windir) && windir.IndexOf(':', StringComparison.Ordinal) == 1 && windir[0] != '/' && windir[0] != '\\' && Directory.Exists(windir)) {
                 _current = Platform.Windows;
 
             } else if (Directory.Exists("/etc/selinux")) {
@@ -61,7 +61,10 @@ namespace MonoMod.Utils {
             }
 #endif
 
-            if (Is(Platform.Linux) &&
+            if (_current == Platform.Unknown) {
+                // Welp.
+
+            } else if (Is(Platform.Linux) &&
                 Directory.Exists("/data") && File.Exists("/system/build.prop")
             ) {
                 _current = Platform.Android;
@@ -92,7 +95,7 @@ namespace MonoMod.Utils {
                 RuntimeInformation.OSArchitecture.HasFlag(Architecture.Arm))
                 _current |= Platform.ARM;
 #else
-            if ((Is(Platform.Unix) || Is(Platform.Unknown)) && Type.GetType("Mono.Runtime") != null) {
+            if (_current != Platform.Unknown && (Is(Platform.Unix) || Is(Platform.Unknown)) && Type.GetType("Mono.Runtime") != null) {
                 /* I'd love to use RuntimeInformation, but it returns X64 up until...
                  * https://github.com/mono/mono/commit/396559769d0e4ca72837e44bcf837b7c91596414
                  * ... and that commit still hasn't reached Mono 5.16 on Debian, dated
