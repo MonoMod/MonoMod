@@ -184,7 +184,11 @@ namespace MonoMod.Utils {
                         operand = member;
 #if !NETSTANDARD
                         if (mb != null && member != null) {
-                            Assembly asm = member.Module?.Assembly;
+                            // See DMDGenerator.cs for the explanation of this forced .?
+                            Module module = member?.Module;
+                            if (module == null)
+                                continue;
+                            Assembly asm = module.Assembly;
                             if (asm != null && !accessChecksIgnored.Contains(asm)) {
                                 // while (member.DeclaringType != null)
                                 //     member = member.DeclaringType;
