@@ -37,12 +37,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
         private static readonly FieldInfo _RuntimeMethodHandle_m_value =
             typeof(RuntimeMethodHandle).GetField("m_value", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        private static readonly MethodInfo _IRuntimeMethodInfo_get_Value =
+            typeof(RuntimeMethodHandle).Assembly.GetType("System.IRuntimeMethodInfo")?.GetMethod("get_Value");
+
         private static readonly MethodInfo _RuntimeHelpers__CompileMethod =
             typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesIntPtr =
             _RuntimeHelpers__CompileMethod?.GetParameters()[0].ParameterType.FullName == "System.IntPtr";
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo =
             _RuntimeHelpers__CompileMethod?.GetParameters()[0].ParameterType.FullName == "System.IRuntimeMethodInfo";
+        private static readonly bool _RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal =
+            _RuntimeHelpers__CompileMethod?.GetParameters()[0].ParameterType.FullName == "System.RuntimeMethodHandleInternal";
 
         public override MethodBase GetIdentifiable(MethodBase method) {
             if (_RTDynamicMethod_m_owner != null && method.GetType() == _RTDynamicMethod)
@@ -60,6 +65,10 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 } else if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
                     // mscorlib 4.0.0.0
                     _RuntimeHelpers__CompileMethod.Invoke(null, new object[] { _RuntimeMethodHandle_m_value.GetValue(((RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, _NoArgs))) });
+
+                } else if (_RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal) {
+                    // System.Private.CoreLib 5.0.0.0
+                    _RuntimeHelpers__CompileMethod.Invoke(null, new object[] { _IRuntimeMethodInfo_get_Value.Invoke(_RuntimeMethodHandle_m_value.GetValue(((RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, _NoArgs))), null) });
 
                 } else {
                     // This should work just fine.
