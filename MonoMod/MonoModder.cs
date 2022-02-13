@@ -49,8 +49,6 @@ namespace MonoMod {
 
     public class MonoModder : IDisposable {
 
-        public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
-
         public static readonly Version Version = typeof(MonoModder).Assembly.GetName().Version;
 
         public Dictionary<string, object> SharedData = new Dictionary<string, object>();
@@ -181,7 +179,7 @@ namespace MonoMod {
                     return _GACPaths;
 
 
-                if (!IsMono) {
+                if (!ReflectionHelper.IsMono) {
                     // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
                     string path = Environment.GetEnvironmentVariable("windir");
                     if (string.IsNullOrEmpty(path))

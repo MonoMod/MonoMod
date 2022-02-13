@@ -13,7 +13,7 @@ namespace MonoMod.UnitTest {
 
             if (Environment.GetEnvironmentVariable("AGENT_OS") == "Linux" &&
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_ARTIFACTSTAGINGDIRECTORY")) &&
-                Type.GetType("Mono.Runtime") != null) {
+                ReflectionHelper.IsMono) {
                 Skip = "Not supported on Azure Linux mono.";
                 return;
             }

@@ -16,7 +16,7 @@ namespace MonoMod.UnitTest {
     public class DetourMemoryTest {
         [Fact]
         public void TestDetourMemory() {
-            if (Type.GetType("Mono.Runtime") != null) {
+            if (ReflectionHelper.IsMono) {
                 // GC.GetTotalMemory likes to die on Mono:
                 // * Assertion: should not be reached at sgen-scan-object.h:91
                 // at System.GC:GetTotalMemory <0x00061>

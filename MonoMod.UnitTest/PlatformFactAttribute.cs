@@ -20,10 +20,10 @@ namespace MonoMod.UnitTest {
                     switch (runtime) {
 #if NETFRAMEWORK
                         case Runtime.FX:
-                            matchRuntime = Type.GetType("Mono.Runtime") == null ? true : (matchRuntime ?? false);
+                            matchRuntime = !ReflectionHelper.IsMono || (matchRuntime ?? false);
                             break;
                         case Runtime.Mono:
-                            matchRuntime = Type.GetType("Mono.Runtime") != null ? true : (matchRuntime ?? false);
+                            matchRuntime = ReflectionHelper.IsMono || (matchRuntime ?? false);
                             break;
 
 #else

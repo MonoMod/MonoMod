@@ -174,7 +174,7 @@ namespace MonoMod.UnitTest {
                     Assert.NotEqual("", e.StackTrace.Trim());
                 }
 
-                using (Hook h = Type.GetType("Mono.Runtime") != null ?
+                using (Hook h = ReflectionHelper.IsMono ?
                     // Mono
                     new Hook(
                         typeof(Exception).GetMethod("GetStackTrace", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance),

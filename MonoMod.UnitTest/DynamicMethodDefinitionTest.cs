@@ -124,7 +124,7 @@ namespace MonoMod.UnitTest {
             // Verify that we can still obtain the real DynamicMethod.
             // .NET uses a wrapping RTDynamicMethod to avoid leaking the mutable DynamicMethod.
             // Mono uses RuntimeMethodInfo without any link to the original DynamicMethod.
-            if (Type.GetType("Mono.Runtime") != null)
+            if (ReflectionHelper.IsMono)
                 stacker.Pin();
             StackTrace stack = ((Func<StackTrace>) stacker.CreateDelegate(typeof(Func<StackTrace>)))();
             MethodBase stacked = stack.GetFrames().First(f => f.GetMethod()?.IsDynamicMethod() ?? false).GetMethod();
@@ -133,7 +133,7 @@ namespace MonoMod.UnitTest {
             Assert.Equal(stacker.GetNativeStart(), stacked.GetNativeStart());
             // This will always be true on .NET and only be true on Mono if the method is still pinned.
             Assert.IsAssignableFrom<DynamicMethod>(stacked.GetIdentifiable());
-            if (Type.GetType("Mono.Runtime") != null)
+            if (ReflectionHelper.IsMono)
                 stacker.Unpin();
         }
 
