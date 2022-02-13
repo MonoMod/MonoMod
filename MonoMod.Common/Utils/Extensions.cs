@@ -71,7 +71,7 @@ namespace MonoMod.Utils {
         }
 
         public static unsafe void SetMonoCorlibInternal(this Assembly asm, bool value) {
-            if (Type.GetType("Mono.Runtime") == null)
+            if (!ReflectionHelper.IsMono)
                 return;
 
             // Mono doesn't know about IgnoresAccessChecksToAttribute,
@@ -150,11 +150,11 @@ namespace MonoMod.Utils {
                 // major, minor, build, revision[, arch] (10 framework / 20 core + padding)
                 (
                     !_MonoAssemblyNameHasArch ? (
-                        typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ?
+                        ReflectionHelper.IsCore ?
                         16 :
                         8
                     ) : (
-                        typeof(object).Assembly.GetName().Name == "System.Private.CoreLib" ?
+                        ReflectionHelper.IsCore ?
                         (IntPtr.Size == 4 ? 20 : 24) :
                         (IntPtr.Size == 4 ? 12 : 16)
                     )

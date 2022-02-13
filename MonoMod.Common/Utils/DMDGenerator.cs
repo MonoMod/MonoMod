@@ -41,7 +41,7 @@ namespace MonoMod.Utils {
             if (mi == null)
                 return null;
 
-            if (DynamicMethodDefinition._IsMono) {
+            if (ReflectionHelper.IsMono) {
                 // Luckily we're guaranteed to be safe from DynamicMethod -> RuntimeMethodInfo conversions.
                 if (!(mi is DynamicMethod) && mi.DeclaringType != null) {
                     // get_Assembly is virtual in some versions of Mono (notably older ones and the infamous Unity fork).

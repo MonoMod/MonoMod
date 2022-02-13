@@ -25,20 +25,19 @@ namespace MonoMod.Utils {
             _InitCopier();
         }
 
-        internal static readonly bool _IsMono = Type.GetType("Mono.Runtime") != null;
-        internal static readonly bool _IsNewMonoSRE = _IsMono && typeof(DynamicMethod).GetField("il_info", BindingFlags.NonPublic | BindingFlags.Instance) != null;
-        internal static readonly bool _IsOldMonoSRE = _IsMono && !_IsNewMonoSRE && typeof(DynamicMethod).GetField("ilgen", BindingFlags.NonPublic | BindingFlags.Instance) != null;
+        internal static readonly bool _IsNewMonoSRE = ReflectionHelper.IsMono && typeof(DynamicMethod).GetField("il_info", BindingFlags.NonPublic | BindingFlags.Instance) != null;
+        internal static readonly bool _IsOldMonoSRE = ReflectionHelper.IsMono && !_IsNewMonoSRE && typeof(DynamicMethod).GetField("ilgen", BindingFlags.NonPublic | BindingFlags.Instance) != null;
 
         // If SRE has been stubbed out, prefer Cecil.
         private static bool _PreferCecil =
-            (_IsMono && (
+            (ReflectionHelper.IsMono && (
                 // Mono 4.X+
                 !_IsNewMonoSRE &&
                 // Unity pre 2018
                 !_IsOldMonoSRE
             )) ||
                 
-            (!_IsMono && (
+            (!ReflectionHelper.IsMono && (
                 // .NET
                 typeof(ILGenerator).Assembly
                 .GetType("System.Reflection.Emit.DynamicILGenerator")

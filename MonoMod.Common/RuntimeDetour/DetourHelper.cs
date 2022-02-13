@@ -31,9 +31,9 @@ namespace MonoMod.RuntimeDetour {
                         return null;
                     _RuntimeInit = true;
 
-                    if (Type.GetType("Mono.Runtime") != null) {
+                    if (ReflectionHelper.IsMono) {
                         _Runtime = new DetourRuntimeMonoPlatform();
-                    } else if (typeof(object).Assembly.GetName().Name == "System.Private.CoreLib") {
+                    } else if (ReflectionHelper.IsCore) {
                         _Runtime = DetourRuntimeNETCorePlatform.Create();
                     } else {
                         _Runtime = new DetourRuntimeNETPlatform();
@@ -73,7 +73,7 @@ namespace MonoMod.RuntimeDetour {
                         return _Native = new DetourNativeWindowsPlatform(native);
                     }
 
-                    if (Type.GetType("Mono.Runtime") != null) {
+                    if (ReflectionHelper.IsMono) {
                         try {
                             // It's prefixed with lib on every platform.
                             return _Native = new DetourNativeMonoPlatform(native, $"libmonosgen-2.0.{PlatformHelper.LibrarySuffix}");
@@ -87,7 +87,7 @@ namespace MonoMod.RuntimeDetour {
                     // MonoPosixHelper is available outside of Unix and even outside of Mono.
                     // ... yet the available version might be incompatible with the current runtime for unknown reasons.
                     string isMonoPosixPreferred = Environment.GetEnvironmentVariable("MONOMOD_RUNTIMEDETOUR_MONOPOSIXHELPER");
-                    if ((Type.GetType("Mono.Runtime") != null && isMonoPosixPreferred != "0") || isMonoPosixPreferred == "1") {
+                    if ((ReflectionHelper.IsMono && isMonoPosixPreferred != "0") || isMonoPosixPreferred == "1") {
                         try {
                             return _Native = new DetourNativeMonoPosixPlatform(native);
                         } catch {

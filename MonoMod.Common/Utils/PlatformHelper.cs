@@ -95,7 +95,7 @@ namespace MonoMod.Utils {
                 RuntimeInformation.OSArchitecture.HasFlag(Architecture.Arm))
                 _current |= Platform.ARM;
 #else
-            if (_current != Platform.Unknown && (Is(Platform.Unix) || Is(Platform.Unknown)) && Type.GetType("Mono.Runtime") != null) {
+            if (_current != Platform.Unknown && (Is(Platform.Unix) || Is(Platform.Unknown)) && ReflectionHelper.IsMono) {
                 /* I'd love to use RuntimeInformation, but it returns X64 up until...
                  * https://github.com/mono/mono/commit/396559769d0e4ca72837e44bcf837b7c91596414
                  * ... and that commit still hasn't reached Mono 5.16 on Debian, dated
