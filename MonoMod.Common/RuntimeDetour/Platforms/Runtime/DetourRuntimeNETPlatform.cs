@@ -151,8 +151,42 @@ namespace MonoMod.RuntimeDetour.Platforms {
             // IMPORTANT: IN SOME CIRCUMSTANCES, THIS CAN FIND ThePreStub AS THE ENTRY POINT.
 
             if (PlatformHelper.Is(Platform.ARM)) {
-                // TODO: Debug detouring NGEN'd methods on ARM.
+                if (IntPtr.Size == 4) {
+                    // TODO: 32-bit arm precode walkers
+                } else {
+                    IntPtr WalkPrecode(IntPtr curr) {
+                        long lptr = (long) curr;
 
+                        if (
+                            *(uint*) (lptr + 0x00) == 0x1000000c && // adr x12, #0x00
+                            *(uint*) (lptr + 0x04) == 0x5800006b && // ldr x11, #0x0c
+                            *(uint*) (lptr + 0x08) == 0xd61f0160    // br x11
+                        ) {
+                            IntPtr next = *(IntPtr*) (lptr + 0x10);
+                            return NotThePreStub(curr, next);
+                        } else if (
+                            *(uint*) (lptr + 0x00) == 0x10000089 && // adr x9, #0x10
+                            *(uint*) (lptr + 0x04) == 0xa940312a && // ldp x10, x12, [x9]
+                            *(uint*) (lptr + 0x08) == 0xd61f0140    // br x10
+                        ) {
+                            IntPtr next = *(IntPtr*) (lptr + 0x10);
+                            return NotThePreStub(curr, next);
+                        }
+
+                        // TODO: more precode types?
+                        return curr;
+                    }
+
+                    int numIterations = 0;
+
+                    IntPtr nextPtr = WalkPrecode(ptr);
+                    while (nextPtr != ptr && numIterations < 16) {
+                        numIterations++;
+                        ptr = nextPtr;
+
+                        nextPtr = WalkPrecode(ptr);
+                    }
+                }
             } else if (IntPtr.Size == 4) {
                 int iptr = (int) ptr;
                 // x86
