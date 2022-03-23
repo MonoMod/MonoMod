@@ -6,6 +6,7 @@ strategy:
       artifactPrefix: ''
       artifactSuffix: ''
       testers: ';fx;core2.1;core3;core3.1;core5;core6;'
+      testx86: 'true'
       generateDocFX: 'false'
       pushNuGet: 'true'
     linux:
@@ -14,6 +15,7 @@ strategy:
       artifactPrefix: '~dbg.linux.'
       artifactSuffix: ''
       testers: ';mono;core2.1;core3;core3.1;core5;core6;'
+      testx86: 'false'
       generateDocFX: 'false'
       pushNuGet: 'false'
     macos:
@@ -22,6 +24,7 @@ strategy:
       artifactPrefix: '~dbg.macos.'
       artifactSuffix: ''
       testers: ';mono;core2.1;core3;core3.1;core5;core6;'
+      testx86: 'false'
       generateDocFX: 'false'
       pushNuGet: 'false'
   maxParallel: 4
@@ -202,19 +205,6 @@ steps:
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.1'
 
 - task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core2.1;'))
-  displayName: 'Test: core: netcoreapp2.1-x86'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.1 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp2.1-x86.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core2.1;'))
-  displayName: 'Test: Publish: core: netcoreapp2.1-x86'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp2.1-x86.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.1-x86'
-
-- task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core3;'))
   displayName: 'Test: core: netcoreapp3.0'
   inputs:
@@ -228,12 +218,12 @@ steps:
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.0'
 
 - task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core3;'))
+  condition: and(always(), contains(variables.testers, ';core3;'), eq(variables.textx86, 'true'))
   displayName: 'Test: core: netcoreapp3.0-x86'
   inputs:
     script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.0-x86.trx"'
 - task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core3;'))
+  condition: and(always(), contains(variables.testers, ';core3;'), eq(variables.textx86, 'true'))
   displayName: 'Test: Publish: core: netcoreapp3.0-x86'
   inputs:
     testResultsFormat: 'VSTest'
@@ -254,12 +244,12 @@ steps:
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.1'
 
 - task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core3.1;'))
+  condition: and(always(), contains(variables.testers, ';core3.1;'), eq(variables.textx86, 'true'))
   displayName: 'Test: core: netcoreapp3.1-x86'
   inputs:
     script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.1 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.1-x86.trx"'
 - task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core3.1;'))
+  condition: and(always(), contains(variables.testers, ';core3.1;'), eq(variables.textx86, 'true'))
   displayName: 'Test: Publish: core: netcoreapp3.1-x86'
   inputs:
     testResultsFormat: 'VSTest'
@@ -280,12 +270,12 @@ steps:
     testRunTitle: 'Tests @ $(jobArchName) core net5.0'
 
 - task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core5;'))
+  condition: and(always(), contains(variables.testers, ';core5;'), eq(variables.textx86, 'true'))
   displayName: 'Test: core: net5.0-x86'
   inputs:
     script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net5.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net5.0-x86.trx"'
 - task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core5;'))
+  condition: and(always(), contains(variables.testers, ';core5;'), eq(variables.textx86, 'true'))
   displayName: 'Test: Publish: core: net5.0-x86'
   inputs:
     testResultsFormat: 'VSTest'
@@ -304,19 +294,6 @@ steps:
     testResultsFormat: 'VSTest'
     testResultsFiles: '**/testresults.core.net6.0.trx'
     testRunTitle: 'Tests @ $(jobArchName) core net6.0'
-
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core6;'))
-  displayName: 'Test: core: net6.0-x86'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net6.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net6.0-x86.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core6;'))
-  displayName: 'Test: Publish: core: net6.0-x86'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.net6.0-x86.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core net6.0-x86'
 
 # Rebuild and publish the DocFX page.
 - task: PowerShell@2

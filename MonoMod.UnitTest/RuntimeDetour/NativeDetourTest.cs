@@ -55,18 +55,21 @@ namespace MonoMod.UnitTest {
             Assert.Equal(-1, d_not_rand());
             Assert.False(DidNothing);
 
-            using (new NativeDetour(
-                typeof(NativeDetourTest).GetMethod("msvcrt_rand"),
-                typeof(NativeDetourTest).GetMethod("not_rand")
-            )) {
-                DidNothing = true;
-                Assert.Equal(-1, msvcrt_rand());
-                Assert.False(DidNothing);
-            }
+            // If you're stuck on x86 and reading this: Why.
+            if (IntPtr.Size == 8) {
+                using (new NativeDetour(
+                    typeof(NativeDetourTest).GetMethod("msvcrt_rand"),
+                    typeof(NativeDetourTest).GetMethod("not_rand")
+                )) {
+                    DidNothing = true;
+                    Assert.Equal(-1, msvcrt_rand());
+                    Assert.False(DidNothing);
+                }
 
-            DidNothing = true;
-            msvcrt_rand();
-            Assert.True(DidNothing);
+                DidNothing = true;
+                msvcrt_rand();
+                Assert.True(DidNothing);
+            }
 
             NativeDetour d = new NativeDetour(
                 ptr_msvcrt_rand,
