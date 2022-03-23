@@ -202,6 +202,19 @@ steps:
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.1'
 
 - task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core2.1;'))
+  displayName: 'Test: core: netcoreapp2.1-x86'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.1 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp2.1-x86.trx"'
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';core2.1;'))
+  displayName: 'Test: Publish: core: netcoreapp2.1-x86'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.netcoreapp2.1-x86.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.1-x86'
+
+- task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core3;'))
   displayName: 'Test: core: netcoreapp3.0'
   inputs:
@@ -213,6 +226,19 @@ steps:
     testResultsFormat: 'VSTest'
     testResultsFiles: '**/testresults.core.netcoreapp3.0.trx'
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.0'
+
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core3;'))
+  displayName: 'Test: core: netcoreapp3.0-x86'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.0-x86.trx"'
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';core3;'))
+  displayName: 'Test: Publish: core: netcoreapp3.0-x86'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.netcoreapp3.0-x86.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.0-x86'
 
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core3.1;'))
@@ -228,30 +254,69 @@ steps:
     testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.1'
 
 - task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core5;'))
-  displayName: 'Test: core: netcoreapp5.0'
+  condition: and(always(), contains(variables.testers, ';core3.1;'))
+  displayName: 'Test: core: netcoreapp3.1-x86'
   inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp5.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp5.0.trx"'
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.1 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.1-x86.trx"'
 - task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core5;'))
-  displayName: 'Test: Publish: core: netcoreapp5.0'
+  condition: and(always(), contains(variables.testers, ';core3.1;'))
+  displayName: 'Test: Publish: core: netcoreapp3.1-x86'
   inputs:
     testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp5.0.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp5.0'
+    testResultsFiles: '**/testresults.core.netcoreapp3.1-x86.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.1-x86'
+
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core5;'))
+  displayName: 'Test: core: net5.0'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net5.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net5.0.trx"'
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';core5;'))
+  displayName: 'Test: Publish: core: net5.0'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.net5.0.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core net5.0'
+
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core5;'))
+  displayName: 'Test: core: net5.0-x86'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net5.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net5.0-x86.trx"'
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';core5;'))
+  displayName: 'Test: Publish: core: net5.0-x86'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.net5.0-x86.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core net5.0-x86'
 
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';core6;'))
-  displayName: 'Test: core: netcoreapp6.0'
+  displayName: 'Test: core: net6.0'
   inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp6.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp6.0.trx"'
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net6.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net6.0.trx"'
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';core6;'))
-  displayName: 'Test: Publish: core: netcoreapp6.0'
+  displayName: 'Test: Publish: core: net6.0'
   inputs:
     testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp6.0.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp6.0'
+    testResultsFiles: '**/testresults.core.net6.0.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core net6.0'
+
+- task: CmdLine@2
+  condition: and(always(), contains(variables.testers, ';core6;'))
+  displayName: 'Test: core: net6.0-x86'
+  inputs:
+    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net6.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net6.0-x86.trx"'
+- task: PublishTestResults@2
+  condition: and(always(), contains(variables.testers, ';core6;'))
+  displayName: 'Test: Publish: core: net6.0-x86'
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/testresults.core.net6.0-x86.trx'
+    testRunTitle: 'Tests @ $(jobArchName) core net6.0-x86'
 
 # Rebuild and publish the DocFX page.
 - task: PowerShell@2
