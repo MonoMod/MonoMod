@@ -38,8 +38,8 @@ namespace MonoMod.RuntimeDetour.Platforms {
             *m_wFlags |= 0x2000;
         }
 
-        private d_compileMethod GetCompileMethod(IntPtr jit)
-            => ReadObjectVTable(jit, VTableIndex_ICorJitCompiler_compileMethod).AsDelegate<d_compileMethod>();
+        private IntPtr GetCompileMethod(IntPtr jit)
+            => ReadObjectVTable(jit, VTableIndex_ICorJitCompiler_compileMethod);
 
         private unsafe d_compileMethod our_compileMethod;
         private IntPtr real_compileMethodPtr;
@@ -47,10 +47,25 @@ namespace MonoMod.RuntimeDetour.Platforms {
 
         public override bool OnMethodCompiledWillBeCalled => true;
 
-        protected override unsafe void InstallJitHooks(IntPtr jit) {
-            SetupJitHookHelpers();
-            real_compileMethod = GetCompileMethod(jit);
+        protected virtual unsafe CorJitResult InvokeRealCompileMethod(
+            IntPtr thisPtr, // ICorJitCompiler*
+            IntPtr corJitInfo, // ICorJitInfo*
+            in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
+            uint flags,
+            out byte* nativeEntry,
+            out uint nativeSizeOfCode
+        ) {
+            nativeEntry = null;
+            nativeSizeOfCode = 0;
 
+            if (real_compileMethod == null)
+                return CorJitResult.CORJIT_OK;
+
+            return real_compileMethod(thisPtr, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+        }
+
+        protected virtual unsafe IntPtr GetCompileMethodHook(IntPtr real) {
+            real_compileMethod = real.AsDelegate<d_compileMethod>();
             our_compileMethod = CompileMethodHook;
             IntPtr our_compileMethodPtr = Marshal.GetFunctionPointerForDelegate(our_compileMethod);
 
@@ -62,6 +77,17 @@ namespace MonoMod.RuntimeDetour.Platforms {
                 FreeNativeTrampoline(trampolineData);
             }
 
+            return our_compileMethodPtr;
+        }
+
+        protected override unsafe void InstallJitHooks(IntPtr jit) {
+            SetupJitHookHelpers();
+
+            // Make sure we also get the InvokeRealCompileMethod jit-compiled before we lock ourselves out.
+            InvokeRealCompileMethod(IntPtr.Zero, IntPtr.Zero, new CORINFO_METHOD_INFO(), 0, out _, out _);
+
+            IntPtr our_compileMethodPtr = GetCompileMethodHook(GetCompileMethod(jit));
+
             // Make sure we run the cctor before the hook to avoid wierdness
             _ = hookEntrancy;
 
@@ -72,7 +98,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
             *vtableEntry = our_compileMethodPtr;
         }
 
-        private static NativeDetourData CreateNativeTrampolineTo(IntPtr target) {
+        protected static NativeDetourData CreateNativeTrampolineTo(IntPtr target) {
             IntPtr mem = DetourHelper.Native.MemAlloc(64); // 64 bytes should be enough on all platforms
             NativeDetourData data = DetourHelper.Native.Create(mem, target);
             DetourHelper.Native.MakeWritable(data);
@@ -82,19 +108,19 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return data;
         }
 
-        private static void FreeNativeTrampoline(NativeDetourData data) {
+        protected static void FreeNativeTrampoline(NativeDetourData data) {
             DetourHelper.Native.MakeWritable(data);
             DetourHelper.Native.MemFree(data.Method);
             DetourHelper.Native.Free(data);
         }
 
-        private enum CorJitResult {
+        protected enum CorJitResult {
             CORJIT_OK = 0,
             // There are more, but I don't particularly care about them
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private unsafe struct CORINFO_SIG_INST {
+        protected unsafe struct CORINFO_SIG_INST {
             public uint classInstCount;
             public IntPtr* classInst; // CORINFO_CLASS_HANDLE* // (representative, not exact) instantiation for class type variables in signature
             public uint methInstCount;
@@ -102,7 +128,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct CORINFO_SIG_INFO {
+        protected struct CORINFO_SIG_INFO {
             public int callConv; // CorInfoCallConv
             public IntPtr retTypeClass; // CORINFO_CLASS_HANDLE // if the return type is a value class, this is its handle (enums are normalized)
             public IntPtr retTypeSigClass; // CORINFO_CLASS_HANDLE // returns the value class as it is in the sig (enums are not converted to primitives)
@@ -118,7 +144,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private unsafe struct CORINFO_METHOD_INFO {
+        protected unsafe struct CORINFO_METHOD_INFO {
             public IntPtr ftn;   // CORINFO_METHOD_HANDLE
             public IntPtr scope; // CORINFO_MODULE_HANDLE
             public byte* ILCode;
@@ -138,18 +164,18 @@ namespace MonoMod.RuntimeDetour.Platforms {
             in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
             uint flags,
             out byte* nativeEntry,
-            out ulong nativeSizeOfCode
+            out uint nativeSizeOfCode
         );
 
         [ThreadStatic]
         private static int hookEntrancy = 0;
-        private unsafe CorJitResult CompileMethodHook(
+        protected unsafe CorJitResult CompileMethodHook(
             IntPtr jit, // ICorJitCompiler*
             IntPtr corJitInfo, // ICorJitInfo*
             in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
             uint flags, 
             out byte* nativeEntry, 
-            out ulong nativeSizeOfCode) {
+            out uint nativeSizeOfCode) {
 
             nativeEntry = null;
             nativeSizeOfCode = 0;
@@ -165,7 +191,7 @@ namespace MonoMod.RuntimeDetour.Platforms {
                  * FIXME: Linux .NET Core pre-5.0 (and sometimes even 5.0) can die in real_compileMethod on invalid IL?!
                  * -ade
                  */
-                CorJitResult result = real_compileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                CorJitResult result = InvokeRealCompileMethod(jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
 
                 if (hookEntrancy == 1) {
                     try {
