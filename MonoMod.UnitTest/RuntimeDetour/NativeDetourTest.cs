@@ -10,6 +10,7 @@ using MonoMod.Utils;
 using System.Reflection.Emit;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.ComponentModel;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -120,20 +121,36 @@ namespace MonoMod.UnitTest {
                 !DynDll.TryOpenLibrary($"libc.{PlatformHelper.LibrarySuffix}", out libc))
                 return;
 
+            bool manualApply = PlatformHelper.Is(Platform.MacOS);
+
             NativeDetour d = new NativeDetour(
                 libc.GetFunction("rand"),
-                ptr_not_rand
+                ptr_not_rand,
+                new NativeDetourConfig() {
+                    ManualApply = manualApply
+                }
             );
 
-            DidNothing = true;
-            Assert.Equal(-1, libc_rand());
-            Assert.False(DidNothing);
+            if (manualApply) {
+                try {
+                    d.Apply();
+                } catch (Win32Exception) {
+                    // Modern macOS doesn't give us permission to mess with this anymore.
+                    d.Dispose();
+                }
+            }
 
-            d.Dispose();
+            if (d.IsValid) {
+                DidNothing = true;
+                Assert.Equal(-1, libc_rand());
+                Assert.False(DidNothing);
 
-            DidNothing = true;
-            libc_rand();
-            Assert.True(DidNothing);
+                d.Dispose();
+
+                DidNothing = true;
+                libc_rand();
+                Assert.True(DidNothing);
+            }
         }
 
         [DllImport("msvcrt", EntryPoint = "rand", CallingConvention = CallingConvention.Cdecl)]
