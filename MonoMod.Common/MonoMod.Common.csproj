@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Metadata -->
+  <PropertyGroup>
+    <ProjectGuid>{D08C41CC-6121-47FB-AEBF-57A1D94DD09E}</ProjectGuid>
+
+    <AssemblyName>MonoMod.Common</AssemblyName>
+    <PackageId>MonoMod.Common</PackageId>
+    <Description>Common building blocks used INTERNALLY by MonoMod and Harmony which can be used to build your own libraries, f.e. RuntimeDetour's platform abstraction and Utils' DynamicMethodDefinition. For code that is ready to use reliably, use MonoMod.Utils.</Description>
+    <PackageTags>$(PackageTags)</PackageTags>
+
+    <TargetFrameworks>net35;net452;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
+    <OutputType>Library</OutputType>
+
+    <MonoModSharedShims Condition="'$(MonoModSharedShims)' == ''">false</MonoModSharedShims>
+  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.props" />
+
+  <!-- Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>MonoMod.Utils.Cil.ILGeneratorProxy</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
