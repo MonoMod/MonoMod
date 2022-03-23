@@ -136,11 +136,15 @@ namespace MonoMod.UnitTest {
                     d.Apply();
                 } catch (Win32Exception) {
                     // Modern macOS doesn't give us permission to mess with this anymore.
-                    d.Dispose();
+                    try {
+                        d.Dispose();
+                    } catch (Win32Exception) {
+                        // Of course it might also throw while trying to undo any made changes.
+                    }
                 }
             }
 
-            if (d.IsValid) {
+            if (d.IsApplied) {
                 DidNothing = true;
                 Assert.Equal(-1, libc_rand());
                 Assert.False(DidNothing);
