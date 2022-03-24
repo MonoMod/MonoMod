@@ -1,13 +1,9 @@
-﻿// #define MONOMOD_DBGLOG
-
+﻿#nullable enable
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
@@ -15,9 +11,9 @@ using System.Threading;
 namespace MonoMod {
     internal static class MMDbgLog {
 
-        public static readonly string Tag = typeof(MMDbgLog).Assembly.GetName().Name;
+        public static readonly string Tag = typeof(MMDbgLog).Assembly.GetName().Name ?? "MonoMod";
 
-        public static TextWriter Writer;
+        public static TextWriter? Writer;
 
         public static bool Debugging;
 
@@ -27,7 +23,7 @@ namespace MonoMod {
                 true;
 #else
                 Environment.GetEnvironmentVariable("MONOMOD_DBGLOG") == "1" ||
-                (Environment.GetEnvironmentVariable("MONOMOD_DBGLOG")?.ToLower(CultureInfo.InvariantCulture)?.Contains(Tag.ToLower(CultureInfo.InvariantCulture), StringComparison.Ordinal) ?? false);
+                (Environment.GetEnvironmentVariable("MONOMOD_DBGLOG")?.ToUpperInvariant()?.Contains(Tag.ToUpperInvariant(), StringComparison.Ordinal) ?? false);
 #endif
 
             if (enabled)
@@ -39,17 +35,19 @@ namespace MonoMod {
             if (!Debugging) {
                 Debugging = true;
                 // WinDbg doesn't trigger Debugger.IsAttached
-                Debugger.Launch();
+                _ = Debugger.Launch();
                 Thread.Sleep(6000);
                 Debugger.Break();
             }
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "If the IO in the try blocks in this method fails, we don't want everything to break. We just continue without logging.")]
         public static void Start() {
             if (Writer != null)
                 return;
 
-            string path = Environment.GetEnvironmentVariable("MONOMOD_DBGLOG_PATH");
+            string? path = Environment.GetEnvironmentVariable("MONOMOD_DBGLOG_PATH");
             if (path == "-") {
                 Writer = Console.Out;
                 return;
@@ -64,16 +62,15 @@ namespace MonoMod {
                     File.Delete(path);
             } catch { }
             try {
-                string dir = Path.GetDirectoryName(path);
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                string? dir = Path.GetDirectoryName(path);
+                if (dir is not null && !Directory.Exists(dir))
+                    _ = Directory.CreateDirectory(dir);
                 Writer = new StreamWriter(new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete), Encoding.UTF8);
             } catch { }
         }
 
         public static void Log(string str) {
-            TextWriter w = Writer;
-            if (w == null)
+            if (Writer is not { } w)
                 return;
 
             w.WriteLine(str);
@@ -81,8 +78,7 @@ namespace MonoMod {
         }
 
         public static T Log<T>(string str, T value) {
-            TextWriter w = Writer;
-            if (w == null)
+            if (Writer is not { } w)
                 return value;
 
             w.WriteLine(string.Format(CultureInfo.InvariantCulture, str, value));
