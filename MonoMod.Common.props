@@ -11,7 +11,7 @@
     <DebugType Condition="'$(DebugType)' == ''">portable</DebugType>
     <OutputPath>bin\$(Configuration)</OutputPath>
 
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>10</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <ErrorReport>prompt</ErrorReport>

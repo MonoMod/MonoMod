@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Metadata -->
+  <PropertyGroup>
+    <AssemblyName>MonoMod.Core</AssemblyName>
+    <PackageId>MonoMod.Core</PackageId>
+    <Description>Flexible and easily extensible runtime detouring library. Wrap, replace and manipulate (Mono.Cecil) methods at runtime.</Description>
+    <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
+
+    <TargetFrameworks>net35;net452;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
+    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <Import Project="..\MonoMod.Common.props" />
+
+  <!-- Dependencies -->
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
+      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
+  </ItemGroup>
+
+</Project>
