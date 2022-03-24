@@ -11,7 +11,7 @@ using Mono.Cecil;
  * across assembly boundaries.
  * -ade
  */
-static class MultiTargetShims {
+internal static class MultiTargetShims {
 
     private static readonly object[] _NoArgs = new object[0];
 
