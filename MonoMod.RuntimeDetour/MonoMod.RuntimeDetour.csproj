@@ -25,9 +25,5 @@
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
   </ItemGroup>
-
-  <!-- Shared source files. -->
-  <ItemGroup>
-    <Compile Include="..\MonoMod.Common\RuntimeDetour\**\*.cs" />
-  </ItemGroup>
+  
 </Project>

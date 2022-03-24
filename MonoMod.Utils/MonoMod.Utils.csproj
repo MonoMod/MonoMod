@@ -23,11 +23,6 @@
     </PackageReference>
   </ItemGroup>
 
-  <!-- Shared source files. -->
-  <ItemGroup>
-    <Compile Include="..\MonoMod.Common\Utils\**\*.cs" />
-  </ItemGroup>
-
   <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
