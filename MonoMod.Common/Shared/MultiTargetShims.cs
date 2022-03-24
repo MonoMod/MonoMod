@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.IO;
-using MonoMod.Utils;
 using Mono.Cecil;
 
 /* This class is included in every MonoMod assembly.
