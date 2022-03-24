@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Core {
-    internal interface ICoreDetour {
+    public interface ICoreDetour {
 
         MethodBase Source { get; }
         MethodBase Destination { get; }

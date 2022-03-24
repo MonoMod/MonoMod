@@ -5,6 +5,6 @@ namespace MonoMod.Core {
 
         FeatureFlags SupportedFeatures { get; }
 
-        CoreDetour CreateDetour(MethodBase source, MethodBase dest);
+        ICoreDetour CreateDetour(MethodBase source, MethodBase dest);
     }
 }
