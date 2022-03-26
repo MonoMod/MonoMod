@@ -16,7 +16,12 @@ namespace MonoMod.Core.Utils {
 #endif
         }
 
-        public static unsafe bool MemCmp(SimpleByteSpan a, SimpleByteSpan b) {
+        public static unsafe bool MemCmp(SimpleSpan<byte> a, SimpleSpan<byte> b) {
+            // TODO: implement
+            throw new NotImplementedException();
+        }
+
+        public static unsafe int IndexOf<T>(SimpleSpan<T> haystack, SimpleSpan<T> needle) where T : unmanaged {
             // TODO: implement
             throw new NotImplementedException();
         }

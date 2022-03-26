@@ -1,16 +1,16 @@
 ﻿using System;
 
 namespace MonoMod.Core.Utils {
-    public readonly unsafe ref struct SimpleByteSpan {
-        public byte* Start { get; }
+    public readonly unsafe ref struct SimpleSpan<T> where T : unmanaged {
+        public T* Start { get; }
         public int Length { get; }
 
-        public SimpleByteSpan(byte* start, int length) {
+        public SimpleSpan(T* start, int length) {
             Start = start;
             Length = length;
         }
 
-        public byte this[int index] {
+        public T this[int index] {
             get {
                 if (index < 0 || index >= Length)
                     throw new ArgumentOutOfRangeException(nameof(index));
@@ -20,8 +20,8 @@ namespace MonoMod.Core.Utils {
             // if a user wants to write, they still can through the Start pointer
         }
 
-        public SimpleByteSpan Slice(int position) => Slice(position, Length - position);
-        public SimpleByteSpan Slice(int position, int length) {
+        public SimpleSpan<T> Slice(int position) => Slice(position, Length - position);
+        public SimpleSpan<T> Slice(int position, int length) {
             if (position < 0 || position > Length)
                 throw new ArgumentOutOfRangeException(nameof(position));
             if (length < 0 || position + length > Length)
@@ -30,7 +30,7 @@ namespace MonoMod.Core.Utils {
             if (length == 0)
                 return default;
 
-            return new SimpleByteSpan(Start + position, length);
+            return new SimpleSpan<T>(Start + position, length);
         }
     }
 }
