@@ -22,6 +22,8 @@
     <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
+    <!-- This package includes polyfills for a lot of things, including ValueTuples, Range, Index and friends -->
+    <PackageReference Include="Theraot.Core" Version="3.2.11" />
   </ItemGroup>
 
   <ItemGroup>
