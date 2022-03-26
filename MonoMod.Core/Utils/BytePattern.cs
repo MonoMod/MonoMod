@@ -27,7 +27,6 @@ namespace MonoMod.Core.Utils {
         private record struct PatternSegment(int Start, int Length, SegmentKind Kind) {
             public SimpleByteSpan SliceOf(SimpleByteSpan span) => span.Slice(Start, Length);
         }
-        private record struct VT<TA, TB, TC>(TA A, TB B, TC C); // <- something like a value tuple polyfill
 
         public BytePattern(params short[] pattern) {
             (segments, MinLength, AddressBytes) = ComputeSegments(pattern);
@@ -39,7 +38,7 @@ namespace MonoMod.Core.Utils {
             this.pattern = bytePattern;
         }
 
-        private static VT<PatternSegment[], int, int> ComputeSegments(short[] pattern) {
+        private static (PatternSegment[] Segments, int MinLen, int AddrBytes) ComputeSegments(short[] pattern) {
             if (pattern is null)
                 throw new ArgumentNullException(nameof(pattern));
             if (pattern.Length == 0)
