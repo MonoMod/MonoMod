@@ -29,4 +29,8 @@
       <_Parameter1>MonoMod.Utils.Cil.ILGeneratorProxy</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.ILHelpers\MonoMod.ILHelpers.ilproj" Aliases="ilhelpers" />
+  </ItemGroup>
 </Project>

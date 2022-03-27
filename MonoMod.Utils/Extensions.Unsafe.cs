@@ -32,56 +32,7 @@ namespace MonoMod.Utils {
                 return size;
 
             if (_GetManagedSizeHelper == null) {
-                Assembly asm;
-
-                const string @namespace = "MonoMod.Utils";
-                const string @name = "GetManagedSizeHelper";
-                const string @fullName = @namespace + "." + @name;
-
-#if !CECIL0_9
-                using (
-#endif
-                ModuleDefinition module = ModuleDefinition.CreateModule(
-                    @fullName,
-                    new ModuleParameters() {
-                        Kind = ModuleKind.Dll,
-#if !CECIL0_9 && MONOMOD_UTILS
-                        ReflectionImporterProvider = MMReflectionImporter.Provider
-#endif
-                    }
-                )
-#if CECIL0_9
-                ;
-#else
-                )
-#endif
-                {
-
-                    TypeDefinition type = new TypeDefinition(
-                        @namespace,
-                        @name,
-                        MC.TypeAttributes.Public | MC.TypeAttributes.Abstract | MC.TypeAttributes.Sealed
-                    ) {
-                        BaseType = module.TypeSystem.Object
-                    };
-                    module.Types.Add(type);
-
-                    MethodDefinition method = new MethodDefinition(@name,
-                        MC.MethodAttributes.Public | MC.MethodAttributes.Static | MC.MethodAttributes.HideBySig,
-                        module.TypeSystem.Int32
-                    );
-                    GenericParameter genParam = new GenericParameter("T", method);
-                    method.GenericParameters.Add(genParam);
-                    type.Methods.Add(method);
-
-                    ILProcessor il = method.Body.GetILProcessor();
-                    il.Emit(OpCodes.Sizeof, genParam);
-                    il.Emit(OpCodes.Ret);
-
-                    asm = ReflectionHelper.Load(module);
-                }
-
-                _GetManagedSizeHelper = asm.GetType(@fullName).GetMethod(@name);
+                _GetManagedSizeHelper = typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf));
             }
 
             size =  (_GetManagedSizeHelper.MakeGenericMethod(t).CreateDelegate<Func<int>>() as Func<int>)();
