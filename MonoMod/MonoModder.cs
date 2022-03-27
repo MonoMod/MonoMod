@@ -1663,6 +1663,9 @@ namespace MonoMod {
                 method.Overrides[i] = (MethodReference) method.Overrides[i].Relink(Relinker, method);
 
             method.ReturnType = method.ReturnType.Relink(Relinker, method);
+            
+            for (int i = 0; i < method.MethodReturnType.CustomAttributes.Count; i++)
+                PatchRefsInCustomAttribute(method.MethodReturnType.CustomAttributes[i] = method.MethodReturnType.CustomAttributes[i].Relink(Relinker, method));
 
             if (method.Body == null) return;
 
