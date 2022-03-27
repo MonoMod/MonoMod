@@ -171,7 +171,7 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        private unsafe bool TryMatchAtImpl(SimpleSpan<byte> patternSpan, SimpleSpan<byte> data, SimpleSpan<byte> addrBuf, out int length, int startAtSegment) {
+        private bool TryMatchAtImpl(SimpleSpan<byte> patternSpan, SimpleSpan<byte> data, SimpleSpan<byte> addrBuf, out int length, int startAtSegment) {
             length = 0;
 
             int pos = 0;
@@ -205,7 +205,7 @@ namespace MonoMod.Core.Utils {
                                 return false;
 
                             SimpleSpan<byte> pattern = segment.SliceOf(patternSpan);
-                            Buffer.MemoryCopy(pattern.Start, addrBuf.Start, (ulong) addrBuf.Length, (ulong) pattern.Length);
+                            Buffer.MemoryCopy(pattern, addrBuf);
                             addrBuf = addrBuf.Slice(Math.Min(addrBuf.Length, pattern.Length));
 
                             pos += segment.Length;
@@ -235,6 +235,12 @@ namespace MonoMod.Core.Utils {
         }
 
         public unsafe bool TryFindMatch(SimpleSpan<byte> data, out ulong address, out int offset, out int length) {
+            if (data.Length < MinLength) {
+                length = offset = 0;
+                address = 0;
+                return false; // the input data is less than this pattern's minimum length, so it can't possibly match
+            }
+
             fixed (byte* patternBufferPtr = pattern) {
                 SimpleSpan<byte> patternSpan = new(patternBufferPtr, pattern.Length);
                 ulong* addr = stackalloc ulong[1];
@@ -246,6 +252,11 @@ namespace MonoMod.Core.Utils {
         }
 
         public unsafe bool TryFindMatch(SimpleSpan<byte> data, SimpleSpan<byte> addrBuf, out int offset, out int length) {
+            if (data.Length < MinLength) {
+                length = offset = 0;
+                return false; // the input data is less than this pattern's minimum length, so it can't possibly match
+            }
+
             fixed (byte* patternBufferPtr = pattern) {
                 SimpleSpan<byte> patternSpan = new(patternBufferPtr, pattern.Length);
 

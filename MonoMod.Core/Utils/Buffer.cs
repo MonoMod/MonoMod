@@ -16,6 +16,11 @@ namespace MonoMod.Core.Utils {
 #endif
         }
 
+        [MethodImpl(Helpers.AggressiveInlining)]
+        public static unsafe void MemoryCopy(SimpleSpan<byte> source, SimpleSpan<byte> destination) {
+            MemoryCopy(source.Start, destination.Start, (ulong) destination.Length, (ulong) source.Length);
+        }
+
         public static unsafe bool MemCmp(SimpleSpan<byte> a, SimpleSpan<byte> b) {
             // TODO: implement
             throw new NotImplementedException();
