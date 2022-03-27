@@ -12,12 +12,8 @@
 
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyFileVersionAttribute::.ctor(string) = FILE_VERSION
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyInformationalVersionAttribute::.ctor(string) = INFORMATIONAL_VERSION
-  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyTitleAttribute::.ctor(string) = {string('MonoMod.ILHelpers')} //( 01 00 26 53 79 73 74 65 6D 2E 52 75 6E 74 69 6D   // ..&System.Runtim
-                                                                                              //65 2E 43 6F 6D 70 69 6C 65 72 53 65 72 76 69 63   // e.CompilerServic
-                                                                                              //65 73 2E 55 6E 73 61 66 65 00 00 )                // es.Unsafe..
-  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyDescriptionAttribute::.ctor(string) = {string('MonoMod.ILHelpers')} //( 01 00 26 53 79 73 74 65 6D 2E 52 75 6E 74 69 6D   // ..&System.Runtim
-                                                                                                    //65 2E 43 6F 6D 70 69 6C 65 72 53 65 72 76 69 63   // e.CompilerServic
-                                                                                                    //65 73 2E 55 6E 73 61 66 65 00 00 )                // es.Unsafe..
+  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyTitleAttribute::.ctor(string) = {string('MonoMod.ILHelpers')}
+  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyDescriptionAttribute::.ctor(string) = {string('MonoMod.ILHelpers')}
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyMetadataAttribute::.ctor(string, string) = (
     01 00 15 2e 4e 45 54 46 72 61 6d 65 77 6f 72 6b
     41 73 73 65 6d 62 6c 79 00 00 00
