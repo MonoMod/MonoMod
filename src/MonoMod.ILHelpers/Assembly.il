@@ -26,17 +26,8 @@
     01 00 0b 49 73 54 72 69 6d 6d 61 62 6c 65 04 54
     72 75 65 00 00
   ) // "IsTrimmable", "True"
-  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyCopyrightAttribute::.ctor(string) = ( 01 00 2F C2 A9 20 4D 69 63 72 6F 73 6F 66 74 20   // ../.. Microsoft
-                                                                                        43 6F 72 70 6F 72 61 74 69 6F 6E 2E 20 20 41 6C   // Corporation.  Al
-                                                                                        6C 20 72 69 67 68 74 73 20 72 65 73 65 72 76 65   // l rights reserve
-                                                                                        64 2E 00 00 )                                     // d...
-  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyCompanyAttribute::.ctor(string) = ( 01 00 15 4D 69 63 72 6F 73 6F 66 74 20 43 6F 72   // ...Microsoft Cor
-                                                                                      70 6F 72 61 74 69 6F 6E 00 00 )                   // poration..
-  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyProductAttribute::.ctor(string) = ( 01 00 1A 4D 69 63 72 6F 73 6F 66 74 C2 AE 20 2E   // ...Microsoft.. .
-                                                                                      4E 45 54 20 46 72 61 6D 65 77 6F 72 6B 00 00 )    // NET Framework..
-  .custom instance void [CORE_ASSEMBLY]System.CLSCompliantAttribute::.ctor(bool) = (
-    01 00 00 00 00
-  ) // false
+  .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyCopyrightAttribute::.ctor(string) = ASSEMBLY_COPYRIGHT
+  .custom instance void [CORE_ASSEMBLY]System.CLSCompliantAttribute::.ctor(bool) = ( 01 00 00 00 00 ) // false
   .hash algorithm 0x00008004
   .ver ASSEMBLY_VERSION
 }

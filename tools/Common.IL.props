@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <!-- IL-specific properties -->
+  <!-- This is all largely pulled directly from the old System.Runtime.CompilerService.Unsafe BCL implementation -->
+  <PropertyGroup>
+    <!-- Make sure that the DebuggableAttribute is set properly. -->
+    <DebugOptimization>IMPL</DebugOptimization>
+    <DebugOptimization Condition="'$(Optimize)' == 'true'">OPT</DebugOptimization>
+    <CoreCompileDependsOn>$(CoreCompileDependsOn);GenerateVersionFile</CoreCompileDependsOn>
+    <!--<DocumentationFile>$(MSBuildThisFileDirectory)System.Runtime.CompilerServices.Unsafe.xml</DocumentationFile>-->
+    <IlasmFlags>$(IlasmFlags) -DEBUG=$(DebugOptimization)</IlasmFlags>
+    <IsPackable>true</IsPackable>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <IsNetCoreOrStandard>false</IsNetCoreOrStandard>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)')) == '.NETCoreApp'">
+    <DefineConstants>netcoreapp;$(DefineConstants)</DefineConstants>
+    <CoreAssembly>System.Runtime</CoreAssembly>
+    <IsNetCoreOrStandard>true</IsNetCoreOrStandard>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)')) == '.NETStandard'">
+    <CoreAssembly>netstandard</CoreAssembly>
+    <IsNetCoreOrStandard>true</IsNetCoreOrStandard>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)')) == '.NETFramework'">
+    <CoreAssembly>mscorlib</CoreAssembly>
+  </PropertyGroup>
+
+</Project>
