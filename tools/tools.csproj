@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  
+  <Import Project="$(MSBuildThisFileDirectory)Common.props" />
+
+  <PropertyGroup>
+    <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
+    <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <Import Sdk="Microsoft.Build.NoTargets" Version="3.3.0" Project="Sdk.props" />
+  
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)*" Exclude="$(MSBuildThisFile)" />
+  </ItemGroup>
+
+  <Import Sdk="Microsoft.Build.NoTargets" Version="3.3.0" Project="Sdk.targets" />
+  
+</Project>
