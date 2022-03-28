@@ -27,6 +27,7 @@
     <!-- These properties make the build outputs land out-of-source for easy fully clean rebuilds -->
 		<PackageOutputPath>$(MMArtifactsPath)packages\$(Configuration)\</PackageOutputPath>
 		<BaseIntermediateOutputPath>$(MMArtifactsPath)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Configuration)\</IntermediateOutputPath>
 		<BaseOutputPath>$(MMArtifactsPath)bin\$(MSBuildProjectName)\</BaseOutputPath>
     
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
