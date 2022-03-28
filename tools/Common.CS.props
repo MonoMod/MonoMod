@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <!-- C#-specific properties -->
+  <PropertyGroup>
+    <LangVersion>10</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable> <!-- C# projects should have nullability enabled. -->
+    <WarningsAsErrors>$(WarningsAsErrors);nullable</WarningsAsErrors> <!-- Nullability warnings should be errors. -->
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateDocumentation>true</GenerateDocumentation>
+    
+    <ImplicitUsings>false</ImplicitUsings>
+    
+    <EnableNetAnalyzers>true</EnableNetAnalyzers>
+    <AnalysisLevel>6.0</AnalysisLevel>
+    <!-- Because we're bringing in the package ourselves, we wnat to turn this off. -->
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    
+    <MMSharedSourceFiles>true</MMSharedSourceFiles>
+    
+    <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- XML documentation warning. TODO: We should probably remove this at some point and ensure that MM is fully documented. -->
+    <NoWarn>$(NoWarn);CA1716</NoWarn> <!-- Members have name shared with primitive type. -->
+  </PropertyGroup>
+
+  <!-- For our C# projects, we want to pull in the code analyzers -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup
+
+</Project>

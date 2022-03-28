@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <!-- These properties are defaults for ALL project types. C#-specific things must go in Common.CS.props -->
+  <PropertyGroup>
+    <Configurations>Debug;Release;DebugTrace;ReleaseTrace</Configurations>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <DebugType>portable</DebugType>
+    <Deterministic>true</Deterministic>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    
+    <!-- All MonoMod projects (by default) target these frameworks -->
+    <TargetFrameworks>net35;net452;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(NETCoreAppMaximumVersion) &gt;= 6.0">$(TargetFrameworks);net6.0</TargetFrameworks>
+    <!-- If a project wants to target some subset or other set, then they can just reassign TargetFrameworks in their project file -->
+    
+    <!-- Conditional compilation constants are used *everywhere*, make sure common ones are set -->
+    <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
+    <!-- TODO: do we even need the assembly constant? the vast majority of shared code has been un-shared -->
+    <DisableImplicitFrameworkDefines>false</DisableImplicitFrameworkDefines>
+    
+    <!-- Properties for the repository paths -->
+    <MMToolsPath>$(MSBuildThisFileDirectory)</MMToolsPath>
+    <MMRootPath>$(MMToolsPath)..\</MMRootPath>
+    <MMSourcePath>$(MMRootPath)src\</MMSourcePath>
+    <MMArtifactsPath>$(MMRootPath)artifacts\</MMArtifactsPath>
+
+    <!-- These properties make the build outputs land out-of-source for easy fully clean rebuilds -->
+		<PackageOutputPath>$(MMArtifactsPath)packages\$(Configuration)\</PackageOutputPath>
+		<BaseIntermediateOutputPath>$(MMArtifactsPath)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+		<BaseOutputPath>$(MMArtifactsPath)bin\$(MSBuildProjectName)\</BaseOutputPath>
+    
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    
+    <!-- Assembly signing -->
+    <AssemblyOriginatorKeyFile>$(MMRootPath)MonoMod.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly Condition="'$(SignAssembly)' == 'force'">true</SignAssembly>
+    <SignAssembly Condition="'$(SignAssembly)' != 'skip'">false</SignAssembly> <!-- default -->
+    <DelaySign>false</DelaySign>
+	</PropertyGroup>
+  
+  <!-- Debug -->
+  <PropertyGroup Condition="$(Configuration.Contains('Debug'))">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Release -->
+  <PropertyGroup Condition="$(Configuration.Contains('Release'))">
+    <Optimize>true</Optimize>
+    <!--<DefineConstants>$(DefineConstants)</DefineConstants>-->
+  </PropertyGroup>
+
+  <!-- Trace -->
+  <PropertyGroup Condition="$(Configuration.Contains('Trace'))">
+    <DefineConstants>MONOMOD_DBGLOG;TRACE;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+  
+  <!-- NuGet Information -->
+  <Import Project="$(MMToolsPath)NuGet.props" />
+  
+  <!-- Project Language information -->
+  <PropertyGroup>
+    <MMProjectLanguage>Unknown</MMProjectLanguage>
+    <MMProjectLanguage Condition="'$(MSBuildProjectExtension)' == '.csproj'">CS</MMProjectLanguage>
+    <MMProjectLanguage Condition="'$(MSBuildProjectExtension)' == '.ilproj'">IL</MMProjectLanguage>
+    <MMLanguageProps>$(MMToolsPath)Common.$(MMProjectLanguage).props</MMLanguageProps>
+    <MMLanguageTargets>$(MMToolsPath)Common.$(MMProjectLanguage).targets</MMLanguageTargets>
+  </PropertyGroup>
+  
+  <Import Project="$(MMLanguageProps)" Condition="Exists('$(MMLanguageProps)')" />
+
+</Project>

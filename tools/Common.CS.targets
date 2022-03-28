@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <!-- C#-specific targets -->
+  <Choose>
+    <When Condition="$(DefineConstants.Contains('NETSTANDARD2_0_OR_GREATER'))">
+      <!-- .NET Standard -->
+      <PropertyGroup>
+        <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
+        <DefineConstants>CECIL0_11;$(DefineConstants)</DefineConstants>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
+        <NETShimVersion>4.*</NETShimVersion>
+      </PropertyGroup>
+      <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. -->
+      <ItemGroup>
+        <PackageReference Include="System.Reflection.TypeExtensions" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.Collections.NonGeneric" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.ComponentModel.TypeConverter" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.IO.FileSystem.Primitives" Version="$(NETShimVersion)" />
+      </ItemGroup>
+      <!-- This could be made optional at compile-time, but it's preferred to check for availability at runtime. -->
+      <ItemGroup>
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="$(NETShimVersion)" />
+      </ItemGroup>
+    </When>
+    
+    <When Condition="$(DefineConstants.Contains('NET40_OR_GREATER'))">
+      <!-- .NET Framework 4.0+ -->
+      <PropertyGroup>
+        <DefineConstants>NETFRAMEWORK4;$(DefineConstants)</DefineConstants>
+        <DefineConstants>CECIL0_11;$(DefineConstants)</DefineConstants>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
+      </PropertyGroup>
+      <ItemGroup>
+        <!-- <Reference Include="mscorlib" /> -->
+        <Reference Include="System" />
+        <!-- .NET Framework 4.0+ reference assemblies aren't always available system-wide. -->
+        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.*">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+      </ItemGroup>
+    </When>
+    
+    <When Condition="$(DefineConstants.Contains('NET35_OR_GREATER'))">
+      <!-- .NET Framework 3.5 -->
+      <PropertyGroup>
+        <DefineConstants>NETFRAMEWORK3;$(DefineConstants)</DefineConstants>
+        <DefineConstants>CECIL0_10;$(DefineConstants)</DefineConstants>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">0.10.*</CecilVersion>
+      </PropertyGroup>
+      <ItemGroup>
+        <!-- <Reference Include="mscorlib" /> -->
+        <Reference Include="System" />
+        <!-- .NET Framework 3.5 reference assemblies aren't always available system-wide. -->
+        <PackageReference Include="jnm2.ReferenceAssemblies.net35" Version="1.*">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+      </ItemGroup>
+    </When>
+    
+    <Otherwise>
+      <PropertyGruop>
+        <CoreCompileDependsOn>ErrorBecauseNoSupportedTFM;$(CoreCompileDependsOn)</CoreCompileDependsOn>
+      </PropertyGroup>
+      <Target Name="ErrorBecauseNoSupportedTFM">
+        <Error Text="No supported TFM configuration! Update tools/Common.CS.targets" />
+      </Target>
+    </Otherwise>
+  </Choose>
+  
+  <!-- Shared source files -->
+  <ItemGroup Condition="'$(MMSharedSourceFiles)' == 'true'">
+    <Compile Include="$(MMSourcePath)MonoMod.Common\Shared\**\*.cs" />
+  </ItemGroup>
+
+</Project>

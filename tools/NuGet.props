@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <PropertyGroup>
+    <PackageId>$(MSBuildProjectName)</PackageId>
+    <Authors>0x0ade</Authors> <!-- Note: With dotnet pack, <Authors> is also the list of owners. -->
+    <Version>$([System.DateTime]::Now.ToString(yy.MM.dd)).00</Version> <!-- Devbuild -->
+    <Version Condition="'$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version> <!-- Azure Pipelines -->
+    <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) 0x0ade</Copyright>
+    <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Repository>https://github.com/MonoMod/MonoMod</Repository>
+    <PackageProjectUrl>https://github.com/MonoMod</PackageProjectUrl>
+    <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
+  </PropertyGroup>
+
+  <!-- We have literally no reason not to use SourceLink -->
+  <PropertyGroup>
+    <!-- https://github.com/dotnet/sourcelink -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <!-- SourceLink -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <!-- NuGetizer for better control over NuGet package generation with dotnet pack -->
+    <PackageReference Include="NuGetizer" Version="0.7.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
