@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Metadata -->
   <PropertyGroup>
@@ -6,16 +7,7 @@
     <PackageId>MonoMod.Core</PackageId>
     <Description>Flexible and easily extensible runtime detouring library. Wrap, replace and manipulate (Mono.Cecil) methods at runtime.</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
-
-    <TargetFrameworks>net35;net452;netstandard2.0</TargetFrameworks>
-    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
-    <OutputType>Library</OutputType>
-    <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AnalysisLevel>latest-all</AnalysisLevel>
   </PropertyGroup>
-  
-  <Import Project="..\MonoMod.Common.props" />
 
   <!-- Dependencies -->
   <ItemGroup>

@@ -2,19 +2,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Metadata -->
   <PropertyGroup>
-    <ProjectGuid>{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}</ProjectGuid>
-
     <AssemblyName>MonoMod.Utils</AssemblyName>
     <PackageId>MonoMod.Utils</PackageId>
     <Description>Utilities and smaller MonoMod "components" (f.e. ModInterop, DynDll, DynData). Can be used for your own mods. Required by all other MonoMod components.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
-
-    <TargetFrameworks>net35;net452;netstandard2.0</TargetFrameworks>
-    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
-    <Configurations>Debug;Release;DebugLegacy;ReleaseLegacy;DebugTrace;ReleaseTrace</Configurations>
-    <OutputType>Library</OutputType>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.props" />
 
   <!-- Dependencies -->
   <ItemGroup>

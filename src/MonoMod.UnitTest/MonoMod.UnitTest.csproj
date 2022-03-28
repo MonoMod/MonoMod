@@ -15,7 +15,6 @@
     <OutputType>Library</OutputType>
     <SignAssembly>skip</SignAssembly>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.props" />
 
   <!-- Dependencies -->
   <ItemGroup>

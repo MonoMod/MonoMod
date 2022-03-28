@@ -2,18 +2,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Metadata -->
   <PropertyGroup>
-    <ProjectGuid>{68E38462-2DB9-4692-AD91-077A8FBE8AE9}</ProjectGuid>
-
     <AssemblyName>MonoMod.DebugIL</AssemblyName>
     <PackageId></PackageId>
     <Description></Description>
     <PackageTags>$(PackageTags)</PackageTags>
 
-    <TargetFrameworks>net452;netstandard2.0;netcoreapp2.1</TargetFrameworks>
-    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.6.0 And $(NETCoreAppMaximumVersion) &gt;= 5.0">$(TargetFrameworks);net5.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.props" />
 
   <!-- Dependencies -->
   <ItemGroup>
