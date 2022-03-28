@@ -9,7 +9,6 @@
 
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
   </PropertyGroup>
-  <Import Project="..\MonoMod.Common.props" />
 
   <!-- Dependencies -->
   <ItemGroup>

@@ -61,15 +61,20 @@
       </ItemGroup>
     </When>
     
+    <!--<When Condition="'$(TargetFramework)' == '' and '$(TargetFrameworks)' != ''">
+      <!- We matched no frameworks, but TargetFramework is empty, meaning we're in the top-level build ->
+    </When>
+    
     <Otherwise>
-      <PropertyGruop>
+      <PropertyGroup>
         <CoreCompileDependsOn>ErrorBecauseNoSupportedTFM;$(CoreCompileDependsOn)</CoreCompileDependsOn>
       </PropertyGroup>
-      <Target Name="ErrorBecauseNoSupportedTFM">
-        <Error Text="No supported TFM configuration! Update tools/Common.CS.targets" />
-      </Target>
-    </Otherwise>
+    </Otherwise>-->
   </Choose>
+  
+  <Target Name="ErrorBecauseNoSupportedTFM">
+    <Error Text="No supported TFM configuration! Update tools/Common.CS.targets" />
+  </Target>
   
   <!-- Shared source files -->
   <ItemGroup Condition="'$(MMSharedSourceFiles)' == 'true'">
