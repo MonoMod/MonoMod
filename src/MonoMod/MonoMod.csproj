@@ -6,6 +6,7 @@
     <PackageId>MonoMod</PackageId>
     <Description>General purpose .NET assembly modding "basework". This package contains the core IL patcher and relinker.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
+    <Nullable>annotations</Nullable>
     
     <OutputType>Exe</OutputType>
   </PropertyGroup>

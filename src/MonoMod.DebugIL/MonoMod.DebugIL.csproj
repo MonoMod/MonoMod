@@ -6,6 +6,8 @@
     <PackageId></PackageId>
     <Description></Description>
     <PackageTags>$(PackageTags)</PackageTags>
+    <Nullable>annotations</Nullable>
+    <TargetFrameworks>net452;net6.0</TargetFrameworks>
 
     <OutputType>Exe</OutputType>
   </PropertyGroup>
