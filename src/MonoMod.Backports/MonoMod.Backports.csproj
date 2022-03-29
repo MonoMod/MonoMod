@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- We're not going to be having any of the logic that would use the shared sources, so we'll just not include them -->
+    <MMSharedSourceFiles>false</MMSharedSourceFiles>
+  </PropertyGroup>
+  
+  <!-- Conditionally importing based on TFMs, but automated -->
+  <ItemGroup>
+    <None Include="@(Compile)" />
+    <Compile Remove="%(Compile.Identity)" 
+             Condition="$([System.String]::Copy('%(Identity)').Contains('tfm')) 
+                    and !$([System.String]::Copy('%(Identity)').Contains('$(TargetFramework)'))" />
+    <Compile Remove="%(Compile.Identity)" 
+             Condition="$([System.String]::Copy('%(Identity)').Contains('notfm'))
+                    and $([System.String]::Copy('%(Identity)').Contains('$(TargetFramework)'))" />
+  </ItemGroup>
+
+</Project>
