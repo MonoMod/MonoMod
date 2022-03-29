@@ -40,7 +40,7 @@
     
     <ItemGroup>
       <_ExtraMacros Include="$(ExtraMacros)" />
-      <_DefineConstants Include="$(DefineConstants)" />
+      <_DefineConstants Include="$(DefineConstants);$(ImplicitFrameworkDefine)" />
     </ItemGroup>
     
     <ItemGroup>

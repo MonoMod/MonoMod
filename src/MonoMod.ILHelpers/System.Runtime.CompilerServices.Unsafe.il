@@ -7,6 +7,18 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
+#ifdef NET5_0
+.assembly extern System.Runtime.CompilerServices.Unsafe { .ver CORE_ASSEMBLY_VERSION }
+.class extern forwarder System.Runtime.CompilerServices.Unsafe { .assembly extern System.Runtime.CompilerServices.Unsafe }
+#endif
+#ifdef NET6_0
+.assembly extern System.Runtime.CompilerServices.Unsafe { .ver CORE_ASSEMBLY_VERSION }
+.class extern forwarder System.Runtime.CompilerServices.Unsafe { .assembly extern System.Runtime.CompilerServices.Unsafe }
+#endif
+
+#ifdef NET5_0_OR_GREATER
+#else
+
 .class public abstract auto ansi sealed beforefieldinit System.Runtime.CompilerServices.Unsafe
        extends [CORE_ASSEMBLY]System.Object
 {
@@ -492,3 +504,5 @@
   } // end of method Unsafe::NullRef
 
 } // end of class System.Runtime.CompilerServices.Unsafe
+
+#endif
