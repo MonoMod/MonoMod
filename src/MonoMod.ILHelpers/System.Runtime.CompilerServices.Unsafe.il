@@ -19,6 +19,7 @@
 #ifdef NET5_0_OR_GREATER
 #else
 
+// TODO: nullable annotations (ugh)
 .class public abstract auto ansi sealed beforefieldinit System.Runtime.CompilerServices.Unsafe
        extends [CORE_ASSEMBLY]System.Object
 {

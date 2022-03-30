@@ -17,5 +17,9 @@
     </ItemGroup>
     <Message Importance="high" Text="TFM: $(TargetFramework) - @(Compile)" />
   </Target>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\MonoMod.ILHelpers\MonoMod.ILHelpers.ilproj" />
+  </ItemGroup>
 
 </Project>
