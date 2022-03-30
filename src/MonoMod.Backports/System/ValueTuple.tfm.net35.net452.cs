@@ -7,19 +7,67 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace System {
-
 #pragma warning disable CA1036 // Override methods on comparable types
 #pragma warning disable CA1815 // Override equals and operator equals on value types
 #pragma warning disable CA2231 // Overload operator equals on overriding value type Equals
-    // For some reason, the BCL implementation doesn't do any of the above either.
+// For some reason, the BCL implementation doesn't do any of the above either.
 
 #pragma warning disable IDE0008 // Use explicit type
 #pragma warning disable IDE0046
-    // Most of this code is copied directly from the BCL.
+// Most of this code is copied directly from the BCL.
 
 #pragma warning disable CA1051 // Do not declare visible instance fields
-    // One of the major points of ValueTuple is the visible instance fields
+// One of the major points of ValueTuple is the visible instance fields
+
+namespace System.Runtime.CompilerServices {
+    /// <summary>
+    ///     Indicates that the use of <see cref="ValueTuple" /> on a member is meant to be treated as a tuple with
+    ///     element names.
+    /// </summary>
+    [CLSCompliant(false)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.ReturnValue | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Event)]
+    public sealed class TupleElementNamesAttribute : Attribute {
+        private readonly string[] _transformNames;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="TupleElementNamesAttribute" />
+        ///     class.
+        /// </summary>
+        /// <param name="transformNames">
+        ///     Specifies, in a pre-order depth-first traversal of a type's
+        ///     construction, which <see cref="ValueType" /> occurrences are
+        ///     meant to carry element names.
+        /// </param>
+        /// <remarks>
+        ///     This constructor is meant to be used on types that contain an
+        ///     instantiation of <see cref="ValueType" /> that contains
+        ///     element names.  For instance, if <c>C</c> is a generic type with
+        ///     two type parameters, then a use of the constructed type
+        ///     <c>C{<see cref="ValueTuple{T1, T2}" />, <see cref="ValueTuple{T1, T2, T3}" /></c> might be intended to
+        ///     treat the first type argument as a tuple with element names and the
+        ///     second as a tuple without element names. In which case, the
+        ///     appropriate attribute specification should use a
+        ///     <c>transformNames</c> value of
+        ///     <code>
+        ///         { "name1", "name2", null, null,
+        ///         null }
+        ///     </code>
+        ///     .
+        /// </remarks>
+        public TupleElementNamesAttribute(string[] transformNames) {
+            _transformNames = transformNames ?? throw new ArgumentNullException(nameof(transformNames));
+        }
+
+        /// <summary>
+        ///     Specifies, in a pre-order depth-first traversal of a type's
+        ///     construction, which <see cref="ValueTuple" /> elements are
+        ///     meant to carry element names.
+        /// </summary>
+        public IList<string> TransformNames => _transformNames;
+    }
+}
+
+namespace System {
 
     /// <summary>
     /// Helper so we can call some tuple methods recursively without knowing the underlying types.
