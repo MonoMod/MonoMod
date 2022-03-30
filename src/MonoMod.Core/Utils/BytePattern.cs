@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -14,7 +15,7 @@ namespace MonoMod.Core.Utils {
         // a captured byte, pushed into the address buffer during matching
         public const short AddressValue = -3;
 
-        private readonly byte[] pattern;
+        private readonly ReadOnlyMemory<byte> pattern;
         private readonly PatternSegment[] segments;
 
         public int AddressBytes { get; }
@@ -25,24 +26,26 @@ namespace MonoMod.Core.Utils {
         }
 
         private record struct PatternSegment(int Start, int Length, SegmentKind Kind) {
-            public SimpleSpan<byte> SliceOf(SimpleSpan<byte> span) => span.Slice(Start, Length);
+            public ReadOnlySpan<byte> SliceOf(ReadOnlySpan<byte> span) => span.Slice(Start, Length);
         }
 
-        public BytePattern(params short[] pattern) {
+        public BytePattern(ReadOnlyMemory<short> pattern) {
             (segments, MinLength, AddressBytes) = ComputeSegments(pattern);
 
             byte[] bytePattern = new byte[pattern.Length];
             for (int i = 0; i < pattern.Length; i++) {
-                bytePattern[i] = (byte) (pattern[i] & 0xFF);
+                bytePattern[i] = (byte) (pattern.Span[i] & 0xFF);
             }
             this.pattern = bytePattern;
         }
 
-        private static (PatternSegment[] Segments, int MinLen, int AddrBytes) ComputeSegments(short[] pattern) {
-            if (pattern is null)
-                throw new ArgumentNullException(nameof(pattern));
-            if (pattern.Length == 0)
-                throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
+        public BytePattern(params short[] pattern) : this(pattern.AsMemory()) { }
+
+        private static (PatternSegment[] Segments, int MinLen, int AddrBytes) ComputeSegments(ReadOnlyMemory<short> patternMem) {
+            if (patternMem.Length == 0)
+                throw new ArgumentException("Pattern cannot be empty", nameof(patternMem));
+
+            ReadOnlySpan<short> pattern = patternMem.Span;
 
             // first, we do a pass to compute how many segments we need
             int segmentCount = 0;
@@ -57,10 +60,10 @@ namespace MonoMod.Core.Utils {
                 AnyValue => SegmentKind.Any,
                 AnyRepeatingValue => SegmentKind.AnyRepeating,
                 AddressValue => SegmentKind.Address,
-                _ => throw new ArgumentException($"Pattern contains unknown special value {value}", nameof(pattern))
+                _ => throw new ArgumentException($"Pattern contains unknown special value {value}", nameof(patternMem))
             };
 
-            for (int i = 0; i < pattern.Length; i++) {
+            for (int i = 0; i < patternMem.Length; i++) {
                 SegmentKind thisSegmentKind = KindForByte(pattern[i]);
 
                 minLength += thisSegmentKind switch {
@@ -92,12 +95,12 @@ namespace MonoMod.Core.Utils {
             }
 
             if (segmentCount == 0 || minLength <= 0) {
-                throw new ArgumentException("Pattern has no meaningful segments", nameof(pattern));
+                throw new ArgumentException("Pattern has no meaningful segments", nameof(patternMem));
             }
 
             // TODO: support >8 address bytes somehow
             if (addrLength > sizeof(ulong))
-                throw new ArgumentException("Pattern has more than 8 address bytes", nameof(pattern));
+                throw new ArgumentException("Pattern has more than 8 address bytes", nameof(patternMem));
 
             // TODO: do we want to require an address?
 
@@ -107,7 +110,7 @@ namespace MonoMod.Core.Utils {
             lastKind = SegmentKind.AnyRepeating;
             segmentLength = 0;
 
-            for (int i = firstSegmentStart; i < pattern.Length && segmentCount <= segments.Length; i++) {
+            for (int i = firstSegmentStart; i < patternMem.Length && segmentCount <= segments.Length; i++) {
                 SegmentKind thisSegmentKind = KindForByte(pattern[i]);
 
                 if (thisSegmentKind != lastKind) {
@@ -130,7 +133,7 @@ namespace MonoMod.Core.Utils {
             }
 
             if (lastKind is not SegmentKind.AnyRepeating && segmentCount > 0) {
-                segments[segmentCount - 1] = new(pattern.Length - segmentLength, segmentLength, lastKind);
+                segments[segmentCount - 1] = new(patternMem.Length - segmentLength, segmentLength, lastKind);
             }
 
             return new(segments, minLength, addrLength);
@@ -142,36 +145,32 @@ namespace MonoMod.Core.Utils {
         //   this means that on big-endian, the resulting address may need to be shifted
         // around some to be useful. fortunately, no supported platforms *are* big-endian
         // as far as I am aware.
-        public unsafe bool TryMatchAt(SimpleSpan<byte> data, out ulong address, out int length) {
+        public bool TryMatchAt(ReadOnlySpan<byte> data, out ulong address, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
                 address = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            fixed (byte* patternBufferPtr = pattern) {
-                SimpleSpan<byte> patternSpan = new(patternBufferPtr, pattern.Length);
-                // set up address buffer
-                ulong* addr = stackalloc ulong[1];
-                bool result = TryMatchAtImpl(patternSpan, data, new((byte*) addr, sizeof(ulong)), out length, 0);
-                address = *addr;
-                return result;
-            }
+            ReadOnlySpan<byte> patternSpan = pattern.Span;
+            // set up address buffer
+            Span<byte> addr = stackalloc byte[sizeof(ulong)];
+            bool result = TryMatchAtImpl(patternSpan, data, addr, out length, 0);
+            address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
+            return result;
         }
 
-        public unsafe bool TryMatchAt(SimpleSpan<byte> data, SimpleSpan<byte> addrBuf, out int length) {
+        public bool TryMatchAt(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            fixed (byte* patternBufferPtr = pattern) {
-                SimpleSpan<byte> patternSpan = new(patternBufferPtr, pattern.Length);
-                return TryMatchAtImpl(patternSpan, data, addrBuf, out length, 0);
-            }
+            ReadOnlySpan<byte> patternSpan = pattern.Span;
+            return TryMatchAtImpl(patternSpan, data, addrBuf, out length, 0);
         }
 
-        private bool TryMatchAtImpl(SimpleSpan<byte> patternSpan, SimpleSpan<byte> data, SimpleSpan<byte> addrBuf, out int length, int startAtSegment) {
+        private bool TryMatchAtImpl(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length, int startAtSegment) {
             length = 0;
 
             int pos = 0;
@@ -184,8 +183,9 @@ namespace MonoMod.Core.Utils {
                             if (data.Length - pos < segment.Length)
                                 return false; // if we don't have enough space left for the match, then just fail out
 
-                            SimpleSpan<byte> pattern = segment.SliceOf(patternSpan);
-                            if (!Buffer.MemCmp(pattern, data.Slice(pos, pattern.Length)))
+                            ReadOnlySpan<byte> pattern = segment.SliceOf(patternSpan);
+                            
+                            if (!pattern.SequenceEqual(data.Slice(pos, pattern.Length)))
                                 return false; // the literal didn't match here, oopsie
                             // we successfully matched the literal, lets advance our position, and we're done here
                             pos += segment.Length;
@@ -204,7 +204,7 @@ namespace MonoMod.Core.Utils {
                             if (data.Length - pos < segment.Length)
                                 return false;
 
-                            SimpleSpan<byte> pattern = segment.SliceOf(patternSpan);
+                            ReadOnlySpan<byte> pattern = segment.SliceOf(patternSpan);
                             Buffer.MemoryCopy(pattern, addrBuf);
                             addrBuf = addrBuf.Slice(Math.Min(addrBuf.Length, pattern.Length));
 
@@ -234,37 +234,32 @@ namespace MonoMod.Core.Utils {
             return true;
         }
 
-        public unsafe bool TryFindMatch(SimpleSpan<byte> data, out ulong address, out int offset, out int length) {
+        public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;
                 address = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            fixed (byte* patternBufferPtr = pattern) {
-                SimpleSpan<byte> patternSpan = new(patternBufferPtr, pattern.Length);
-                ulong* addr = stackalloc ulong[1];
+            ReadOnlySpan<byte> patternSpan = pattern.Span;
 
-                bool result = ScanForNextLiteral(patternSpan, data, new((byte*)addr, sizeof(ulong)), out offset, out length, 0);
-                address = *addr;
-                return result;
-            }
+            Span<byte> addr = stackalloc byte[sizeof(ulong)];
+            bool result = ScanForNextLiteral(patternSpan, data, addr, out offset, out length, 0);
+            address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
+            return result;
         }
 
-        public unsafe bool TryFindMatch(SimpleSpan<byte> data, SimpleSpan<byte> addrBuf, out int offset, out int length) {
+        public bool TryFindMatch(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            fixed (byte* patternBufferPtr = pattern) {
-                SimpleSpan<byte> patternSpan = new(patternBufferPtr, pattern.Length);
-
-                return ScanForNextLiteral(patternSpan, data, addrBuf, out offset, out length, 0);
-            }
+            ReadOnlySpan<byte> patternSpan = pattern.Span;
+            return ScanForNextLiteral(patternSpan, data, addrBuf, out offset, out length, 0);
         }
 
-        private bool ScanForNextLiteral(SimpleSpan<byte> patternSpan, SimpleSpan<byte> data, SimpleSpan<byte> addrBuf, out int offset, out int length, int segmentIndex) {
+        private bool ScanForNextLiteral(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length, int segmentIndex) {
             var (literalSegment, baseOffs) = GetNextLiteralSegment(segmentIndex);
             if (baseOffs + literalSegment.Length > data.Length) {
                 // we literally *cannot* match this data based on the segments, so fail out
@@ -274,7 +269,7 @@ namespace MonoMod.Core.Utils {
 
             int scanOffsFromBase = 0;
             do {
-                int scannedOffs = Buffer.IndexOf(data.Slice(baseOffs + scanOffsFromBase), literalSegment.SliceOf(patternSpan));
+                int scannedOffs = data.Slice(baseOffs + scanOffsFromBase).IndexOf(literalSegment.SliceOf(patternSpan));
                 if (scannedOffs < 0) {
                     // we didn't find the literal 
                     offset = length = 0;
