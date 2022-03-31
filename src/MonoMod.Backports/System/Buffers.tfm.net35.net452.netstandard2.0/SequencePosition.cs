@@ -48,10 +48,7 @@ namespace System {
 
         /// <inheritdoc />
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public override int GetHashCode() {
-            //=> HashHelpers.Combine(_object?.GeHashCode() ?? 0, _integer);
-            // TODO: implement using HashCode polyfill
-            throw new NotImplementedException();
-        }
+        public override int GetHashCode()
+            => HashCode.Combine(_object, _integer);
     }
 }
