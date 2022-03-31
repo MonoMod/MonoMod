@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Backports\MonoMod.Backports.csproj" />
-    <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
   </ItemGroup>
 
 </Project>

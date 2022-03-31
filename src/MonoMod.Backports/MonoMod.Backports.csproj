@@ -4,6 +4,7 @@
     <!-- We're not going to be having any of the logic that would use the shared sources, so we'll just not include them -->
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
     <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>
+    <MMReferenceUtils>false</MMReferenceUtils>
     <RootNamespace><![CDATA[ ]]></RootNamespace>
   </PropertyGroup>
 
@@ -18,9 +19,5 @@
     </ItemGroup>
     <Message Importance="high" Text="TFM: $(TargetFramework) - @(Compile)" />
   </Target>
-  
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.ILHelpers\MonoMod.ILHelpers.ilproj" />
-  </ItemGroup>
 
 </Project>

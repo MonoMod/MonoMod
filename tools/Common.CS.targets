@@ -20,6 +20,11 @@
     </ProjectReference>
   </ItemGroup>
   
+  <!-- MonoMod.Utils reference -->
+  <ItemGroup Condition="'$(MMReferenceUtils)' == 'true'">
+    <ProjectReference Include="$(MMSourcePath)MonoMod.Utils\MonoMod.Utils.csproj" />
+  </ItemGroup>
+  
   <Choose>
     <When Condition="$(TargetFramework.StartsWith('netstandard')) or $(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.Contains('.'))">
       <!-- .NET Standard -->
