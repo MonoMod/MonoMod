@@ -15,7 +15,7 @@ namespace System {
         /// <summary>
         /// Creates a new span over the portion of the target array.
         /// </summary>
-        public static Span<T> AsSpan<T>(this T[] array, int start) => Span<T>.Create(array, start);
+        public static Span<T> AsSpan<T>(this T[]? array, int start) => Span<T>.Create(array, start);
 
         /// <summary>
         /// Returns a value indicating whether the specified <paramref name="value"/> occurs within the <paramref name="span"/>.
@@ -151,11 +151,7 @@ namespace System {
                 return -1;
 
             string sourceString = source.ToString();
-#if !netstandard11
-            string resultString = sourceString.ToLower(culture);
-#else
-            string resultString = culture.TextInfo.ToLower(sourceString);
-#endif
+            string resultString = culture!.TextInfo.ToLower(sourceString);
             Debug.Assert(sourceString.Length == resultString.Length);
             resultString.AsSpan().CopyTo(destination);
             return source.Length;
@@ -193,11 +189,7 @@ namespace System {
                 return -1;
 
             string sourceString = source.ToString();
-#if !netstandard11
-            string resultString = sourceString.ToUpper(culture);
-#else
-            string resultString = culture.TextInfo.ToUpper(sourceString);
-#endif
+            string resultString = culture!.TextInfo.ToUpper(sourceString);
             Debug.Assert(sourceString.Length == resultString.Length);
             resultString.AsSpan().CopyTo(destination);
             return source.Length;

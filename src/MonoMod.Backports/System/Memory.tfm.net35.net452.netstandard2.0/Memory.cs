@@ -41,7 +41,7 @@ namespace System {
         /// <remarks>Returns default when <paramref name="array"/> is null.</remarks>
         /// <exception cref="System.ArrayTypeMismatchException">Thrown when <paramref name="array"/> is covariant and array's type is not exactly T[].</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Memory(T[] array) {
+        public Memory(T[]? array) {
             if (array == null) {
                 this = default;
                 return; // returns default
@@ -55,7 +55,7 @@ namespace System {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Memory(T[] array, int start) {
+        internal Memory(T[]? array, int start) {
             if (array == null) {
                 if (start != 0)
                     ThrowHelper.ThrowArgumentOutOfRangeException();
@@ -85,7 +85,7 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=Length).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Memory(T[] array, int start, int length) {
+        public Memory(T[]? array, int start, int length) {
             if (array == null) {
                 if (start != 0 || length != 0)
                     ThrowHelper.ThrowArgumentOutOfRangeException();
@@ -160,12 +160,12 @@ namespace System {
         /// <summary>
         /// Defines an implicit conversion of an array to a <see cref="Memory{T}"/>
         /// </summary>
-        public static implicit operator Memory<T>(T[] array) => new Memory<T>(array);
+        public static implicit operator Memory<T>(T[]? array) => new Memory<T>(array);
 
         /// <summary>
         /// Defines an implicit conversion of a <see cref="ArraySegment{T}"/> to a <see cref="Memory{T}"/>
         /// </summary>
-        public static implicit operator Memory<T>(ArraySegment<T> segment) => new Memory<T>(segment.Array ?? throw new ArgumentNullException(nameof(segment)), segment.Offset, segment.Count);
+        public static implicit operator Memory<T>(ArraySegment<T> segment) => new Memory<T>(segment.Array, segment.Offset, segment.Count);
 
         /// <summary>
         /// Defines an implicit conversion of a <see cref="Memory{T}"/> to a <see cref="ReadOnlyMemory{T}"/>
@@ -362,15 +362,7 @@ namespace System {
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
         public override int GetHashCode() {
-            return _object != null ? CombineHashCodes(_object.GetHashCode(), _index.GetHashCode(), _length.GetHashCode()) : 0;
-        }
-
-        private static int CombineHashCodes(int left, int right) {
-            return ((left << 5) + left) ^ right;
-        }
-
-        private static int CombineHashCodes(int h1, int h2, int h3) {
-            return CombineHashCodes(CombineHashCodes(h1, h2), h3);
+            return _object != null ? HashCode.Combine(_object, _index, _length) : 0;
         }
 
     }

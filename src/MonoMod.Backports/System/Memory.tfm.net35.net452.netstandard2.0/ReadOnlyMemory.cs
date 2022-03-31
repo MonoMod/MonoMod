@@ -38,7 +38,7 @@ namespace System {
         /// <remarks>Returns default when <paramref name="array"/> is null.</remarks>
         /// <exception cref="System.ArrayTypeMismatchException">Thrown when <paramref name="array"/> is covariant and array's type is not exactly T[].</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyMemory(T[] array) {
+        public ReadOnlyMemory(T[]? array) {
             if (array == null) {
                 this = default;
                 return; // returns default
@@ -92,7 +92,7 @@ namespace System {
         /// <summary>
         /// Defines an implicit conversion of an array to a <see cref="ReadOnlyMemory{T}"/>
         /// </summary>
-        public static implicit operator ReadOnlyMemory<T>(T[] array) => new ReadOnlyMemory<T>(array);
+        public static implicit operator ReadOnlyMemory<T>(T[]? array) => new ReadOnlyMemory<T>(array);
 
         /// <summary>
         /// Defines an implicit conversion of a <see cref="ArraySegment{T}"/> to a <see cref="ReadOnlyMemory{T}"/>
@@ -273,15 +273,7 @@ namespace System {
         /// <summary>Returns the hash code for this <see cref="ReadOnlyMemory{T}"/></summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
         public override int GetHashCode() {
-            return _object != null ? CombineHashCodes(_object.GetHashCode(), _index.GetHashCode(), _length.GetHashCode()) : 0;
-        }
-
-        private static int CombineHashCodes(int left, int right) {
-            return ((left << 5) + left) ^ right;
-        }
-
-        private static int CombineHashCodes(int h1, int h2, int h3) {
-            return CombineHashCodes(CombineHashCodes(h1, h2), h3);
+            return _object != null ? HashCode.Combine(_object, _index, _length) : 0;
         }
 
         /// <summary>Gets the state of the memory as individual fields.</summary>
