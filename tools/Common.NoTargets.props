@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project>
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+    <MMSharedSourceFiles>false</MMSharedSourceFiles>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <None Include="**/*" />
+    <None Remove="$(MSBuildProjectFullPath)" />
+  </ItemGroup>
+  
+</Project>

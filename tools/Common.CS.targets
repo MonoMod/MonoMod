@@ -2,6 +2,24 @@
 <Project>
 
   <!-- C#-specific targets -->
+
+  <!-- Shared source files -->
+  <ItemGroup Condition="'$(MMSharedSourceFiles)' == 'true'">
+    <Compile Include="$(MMCommonPath)Shared\**\*.cs">
+      <Link>Shared/%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+  
+  <!-- ILHelpers reference -->
+  <ItemGroup Condition="'$(MMReferenceILHelpers)' == 'true'">
+    <Compile Include="$(MMCommonPath)UnsafeAlias.cs" Condition="'$(MMIncludeUnsafeAlias)' == 'true'">
+      <Link>Shared/%(Filename)%(Extension)</Link>
+    </Compile>
+    <ProjectReference Include="$(MMSourcePath)MonoMod.ILHelpers\MonoMod.ILHelpers.ilproj">
+      <Aliases Condition="'$(MMIncludeUnsafeAlias)' == 'true'">ilhelpers</Aliases>
+    </ProjectReference>
+  </ItemGroup>
+  
   <Choose>
     <When Condition="$(TargetFramework.StartsWith('netstandard')) or $(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.Contains('.'))">
       <!-- .NET Standard -->
@@ -64,11 +82,6 @@
 
   <ItemGroup>
     <PackageReference Update="Mono.Cecil" Version="$(CecilVersion)" />
-  </ItemGroup>
-  
-  <!-- Shared source files -->
-  <ItemGroup Condition="'$(MMSharedSourceFiles)' == 'true'">
-    <Compile Include="$(MMSourcePath)MonoMod.Common\Shared\**\*.cs" />
   </ItemGroup>
 
 </Project>

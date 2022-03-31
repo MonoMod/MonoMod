@@ -66,6 +66,7 @@
     <MMProjectLanguage>Unknown</MMProjectLanguage>
     <MMProjectLanguage Condition="'$(MSBuildProjectExtension)' == '.csproj'">CS</MMProjectLanguage>
     <MMProjectLanguage Condition="'$(MSBuildProjectExtension)' == '.ilproj'">IL</MMProjectLanguage>
+    <MMProjectLanguage Condition="'$(UsingMicrosoftNoTargetsSdk)' == 'true'">NoTargets</MMProjectLanguage>
     <MMLanguageProps>$(MMToolsPath)Common.$(MMProjectLanguage).props</MMLanguageProps>
     <MMLanguageTargets>$(MMToolsPath)Common.$(MMProjectLanguage).targets</MMLanguageTargets>
   </PropertyGroup>

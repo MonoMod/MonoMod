@@ -22,6 +22,10 @@
     <AnalysisLevel>latest-all</AnalysisLevel>
     
     <MMSharedSourceFiles>true</MMSharedSourceFiles>
+    <MMReferenceILHelpers>true</MMReferenceILHelpers>
+    <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
+
+    <MMCommonPath>$(MMSourcePath)Common\</MMCommonPath>
     
     <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- XML documentation warning. TODO: We should probably remove this at some point and ensure that MM is fully documented. -->
     <NoWarn>$(NoWarn);CA1716</NoWarn> <!-- Members have name shared with primitive type. -->

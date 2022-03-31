@@ -17,7 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MonoMod.ILHelpers\MonoMod.ILHelpers.ilproj" Aliases="ilhelpers" />
     <ProjectReference Include="..\MonoMod.Backports\MonoMod.Backports.csproj" />
     <ProjectReference Include="..\MonoMod.Utils\MonoMod.Utils.csproj" />
   </ItemGroup>
