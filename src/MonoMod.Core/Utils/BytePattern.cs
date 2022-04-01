@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace MonoMod.Core.Utils {
     public sealed class BytePattern {
@@ -26,12 +22,14 @@ namespace MonoMod.Core.Utils {
         }
 
         private record struct PatternSegment(int Start, int Length, SegmentKind Kind) {
-            public ReadOnlySpan<byte> SliceOf(ReadOnlySpan<byte> span) => span.Slice(Start, Length);
+            public ReadOnlySpan<T> SliceOf<T>(ReadOnlySpan<T> span) => span.Slice(Start, Length);
+            public ReadOnlyMemory<T> SliceOf<T>(ReadOnlyMemory<T> mem) => mem.Slice(Start, Length);
         }
 
         public BytePattern(ReadOnlyMemory<short> pattern) {
             (segments, MinLength, AddressBytes) = ComputeSegments(pattern);
 
+            // TODO: is there something we can do to avoid this extra allocation, on top of the segments array?
             byte[] bytePattern = new byte[pattern.Length];
             for (int i = 0; i < pattern.Length; i++) {
                 bytePattern[i] = (byte) (pattern.Span[i] & 0xFF);
@@ -288,7 +286,15 @@ namespace MonoMod.Core.Utils {
             } while (true);
         }
 
-        private (PatternSegment Segment, int LiteralOffset) GetNextLiteralSegment(int segmentIndexId = 0) {
+        private (ReadOnlyMemory<byte> Bytes, int Offset)? lazyFirstLiteralSegment;
+        public (ReadOnlyMemory<byte> Bytes, int Offset) FirstLiteralSegment => lazyFirstLiteralSegment ??= GetFirstLiteralSegment();
+
+        private (ReadOnlyMemory<byte> Bytes, int Offset) GetFirstLiteralSegment() {
+            var (segment, offset) = GetNextLiteralSegment(0);
+            return (segment.SliceOf(pattern), offset);
+        }
+
+        private (PatternSegment Segment, int LiteralOffset) GetNextLiteralSegment(int segmentIndexId) {
             if (segmentIndexId < 0 || segmentIndexId >= segments.Length) {
                 throw new ArgumentOutOfRangeException(nameof(segmentIndexId));
             }
