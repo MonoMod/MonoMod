@@ -202,7 +202,7 @@ namespace MonoMod.Core.Utils {
                             if (data.Length - pos < segment.Length)
                                 return false;
 
-                            ReadOnlySpan<byte> pattern = segment.SliceOf(patternSpan);
+                            ReadOnlySpan<byte> pattern = data.Slice(pos, segment.Length);
                             Buffer.MemoryCopy(pattern, addrBuf);
                             addrBuf = addrBuf.Slice(Math.Min(addrBuf.Length, pattern.Length));
 

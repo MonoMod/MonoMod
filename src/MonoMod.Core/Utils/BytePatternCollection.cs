@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 
 namespace MonoMod.Core.Utils {
-    public sealed class BytePatternCollection {
+    public sealed class BytePatternCollection : IEnumerable<BytePattern> {
 
         private readonly HomogenousPatternCollection[] patternCollections;
         private readonly BytePattern[]? emptyPatterns;
@@ -16,12 +16,34 @@ namespace MonoMod.Core.Utils {
         public int MaxAddressLength { get; }
 
         public BytePatternCollection(ReadOnlyMemory<BytePattern> patterns) {
-            (this.patternCollections, emptyPatterns) = ComputeLut(patterns, out int minLength, out int maxMinLength, out int maxAddrLength);
+            (patternCollections, emptyPatterns) = ComputeLut(patterns, out int minLength, out int maxMinLength, out int maxAddrLength);
             MinLength = minLength;
             MaxMinLength = maxMinLength;
             MaxAddressLength = maxAddrLength;
             Debug.Assert(MinLength > 0);
         }
+
+        public BytePatternCollection(params BytePattern[] patterns) : this(patterns.AsMemory()) { }
+
+        public IEnumerator<BytePattern> GetEnumerator() {
+            for (int i = 0; i < patternCollections.Length; i++) {
+                var coll = patternCollections[i].Lut;
+                for (int j = 0; j < coll.Length; j++) {
+                    if (coll[j] is null)
+                        continue;
+                    foreach (var pattern in coll[j]!) {
+                        yield return pattern;
+                    }
+                }
+            }
+            if (emptyPatterns is not null) {
+                foreach (var pattern in emptyPatterns) {
+                    yield return pattern;
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         private static (HomogenousPatternCollection[], BytePattern[]?) ComputeLut(
             ReadOnlyMemory<BytePattern> patterns, 
@@ -98,7 +120,8 @@ namespace MonoMod.Core.Utils {
             int savedEmptyPatterns = 0;
             // then our list of homogenous pattern collections
             HomogenousPatternCollection[] homoPatterns = new HomogenousPatternCollection[distinctOffsetCount];
-            int savedHomoPatterns = 0;
+            int savedHomoPatterns = 1; // the first value is always present
+            homoPatterns[0] = new(0);
 
             // now iterate through our input pattern list again, and add them to their relevant collections
             for (int i = 0; i < patterns.Length; i++) {

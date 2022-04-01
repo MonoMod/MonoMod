@@ -30,6 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MonoMod.Backports\MonoMod.Backports.csproj" />
+    <ProjectReference Include="..\MonoMod.Core\MonoMod.Core.csproj" />
     <ProjectReference Include="..\MonoMod.RuntimeDetour.HookGen\MonoMod.RuntimeDetour.HookGen.csproj" />
     <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />
     <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
