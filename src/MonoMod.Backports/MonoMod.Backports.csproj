@@ -10,14 +10,17 @@
 
   <!-- Conditionally importing based on TFMs, but automated -->
   <PropertyGroup>
-    <CoreCompileDependsOn>FilterTFMRestrictedFiles;$(FilterTFMRestrictedFiles)</CoreCompileDependsOn>
+    <CoreCompileDependsOn>FilterTFMRestrictedFiles;$(CoreCompileDependsOn)</CoreCompileDependsOn>
+    <CompileDependsOn>FilterTFMRestrictedFiles;$(CompileDependsOn)</CompileDependsOn>
   </PropertyGroup>
-  <Target Name="FilterTFMRestrictedFiles" BeforeTargets="CheckForDuplicateItems;Compile;CompileDesignTime">
+  <Target Name="FilterTFMRestrictedFiles" BeforeTargets="CheckForDuplicateItems;Compile;CompileDesignTime;BuildProjectOutputGroup">
     <ItemGroup>
       <Compile Remove="%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains('.tfm')) and !$([System.String]::Copy('%(Identity)').Contains('.$(TargetFramework)'))" />
       <Compile Remove="%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains('.notfm')) and $([System.String]::Copy('%(Identity)').Contains('.$(TargetFramework)'))" />
     </ItemGroup>
     <Message Importance="high" Text="TFM: $(TargetFramework) - @(Compile)" />
   </Target>
+
+  <Target Name="FilterTFMFilesAfterPrepForBuild" DependsOnTargets="FilterTFMRestrictedFiles" AfterTargets="PrepareForBuild" />
 
 </Project>
