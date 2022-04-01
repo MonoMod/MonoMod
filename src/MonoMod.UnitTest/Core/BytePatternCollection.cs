@@ -25,7 +25,7 @@ namespace MonoMod.UnitTest.Core {
                     // TODO: other examples
                 );
 
-            bool result = collection.TryMatchAt(new byte[] { 0xe9, 0x01, 0x23, 0x45, 0x67, 0x5f }.AsSpan(), out ulong addr1, out int len1);
+            bool result = collection.TryMatchAt(new byte[] { 0xe9, 0x01, 0x23, 0x45, 0x67, 0x5f }.AsSpan(), out ulong addr1, out var matchingPattern, out int len1);
 
         }
     }

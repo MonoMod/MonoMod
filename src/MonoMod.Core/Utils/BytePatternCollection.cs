@@ -2,8 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Utils {
     public sealed class BytePatternCollection : IEnumerable<BytePattern> {
@@ -208,23 +207,25 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        public bool TryMatchAt(ReadOnlySpan<byte> data, out ulong address, out int length) {
+        public bool TryMatchAt(ReadOnlySpan<byte> data, out ulong address, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
                 address = 0;
+                matchingPattern = null;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
             // set up address buffer
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
-            bool result = TryMatchAt(data, addr, out length);
+            bool result = TryMatchAt(data, addr, out matchingPattern, out length);
             address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
             return result;
         }
 
-        public bool TryMatchAt(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length) {
+        public bool TryMatchAt(ReadOnlySpan<byte> data, Span<byte> addrBuf, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
+                matchingPattern = null;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
@@ -242,6 +243,7 @@ namespace MonoMod.Core.Utils {
 
                 foreach (var pattern in patterns) {
                     if (pattern.TryMatchAt(data, addrBuf, out length)) {
+                        matchingPattern = pattern;
                         return true;
                     }
                 }
@@ -251,32 +253,36 @@ namespace MonoMod.Core.Utils {
             if (emptyPatterns is not null) {
                 foreach(var pattern in emptyPatterns) {
                     if (pattern.TryMatchAt(data, addrBuf, out length)) {
+                        matchingPattern = pattern;
                         return true;
                     }
                 }
             }
 
             // otherwise, we didn't find a match, fail
+            matchingPattern = null;
             length = 0;
             return false;
         }
 
-        public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, out int offset, out int length) {
+        public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;
                 address = 0;
+                matchingPattern = null;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
-            bool result = TryFindMatch(data, addr, out offset, out length);
+            bool result = TryFindMatch(data, addr, out matchingPattern, out offset, out length);
             address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
             return result;
         }
 
-        public bool TryFindMatch(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length) {
+        public bool TryFindMatch(ReadOnlySpan<byte> data, Span<byte> addrBuf, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;
+                matchingPattern = null;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
@@ -308,6 +314,7 @@ namespace MonoMod.Core.Utils {
                     foreach (var pattern in patterns) {
                         if (pattern.TryMatchAt(data.Slice(offset - coll.Offset), addrBuf, out length)) {
                             offset -= coll.Offset;
+                            matchingPattern = pattern;
                             return true;
                         }
                     }
@@ -318,11 +325,13 @@ namespace MonoMod.Core.Utils {
             if (emptyPatterns is not null) {
                 foreach (var pattern in emptyPatterns) {
                     if (pattern.TryFindMatch(data, addrBuf, out offset, out length)) {
+                        matchingPattern = pattern;
                         return true;
                     }
                 }
             }
 
+            matchingPattern = null;
             offset = 0;
             length = 0;
             return false;
