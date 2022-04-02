@@ -14,12 +14,89 @@
     <CoreCompileDependsOn>FilterTFMRestrictedFiles;$(CoreCompileDependsOn)</CoreCompileDependsOn>
     <CompileDependsOn>FilterTFMRestrictedFiles;$(CompileDependsOn)</CompileDependsOn>
   </PropertyGroup>
+  
   <Target Name="FilterTFMRestrictedFiles" BeforeTargets="CheckForDuplicateItems;Compile;CompileDesignTime;BuildProjectOutputGroup">
+    <PropertyGroup>
+      <_CurrentTfmIdent>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</_CurrentTfmIdent>
+      <_CurrentTfmVer>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</_CurrentTfmVer>
+    </PropertyGroup>
+    
     <ItemGroup>
       <Compile Remove="%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains('.tfm')) and !$([System.String]::Copy('%(Identity)').Contains('.$(TargetFramework)'))" />
       <Compile Remove="%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains('.notfm')) and $([System.String]::Copy('%(Identity)').Contains('.$(TargetFramework)'))" />
     </ItemGroup>
+
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="FilterTFMSingleFile" Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_FileToFilter=%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains(','))">
+      <Output TaskParameter="TargetOutputs" ItemName="_ItemsToFilter" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_ItemsToFilter Remove="%(_ItemsToFilter.Identity)" Condition="'%(DidPass)' == 'true'" />
+      <Compile Remove="@(_ItemsToFilter)" />
+    </ItemGroup>
+    
     <Message Importance="high" Text="TFM: $(TargetFramework) - @(Compile)" />
+  </Target>
+
+  <Target Name="FilterTFMSingleFile" Returns="@(FileWithInfo)">
+    <!-- File name passed in via $(_FileToFilter) -->
+    
+    <!-- Extract info about the file -->
+    <ItemGroup>
+      <_ExtractFileInfo Include="$(_FileToFilter)" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_Filename>@(_ExtractFileInfo->'%(Filename)')</_Filename>
+      <_Extension>@(_ExtractFileInfo->'%(Extension)')</_Extension>
+      <_Basename>$(_Filename.Split(',')[0])</_Basename>
+      <_SplitFilename>$(_Filename.Split(','))</_SplitFilename>
+      <_RestOfFilename>$(_SplitFilename.Replace('$(_Basename);',''))</_RestOfFilename>
+    </PropertyGroup>
+    <ItemGroup>
+      <_FilenameFilterParts Include="$([MSBuild]::Unescape('$(_RestOfFilename)'))" />
+    </ItemGroup>
+
+    <!-- Process each of the filter kinds -->
+    <ItemGroup>
+      <_FilenameFilterParts>
+        <Op>$([System.String]::Copy('%(Identity)').Split('_')[0])</Op>
+        <Kind>$([System.String]::Copy('%(Identity)').Split('_')[1])</Kind>
+        <Version></Version>
+        <Pass>false</Pass>
+      </_FilenameFilterParts>
+      <!-- TfmId check -->
+      <_FilenameFilterParts>
+        <TfmIdPass>false</TfmIdPass>
+        <TfmIdPass Condition="'%(Kind)' == 'core' and '$(_CurrentTfmIdent)' == '.NETCoreApp'">true</TfmIdPass>
+        <TfmIdPass Condition="'%(Kind)' == 'fx' and '$(_CurrentTfmIdent)' == '.NETFramework'">true</TfmIdPass>
+        <TfmIdPass Condition="'%(Kind)' == 'std' and '$(_CurrentTfmIdent)' == '.NETStandard'">true</TfmIdPass>
+      </_FilenameFilterParts>
+      <_FilenameFilterParts>
+        <!-- is ops -->
+        <Pass Condition="'%(Op)' == 'is' and %(TfmIdPass)">true</Pass>
+
+        <Version Condition="'%(Op)' == 'lt' or '%(Op)' == 'eq' or '%(Op)' == 'gte'">$([System.String]::Copy('%(Identity)').Split('_')[2])</Version>
+      </_FilenameFilterParts>
+      <_FilenameFilterParts Condition="'%(Version)' != ''">
+        <!-- eq ops -->
+        <Pass Condition="'%(Op)' == 'eq' and %(TfmIdPass) and $([MSBuild]::VersionEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
+        <!-- lt ops -->
+        <Pass Condition="'%(Op)' == 'lt' and %(TfmIdPass) and $([MSBuild]::VersionLessThan('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
+        <!-- gte ops -->
+        <Pass Condition="'%(Op)' == 'gte' and %(TfmIdPass) and $([MSBuild]::VersionGreaterThanOrEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
+      </_FilenameFilterParts>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_PassCond>@(_FilenameFilterParts->'%(Pass)',' ')</_PassCond>
+      <_DidPass>false</_DidPass>
+      <_DidPass Condition="$(_PassCond.Contains('true'))">true</_DidPass>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <FileWithInfo Include="$(_FileToFilter)" DidPass="$(_DidPass)" />
+    </ItemGroup>
+    
   </Target>
 
   <Target Name="FilterTFMFilesAfterPrepForBuild" DependsOnTargets="FilterTFMRestrictedFiles" AfterTargets="PrepareForBuild" />
