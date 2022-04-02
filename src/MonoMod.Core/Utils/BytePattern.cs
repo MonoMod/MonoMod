@@ -17,6 +17,8 @@ namespace MonoMod.Core.Utils {
         public int AddressBytes { get; }
         public int MinLength { get; }
 
+        public AddressMeaning AddressMeaning { get; }
+
         private enum SegmentKind {
             Literal, Any, AnyRepeating, Address,
         }
@@ -26,7 +28,8 @@ namespace MonoMod.Core.Utils {
             public ReadOnlyMemory<T> SliceOf<T>(ReadOnlyMemory<T> mem) => mem.Slice(Start, Length);
         }
 
-        public BytePattern(ReadOnlyMemory<short> pattern) {
+        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<short> pattern) {
+            AddressMeaning = meaning;
             (segments, MinLength, AddressBytes) = ComputeSegments(pattern);
 
             // TODO: is there something we can do to avoid this extra allocation, on top of the segments array?
@@ -37,7 +40,7 @@ namespace MonoMod.Core.Utils {
             this.pattern = bytePattern;
         }
 
-        public BytePattern(params short[] pattern) : this(pattern.AsMemory()) { }
+        public BytePattern(AddressMeaning meaning, params short[] pattern) : this(meaning, pattern.AsMemory()) { }
 
         private static (PatternSegment[] Segments, int MinLen, int AddrBytes) ComputeSegments(ReadOnlyMemory<short> patternMem) {
             if (patternMem.Length == 0)
