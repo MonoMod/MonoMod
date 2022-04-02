@@ -96,10 +96,6 @@ namespace MonoMod.Core.Utils {
                 throw new ArgumentException("Pattern has no meaningful segments", nameof(patternMem));
             }
 
-            // TODO: support >8 address bytes somehow
-            if (addrLength > sizeof(ulong))
-                throw new ArgumentException("Pattern has more than 8 address bytes", nameof(patternMem));
-
             // TODO: do we want to require an address?
 
             // we now know how many segments we need, so lets allocate our array
@@ -202,7 +198,7 @@ namespace MonoMod.Core.Utils {
                             if (data.Length - pos < segment.Length)
                                 return false;
 
-                            ReadOnlySpan<byte> pattern = data.Slice(pos, segment.Length);
+                            ReadOnlySpan<byte> pattern = data.Slice(pos, Math.Min(segment.Length, addrBuf.Length));
                             Buffer.MemoryCopy(pattern, addrBuf);
                             addrBuf = addrBuf.Slice(Math.Min(addrBuf.Length, pattern.Length));
 

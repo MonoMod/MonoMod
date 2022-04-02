@@ -319,6 +319,9 @@ namespace MonoMod.Core.Utils {
                         }
                     }
                 }
+
+                // we didn't match any collections, update the scan base
+                scanBase = offset + 1;
             } while (true);
 
             // only after we've fully exhausted the search space do we even bother trying to match the empty patterns
@@ -338,7 +341,7 @@ namespace MonoMod.Core.Utils {
         }
 
         private ReadOnlyMemory<byte>? lazyPossibleFirstBytes;
-        private ReadOnlyMemory<byte> PossibleFirstBytes => lazyPossibleFirstBytes ?? GetPossibleFirstBytes();
+        private ReadOnlyMemory<byte> PossibleFirstBytes => lazyPossibleFirstBytes ??= GetPossibleFirstBytes();
 
         private ReadOnlyMemory<byte> GetPossibleFirstBytes() {
             var alloc = new byte[FirstByteCollection.SingleAllocationSize].AsMemory();
@@ -348,7 +351,7 @@ namespace MonoMod.Core.Utils {
                 patternCollections[i].AddFirstBytes(ref collection);
             }
 
-            return alloc.Slice(collection.FirstBytes.Length);
+            return alloc.Slice(0, collection.FirstBytes.Length);
         }
 
         private ref struct FirstByteCollection {
@@ -356,7 +359,7 @@ namespace MonoMod.Core.Utils {
             private Span<byte> byteIndicies;
             private int firstBytesRecorded;
 
-            public ReadOnlySpan<byte> FirstBytes => firstByteStore.Slice(firstBytesRecorded);
+            public ReadOnlySpan<byte> FirstBytes => firstByteStore.Slice(0, firstBytesRecorded);
 
             public const int SingleAllocationSize = 256 * 2;
 
