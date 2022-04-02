@@ -26,7 +26,9 @@
       <Compile Remove="%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains('.notfm')) and $([System.String]::Copy('%(Identity)').Contains('.$(TargetFramework)'))" />
     </ItemGroup>
 
-    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="FilterTFMSingleFile" Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_FileToFilter=%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains(','))">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="FilterTFMSingleFile" 
+             Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_FileToFilter=%(Compile.Identity)"
+             Condition="$([System.String]::Copy('%(Identity)').Contains(','))">
       <Output TaskParameter="TargetOutputs" ItemName="_ItemsToFilter" />
     </MSBuild>
 
@@ -41,19 +43,44 @@
   <Target Name="FilterTFMSingleFile" Returns="@(FileWithInfo)">
     <!-- File name passed in via $(_FileToFilter) -->
     
-    <!-- Extract info about the file -->
     <ItemGroup>
-      <_ExtractFileInfo Include="$(_FileToFilter)" />
+      <_FilePathParts Include="$(_FileToFilter.Split('\'))" />
+      <_FilePathParts Remove="%(Identity)" Condition="!$([System.String]::Copy('%(Identity)').Contains(','))" />
+      <_FilePathParts>
+        <_Basename>$([System.String]::Copy('%(Filename)').Split(',')[0])</_Basename>
+        <_SplitFilename>$([System.String]::Copy('%(Filename)').Split(','))</_SplitFilename>
+      </_FilePathParts>
+      <_FilePathParts>
+        <_RestOfFilename>$([System.String]::Copy('%(_SplitFilename)').Replace('%(_Basename);',''))</_RestOfFilename>  
+      </_FilePathParts>
+      <_FilePathParts>
+        <ComponentSet>$([System.String]::Copy('%(_RestOfFilename)').Replace(';',','))</ComponentSet>
+      </_FilePathParts>
     </ItemGroup>
+
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="ComputeFilterForComponents"
+             Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_ComponentSet=%(_FilePathParts.ComponentSet)">
+      <Output TaskParameter="TargetOutputs" ItemName="_ComponentSets" />
+    </MSBuild>
+    
     <PropertyGroup>
-      <_Filename>@(_ExtractFileInfo->'%(Filename)')</_Filename>
-      <_Extension>@(_ExtractFileInfo->'%(Extension)')</_Extension>
-      <_Basename>$(_Filename.Split(',')[0])</_Basename>
-      <_SplitFilename>$(_Filename.Split(','))</_SplitFilename>
-      <_RestOfFilename>$(_SplitFilename.Replace('$(_Basename);',''))</_RestOfFilename>
+      <_PassCond>@(_ComponentSets->'%(DidPass)',' ')</_PassCond>
+      <_DidPass>false</_DidPass>
+      <_DidPass Condition="!$(_PassCond.Contains('false'))">true</_DidPass>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <FileWithInfo Include="$(_FileToFilter)" DidPass="$(_DidPass)" />
+    </ItemGroup>
+  </Target>
+  
+  <Target Name="ComputeFilterForComponents" Returns="@(OutComponents)">
+    <!-- The component set is passed in as a comma-delimited _ComponentSet -->
+    <PropertyGroup>
+      <_ReplacedComponentSet>$(_ComponentSet.Replace(',',';'))</_ReplacedComponentSet>
     </PropertyGroup>
     <ItemGroup>
-      <_FilenameFilterParts Include="$([MSBuild]::Unescape('$(_RestOfFilename)'))" />
+      <_FilenameFilterParts Include="$([MSBuild]::Unescape('$(_ReplacedComponentSet)'))" />
     </ItemGroup>
 
     <!-- Process each of the filter kinds -->
@@ -94,9 +121,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <FileWithInfo Include="$(_FileToFilter)" DidPass="$(_DidPass)" />
+      <OutComponents Include="$(_ComponentSet)" DidPass="$(_DidPass)" />
     </ItemGroup>
-    
   </Target>
 
   <Target Name="FilterTFMFilesAfterPrepForBuild" DependsOnTargets="FilterTFMRestrictedFiles" AfterTargets="PrepareForBuild" />
