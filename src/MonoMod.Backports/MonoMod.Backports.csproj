@@ -20,15 +20,8 @@
       <_CurrentTfmIdent>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</_CurrentTfmIdent>
       <_CurrentTfmVer>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</_CurrentTfmVer>
     </PropertyGroup>
-    
-    <ItemGroup>
-      <Compile Remove="%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains('.tfm')) and !$([System.String]::Copy('%(Identity)').Contains('.$(TargetFramework)'))" />
-      <Compile Remove="%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains('.notfm')) and $([System.String]::Copy('%(Identity)').Contains('.$(TargetFramework)'))" />
-    </ItemGroup>
 
-    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="FilterTFMSingleFile" 
-             Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_FileToFilter=%(Compile.Identity)"
-             Condition="$([System.String]::Copy('%(Identity)').Contains(','))">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="FilterTFMSingleFile" Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_FileToFilter=%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains(','))">
       <Output TaskParameter="TargetOutputs" ItemName="_ItemsToFilter" />
     </MSBuild>
 
@@ -40,6 +33,7 @@
     <Message Importance="high" Text="TFM: $(TargetFramework) - @(Compile)" />
   </Target>
 
+  <!-- TODO: Don't be a fucking moron and do this all in MSBuild, write a Task for it in C# -->
   <Target Name="FilterTFMSingleFile" Returns="@(FileWithInfo)">
     <!-- File name passed in via $(_FileToFilter) -->
     
@@ -47,8 +41,12 @@
       <_FilePathParts Include="$(_FileToFilter.Split('\'))" />
       <_FilePathParts Remove="%(Identity)" Condition="!$([System.String]::Copy('%(Identity)').Contains(','))" />
       <_FilePathParts>
-        <_Basename>$([System.String]::Copy('%(Filename)').Split(',')[0])</_Basename>
-        <_SplitFilename>$([System.String]::Copy('%(Filename)').Split(','))</_SplitFilename>
+        <Fname>%(Filename)</Fname>
+        <Fname Condition="'%(Extension)' != '.cs'">%(Filename)%(Extension)</Fname>
+      </_FilePathParts>
+      <_FilePathParts>
+        <_Basename>$([System.String]::Copy('%(Fname)').Split(',')[0])</_Basename>
+        <_SplitFilename>$([System.String]::Copy('%(Fname)').Split(','))</_SplitFilename>
       </_FilePathParts>
       <_FilePathParts>
         <_RestOfFilename>$([System.String]::Copy('%(_SplitFilename)').Replace('%(_Basename);',''))</_RestOfFilename>  
@@ -58,8 +56,7 @@
       </_FilePathParts>
     </ItemGroup>
 
-    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="ComputeFilterForComponents"
-             Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_ComponentSet=%(_FilePathParts.ComponentSet)">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="ComputeFilterForComponents" Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_ComponentSet=%(_FilePathParts.ComponentSet)">
       <Output TaskParameter="TargetOutputs" ItemName="_ComponentSets" />
     </MSBuild>
     
@@ -102,13 +99,19 @@
         <!-- is ops -->
         <Pass Condition="'%(Op)' == 'is' and %(TfmIdPass)">true</Pass>
 
-        <Version Condition="'%(Op)' == 'lt' or '%(Op)' == 'eq' or '%(Op)' == 'gte'">$([System.String]::Copy('%(Identity)').Split('_')[2])</Version>
+        <Version Condition="'%(Op)' == 'lt' or '%(Op)' == 'lte' or '%(Op)' == 'eq' or '%(Op)' == 'neq' or '%(Op)' == 'gt' or '%(Op)' == 'gte'">$([System.String]::Copy('%(Identity)').Split('_')[2])</Version>
       </_FilenameFilterParts>
       <_FilenameFilterParts Condition="'%(Version)' != ''">
         <!-- eq ops -->
         <Pass Condition="'%(Op)' == 'eq' and %(TfmIdPass) and $([MSBuild]::VersionEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
+        <!-- eq ops -->
+        <Pass Condition="'%(Op)' == 'neq' and %(TfmIdPass) and !$([MSBuild]::VersionEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
         <!-- lt ops -->
         <Pass Condition="'%(Op)' == 'lt' and %(TfmIdPass) and $([MSBuild]::VersionLessThan('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
+        <!-- lte ops -->
+        <Pass Condition="'%(Op)' == 'lte' and %(TfmIdPass) and $([MSBuild]::VersionLessThanOrEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
+        <!-- gt ops -->
+        <Pass Condition="'%(Op)' == 'gt' and %(TfmIdPass) and $([MSBuild]::VersionGreaterThan('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
         <!-- gte ops -->
         <Pass Condition="'%(Op)' == 'gte' and %(TfmIdPass) and $([MSBuild]::VersionGreaterThanOrEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
       </_FilenameFilterParts>
