@@ -1,4 +1,5 @@
-﻿using MonoMod.Core.Utils;
+﻿using MonoMod.Core;
+using MonoMod.Core.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,12 @@ namespace MonoMod.UnitTest.Core {
     public class BytePatternCollectionTests {
         [Fact]
         public void TestBytePattern() {
+
+            var runtimeFlgs = RuntimeFeature.GenericSharing | RuntimeFeature.CompileMethodHook | RuntimeFeature.DisableInlining;
+
+            Assert.True(runtimeFlgs.Has(RuntimeFeature.CompileMethodHook));
+            Assert.False(runtimeFlgs.Has(RuntimeFeature.PreciseGC));
+
             // -3 is addr, -2 is any repeating, -1 is any
             var collection = new BytePatternCollection(
                     // mov...; nop; call...; jmp {delta}

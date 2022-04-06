@@ -6,6 +6,7 @@ using System.Text;
 
 namespace MonoMod.Core.Platforms {
     public interface IArchitecture {
+        ArchitectureFeature Features { get; }
 
         BytePatternCollection KnownMethodThunks { get; }
     }

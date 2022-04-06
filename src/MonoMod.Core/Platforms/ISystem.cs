@@ -5,6 +5,6 @@ using System.Text;
 
 namespace MonoMod.Core.Platforms {
     public interface ISystem {
-
+        SystemFeature Features { get; }
     }
 }
