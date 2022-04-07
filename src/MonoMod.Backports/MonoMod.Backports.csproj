@@ -38,7 +38,7 @@
     <!-- File name passed in via $(_FileToFilter) -->
     
     <ItemGroup>
-      <_FilePathParts Include="$(_FileToFilter.Split('\'))" />
+      <_FilePathParts Include="$(_FileToFilter.Split($([System.IO.Path]::DirectorySeparatorChar)))" />
       <_FilePathParts Remove="%(Identity)" Condition="!$([System.String]::Copy('%(Identity)').Contains(','))" />
       <_FilePathParts>
         <Fname>%(Filename)</Fname>
