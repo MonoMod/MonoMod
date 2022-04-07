@@ -1,5 +1,7 @@
 ﻿extern alias ilhelpers;
 
+#pragma warning disable IDE0005 // unused using
+
 global using ilhelpers;
 
 #if !NET6_0_OR_GREATER
