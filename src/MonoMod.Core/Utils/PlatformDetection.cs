@@ -4,34 +4,46 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace MonoMod.Core.Utils {
     public static class PlatformDetection {
-        public enum OSKind {
-            Unknown = 0,
 
-            Posix = 0x01,
-            Linux = 0x01 << 1 | Posix,
-            Android = 0x05 << 1 | Posix, // Android is a subset of Linux
-            OSX = 0x02 << 1 | Posix,
-            IOS = 0x03 << 1 | Posix, // iOS is a subset of OSX
-            BSD = 0x04 << 1 | Posix,
+        private static int platInitState;
+        private static OperatingSystem os;
+        private static Architecture arch;
 
-            Windows = 0x10 << 1,
-            Wine = 0x11 << 1,
+        private static void EnsurePlatformInfoInitialized() {
+            if (platInitState != 0) {
+                return;
+            }
+
+            // we're actually OK with invoking this multiple times on different threads, because it
+            // *should* give the same results each time.
+            var detected = DetectPlatformInfo();
+            os = detected.OS;
+            arch = detected.Arch;
+            Thread.MemoryBarrier();
+            _ = Interlocked.Exchange(ref platInitState, 1);
         }
 
-        public enum Arch {
-            Unknown,
-            x86,
-            x86_64,
-            Arm,
-            Arm64
+        public static OperatingSystem OS {
+            get {
+                EnsurePlatformInfoInitialized();
+                return os;
+            }
         }
 
-        public static (OSKind, Arch) DetectPlatformInfo() {
-            OSKind os = OSKind.Unknown;
-            Arch arch = Arch.Unknown;
+        public static Architecture Architecture {
+            get {
+                EnsurePlatformInfoInitialized();
+                return arch;
+            }
+        }
+
+        private static (OperatingSystem OS, Architecture Arch) DetectPlatformInfo() {
+            OperatingSystem os = OperatingSystem.Unknown;
+            Architecture arch = Architecture.Unknown;
 
             {
                 // For old Mono, get from a private property to accurately get the platform.
@@ -47,42 +59,42 @@ namespace MonoMod.Core.Utils {
                 platID = platID?.ToUpperInvariant() ?? "";
 
                 if (platID.Contains("WIN")) {
-                    os = OSKind.Windows;
+                    os = OperatingSystem.Windows;
                 } else if (platID.Contains("MAC") || platID.Contains("OSX")) {
-                    os = OSKind.OSX;
+                    os = OperatingSystem.OSX;
                 } else if (platID.Contains("LIN")) {
-                    os = OSKind.Linux;
+                    os = OperatingSystem.Linux;
                 } else if (platID.Contains("BSD")) {
-                    os = OSKind.BSD;
+                    os = OperatingSystem.BSD;
                 } else if (platID.Contains("UNIX")) {
-                    os = OSKind.Posix;
+                    os = OperatingSystem.Posix;
                 }
             }
 
             // Try to use OS-specific methods of determining OS/Arch info
-            if (os == OSKind.Windows) {
+            if (os == OperatingSystem.Windows) {
                 DetectInfoWindows(ref os, ref arch);
-            } else if ((os & OSKind.Posix) != 0) {
+            } else if ((os & OperatingSystem.Posix) != 0) {
                 DetectInfoPosix(ref os, ref arch);
             }
 
-            if (os == OSKind.Unknown) {
+            if (os == OperatingSystem.Unknown) {
                 // Welp.
 
-            } else if (os == OSKind.Linux &&
+            } else if (os == OperatingSystem.Linux &&
                 Directory.Exists("/data") && File.Exists("/system/build.prop")
             ) {
-                os = OSKind.Android;
-            } else if (os == OSKind.Posix &&
+                os = OperatingSystem.Android;
+            } else if (os == OperatingSystem.Posix &&
                 Directory.Exists("/Applications") && Directory.Exists("/System") &&
                 Directory.Exists("/User") && !Directory.Exists("/Users")
             ) {
-                os = OSKind.IOS;
-            } else if (os == OSKind.Windows &&
+                os = OperatingSystem.IOS;
+            } else if (os == OperatingSystem.Windows &&
                 CheckWine()
             ) {
                 // Sorry, Wine devs, but you might want to look at DetourRuntimeNETPlatform.
-                os = OSKind.Wine;
+                os = OperatingSystem.Wine;
             }
 
             MMDbgLog.Log($"Platform info: {os} {arch}");
@@ -102,10 +114,10 @@ namespace MonoMod.Core.Utils {
         [DllImport(LibSystem, CallingConvention = CallingConvention.Cdecl, EntryPoint = "uname", SetLastError = true)]
         private static extern unsafe int OSXUname(byte* buf);
 
-        private static unsafe int PosixUname(OSKind os, byte* buf) {
+        private static unsafe int PosixUname(OperatingSystem os, byte* buf) {
             static int Libc(byte* buf) => LibcUname(buf);
             static int Osx(byte* buf) => Osx(buf);
-            return os == OSKind.OSX ? Osx(buf) : Libc(buf);
+            return os == OperatingSystem.OSX ? Osx(buf) : Libc(buf);
         }
 
         private static unsafe string GetCString(ReadOnlySpan<byte> buffer, out int nullByte) {
@@ -114,7 +126,7 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        private static void DetectInfoPosix(ref OSKind os, ref Arch arch) {
+        private static void DetectInfoPosix(ref OperatingSystem os, ref Architecture arch) {
             try {
                 // we want to call libc's uname() function
                 // the fields we're interested in are sysname and machine, which are field 0 and 4 respectively.
@@ -162,27 +174,27 @@ namespace MonoMod.Core.Utils {
 
                 // now we want to inspect the fields and select something useful from them
                 if (kernelName.Contains("LINUX")) { // A Linux kernel
-                    os = OSKind.Linux;
+                    os = OperatingSystem.Linux;
                 } else if (kernelName.Contains("DARWIN")) { // the MacOS kernel
-                    os = OSKind.OSX;
+                    os = OperatingSystem.OSX;
                 } else if (kernelName.Contains("BSD")) { // a BSD kernel
                     // Note: I'm fairly sure that the different BSDs vary quite a lot, so it may be worth checking with more specificity here
-                    os = OSKind.BSD;
+                    os = OperatingSystem.BSD;
                 }
                 // TODO: fill in other known kernel names
 
                 if (machineName.Contains("X86_64")) {
-                    arch = Arch.x86_64;
+                    arch = Architecture.x86_64;
                 } else if (machineName.Contains("AMD64")) {
-                    arch = Arch.x86_64;
+                    arch = Architecture.x86_64;
                 } else if (machineName.Contains("X86")) {
-                    arch = Arch.x86;
+                    arch = Architecture.x86;
                 } else if (machineName.Contains("AARCH64")) {
-                    arch = Arch.Arm64;
+                    arch = Architecture.Arm64;
                 } else if (machineName.Contains("ARM64")) {
-                    arch = Arch.Arm64;
+                    arch = Architecture.Arm64;
                 } else if (machineName.Contains("ARM")) {
-                    arch = Arch.Arm;
+                    arch = Architecture.Arm;
                 }
                 // TODO: fill in other values for machine
 
@@ -212,19 +224,19 @@ namespace MonoMod.Core.Utils {
         [DllImport(Kernel32, EntryPoint = "GetSystemInfo", SetLastError = false)]
         private static extern void WinGetSystemInfo(out SystemInfo lpSystemInfo);
 
-        private static void DetectInfoWindows(ref OSKind os, ref Arch arch) {
+        private static void DetectInfoWindows(ref OperatingSystem os, ref Architecture arch) {
             WinGetSystemInfo(out var sysInfo);
 
             // we don't update OS here, because Windows
 
             // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
             arch = sysInfo.wProcessorArchitecture switch {
-                9 => Arch.x86_64,
-                5 => Arch.Arm,
-                12 => Arch.Arm64,
+                9 => Architecture.x86_64,
+                5 => Architecture.Arm,
+                12 => Architecture.Arm64,
                 6 => arch, // Itanium. Fuck Itanium.
-                0 => Arch.x86,
-                _ => Arch.Unknown
+                0 => Architecture.x86,
+                _ => Architecture.Unknown
             };
         }
         #endregion

@@ -18,7 +18,7 @@ namespace MonoMod.UnitTest.Core {
             Assert.True(runtimeFlgs.Has(RuntimeFeature.CompileMethodHook));
             Assert.False(runtimeFlgs.Has(RuntimeFeature.PreciseGC));
 
-            _ = PlatformDetection.DetectPlatformInfo();
+            _ = PlatformDetection.OS;
 
             // -3 is addr, -2 is any repeating, -1 is any
             var collection = new BytePatternCollection(
