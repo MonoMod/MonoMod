@@ -26,9 +26,11 @@
            Condition="$([MSBuild]::VersionLessThan('$(MSBuildVersion)', '$(MSBuildRequiredVersion)'))" />
   </Target>
 
-  <!-- Shared source files -->
-  <ItemGroup Condition="'$(MMSharedSourceFiles)' == 'true'">
-    <Compile Include="$(MMCommonPath)Shared\**\*.cs">
+  <!-- Backports reference -->
+  <ItemGroup Condition="'$(MMReferenceBackports)' == 'true'">
+    <ProjectReference Include="$(MMSourcePath)MonoMod.Backports\MonoMod.Backports.csproj" />
+    <!-- Shared source files -->
+    <Compile Include="$(MMCommonPath)Shared\**\*.cs" Condition="'$(MMSharedSourceFiles)' == 'true'">
       <Link>Shared/%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Compile>
   </ItemGroup>

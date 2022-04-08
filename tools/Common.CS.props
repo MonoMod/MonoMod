@@ -21,13 +21,12 @@
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-all</AnalysisLevel>
     
-    <MMSharedSourceFiles>true</MMSharedSourceFiles>
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
     
-    <!-- TODO: should everything reference Utils by default? If so, should everything *also* reference Backports? -->
     <MMReferenceUtils>true</MMReferenceUtils>
-    <MMReferenceUtils Condition="'$(MSBuildProjectName)' == 'MonoMod.Utils'">false</MMReferenceUtils>
+    <MMReferenceBackports>true</MMReferenceBackports>
+    <MMSharedSourceFiles>true</MMSharedSourceFiles>
 
     <MMCommonPath>$(MMSourcePath)Common\</MMCommonPath>
     

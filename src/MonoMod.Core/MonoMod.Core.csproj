@@ -16,8 +16,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.Backports\MonoMod.Backports.csproj" />
-  </ItemGroup>
-
 </Project>
