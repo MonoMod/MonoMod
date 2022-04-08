@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
@@ -8,7 +9,7 @@ using System.Threading;
 
 namespace MonoMod.Core.Utils {
     public static class PlatformDetection {
-
+        #region OS/Arch
         private static int platInitState;
         private static OperatingSystem os;
         private static Architecture arch;
@@ -275,5 +276,133 @@ namespace MonoMod.Core.Utils {
             CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true,
             BestFitMapping = false, ThrowOnUnmappableChar = true)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+        #endregion
+
+        #region Runtime
+        private static int runtimeInitState;
+        private static Runtime runtime;
+        private static Version? runtimeVersion;
+
+        [MemberNotNull(nameof(runtimeVersion))]
+        private static void EnsureRuntimeInitialized() {
+            if (runtimeInitState != 0) {
+                if (runtimeVersion is null) {
+                    throw new InvalidOperationException("Despite runtimeInitState being set, runtimeVersion was somehow null");
+                }
+                return;
+            }
+
+            var runtimeInfo = DetermineRuntimeInfo();
+            runtime = runtimeInfo.Rt;
+            runtimeVersion = runtimeInfo.Ver;
+
+            Thread.MemoryBarrier();
+            _ = Interlocked.Exchange(ref runtimeInitState, 1);
+        }
+
+        public static Runtime Runtime {
+            get {
+                EnsureRuntimeInitialized();
+                return runtime;
+            }
+        }
+
+        public static Version RuntimeVersion {
+            get {
+                EnsureRuntimeInitialized();
+                return runtimeVersion;
+            }
+        }
+
+        private static (Runtime Rt, Version Ver) DetermineRuntimeInfo() {
+            var runtime = Runtime.Unknown;
+            Version? version = null; // an unknown version
+
+            bool isMono =
+                // This is what everyone expects.
+                Type.GetType("Mono.Runtime") != null ||
+                // .NET Core BCL running on Mono, see https://github.com/dotnet/runtime/blob/main/src/libraries/Common/tests/TestUtilities/System/PlatformDetection.cs
+                Type.GetType("Mono.RuntimeStructs") != null;
+
+            bool isCoreBcl = typeof(object).Assembly.GetName().Name == "System.Private.CoreLib";
+
+            if (isMono) {
+                runtime = Runtime.Mono;
+            } else if (isCoreBcl && !isMono) {
+                runtime = Runtime.CoreCLR;
+            } else {
+                runtime = Runtime.Framework;
+            }
+
+            MMDbgLog.Log($"IsMono: {isMono}, IsCoreBcl: {isCoreBcl}");
+
+            var sysVer = Environment.Version;
+            MMDbgLog.Log($"Returned system version: {sysVer}");
+
+            // RuntimeInformation is present in FX 4.7.1+ and all netstandard and Core releases, however its location varies
+            // In FX, it is in mscorlib
+            Type? rti = Type.GetType("System.Runtime.InteropServices.RuntimeInformation");
+            // however, in Core, its in System.Runtime.InteropServices.RuntimeInformation
+            rti ??= Type.GetType("System.Runtime.InteropServices.RuntimeInformation, System.Runtime.InteropServices.RuntimeInformation");
+
+            // FrameworkDescription is a string which (is supposed to) describe the runtime
+            var fxDesc = (string?) rti?.GetProperty("FrameworkDescription")?.GetValue(null, null);
+            MMDbgLog.Log($"FrameworkDescription: {fxDesc??"(null)"}");
+
+            if (fxDesc is not null) {
+                // If we could get FrameworkDescription, we want to check the start of it for each known runtime
+                const string MonoPrefix = "Mono ";
+                const string NetCore = ".NET Core ";
+                const string NetFramework = ".NET Framework ";
+                const string Net5Plus = ".NET ";
+
+                int prefixLength;
+                if (fxDesc.StartsWith(MonoPrefix, StringComparison.Ordinal)) {
+                    runtime = Runtime.Mono;
+                    prefixLength = MonoPrefix.Length;
+                } else if (fxDesc.StartsWith(NetCore, StringComparison.Ordinal)) {
+                    runtime = Runtime.CoreCLR;
+                    prefixLength = NetCore.Length;
+                } else if (fxDesc.StartsWith(NetFramework, StringComparison.Ordinal)) {
+                    runtime = Runtime.Framework;
+                    prefixLength = NetFramework.Length;
+                } else if (fxDesc.StartsWith(Net5Plus, StringComparison.Ordinal)) {
+                    runtime = Runtime.CoreCLR;
+                    prefixLength = Net5Plus.Length;
+                } else {
+                    runtime = Runtime.Unknown; // even if we think we already know, if we get to this point, explicitly set to unknown
+                    // this *likely* means that this is some new/obscure runtime
+                    prefixLength = fxDesc.Length;
+                }
+
+                // find the next space, if any, because everything up to that should be the version
+                var space = fxDesc.IndexOf(' ', prefixLength);
+                if (space < 0)
+                    space = fxDesc.Length;
+
+                var versionString = fxDesc.Substring(prefixLength, space - prefixLength);
+
+                try {
+                    version = new Version(versionString);
+                } catch (Exception e) {
+                    MMDbgLog.Log("Invalid version string pulled from FrameworkDescription");
+                    MMDbgLog.Log(e.ToString());
+                }
+
+                // TODO: map .NET Core 2.1 version to something saner
+            }
+
+            // only on old Framework is this anything *close* to reliable
+            if (runtime == Runtime.Framework)
+                version ??= sysVer;
+
+            // TODO: map strange (read: Framework) versions correctly
+
+            MMDbgLog.Log($"Detected runtime: {runtime} {version?.ToString()??"(null)"}");
+
+            return (runtime, version ?? new Version(0, 0));
+        }
+
+        #endregion
     }
 }
