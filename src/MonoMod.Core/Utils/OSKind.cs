@@ -1,5 +1,5 @@
 ﻿namespace MonoMod.Core.Utils {
-    public enum OperatingSystem {
+    public enum OSKind {
         Unknown = 0,
 
         // low 5 bits are flags for the base OS
@@ -18,9 +18,9 @@
         Wine = 0x01 << 5 | Windows,
     }
 
-    public static class OperatingSystemExtensions {
-        public static bool Is(this OperatingSystem operatingSystem, OperatingSystem test) => operatingSystem.Has(test);
-        public static OperatingSystem GetKernel(this OperatingSystem operatingSystem) => (OperatingSystem) ((int) operatingSystem & 0b11111);
-        public static int GetSubtypeId(this OperatingSystem operatingSystem) => (int) operatingSystem >> 5;
+    public static class OSKindExtensions {
+        public static bool Is(this OSKind operatingSystem, OSKind test) => operatingSystem.Has(test);
+        public static OSKind GetKernel(this OSKind operatingSystem) => (OSKind) ((int) operatingSystem & 0b11111);
+        public static int GetSubtypeId(this OSKind operatingSystem) => (int) operatingSystem >> 5;
     }
 }

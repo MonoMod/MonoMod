@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using MonoMod.Core.Utils;
 
 namespace MonoMod.Core.Platforms {
     public interface ISystem {
+        OSKind Target { get; }
+
         SystemFeature Features { get; }
     }
 }

@@ -6,13 +6,11 @@ using System.Text;
 namespace MonoMod.Core {
     public readonly struct FeatureFlags : IEquatable<FeatureFlags> {
 
+        public ArchitectureFeature Architecture { get; }
+        public SystemFeature System { get; }
         public RuntimeFeature Runtime { get; }
 
-        public ArchitectureFeature Architecture { get; }
-
-        public SystemFeature System { get; }
-
-        public FeatureFlags(RuntimeFeature runtimeFlags, ArchitectureFeature archFlags, SystemFeature sysFlags) {
+        public FeatureFlags(ArchitectureFeature archFlags, SystemFeature sysFlags, RuntimeFeature runtimeFlags) {
             Runtime = runtimeFlags;
             Architecture = archFlags;
             System = sysFlags;
