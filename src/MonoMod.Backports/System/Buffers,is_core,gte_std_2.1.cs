@@ -13,3 +13,5 @@ using System.Runtime.CompilerServices;
 [assembly: TypeForwardedTo(typeof(ReadOnlySequenceSegment<>))]
 [assembly: TypeForwardedTo(typeof(ReadOnlySequence<>))]
 [assembly: TypeForwardedTo(typeof(SequencePosition))]
+
+[assembly: TypeForwardedTo(typeof(ArrayPool<>))]
