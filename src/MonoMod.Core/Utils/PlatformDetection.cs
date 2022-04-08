@@ -52,7 +52,7 @@ namespace MonoMod.Core.Utils {
                 PropertyInfo? p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
                 string? platID;
                 if (p_Platform != null) {
-                    platID = p_Platform.GetValue(null, new object[0])?.ToString();
+                    platID = p_Platform.GetValue(null, null)?.ToString();
                 } else {
                     // For .NET and newer Mono, use the usual value.
                     platID = Environment.OSVersion.Platform.ToString();

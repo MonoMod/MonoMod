@@ -34,6 +34,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tools", "tools\tools.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Backports", "src\MonoMod.Backports\MonoMod.Backports.csproj", "{9B90DE41-122C-4395-919B-DBBD20B60F9A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.FrameworkTests", "src\MonoMod.FrameworkTests\MonoMod.FrameworkTests.csproj", "{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -130,6 +132,14 @@ Global
 		{9B90DE41-122C-4395-919B-DBBD20B60F9A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9B90DE41-122C-4395-919B-DBBD20B60F9A}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
 		{9B90DE41-122C-4395-919B-DBBD20B60F9A}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.DebugTrace|Any CPU.ActiveCfg = DebugTrace|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.DebugTrace|Any CPU.Build.0 = DebugTrace|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
+		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
