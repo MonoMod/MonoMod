@@ -36,7 +36,7 @@ namespace MonoMod.Utils {
         public static void Generate(DynamicMethodDefinition dmd, MethodBase _mb, ILGenerator il) {
             MethodDefinition def = dmd.Definition;
             DynamicMethod dm = _mb as DynamicMethod;
-#if !NETSTANDARD
+#if NETFRAMEWORK
             MethodBuilder mb = _mb as MethodBuilder;
             ModuleBuilder moduleBuilder = mb?.Module as ModuleBuilder;
             // moduleBuilder.Assembly sometimes avoids the .Assembly override under mysterious circumstances.
@@ -56,7 +56,7 @@ namespace MonoMod.Utils {
                     dm.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
                 }
             }
-#if !NETSTANDARD
+#if NETFRAMEWORK
             if (mb != null) {
                 foreach (ParameterDefinition param in def.Parameters) {
                     mb.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
@@ -67,7 +67,7 @@ namespace MonoMod.Utils {
             LocalBuilder[] locals = def.Body.Variables.Select(
                 var => {
                     LocalBuilder local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
-#if !NETSTANDARD && !CECIL0_9
+#if NETFRAMEWORK && !CECIL0_9
                     if (mb != null && defInfo != null && defInfo.TryGetName(var, out string name)) {
                         local.SetLocalSymInfo(name);
                     }
@@ -90,7 +90,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-#if !NETSTANDARD && !CECIL0_9
+#if NETFRAMEWORK && !CECIL0_9
             Dictionary<Document, ISymbolDocumentWriter> infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
 #endif
 
@@ -101,7 +101,7 @@ namespace MonoMod.Utils {
                 if (labelMap.TryGetValue(instr, out Label label))
                     il.MarkLabel(label);
 
-#if !NETSTANDARD && !CECIL0_9
+#if NETFRAMEWORK && !CECIL0_9
                 SequencePoint instrInfo = defInfo?.GetSequencePoint(instr);
                 if (mb != null && instrInfo != null) {
                     if (!infoDocCache.TryGetValue(instrInfo.Document, out ISymbolDocumentWriter infoDoc)) {
@@ -182,7 +182,7 @@ namespace MonoMod.Utils {
                     } else if (operand is MemberReference mref) {
                         MemberInfo member = mref == def ? _mb : mref.ResolveReflection();
                         operand = member;
-#if !NETSTANDARD
+#if NETFRAMEWORK
                         if (mb != null && member != null) {
                             // See DMDGenerator.cs for the explanation of this forced .?
                             Module module = member?.Module;
@@ -206,14 +206,14 @@ namespace MonoMod.Utils {
                             _EmitCallSite(dm, il, _ReflOpCodes[instr.OpCode.Value], csite);
                             continue;
                         }
-#if !NETSTANDARD
+#if NETFRAMEWORK
                         operand = csite.ResolveReflection(mb.Module);
 #else
                         throw new NotSupportedException();
 #endif
                     }
 
-#if !NETSTANDARD
+#if NETFRAMEWORK
                     if (mb != null && operand is MethodBase called && called.DeclaringType == null) {
                         // "Global" methods (f.e. DynamicMethods) cannot be tokenized.
                         if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Call) {

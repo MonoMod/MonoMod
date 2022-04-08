@@ -49,7 +49,29 @@
   </ItemGroup>
   
   <Choose>
-    <When Condition="$(TargetFramework.StartsWith('netstandard')) or $(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.Contains('.'))">
+    <When Condition="$(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.Contains('.'))">
+      <!-- .NET Core -->
+      <PropertyGroup>
+        <DefineConstants>$(DefineConstants)</DefineConstants>
+        <DefineConstants>CECIL0_11;$(DefineConstants)</DefineConstants>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
+        <NETShimVersion>4.*</NETShimVersion>
+      </PropertyGroup>
+      <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. -->
+      <ItemGroup>
+        <PackageReference Include="System.Reflection.TypeExtensions" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.Collections.NonGeneric" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.ComponentModel.TypeConverter" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.IO.FileSystem.Primitives" Version="$(NETShimVersion)" />
+      </ItemGroup>
+      <!-- This could be made optional at compile-time, but it's preferred to check for availability at runtime. -->
+      <ItemGroup>
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="$(NETShimVersion)" />
+      </ItemGroup>
+    </When>
+    
+    <When Condition="$(TargetFramework.StartsWith('netstandard'))">
       <!-- .NET Standard -->
       <PropertyGroup>
         <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>

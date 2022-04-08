@@ -185,7 +185,7 @@ namespace MonoMod.Utils {
                 case "dm":
                     return DMDEmitDynamicMethodGenerator.Generate(this, context);
 
-#if !NETSTANDARD
+#if NETFRAMEWORK
                 case "methodbuilder":
                 case "mb":
                     return DMDEmitMethodBuilderGenerator.Generate(this, context);
@@ -209,7 +209,7 @@ namespace MonoMod.Utils {
                         return DMDCecilGenerator.Generate(this, context);
 
                     if (Debug)
-#if NETSTANDARD
+#if !NETFRAMEWORK
                         return DMDCecilGenerator.Generate(this, context);
 #else
                         return DMDEmitMethodBuilderGenerator.Generate(this, context);
@@ -223,11 +223,7 @@ namespace MonoMod.Utils {
                         eh.HandlerType == ExceptionHandlerType.Fault ||
                         eh.HandlerType == ExceptionHandlerType.Filter
                     ))
-#if NETSTANDARD
-                        return DMDCecilGenerator.Generate(this, context);
-#else
                         return DMDEmitMethodBuilderGenerator.Generate(this, context);
-#endif
 #endif
 
                     return DMDEmitDynamicMethodGenerator.Generate(this, context);

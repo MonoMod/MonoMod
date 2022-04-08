@@ -408,7 +408,7 @@ namespace MonoMod.Utils {
         public static SignatureHelper ResolveReflectionSignature(this IMethodSignature csite, Module context) {
             SignatureHelper shelper;
             switch (csite.CallingConvention) {
-#if !NETSTANDARD
+#if NETFRAMEWORK
                 case MethodCallingConvention.C:
                     shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.Cdecl, csite.ReturnType.ResolveReflection());
                     break;
@@ -428,7 +428,6 @@ namespace MonoMod.Utils {
                 case MethodCallingConvention.VarArg:
                     shelper = SignatureHelper.GetMethodSigHelper(context, CallingConventions.VarArgs, csite.ReturnType.ResolveReflection());
                     break;
-
 #else
                 case MethodCallingConvention.C:
                 case MethodCallingConvention.StdCall:
@@ -436,7 +435,6 @@ namespace MonoMod.Utils {
                 case MethodCallingConvention.FastCall:
                 case MethodCallingConvention.VarArg:
                     throw new NotSupportedException("Unmanaged calling conventions for callsites not supported on .NET Standard");
-
 #endif
 
                 default:

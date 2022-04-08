@@ -47,6 +47,7 @@ internal static class MultiTargetShims {
 
     public static byte[] GetBuffer(this MemoryStream ms) {
         long posPrev = ms.Position;
+        ms.Position = 0;
         byte[] data = new byte[ms.Length];
         int read = 0;
         do {
