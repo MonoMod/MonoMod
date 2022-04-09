@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Core.Platforms {
@@ -9,5 +10,10 @@ namespace MonoMod.Core.Platforms {
         Runtime Target { get; }
 
         RuntimeFeature Features { get; }
+
+        MethodBase GetIdentifiable(MethodBase method);
+        RuntimeMethodHandle GetMethodHandle(MethodBase method);
+
+        IDisposable? PinMethodIfNeeded(MethodBase method);
     }
 }

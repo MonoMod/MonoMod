@@ -117,7 +117,7 @@ namespace MonoMod.Core.Utils {
 
         private static unsafe int PosixUname(OSKind os, byte* buf) {
             static int Libc(byte* buf) => LibcUname(buf);
-            static int Osx(byte* buf) => Osx(buf);
+            static int Osx(byte* buf) => OSXUname(buf);
             return os == OSKind.OSX ? Osx(buf) : Libc(buf);
         }
 

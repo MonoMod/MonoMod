@@ -1,6 +1,7 @@
 ﻿using MonoMod.Backports;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -15,5 +16,18 @@ namespace MonoMod.Core.Utils {
             Unsafe.CopyBlock(ref Unsafe.As<ulong, byte>(ref result), ref Unsafe.As<T, byte>(ref value), (uint)Unsafe.SizeOf<T>());
             return result;
         }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static void ThrowIfNull<T>([NotNull] T? arg, [CallerArgumentExpression("arg")] string name = "") {
+            if (arg is null)
+                ThrowArgumentNull(name);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        [DoesNotReturn]
+        private static void ThrowArgumentNull(string argName) {
+            throw new ArgumentNullException(argName);
+        }
+
     }
 }

@@ -17,6 +17,9 @@ namespace MonoMod.Core {
         DisableInlining = 0x10,
         Uninlining = 0x20,
 
+        RequiresMethodPinning = 0x80,
+        RequiresMethodIdentification = 0x100,
+
         // TODO: what other runtime feature flags would be useful to have?
     }
 }
