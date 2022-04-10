@@ -47,6 +47,12 @@ namespace System {
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static Exception CreateArgumentException_DestinationTooShort() { return new ArgumentException("Destination too short"); }
 
+
+        [DoesNotReturn]
+        internal static void ThrowArgumentException(string message, string? argument = null) { throw CreateArgumentException(message, argument); }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static Exception CreateArgumentException(string message, string? argument) { return new ArgumentException(message, argument ?? ""); }
+
         [DoesNotReturn]
         internal static void ThrowIndexOutOfRangeException() { throw CreateIndexOutOfRangeException(); }
         [MethodImpl(MethodImplOptions.NoInlining)]
