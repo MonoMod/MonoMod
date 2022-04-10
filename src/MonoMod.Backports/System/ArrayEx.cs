@@ -5,5 +5,12 @@
         }
 
         public static T[] Empty<T>() => TypeHolder<T>.Empty;
+
+        public static int MaxLength
+#if NET6_0_OR_GREATER
+            => Array.MaxLength;
+#else
+            => 0x6FFFFFFF; // this is a total estimate, intentionally kept smaller than the value in the .NET Core BCL
+#endif
     }
 }

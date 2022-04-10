@@ -21,12 +21,16 @@ namespace System {
     // 3b. Older JITs will inline the throw itself and move to cold section; but not inline the non-inlinable exception
     //     factory methods - still maintaining advantages 1 & 2
     //
-
     internal static partial class ThrowHelper {
         [DoesNotReturn]
         internal static void ThrowArgumentNullException(ExceptionArgument argument) { throw CreateArgumentNullException(argument); }
+        [DoesNotReturn]
+        internal static void ThrowArgumentNullException(string argument, string? message = null) { throw CreateArgumentNullException(argument, message); }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentNullException(ExceptionArgument argument) { return new ArgumentNullException(argument.ToString()); }
+        private static Exception CreateArgumentNullException(ExceptionArgument argument) { return CreateArgumentNullException(argument.ToString()); }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static Exception CreateArgumentNullException(string argument, string? message = null) { return new ArgumentNullException(argument, message); }
 
         [DoesNotReturn]
         internal static void ThrowArrayTypeMismatchException() { throw CreateArrayTypeMismatchException(); }
@@ -118,6 +122,19 @@ namespace System {
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static Exception CreateThrowNotSupportedException() { return new NotSupportedException(); }
 
+        [DoesNotReturn]
+        internal static void ThrowKeyNullException() { ThrowArgumentNullException(ExceptionArgument.key); }
+
+        [DoesNotReturn]
+        internal static void ThrowValueNullException() { throw CreateThrowValueNullException(); }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static Exception CreateThrowValueNullException() { return new ArgumentException("Value is null"); }
+
+        [DoesNotReturn]
+        internal static void ThrowOutOfMemoryException() { throw CreateOutOfMemoryException(); }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static Exception CreateOutOfMemoryException() { return new OutOfMemoryException(); }
+
         //
         // Enable use of ThrowHelper from TryFormat() routines without introducing dozens of non-code-coveraged "bytesWritten = 0; return false" boilerplate.
         //
@@ -203,6 +220,8 @@ namespace System {
         endIndex,
         array,
         culture,
-        manager
+        manager,
+        key,
+        collection
     }
 }
