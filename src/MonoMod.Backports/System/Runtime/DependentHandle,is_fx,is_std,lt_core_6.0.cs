@@ -1,6 +1,8 @@
-﻿using System.Diagnostics;
+﻿using System.Threading;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace System.Runtime {
     [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types",
@@ -13,32 +15,48 @@ namespace System.Runtime {
 
         // Target is the key, Dependent is the value.
 
-        private GCHandle targetHandle;
         private GCHandle dependentHandle;
         private volatile bool allocated;
 
         // This object will be held with WeakTrackResurrection, so that it can resurrect itself
         // if the target is still alive.
-        private sealed class DependentHolder {
+        private sealed class DependentHolder : CriticalFinalizerObject {
             public GCHandle TargetHandle;
-            public volatile object Dependent;
+            private IntPtr dependent;
+
+            // TODO: figure out a way to make this handle a normal object reference, but prevent finalization of
+            // referenced object when we resurrect
+
+            public object? Dependent {
+                get => GCHandle.FromIntPtr(dependent).Target;
+                set {
+                    IntPtr oldHandle, newHandle = GCHandle.ToIntPtr(GCHandle.Alloc(value, GCHandleType.Normal));
+                    do {
+                        oldHandle = dependent;
+                    } while (Interlocked.CompareExchange(ref dependent, newHandle, oldHandle) == oldHandle);
+                    GCHandle.FromIntPtr(oldHandle).Free();
+                }
+            }
 
             public DependentHolder(GCHandle targetHandle, object dependent) {
                 TargetHandle = targetHandle;
-                Dependent = dependent;
+                this.dependent = GCHandle.ToIntPtr(GCHandle.Alloc(dependent, GCHandleType.Normal));
             }
 
             ~DependentHolder() {
-                // if the target still exists, resurrect ourselves.
-                if (TargetHandle.IsAllocated)
+                // if the target still exists, resurrect ourselves and our dependent.
+                if (TargetHandle.Target is not null) {
                     GC.ReRegisterForFinalize(this);
+                } else {
+                    GCHandle.FromIntPtr(dependent).Free();
+                }
             }
         }
 
         public DependentHandle(object? target, object? dependent) {
             // we allocate with WeakTrackResurrection so that a resurrected target doesn't
             // allow collection of the dependent
-            targetHandle = GCHandle.Alloc(target, GCHandleType.WeakTrackResurrection);
+            var targetHandle = GCHandle.Alloc(target, GCHandleType.WeakTrackResurrection);
             dependentHandle = AllocDepHolder(targetHandle, dependent);
             GC.KeepAlive(target);
             allocated = true;
@@ -69,7 +87,7 @@ namespace System.Runtime {
             get {
                 if (!allocated)
                     throw new InvalidOperationException();
-                return (dependentHandle.Target as DependentHolder)?.Dependent;
+                return UnsafeGetHolder()?.Dependent;
             }
             set {
                 if (!allocated)
@@ -87,13 +105,25 @@ namespace System.Runtime {
             }
         }
 
+        private DependentHolder? UnsafeGetHolder() {
+            return Unsafe.As<DependentHolder?>(dependentHandle.Target);
+        }
+
         internal object? UnsafeGetTarget() {
-            return targetHandle.Target;
+            return UnsafeGetHolder()?.TargetHandle.Target;
         }
 
         internal object? UnsafeGetTargetAndDependent(out object? dependent) {
-            var target = UnsafeGetTarget();
-            dependent = Dependent;
+            dependent = null;
+            var holder = UnsafeGetHolder();
+            if (holder is null) {
+                return null;
+            }
+            var target = holder.TargetHandle.Target;
+            if (target is null) {
+                return null;
+            }
+            dependent = holder.Dependent;
             return target;
         }
 
@@ -102,40 +132,27 @@ namespace System.Runtime {
         }
 
         internal void UnsafeSetDependent(object? value) {
-            // we want to keep Target alive during this process
-            var target = UnsafeGetTarget();
+            var holder = UnsafeGetHolder();
 
-            if (target is null) {
+            if (holder is null)
+                return;
+
+            if (!holder.TargetHandle.IsAllocated) {
                 // if our target is dead, free everything and return
                 Free();
                 return;
             }
 
-            if (value is not null) {
-                if (dependentHandle.Target is DependentHolder holder) {
-                    holder.Dependent = value;
-                } else {
-                    // the dependentHandle doesn't point to anything, we want to allocate a new handle
-                    dependentHandle = AllocDepHolder(targetHandle, value);
-                }
-            } else {
-                // if our new value is null, we just want to free the depholder
-                FreeDependentHandle(dependentHandle);
-            }
-
-            GC.KeepAlive(target);
+            holder.Dependent = value;
         }
 
-        private static void FreeDependentHandle(GCHandle dependent) {
-            if (dependent.Target is DependentHolder holder) {
-                holder.TargetHandle.Free();
-            }
-            dependent.Free();
+        private void FreeDependentHandle() {
+            UnsafeGetHolder()?.TargetHandle.Free();
+            dependentHandle.Free();
         }
 
         private void Free() {
-            targetHandle.Free();
-            FreeDependentHandle(dependentHandle);
+            FreeDependentHandle();
         }
 
         public void Dispose() {

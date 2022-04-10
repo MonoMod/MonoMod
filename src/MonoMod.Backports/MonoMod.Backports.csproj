@@ -4,7 +4,7 @@
     <!-- We're not going to be having any of the logic that would use the shared sources, so we'll just not include them -->
     <TargetFrameworks>$(TargetFrameworks);netstandard2.1;netcoreapp2.1</TargetFrameworks>
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
-    <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>
+    <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
     <MMReferenceUtils>false</MMReferenceUtils>
     <MMReferenceBackports>false</MMReferenceBackports>
     <RootNamespace><![CDATA[ ]]></RootNamespace>
