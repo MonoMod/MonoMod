@@ -280,7 +280,7 @@ namespace MonoMod.Core.Utils {
 
         #region Runtime
         private static int runtimeInitState;
-        private static Runtime runtime;
+        private static RuntimeKind runtime;
         private static Version? runtimeVersion;
 
         [MemberNotNull(nameof(runtimeVersion))]
@@ -300,7 +300,7 @@ namespace MonoMod.Core.Utils {
             _ = Interlocked.Exchange(ref runtimeInitState, 1);
         }
 
-        public static Runtime Runtime {
+        public static RuntimeKind Runtime {
             get {
                 EnsureRuntimeInitialized();
                 return runtime;
@@ -314,8 +314,8 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        private static (Runtime Rt, Version Ver) DetermineRuntimeInfo() {
-            var runtime = Runtime.Unknown;
+        private static (RuntimeKind Rt, Version Ver) DetermineRuntimeInfo() {
+            var runtime = RuntimeKind.Unknown;
             Version? version = null; // an unknown version
 
             bool isMono =
@@ -327,11 +327,11 @@ namespace MonoMod.Core.Utils {
             bool isCoreBcl = typeof(object).Assembly.GetName().Name == "System.Private.CoreLib";
 
             if (isMono) {
-                runtime = Runtime.Mono;
+                runtime = RuntimeKind.Mono;
             } else if (isCoreBcl && !isMono) {
-                runtime = Runtime.CoreCLR;
+                runtime = RuntimeKind.CoreCLR;
             } else {
-                runtime = Runtime.Framework;
+                runtime = RuntimeKind.Framework;
             }
 
             MMDbgLog.Log($"IsMono: {isMono}, IsCoreBcl: {isCoreBcl}");
@@ -358,19 +358,19 @@ namespace MonoMod.Core.Utils {
 
                 int prefixLength;
                 if (fxDesc.StartsWith(MonoPrefix, StringComparison.Ordinal)) {
-                    runtime = Runtime.Mono;
+                    runtime = RuntimeKind.Mono;
                     prefixLength = MonoPrefix.Length;
                 } else if (fxDesc.StartsWith(NetCore, StringComparison.Ordinal)) {
-                    runtime = Runtime.CoreCLR;
+                    runtime = RuntimeKind.CoreCLR;
                     prefixLength = NetCore.Length;
                 } else if (fxDesc.StartsWith(NetFramework, StringComparison.Ordinal)) {
-                    runtime = Runtime.Framework;
+                    runtime = RuntimeKind.Framework;
                     prefixLength = NetFramework.Length;
                 } else if (fxDesc.StartsWith(Net5Plus, StringComparison.Ordinal)) {
-                    runtime = Runtime.CoreCLR;
+                    runtime = RuntimeKind.CoreCLR;
                     prefixLength = Net5Plus.Length;
                 } else {
-                    runtime = Runtime.Unknown; // even if we think we already know, if we get to this point, explicitly set to unknown
+                    runtime = RuntimeKind.Unknown; // even if we think we already know, if we get to this point, explicitly set to unknown
                     // this *likely* means that this is some new/obscure runtime
                     prefixLength = fxDesc.Length;
                 }
@@ -393,7 +393,7 @@ namespace MonoMod.Core.Utils {
             }
 
             // only on old Framework is this anything *close* to reliable
-            if (runtime == Runtime.Framework)
+            if (runtime == RuntimeKind.Framework)
                 version ??= sysVer;
 
             // TODO: map strange (read: Framework) versions correctly

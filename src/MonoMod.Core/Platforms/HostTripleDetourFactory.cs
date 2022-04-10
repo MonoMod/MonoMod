@@ -19,7 +19,7 @@ namespace MonoMod.Core.Platforms {
             Runtime = runtime;
         }
 
-        public (Architecture Arch, OSKind OS, Runtime Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);
+        public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);
 
         private FeatureFlags? lazySupportedFeatures;
         public FeatureFlags SupportedFeatures => lazySupportedFeatures ??= new(Architecture.Features, System.Features, Runtime.Features);
@@ -75,6 +75,15 @@ namespace MonoMod.Core.Platforms {
 
             // otherwise, always return
             return null;
+        }
+
+        public bool DisableInliningIfPossible(MethodBase method) {
+            if (SupportedFeatures.Has(RuntimeFeature.DisableInlining)) {
+                Runtime.DisableInlining(method);
+                return true;
+            }
+
+            return false;
         }
 
         public ICoreDetour CreateDetour(MethodBase source, MethodBase dest) {

@@ -1,5 +1,5 @@
 ﻿namespace MonoMod.Core.Utils {
-    public enum Runtime {
+    public enum RuntimeKind {
         Unknown = 0,
         Framework,
         CoreCLR,

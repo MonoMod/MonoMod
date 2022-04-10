@@ -1,5 +1,5 @@
 ﻿namespace MonoMod.Core.Utils {
-    public enum Architecture {
+    public enum ArchitectureKind {
         Unknown,
         Bits64 = 1,
         x86 = 0x01 << 1,

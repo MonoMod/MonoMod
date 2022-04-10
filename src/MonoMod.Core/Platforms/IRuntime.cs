@@ -7,12 +7,14 @@ using System.Text;
 
 namespace MonoMod.Core.Platforms {
     public interface IRuntime {
-        Runtime Target { get; }
+        RuntimeKind Target { get; }
 
         RuntimeFeature Features { get; }
 
         MethodBase GetIdentifiable(MethodBase method);
         RuntimeMethodHandle GetMethodHandle(MethodBase method);
+
+        void DisableInlining(MethodBase method);
 
         IDisposable? PinMethodIfNeeded(MethodBase method);
     }

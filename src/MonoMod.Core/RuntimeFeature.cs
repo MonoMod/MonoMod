@@ -20,6 +20,8 @@ namespace MonoMod.Core {
         RequiresMethodPinning = 0x80,
         RequiresMethodIdentification = 0x100,
 
+        RequiresBodyPointerWalking = 0x200,
+
         // TODO: what other runtime feature flags would be useful to have?
     }
 }

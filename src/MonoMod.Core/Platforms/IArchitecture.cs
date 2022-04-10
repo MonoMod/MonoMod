@@ -2,7 +2,7 @@
 
 namespace MonoMod.Core.Platforms {
     public interface IArchitecture {
-        Architecture Target { get; }
+        ArchitectureKind Target { get; }
         ArchitectureFeature Features { get; }
 
         BytePatternCollection KnownMethodThunks { get; }
