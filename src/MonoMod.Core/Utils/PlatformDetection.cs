@@ -12,7 +12,7 @@ namespace MonoMod.Core.Utils {
         #region OS/Arch
         private static int platInitState;
         private static OSKind os;
-        private static Architecture arch;
+        private static ArchitectureKind arch;
 
         private static void EnsurePlatformInfoInitialized() {
             if (platInitState != 0) {
@@ -35,16 +35,16 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        public static Architecture Architecture {
+        public static ArchitectureKind Architecture {
             get {
                 EnsurePlatformInfoInitialized();
                 return arch;
             }
         }
 
-        private static (OSKind OS, Architecture Arch) DetectPlatformInfo() {
+        private static (OSKind OS, ArchitectureKind Arch) DetectPlatformInfo() {
             OSKind os = OSKind.Unknown;
-            Architecture arch = Architecture.Unknown;
+            ArchitectureKind arch = ArchitectureKind.Unknown;
 
             {
                 // For old Mono, get from a private property to accurately get the platform.
@@ -127,7 +127,7 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        private static void DetectInfoPosix(ref OSKind os, ref Architecture arch) {
+        private static void DetectInfoPosix(ref OSKind os, ref ArchitectureKind arch) {
             try {
                 // we want to call libc's uname() function
                 // the fields we're interested in are sysname and machine, which are field 0 and 4 respectively.
@@ -185,17 +185,17 @@ namespace MonoMod.Core.Utils {
                 // TODO: fill in other known kernel names
 
                 if (machineName.Contains("X86_64")) {
-                    arch = Architecture.x86_64;
+                    arch = ArchitectureKind.x86_64;
                 } else if (machineName.Contains("AMD64")) {
-                    arch = Architecture.x86_64;
+                    arch = ArchitectureKind.x86_64;
                 } else if (machineName.Contains("X86")) {
-                    arch = Architecture.x86;
+                    arch = ArchitectureKind.x86;
                 } else if (machineName.Contains("AARCH64")) {
-                    arch = Architecture.Arm64;
+                    arch = ArchitectureKind.Arm64;
                 } else if (machineName.Contains("ARM64")) {
-                    arch = Architecture.Arm64;
+                    arch = ArchitectureKind.Arm64;
                 } else if (machineName.Contains("ARM")) {
-                    arch = Architecture.Arm;
+                    arch = ArchitectureKind.Arm;
                 }
                 // TODO: fill in other values for machine
 
@@ -225,19 +225,19 @@ namespace MonoMod.Core.Utils {
         [DllImport(Kernel32, EntryPoint = "GetSystemInfo", SetLastError = false)]
         private static extern void WinGetSystemInfo(out SystemInfo lpSystemInfo);
 
-        private static void DetectInfoWindows(ref OSKind os, ref Architecture arch) {
+        private static void DetectInfoWindows(ref OSKind os, ref ArchitectureKind arch) {
             WinGetSystemInfo(out var sysInfo);
 
             // we don't update OS here, because Windows
 
             // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
             arch = sysInfo.wProcessorArchitecture switch {
-                9 => Architecture.x86_64,
-                5 => Architecture.Arm,
-                12 => Architecture.Arm64,
+                9 => ArchitectureKind.x86_64,
+                5 => ArchitectureKind.Arm,
+                12 => ArchitectureKind.Arm64,
                 6 => arch, // Itanium. Fuck Itanium.
-                0 => Architecture.x86,
-                _ => Architecture.Unknown
+                0 => ArchitectureKind.x86,
+                _ => ArchitectureKind.Unknown
             };
         }
         #endregion

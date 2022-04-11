@@ -43,7 +43,7 @@ namespace MonoMod.Core.Platforms.Runtime {
 
         public virtual MethodBase GetIdentifiable(MethodBase method) {
             if (RTDynamicMethod_m_owner != null && method.GetType() == RTDynamicMethod)
-                return (MethodBase) RTDynamicMethod_m_owner.GetValue(method);
+                return (MethodBase) RTDynamicMethod_m_owner.GetValue(method)!;
             return method;
         }
 
@@ -63,9 +63,9 @@ namespace MonoMod.Core.Platforms.Runtime {
                 }
 
                 if (_DynamicMethod_m_method != null)
-                    return (RuntimeMethodHandle) _DynamicMethod_m_method.GetValue(method);
+                    return (RuntimeMethodHandle) _DynamicMethod_m_method.GetValue(method)!;
                 if (_DynamicMethod_GetMethodDescriptor != null)
-                    return (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(method, null);
+                    return (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(method, null)!;
             }
 
             return method.MethodHandle;
@@ -76,7 +76,7 @@ namespace MonoMod.Core.Platforms.Runtime {
             handle = default;
             if (_RuntimeHelpers__CompileMethod is null || _DynamicMethod_GetMethodDescriptor is null)
                 return false;
-            handle = (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, null);
+            handle = (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, null)!;
             if (_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                 // mscorlib 2.0.0.0
                 _RuntimeHelpers__CompileMethod.Invoke(null, new object?[] { handle.Value });
