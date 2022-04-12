@@ -110,9 +110,5 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         // inlining disabling is up to each individual runtime
         public abstract void DisableInlining(MethodBase method);
-
-        public virtual void Initialize(HostTripleDetourFactory detourFactory) {
-            // this base requires no initialization
-        }
     }
 }

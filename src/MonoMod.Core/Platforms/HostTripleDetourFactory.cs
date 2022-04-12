@@ -7,11 +7,19 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MonoMod.Core.Platforms {
+    public interface INeedsHostTripleInit {
+        void Initialize(HostTripleDetourFactory factory);
+        void PostInit();
+    }
+
     public class HostTripleDetourFactory : IDetourFactory {
 
         public IArchitecture Architecture { get; }
         public ISystem System { get; }
         public IRuntime Runtime { get; }
+
+        public static HostTripleDetourFactory CreateCurrent()
+            => new(Platform.CreateCurrentArchitecture(), Platform.CreateCurrentSystem(), Platform.CreateCurrentRuntime());
 
         public HostTripleDetourFactory(IArchitecture architecture, ISystem system, IRuntime runtime) {
             Helpers.ThrowIfNull(architecture);
@@ -23,11 +31,21 @@ namespace MonoMod.Core.Platforms {
             Runtime = runtime;
 
             // init the interface implementations
-            // architecture is already inited
-            system.Initialize(architecture);
-            runtime.Initialize(this);
-            architecture.PostInit(this);
-            system.PostInit(this);
+            InitIfNeeded(architecture, out var archIniter);
+            InitIfNeeded(system, out var sysIniter);
+            InitIfNeeded(runtime, out var rtIniter);
+            archIniter?.PostInit();
+            sysIniter?.PostInit();
+            rtIniter?.PostInit();
+        }
+
+        private void InitIfNeeded(object obj, out INeedsHostTripleInit? initer) {
+            if (obj is INeedsHostTripleInit init) {
+                initer = init;
+                init.Initialize(this);
+            } else {
+                initer = null;
+            }
         }
 
         public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);

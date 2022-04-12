@@ -5,9 +5,5 @@ namespace MonoMod.Core.Platforms {
         OSKind Target { get; }
 
         SystemFeature Features { get; }
-
-        // the system is initialized with a particular arch
-        void Initialize(IArchitecture architecture);
-        void PostInit(HostTripleDetourFactory detourFactory);
     }
 }
