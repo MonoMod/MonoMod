@@ -11,6 +11,8 @@ namespace MonoMod.Core.Platforms {
 
         RuntimeFeature Features { get; }
 
+        void Initialize(HostTripleDetourFactory detourFactory);
+
         MethodBase GetIdentifiable(MethodBase method);
         RuntimeMethodHandle GetMethodHandle(MethodBase method);
 

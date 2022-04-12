@@ -6,5 +6,8 @@ namespace MonoMod.Core.Platforms {
         ArchitectureFeature Features { get; }
 
         BytePatternCollection KnownMethodThunks { get; }
+
+        // initialization is done entirely through construction
+        void PostInit(HostTripleDetourFactory detourFactory);
     }
 }

@@ -7,7 +7,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace MonoMod.Core.Platforms.Runtime {
+namespace MonoMod.Core.Platforms.Runtimes {
     internal abstract class FxCoreCLRBaseRuntime : IRuntime {
 
         public abstract RuntimeKind Target { get; }
@@ -110,5 +110,9 @@ namespace MonoMod.Core.Platforms.Runtime {
 
         // inlining disabling is up to each individual runtime
         public abstract void DisableInlining(MethodBase method);
+
+        public virtual void Initialize(HostTripleDetourFactory detourFactory) {
+            // this base requires no initialization
+        }
     }
 }

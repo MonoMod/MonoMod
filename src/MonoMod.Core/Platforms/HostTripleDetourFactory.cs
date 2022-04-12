@@ -14,9 +14,20 @@ namespace MonoMod.Core.Platforms {
         public IRuntime Runtime { get; }
 
         public HostTripleDetourFactory(IArchitecture architecture, ISystem system, IRuntime runtime) {
+            Helpers.ThrowIfNull(architecture);
+            Helpers.ThrowIfNull(system);
+            Helpers.ThrowIfNull(runtime);
+
             Architecture = architecture;
             System = system;
             Runtime = runtime;
+
+            // init the interface implementations
+            // architecture is already inited
+            system.Initialize(architecture);
+            runtime.Initialize(this);
+            architecture.PostInit(this);
+            system.PostInit(this);
         }
 
         public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);
