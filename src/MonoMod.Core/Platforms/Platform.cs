@@ -26,6 +26,15 @@ namespace MonoMod.Core.Platforms {
             };
 
         public static ISystem CreateCurrentSystem()
-            => throw new NotImplementedException();
+            => PlatformDetection.OS switch {
+                OSKind.Posix => throw new NotImplementedException(),
+                OSKind.Linux => throw new NotImplementedException(),
+                OSKind.Android => throw new NotImplementedException(),
+                OSKind.OSX => throw new NotImplementedException(),
+                OSKind.IOS => throw new NotImplementedException(),
+                OSKind.BSD => throw new NotImplementedException(),
+                OSKind.Windows or OSKind.Wine => new Systems.WindowsSystem(),
+                var kind => throw new PlatformNotSupportedException($"OS kind {kind} not supported"),
+            };
     }
 }

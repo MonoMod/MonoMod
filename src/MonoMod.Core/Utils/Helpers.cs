@@ -42,5 +42,21 @@ namespace MonoMod.Core.Utils {
             _ = Interlocked.CompareExchange(ref location, init(), null);
             return location!;
         }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static T GetOrInitWithLock<T>(ref T? location, object @lock, Func<T> init) where T : class {
+            if (location is not null)
+                return location;
+            return InitializeValueWithLock(ref location, @lock, init);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        private static T InitializeValueWithLock<T>(ref T? location, object @lock, Func<T> init) where T : class {
+            lock (@lock) {
+                if (location is not null)
+                    return location;
+                return location = init();
+            }
+        }
     }
 }
