@@ -17,5 +17,7 @@ namespace MonoMod.Core.Platforms {
         void DisableInlining(MethodBase method);
 
         IDisposable? PinMethodIfNeeded(MethodBase method);
+
+        IntPtr GetMethodEntryPoint(MethodBase method);
     }
 }

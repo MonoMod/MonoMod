@@ -375,12 +375,12 @@ namespace MonoMod.RuntimeDetour.Platforms {
             return ptr;
         }
 
-        private static IntPtr ThePreStub = IntPtr.Zero;
-
         public override bool OnMethodCompiledWillBeCalled => false;
 #pragma warning disable CS0067 // Event never fired
         public override event OnMethodCompiledEvent OnMethodCompiled;
 #pragma warning restore CS0067
+
+        private static IntPtr ThePreStub = IntPtr.Zero;
 
         private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed) {
             if (ThePreStub == IntPtr.Zero) {

@@ -1,10 +1,7 @@
 ﻿using MonoMod.Backports;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace MonoMod.Core.Utils {
     [Flags]
@@ -15,12 +12,17 @@ namespace MonoMod.Core.Utils {
         Rel64 = 0b10,
         Abs32 = 0b01,
         Abs64 = 0b11,
+        PrecodeFixupThunk_Rel32 = 0b100,
+        PrecodeFixupThunk_Rel64 = 0b110,
+        PrecodeFixupThunk_Abs32 = 0b101,
+        PrecodeFixupThunk_Abs64 = 0b111,
     }
 
     public static class AddressKindExtensions {
         public const AddressKind
             IsAbsoluteField = (AddressKind) 0b01,
-            Is64BitField = (AddressKind) 0b10;
+            Is64BitField = (AddressKind) 0b10,
+            IsPrecodeFixupField = (AddressKind) 0b100;
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static bool IsRelative(this AddressKind value)
@@ -35,8 +37,12 @@ namespace MonoMod.Core.Utils {
         public static bool Is64Bit(this AddressKind value)
             => !value.Is32Bit();
 
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static bool IsPrecodeFixup(this AddressKind value)
+            => (value & IsPrecodeFixupField) != 0;
+
         public static void Validate(this AddressKind value, [CallerArgumentExpression("value")] string argName = "") {
-            if ((value & ~(IsAbsoluteField | Is64BitField)) != 0)
+            if ((value & ~(IsAbsoluteField | Is64BitField | IsPrecodeFixupField)) != 0)
                 throw new ArgumentOutOfRangeException(argName);
         }
     }

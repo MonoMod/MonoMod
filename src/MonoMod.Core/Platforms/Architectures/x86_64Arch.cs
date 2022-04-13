@@ -40,21 +40,21 @@ namespace MonoMod.Core.Platforms.Architectures {
                             // pop rdi
                             0x5f),
 
-                        // Autoscan #1 
-                        new(new(AddressKind.Abs64),
-                            // movabs rax, {PTR}
-                            0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3,
-                            // jmp rax
-                            0xff, 0xe0),
-
                         // Wine wierdness
-                        PlatformDetection.OS.Is(OSKind.Wine)
+                        (PlatformDetection.OS.Is(OSKind.Wine)
                             ? new(new(AddressKind.Abs64),
                                 // movabs rax, {PTR}
                                 0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3,
                                 // jmp rax
                                 0xff, 0xe0)
-                            : null
+                            : null),
+
+                        // PrecodeFixupThunk
+                        new(new(AddressKind.PrecodeFixupThunk_Rel32, 5),
+                            // call {PRECODE FIXUP THUNK}
+                            0xe8, -3, -3, -3, -3,
+                            // pop rsi(?) (is this even consistent?)
+                            0x5e)
                     );
                 } else {
                     // TODO: Mono

@@ -68,7 +68,7 @@ namespace MonoMod.Utils {
             if (_GetLdftnPointerCache.TryGetValue(m, out Func<IntPtr> func))
                 return func();
 
-            DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+            using DynamicMethodDefinition dmd = new DynamicMethodDefinition(
                 $"GetLdftnPointer<{m.GetID(simple: true)}>",
                 typeof(IntPtr), Type.EmptyTypes
             );

@@ -26,6 +26,21 @@ namespace MonoMod.Core.Utils {
             RelativeToOffset = relativeOffset;
         }
 
+        private static nint DoProcessAddress(AddressKind kind, nint basePtr, int offset, ulong address) {
+            if (kind.IsAbsolute()) {
+                return (nint) address;
+            } else { // IsRelative
+                var offs = kind.Is32Bit()
+                    ? Unsafe.As<ulong, int>(ref address)
+                    : Unsafe.As<ulong, long>(ref address);
+                return (nint) (basePtr + offset + offs);
+            }
+        }
+
+        public nint ProcessAddress(nint basePtr, int offset, ulong address) {
+            return DoProcessAddress(Kind, basePtr, offset + RelativeToOffset, address);
+        }
+
         public override bool Equals(object? obj) {
             return obj is AddressMeaning meaning && Equals(meaning);
         }

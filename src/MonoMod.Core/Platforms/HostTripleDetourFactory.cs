@@ -115,6 +115,63 @@ namespace MonoMod.Core.Platforms {
             return false;
         }
 
+        public unsafe IntPtr GetNativeMethodBody(MethodBase method) {
+            bool regenerated = false;
+
+            var archMatchCollection = Architecture.KnownMethodThunks;
+
+            ReloadFuncPtr:
+            var entry = (nint)Runtime.GetMethodEntryPoint(method);
+
+            do {
+                var span = new ReadOnlySpan<byte>((void*) entry, archMatchCollection.MaxMinLength);
+
+                if (!archMatchCollection.TryFindMatch(span, out var addr, out var match, out var offset, out var length))
+                    break;
+
+                var lastEntry = entry;
+
+                var meaning = match.AddressMeaning;
+                if (meaning.Kind.IsPrecodeFixup() && !regenerated) {
+                    var precode = meaning.ProcessAddress(entry, offset, addr);
+                    MMDbgLog.Log($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
+                    Prepare(method);
+                    goto ReloadFuncPtr;
+                } else {
+                    entry = meaning.ProcessAddress(entry, offset, addr);
+                }
+
+                entry = NotThePreStub(lastEntry, entry);
+            } while (true);
+
+            return entry;
+        }
+
+        private IntPtr ThePreStub = IntPtr.Zero;
+
+        private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed) {
+            if (ThePreStub == IntPtr.Zero) {
+                ThePreStub = (IntPtr) (-2);
+
+                // FIXME: Find a better less likely called NGEN'd candidate that points to ThePreStub.
+                // This was "found" by tModLoader.
+                // Can be missing in .NET 5.0 outside of Windows for some reason.
+                var mi = typeof(System.Net.HttpWebRequest).Assembly
+                    .GetType("System.Net.Connection")
+                    ?.GetMethod("SubmitRequest", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                if (mi != null) {
+                    ThePreStub = GetNativeMethodBody(mi);
+                    MMDbgLog.Log($"ThePreStub: 0x{(long) ThePreStub:X16}");
+                } else if (PlatformDetection.OS.Is(OSKind.Windows)) {
+                    // FIXME: This should be -1 (always return ptrGot) on all plats, but SubmitRequest is Windows-only?
+                    ThePreStub = (IntPtr) (-1);
+                }
+            }
+
+            return (ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/) ? ptrGot : ptrParsed;
+        }
+
         public ICoreDetour CreateDetour(MethodBase source, MethodBase dest) {
             throw new NotImplementedException();
         }

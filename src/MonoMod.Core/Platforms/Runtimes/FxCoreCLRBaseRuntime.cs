@@ -1,4 +1,5 @@
 ﻿using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -110,5 +111,38 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         // inlining disabling is up to each individual runtime
         public abstract void DisableInlining(MethodBase method);
+
+        public IntPtr GetMethodEntryPoint(MethodBase method) {
+            method = GetIdentifiable(method);
+
+            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
+                /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
+                 * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation
+                 *
+                 * Observations made so far:
+                 * - GetFunctionPointer ALWAYS returns a pointer to the unboxing stub handle.
+                 * - On x86, the "real" entry point is often found 8 bytes after the unboxing stub entry point.
+                 * - Methods WILL be called INDIRECTLY using the pointer found in the "real" MethodDesc.
+                 * - The "real" MethodDesc will be updated, which isn't an issue except that we can't patch the stub in time.
+                 * - The "real" stub will stay untouched.
+                 * - LDFTN RETURNS A POINTER TO THE "REAL" ENTRY POINT.
+                 *
+                 * Exceptions so far:
+                 * - SOME interface methods seem to follow similar rules, but ldftn isn't enough.
+                 * - Can't use GetBaseDefinition to check for interface methods as that holds up ALC unloading. (Mapping info is fine though...)
+                 */
+                foreach (Type intf in method.DeclaringType.GetInterfaces()) {
+                    if (method.DeclaringType.GetInterfaceMap(intf).TargetMethods.Contains(method)) {
+                        break;
+                    }
+                }
+
+                return method.GetLdftnPointer();
+            } else {
+                // Your typical method.
+                var handle = GetMethodHandle(method);
+                return handle.GetFunctionPointer();
+            }
+        }
     }
 }
