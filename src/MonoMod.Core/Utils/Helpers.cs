@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 
 namespace MonoMod.Core.Utils {
     internal static class Helpers {
@@ -29,5 +30,17 @@ namespace MonoMod.Core.Utils {
             throw new ArgumentNullException(argName);
         }
 
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static T GetOrInit<T>(ref T? location, Func<T> init) where T : class {
+            if (location is not null)
+                return location;
+            return InitializeValue(ref location, init);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        private static T InitializeValue<T>(ref T? location, Func<T> init) where T : class {
+            _ = Interlocked.CompareExchange(ref location, init(), null);
+            return location!;
+        }
     }
 }

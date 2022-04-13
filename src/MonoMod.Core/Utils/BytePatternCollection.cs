@@ -14,7 +14,7 @@ namespace MonoMod.Core.Utils {
         public int MaxMinLength { get; }
         public int MaxAddressLength { get; }
 
-        public BytePatternCollection(ReadOnlyMemory<BytePattern> patterns) {
+        public BytePatternCollection(ReadOnlyMemory<BytePattern?> patterns) {
             (patternCollections, emptyPatterns) = ComputeLut(patterns, out int minLength, out int maxMinLength, out int maxAddrLength);
             MinLength = minLength;
             MaxMinLength = maxMinLength;
@@ -22,7 +22,7 @@ namespace MonoMod.Core.Utils {
             Debug.Assert(MinLength > 0);
         }
 
-        public BytePatternCollection(params BytePattern[] patterns) : this(patterns.AsMemory()) { }
+        public BytePatternCollection(params BytePattern?[] patterns) : this(patterns.AsMemory()) { }
 
         public IEnumerator<BytePattern> GetEnumerator() {
             for (int i = 0; i < patternCollections.Length; i++) {
@@ -45,10 +45,13 @@ namespace MonoMod.Core.Utils {
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         private static (HomogenousPatternCollection[], BytePattern[]?) ComputeLut(
-            ReadOnlyMemory<BytePattern> patterns, 
+            ReadOnlyMemory<BytePattern?> patterns, 
             out int minLength, out int maxMinLength, out int maxAddrLength) {
             if (patterns.Length == 0) {
-                throw new ArgumentException("Pattern list cannot be empty", nameof(patterns));
+                minLength = 0;
+                maxMinLength = 0;
+                maxAddrLength = 0;
+                return (ArrayEx.Empty<HomogenousPatternCollection>(), null);
             }
 
             // first pass is counting
@@ -68,7 +71,9 @@ namespace MonoMod.Core.Utils {
             int distinctOffsetCount = 0; // starts at 1 because of the zero offset
 
             for (int i = 0; i < patterns.Length; i++) {
-                BytePattern pattern = patterns.Span[i];
+                BytePattern? pattern = patterns.Span[i];
+                if (pattern is null)
+                    continue;
 
                 // update min/max lengths
                 if (pattern.MinLength < minLength) {
@@ -124,7 +129,9 @@ namespace MonoMod.Core.Utils {
 
             // now iterate through our input pattern list again, and add them to their relevant collections
             for (int i = 0; i < patterns.Length; i++) {
-                BytePattern pattern = patterns.Span[i];
+                BytePattern? pattern = patterns.Span[i];
+                if (pattern is null)
+                    continue;
 
                 var (seg, offs) = pattern.FirstLiteralSegment;
 
