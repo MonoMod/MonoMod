@@ -16,6 +16,11 @@ namespace MonoMod.Core.Platforms.Architectures {
         
         private static BytePatternCollection CreateKnownMethodThunks()
         {
+            const ushort Sn = BytePattern.SAnyValue;
+            const ushort Sd = BytePattern.SAddressValue;
+            const byte An = BytePattern.BAnyValue;
+            const byte Ad = BytePattern.BAddressValue;
+
             if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
                 return new BytePatternCollection(
                     // .NET Framework
@@ -23,22 +28,22 @@ namespace MonoMod.Core.Platforms.Architectures {
                         // test rcx, rcx
                         0x48, 0x85, 0xc9,
                         // je .... ???
-                        0x74, -1,
+                        0x74, Sn,
                         // mov rax, [rcx]
                         0x48, 0x8b, 0x01,
                         // mov ... (extra)
-                        0x49, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        0x49, Sn, Sn, Sn, Sn, Sn, Sn, Sn, Sn, Sn,
                         // cmp rax, r10
                         0x49, 0x3b, 0xc2,
                         // je ...
-                        0x74, -1,
+                        0x74, Sn,
                         // mov {TARGET}
-                        0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3),
+                        0x48, 0xb8, Sd, Sd, Sd, Sd, Sd, Sd, Sd, Sd),
 
                     // .NET Core
                     new(new(AddressKind.Rel32, 5),
                         // jmp {DELTA}
-                        0xe9, -3, -3, -3, -3,
+                        0xe9, Sd, Sd, Sd, Sd,
                         // pop rdi
                         0x5f),
 
@@ -46,15 +51,31 @@ namespace MonoMod.Core.Platforms.Architectures {
                     (PlatformDetection.OS.Is(OSKind.Wine)
                         ? new(new(AddressKind.Abs64),
                             // movabs rax, {PTR}
-                            0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3,
+                            0x48, 0xb8, Sd, Sd, Sd, Sd, Sd, Sd, Sd, Sd,
                             // jmp rax
                             0xff, 0xe0)
                         : null),
 
+                    // Autoscan funkyness
+                    new(new(AddressKind.Rel32, 19),
+                        new byte[] { // mask
+                            0xf0, 0xff, 00, 00, 00, 00, 00, 00, 00, 00, 
+                            0xff, 0xff, 0xf0, 
+                            0xff, 0xff, 00, 00, 00, 00
+                        },
+                        new byte[] { // pattern
+                            // movabs ??1, ???
+                            0x40, 0xb8, An, An, An, An, An, An, An, An,
+                            // dec WORD PTR [??1]
+                            0x66, 0xff, 0x00, 
+                            // jne {DELTA}
+                            0x0f, 0x85, Ad, Ad, Ad, Ad
+                        }), 
+
                     // PrecodeFixupThunk
                     new(new(AddressKind.PrecodeFixupThunk_Rel32, 5),
                         // call {PRECODE FIXUP THUNK}
-                        0xe8, -3, -3, -3, -3,
+                        0xe8, Sd, Sd, Sd, Sd,
                         // pop rsi(?) (is this even consistent?)
                         0x5e)
                 );

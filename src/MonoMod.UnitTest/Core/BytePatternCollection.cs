@@ -21,17 +21,19 @@ namespace MonoMod.UnitTest.Core {
             _ = PlatformDetection.OS;
             _ = PlatformDetection.Runtime;
 
-            // -3 is addr, -2 is any repeating, -1 is any
+            const ushort An = BytePattern.SAnyValue;
+            const ushort Ad = BytePattern.SAddressValue;
+
             var collection = new BytePatternCollection(
                     // mov...; nop; call...; jmp {delta}
-                    new(new(AddressKind.Rel32, 16), 0xb8, -1, -1, -1, -1, 0x90, 0xe8, -1, -1, -1, -1, 0xe9, -3, -3, -3, -3),
+                    new(new(AddressKind.Rel32, 16), 0xb8, An, An, An, An, 0x90, 0xe8, An, An, An, An, 0xe9, Ad, Ad, Ad, Ad),
                     // jmp {delta}; pop rdi
-                    new(new(AddressKind.Rel32, 5), 0xe9, -3, -3, -3, -3, 0x5f),
+                    new(new(AddressKind.Rel32, 5), 0xe9, Ad, Ad, Ad, Ad, 0x5f),
                     // text rcx, rcx; je ...; mov rax, [rcx]; cmp rax, r10; je ...; mov {target}
                     new(new(AddressKind.Abs64),
-                        0x48, 0x85, 0xc9, 0x74, -1, 
-                        0x48, 0x8b, 0x01, 0x49, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
-                        0x49, 0x3b, 0xc2, 0x74, -1, 0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3)
+                        0x48, 0x85, 0xc9, 0x74, An, 
+                        0x48, 0x8b, 0x01, 0x49, An, An, An, An, An, An, An, An, An, 
+                        0x49, 0x3b, 0xc2, 0x74, An, 0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad)
                     // TODO: other examples
                 );
 

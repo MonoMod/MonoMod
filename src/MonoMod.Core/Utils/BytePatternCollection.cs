@@ -85,6 +85,8 @@ namespace MonoMod.Core.Utils {
                 if (pattern.AddressBytes > maxAddrLength) {
                     maxAddrLength = pattern.AddressBytes;
                 }
+                
+                // TODO: index masked segments
 
                 // figure out where to put its first segment
                 var (seg, offs) = pattern.FirstLiteralSegment;

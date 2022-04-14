@@ -4,14 +4,20 @@ using System.Linq;
 namespace MonoMod.Core.Utils {
     public sealed class BytePattern {
 
+        private const ushort MaskMask = 0xFF00;
+
         // one byte with any value
-        public const short AnyValue = -1;
+        public const byte BAnyValue = 0x00;
+        public const ushort SAnyValue = MaskMask | BAnyValue;
         // zero or more bytes with any value
-        public const short AnyRepeatingValue = -2;
+        public const byte BAnyRepeatingValue = 0x01;
+        public const ushort SAnyRepeatingValue = MaskMask | BAnyRepeatingValue;
         // a captured byte, pushed into the address buffer during matching
-        public const short AddressValue = -3;
+        public const byte BAddressValue = 0x02;
+        public const ushort SAddressValue = MaskMask | BAddressValue;
 
         private readonly ReadOnlyMemory<byte> pattern;
+        private readonly ReadOnlyMemory<byte> bitmask;
         private readonly PatternSegment[] segments;
 
         public int AddressBytes { get; }
@@ -20,7 +26,7 @@ namespace MonoMod.Core.Utils {
         public AddressMeaning AddressMeaning { get; }
 
         private enum SegmentKind {
-            Literal, Any, AnyRepeating, Address,
+            Literal, MaskedLiteral, Any, AnyRepeating, Address,
         }
 
         private record struct PatternSegment(int Start, int Length, SegmentKind Kind) {
@@ -28,25 +34,80 @@ namespace MonoMod.Core.Utils {
             public ReadOnlyMemory<T> SliceOf<T>(ReadOnlyMemory<T> mem) => mem.Slice(Start, Length);
         }
 
-        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<short> pattern) {
+        public BytePattern(AddressMeaning meaning, params ushort[] pattern) : this(meaning, pattern.AsMemory()) { }
+        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<ushort> pattern) {
             AddressMeaning = meaning;
-            (segments, MinLength, AddressBytes) = ComputeSegments(pattern);
+            (segments, MinLength, AddressBytes) = ComputeSegmentsFromShort(pattern);
 
-            // TODO: is there something we can do to avoid this extra allocation, on top of the segments array?
-            byte[] bytePattern = new byte[pattern.Length];
+            // this mess splits the ushort pattern array into 
+            var patternAlloc = new byte[pattern.Length * 2].AsMemory();
+            var patternData = patternAlloc.Slice(0, pattern.Length);
+            var bitmaskData = patternAlloc.Slice(pattern.Length);
             for (int i = 0; i < pattern.Length; i++) {
-                bytePattern[i] = (byte) (pattern.Span[i] & 0xFF);
+                var @byte = pattern.Span[i];
+                var mask = (byte) ((@byte & MaskMask) >> 8);
+                var data = (byte) (@byte & ~MaskMask);
+                if (mask is 0x00 or 0xFF)
+                    mask = (byte)~mask;
+
+                patternData.Span[i] = (byte) (data & mask);
+                bitmaskData.Span[i] = mask;
             }
-            this.pattern = bytePattern;
+
+            this.pattern = patternData;
+            bitmask = bitmaskData;
         }
 
-        public BytePattern(AddressMeaning meaning, params short[] pattern) : this(meaning, pattern.AsMemory()) { }
+        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) {
+            AddressMeaning = meaning;
+            (segments, MinLength, AddressBytes) = ComputeSegmentsFromMaskPattern(mask, pattern);
+            this.pattern = pattern;
+            bitmask = mask;
+        }
 
-        private static (PatternSegment[] Segments, int MinLen, int AddrBytes) ComputeSegments(ReadOnlyMemory<short> patternMem) {
-            if (patternMem.Length == 0)
-                throw new ArgumentException("Pattern cannot be empty", nameof(patternMem));
+        private readonly record struct ComputeSegmentsResult(PatternSegment[] Segments, int MinLen, int AddrBytes);
 
-            ReadOnlySpan<short> pattern = patternMem.Span;
+        private unsafe static ComputeSegmentsResult ComputeSegmentsFromShort(ReadOnlyMemory<ushort> pattern) {
+            return ComputeSegmentsCore(&KindForShort, pattern.Length, pattern);
+
+            static SegmentKind KindForShort(ReadOnlyMemory<ushort> pattern, int idx) {
+                var value = pattern.Span[idx];
+                return (value & MaskMask) switch {
+                    0x0000 => SegmentKind.Literal, // a normal literal
+                    MaskMask => (value & 0x00ff) switch { // a special value
+                        (BAnyValue) => SegmentKind.Any,
+                        (BAnyRepeatingValue) => SegmentKind.AnyRepeating,
+                        (BAddressValue) => SegmentKind.Address,
+                        var x => throw new ArgumentException($"Pattern contained unknown special value {x:x2}", nameof(pattern))
+                    },
+                    _ => SegmentKind.MaskedLiteral,
+                };
+            }
+        }
+
+        private unsafe static ComputeSegmentsResult ComputeSegmentsFromMaskPattern(ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) {
+            if (mask.Length < pattern.Length)
+                throw new ArgumentException("Mask buffer shorter than pattern", nameof(mask));
+
+            return ComputeSegmentsCore(&KindForIdx, pattern.Length, (mask, pattern));
+
+            static SegmentKind KindForIdx((ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) t, int idx) {
+                return t.mask.Span[idx] switch {
+                    0x00 => t.pattern.Span[idx] switch { // the mask hides this byte, it means something special
+                        BAnyValue => SegmentKind.Any,
+                        BAnyRepeatingValue => SegmentKind.AnyRepeating,
+                        BAddressValue => SegmentKind.Address,
+                        var x => throw new ArgumentException($"Pattern contained unknown special value {x:x2}", nameof(pattern))
+                    },
+                    0xFF => SegmentKind.Literal, // its a normal, unmasked literal
+                    _ => SegmentKind.MaskedLiteral, // otherwise, it's a masked literal
+                };
+            }
+        }
+
+        private unsafe static ComputeSegmentsResult ComputeSegmentsCore<TPattern>(delegate*<TPattern, int, SegmentKind> kindForIdx, int patternLength, TPattern pattern) {
+            if (patternLength == 0)
+                throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
 
             // first, we do a pass to compute how many segments we need
             int segmentCount = 0;
@@ -56,19 +117,12 @@ namespace MonoMod.Core.Utils {
             int minLength = 0;
             int firstSegmentStart = -1;
 
-            static SegmentKind KindForByte(short value) => value switch {
-                >= 0 and <= 0xff => SegmentKind.Literal,
-                AnyValue => SegmentKind.Any,
-                AnyRepeatingValue => SegmentKind.AnyRepeating,
-                AddressValue => SegmentKind.Address,
-                _ => throw new ArgumentException($"Pattern contains unknown special value {value}", nameof(patternMem))
-            };
-
-            for (int i = 0; i < patternMem.Length; i++) {
-                SegmentKind thisSegmentKind = KindForByte(pattern[i]);
+            for (int i = 0; i < patternLength; i++) {
+                var thisSegmentKind = kindForIdx(pattern, i);
 
                 minLength += thisSegmentKind switch {
                     SegmentKind.Literal => 1,
+                    SegmentKind.MaskedLiteral => 1,
                     SegmentKind.Any => 1,
                     SegmentKind.AnyRepeating => 0, // AnyRepeating matches zero or more
                     SegmentKind.Address => 1,
@@ -96,10 +150,8 @@ namespace MonoMod.Core.Utils {
             }
 
             if (segmentCount == 0 || minLength <= 0) {
-                throw new ArgumentException("Pattern has no meaningful segments", nameof(patternMem));
+                throw new ArgumentException("Pattern has no meaningful segments", nameof(pattern));
             }
-
-            // TODO: do we want to require an address?
 
             // we now know how many segments we need, so lets allocate our array
             var segments = new PatternSegment[segmentCount];
@@ -107,8 +159,8 @@ namespace MonoMod.Core.Utils {
             lastKind = SegmentKind.AnyRepeating;
             segmentLength = 0;
 
-            for (int i = firstSegmentStart; i < patternMem.Length && segmentCount <= segments.Length; i++) {
-                SegmentKind thisSegmentKind = KindForByte(pattern[i]);
+            for (int i = firstSegmentStart; i < patternLength && segmentCount <= segments.Length; i++) {
+                var thisSegmentKind = kindForIdx(pattern, i);
 
                 if (thisSegmentKind != lastKind) {
                     if (segmentCount > 0) {
@@ -130,7 +182,7 @@ namespace MonoMod.Core.Utils {
             }
 
             if (lastKind is not SegmentKind.AnyRepeating && segmentCount > 0) {
-                segments[segmentCount - 1] = new(patternMem.Length - segmentLength, segmentLength, lastKind);
+                segments[segmentCount - 1] = new(patternLength - segmentLength, segmentLength, lastKind);
             }
 
             return new(segments, minLength, addrLength);
@@ -168,8 +220,6 @@ namespace MonoMod.Core.Utils {
         }
 
         private bool TryMatchAtImpl(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length, int startAtSegment) {
-            length = 0;
-
             int pos = 0;
             int segmentIdx = startAtSegment;
 
@@ -178,13 +228,26 @@ namespace MonoMod.Core.Utils {
                 switch (segment.Kind) {
                     case SegmentKind.Literal: {
                             if (data.Length - pos < segment.Length)
-                                return false; // if we don't have enough space left for the match, then just fail out
+                                goto NoMatch; // if we don't have enough space left for the match, then just fail out
 
                             ReadOnlySpan<byte> pattern = segment.SliceOf(patternSpan);
                             
                             if (!pattern.SequenceEqual(data.Slice(pos, pattern.Length)))
-                                return false; // the literal didn't match here, oopsie
+                                goto NoMatch; // the literal didn't match here, oopsie
                             // we successfully matched the literal, lets advance our position, and we're done here
+                            pos += segment.Length;
+                            break;
+                        }
+                    case SegmentKind.MaskedLiteral: {
+                            if (data.Length - pos < segment.Length)
+                                goto NoMatch;
+
+                            var pattern = segment.SliceOf(patternSpan);
+                            var mask = segment.SliceOf(bitmask.Span);
+
+                            if (!Helpers.MaskedSequenceEqual(pattern, data.Slice(pos, pattern.Length), mask))
+                                goto NoMatch;
+
                             pos += segment.Length;
                             break;
                         }
@@ -192,14 +255,14 @@ namespace MonoMod.Core.Utils {
                             // this is easily the simplest pattern to match
                             // we just need to make sure that there's enough space left in the input
                             if (data.Length - pos < segment.Length)
-                                return false;
+                                goto NoMatch;
                             pos += segment.Length;
                             break;
                         }
                     case SegmentKind.Address: {
                             // this is almost as simple as Any, we just *also* need to copy into the addrBuf
                             if (data.Length - pos < segment.Length)
-                                return false;
+                                goto NoMatch;
 
                             ReadOnlySpan<byte> pattern = data.Slice(pos, Math.Min(segment.Length, addrBuf.Length));
                             Buffer.MemoryCopy(pattern, addrBuf);
@@ -229,6 +292,11 @@ namespace MonoMod.Core.Utils {
 
             length = pos;
             return true;
+
+            // this is a JITted function size optimization to prevent duplicate epilogs
+            NoMatch:
+            length = 0;
+            return false;
         }
 
         public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, out int offset, out int length) {
@@ -303,7 +371,7 @@ namespace MonoMod.Core.Utils {
                 PatternSegment segment = segments[segmentIndexId];
                 if (segment.Kind is SegmentKind.Literal) {
                     return (segment, litOffset);
-                } else if (segment.Kind is SegmentKind.Any or SegmentKind.Address) {
+                } else if (segment.Kind is SegmentKind.Any or SegmentKind.Address or SegmentKind.MaskedLiteral) { // TODO: enable indexing MaskedLiterals
                     litOffset += segment.Length;
                 } else if (segment.Kind is SegmentKind.AnyRepeating) {
                     // no litOffset change, just advance to the next segment
