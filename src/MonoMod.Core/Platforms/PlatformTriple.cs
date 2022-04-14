@@ -148,7 +148,15 @@ namespace MonoMod.Core.Platforms {
             return false;
         }
 
-        public unsafe IntPtr GetNativeMethodBody(MethodBase method) {
+        public IntPtr GetNativeMethodBody(MethodBase method) {
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyPointerWalking)) {
+                return GetNativeMethodBodyWalk(method);
+            } else {
+                return GetNativeMethodBodyDirect(method);
+            }
+        }
+
+        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method) {
             bool regenerated = false;
 
             var archMatchCollection = Architecture.KnownMethodThunks;
@@ -178,6 +186,10 @@ namespace MonoMod.Core.Platforms {
             } while (true);
 
             return entry;
+        }
+
+        private unsafe IntPtr GetNativeMethodBodyDirect(MethodBase method) {
+            return Runtime.GetMethodEntryPoint(method);
         }
 
         private IntPtr ThePreStub = IntPtr.Zero;
