@@ -368,6 +368,77 @@ namespace System.Runtime.CompilerServices {
         }
         #endregion
 
+        #region AppendFormatted overloads for IntPtr casting them to normal integer types
+        // These are needed because on older runtimes IntPtr and UIntPtr don't implement IFormattable, and so
+        // cannot be formatted with format arguments.
+
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(IntPtr value) {
+            if (IntPtr.Size == 4) {
+                AppendFormatted((int) value);
+            } else {
+                AppendFormatted((long) value);
+            }
+        }
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(IntPtr value, string? format) {
+            if (IntPtr.Size == 4) {
+                AppendFormatted((int) value, format);
+            } else {
+                AppendFormatted((long) value, format);
+            }
+        }
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(IntPtr value, int alignment) {
+            if (IntPtr.Size == 4) {
+                AppendFormatted((int) value, alignment);
+            } else {
+                AppendFormatted((long) value, alignment);
+            }
+        }
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(IntPtr value, int alignment, string? format) {
+            if (IntPtr.Size == 4) {
+                AppendFormatted((int) value, alignment, format);
+            } else {
+                AppendFormatted((long) value, alignment, format);
+            }
+        }
+
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(UIntPtr value) {
+            if (UIntPtr.Size == 4) {
+                AppendFormatted((uint) value);
+            } else {
+                AppendFormatted((ulong) value);
+            }
+        }
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(UIntPtr value, string? format) {
+            if (UIntPtr.Size == 4) {
+                AppendFormatted((uint) value, format);
+            } else {
+                AppendFormatted((ulong) value, format);
+            }
+        }
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(UIntPtr value, int alignment) {
+            if (UIntPtr.Size == 4) {
+                AppendFormatted((uint) value, alignment);
+            } else {
+                AppendFormatted((ulong) value, alignment);
+            }
+        }
+        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(UIntPtr value, int alignment, string? format) {
+            if (UIntPtr.Size == 4) {
+                AppendFormatted((uint) value, alignment, format);
+            } else {
+                AppendFormatted((ulong) value, alignment, format);
+            }
+        }
+        #endregion
+
         #region AppendFormatted ReadOnlySpan<char>
         /// <summary>Writes the specified character span to the handler.</summary>
         /// <param name="value">The span to write.</param>
