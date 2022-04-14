@@ -28,9 +28,8 @@ namespace System.Buffers {
         /// <summary>A per-thread array of arrays, to cache one array per array size per thread.</summary>
         [ThreadStatic]
         private static ThreadLocalArray[]? t_tlsBuckets;
-        // TODO: polyfill CWT
         /// <summary>Used to keep track of all thread local buckets for trimming if needed.</summary>
-        //private readonly ConditionalWeakTable<ThreadLocalArray[], object?> _allTlsBuckets = new ConditionalWeakTable<ThreadLocalArray[], object?>();
+        private readonly ConditionalWeakTable<ThreadLocalArray[], object?> _allTlsBuckets = new ConditionalWeakTable<ThreadLocalArray[], object?>();
         /// <summary>
         /// An array of per-core array stacks. The slots are lazily initialized to avoid creating
         /// lots of overhead for unused array sizes.
@@ -151,8 +150,7 @@ namespace System.Buffers {
             // trim an array we didn't need to.  Both of these should be rare occurrences.
 
             // Under high pressure, release all thread locals.
-            // TODO: re-enable this when CWT is polyfilled correctly
-            /*if (pressure == Utilities.MemoryPressure.High) {
+            if (pressure == Utilities.MemoryPressure.High) {
                 foreach (KeyValuePair<ThreadLocalArray[], object?> tlsBuckets in _allTlsBuckets) {
                     Array.Clear(tlsBuckets.Key, 0, tlsBuckets.Key.Length);
                 }
@@ -186,7 +184,6 @@ namespace System.Buffers {
                     }
                 }
             }
-            */
 
             return true;
         }
@@ -197,7 +194,7 @@ namespace System.Buffers {
             var tlsBuckets = new ThreadLocalArray[NumBuckets];
             t_tlsBuckets = tlsBuckets;
 
-            //_allTlsBuckets.Add(tlsBuckets, null);
+            _allTlsBuckets.Add(tlsBuckets, null);
             if (Interlocked.Exchange(ref _trimCallbackCreated, 1) == 0) {
                 Gen2GcCallback.Register(s => ((TlsOverPerCoreLockedStacksArrayPool<T>) s).Trim(), this);
             }
