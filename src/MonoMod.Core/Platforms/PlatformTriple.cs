@@ -68,6 +68,9 @@ namespace MonoMod.Core.Platforms {
             archIniter?.PostInit();
             sysIniter?.PostInit();
             rtIniter?.PostInit();
+
+            // eagerly initialize this so that the check functions get as much inlined as possible
+            SupportedFeatures = new(Architecture.Features, System.Features, Runtime.Features);
         }
 
         private void InitIfNeeded(object obj, out INeedsPlatformTripleInit? initer) {
@@ -81,8 +84,7 @@ namespace MonoMod.Core.Platforms {
 
         public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);
 
-        private FeatureFlags? lazySupportedFeatures;
-        public FeatureFlags SupportedFeatures => lazySupportedFeatures ??= new(Architecture.Features, System.Features, Runtime.Features);
+        public FeatureFlags SupportedFeatures { get; }
 
         /// <summary>
         /// Prepares <paramref name="method"/> by calling <see cref="RuntimeHelpers.PrepareMethod(RuntimeMethodHandle)"/>.
