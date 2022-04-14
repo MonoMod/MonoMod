@@ -7,21 +7,52 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MonoMod.Core.Platforms {
-    public interface INeedsHostTripleInit {
-        void Initialize(HostTripleDetourFactory factory);
+    public interface INeedsPlatformTripleInit {
+        void Initialize(PlatformTriple factory);
         void PostInit();
     }
+    public sealed class PlatformTriple {
+        public static IRuntime CreateCurrentRuntime()
+            => PlatformDetection.Runtime switch {
+                RuntimeKind.Framework => Runtimes.FxBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion),
+                RuntimeKind.CoreCLR => Runtimes.CoreCLRBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion),
+                RuntimeKind.Mono => throw new NotImplementedException(),
+                var kind => throw new PlatformNotSupportedException($"Runtime kind {kind} not supported"),
+            };
 
-    public class HostTripleDetourFactory : IDetourFactory {
+        public static IArchitecture CreateCurrentArchitecture()
+            => PlatformDetection.Architecture switch {
+                ArchitectureKind.x86 => throw new NotImplementedException(),
+                ArchitectureKind.x86_64 => new Architectures.x86_64Arch(),
+                ArchitectureKind.Arm => throw new NotImplementedException(),
+                ArchitectureKind.Arm64 => throw new NotImplementedException(),
+                var kind => throw new PlatformNotSupportedException($"Architecture kind {kind} not supported"),
+            };
+
+        public static ISystem CreateCurrentSystem()
+            => PlatformDetection.OS switch {
+                OSKind.Posix => throw new NotImplementedException(),
+                OSKind.Linux => throw new NotImplementedException(),
+                OSKind.Android => throw new NotImplementedException(),
+                OSKind.OSX => throw new NotImplementedException(),
+                OSKind.IOS => throw new NotImplementedException(),
+                OSKind.BSD => throw new NotImplementedException(),
+                OSKind.Windows or OSKind.Wine => new Systems.WindowsSystem(),
+                var kind => throw new PlatformNotSupportedException($"OS kind {kind} not supported"),
+            };
 
         public IArchitecture Architecture { get; }
         public ISystem System { get; }
         public IRuntime Runtime { get; }
 
-        public static HostTripleDetourFactory CreateCurrent()
-            => new(Platform.CreateCurrentArchitecture(), Platform.CreateCurrentSystem(), Platform.CreateCurrentRuntime());
+        private static object lazyCurrentLock = new();
+        private static PlatformTriple? lazyCurrent;
+        public static PlatformTriple Current => Helpers.GetOrInitWithLock(ref lazyCurrent, lazyCurrentLock, CreateCurrent);
 
-        public HostTripleDetourFactory(IArchitecture architecture, ISystem system, IRuntime runtime) {
+        private static PlatformTriple CreateCurrent()
+            => new(CreateCurrentArchitecture(), CreateCurrentSystem(), CreateCurrentRuntime());
+
+        public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime) {
             Helpers.ThrowIfNull(architecture);
             Helpers.ThrowIfNull(system);
             Helpers.ThrowIfNull(runtime);
@@ -39,8 +70,8 @@ namespace MonoMod.Core.Platforms {
             rtIniter?.PostInit();
         }
 
-        private void InitIfNeeded(object obj, out INeedsHostTripleInit? initer) {
-            if (obj is INeedsHostTripleInit init) {
+        private void InitIfNeeded(object obj, out INeedsPlatformTripleInit? initer) {
+            if (obj is INeedsPlatformTripleInit init) {
                 initer = init;
                 init.Initialize(this);
             } else {
@@ -121,7 +152,7 @@ namespace MonoMod.Core.Platforms {
             var archMatchCollection = Architecture.KnownMethodThunks;
 
             ReloadFuncPtr:
-            var entry = (nint)Runtime.GetMethodEntryPoint(method);
+            var entry = (nint) Runtime.GetMethodEntryPoint(method);
 
             do {
                 var span = new ReadOnlySpan<byte>((void*) entry, archMatchCollection.MaxMinLength);
@@ -172,8 +203,5 @@ namespace MonoMod.Core.Platforms {
             return (ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/) ? ptrGot : ptrParsed;
         }
 
-        public ICoreDetour CreateDetour(MethodBase source, MethodBase dest) {
-            throw new NotImplementedException();
-        }
     }
 }

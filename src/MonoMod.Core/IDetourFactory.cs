@@ -10,10 +10,8 @@ namespace MonoMod.Core {
     }
 
     public static class DetourFactory {
-        private static object creationLock = new();
-
         private static IDetourFactory? lazyCurrent;
-        public static IDetourFactory Current => Helpers.GetOrInitWithLock(ref lazyCurrent, creationLock,
-            () => Platforms.HostTripleDetourFactory.CreateCurrent());
+        public static IDetourFactory Current => Helpers.GetOrInit(ref lazyCurrent,
+            () => new Platforms.PlatformTripleDetourFactory(Platforms.PlatformTriple.Current));
     }
 }

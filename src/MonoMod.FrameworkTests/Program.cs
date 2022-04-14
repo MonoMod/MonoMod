@@ -2,11 +2,11 @@
 using MonoMod.Core.Platforms;
 using System;
 
-var factory = (HostTripleDetourFactory) DetourFactory.Current;
+var platTriple = PlatformTriple.Current;
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;
 
-var ptr = factory.GetNativeMethodBody(method);
+var ptr = platTriple.GetNativeMethodBody(method);
 Console.WriteLine(ptr);
 
 static class TestClass {
