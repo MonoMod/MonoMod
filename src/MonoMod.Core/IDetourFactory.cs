@@ -11,7 +11,9 @@ namespace MonoMod.Core {
 
     public static class DetourFactory {
         private static IDetourFactory? lazyCurrent;
-        public static IDetourFactory Current => Helpers.GetOrInit(ref lazyCurrent,
-            () => new Platforms.PlatformTripleDetourFactory(Platforms.PlatformTriple.Current));
+        public static unsafe IDetourFactory Current => Helpers.GetOrInit(ref lazyCurrent, &CreateDefaultFactory);
+
+        private static IDetourFactory CreateDefaultFactory()
+            => new Platforms.PlatformTripleDetourFactory(Platforms.PlatformTriple.Current);
     }
 }

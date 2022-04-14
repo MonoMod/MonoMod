@@ -25,12 +25,7 @@
         $(_assemblyNamePattern),
         '${v1}:${v2}:${v3}:${v4}'))]]>
       </_coreAssemblyVersion>
-      <_coreAssemblyPublicKeyToken>
-        $([System.Text.RegularExpressions.Regex]::Replace(
-        $(_coreAssemblyName),
-        $(_assemblyNamePattern),
-        '${p1} ${p2} ${p3} ${p4} ${p5} ${p6} ${p7} ${p8}').ToUpperInvariant())
-      </_coreAssemblyPublicKeyToken>
+      <_coreAssemblyPublicKeyToken>$([System.Text.RegularExpressions.Regex]::Replace($(_coreAssemblyName),$(_assemblyNamePattern),'${p1} ${p2} ${p3} ${p4} ${p5} ${p6} ${p7} ${p8}').ToUpperInvariant())</_coreAssemblyPublicKeyToken>
       
       <ExtraMacros><![CDATA[#define ASSEMBLY_COPYRIGHT "{string('$(Copyright)')}";$(ExtraMacros)]]></ExtraMacros>
       <ExtraMacros><![CDATA[#define ASSEMBLY_NAME "{string('$(AssemblyName)')}";$(ExtraMacros)]]></ExtraMacros>
@@ -55,12 +50,13 @@
 #define CORE_ASSEMBLY_VERSION "$(_CoreAssemblyVersion)"
 #define FILE_VERSION "{string('$(FileVersion)')}"
 #define INFORMATIONAL_VERSION "{string('$(InformationalVersion)')}"
+#define CORE_PUBKEY_TOKEN "($(_coreAssemblyPublicKeyToken) )"
 @(_ExtraMacros,'%0A')
 #ifdef REFERENCE_CORE_ASSEMBLY
 // Metadata version: v4.0.30319
 .assembly extern CORE_ASSEMBLY
 {
-  .publickeytoken = ($(_coreAssemblyPublicKeyToken) )
+  .publickeytoken = CORE_PUBKEY_TOKEN
   .ver CORE_ASSEMBLY_VERSION
 }
 #endif

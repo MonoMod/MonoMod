@@ -31,31 +31,59 @@ namespace MonoMod.Core.Utils {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static T GetOrInit<T>(ref T? location, Func<T> init) where T : class {
+        public unsafe static T GetOrInit<T>(ref T? location, Func<T> init) where T : class {
             if (location is not null)
                 return location;
-            return InitializeValue(ref location, init);
-        }
-
-        [MethodImpl(MethodImplOptionsEx.NoInlining)]
-        private static T InitializeValue<T>(ref T? location, Func<T> init) where T : class {
-            _ = Interlocked.CompareExchange(ref location, init(), null);
-            return location!;
+            return InitializeValue(ref location, &ILHelpers.TailCallFunc<T>, init);
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static T GetOrInitWithLock<T>(ref T? location, object @lock, Func<T> init) where T : class {
+        public unsafe static T GetOrInitWithLock<T>(ref T? location, object @lock, Func<T> init) where T : class {
             if (location is not null)
                 return location;
-            return InitializeValueWithLock(ref location, @lock, init);
+            return InitializeValueWithLock(ref location, @lock, &ILHelpers.TailCallFunc<T>, init);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public unsafe static T GetOrInit<T>(ref T? location, delegate*<T> init) where T : class {
+            if (location is not null)
+                return location;
+            return InitializeValue(ref location, &ILHelpers.TailCallDelegatePtr<T>, (IntPtr) init);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public unsafe static T GetOrInitWithLock<T>(ref T? location, object @lock, delegate*<T> init) where T : class {
+            if (location is not null)
+                return location;
+            return InitializeValueWithLock(ref location, @lock, &ILHelpers.TailCallDelegatePtr<T>, (IntPtr)init);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public unsafe static T GetOrInit<T, TParam>(ref T? location, delegate*<TParam, T> init, TParam obj) where T : class {
+            if (location is not null)
+                return location;
+            return InitializeValue(ref location, init, obj);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public unsafe static T GetOrInitWithLock<T, TParam>(ref T? location, object @lock, delegate*<TParam, T> init, TParam obj) where T : class {
+            if (location is not null)
+                return location;
+            return InitializeValueWithLock(ref location, @lock, init, obj);
         }
 
         [MethodImpl(MethodImplOptionsEx.NoInlining)]
-        private static T InitializeValueWithLock<T>(ref T? location, object @lock, Func<T> init) where T : class {
+        private unsafe static T InitializeValue<T, TParam>(ref T? location, delegate*<TParam, T> init, TParam obj) where T : class {
+            _ = Interlocked.CompareExchange(ref location, init(obj), null);
+            return location!;
+        }
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        private unsafe static T InitializeValueWithLock<T, TParam>(ref T? location, object @lock, delegate*<TParam, T> init, TParam obj) where T : class {
             lock (@lock) {
                 if (location is not null)
                     return location;
-                return location = init();
+                return location = init(obj);
             }
         }
     }

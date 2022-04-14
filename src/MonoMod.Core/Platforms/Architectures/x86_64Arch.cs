@@ -12,55 +12,57 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         // -3 is addr, -2 is any repeating, -1 is any
         private BytePatternCollection? lazyKnownMethodThunks;
-        public BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks,
-            () => {
-                if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
-                    return new BytePatternCollection(
-                        // .NET Framework
-                        new(new(AddressKind.Abs64),
-                            // test rcx, rcx
-                            0x48, 0x85, 0xc9,
-                            // je .... ???
-                            0x74, -1,
-                            // mov rax, [rcx]
-                            0x48, 0x8b, 0x01,
-                            // mov ... (extra)
-                            0x49, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                            // cmp rax, r10
-                            0x49, 0x3b, 0xc2,
-                            // je ...
-                            0x74, -1,
-                            // mov {TARGET}
-                            0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3),
+        public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, /*&*/CreateKnownMethodThunks);
+        
+        private static BytePatternCollection CreateKnownMethodThunks()
+        {
+            if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
+                return new BytePatternCollection(
+                    // .NET Framework
+                    new(new(AddressKind.Abs64),
+                        // test rcx, rcx
+                        0x48, 0x85, 0xc9,
+                        // je .... ???
+                        0x74, -1,
+                        // mov rax, [rcx]
+                        0x48, 0x8b, 0x01,
+                        // mov ... (extra)
+                        0x49, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        // cmp rax, r10
+                        0x49, 0x3b, 0xc2,
+                        // je ...
+                        0x74, -1,
+                        // mov {TARGET}
+                        0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3),
 
-                        // .NET Core
-                        new(new(AddressKind.Rel32, 5),
-                            // jmp {DELTA}
-                            0xe9, -3, -3, -3, -3,
-                            // pop rdi
-                            0x5f),
+                    // .NET Core
+                    new(new(AddressKind.Rel32, 5),
+                        // jmp {DELTA}
+                        0xe9, -3, -3, -3, -3,
+                        // pop rdi
+                        0x5f),
 
-                        // Wine wierdness
-                        (PlatformDetection.OS.Is(OSKind.Wine)
-                            ? new(new(AddressKind.Abs64),
-                                // movabs rax, {PTR}
-                                0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3,
-                                // jmp rax
-                                0xff, 0xe0)
-                            : null),
+                    // Wine wierdness
+                    (PlatformDetection.OS.Is(OSKind.Wine)
+                        ? new(new(AddressKind.Abs64),
+                            // movabs rax, {PTR}
+                            0x48, 0xb8, -3, -3, -3, -3, -3, -3, -3, -3,
+                            // jmp rax
+                            0xff, 0xe0)
+                        : null),
 
-                        // PrecodeFixupThunk
-                        new(new(AddressKind.PrecodeFixupThunk_Rel32, 5),
-                            // call {PRECODE FIXUP THUNK}
-                            0xe8, -3, -3, -3, -3,
-                            // pop rsi(?) (is this even consistent?)
-                            0x5e)
-                    );
-                } else {
-                    // TODO: Mono
-                    return new();
-                }
-            });
+                    // PrecodeFixupThunk
+                    new(new(AddressKind.PrecodeFixupThunk_Rel32, 5),
+                        // call {PRECODE FIXUP THUNK}
+                        0xe8, -3, -3, -3, -3,
+                        // pop rsi(?) (is this even consistent?)
+                        0x5e)
+                );
+            } else {
+                // TODO: Mono
+                return new();
+            }
+        }
 
         public enum DetourKind {
             Rel32,

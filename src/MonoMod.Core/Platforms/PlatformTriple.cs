@@ -47,7 +47,7 @@ namespace MonoMod.Core.Platforms {
 
         private static object lazyCurrentLock = new();
         private static PlatformTriple? lazyCurrent;
-        public static PlatformTriple Current => Helpers.GetOrInitWithLock(ref lazyCurrent, lazyCurrentLock, CreateCurrent);
+        public static unsafe PlatformTriple Current => Helpers.GetOrInitWithLock(ref lazyCurrent, lazyCurrentLock, &CreateCurrent);
 
         private static PlatformTriple CreateCurrent()
             => new(CreateCurrentArchitecture(), CreateCurrentSystem(), CreateCurrentRuntime());

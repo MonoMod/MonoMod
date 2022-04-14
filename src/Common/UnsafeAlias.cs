@@ -2,7 +2,7 @@
 
 #pragma warning disable IDE0005 // unused using
 
-global using ilhelpers;
+global using ilhelpers::MonoMod;
 
 #if !NET6_0_OR_GREATER
 // Any time we want to use Unsafe, we want ours, not the BCL's
