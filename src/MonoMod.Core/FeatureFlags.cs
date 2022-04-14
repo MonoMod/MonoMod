@@ -39,6 +39,9 @@ namespace MonoMod.Core {
             return HashCode.Combine(Runtime, Architecture, System);
         }
 
+        public override string ToString()
+            => $"({Architecture})({System})({Runtime})";
+
         public static bool operator ==(FeatureFlags left, FeatureFlags right) => left.Equals(right);
         public static bool operator !=(FeatureFlags left, FeatureFlags right) => !(left == right);
     }
