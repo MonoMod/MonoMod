@@ -185,7 +185,7 @@ namespace System.Buffers {
                 }
             }
 
-            return true;
+            return !(Environment.HasShutdownStarted || AppDomain.CurrentDomain.IsFinalizingForUnload());
         }
 
         private ThreadLocalArray[] InitializeTlsBucketsAndTrimming() {
