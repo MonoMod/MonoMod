@@ -9,14 +9,15 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MonoMod.Core.Platforms.Runtimes {
-    internal abstract class FxCoreCLRBaseRuntime : IRuntime {
+    internal abstract class FxCoreBaseRuntime : IRuntime {
 
         public abstract RuntimeKind Target { get; }
 
         public virtual RuntimeFeature Features => 
             RuntimeFeature.RequiresMethodIdentification | 
             RuntimeFeature.PreciseGC |
-            RuntimeFeature.RequiresBodyPointerWalking;
+            RuntimeFeature.RequiresBodyPointerWalking |
+            RuntimeFeature.GenericSharing;
 
 
         private static readonly Type? RTDynamicMethod =

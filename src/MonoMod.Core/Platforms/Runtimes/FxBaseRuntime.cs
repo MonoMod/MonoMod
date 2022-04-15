@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 
 namespace MonoMod.Core.Platforms.Runtimes {
-    internal abstract class FxBaseRuntime : FxCoreCLRBaseRuntime {
+    internal abstract class FxBaseRuntime : FxCoreBaseRuntime {
         public override RuntimeKind Target => RuntimeKind.Framework;
 
         public static FxBaseRuntime CreateForVersion(Version version) {

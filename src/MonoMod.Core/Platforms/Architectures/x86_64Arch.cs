@@ -12,14 +12,14 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         // -3 is addr, -2 is any repeating, -1 is any
         private BytePatternCollection? lazyKnownMethodThunks;
-        public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, /*&*/CreateKnownMethodThunks);
+        public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, &CreateKnownMethodThunks);
         
         private static BytePatternCollection CreateKnownMethodThunks()
         {
-            const ushort Sn = BytePattern.SAnyValue;
-            const ushort Sd = BytePattern.SAddressValue;
-            const byte An = BytePattern.BAnyValue;
-            const byte Ad = BytePattern.BAddressValue;
+            const ushort An = BytePattern.SAnyValue;
+            const ushort Ad = BytePattern.SAddressValue;
+            const byte Bn = BytePattern.BAnyValue;
+            const byte Bd = BytePattern.BAddressValue;
 
             if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
                 return new BytePatternCollection(
@@ -28,33 +28,31 @@ namespace MonoMod.Core.Platforms.Architectures {
                         // test rcx, rcx
                         0x48, 0x85, 0xc9,
                         // je .... ???
-                        0x74, Sn,
+                        0x74, An,
                         // mov rax, [rcx]
                         0x48, 0x8b, 0x01,
                         // mov ... (extra)
-                        0x49, Sn, Sn, Sn, Sn, Sn, Sn, Sn, Sn, Sn,
+                        0x49, An, An, An, An, An, An, An, An, An,
                         // cmp rax, r10
                         0x49, 0x3b, 0xc2,
                         // je ...
-                        0x74, Sn,
+                        0x74, An,
                         // mov {TARGET}
-                        0x48, 0xb8, Sd, Sd, Sd, Sd, Sd, Sd, Sd, Sd),
+                        0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad),
 
                     // .NET Core
                     new(new(AddressKind.Rel32, 5),
                         // jmp {DELTA}
-                        0xe9, Sd, Sd, Sd, Sd,
+                        0xe9, Ad, Ad, Ad, Ad,
                         // pop rdi
                         0x5f),
 
-                    // Wine wierdness
-                    (PlatformDetection.OS.Is(OSKind.Wine)
-                        ? new(new(AddressKind.Abs64),
+                    // Wine wierdness and generic type handle thunks
+                    new(new(AddressKind.Abs64),
                             // movabs rax, {PTR}
-                            0x48, 0xb8, Sd, Sd, Sd, Sd, Sd, Sd, Sd, Sd,
+                            0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad,
                             // jmp rax
-                            0xff, 0xe0)
-                        : null),
+                            0xff, 0xe0),
 
                     // Autoscan funkyness
                     new(new(AddressKind.Rel32, 19),
@@ -65,17 +63,19 @@ namespace MonoMod.Core.Platforms.Architectures {
                         },
                         new byte[] { // pattern
                             // movabs ??1, ???
-                            0x40, 0xb8, An, An, An, An, An, An, An, An,
+                            0x40, 0xb8, Bn, Bn, Bn, Bn, Bn, Bn, Bn, Bn,
                             // dec WORD PTR [??1]
                             0x66, 0xff, 0x00, 
                             // jne {DELTA}
-                            0x0f, 0x85, Ad, Ad, Ad, Ad
+                            0x0f, 0x85, Bd, Bd, Bd, Bd
+                            // TODO: somehow encode a check that the ??1s are the same
+                            // I somehow doubt that that's necessary, but hey
                         }), 
 
                     // PrecodeFixupThunk
                     new(new(AddressKind.PrecodeFixupThunk_Rel32, 5),
                         // call {PRECODE FIXUP THUNK}
-                        0xe8, Sd, Sd, Sd, Sd,
+                        0xe8, Ad, Ad, Ad, Ad,
                         // pop rsi(?) (is this even consistent?)
                         0x5e)
                 );
