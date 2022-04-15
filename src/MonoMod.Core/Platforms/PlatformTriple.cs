@@ -1,6 +1,7 @@
 ﻿using MonoMod.Core.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -146,6 +147,28 @@ namespace MonoMod.Core.Platforms {
             }
 
             return false;
+        }
+
+        public NativeDetour? CreateNativeDetour(IntPtr from, IntPtr to, bool undoable = true) {
+            var detourInfo = Architecture.ComputeDetourInfo(from, to);
+
+            // detours are usually fairly small, so we'll stackalloc it
+            Span<byte> detourData = stackalloc byte[detourInfo.Size];
+
+            // get the detour bytes from the architecture
+            var size = Architecture.GetDetourBytes(detourInfo, detourData);
+
+            // these should be the same
+            Debug.Assert(size == detourInfo.Size);
+
+            // allocate a backup if needed
+            var backup = undoable ? new byte[detourInfo.Size] : null;
+
+            // now we can apply the detour through the system
+            System.PatchExecutableData(from, detourData, backup);
+
+            // and now we just create the NativeDetour object, if its supposed to be undoable
+            return backup is not null ? new NativeDetour(this, from, to, backup) : null;
         }
 
         public IntPtr GetNativeMethodBody(MethodBase method) {

@@ -102,9 +102,9 @@ namespace MonoMod.Core.Utils {
             return (os, arch);
         }
 
-        private const string LibC = "libc";
-        private const string LibSystem = "libSystem";
-        private const string Kernel32 = "Kernel32";
+        public const string LibC = "libc";
+        public const string LibSystem = "libSystem";
+        public const string Kernel32 = "Kernel32";
 
         #region OS-specific arch detection
 
