@@ -7,9 +7,14 @@ using System.Runtime.CompilerServices;
 var platTriple = PlatformTriple.Current;
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;
+var method2 = typeof(TestClass).GetMethod(nameof(TestClass.Target))!;
 
-var ptr = platTriple.GetNativeMethodBody(method);
-Console.WriteLine($"{ptr:X16}");
+var from = platTriple.GetNativeMethodBody(method);
+Console.WriteLine($"0x{from:X16}");
+var to = platTriple.GetNativeMethodBody(method2);
+Console.WriteLine($"0x{to:X16}");
+
+using var detour = platTriple.CreateNativeDetour(from, to);
 
 TestClass.TestDetourMethod();
 
@@ -19,5 +24,10 @@ static class TestClass {
         var factory = DetourFactory.Current;
 
         Console.WriteLine(factory.SupportedFeatures);
+    }
+
+    [MethodImpl(MethodImplOptionsEx.NoInlining)]
+    public static void Target() {
+        Console.WriteLine("Method successfully detoured");
     }
 }
