@@ -72,12 +72,19 @@ namespace MonoMod.Core.Platforms.Architectures {
                             // I somehow doubt that that's necessary, but hey
                         }), 
 
-                    // PrecodeFixupThunk
+                    // PrecodeFixupThunk (CLR 4+)
                     new(new(AddressKind.PrecodeFixupThunk_Rel32, 5),
                         // call {PRECODE FIXUP THUNK}
                         0xe8, Ad, Ad, Ad, Ad,
                         // pop rsi(?) (is this even consistent?)
-                        0x5e)
+                        0x5e),
+
+                    // PrecodeFixupThunk (CLR 2)
+                    new(new(AddressKind.PrecodeFixupThunk_Rel32, 5),
+                        // call {PRECODE FIXUP THUNK}
+                        0xe8, Ad, Ad, Ad, Ad,
+                        // int 3
+                        0xcc)
                 );
             } else {
                 // TODO: Mono
