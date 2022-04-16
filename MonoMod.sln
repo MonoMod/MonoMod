@@ -34,7 +34,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tools", "tools\tools.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Backports", "src\MonoMod.Backports\MonoMod.Backports.csproj", "{9B90DE41-122C-4395-919B-DBBD20B60F9A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.FrameworkTests", "src\MonoMod.FrameworkTests\MonoMod.FrameworkTests.csproj", "{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.FrameworkTests", "src\MonoMod.FrameworkTests\MonoMod.FrameworkTests.csproj", "{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.ILHelpers.Patcher", "src\MonoMod.ILHelpers.Patcher\MonoMod.ILHelpers.Patcher.csproj", "{673E5693-0F3F-4A8E-9F1A-02BDB048760A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -140,6 +142,14 @@ Global
 		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
 		{6C2B3C2B-67AE-4DE2-B3AE-1628CEADD301}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.DebugTrace|Any CPU.ActiveCfg = DebugTrace|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.DebugTrace|Any CPU.Build.0 = DebugTrace|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
+		{673E5693-0F3F-4A8E-9F1A-02BDB048760A}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
