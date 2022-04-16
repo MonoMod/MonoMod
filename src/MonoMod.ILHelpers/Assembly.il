@@ -15,6 +15,8 @@
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyTitleAttribute::.ctor(string) = ASSEMBLY_NAME
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyCompanyAttribute::.ctor(string) = ASSEMBLY_COMPANY
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyDescriptionAttribute::.ctor(string) = ASSEMBLY_DESCRIPTION
+#ifdef NET35
+#else
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyMetadataAttribute::.ctor(string, string) = (
     01 00 15 2e 4e 45 54 46 72 61 6d 65 77 6f 72 6b
     41 73 73 65 6d 62 6c 79 00 00 00
@@ -27,6 +29,7 @@
     01 00 0b 49 73 54 72 69 6d 6d 61 62 6c 65 04 54
     72 75 65 00 00
   ) // "IsTrimmable", "True"
+#endif
   .custom instance void [CORE_ASSEMBLY]System.Reflection.AssemblyCopyrightAttribute::.ctor(string) = ASSEMBLY_COPYRIGHT
   .custom instance void [CORE_ASSEMBLY]System.CLSCompliantAttribute::.ctor(bool) = ( 01 00 00 00 00 ) // false
   .hash algorithm 0x00008004

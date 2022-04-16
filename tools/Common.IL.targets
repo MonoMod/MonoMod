@@ -10,6 +10,45 @@
     <Reference Include="$(CoreAssembly)" Condition="'$(IsNetCoreOrStandard)' != 'true'" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Reference patcher -->
+    <ProjectReference Include="$(MMSourcePath)MonoMod.ILHelpers.Patcher\MonoMod.ILHelpers.Patcher.csproj" 
+                      Reference="false" ReferenceOutputAssembly="false"
+                      OutputItemType="ILVersionPatcher"
+                      Private="false"
+                      SetTargetFramework="TargetFramework=net6.0"
+                      SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <_PatchMetaOutputDir>$(IntermediateOutputPath)verpatched\</_PatchMetaOutputDir>
+  </PropertyGroup>
+  
+  <Target Name="PatchMetadataVersion"
+          Inputs="$(MSBuildAllProjects);@(IntermediateAssembly)"
+          Outputs="@(IntermediateAssembly->'$(_PatchMetaOutputDir)%(Filename)%(Extension)')"
+          AfterTargets="CoreCompile"
+          BeforeTargets="_TimeStampAfterCompile;AfterCompile">
+    <PropertyGroup>
+      <_NativeExecutableExtension Condition="'$(_NativeExecutableExtension)' == '' and '$(OS)' == 'Windows_NT'">.exe</_NativeExecutableExtension>
+      <_ILVersionPatcherBinary>%(ILVersionPatcher.RelativeDir)%(FileName)$(_NativeExecutableExtension)</_ILVersionPatcherBinary>
+    </PropertyGroup>
+    
+    <MakeDir Directories="$(_PatchMetaOutputDir)" Condition="!Exists('$(_PatchMetaOutputDir)')"  />
+    <Exec Command="&quot;$(_ILVersionPatcherBinary)&quot; &quot;%(IntermediateAssembly.Identity)&quot; &quot;$(RuntimeMetadataVersion)&quot; &quot;$(_PatchMetaOutputDir)%(Filename)%(Extension)&quot;">
+      <Output TaskParameter="ExitCode" PropertyName="_PatcherExitCode" />
+    </Exec>
+
+    <ItemGroup>
+      <_PatchedFiles Include="@(IntermediateAssembly->'$(_PatchMetaOutputDir)%(Filename)%(Extension)')" />
+      <FileWrites Include="@(_PatchedFiles)" />
+      <IntermediateAssembly Remove="@(IntermediateAssembly)" />
+      <IntermediateAssembly Include="@(_PatchedFiles)" />
+    </ItemGroup>
+
+    <Error Text="Patcher failed" Condition="'$(_PatcherExitCode)' != '0'" />
+  </Target>
+
   <Target Name="GenerateVersionFile" DependsOnTargets="GetAssemblyVersion;ResolveReferences;AddImplicitDefineConstants" Inputs="$(MSBuildAllProjects)" Outputs="'$(VersionFilePath)">
     <PropertyGroup>
       <IncludePath>$([MSBuild]::NormalizeDirectory('$(IntermediateOutputPath)', 'version'))</IncludePath>

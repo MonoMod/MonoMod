@@ -49,9 +49,14 @@
   <ItemGroup Condition="'$(MMReferenceUtils)' == 'true'">
     <ProjectReference Include="$(MMSourcePath)MonoMod.Utils\MonoMod.Utils.csproj" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <_TFMIdentifier>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</_TFMIdentifier>
+
+  </PropertyGroup>
   
   <Choose>
-    <When Condition="$(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.Contains('.'))">
+    <When Condition="'$(_TFMIdentifier)' == '.NETCoreApp'">
       <!-- .NET Core -->
       <PropertyGroup>
         <DefineConstants>$(DefineConstants)</DefineConstants>
@@ -59,21 +64,22 @@
         <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
-      <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. -->
+      <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. ->
       <ItemGroup>
         <PackageReference Include="System.Reflection.TypeExtensions" Version="$(NETShimVersion)" />
         <PackageReference Include="System.Collections.NonGeneric" Version="$(NETShimVersion)" />
         <PackageReference Include="System.ComponentModel.TypeConverter" Version="$(NETShimVersion)" />
         <PackageReference Include="System.IO.FileSystem.Primitives" Version="$(NETShimVersion)" />
       </ItemGroup>
-      <!-- This could be made optional at compile-time, but it's preferred to check for availability at runtime. -->
+      <!- This could be made optional at compile-time, but it's preferred to check for availability at runtime. ->
       <ItemGroup>
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="$(NETShimVersion)" />
         <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="$(NETShimVersion)" />
       </ItemGroup>
+      --> <!-- These are commented out for .NET Core because I'm pretty sure they're not really needed -->
     </When>
     
-    <When Condition="$(TargetFramework.StartsWith('netstandard'))">
+    <When Condition="'$(_TFMIdentifier)' == '.NETStandard'">
       <!-- .NET Standard -->
       <PropertyGroup>
         <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
