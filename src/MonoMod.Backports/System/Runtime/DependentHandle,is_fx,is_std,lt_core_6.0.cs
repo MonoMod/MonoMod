@@ -147,8 +147,11 @@ namespace System.Runtime {
         }
 
         private void FreeDependentHandle() {
-            UnsafeGetHolder()?.TargetHandle.Free();
-            dependentHandle.Free();
+            if (allocated) {
+                UnsafeGetHolder()?.TargetHandle.Free();
+                dependentHandle.Free();
+            }
+            allocated = false;
         }
 
         private void Free() {
@@ -156,8 +159,8 @@ namespace System.Runtime {
         }
 
         public void Dispose() {
-            allocated = false;
             Free();
+            allocated = false;
         }
     }
 
