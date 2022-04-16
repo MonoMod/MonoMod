@@ -9,7 +9,7 @@ using System.Text;
 
 namespace MonoMod.Core.Platforms {
     public interface INeedsPlatformTripleInit {
-        void Initialize(PlatformTriple factory);
+        void Initialize(PlatformTriple triple);
         void PostInit();
     }
     public sealed class PlatformTriple {
@@ -171,8 +171,8 @@ namespace MonoMod.Core.Platforms {
             return backup is not null ? new NativeDetour(this, from, to, backup) : null;
         }
 
-        public IntPtr GetNativeMethodBody(MethodBase method) {
-            if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyPointerWalking)) {
+        public IntPtr GetNativeMethodBody(MethodBase method, bool followThunks = true) {
+            if (followThunks && SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking)) {
                 return GetNativeMethodBodyWalk(method);
             } else {
                 return GetNativeMethodBodyDirect(method);

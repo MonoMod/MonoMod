@@ -2,9 +2,7 @@
 using System;
 
 namespace MonoMod.Core.Platforms.Runtimes {
-    internal abstract class CoreBaseRuntime : FxCoreBaseRuntime {
-
-        public override RuntimeKind Target => RuntimeKind.CoreCLR;
+    internal abstract class CoreBaseRuntime : FxCoreBaseRuntime, INeedsPlatformTripleInit {
 
         public static CoreBaseRuntime CreateForVersion(Version version) {
 
@@ -47,5 +45,28 @@ namespace MonoMod.Core.Platforms.Runtimes {
             throw new NotImplementedException();
         }
 
+        public override RuntimeKind Target => RuntimeKind.CoreCLR;
+
+        private IAbi abi;
+        private PlatformTriple platformTriple;
+        public override IAbi Abi => abi;
+
+        protected CoreBaseRuntime() {
+            abi = null!;
+            platformTriple = null!;
+        }
+
+        void INeedsPlatformTripleInit.Initialize(PlatformTriple triple) {
+            platformTriple = triple;
+        }
+
+        void INeedsPlatformTripleInit.PostInit() {
+            if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
+                abi = new Abi.CoreFx45AMD64Abi(platformTriple.System.DefaultAbi);
+            } else {
+                // TODO: run selftests to detect
+                throw new PlatformNotSupportedException();
+            }
+        }
     }
 }

@@ -16,9 +16,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
         public virtual RuntimeFeature Features => 
             RuntimeFeature.RequiresMethodIdentification | 
             RuntimeFeature.PreciseGC |
-            RuntimeFeature.RequiresBodyPointerWalking |
+            RuntimeFeature.RequiresBodyThunkWalking |
             RuntimeFeature.GenericSharing;
 
+        public abstract IAbi Abi { get; }
 
         private static readonly Type? RTDynamicMethod =
             typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic);

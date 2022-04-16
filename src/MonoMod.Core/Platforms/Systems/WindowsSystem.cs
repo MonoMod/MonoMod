@@ -13,6 +13,17 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public SystemFeature Features => SystemFeature.RWXPages;
 
+        public IAbi DefaultAbi { get; }
+
+        public WindowsSystem() {
+            if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
+                DefaultAbi = new Abi.WinX64NativeAbi();
+            } else {
+                // TODO: perform selftests here instead of throwing
+                throw new PlatformNotSupportedException($"Windows on non-x86_64 is currently not supported");
+            }
+        }
+
         // if the provided backup isn't large enough, the data isn't backed up
         public unsafe void PatchExecutableData(IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup) {
             // TODO: should this be thread-safe? It definitely is not right now.
