@@ -1,12 +1,11 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace MonoMod.Core.Platforms.Systems {
     internal class WindowsSystem : ISystem {
@@ -114,8 +113,233 @@ namespace MonoMod.Core.Platforms.Systems {
             return ex;
         }
 
+        private class PagedMemoryAllocator : IMemoryAllocator {
+
+            private sealed class FreeMem {
+                public uint BaseOffset;
+                public uint Size;
+                public FreeMem? NextFree;
+            }
+
+            private sealed class PageAlloc : IAllocatedMemory {
+
+                private readonly Page owner;
+                private readonly uint offset;
+
+                public PageAlloc(Page page, uint offset, int size) {
+                    owner = page;
+                    this.offset = offset;
+                    Size = size;
+                }
+
+                public IntPtr BaseAddress => (IntPtr)(((nint)owner.BaseAddr) + offset);
+
+                public int Size { get; }
+
+                public unsafe Span<byte> Memory => new((void*) BaseAddress, Size);
+
+                #region IDisposable implementation
+                private bool disposedValue;
+
+                private void Dispose(bool disposing) {
+                    if (!disposedValue) {
+
+                        owner.FreeMem(offset, (uint)Size);
+                        disposedValue = true;
+                    }
+                }
+
+                ~PageAlloc()
+                {
+                    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                    Dispose(disposing: false);
+                }
+
+                public void Dispose() {
+                    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                    Dispose(disposing: true);
+                    GC.SuppressFinalize(this);
+                }
+                #endregion
+            }
+
+            private sealed class Page : IDisposable {
+
+                private readonly PagedMemoryAllocator owner;
+
+                public readonly IntPtr BaseAddr;
+                public readonly uint Size;
+
+                public readonly bool IsExecutable;
+
+                public int Allocations;
+
+                // we keep freeList sorted by BaseOffset, possibly with nulls between
+                private FreeMem? freeList;
+
+                public Page(PagedMemoryAllocator owner, IntPtr baseAddr, uint size, bool isExecutable) {
+                    this.owner = owner;
+                    (BaseAddr, Size) = (baseAddr, size);
+                    IsExecutable = isExecutable;
+                    freeList = new FreeMem {
+                        BaseOffset = 0,
+                        Size = size,
+                        NextFree = null,
+                    };
+                }
+
+                public bool TryAllocate(uint size, uint align, [MaybeNullWhen(false)] out PageAlloc alloc) {
+                    // the sizes we allocate we want to round to a power of two
+                    //size = BitOperations.RoundUpToPowerOf2(size);
+
+                    ref var ptrNode = ref freeList;
+
+                    uint alignOffset = 0;
+                    while (ptrNode is not null) {
+                        var alignFix = align - (ptrNode.BaseOffset % align);
+                        if (ptrNode.Size >= alignFix + size) {
+                            alignOffset = alignFix;
+                            break; // we found our node
+                        }
+
+                        // otherwise, move to the next one
+                        ptrNode = ref ptrNode.NextFree;
+                    }
+
+                    if (ptrNode is null) {
+                        // we couldn't find a free node large enough
+                        alloc = null;
+                        return false;
+                    }
+
+                    var offs = ptrNode.BaseOffset + alignOffset;
+
+                    if (alignOffset == 0) {
+                        // if the align offset is zero, then we just allocate out of the front of this node
+                        ptrNode.BaseOffset += size;
+                        ptrNode.Size -= size;
+
+                        // removing zero-size enties is done in normalize
+                    } else {
+                        // otherwise, we have to split the free node
+
+                        // create the front half
+                        var frontNode = new FreeMem {
+                            BaseOffset = ptrNode.BaseOffset,
+                            Size = alignOffset,
+                            NextFree = ptrNode,
+                        };
+
+                        // push back the back half
+                        ptrNode.BaseOffset += alignOffset + size;
+                        ptrNode.Size -= alignOffset + size;
+
+                        // removing zero-size enties is done in normalize
+
+                        // update our pointer to point at the new node
+                        ptrNode = frontNode;
+                    }
+
+                    // now we normalize the free list, to ensure its in a sane state
+                    NormalizeFreeList();
+
+                    // and can now actually create the allocation object
+                    alloc = new PageAlloc(this, offs, (int) size);
+                    Allocations++;
+
+                    return true;
+                }
+
+                private void NormalizeFreeList() {
+                    ref var node = ref freeList;
+
+                    while (node is not null) {
+                        if (node.Size <= 0) {
+                            // if the node size is zero, remove it from the list
+                            node = node.NextFree;
+                            continue; // and retry with new value
+                        }
+
+                        if (node.NextFree is { } next &&
+                            next.BaseOffset == node.BaseOffset + node.Size) {
+                            // if the next node exists and starts at our end, combine down and remove next
+                            node.Size += next.Size;
+                            node.NextFree = next.NextFree;
+
+                            // now we want to loop back to the top *without* advancing down the chain to continue this
+                            continue;
+                        }
+
+                        node = ref node.NextFree;
+                    }
+                }
+
+                // correctness relies on this only being called internally byPageAlloc's Dispose()
+                public void FreeMem(uint offset, uint size) {
+                    ref var node = ref freeList;
+
+                    while (node is not null) {
+                        if (node.BaseOffset > offset) {
+                            // we found the first node with greater offset, break out
+                            break;
+                        }
+                        node = ref node.NextFree;
+                    }
+
+                    // now node points to where we need to store the new FreeMem, as well as its next node
+                    node = new FreeMem {
+                        BaseOffset = offset,
+                        Size = size,
+                        NextFree = node,
+                    };
+                    NormalizeFreeList();
+                }
+
+                #region Disposable implementation
+                private bool disposedValue;
+
+                private void Dispose(bool disposing) {
+                    if (!disposedValue) {
+                        if (disposing) {
+                            // TODO: dispose managed state (managed objects)
+                        }
+
+                        // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                        // TODO: set large fields to null
+                        disposedValue = true;
+                    }
+                }
+
+                ~Page()
+                {
+                    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                    Dispose(disposing: false);
+                }
+
+                public void Dispose() {
+                    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                    Dispose(disposing: true);
+                    GC.SuppressFinalize(this);
+                }
+                #endregion
+            }
+
+
+
+            public bool TryAllocateInRange(IntPtr target, IntPtr low, IntPtr high, int size, int align, bool executable, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+                throw new NotImplementedException();
+            }
+        }
+
+        #region P/Invoke stuff
+        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
+        private static extern IntPtr VirtualAlloc(IntPtr lpAddress, nint dwSize, MEM flAllocationType, PAGE flProtect);
+
         [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
         private static extern bool VirtualProtect(IntPtr lpAddress, nint dwSize, PAGE flNewProtect, out PAGE lpflOldProtect);
+
+        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
+        private static extern bool VirtualFree(IntPtr lpAddress, nint dwSize, MEM dwFreeType);
 
         [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
         private static extern IntPtr GetCurrentProcess();
@@ -179,5 +403,6 @@ namespace MonoMod.Core.Platforms.Systems {
             public PAGE Protect;
             public MEM Type;
         }
+        #endregion
     }
 }
