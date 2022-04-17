@@ -63,7 +63,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 AbiCore = AbiForCoreFx45X64(abi);
             } else if (AbiCore is null) {
                 // TODO: run selftests to detect
-                throw new PlatformNotSupportedException();
+                //throw new PlatformNotSupportedException();
             }
         }
     }

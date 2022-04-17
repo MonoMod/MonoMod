@@ -34,7 +34,7 @@ namespace MonoMod.Core.Platforms.Systems {
                     ReturnsReturnBuffer: true);
             } else {
                 // TODO: perform selftests here instead of throwing
-                throw new PlatformNotSupportedException($"Windows on non-x86_64 is currently not supported");
+                //throw new PlatformNotSupportedException($"Windows on non-x86_64 is currently not supported");
             }
         }
 

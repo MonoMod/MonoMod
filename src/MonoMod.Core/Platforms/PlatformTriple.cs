@@ -66,12 +66,15 @@ namespace MonoMod.Core.Platforms {
             InitIfNeeded(architecture, out var archIniter);
             InitIfNeeded(system, out var sysIniter);
             InitIfNeeded(runtime, out var rtIniter);
+
+            // eagerly initialize this so that the check functions get as much inlined as possible
+            SupportedFeatures = new(Architecture.Features, System.Features, Runtime.Features);
+
             archIniter?.PostInit();
             sysIniter?.PostInit();
             rtIniter?.PostInit();
 
-            // eagerly initialize this so that the check functions get as much inlined as possible
-            SupportedFeatures = new(Architecture.Features, System.Features, Runtime.Features);
+            Abi = Runtime.Abi ?? AbiSelftest.DetectAbi(this);
         }
 
         private void InitIfNeeded(object obj, out INeedsPlatformTripleInit? initer) {
@@ -86,6 +89,8 @@ namespace MonoMod.Core.Platforms {
         public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);
 
         public FeatureFlags SupportedFeatures { get; }
+
+        public Abi Abi { get; }
 
         /// <summary>
         /// Prepares <paramref name="method"/> by calling <see cref="RuntimeHelpers.PrepareMethod(RuntimeMethodHandle)"/>.

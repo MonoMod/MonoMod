@@ -10,7 +10,6 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         public ArchitectureFeature Features => ArchitectureFeature.Immediate64;
 
-        // -3 is addr, -2 is any repeating, -1 is any
         private BytePatternCollection? lazyKnownMethodThunks;
         public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, &CreateKnownMethodThunks);
         
