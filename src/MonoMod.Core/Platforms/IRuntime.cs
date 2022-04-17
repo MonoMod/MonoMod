@@ -11,7 +11,7 @@ namespace MonoMod.Core.Platforms {
 
         RuntimeFeature Features { get; }
 
-        IAbi Abi { get; }
+        Abi? Abi { get; }
 
         MethodBase GetIdentifiable(MethodBase method);
         RuntimeMethodHandle GetMethodHandle(MethodBase method);

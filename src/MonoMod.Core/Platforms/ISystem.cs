@@ -7,7 +7,7 @@ namespace MonoMod.Core.Platforms {
 
         SystemFeature Features { get; }
 
-        IAbi DefaultAbi { get; }
+        Abi? DefaultAbi { get; }
 
         void PatchExecutableData(IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup);
     }

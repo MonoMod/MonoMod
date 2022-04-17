@@ -1,4 +1,5 @@
 ﻿using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,11 +14,24 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public SystemFeature Features => SystemFeature.RWXPages;
 
-        public IAbi DefaultAbi { get; }
+        public Abi? DefaultAbi { get; }
+
+        // the classifiers are only called for value types
+        private static TypeClassification ClassifyX64(Type type, bool isReturn) {
+            var size = type.GetManagedSize();
+            if (size is 1 or 2 or 4 or 8) {
+                return TypeClassification.Register;
+            } else {
+                return TypeClassification.PointerToMemory;
+            }
+        }
 
         public WindowsSystem() {
             if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
-                DefaultAbi = new Abi.WinX64NativeAbi();
+                DefaultAbi = new Abi(
+                    new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
+                    ClassifyX64,
+                    ReturnsReturnBuffer: true);
             } else {
                 // TODO: perform selftests here instead of throwing
                 throw new PlatformNotSupportedException($"Windows on non-x86_64 is currently not supported");

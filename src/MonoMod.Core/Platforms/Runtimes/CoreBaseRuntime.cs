@@ -47,12 +47,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         public override RuntimeKind Target => RuntimeKind.CoreCLR;
 
-        private IAbi abi;
         private PlatformTriple platformTriple;
-        public override IAbi Abi => abi;
 
         protected CoreBaseRuntime() {
-            abi = null!;
             platformTriple = null!;
         }
 
@@ -61,9 +58,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
         }
 
         void INeedsPlatformTripleInit.PostInit() {
-            if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
-                abi = new Abi.CoreFx45AMD64Abi(platformTriple.System.DefaultAbi);
-            } else {
+            if (PlatformDetection.Architecture == ArchitectureKind.x86_64 &&
+                platformTriple.System.DefaultAbi is { } abi) {
+                AbiCore = AbiForCoreFx45X64(abi);
+            } else if (AbiCore is null) {
                 // TODO: run selftests to detect
                 throw new PlatformNotSupportedException();
             }

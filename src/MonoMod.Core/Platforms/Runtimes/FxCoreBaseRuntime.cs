@@ -19,7 +19,59 @@ namespace MonoMod.Core.Platforms.Runtimes {
             RuntimeFeature.RequiresBodyThunkWalking |
             RuntimeFeature.GenericSharing;
 
-        public abstract IAbi Abi { get; }
+        protected Abi? AbiCore;
+
+        public Abi? Abi => AbiCore;
+
+        private static TypeClassification ClassifyRyuJitX86(Type type, bool isReturn) {
+
+            while (!type.IsPrimitive || type.IsEnum) {
+                FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (fields == null || fields.Length != 1) {
+                    // zero-size empty or too large struct, passed byref
+                    break;
+                }
+                type = fields[0].FieldType;
+            }
+
+            // we now either have a primitive or a multi-valued struct
+
+            var typeCode = Type.GetTypeCode(type);
+            if (typeCode is
+                TypeCode.Byte or TypeCode.SByte or
+                TypeCode.Int16 or TypeCode.UInt16 or
+                TypeCode.Int32 or TypeCode.UInt32 ||
+                type == typeof(IntPtr) || type == typeof(UIntPtr)) {
+                // if it's one of these primitives, it's always passed in register
+                return TypeClassification.Register;
+            }
+
+            // if the type is a 64-bit integer and we're checking return, it's passed in register
+            if (isReturn && typeCode is TypeCode.Int64 or TypeCode.UInt64) {
+                return TypeClassification.Register;
+            }
+
+            // all others are passed on stack (or in our parlance, PointerToMemory, even if it's not actually a pointer)
+            return TypeClassification.PointerToMemory;
+        }
+
+        protected FxCoreBaseRuntime() {
+            if (PlatformDetection.Architecture == ArchitectureKind.x86) {
+                // On x86/RyuJIT, the runtime uses its own really funky ABI
+                // TODO: is this the ABI used on CLR 2?
+                AbiCore = new Abi(
+                    new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments, SpecialArgumentKind.GenericContext },
+                    ClassifyRyuJitX86,
+                    ReturnsReturnBuffer: false // The ABI document doesn't actually specify, so this is just my guess.
+                    );
+            }
+        }
+
+        protected static Abi AbiForCoreFx45X64(Abi baseAbi) {
+            return baseAbi with {
+                ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.GenericContext, SpecialArgumentKind.UserArguments },
+            };
+        }
 
         private static readonly Type? RTDynamicMethod =
             typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic);
