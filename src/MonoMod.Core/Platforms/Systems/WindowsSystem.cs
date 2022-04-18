@@ -1,12 +1,15 @@
-﻿using MonoMod.Core.Utils;
+﻿using MonoMod.Backports;
+using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace MonoMod.Core.Platforms.Systems {
     internal class WindowsSystem : ISystem {
@@ -113,7 +116,9 @@ namespace MonoMod.Core.Platforms.Systems {
             return ex;
         }
 
-        private class PagedMemoryAllocator : IMemoryAllocator {
+        public IMemoryAllocator MemoryAllocator { get; } = new PagedMemoryAllocator();
+
+        private sealed class PagedMemoryAllocator : IMemoryAllocator {
 
             private sealed class FreeMem {
                 public uint BaseOffset;
@@ -176,6 +181,8 @@ namespace MonoMod.Core.Platforms.Systems {
                 // we keep freeList sorted by BaseOffset, possibly with nulls between
                 private FreeMem? freeList;
 
+                public bool IsEmpty => freeList is { } list && list.BaseOffset == 0 && list.Size == Size;
+
                 public Page(PagedMemoryAllocator owner, IntPtr baseAddr, uint size, bool isExecutable) {
                     this.owner = owner;
                     (BaseAddr, Size) = (baseAddr, size);
@@ -196,7 +203,8 @@ namespace MonoMod.Core.Platforms.Systems {
 
                         uint alignOffset = 0;
                         while (ptrNode is not null) {
-                            var alignFix = align - (ptrNode.BaseOffset % align);
+                            var alignFix = ptrNode.BaseOffset % align;
+                            alignFix = alignFix != 0 ? align - alignFix : alignFix;
                             if (ptrNode.Size >= alignFix + size) {
                                 alignOffset = alignFix;
                                 break; // we found our node
@@ -295,23 +303,23 @@ namespace MonoMod.Core.Platforms.Systems {
                         };
                         NormalizeFreeList();
 
-                        if (freeList is { } list && list.BaseOffset == 0 && list.Size == Size) {
-                            // TODO: register for page free
+                        if (IsEmpty) {
+                            owner.RegisterForCleanup(this);
                         }
                     }
                 }
             }
 
             private readonly nint pageBaseMask;
-            private readonly uint pageSize;
+            private readonly nint pageSize;
             private readonly bool pageSizeIsPow2;
 
             public PagedMemoryAllocator() {
                 Interop.Windows.GetSystemInfo(out var sysInfo);
 
-                pageSize = sysInfo.dwPageSize;
+                pageSize = (nint) sysInfo.dwPageSize;
 
-                pageSizeIsPow2 = BitOperations.IsPow2(pageSize);
+                pageSizeIsPow2 = (pageSize & (pageSize - 1)) == 0; // BitOperations.IsPow2, because .NET 5 doesn't expose that
                 pageBaseMask = (~(nint) 0) << BitOperations.TrailingZeroCount(pageSize);
             }
 
@@ -350,10 +358,24 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
             }
 
+            // .NET 5 doesn't expose BitOperations.RoundUpToPowerOf2
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            [CLSCompliant(false)]
+            public static uint RoundUpToPowerOf2(uint value) {
+                // Based on https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+                --value;
+                value |= value >> 1;
+                value |= value >> 2;
+                value |= value >> 4;
+                value |= value >> 8;
+                value |= value >> 16;
+                return value + 1;
+            }
+
             private void InsertAllocatedPage(Page page) {
                 if (pageCount == allocationList.Length) {
                     // we need to expand the allocationList
-                    var newSize = (int) BitOperations.RoundUpToPowerOf2((uint) allocationList.Length);
+                    var newSize = (int) RoundUpToPowerOf2((uint) allocationList.Length);
                     Array.Resize(ref allocationList, newSize);
                 }
 
@@ -397,41 +419,75 @@ namespace MonoMod.Core.Platforms.Systems {
                 return index >= 0 ? index : ~index;
             }
 
+            private readonly ConcurrentBag<Page> pagesToClean = new();
+            private int registeredForCleanup;
+            private void RegisterForCleanup(Page page) {
+                pagesToClean.Add(page);
+
+                if (Interlocked.CompareExchange(ref registeredForCleanup, 1, 0) == 0) {
+                    Gen2GcCallback.Register(DoCleanup);
+                }
+            }
+
+            private bool DoCleanup() {
+                Volatile.Write(ref registeredForCleanup, 0);
+
+                while (pagesToClean.TryTake(out var page)) {
+                    lock (sync) {
+                        // if the page is no longer empty, don't free
+                        if (!page.IsEmpty)
+                            continue;
+
+                        // otherwise, remove it from the allocation list, so we can free it outside the lock
+                        RemoveAllocatedPage(page);
+                    }
+
+                    // now we can actually free the associated memory
+                    if (!Interop.Windows.VirtualFree(page.BaseAddr, 0, Interop.Windows.MEM.RELEASE)) {
+                        // VirtualFree failed, what? log the error and move on
+                        MMDbgLog.Log($"VirtualFree failed trying to deallocate a page! {new Win32Exception(Marshal.GetLastWin32Error()).Message}");
+                    }
+                }
+
+                // this should never be re-registered for later GCs, at least until another page is marked as needing cleaning
+                return false;
+            }
+
             private readonly object sync = new();
 
-            public bool TryAllocateInRange(nint target, nint low, nint high, int size, int align, bool executable, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
-                if (low > high)
-                    throw new ArgumentException("Low and High are reversed", nameof(low));
-                if (target < low || target > high)
-                    throw new ArgumentException("Target not between low and high", nameof(target));
+            public bool TryAllocateInRange(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+                if ((nint) request.LowBound > request.HighBound)
+                    throw new ArgumentException("Low and High are reversed", nameof(request));
+                if ((nint) request.Target < request.LowBound || (nint) request.Target > request.HighBound)
+                    throw new ArgumentException("Target not between low and high", nameof(request));
 
-                if (size < 0)
-                    throw new ArgumentException("Size is negative", nameof(size));
-                if (align <= 0)
-                    throw new ArgumentException("Alignment is zero or negative", nameof(align));
+                if (request.Size < 0)
+                    throw new ArgumentException("Size is negative", nameof(request));
+                if (request.Alignment <= 0)
+                    throw new ArgumentException("Alignment is zero or negative", nameof(request));
 
-                if (size > pageSize) {
+                if (request.Size > pageSize) {
                     // TODO: large allocations
                     throw new NotSupportedException("Single allocations cannot be larger than a page");
                 }
 
                 // we want to round the low value up
-                var pageRoundedLow = RoundDownToPageBoundary(low + (nint)pageSize - 1);
+                var lowPageBound = RoundDownToPageBoundary(request.LowBound + pageSize - 1);
                 // and the high value down
-                var pageRoundedHigh = RoundDownToPageBoundary(high);
+                var highPageBound = RoundDownToPageBoundary(request.HighBound);
+
+                var targetPage = RoundDownToPageBoundary(request.Target);
+
+                var target = (nint) request.Target;
 
                 lock (sync) {
-                    var range = high - low;
-                    var lowDiff = target - low;
-                    var highDiff = high - target;
-
-                    var lowIdxBound = GetBoundIndex(pageRoundedLow);
-                    var highIdxBound = GetBoundIndex(pageRoundedHigh);
+                    var lowIdxBound = GetBoundIndex(lowPageBound);
+                    var highIdxBound = GetBoundIndex(highPageBound);
 
                     if (lowIdxBound != highIdxBound) {
                         // there are pages for us to check within the target range
                         // lets see where our target lands us
-                        var targetIndex = GetBoundIndex(RoundDownToPageBoundary(target));
+                        var targetIndex = GetBoundIndex(targetPage);
 
                         // we'll check pages starting at targetIndex and expanding around it
 
@@ -444,7 +500,7 @@ namespace MonoMod.Core.Platforms.Systems {
                                 highIdx < highIdxBound && 
                                 (lowIdx < lowIdxBound || target - AllocList[lowIdx].BaseAddr < AllocList[highIdx].BaseAddr - target)
                             ) {
-                                if (TryAllocWithPage(AllocList[highIdx], low, high, size, align, executable, out allocated))
+                                if (TryAllocWithPage(AllocList[highIdx], request, out allocated))
                                     return true;
                                 highIdx++;
                             }
@@ -454,7 +510,7 @@ namespace MonoMod.Core.Platforms.Systems {
                                 lowIdx >= lowIdxBound &&
                                 (highIdx >= highIdxBound || target - AllocList[lowIdx].BaseAddr > AllocList[highIdx].BaseAddr - target)
                             ) {
-                                if (TryAllocWithPage(AllocList[lowIdx], low, high, size, align, executable, out allocated))
+                                if (TryAllocWithPage(AllocList[lowIdx], request, out allocated))
                                     return true;
                                 lowIdx++;
                             }
@@ -463,27 +519,111 @@ namespace MonoMod.Core.Platforms.Systems {
                         // if we fall out here, no adequate page was found
                     }
 
-                    // TODO: allocate new pages from the OS
+                    // if we make it here, we need to allocate a page from the OS
 
-                    throw new NotImplementedException();
-                }
+                    // we'll do the same approach for trying to find an existing page, but querying the OS for free pages to allocate
 
+                    var lowPage = targetPage - pageSize;
+                    var highPage = targetPage;
 
-                static bool TryAllocWithPage(Page page, nint low, nint high, int size, int align, bool exec, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
-                    if (page.IsExecutable == exec && page.BaseAddr >= low && page.BaseAddr < high) {
-                        if (page.TryAllocate((uint) size, (uint) align, out var pageAlloc)) {
-                            if (pageAlloc.BaseAddress >= low && pageAlloc.BaseAddress < high) {
-                                // we've found a valid allocation, we're done
-                                allocated = pageAlloc;
+                    while (lowPage >= lowPageBound || highPage < highPageBound) {
+                        // first check the high pages, while they're closer than low pages
+                        while (
+                            highPage < highPageBound &&
+                            (lowPage < lowPageBound || target - lowPage < highPage - target)
+                        ) {
+                            if (TryAllocNewPage(request, ref highPage, true, out allocated))
                                 return true;
-                            } else {
-                                // this allocation isn't within the bounds (not sure how this could happen, but check anyway)
-                                // we deallocate by disposing, and move on
-                                pageAlloc.Dispose();
-                            }
+                        }
+
+                        // then try low pages, while they're closer than high pages
+                        while (
+                            lowPage >= lowPageBound &&
+                            (highPage >= highPageBound || target - lowPage > highPage - target)
+                        ) {
+                            if (TryAllocNewPage(request, ref lowPage, false, out allocated))
+                                return true;
                         }
                     }
 
+                    // if we fall out to here, we just couldn't allocate, so sucks
+                    allocated = null;
+                    return false;
+                }
+            }
+
+            private static bool TryAllocWithPage(Page page, AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+                if (page.IsExecutable == request.Executable && page.BaseAddr >= (nint) request.LowBound && page.BaseAddr < (nint) request.HighBound) {
+                    if (page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var pageAlloc)) {
+                        if ((nint) pageAlloc.BaseAddress >= request.LowBound && (nint) pageAlloc.BaseAddress < request.HighBound) {
+                            // we've found a valid allocation, we're done
+                            allocated = pageAlloc;
+                            return true;
+                        } else {
+                            // this allocation isn't within the bounds (not sure how this could happen, but check anyway)
+                            // we deallocate by disposing, and move on
+                            pageAlloc.Dispose();
+                        }
+                    }
+                }
+
+                allocated = null;
+                return false;
+            }
+
+            private unsafe bool TryAllocNewPage(AllocationRequest request, ref nint page, bool goingUp, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+
+                if (Interop.Windows.VirtualQuery(page, out var memInfo, sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) != 0) {
+                    // VirtualQuery succeeded, lets check it out
+
+                    if (memInfo.State != Interop.Windows.MEM.FREE) {
+                        // this is not a free block, we don't care about it
+                        goto Fail;
+                    }
+
+                    var pageProt = request.Executable ? Interop.Windows.PAGE.EXECUTE_READWRITE : Interop.Windows.PAGE.READWRITE;
+
+                    // page points at a free page, lets allocate!
+                    var allocBase = Interop.Windows.VirtualAlloc(page, pageSize, Interop.Windows.MEM.RESERVE | Interop.Windows.MEM.COMMIT, pageProt);
+                    if (allocBase == IntPtr.Zero) {
+                        // VirtualAlloc failed, fail out
+                        // TODO: check GetLastError
+                        goto Fail;
+                    }
+
+                    // we have a page allocated now, lets create a Page and insert it
+                    var pageObj = new Page(this, allocBase, (uint) pageSize, request.Executable);
+                    InsertAllocatedPage(pageObj);
+
+                    // now we'll try to allocate out of the page. If we fail, we'll immediately register it for cleanup.
+                    if (!pageObj.TryAllocate((uint) request.Size, (uint) request.Alignment, out var alloc)) {
+                        RegisterForCleanup(pageObj);
+                        goto Fail;
+                    }
+
+                    // if we successfully allocated, return the page allocation
+                    allocated = alloc;
+                    return true;
+
+                    Fail:
+                    // We're failing out, update the page address appropriately
+                    if (goingUp) {
+                        page = (nint) memInfo.AllocationBase + memInfo.RegionSize;
+                    } else {
+                        page = memInfo.AllocationBase - pageSize;
+                    }
+
+                    allocated = null;
+                    return false;
+                } else {
+                    // TODO: check GetLastError
+
+                    // query failed, fail out
+                    if (goingUp) {
+                        page += pageSize;
+                    } else {
+                        page -= pageSize;
+                    }
                     allocated = null;
                     return false;
                 }

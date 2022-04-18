@@ -55,6 +55,8 @@ namespace MonoMod.Core.Interop {
 
         public enum MEM : uint {
             UNSET,
+            DECOMMIT = 0x00004000,
+            RELEASE = 0x00008000,
             COMMIT =
                 0b00000000000000000001000000000000,
             RESERVE =

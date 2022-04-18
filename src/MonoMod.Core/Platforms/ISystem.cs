@@ -9,6 +9,8 @@ namespace MonoMod.Core.Platforms {
 
         Abi? DefaultAbi { get; }
 
+        IMemoryAllocator MemoryAllocator { get; }
+
         void PatchExecutableData(IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup);
     }
 }
