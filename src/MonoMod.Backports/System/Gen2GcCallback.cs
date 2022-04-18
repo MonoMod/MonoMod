@@ -10,7 +10,7 @@ namespace System {
     /// Schedules a callback roughly every gen 2 GC (you may see a Gen 0 an Gen 1 but only once)
     /// (We can fix this by capturing the Gen 2 count at startup and testing, but I mostly don't care)
     /// </summary>
-    internal sealed class Gen2GcCallback : CriticalFinalizerObject {
+    public sealed class Gen2GcCallback : CriticalFinalizerObject {
         private readonly Func<bool>? _callback0;
         private readonly Func<object, bool>? _callback1;
         private GCHandle _weakTargetObj;

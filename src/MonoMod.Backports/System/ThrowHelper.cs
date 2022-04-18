@@ -124,9 +124,9 @@ namespace System {
         private static Exception CreateArgumentException_OverlapAlignmentMismatch() { return new ArgumentException("Overlap alignment mismatch"); }
 
         [DoesNotReturn]
-        internal static void ThrowNotSupportedException() { throw CreateThrowNotSupportedException(); }
+        internal static void ThrowNotSupportedException(string? msg = null) { throw CreateThrowNotSupportedException(msg); }
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateThrowNotSupportedException() { return new NotSupportedException(); }
+        private static Exception CreateThrowNotSupportedException(string? msg) { return new NotSupportedException(); }
 
         [DoesNotReturn]
         internal static void ThrowKeyNullException() { ThrowArgumentNullException(ExceptionArgument.key); }
@@ -193,6 +193,11 @@ namespace System {
                 return CreateArgumentOutOfRangeException(ExceptionArgument.length);
         }
 
+        [DoesNotReturn]
+        internal static void ThrowArgumentException_TupleIncorrectType(object obj) {
+            throw new ArgumentException($"Value tuple of incorrect type (found {obj.GetType()})", "other");
+        }
+
         //
         // ReadOnlySequence Slice validation Throws coalesced to enable inlining of the Slice
         //
@@ -228,6 +233,7 @@ namespace System {
         culture,
         manager,
         key,
-        collection
+        collection,
+        index
     }
 }

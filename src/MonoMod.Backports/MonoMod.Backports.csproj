@@ -15,9 +15,6 @@
     <CoreCompileDependsOn>FilterTFMRestrictedFiles;$(CoreCompileDependsOn)</CoreCompileDependsOn>
     <CompileDependsOn>FilterTFMRestrictedFiles;$(CompileDependsOn)</CompileDependsOn>
   </PropertyGroup>
-  <ItemGroup>
-    <Folder Include="System\Collections\Generic\" />
-  </ItemGroup>
   
   <Target Name="FilterTFMRestrictedFiles" BeforeTargets="CheckForDuplicateItems;Compile;CompileDesignTime;BuildProjectOutputGroup">
     <PropertyGroup>
