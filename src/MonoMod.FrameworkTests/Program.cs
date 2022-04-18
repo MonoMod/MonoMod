@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 
 var platTriple = PlatformTriple.Current;
 
+Console.WriteLine(AbiSelftest.DetectAbi(platTriple).ToString());
+
 Console.WriteLine(platTriple.Runtime.Abi.ToString());
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;

@@ -102,22 +102,13 @@ namespace MonoMod.Core.Utils {
             return (os, arch);
         }
 
-        public const string LibC = "libc";
-        public const string LibSystem = "libSystem";
-        public const string Kernel32 = "Kernel32";
 
         #region OS-specific arch detection
 
-        // If this dllimport decl isn't enough to get the runtime to load the right thing, I give up
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "uname", SetLastError = true)]
-        private static extern unsafe int LibcUname(byte* buf);
-
-        [DllImport(LibSystem, CallingConvention = CallingConvention.Cdecl, EntryPoint = "uname", SetLastError = true)]
-        private static extern unsafe int OSXUname(byte* buf);
 
         private static unsafe int PosixUname(OSKind os, byte* buf) {
-            static int Libc(byte* buf) => LibcUname(buf);
-            static int Osx(byte* buf) => OSXUname(buf);
+            static int Libc(byte* buf) => Interop.Unix.Uname(buf);
+            static int Osx(byte* buf) => Interop.OSX.Uname(buf);
             return os == OSKind.OSX ? Osx(buf) : Libc(buf);
         }
 
@@ -207,26 +198,8 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private unsafe struct SystemInfo {
-            public ushort wProcessorArchitecture;
-            public ushort wReserved1;
-            public uint dwPageSize;
-            public void* lpMinAppAddr;
-            public void* lpMaxAppAddr;
-            public nint dwActiveProcessorMask;
-            public uint dwNumberOfProcessors;
-            public uint dwProcessorType;
-            public uint dwAllocationGranularity;
-            public ushort wProcessorLevel;
-            public ushort wProcessorRevision;
-        }
-
-        [DllImport(Kernel32, EntryPoint = "GetSystemInfo", SetLastError = false)]
-        private static extern void WinGetSystemInfo(out SystemInfo lpSystemInfo);
-
         private static void DetectInfoWindows(ref OSKind os, ref ArchitectureKind arch) {
-            WinGetSystemInfo(out var sysInfo);
+            Interop.Windows.GetSystemInfo(out var sysInfo);
 
             // we don't update OS here, because Windows
 
@@ -261,21 +234,12 @@ namespace MonoMod.Core.Utils {
             if (env == "FALSE")
                 return false;
 
-            IntPtr ntdll = GetModuleHandle("ntdll.dll");
-            if (ntdll != IntPtr.Zero && GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero)
+            IntPtr ntdll = Interop.Windows.GetModuleHandle("ntdll.dll");
+            if (ntdll != IntPtr.Zero && Interop.Windows.GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero)
                 return true;
 
             return false;
         }
-
-        [DllImport(Kernel32, SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
-        [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments",
-            Justification = "This call needs CharSet = Ansi, and we have BestFitMapping = false and ThrowOnUnmappableChar  = true.")]
-        [DllImport(Kernel32,
-            CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true,
-            BestFitMapping = false, ThrowOnUnmappableChar = true)]
-        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
         #endregion
 
         #region Runtime

@@ -10,6 +10,7 @@ namespace MonoMod.Core.Platforms {
     }
 
     public interface IAllocatedMemory : IDisposable {
+        // TODO: distinguish between executable and non-executable
         IntPtr BaseAddress { get; }
         int Size { get; }
         Span<byte> Memory { get; }

@@ -1,6 +1,7 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
@@ -54,13 +55,13 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         private static void SetProtection(IntPtr addr, nint size) {
-            if (!VirtualProtect(addr, size, PAGE.EXECUTE_READWRITE, out _)) {
+            if (!Interop.Windows.VirtualProtect(addr, size, Interop.Windows.PAGE.EXECUTE_READWRITE, out _)) {
                 throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
             }
         }
 
         private static void FlushInstructionCache(IntPtr addr, nint size) {
-            if (!FlushInstructionCache(GetCurrentProcess(), addr, size)) {
+            if (!Interop.Windows.FlushInstructionCache(Interop.Windows.GetCurrentProcess(), addr, size)) {
                 throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
             }
         }
@@ -74,11 +75,10 @@ namespace MonoMod.Core.Platforms.Systems {
             MMDbgLog.Log($"reason: {ex.Message}");
 
             try {
-                IntPtr proc = GetCurrentProcess();
                 IntPtr addr = (IntPtr) 0x00000000000010000;
                 int i = 0;
                 while (true) {
-                    if (VirtualQueryEx(proc, addr, out MEMORY_BASIC_INFORMATION infoBasic, sizeof(MEMORY_BASIC_INFORMATION)) == 0)
+                    if (Interop.Windows.VirtualQuery(addr, out Interop.Windows.MEMORY_BASIC_INFORMATION infoBasic, sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) == 0)
                         break;
 
                     nint srcL = src;
@@ -143,7 +143,6 @@ namespace MonoMod.Core.Platforms.Systems {
 
                 private void Dispose(bool disposing) {
                     if (!disposedValue) {
-
                         owner.FreeMem(offset, (uint)Size);
                         disposedValue = true;
                     }
@@ -163,16 +162,16 @@ namespace MonoMod.Core.Platforms.Systems {
                 #endregion
             }
 
-            private sealed class Page : IDisposable {
+            private sealed class Page {
 
                 private readonly PagedMemoryAllocator owner;
+
+                private readonly object sync = new();
 
                 public readonly IntPtr BaseAddr;
                 public readonly uint Size;
 
                 public readonly bool IsExecutable;
-
-                public int Allocations;
 
                 // we keep freeList sorted by BaseOffset, possibly with nulls between
                 private FreeMem? freeList;
@@ -191,63 +190,64 @@ namespace MonoMod.Core.Platforms.Systems {
                 public bool TryAllocate(uint size, uint align, [MaybeNullWhen(false)] out PageAlloc alloc) {
                     // the sizes we allocate we want to round to a power of two
                     //size = BitOperations.RoundUpToPowerOf2(size);
+                    lock (sync) {
 
-                    ref var ptrNode = ref freeList;
+                        ref var ptrNode = ref freeList;
 
-                    uint alignOffset = 0;
-                    while (ptrNode is not null) {
-                        var alignFix = align - (ptrNode.BaseOffset % align);
-                        if (ptrNode.Size >= alignFix + size) {
-                            alignOffset = alignFix;
-                            break; // we found our node
+                        uint alignOffset = 0;
+                        while (ptrNode is not null) {
+                            var alignFix = align - (ptrNode.BaseOffset % align);
+                            if (ptrNode.Size >= alignFix + size) {
+                                alignOffset = alignFix;
+                                break; // we found our node
+                            }
+
+                            // otherwise, move to the next one
+                            ptrNode = ref ptrNode.NextFree;
                         }
 
-                        // otherwise, move to the next one
-                        ptrNode = ref ptrNode.NextFree;
+                        if (ptrNode is null) {
+                            // we couldn't find a free node large enough
+                            alloc = null;
+                            return false;
+                        }
+
+                        var offs = ptrNode.BaseOffset + alignOffset;
+
+                        if (alignOffset == 0) {
+                            // if the align offset is zero, then we just allocate out of the front of this node
+                            ptrNode.BaseOffset += size;
+                            ptrNode.Size -= size;
+
+                            // removing zero-size enties is done in normalize
+                        } else {
+                            // otherwise, we have to split the free node
+
+                            // create the front half
+                            var frontNode = new FreeMem {
+                                BaseOffset = ptrNode.BaseOffset,
+                                Size = alignOffset,
+                                NextFree = ptrNode,
+                            };
+
+                            // push back the back half
+                            ptrNode.BaseOffset += alignOffset + size;
+                            ptrNode.Size -= alignOffset + size;
+
+                            // removing zero-size enties is done in normalize
+
+                            // update our pointer to point at the new node
+                            ptrNode = frontNode;
+                        }
+
+                        // now we normalize the free list, to ensure its in a sane state
+                        NormalizeFreeList();
+
+                        // and can now actually create the allocation object
+                        alloc = new PageAlloc(this, offs, (int) size);
+
+                        return true;
                     }
-
-                    if (ptrNode is null) {
-                        // we couldn't find a free node large enough
-                        alloc = null;
-                        return false;
-                    }
-
-                    var offs = ptrNode.BaseOffset + alignOffset;
-
-                    if (alignOffset == 0) {
-                        // if the align offset is zero, then we just allocate out of the front of this node
-                        ptrNode.BaseOffset += size;
-                        ptrNode.Size -= size;
-
-                        // removing zero-size enties is done in normalize
-                    } else {
-                        // otherwise, we have to split the free node
-
-                        // create the front half
-                        var frontNode = new FreeMem {
-                            BaseOffset = ptrNode.BaseOffset,
-                            Size = alignOffset,
-                            NextFree = ptrNode,
-                        };
-
-                        // push back the back half
-                        ptrNode.BaseOffset += alignOffset + size;
-                        ptrNode.Size -= alignOffset + size;
-
-                        // removing zero-size enties is done in normalize
-
-                        // update our pointer to point at the new node
-                        ptrNode = frontNode;
-                    }
-
-                    // now we normalize the free list, to ensure its in a sane state
-                    NormalizeFreeList();
-
-                    // and can now actually create the allocation object
-                    alloc = new PageAlloc(this, offs, (int) size);
-                    Allocations++;
-
-                    return true;
                 }
 
                 private void NormalizeFreeList() {
@@ -274,135 +274,220 @@ namespace MonoMod.Core.Platforms.Systems {
                     }
                 }
 
-                // correctness relies on this only being called internally byPageAlloc's Dispose()
+                // correctness relies on this only being called internally by PageAlloc's Dispose()
                 public void FreeMem(uint offset, uint size) {
-                    ref var node = ref freeList;
+                    lock (sync) {
+                        ref var node = ref freeList;
 
-                    while (node is not null) {
-                        if (node.BaseOffset > offset) {
-                            // we found the first node with greater offset, break out
-                            break;
-                        }
-                        node = ref node.NextFree;
-                    }
-
-                    // now node points to where we need to store the new FreeMem, as well as its next node
-                    node = new FreeMem {
-                        BaseOffset = offset,
-                        Size = size,
-                        NextFree = node,
-                    };
-                    NormalizeFreeList();
-                }
-
-                #region Disposable implementation
-                private bool disposedValue;
-
-                private void Dispose(bool disposing) {
-                    if (!disposedValue) {
-                        if (disposing) {
-                            // TODO: dispose managed state (managed objects)
+                        while (node is not null) {
+                            if (node.BaseOffset > offset) {
+                                // we found the first node with greater offset, break out
+                                break;
+                            }
+                            node = ref node.NextFree;
                         }
 
-                        // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                        // TODO: set large fields to null
-                        disposedValue = true;
+                        // now node points to where we need to store the new FreeMem, as well as its next node
+                        node = new FreeMem {
+                            BaseOffset = offset,
+                            Size = size,
+                            NextFree = node,
+                        };
+                        NormalizeFreeList();
+
+                        if (freeList is { } list && list.BaseOffset == 0 && list.Size == Size) {
+                            // TODO: register for page free
+                        }
                     }
                 }
-
-                ~Page()
-                {
-                    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-                    Dispose(disposing: false);
-                }
-
-                public void Dispose() {
-                    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-                    Dispose(disposing: true);
-                    GC.SuppressFinalize(this);
-                }
-                #endregion
             }
 
+            private readonly nint pageBaseMask;
+            private readonly uint pageSize;
+            private readonly bool pageSizeIsPow2;
+
+            public PagedMemoryAllocator() {
+                Interop.Windows.GetSystemInfo(out var sysInfo);
+
+                pageSize = sysInfo.dwPageSize;
+
+                pageSizeIsPow2 = BitOperations.IsPow2(pageSize);
+                pageBaseMask = (~(nint) 0) << BitOperations.TrailingZeroCount(pageSize);
+            }
+
+            private nint RoundDownToPageBoundary(nint ptr) {
+                if (pageSizeIsPow2) {
+                    return ptr & pageBaseMask;
+                } else {
+                    return ptr - (ptr % ((nint)pageSize));
+                }
+            }
+
+            private Page?[] allocationList = new Page?[16];
+            private int pageCount;
+
+            private readonly struct PageComparer : IComparer<Page?> {
+                public int Compare(Page? x, Page? y) {
+                    if (x == y)
+                        return 0;
+                    if (x is null)
+                        return 1;
+                    if (y is null)
+                        return -1;
+
+                    return ((long) x.BaseAddr).CompareTo((long) y.BaseAddr);
+                }
+            }
+
+            private readonly struct PageAddrComparable : IComparable<Page> {
+                private readonly IntPtr addr;
+                public PageAddrComparable(IntPtr addr) => this.addr = addr;
+                public int CompareTo(Page? other) {
+                    if (other is null)
+                        return 1;
+
+                    return ((long) addr).CompareTo((long) other.BaseAddr);
+                }
+            }
+
+            private void InsertAllocatedPage(Page page) {
+                if (pageCount == allocationList.Length) {
+                    // we need to expand the allocationList
+                    var newSize = (int) BitOperations.RoundUpToPowerOf2((uint) allocationList.Length);
+                    Array.Resize(ref allocationList, newSize);
+                }
+
+                var list = allocationList.AsSpan();
+
+                var insertAt = list.Slice(0, pageCount).BinarySearch(page, new PageComparer());
+
+                if (insertAt >= 0) {
+                    // the page is already in the list, no work needed
+                    return;
+                } else {
+                    insertAt = ~insertAt;
+                }
+
+                // insertAt is the index of the next item larger, which is the index we want the page to be at
+                list.Slice(insertAt, pageCount - insertAt).CopyTo(list.Slice(insertAt + 1));
+                list[insertAt] = page;
+                pageCount++;
+            }
+
+            private void RemoveAllocatedPage(Page page) {
+                var list = allocationList.AsSpan();
+
+                var indexToRemove = list.Slice(0, pageCount).BinarySearch(page, new PageComparer());
+
+                if (indexToRemove < 0) {
+                    // the page doesn't exist, nothing needs to be done
+                    return;
+                }
+
+                // just copy from above the index down
+                list.Slice(indexToRemove + 1).CopyTo(list.Slice(indexToRemove));
+                pageCount--;
+            }
+
+            private ReadOnlySpan<Page> AllocList => allocationList.AsSpan().Slice(0, pageCount);
+
+            private int GetBoundIndex(IntPtr ptr) {
+                var index = AllocList.BinarySearch(new PageAddrComparable(ptr));
+
+                return index >= 0 ? index : ~index;
+            }
+
+            private readonly object sync = new();
+
+            public bool TryAllocateInRange(nint target, nint low, nint high, int size, int align, bool executable, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+                if (low > high)
+                    throw new ArgumentException("Low and High are reversed", nameof(low));
+                if (target < low || target > high)
+                    throw new ArgumentException("Target not between low and high", nameof(target));
+
+                if (size < 0)
+                    throw new ArgumentException("Size is negative", nameof(size));
+                if (align <= 0)
+                    throw new ArgumentException("Alignment is zero or negative", nameof(align));
+
+                if (size > pageSize) {
+                    // TODO: large allocations
+                    throw new NotSupportedException("Single allocations cannot be larger than a page");
+                }
+
+                // we want to round the low value up
+                var pageRoundedLow = RoundDownToPageBoundary(low + (nint)pageSize - 1);
+                // and the high value down
+                var pageRoundedHigh = RoundDownToPageBoundary(high);
+
+                lock (sync) {
+                    var range = high - low;
+                    var lowDiff = target - low;
+                    var highDiff = high - target;
+
+                    var lowIdxBound = GetBoundIndex(pageRoundedLow);
+                    var highIdxBound = GetBoundIndex(pageRoundedHigh);
+
+                    if (lowIdxBound != highIdxBound) {
+                        // there are pages for us to check within the target range
+                        // lets see where our target lands us
+                        var targetIndex = GetBoundIndex(RoundDownToPageBoundary(target));
+
+                        // we'll check pages starting at targetIndex and expanding around it
+
+                        var lowIdx = targetIndex - 1;
+                        var highIdx = targetIndex;
+
+                        while (lowIdx >= lowIdxBound || highIdx < highIdxBound) {
+                            // try high pages, while they're closer than low pages
+                            while (
+                                highIdx < highIdxBound && 
+                                (lowIdx < lowIdxBound || target - AllocList[lowIdx].BaseAddr < AllocList[highIdx].BaseAddr - target)
+                            ) {
+                                if (TryAllocWithPage(AllocList[highIdx], low, high, size, align, executable, out allocated))
+                                    return true;
+                                highIdx++;
+                            }
+
+                            // then try low pages, while they're closer than high pages
+                            while (
+                                lowIdx >= lowIdxBound &&
+                                (highIdx >= highIdxBound || target - AllocList[lowIdx].BaseAddr > AllocList[highIdx].BaseAddr - target)
+                            ) {
+                                if (TryAllocWithPage(AllocList[lowIdx], low, high, size, align, executable, out allocated))
+                                    return true;
+                                lowIdx++;
+                            }
+                        }
+
+                        // if we fall out here, no adequate page was found
+                    }
+
+                    // TODO: allocate new pages from the OS
+
+                    throw new NotImplementedException();
+                }
 
 
-            public bool TryAllocateInRange(IntPtr target, IntPtr low, IntPtr high, int size, int align, bool executable, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
-                throw new NotImplementedException();
+                static bool TryAllocWithPage(Page page, nint low, nint high, int size, int align, bool exec, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+                    if (page.IsExecutable == exec && page.BaseAddr >= low && page.BaseAddr < high) {
+                        if (page.TryAllocate((uint) size, (uint) align, out var pageAlloc)) {
+                            if (pageAlloc.BaseAddress >= low && pageAlloc.BaseAddress < high) {
+                                // we've found a valid allocation, we're done
+                                allocated = pageAlloc;
+                                return true;
+                            } else {
+                                // this allocation isn't within the bounds (not sure how this could happen, but check anyway)
+                                // we deallocate by disposing, and move on
+                                pageAlloc.Dispose();
+                            }
+                        }
+                    }
+
+                    allocated = null;
+                    return false;
+                }
             }
         }
-
-        #region P/Invoke stuff
-        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
-        private static extern IntPtr VirtualAlloc(IntPtr lpAddress, nint dwSize, MEM flAllocationType, PAGE flProtect);
-
-        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
-        private static extern bool VirtualProtect(IntPtr lpAddress, nint dwSize, PAGE flNewProtect, out PAGE lpflOldProtect);
-
-        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
-        private static extern bool VirtualFree(IntPtr lpAddress, nint dwSize, MEM dwFreeType);
-
-        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
-        private static extern IntPtr GetCurrentProcess();
-
-        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
-        private static extern bool FlushInstructionCache(IntPtr hProcess, IntPtr lpBaseAddress, nint dwSize);
-
-        [DllImport(PlatformDetection.Kernel32, SetLastError = true)]
-        private static extern int VirtualQueryEx(IntPtr hProcess, IntPtr lpAddress, out MEMORY_BASIC_INFORMATION lpBuffer, int dwLength);
-
-        [Flags]
-        private enum PAGE : uint {
-            UNSET,
-            NOACCESS =
-                0b00000000000000000000000000000001,
-            READONLY =
-                0b00000000000000000000000000000010,
-            READWRITE =
-                0b00000000000000000000000000000100,
-            WRITECOPY =
-                0b00000000000000000000000000001000,
-            EXECUTE =
-                0b00000000000000000000000000010000,
-            EXECUTE_READ =
-                0b00000000000000000000000000100000,
-            EXECUTE_READWRITE =
-                0b00000000000000000000000001000000,
-            EXECUTE_WRITECOPY =
-                0b00000000000000000000000010000000,
-            GUARD =
-                0b00000000000000000000000100000000,
-            NOCACHE =
-                0b00000000000000000000001000000000,
-            WRITECOMBINE =
-                0b00000000000000000000010000000000,
-        }
-
-        private enum MEM : uint {
-            UNSET,
-            COMMIT =
-                0b00000000000000000001000000000000,
-            RESERVE =
-                0b00000000000000000010000000000000,
-            FREE =
-                0b00000000000000010000000000000000,
-            PRIVATE =
-                0b00000000000000100000000000000000,
-            MAPPED =
-                0b00000000000001000000000000000000,
-            IMAGE =
-                0b00000001000000000000000000000000,
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct MEMORY_BASIC_INFORMATION {
-            public IntPtr BaseAddress;
-            public IntPtr AllocationBase;
-            public PAGE AllocationProtect;
-            public IntPtr RegionSize;
-            public MEM State;
-            public PAGE Protect;
-            public MEM Type;
-        }
-        #endregion
     }
 }
