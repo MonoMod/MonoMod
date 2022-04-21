@@ -50,6 +50,16 @@ namespace MonoMod.Core.Platforms {
         private static PlatformTriple? lazyCurrent;
         public static unsafe PlatformTriple Current => Helpers.GetOrInitWithLock(ref lazyCurrent, lazyCurrentLock, &CreateCurrent);
 
+        public enum InitializationStatus {
+            Uninitialized,
+            InterfacesAvailable,
+            InterfacesPartialInited,
+            InterfacesInited,
+            Complete,
+        }
+
+        public InitializationStatus Status { get; private set; }
+
         private static PlatformTriple CreateCurrent()
             => new(CreateCurrentArchitecture(), CreateCurrentSystem(), CreateCurrentRuntime());
 
@@ -58,9 +68,13 @@ namespace MonoMod.Core.Platforms {
             Helpers.ThrowIfNull(system);
             Helpers.ThrowIfNull(runtime);
 
+            Status = InitializationStatus.Uninitialized;
+
             Architecture = architecture;
             System = system;
             Runtime = runtime;
+
+            Status = InitializationStatus.InterfacesAvailable;
 
             // init the interface implementations
             InitIfNeeded(architecture, out var archIniter);
@@ -70,11 +84,17 @@ namespace MonoMod.Core.Platforms {
             // eagerly initialize this so that the check functions get as much inlined as possible
             SupportedFeatures = new(Architecture.Features, System.Features, Runtime.Features);
 
+            Status = InitializationStatus.InterfacesPartialInited;
+
             archIniter?.PostInit();
             sysIniter?.PostInit();
             rtIniter?.PostInit();
 
+            Status = InitializationStatus.InterfacesInited;
+
             Abi = Runtime.Abi ?? AbiSelftest.DetectAbi(this);
+
+            Status = InitializationStatus.Complete;
         }
 
         private void InitIfNeeded(object obj, out INeedsPlatformTripleInit? initer) {
