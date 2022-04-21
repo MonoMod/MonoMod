@@ -184,7 +184,7 @@ namespace MonoMod.Core.Platforms {
             var size = Architecture.GetDetourBytes(detourInfo, detourData);
 
             // these should be the same
-            Debug.Assert(size == detourInfo.Size);
+            Helpers.Assert(size == detourInfo.Size);
 
             // allocate a backup if needed
             var backup = undoable ? new byte[detourInfo.Size] : null;

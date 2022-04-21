@@ -19,7 +19,7 @@ namespace MonoMod.Core.Utils {
             MinLength = minLength;
             MaxMinLength = maxMinLength;
             MaxAddressLength = maxAddrLength;
-            Debug.Assert(MinLength > 0);
+            Helpers.Assert(MinLength > 0);
         }
 
         public BytePatternCollection(params BytePattern?[] patterns) : this(patterns.AsMemory()) { }
@@ -138,8 +138,8 @@ namespace MonoMod.Core.Utils {
                 var (seg, offs) = pattern.FirstLiteralSegment;
 
                 if (seg.Length == 0) {
-                    Debug.Assert(emptyPatterns is not null);
-                    emptyPatterns![savedEmptyPatterns++] = pattern;
+                    Helpers.DAssert(emptyPatterns is not null);
+                    emptyPatterns[savedEmptyPatterns++] = pattern;
                     continue;
                 }
 
@@ -185,13 +185,13 @@ namespace MonoMod.Core.Utils {
                     collection.Lut = lut;
                 }
 
-                Debug.Assert(collection.Offset == offs);
+                Helpers.DAssert(collection.Offset == offs);
 
                 BytePattern?[]? targetArray = collection.Lut[seg.Span[0]];
-                Debug.Assert(targetArray is not null);
-                int targetIndex = Array.IndexOf(targetArray!, null);
-                Debug.Assert(targetIndex >= 0);
-                targetArray![targetIndex] = pattern;
+                Helpers.DAssert(targetArray is not null);
+                int targetIndex = Array.IndexOf(targetArray, null);
+                Helpers.DAssert(targetIndex >= 0);
+                targetArray[targetIndex] = pattern;
 
                 // then update MinLength if needed
                 if (pattern.MinLength < collection.MinLength) {
@@ -375,7 +375,7 @@ namespace MonoMod.Core.Utils {
             public FirstByteCollection(Span<byte> store) : this(store.Slice(0, 256), store.Slice(256, 256)) { }
 
             public FirstByteCollection(Span<byte> store, Span<byte> indicies) {
-                Debug.Assert(store.Length >= 256 && indicies.Length >= 256);
+                Helpers.DAssert(store.Length >= 256 && indicies.Length >= 256);
                 firstByteStore = store;
                 byteIndicies = indicies;
                 firstBytesRecorded = 0;

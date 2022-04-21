@@ -1,21 +1,40 @@
 ﻿using MonoMod.Backports;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 
 namespace MonoMod.Core.Utils {
+
+    internal sealed class AssertionFailedException : Exception {
+        private const string AssertFailed = "Assertion failed! ";
+        public AssertionFailedException(string? message) : base(AssertFailed + message) {
+            Message = message ?? "";
+        }
+
+        public AssertionFailedException(string? message, Exception innerException) : base(AssertFailed + message, innerException) {
+            Message = message ?? "";
+        }
+
+        public AssertionFailedException(string? message, string expression) : base($"{AssertFailed}{expression} {message}") {
+            Message = message ?? "";
+            Expression = expression;
+        }
+
+        public string Expression { get; } = "";
+
+        public override string Message { get; }
+    }
+
     internal static class Helpers {
         public static void Swap<T>(ref T a, ref T b) => (b, a) = (a, b);
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static ulong NumericValue<T>(T value) where T : struct, Enum {
             ulong result = 0;
-            Unsafe.CopyBlock(ref Unsafe.As<ulong, byte>(ref result), ref Unsafe.As<T, byte>(ref value), (uint)Unsafe.SizeOf<T>());
+            Unsafe.CopyBlock(ref Unsafe.As<ulong, byte>(ref result), ref Unsafe.As<T, byte>(ref value), (uint) Unsafe.SizeOf<T>());
             return result;
         }
 
@@ -29,6 +48,25 @@ namespace MonoMod.Core.Utils {
         [DoesNotReturn]
         private static void ThrowArgumentNull(string argName) {
             throw new ArgumentNullException(argName);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static void Assert([DoesNotReturnIf(false)] bool value, string? message = null, [CallerArgumentExpression("value")] string expr = "") {
+            if (!value)
+                ThrowAssertionFailed(message, expr);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        [Conditional("DEBUG")]
+        public static void DAssert([DoesNotReturnIf(false)] bool value, string? message = null, [CallerArgumentExpression("value")] string expr = "") {
+            if (!value)
+                ThrowAssertionFailed(message, expr);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        [DoesNotReturn]
+        private static void ThrowAssertionFailed(string? msg, string expr) {
+            throw new AssertionFailedException(msg, expr);
         }
 
         #region GetOrInit*

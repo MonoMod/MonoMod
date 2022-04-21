@@ -1,4 +1,5 @@
-﻿using MonoMod.Utils;
+﻿using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -55,9 +56,9 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            Debug.Assert(fieldType is not null);
+            Helpers.DAssert(fieldType is not null);
 
-            if (fieldType!.IsPointer) {
+            if (fieldType.IsPointer) {
                 fieldType = typeof(UIntPtr);
             }
 
