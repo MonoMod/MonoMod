@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 
 var platTriple = PlatformTriple.Current;
 
+/*
 {
     var alloc = platTriple.System.MemoryAllocator;
 
@@ -16,6 +17,7 @@ var platTriple = PlatformTriple.Current;
 }
 
 GC.GetTotalMemory(true);
+*/
 
 Console.WriteLine(AbiSelftest.DetectAbi(platTriple).ToString());
 
