@@ -16,13 +16,33 @@ namespace MonoMod.Core.Platforms {
         public static Abi DetectAbi(PlatformTriple triple) {
             Helpers.ThrowIfNull(triple);
 
+            bool returnsRetbuf;
+            SelftestArgumentOrder argOrder;
+            StructKindFlags returnByVal, passByVal;
+
             lock (SelftestLock) {
-                var returnsRetbuf = DetectReturnsRetBuf();
-                var argOrder = DetectArgumentOrder(triple);
-                var (structsWithNoRetbuf, structsPassByValue) = DetectStructPassing(triple, argOrder);
+                returnsRetbuf = DetectReturnsRetBuf();
+                argOrder = DetectArgumentOrder(triple);
+                (returnByVal, passByVal) = DetectStructPassing(triple, argOrder);
             }
 
-            throw new NotImplementedException();
+            // TODO: selftest generic pointer position somehow
+
+            var classifier = new SelftestClassifier(returnByVal, passByVal);
+            var argOrderArr = argOrder switch {
+                SelftestArgumentOrder.RetThisArgs => new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
+                SelftestArgumentOrder.ThisRetArgs => new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments },
+                SelftestArgumentOrder.ThisArgsRet => new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments, SpecialArgumentKind.ReturnBuffer },
+                SelftestArgumentOrder.RetArgsThis => new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments, SpecialArgumentKind.ThisPointer },
+                SelftestArgumentOrder.ArgsThisRet => new[] { SpecialArgumentKind.UserArguments, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer },
+                SelftestArgumentOrder.ArgsRetThis => new[] { SpecialArgumentKind.UserArguments, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer },
+                _ => throw new InvalidOperationException("Invalid argument order"),
+            };
+
+            return new(
+                argOrderArr,
+                classifier.Classifier,
+                returnsRetbuf);
         }
 
 
