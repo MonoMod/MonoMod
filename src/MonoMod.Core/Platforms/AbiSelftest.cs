@@ -19,8 +19,7 @@ namespace MonoMod.Core.Platforms {
             lock (SelftestLock) {
                 var returnsRetbuf = DetectReturnsRetBuf();
                 var argOrder = DetectArgumentOrder(triple);
-                var structsWithNoRetbuf = DetectStructsWithNoRetBuf(triple, argOrder);
-                var structsPassByValue = DetectStructPassByValue(triple);
+                var (structsWithNoRetbuf, structsPassByValue) = DetectStructPassing(triple, argOrder);
             }
 
             throw new NotImplementedException();
@@ -233,65 +232,73 @@ namespace MonoMod.Core.Platforms {
             return val < 0x1000; // we give a vairly generous page of space for them to be in
         }
 
-        #region Test value type ret buffer classifications
-        private static StructKindFlags DetectStructsWithNoRetBuf(PlatformTriple triple, SelftestArgumentOrder argOrder) {
-            return
-                GetFlagFor(TestReturnForStruct<HfaFloat1>(triple, argOrder), StructKindFlags.HfaFloat1) |
-                GetFlagFor(TestReturnForStruct<HfaFloat2>(triple, argOrder), StructKindFlags.HfaFloat2) |
-                GetFlagFor(TestReturnForStruct<HfaFloat3>(triple, argOrder), StructKindFlags.HfaFloat3) |
-                GetFlagFor(TestReturnForStruct<HfaFloat4>(triple, argOrder), StructKindFlags.HfaFloat4) |
+        private static (StructKindFlags ByValRet, StructKindFlags ByValPass) DetectStructPassing(PlatformTriple triple, SelftestArgumentOrder argOrder) {
+            StructKindFlags ret = 0, pass = 0;
 
-                GetFlagFor(TestReturnForStruct<HfaDouble1>(triple, argOrder), StructKindFlags.HfaDouble1) |
-                GetFlagFor(TestReturnForStruct<HfaDouble2>(triple, argOrder), StructKindFlags.HfaDouble2) |
-                GetFlagFor(TestReturnForStruct<HfaDouble3>(triple, argOrder), StructKindFlags.HfaDouble3) |
-                GetFlagFor(TestReturnForStruct<HfaDouble4>(triple, argOrder), StructKindFlags.HfaDouble4) |
+            TestPassReturnStruct<HfaFloat1>(triple, argOrder, StructKindFlags.HfaFloat1, ref ret, ref pass);
+            TestPassReturnStruct<HfaFloat2>(triple, argOrder, StructKindFlags.HfaFloat2, ref ret, ref pass);
+            TestPassReturnStruct<HfaFloat3>(triple, argOrder, StructKindFlags.HfaFloat3, ref ret, ref pass);
+            TestPassReturnStruct<HfaFloat4>(triple, argOrder, StructKindFlags.HfaFloat4, ref ret, ref pass);
 
-                GetFlagFor(TestReturnForStruct<Int1>(triple, argOrder), StructKindFlags.Int1) |
-                GetFlagFor(TestReturnForStruct<Int2>(triple, argOrder), StructKindFlags.Int2) |
-                GetFlagFor(TestReturnForStruct<Int3>(triple, argOrder), StructKindFlags.Int3) |
-                GetFlagFor(TestReturnForStruct<Int4>(triple, argOrder), StructKindFlags.Int4) |
+            TestPassReturnStruct<HfaDouble1>(triple, argOrder, StructKindFlags.HfaDouble1, ref ret, ref pass);
+            TestPassReturnStruct<HfaDouble2>(triple, argOrder, StructKindFlags.HfaDouble2, ref ret, ref pass);
+            TestPassReturnStruct<HfaDouble3>(triple, argOrder, StructKindFlags.HfaDouble3, ref ret, ref pass);
+            TestPassReturnStruct<HfaDouble4>(triple, argOrder, StructKindFlags.HfaDouble4, ref ret, ref pass);
 
-                GetFlagFor(TestReturnForStruct<Long1>(triple, argOrder), StructKindFlags.Long1) |
-                GetFlagFor(TestReturnForStruct<Long2>(triple, argOrder), StructKindFlags.Long2) |
-                GetFlagFor(TestReturnForStruct<Long3>(triple, argOrder), StructKindFlags.Long3) |
-                GetFlagFor(TestReturnForStruct<Long4>(triple, argOrder), StructKindFlags.Long4) |
+            TestPassReturnStruct<Int1>(triple, argOrder, StructKindFlags.Int1, ref ret, ref pass);
+            TestPassReturnStruct<Int2>(triple, argOrder, StructKindFlags.Int2, ref ret, ref pass);
+            TestPassReturnStruct<Int3>(triple, argOrder, StructKindFlags.Int3, ref ret, ref pass);
+            TestPassReturnStruct<Int4>(triple, argOrder, StructKindFlags.Int4, ref ret, ref pass);
 
-                GetFlagFor(TestReturnForStruct<Byte1>(triple, argOrder), StructKindFlags.Byte1) |
-                GetFlagFor(TestReturnForStruct<Byte2>(triple, argOrder), StructKindFlags.Byte2) |
-                GetFlagFor(TestReturnForStruct<Byte3>(triple, argOrder), StructKindFlags.Byte3) |
-                GetFlagFor(TestReturnForStruct<Byte4>(triple, argOrder), StructKindFlags.Byte4) |
+            TestPassReturnStruct<Long1>(triple, argOrder, StructKindFlags.Long1, ref ret, ref pass);
+            TestPassReturnStruct<Long2>(triple, argOrder, StructKindFlags.Long2, ref ret, ref pass);
+            TestPassReturnStruct<Long3>(triple, argOrder, StructKindFlags.Long3, ref ret, ref pass);
+            TestPassReturnStruct<Long4>(triple, argOrder, StructKindFlags.Long4, ref ret, ref pass);
 
-                GetFlagFor(TestReturnForStruct<Short1>(triple, argOrder), StructKindFlags.Short1) |
-                GetFlagFor(TestReturnForStruct<Short2>(triple, argOrder), StructKindFlags.Short2) |
-                GetFlagFor(TestReturnForStruct<Short3>(triple, argOrder), StructKindFlags.Short3) |
-                GetFlagFor(TestReturnForStruct<Short4>(triple, argOrder), StructKindFlags.Short4) |
+            TestPassReturnStruct<Byte1>(triple, argOrder, StructKindFlags.Byte1, ref ret, ref pass);
+            TestPassReturnStruct<Byte2>(triple, argOrder, StructKindFlags.Byte2, ref ret, ref pass);
+            TestPassReturnStruct<Byte3>(triple, argOrder, StructKindFlags.Byte3, ref ret, ref pass);
+            TestPassReturnStruct<Byte4>(triple, argOrder, StructKindFlags.Byte4, ref ret, ref pass);
 
-                GetFlagFor(TestReturnForStruct<OddSize3>(triple, argOrder), StructKindFlags.OddSize3) |
-                GetFlagFor(TestReturnForStruct<OddSize5>(triple, argOrder), StructKindFlags.OddSize5) |
-                GetFlagFor(TestReturnForStruct<OddSize6>(triple, argOrder), StructKindFlags.OddSize6) |
-                GetFlagFor(TestReturnForStruct<OddSize7>(triple, argOrder), StructKindFlags.OddSize7) |
-                GetFlagFor(TestReturnForStruct<OddSize9>(triple, argOrder), StructKindFlags.OddSize9) |
+            TestPassReturnStruct<Short1>(triple, argOrder, StructKindFlags.Short1, ref ret, ref pass);
+            TestPassReturnStruct<Short2>(triple, argOrder, StructKindFlags.Short2, ref ret, ref pass);
+            TestPassReturnStruct<Short3>(triple, argOrder, StructKindFlags.Short3, ref ret, ref pass);
+            TestPassReturnStruct<Short4>(triple, argOrder, StructKindFlags.Short4, ref ret, ref pass);
 
-                GetFlagFor(TestReturnForStruct<X_1>(triple, argOrder), StructKindFlags.X_1) |
-                GetFlagFor(TestReturnForStruct<X_2>(triple, argOrder), StructKindFlags.X_2) |
-                GetFlagFor(TestReturnForStruct<X_3>(triple, argOrder), StructKindFlags.X_3) |
-                GetFlagFor(TestReturnForStruct<X_4>(triple, argOrder), StructKindFlags.X_4) |
-                GetFlagFor(TestReturnForStruct<X_5>(triple, argOrder), StructKindFlags.X_5) |
-                GetFlagFor(TestReturnForStruct<X_6>(triple, argOrder), StructKindFlags.X_6) |
-                GetFlagFor(TestReturnForStruct<X_7>(triple, argOrder), StructKindFlags.X_7) |
-                GetFlagFor(TestReturnForStruct<X_8>(triple, argOrder), StructKindFlags.X_8) |
-                GetFlagFor(TestReturnForStruct<X_9>(triple, argOrder), StructKindFlags.X_9) |
-                GetFlagFor(TestReturnForStruct<X10>(triple, argOrder), StructKindFlags.X10) |
-                GetFlagFor(TestReturnForStruct<X11>(triple, argOrder), StructKindFlags.X11) |
-                GetFlagFor(TestReturnForStruct<X12>(triple, argOrder), StructKindFlags.X12) |
-                GetFlagFor(TestReturnForStruct<X13>(triple, argOrder), StructKindFlags.X13) |
-                GetFlagFor(TestReturnForStruct<X14>(triple, argOrder), StructKindFlags.X14) |
-                GetFlagFor(TestReturnForStruct<X15>(triple, argOrder), StructKindFlags.X15) |
-                GetFlagFor(TestReturnForStruct<X16>(triple, argOrder), StructKindFlags.X16) |
+            TestPassReturnStruct<OddSize3>(triple, argOrder, StructKindFlags.OddSize3, ref ret, ref pass);
+            TestPassReturnStruct<OddSize5>(triple, argOrder, StructKindFlags.OddSize5, ref ret, ref pass);
+            TestPassReturnStruct<OddSize6>(triple, argOrder, StructKindFlags.OddSize6, ref ret, ref pass);
+            TestPassReturnStruct<OddSize7>(triple, argOrder, StructKindFlags.OddSize7, ref ret, ref pass);
+            TestPassReturnStruct<OddSize9>(triple, argOrder, StructKindFlags.OddSize9, ref ret, ref pass);
 
-                GetFlagFor(TestReturnForStruct<Empty>(triple, argOrder), StructKindFlags.Empty);
+            TestPassReturnStruct<X_1>(triple, argOrder, StructKindFlags.X_1, ref ret, ref pass);
+            TestPassReturnStruct<X_2>(triple, argOrder, StructKindFlags.X_2, ref ret, ref pass);
+            TestPassReturnStruct<X_3>(triple, argOrder, StructKindFlags.X_3, ref ret, ref pass);
+            TestPassReturnStruct<X_4>(triple, argOrder, StructKindFlags.X_4, ref ret, ref pass);
+            TestPassReturnStruct<X_5>(triple, argOrder, StructKindFlags.X_5, ref ret, ref pass);
+            TestPassReturnStruct<X_6>(triple, argOrder, StructKindFlags.X_6, ref ret, ref pass);
+            TestPassReturnStruct<X_7>(triple, argOrder, StructKindFlags.X_7, ref ret, ref pass);
+            TestPassReturnStruct<X_8>(triple, argOrder, StructKindFlags.X_8, ref ret, ref pass);
+            TestPassReturnStruct<X_9>(triple, argOrder, StructKindFlags.X_9, ref ret, ref pass);
+            TestPassReturnStruct<X10>(triple, argOrder, StructKindFlags.X10, ref ret, ref pass);
+            TestPassReturnStruct<X11>(triple, argOrder, StructKindFlags.X11, ref ret, ref pass);
+            TestPassReturnStruct<X12>(triple, argOrder, StructKindFlags.X12, ref ret, ref pass);
+            TestPassReturnStruct<X13>(triple, argOrder, StructKindFlags.X13, ref ret, ref pass);
+            TestPassReturnStruct<X14>(triple, argOrder, StructKindFlags.X14, ref ret, ref pass);
+            TestPassReturnStruct<X15>(triple, argOrder, StructKindFlags.X15, ref ret, ref pass);
+            TestPassReturnStruct<X16>(triple, argOrder, StructKindFlags.X16, ref ret, ref pass);
+
+            TestPassReturnStruct<Empty>(triple, argOrder, StructKindFlags.Empty, ref ret, ref pass);
+
+            return (ret, pass);
         }
 
+        private static void TestPassReturnStruct<T>(PlatformTriple triple, SelftestArgumentOrder argOrder, StructKindFlags flag, ref StructKindFlags byvalReturn, ref StructKindFlags byvalPass) where T : struct {
+            byvalReturn |= GetFlagFor(TestReturnForStruct<T>(triple, argOrder), flag);
+            byvalPass |= GetFlagFor(TestPassByValue<T>(triple), flag);
+        }
+
+        #region Test value type ret buffer classifications
         private static readonly MethodInfo Self_RetBufTest = typeof(AbiSelftest).GetMethod(nameof(RetBufTest), AllFlgs)!;
         private static readonly MethodInfo Self_RetBufTestTarget = typeof(AbiSelftest).GetMethod(nameof(RetBufTestTarget), AllFlgs)!;
 
@@ -371,64 +378,6 @@ namespace MonoMod.Core.Platforms {
         #endregion
 
         #region Test value type pass-by-value classifications
-        private static StructKindFlags DetectStructPassByValue(PlatformTriple triple) {
-            return
-                GetFlagFor(TestPassByValue<HfaFloat1>(triple), StructKindFlags.HfaFloat1) |
-                GetFlagFor(TestPassByValue<HfaFloat2>(triple), StructKindFlags.HfaFloat2) |
-                GetFlagFor(TestPassByValue<HfaFloat3>(triple), StructKindFlags.HfaFloat3) |
-                GetFlagFor(TestPassByValue<HfaFloat4>(triple), StructKindFlags.HfaFloat4) |
-
-                GetFlagFor(TestPassByValue<HfaDouble1>(triple), StructKindFlags.HfaDouble1) |
-                GetFlagFor(TestPassByValue<HfaDouble2>(triple), StructKindFlags.HfaDouble2) |
-                GetFlagFor(TestPassByValue<HfaDouble3>(triple), StructKindFlags.HfaDouble3) |
-                GetFlagFor(TestPassByValue<HfaDouble4>(triple), StructKindFlags.HfaDouble4) |
-
-                GetFlagFor(TestPassByValue<Int1>(triple), StructKindFlags.Int1) |
-                GetFlagFor(TestPassByValue<Int2>(triple), StructKindFlags.Int2) |
-                GetFlagFor(TestPassByValue<Int3>(triple), StructKindFlags.Int3) |
-                GetFlagFor(TestPassByValue<Int4>(triple), StructKindFlags.Int4) |
-
-                GetFlagFor(TestPassByValue<Long1>(triple), StructKindFlags.Long1) |
-                GetFlagFor(TestPassByValue<Long2>(triple), StructKindFlags.Long2) |
-                GetFlagFor(TestPassByValue<Long3>(triple), StructKindFlags.Long3) |
-                GetFlagFor(TestPassByValue<Long4>(triple), StructKindFlags.Long4) |
-
-                GetFlagFor(TestPassByValue<Byte1>(triple), StructKindFlags.Byte1) |
-                GetFlagFor(TestPassByValue<Byte2>(triple), StructKindFlags.Byte2) |
-                GetFlagFor(TestPassByValue<Byte3>(triple), StructKindFlags.Byte3) |
-                GetFlagFor(TestPassByValue<Byte4>(triple), StructKindFlags.Byte4) |
-
-                GetFlagFor(TestPassByValue<Short1>(triple), StructKindFlags.Short1) |
-                GetFlagFor(TestPassByValue<Short2>(triple), StructKindFlags.Short2) |
-                GetFlagFor(TestPassByValue<Short3>(triple), StructKindFlags.Short3) |
-                GetFlagFor(TestPassByValue<Short4>(triple), StructKindFlags.Short4) |
-
-                GetFlagFor(TestPassByValue<OddSize3>(triple), StructKindFlags.OddSize3) |
-                GetFlagFor(TestPassByValue<OddSize5>(triple), StructKindFlags.OddSize5) |
-                GetFlagFor(TestPassByValue<OddSize6>(triple), StructKindFlags.OddSize6) |
-                GetFlagFor(TestPassByValue<OddSize7>(triple), StructKindFlags.OddSize7) |
-                GetFlagFor(TestPassByValue<OddSize9>(triple), StructKindFlags.OddSize9) |
-
-                GetFlagFor(TestPassByValue<X_1>(triple), StructKindFlags.X_1) |
-                GetFlagFor(TestPassByValue<X_2>(triple), StructKindFlags.X_2) |
-                GetFlagFor(TestPassByValue<X_3>(triple), StructKindFlags.X_3) |
-                GetFlagFor(TestPassByValue<X_4>(triple), StructKindFlags.X_4) |
-                GetFlagFor(TestPassByValue<X_5>(triple), StructKindFlags.X_5) |
-                GetFlagFor(TestPassByValue<X_6>(triple), StructKindFlags.X_6) |
-                GetFlagFor(TestPassByValue<X_7>(triple), StructKindFlags.X_7) |
-                GetFlagFor(TestPassByValue<X_8>(triple), StructKindFlags.X_8) |
-                GetFlagFor(TestPassByValue<X_9>(triple), StructKindFlags.X_9) |
-                GetFlagFor(TestPassByValue<X10>(triple), StructKindFlags.X10) |
-                GetFlagFor(TestPassByValue<X11>(triple), StructKindFlags.X11) |
-                GetFlagFor(TestPassByValue<X12>(triple), StructKindFlags.X12) |
-                GetFlagFor(TestPassByValue<X13>(triple), StructKindFlags.X13) |
-                GetFlagFor(TestPassByValue<X14>(triple), StructKindFlags.X14) |
-                GetFlagFor(TestPassByValue<X15>(triple), StructKindFlags.X15) |
-                GetFlagFor(TestPassByValue<X16>(triple), StructKindFlags.X16) |
-
-                GetFlagFor(TestPassByValue<Empty>(triple), StructKindFlags.Empty);
-        }
-
         private static readonly MethodInfo Self_PassByValueTest = typeof(AbiSelftest).GetMethod(nameof(PassByValueTest), AllFlgs)!;
         private static readonly MethodInfo Self_PassByValueTarget = typeof(AbiSelftest).GetMethod(nameof(PassByValueTarget), AllFlgs)!;
 
