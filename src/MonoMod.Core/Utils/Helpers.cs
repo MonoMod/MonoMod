@@ -29,6 +29,14 @@ namespace MonoMod.Core.Utils {
     }
 
     internal static class Helpers {
+        public const bool IsDebug =
+#if DEBUG
+            true;
+#else
+            false;
+#endif
+
+
         public static void Swap<T>(ref T a, ref T b) => (b, a) = (a, b);
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
@@ -69,7 +77,7 @@ namespace MonoMod.Core.Utils {
             throw new AssertionFailedException(msg, expr);
         }
 
-        #region GetOrInit*
+#region GetOrInit*
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public unsafe static T GetOrInit<T>(ref T? location, Func<T> init) where T : class {
             if (location is not null)
@@ -126,7 +134,7 @@ namespace MonoMod.Core.Utils {
                 return location = init(obj);
             }
         }
-        #endregion
+#endregion
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static bool MaskedSequenceEqual(ReadOnlySpan<byte> first, ReadOnlySpan<byte> second, ReadOnlySpan<byte> mask) {

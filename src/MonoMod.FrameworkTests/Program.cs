@@ -19,8 +19,6 @@ var platTriple = PlatformTriple.Current;
 GC.GetTotalMemory(true);
 */
 
-Console.WriteLine(AbiSelftest.DetectAbi(platTriple).ToString());
-
 Console.WriteLine(platTriple.Runtime.Abi.ToString());
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;

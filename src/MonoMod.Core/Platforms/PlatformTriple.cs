@@ -92,10 +92,85 @@ namespace MonoMod.Core.Platforms {
 
             Status = InitializationStatus.InterfacesInited;
 
-            Abi = Runtime.Abi ?? AbiSelftest.DetectAbi(this);
+            Abi = GetAbi();
 
             Status = InitializationStatus.Complete;
         }
+
+        private Abi GetAbi() {
+            var rtAbi = Runtime.Abi;
+
+            Abi detected = default;
+            if (Helpers.IsDebug || rtAbi is null) {
+                detected = AbiSelftest.DetectAbi(this);
+            }
+
+            if (rtAbi is not { } abi)
+                return detected;
+
+            Helpers.DAssert(abi.ReturnsReturnBuffer == detected.ReturnsReturnBuffer, 
+                $"Known and detected ABI provide different values for ReturnsReturnBuffer. " +
+                $"known = {abi.ReturnsReturnBuffer}, detected = {detected.ReturnsReturnBuffer}");
+            Helpers.DAssert(FilterArgOrder(abi.ArgumentOrder).SequenceEqual(FilterArgOrder(detected.ArgumentOrder)),
+                $"Known and detected ABI provide different argument orders. " +
+                $"known = {{ {JoinArgOrder(abi.ArgumentOrder)} }}, detected = {{ {JoinArgOrder(abi.ArgumentOrder)} }}");
+
+#if DEBUG
+            var classifier = new DebugClassifier(abi, detected);
+            return new(abi.ArgumentOrder, classifier.Classifier, abi.ReturnsReturnBuffer);
+#else
+            return abi;
+#endif
+        }
+
+#if DEBUG
+        private static IEnumerable<SpecialArgumentKind> FilterArgOrder(ReadOnlyMemory<SpecialArgumentKind> order) {
+            var seg = GetOrCreateArray(order);
+            Helpers.DAssert(seg.Array is not null);
+            for (var i = seg.Offset; i < seg.Offset + seg.Count; i++) {
+                var val = seg.Array[i];
+                // TODO: selftest generic context pointer location
+                if (val == SpecialArgumentKind.GenericContext)
+                    continue;
+                yield return val;
+            }
+        }
+        private static string JoinArgOrder(ReadOnlyMemory<SpecialArgumentKind> order)
+            => string.Join(", ", FilterArgOrder(order).Select(a => a.ToString()).ToArray());
+
+        private static ArraySegment<T> GetOrCreateArray<T>(ReadOnlyMemory<T> mem) {
+            if (global::System.Runtime.InteropServices.MemoryMarshal.TryGetArray(mem, out var seg)) {
+                return seg;
+            } else {
+                return new(mem.ToArray());
+            }
+        }
+
+        private sealed class DebugClassifier {
+            public readonly Abi Runtime;
+            public readonly Abi Detected;
+
+            public Classifier Classifier { get; }
+
+            public DebugClassifier(Abi rt, Abi det) {
+                Runtime = rt;
+                Detected = det;
+
+                Classifier = Classify;
+            }
+
+            private TypeClassification Classify(Type type, bool isRet) {
+                var rtResult = Runtime.Classifier(type, isRet);
+                var detResult = Detected.Classifier(type, isRet);
+
+                Helpers.DAssert(rtResult == detResult,
+                    $"Known ABI and detected ABI returned different classifications for {type.AssemblyQualifiedName} ({(isRet ? "ret" : "arg")}). " +
+                    $"known = {rtResult}, detected = {detResult}");
+
+                return rtResult;
+            }
+        }
+#endif
 
         private void InitIfNeeded(object obj, out INeedsPlatformTripleInit? initer) {
             if (obj is INeedsPlatformTripleInit init) {
