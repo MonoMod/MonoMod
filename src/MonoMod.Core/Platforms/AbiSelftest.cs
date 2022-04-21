@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 namespace MonoMod.Core.Platforms {
-    public static class AbiSelftest {
+    public static partial class AbiSelftest {
 
         private static readonly object SelftestLock = new();
 
@@ -165,46 +165,63 @@ namespace MonoMod.Core.Platforms {
         #region Test value type ret buffer classifications
 
         [Flags]
-        private enum StructRetBufferInfo : uint {
+        private enum StructRetBufferInfo : ulong {
             None = 0,
 
-            HfaFloat1 = 0x00000001,
-            HfaFloat2 = 0x00000002,
-            HfaFloat3 = 0x00000004,
-            HfaFloat4 = 0x00000008,
+            HfaFloat1 = 0x00000000_00000001,
+            HfaFloat2 = 0x00000000_00000002,
+            HfaFloat3 = 0x00000000_00000004,
+            HfaFloat4 = 0x00000000_00000008,
 
-            HfaDouble1 = 0x00000010,
-            HfaDouble2 = 0x00000020,
-            HfaDouble3 = 0x00000040,
-            HfaDouble4 = 0x00000080,
+            HfaDouble1 = 0x00000000_00000010,
+            HfaDouble2 = 0x00000000_00000020,
+            HfaDouble3 = 0x00000000_00000040,
+            HfaDouble4 = 0x00000000_00000080,
 
-            Int1 = 0x00000100,
-            Int2 = 0x00000200,
-            Int3 = 0x00000400,
-            Int4 = 0x00000800,
+            Int1 = 0x00000000_00000100,
+            Int2 = 0x00000000_00000200,
+            Int3 = 0x00000000_00000400,
+            Int4 = 0x00000000_00000800,
 
-            Long1 = 0x00001000,
-            Long2 = 0x00002000,
-            Long3 = 0x00004000,
-            Long4 = 0x00008000,
+            Long1 = 0x00000000_00001000,
+            Long2 = 0x00000000_00002000,
+            Long3 = 0x00000000_00004000,
+            Long4 = 0x00000000_00008000,
 
-            Byte1 = 0x00010000,
-            Byte2 = 0x00020000,
-            Byte3 = 0x00040000,
-            Byte4 = 0x00080000,
+            Byte1 = 0x00000000_00010000,
+            Byte2 = 0x00000000_00020000,
+            Byte3 = 0x00000000_00040000,
+            Byte4 = 0x00000000_00080000,
 
-            Short1 = 0x00100000,
-            Short2 = 0x00200000,
-            Short3 = 0x00400000,
-            Short4 = 0x00800000,
+            Short1 = 0x00000000_00100000,
+            Short2 = 0x00000000_00200000,
+            Short3 = 0x00000000_00400000,
+            Short4 = 0x00000000_00800000,
 
-            OddSize3 = 0x01000000,
-            OddSize5 = 0x02000000,
-            OddSize6 = 0x04000000,
-            OddSize7 = 0x08000000,
-            OddSize9 = 0x10000000,
+            OddSize3 = 0x00000000_01000000,
+            OddSize5 = 0x00000000_02000000,
+            OddSize6 = 0x00000000_04000000,
+            OddSize7 = 0x00000000_08000000,
+            OddSize9 = 0x00000000_10000000,
 
-            Empty = 0x80000000,
+            X_1 = 0x00000001_00000000,
+            X_2 = 0x00000002_00000000,
+            X_3 = 0x00000004_00000000,
+            X_4 = 0x00000008_00000000,
+            X_5 = 0x00000010_00000000,
+            X_6 = 0x00000020_00000000,
+            X_7 = 0x00000040_00000000,
+            X_8 = 0x00000080_00000000,
+            X_9 = 0x00000100_00000000,
+            X10 = 0x00000200_00000000,
+            X11 = 0x00000400_00000000,
+            X12 = 0x00000800_00000000,
+            X13 = 0x00001000_00000000,
+            X14 = 0x00002000_00000000,
+            X15 = 0x00004000_00000000,
+            X16 = 0x00008000_00000000,
+
+            Empty = 0x80000000_00000000,
         }
 
         private static StructRetBufferInfo DetectStructsWithNoRetBuf(PlatformTriple triple, SelftestArgumentOrder argOrder) {
@@ -213,31 +230,55 @@ namespace MonoMod.Core.Platforms {
                 GetFlagFor(TestReturnForStruct<HfaFloat2>(triple, argOrder), StructRetBufferInfo.HfaFloat2) |
                 GetFlagFor(TestReturnForStruct<HfaFloat3>(triple, argOrder), StructRetBufferInfo.HfaFloat3) |
                 GetFlagFor(TestReturnForStruct<HfaFloat4>(triple, argOrder), StructRetBufferInfo.HfaFloat4) |
+
                 GetFlagFor(TestReturnForStruct<HfaDouble1>(triple, argOrder), StructRetBufferInfo.HfaDouble1) |
                 GetFlagFor(TestReturnForStruct<HfaDouble2>(triple, argOrder), StructRetBufferInfo.HfaDouble2) |
                 GetFlagFor(TestReturnForStruct<HfaDouble3>(triple, argOrder), StructRetBufferInfo.HfaDouble3) |
                 GetFlagFor(TestReturnForStruct<HfaDouble4>(triple, argOrder), StructRetBufferInfo.HfaDouble4) |
+
                 GetFlagFor(TestReturnForStruct<Int1>(triple, argOrder), StructRetBufferInfo.Int1) |
                 GetFlagFor(TestReturnForStruct<Int2>(triple, argOrder), StructRetBufferInfo.Int2) |
                 GetFlagFor(TestReturnForStruct<Int3>(triple, argOrder), StructRetBufferInfo.Int3) |
                 GetFlagFor(TestReturnForStruct<Int4>(triple, argOrder), StructRetBufferInfo.Int4) |
+
                 GetFlagFor(TestReturnForStruct<Long1>(triple, argOrder), StructRetBufferInfo.Long1) |
                 GetFlagFor(TestReturnForStruct<Long2>(triple, argOrder), StructRetBufferInfo.Long2) |
                 GetFlagFor(TestReturnForStruct<Long3>(triple, argOrder), StructRetBufferInfo.Long3) |
                 GetFlagFor(TestReturnForStruct<Long4>(triple, argOrder), StructRetBufferInfo.Long4) |
+
                 GetFlagFor(TestReturnForStruct<Byte1>(triple, argOrder), StructRetBufferInfo.Byte1) |
                 GetFlagFor(TestReturnForStruct<Byte2>(triple, argOrder), StructRetBufferInfo.Byte2) |
                 GetFlagFor(TestReturnForStruct<Byte3>(triple, argOrder), StructRetBufferInfo.Byte3) |
                 GetFlagFor(TestReturnForStruct<Byte4>(triple, argOrder), StructRetBufferInfo.Byte4) |
+
                 GetFlagFor(TestReturnForStruct<Short1>(triple, argOrder), StructRetBufferInfo.Short1) |
                 GetFlagFor(TestReturnForStruct<Short2>(triple, argOrder), StructRetBufferInfo.Short2) |
                 GetFlagFor(TestReturnForStruct<Short3>(triple, argOrder), StructRetBufferInfo.Short3) |
                 GetFlagFor(TestReturnForStruct<Short4>(triple, argOrder), StructRetBufferInfo.Short4) |
+
                 GetFlagFor(TestReturnForStruct<OddSize3>(triple, argOrder), StructRetBufferInfo.OddSize3) |
                 GetFlagFor(TestReturnForStruct<OddSize5>(triple, argOrder), StructRetBufferInfo.OddSize5) |
                 GetFlagFor(TestReturnForStruct<OddSize6>(triple, argOrder), StructRetBufferInfo.OddSize6) |
                 GetFlagFor(TestReturnForStruct<OddSize7>(triple, argOrder), StructRetBufferInfo.OddSize7) |
                 GetFlagFor(TestReturnForStruct<OddSize9>(triple, argOrder), StructRetBufferInfo.OddSize9) |
+
+                GetFlagFor(TestReturnForStruct<X_1>(triple, argOrder), StructRetBufferInfo.X_1) |
+                GetFlagFor(TestReturnForStruct<X_2>(triple, argOrder), StructRetBufferInfo.X_2) |
+                GetFlagFor(TestReturnForStruct<X_3>(triple, argOrder), StructRetBufferInfo.X_3) |
+                GetFlagFor(TestReturnForStruct<X_4>(triple, argOrder), StructRetBufferInfo.X_4) |
+                GetFlagFor(TestReturnForStruct<X_5>(triple, argOrder), StructRetBufferInfo.X_5) |
+                GetFlagFor(TestReturnForStruct<X_6>(triple, argOrder), StructRetBufferInfo.X_6) |
+                GetFlagFor(TestReturnForStruct<X_7>(triple, argOrder), StructRetBufferInfo.X_7) |
+                GetFlagFor(TestReturnForStruct<X_8>(triple, argOrder), StructRetBufferInfo.X_8) |
+                GetFlagFor(TestReturnForStruct<X_9>(triple, argOrder), StructRetBufferInfo.X_9) |
+                GetFlagFor(TestReturnForStruct<X10>(triple, argOrder), StructRetBufferInfo.X10) |
+                GetFlagFor(TestReturnForStruct<X11>(triple, argOrder), StructRetBufferInfo.X11) |
+                GetFlagFor(TestReturnForStruct<X12>(triple, argOrder), StructRetBufferInfo.X12) |
+                GetFlagFor(TestReturnForStruct<X13>(triple, argOrder), StructRetBufferInfo.X13) |
+                GetFlagFor(TestReturnForStruct<X14>(triple, argOrder), StructRetBufferInfo.X14) |
+                GetFlagFor(TestReturnForStruct<X15>(triple, argOrder), StructRetBufferInfo.X15) |
+                GetFlagFor(TestReturnForStruct<X16>(triple, argOrder), StructRetBufferInfo.X16) |
+
                 GetFlagFor(TestReturnForStruct<Empty>(triple, argOrder), StructRetBufferInfo.Empty);
         }
 
@@ -473,6 +514,41 @@ namespace MonoMod.Core.Platforms {
             public long C;
             public long D;
         }
+        #endregion
+
+        #region Explicitly sized structs
+        [StructLayout(LayoutKind.Sequential, Size = 1)]
+        private struct X_1 { }
+        [StructLayout(LayoutKind.Sequential, Size = 2)]
+        private struct X_2 { }
+        [StructLayout(LayoutKind.Sequential, Size = 3)]
+        private struct X_3 { }
+        [StructLayout(LayoutKind.Sequential, Size = 4)]
+        private struct X_4 { }
+        [StructLayout(LayoutKind.Sequential, Size = 5)]
+        private struct X_5 { }
+        [StructLayout(LayoutKind.Sequential, Size = 6)]
+        private struct X_6 { }
+        [StructLayout(LayoutKind.Sequential, Size = 7)]
+        private struct X_7 { }
+        [StructLayout(LayoutKind.Sequential, Size = 8)]
+        private struct X_8 { }
+        [StructLayout(LayoutKind.Sequential, Size = 9)]
+        private struct X_9 { }
+        [StructLayout(LayoutKind.Sequential, Size = 10)]
+        private struct X10 { }
+        [StructLayout(LayoutKind.Sequential, Size = 11)]
+        private struct X11 { }
+        [StructLayout(LayoutKind.Sequential, Size = 12)]
+        private struct X12 { }
+        [StructLayout(LayoutKind.Sequential, Size = 13)]
+        private struct X13 { }
+        [StructLayout(LayoutKind.Sequential, Size = 14)]
+        private struct X14 { }
+        [StructLayout(LayoutKind.Sequential, Size = 15)]
+        private struct X15 { }
+        [StructLayout(LayoutKind.Sequential, Size = 16)]
+        private struct X16 { }
         #endregion
 
         #region Odd sizes
