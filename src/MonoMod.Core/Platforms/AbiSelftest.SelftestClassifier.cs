@@ -1,11 +1,7 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace MonoMod.Core.Platforms {
     static partial class AbiSelftest {

@@ -29,6 +29,8 @@ namespace MonoMod.Core.Platforms {
         public TypeClassification Classify(Type type, bool isReturn) {
             Helpers.ThrowIfNull(type);
 
+            if (type == typeof(void))
+                return TypeClassification.Register;
             if (!type.IsValueType)
                 return TypeClassification.Register;
             if (type.IsPointer)

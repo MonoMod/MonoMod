@@ -1,11 +1,11 @@
-﻿using MonoMod.Core.Utils;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace MonoMod.Core.Platforms {
     public interface INeedsPlatformTripleInit {
@@ -100,7 +100,7 @@ namespace MonoMod.Core.Platforms {
         private Abi GetAbi() {
             var rtAbi = Runtime.Abi;
 
-            Abi detected = default;
+            Abi detected = default; // DO NOT REMOVE THIS = default! It's needed in Release.
             if (Helpers.IsDebug || rtAbi is null) {
                 detected = AbiSelftest.DetectAbi(this);
             }
@@ -115,15 +115,15 @@ namespace MonoMod.Core.Platforms {
                 $"Known and detected ABI provide different argument orders. " +
                 $"known = {{ {JoinArgOrder(abi.ArgumentOrder)} }}, detected = {{ {JoinArgOrder(abi.ArgumentOrder)} }}");
 
-#if DEBUG
-            var classifier = new DebugClassifier(abi, detected);
-            return new(abi.ArgumentOrder, classifier.Classifier, abi.ReturnsReturnBuffer);
-#else
-            return abi;
-#endif
+#pragma warning disable CS0162 // Unreachable code detected
+            if (Helpers.IsDebug) {
+                var classifier = new DebugClassifier(abi, detected);
+                return new(abi.ArgumentOrder, classifier.Classifier, abi.ReturnsReturnBuffer);
+            } else {
+                return abi;
+            }
+#pragma warning restore CS0162 // Unreachable code detected
         }
-
-#if DEBUG
         private static IEnumerable<SpecialArgumentKind> FilterArgOrder(ReadOnlyMemory<SpecialArgumentKind> order) {
             var seg = GetOrCreateArray(order);
             Helpers.DAssert(seg.Array is not null);
@@ -135,6 +135,7 @@ namespace MonoMod.Core.Platforms {
                 yield return val;
             }
         }
+
         private static string JoinArgOrder(ReadOnlyMemory<SpecialArgumentKind> order)
             => string.Join(", ", FilterArgOrder(order).Select(a => a.ToString()).ToArray());
 
@@ -163,14 +164,13 @@ namespace MonoMod.Core.Platforms {
                 var rtResult = Runtime.Classifier(type, isRet);
                 var detResult = Detected.Classifier(type, isRet);
 
-                Helpers.DAssert(rtResult == detResult,
+                Helpers.Assert(rtResult == detResult,
                     $"Known ABI and detected ABI returned different classifications for {type.AssemblyQualifiedName} ({(isRet ? "ret" : "arg")}). " +
                     $"known = {rtResult}, detected = {detResult}");
 
                 return rtResult;
             }
         }
-#endif
 
         private void InitIfNeeded(object obj, out INeedsPlatformTripleInit? initer) {
             if (obj is INeedsPlatformTripleInit init) {
@@ -340,5 +340,94 @@ namespace MonoMod.Core.Platforms {
             return (ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/) ? ptrGot : ptrParsed;
         }
 
+        public MethodBase GetRealDetourTarget(MethodBase from, MethodBase to) {
+            Helpers.ThrowIfNull(from);
+            Helpers.ThrowIfNull(to);
+
+            to = GetIdentifiable(to);
+
+            // TODO: check that from and to are actually argument- and return-compatible
+            // this check would ensure that to is only non-static when that makes sense
+
+            if (from is MethodInfo fromInfo &&
+                to is MethodInfo toInfo &&
+                !fromInfo.IsStatic && to.IsStatic) {
+                var retType = fromInfo.ReturnType;
+                // if from has `this` and to doesn't, then we need to fix up the abi
+                var returnClass = Abi.Classify(retType, true);
+
+                // only if the return class is PointerToMemory do we need to do something
+                if (returnClass == TypeClassification.PointerToMemory) {
+                    var thisType = from.GetThisParamType();
+                    var retPtrType = retType.MakeByRefType();
+
+                    var newRetType = Abi.ReturnsReturnBuffer ? retPtrType : typeof(void);
+
+                    int thisPos = -1, retBufPos = -1, argOffset = -1;
+
+                    var paramList = from.GetParameters();
+
+                    var argTypes = new List<Type>();
+                    var order = Abi.ArgumentOrder.Span;
+                    for (var i = 0; i < order.Length; i++) {
+                        var kind = order[i];
+                        
+                        if (kind == SpecialArgumentKind.ThisPointer) {
+                            thisPos = argTypes.Count;
+                            argTypes.Add(thisType);
+                        } else if (kind == SpecialArgumentKind.ReturnBuffer) {
+                            retBufPos = argTypes.Count;
+                            argTypes.Add(retPtrType);
+                        } else if (kind == SpecialArgumentKind.UserArguments) {
+                            argOffset = argTypes.Count;
+                            argTypes.AddRange(paramList.Select(p => p.ParameterType));
+                        }
+
+                        // TODO: somehow handle generic context parameters
+                        // or more likely, just ignore it for this and do generics elsewhere
+                    }
+
+                    Helpers.DAssert(thisPos >= 0);
+                    Helpers.DAssert(retBufPos >= 0);
+                    Helpers.DAssert(argOffset >= 0);
+
+                    using (var dmd = new DynamicMethodDefinition(
+                        $"Glue:AbiFixup<{from.GetID(simple: true)},{to.GetID(simple: true)}>",
+                        newRetType, argTypes.ToArray()
+                    )) {
+                        var il = dmd.GetILProcessor();
+
+                        // load return buffer
+                        il.Emit(OpCodes.Ldarg, retBufPos);
+
+                        // load thisptr
+                        il.Emit(OpCodes.Ldarg, thisPos);
+
+                        // load user arguments
+                        for (var i = 0; i < paramList.Length; i++) {
+                            il.Emit(OpCodes.Ldarg, i + argOffset);
+                        }
+
+                        // call the target method
+                        il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(to));
+
+                        // store the returned object
+                        il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(retType));
+
+                        // if we need to return the pointer, do that
+                        if (Abi.ReturnsReturnBuffer) {
+                            il.Emit(OpCodes.Ldarg, retBufPos);
+                        }
+
+                        // then we're done
+                        il.Emit(OpCodes.Ret);
+
+                        return dmd.Generate();
+                    }
+                }
+            }
+
+            return to;
+        }
     }
 }
