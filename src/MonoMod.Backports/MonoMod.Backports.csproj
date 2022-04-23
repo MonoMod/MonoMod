@@ -10,125 +10,69 @@
     <RootNamespace><![CDATA[ ]]></RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Filter application -->
+    <ProjectReference Include="$(MMSourcePath)MonoMod.Backports.Filter\MonoMod.Backports.Filter.csproj" 
+                      Reference="false" ReferenceOutputAssembly="false" 
+                      OutputItemType="BackportsFilter" Private="false"
+                      SetTargetFramework="TargetFramework=net6.0"
+                      SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
+  <!-- Because this is imported before Microsoft.Common.CurrentVersion.targets, we need to delay creating these properties -->
+  <Target Name="_CreateBackportsFilePathProps">
+  <PropertyGroup>
+    <_FileOptionsPath>$(IntermediateOutputPath)to_compile.txt</_FileOptionsPath>
+    <_ToRemovePath>$(IntermediateOutputPath)to_remove.txt</_ToRemovePath>
+  </PropertyGroup>
+  </Target>
+  
+  <Target Name="_WriteFileOptions" DependsOnTargets="_CreateBackportsFilePathProps"
+          Inputs="@(Compile)" Outputs="$(_FileOptionsPath)">
+    <WriteLinesToFile File="$(_FileOptionsPath)" Overwrite="true" WriteOnlyWhenDifferent="true" Lines="@(Compile)" />
+    <ItemGroup>
+      <FileWrites Include="$(_FileOptionsPath)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_RunFilterOnFiles" DependsOnTargets="_WriteFileOptions"
+          Inputs="@(BackportsFilter);$(_FileOptionsPath)" Outputs="$(_ToRemovePath)">
+    <PropertyGroup>
+      <_NativeExecutableExtension Condition="'$(_NativeExecutableExtension)' == '' and '$(OS)' == 'Windows_NT'">.exe</_NativeExecutableExtension>
+      <_BackportsFilterBinary>%(BackportsFilter.RelativeDir)%(FileName)$(_NativeExecutableExtension)</_BackportsFilterBinary>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_FilterArguments Include="$(_FileOptionsPath)"/>
+      <_FilterArguments Include="$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))" />
+      <_FilterArguments Include="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))" />
+      <_FilterArguments Include="$(_ToRemovePath)" />
+    </ItemGroup>
+    
+    <Exec Command="&quot;$(_BackportsFilterBinary)&quot; filter @(_FilterArguments->'&quot;%(Identity)&quot;',' ')">
+      <Output TaskParameter="ExitCode" PropertyName="_FilterExitCode" />
+    </Exec>
+
+    <Error Text="Filter failed" Condition="'$(_FilterExitCode)' != '0'" />
+
+    <ItemGroup>
+      <FileWrites Include="$(_ToRemovePath)" />
+    </ItemGroup>
+  </Target>
+  
   <!-- Conditionally importing based on TFMs, but automated -->
   <PropertyGroup>
     <CoreCompileDependsOn>FilterTFMRestrictedFiles;$(CoreCompileDependsOn)</CoreCompileDependsOn>
-    <CompileDependsOn>FilterTFMRestrictedFiles;$(CompileDependsOn)</CompileDependsOn>
   </PropertyGroup>
   
-  <Target Name="FilterTFMRestrictedFiles" BeforeTargets="CheckForDuplicateItems;Compile;CompileDesignTime;BuildProjectOutputGroup">
-    <PropertyGroup>
-      <_CurrentTfmIdent>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</_CurrentTfmIdent>
-      <_CurrentTfmVer>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</_CurrentTfmVer>
-    </PropertyGroup>
-
-    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="FilterTFMSingleFile" Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_FileToFilter=%(Compile.Identity)" Condition="$([System.String]::Copy('%(Identity)').Contains(','))">
-      <Output TaskParameter="TargetOutputs" ItemName="_ItemsToFilter" />
-    </MSBuild>
+  <Target Name="FilterTFMRestrictedFiles" DependsOnTargets="_RunFilterOnFiles">
+    <ReadLinesFromFile File="$(_ToRemovePath)">
+      <Output TaskParameter="Lines" ItemName="_ItemsToFilter" />
+    </ReadLinesFromFile>
 
     <ItemGroup>
-      <_ItemsToFilter Remove="%(_ItemsToFilter.Identity)" Condition="'%(DidPass)' == 'true'" />
       <Compile Remove="@(_ItemsToFilter)" />
     </ItemGroup>
-    
-    <Message Importance="high" Text="TFM: $(TargetFramework) - @(Compile)" />
   </Target>
-
-  <!-- TODO: Don't be a fucking moron and do this all in MSBuild, write a Task for it in C# -->
-  <Target Name="FilterTFMSingleFile" Returns="@(FileWithInfo)">
-    <!-- File name passed in via $(_FileToFilter) -->
-    
-    <ItemGroup>
-      <_FilePathParts Include="$(_FileToFilter.Split($([System.IO.Path]::DirectorySeparatorChar)))" />
-      <_FilePathParts Remove="%(Identity)" Condition="!$([System.String]::Copy('%(Identity)').Contains(','))" />
-      <_FilePathParts>
-        <Fname>%(Filename)</Fname>
-        <Fname Condition="'%(Extension)' != '.cs'">%(Filename)%(Extension)</Fname>
-      </_FilePathParts>
-      <_FilePathParts>
-        <_Basename>$([System.String]::Copy('%(Fname)').Split(',')[0])</_Basename>
-        <_SplitFilename>$([System.String]::Copy('%(Fname)').Split(','))</_SplitFilename>
-      </_FilePathParts>
-      <_FilePathParts>
-        <_RestOfFilename>$([System.String]::Copy('%(_SplitFilename)').Replace('%(_Basename);',''))</_RestOfFilename>  
-      </_FilePathParts>
-      <_FilePathParts>
-        <ComponentSet>$([System.String]::Copy('%(_RestOfFilename)').Replace(';',','))</ComponentSet>
-      </_FilePathParts>
-    </ItemGroup>
-
-    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="ComputeFilterForComponents" Properties="_CurrentTfmIdent=$(_CurrentTfmIdent);_CurrentTfmVer=$(_CurrentTfmVer);_ComponentSet=%(_FilePathParts.ComponentSet)">
-      <Output TaskParameter="TargetOutputs" ItemName="_ComponentSets" />
-    </MSBuild>
-    
-    <PropertyGroup>
-      <_PassCond>@(_ComponentSets->'%(DidPass)',' ')</_PassCond>
-      <_DidPass>false</_DidPass>
-      <_DidPass Condition="!$(_PassCond.Contains('false'))">true</_DidPass>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <FileWithInfo Include="$(_FileToFilter)" DidPass="$(_DidPass)" />
-    </ItemGroup>
-  </Target>
-  
-  <Target Name="ComputeFilterForComponents" Returns="@(OutComponents)">
-    <!-- The component set is passed in as a comma-delimited _ComponentSet -->
-    <PropertyGroup>
-      <_ReplacedComponentSet>$(_ComponentSet.Replace(',',';'))</_ReplacedComponentSet>
-    </PropertyGroup>
-    <ItemGroup>
-      <_FilenameFilterParts Include="$([MSBuild]::Unescape('$(_ReplacedComponentSet)'))" />
-    </ItemGroup>
-
-    <!-- Process each of the filter kinds -->
-    <ItemGroup>
-      <_FilenameFilterParts>
-        <Op>$([System.String]::Copy('%(Identity)').Split('_')[0])</Op>
-        <Kind>$([System.String]::Copy('%(Identity)').Split('_')[1])</Kind>
-        <Version></Version>
-        <Pass>false</Pass>
-      </_FilenameFilterParts>
-      <!-- TfmId check -->
-      <_FilenameFilterParts>
-        <TfmIdPass>false</TfmIdPass>
-        <TfmIdPass Condition="'%(Kind)' == 'core' and '$(_CurrentTfmIdent)' == '.NETCoreApp'">true</TfmIdPass>
-        <TfmIdPass Condition="'%(Kind)' == 'fx' and '$(_CurrentTfmIdent)' == '.NETFramework'">true</TfmIdPass>
-        <TfmIdPass Condition="'%(Kind)' == 'std' and '$(_CurrentTfmIdent)' == '.NETStandard'">true</TfmIdPass>
-      </_FilenameFilterParts>
-      <_FilenameFilterParts>
-        <!-- is ops -->
-        <Pass Condition="'%(Op)' == 'is' and %(TfmIdPass)">true</Pass>
-
-        <Version Condition="'%(Op)' == 'lt' or '%(Op)' == 'lte' or '%(Op)' == 'eq' or '%(Op)' == 'neq' or '%(Op)' == 'gt' or '%(Op)' == 'gte'">$([System.String]::Copy('%(Identity)').Split('_')[2])</Version>
-      </_FilenameFilterParts>
-      <_FilenameFilterParts Condition="'%(Version)' != ''">
-        <!-- eq ops -->
-        <Pass Condition="'%(Op)' == 'eq' and %(TfmIdPass) and $([MSBuild]::VersionEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
-        <!-- eq ops -->
-        <Pass Condition="'%(Op)' == 'neq' and %(TfmIdPass) and !$([MSBuild]::VersionEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
-        <!-- lt ops -->
-        <Pass Condition="'%(Op)' == 'lt' and %(TfmIdPass) and $([MSBuild]::VersionLessThan('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
-        <!-- lte ops -->
-        <Pass Condition="'%(Op)' == 'lte' and %(TfmIdPass) and $([MSBuild]::VersionLessThanOrEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
-        <!-- gt ops -->
-        <Pass Condition="'%(Op)' == 'gt' and %(TfmIdPass) and $([MSBuild]::VersionGreaterThan('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
-        <!-- gte ops -->
-        <Pass Condition="'%(Op)' == 'gte' and %(TfmIdPass) and $([MSBuild]::VersionGreaterThanOrEquals('$(_CurrentTfmVer)','%(Version)'))">true</Pass>
-      </_FilenameFilterParts>
-    </ItemGroup>
-
-    <PropertyGroup>
-      <_PassCond>@(_FilenameFilterParts->'%(Pass)',' ')</_PassCond>
-      <_DidPass>false</_DidPass>
-      <_DidPass Condition="$(_PassCond.Contains('true'))">true</_DidPass>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <OutComponents Include="$(_ComponentSet)" DidPass="$(_DidPass)" />
-    </ItemGroup>
-  </Target>
-
-  <Target Name="FilterTFMFilesAfterPrepForBuild" DependsOnTargets="FilterTFMRestrictedFiles" AfterTargets="PrepareForBuild" />
 
 </Project>

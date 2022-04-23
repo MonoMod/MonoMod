@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+
+    <MMReferenceILHelpers>false</MMReferenceILHelpers>
+    <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>
+
+    <MMReferenceUtils>false</MMReferenceUtils>
+    <MMReferenceBackports>false</MMReferenceBackports>
+    <MMSharedSourceFiles>false</MMSharedSourceFiles>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
+  </ItemGroup>
+
+</Project>

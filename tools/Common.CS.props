@@ -17,7 +17,7 @@
     
     <EnableNetAnalyzers>true</EnableNetAnalyzers>
     <AnalysisLevel>6.0</AnalysisLevel>
-    <!-- Because we're bringing in the package ourselves, we wnat to turn this off. -->
+    <!-- Because we're bringing in the package ourselves, we want to turn this off. -->
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-all</AnalysisLevel>
     

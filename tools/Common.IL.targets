@@ -25,7 +25,7 @@
   </PropertyGroup>
   
   <Target Name="PatchMetadataVersion"
-          Inputs="$(MSBuildAllProjects);@(IntermediateAssembly)"
+          Inputs="$(MSBuildAllProjects);@(ILVersionPatcher);@(IntermediateAssembly)"
           Outputs="@(IntermediateAssembly->'$(_PatchMetaOutputDir)%(Filename)%(Extension)')"
           AfterTargets="CoreCompile"
           BeforeTargets="_TimeStampAfterCompile;AfterCompile">
