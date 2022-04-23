@@ -18,7 +18,11 @@ namespace MonoMod.Core.Platforms {
         int GetDetourBytes(NativeDetourInfo info, Span<byte> buffer);
     }
 
-    // TODO: somehow support trampolines
-    // maybe by replacing InternalKind with an opaque object?
-    public readonly record struct NativeDetourInfo(IntPtr From, IntPtr To, int Size, int InternalKind);
+    public interface INativeDetourKind {
+        int Size { get; }
+    }
+
+    public readonly record struct NativeDetourInfo(IntPtr From, IntPtr To, INativeDetourKind InternalKind, object? InternalData) {
+        public int Size => InternalKind.Size;
+    }
 }
