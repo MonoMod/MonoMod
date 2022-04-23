@@ -3,6 +3,7 @@ using MonoMod.Core;
 using MonoMod.Core.Platforms;
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 var platTriple = PlatformTriple.Current;
 
@@ -28,13 +29,20 @@ var method3 = platTriple.GetRealDetourTarget(method, method2);
 
 var from = platTriple.GetNativeMethodBody(method);
 Console.WriteLine($"0x{from:X16}");
+
+var intermediate = Marshal.AllocHGlobal(16);
+Console.WriteLine($"Intermediate 0x{intermediate:X16}");
+
 var to = platTriple.GetNativeMethodBody(method3);
 Console.WriteLine($"0x{to:X16}");
 
-using var detour = platTriple.CreateNativeDetour(from, to);
+using (platTriple.CreateNativeDetour(from, intermediate))
+using (platTriple.CreateNativeDetour(intermediate, to)) {
+    var test = new TestClass();
+    _ = test.TestDetourMethod();
+}
 
-var test = new TestClass();
-_ = test.TestDetourMethod();
+GC.GetTotalMemory(true);
 
 class TestClass {
     [MethodImpl(MethodImplOptionsEx.NoInlining)]

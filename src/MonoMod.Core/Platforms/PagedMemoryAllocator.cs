@@ -28,6 +28,8 @@ namespace MonoMod.Core.Platforms {
             private readonly Page owner;
             private readonly uint offset;
 
+            public bool IsExecutable => owner.IsExecutable;
+
             public PageAllocation(Page page, uint offset, int size) {
                 owner = page;
                 this.offset = offset;
@@ -329,6 +331,9 @@ namespace MonoMod.Core.Platforms {
         }
 
         private bool DoCleanup() {
+            if (Environment.HasShutdownStarted)
+                return false;
+
             Volatile.Write(ref registeredForCleanup, 0);
 
             while (pagesToClean.TryTake(out var page)) {
@@ -397,7 +402,7 @@ namespace MonoMod.Core.Platforms {
                         // try high pages, while they're closer than low pages
                         while (
                             highIdx < highIdxBound &&
-                            (lowIdx < lowIdxBound || target - AllocList[lowIdx].BaseAddr < AllocList[highIdx].BaseAddr - target)
+                            (lowIdx < lowIdxBound || target - AllocList[lowIdx].BaseAddr > AllocList[highIdx].BaseAddr - target)
                         ) {
                             if (TryAllocWithPage(AllocList[highIdx], request, out allocated))
                                 return true;
@@ -407,7 +412,7 @@ namespace MonoMod.Core.Platforms {
                         // then try low pages, while they're closer than high pages
                         while (
                             lowIdx >= lowIdxBound &&
-                            (highIdx >= highIdxBound || target - AllocList[lowIdx].BaseAddr > AllocList[highIdx].BaseAddr - target)
+                            (highIdx >= highIdxBound || target - AllocList[lowIdx].BaseAddr < AllocList[highIdx].BaseAddr - target)
                         ) {
                             if (TryAllocWithPage(AllocList[lowIdx], request, out allocated))
                                 return true;
@@ -422,14 +427,14 @@ namespace MonoMod.Core.Platforms {
 
                 // we'll do the same approach for trying to find an existing page, but querying the OS for free pages to allocate
 
-                var lowPage = targetPage - pageSize;
-                var highPage = targetPage;
+                var lowPage = targetPage;
+                var highPage = targetPage + pageSize;
 
                 while (lowPage >= lowPageBound || highPage < highPageBound) {
                     // first check the high pages, while they're closer than low pages
                     while (
                         highPage < highPageBound &&
-                        (lowPage < lowPageBound || target - lowPage < highPage - target)
+                        (lowPage < lowPageBound || target - lowPage > highPage - target)
                     ) {
                         if (TryAllocNewPage(request, ref highPage, true, out allocated))
                             return true;
@@ -438,7 +443,7 @@ namespace MonoMod.Core.Platforms {
                     // then try low pages, while they're closer than high pages
                     while (
                         lowPage >= lowPageBound &&
-                        (highPage >= highPageBound || target - lowPage > highPage - target)
+                        (highPage >= highPageBound || target - lowPage < highPage - target)
                     ) {
                         if (TryAllocNewPage(request, ref lowPage, false, out allocated))
                             return true;

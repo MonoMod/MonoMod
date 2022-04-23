@@ -15,14 +15,14 @@ namespace MonoMod.Core.Platforms {
         /// <param name="info">The <see cref="NativeDetourInfo"/> representing the detour.</param>
         /// <param name="buffer">A buffer which will hold the byte sequence. It must be at least <see cref="NativeDetourInfo.Size"/> bytes in length.</param>
         /// <returns>The number of bytes written to the buffer.</returns>
-        int GetDetourBytes(NativeDetourInfo info, Span<byte> buffer);
+        int GetDetourBytes(NativeDetourInfo info, Span<byte> buffer, out IDisposable? allocationHandle);
     }
 
     public interface INativeDetourKind {
         int Size { get; }
     }
 
-    public readonly record struct NativeDetourInfo(IntPtr From, IntPtr To, INativeDetourKind InternalKind, object? InternalData) {
+    public readonly record struct NativeDetourInfo(IntPtr From, IntPtr To, INativeDetourKind InternalKind, IDisposable? InternalData) {
         public int Size => InternalKind.Size;
     }
 }

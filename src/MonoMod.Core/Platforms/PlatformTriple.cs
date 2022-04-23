@@ -4,9 +4,11 @@ using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Platforms {
     public interface INeedsPlatformTripleInit {
@@ -250,6 +252,8 @@ namespace MonoMod.Core.Platforms {
             return false;
         }
 
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+            Justification = "allocHandle is correctly transferred around, as needed")]
         public NativeDetour? CreateNativeDetour(IntPtr from, IntPtr to, bool undoable = true) {
             var detourInfo = Architecture.ComputeDetourInfo(from, to);
 
@@ -257,7 +261,7 @@ namespace MonoMod.Core.Platforms {
             Span<byte> detourData = stackalloc byte[detourInfo.Size];
 
             // get the detour bytes from the architecture
-            var size = Architecture.GetDetourBytes(detourInfo, detourData);
+            var size = Architecture.GetDetourBytes(detourInfo, detourData, out var allocHandle);
 
             // these should be the same
             Helpers.Assert(size == detourInfo.Size);
@@ -269,7 +273,15 @@ namespace MonoMod.Core.Platforms {
             System.PatchExecutableData(from, detourData, backup);
 
             // and now we just create the NativeDetour object, if its supposed to be undoable
-            return backup is not null ? new NativeDetour(this, from, to, backup) : null;
+            if (undoable) {
+                // if we're undoable, pass the allocHandle to the NativeDetour
+                return new NativeDetour(this, from, to, backup, allocHandle);
+            } else {
+                // otherwise, create a GCHandle to it and throw it away
+                _ = GCHandle.Alloc(allocHandle);
+                allocHandle = null;
+                return null;
+            }
         }
 
         public IntPtr GetNativeMethodBody(MethodBase method, bool followThunks = true) {

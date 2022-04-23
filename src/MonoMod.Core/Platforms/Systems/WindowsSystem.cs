@@ -148,7 +148,8 @@ namespace MonoMod.Core.Platforms.Systems {
                 if (Interop.Windows.VirtualQuery(pageAddr, out var buffer, sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) != 0) {
                     isFree = buffer.State == Interop.Windows.MEM.FREE;
                     allocBase = buffer.AllocationBase;
-                    allocSize = buffer.RegionSize;
+                    // RegionSize is relative to the provided pageAddr for some reason
+                    allocSize = ((nint) pageAddr + buffer.RegionSize) - allocBase;
 
                     return true;
                 } else {
