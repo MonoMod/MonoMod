@@ -1,4 +1,5 @@
 ﻿using Mono.Cecil.Cil;
+using MonoMod.Backports;
 using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
@@ -395,6 +396,9 @@ namespace MonoMod.Core.Platforms {
                         $"Glue:AbiFixup<{from.GetID(simple: true)},{to.GetID(simple: true)}>",
                         newRetType, argTypes.ToArray()
                     )) {
+                        dmd.Definition.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining |
+                            (Mono.Cecil.MethodImplAttributes) (int) MethodImplOptionsEx.AggressiveOptimization;
+
                         var il = dmd.GetILProcessor();
 
                         // load return buffer
