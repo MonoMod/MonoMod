@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Security;
+using System.Text;
 
 if (args.Length < 1) {
     Console.Error.WriteLine("Usage: filter <filter|gen> <args>...");
@@ -13,7 +15,7 @@ var cmd = args[0];
 if (cmd == "filter") {
     return FilterForTfm(args);
 } else if (cmd == "gen") {
-
+    return GenerateMSBuildFile(args);
 }
 
 Console.Error.WriteLine($"Unknown command '{cmd}'");
@@ -65,6 +67,100 @@ static int FilterForTfm(string[] args) {
     File.WriteAllLines(removeFile, toRemove);
 
     return 0;
+}
+
+const string TfmIdVar = "___tfmid";
+const string TfmVerVar = "___tfmver";
+
+static int GenerateMSBuildFile(string[] args) {
+    if (args.Length < 3) {
+        Console.Error.WriteLine("Usage: Filter gen <file list txt> <msbuild file (out)>");
+        return -1;
+    }
+
+    const string TrueCond = "(''=='')";
+
+    var msbFile = args[2];
+    var files = File.ReadAllLines(args[1]);
+
+    var matchConds = new List<(string File, string Cond)>(files.Length);
+
+    foreach (var file in files) {
+        if (Path.IsPathRooted(file)) {
+            matchConds.Add((file, TrueCond));
+            continue;
+        }
+
+        var expr = GetExprFor(file);
+
+        if (expr is null) {
+            matchConds.Add((file, TrueCond));
+            continue;
+        }
+
+        matchConds.Add((file, GetCondition(expr)));
+    }
+
+    var sb = new StringBuilder();
+    _ = sb.Append($@"<?xml version=""1.0"" encoding=""utf-8"" ?>
+<Project>
+    <PropertyGroup>
+        <{TfmIdVar}>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</{TfmIdVar}>
+        <{TfmVerVar}>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</{TfmVerVar}>
+    </PropertyGroup>
+");
+
+    foreach (var grp in matchConds.GroupBy(t => t.Cond)) {
+        _ = sb.Append($@"
+    <ItemGroup Condition=""!{grp.Key}"">");
+        foreach (var (f, _) in grp) {
+            var escaped = SecurityElement.Escape(f);
+            _ = sb.Append($@"
+        <Compile Remove=""{escaped}"" />
+        <None Include=""{escaped}"" />
+        <__CompileRemoved Include=""{escaped}"" />");
+        }
+        _ = sb.Append($@"
+    </ItemGroup>");
+    }
+
+    _ = sb.Append($@"
+</Project>");
+
+    File.WriteAllText(msbFile, sb.ToString(), Encoding.UTF8);
+
+    return 0;
+}
+
+static string GetCondition(TfmExpr expr) {
+    return expr switch {
+        IsKindTfmExpr(var kind) => $"('$({TfmIdVar})' == '{GetTfmKindString(kind)}')",
+        MatchesTfmExpr(var kind, var op, var ver) => $"('$({TfmIdVar})' == '{GetTfmKindString(kind)}' and {GetOpCompareBegin(op)}('$({TfmVerVar})','{ver}')))",
+        AndTfmExpr(var exprs) => "(" + string.Join(" and ", exprs.Select(GetCondition)) + ")",
+        OrTfmExpr(var exprs) => "(" + string.Join(separator: " or ", exprs.Select(GetCondition)) + ")",
+        _ => throw new InvalidOperationException()
+    };
+}
+
+static string GetTfmKindString(TfmKind kind) {
+    return kind switch {
+        TfmKind.Framework => ".NETFramework",
+        TfmKind.Core => ".NETCoreApp",
+        TfmKind.Standard => ".NETStandard",
+        _ => throw new InvalidOperationException()
+    };
+}
+
+static string GetOpCompareBegin(Operation op) {
+    return op switch {
+        Operation.Eq => "$([MSBuild]::VersionEquals",
+        Operation.Neq => "!$([MSBuild]::VersionEquals",
+        Operation.Lt => "$([MSBuild]::VersionLessThan",
+        Operation.Lte => "$([MSBuild]::VersionLessThanOrEquals",
+        Operation.Gt => "$([MSBuild]::VersionGreaterThan",
+        Operation.Gte => "$([MSBuild]::VersionGreaterThanOrEquals",
+        _ => throw new InvalidOperationException()
+    };
 }
 
 // TODO: basename processing, to be able to do `otherwise`
@@ -155,7 +251,7 @@ static TfmExpr? GetExprFor(string filename) {
         } else if (orBuilder.Count == 1) {
             andBuilder.Add(orBuilder[0]);
         } else {
-            andBuilder.Add(new OrTfmExpr(orBuilder.ToImmutable()));
+            andBuilder.Add(new OrTfmExpr(orBuilder.ToImmutable().Sort(CompareTfmExpr)));
         }
     }
 
@@ -164,7 +260,45 @@ static TfmExpr? GetExprFor(string filename) {
     } else if (andBuilder.Count == 1) {
         return andBuilder[0];
     } else {
-        return new AndTfmExpr(andBuilder.ToImmutable());
+        return new AndTfmExpr(andBuilder.ToImmutable().Sort(CompareTfmExpr));
+    }
+}
+
+static int CompareTfmExpr(TfmExpr a, TfmExpr b) {
+    var res = DoOneWay(a, b);
+    if (res != 0) {
+        return res;
+    }
+    res = DoOneWay(b, a);
+    return -res;
+
+    static int DoOneWay(TfmExpr a, TfmExpr b) {
+        if (a is OrTfmExpr or AndTfmExpr && b is not OrTfmExpr and not AndTfmExpr) {
+            return -1;
+        }
+        if (a is OrTfmExpr && b is AndTfmExpr) {
+            return -1;
+        }
+        if (a is IsKindTfmExpr isA && b is IsKindTfmExpr isB) {
+            return isA.Kind.CompareTo(isB.Kind);
+        }
+        if (a is MatchesTfmExpr mA && b is MatchesTfmExpr mB) {
+            var res = mA.Kind.CompareTo(mB.Kind);
+            if (res != 0)
+                return res;
+            res = mA.Operation.CompareTo(mB.Operation);
+            if (res != 0)
+                return res;
+            return mA.Version.CompareTo(mB.Version);
+        }
+        if (a is IsKindTfmExpr mulA && b is MatchesTfmExpr mulB) {
+            var res = mulA.Kind.CompareTo(mulB.Kind);
+            if (res != 0)
+                return res;
+            return -1;
+        }
+
+        return 0;
     }
 }
 
