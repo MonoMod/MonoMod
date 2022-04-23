@@ -18,6 +18,7 @@ namespace System.Threading {
                 throw new ArgumentException("lockTaken was true.", nameof(lockTaken));
             lockTaken = false;
             Monitor.Enter(obj);
+            lockTaken = true;
 #endif
         }
     }
