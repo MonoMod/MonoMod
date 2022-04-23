@@ -147,7 +147,8 @@ namespace MonoMod.Core.Platforms.Systems {
             public unsafe override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize) {
                 if (Interop.Windows.VirtualQuery(pageAddr, out var buffer, sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) != 0) {
                     isFree = buffer.State == Interop.Windows.MEM.FREE;
-                    allocBase = buffer.AllocationBase;
+                    allocBase = isFree ? buffer.BaseAddress : buffer.AllocationBase;
+
                     // RegionSize is relative to the provided pageAddr for some reason
                     allocSize = ((nint) pageAddr + buffer.RegionSize) - allocBase;
 
