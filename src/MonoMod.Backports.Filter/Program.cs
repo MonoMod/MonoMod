@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -16,14 +17,29 @@ if (cmd == "filter") {
     return FilterForTfm(args);
 } else if (cmd == "gen") {
     return GenerateMSBuildFile(args);
+} else if (cmd == "sort") {
+    return SortFiles(args);
 }
 
 Console.Error.WriteLine($"Unknown command '{cmd}'");
 return -1;
 
+static int SortFiles(string[] args) {
+    if (args.Length < 3) {
+        Console.Error.WriteLine("Usage: Filter sort <file list txt> <sorted list (out)>");
+        return -1;
+    }
+    
+    var list = File.ReadAllLines(args[1]);
+    Array.Sort(list);
+    File.WriteAllLines(args[2], list);
+    
+    return 0;
+}
+
 static int FilterForTfm(string[] args) {
     if (args.Length < 5) {
-        Console.Error.WriteLine("Usafe: Filter filter <file list txt> <tfm type> <tfm version> <remove list txt (out)>");
+        Console.Error.WriteLine("Usage: Filter filter <file list txt> <tfm type> <tfm version> <remove list txt (out)>");
         return -1;
     }
 
@@ -71,6 +87,7 @@ static int FilterForTfm(string[] args) {
 
 const string TfmIdVar = "___tfmid";
 const string TfmVerVar = "___tfmver";
+const string CompileRemovedItem = "___CompileRemoved";
 
 static int GenerateMSBuildFile(string[] args) {
     if (args.Length < 3) {
@@ -107,24 +124,30 @@ static int GenerateMSBuildFile(string[] args) {
     <PropertyGroup>
         <{TfmIdVar}>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</{TfmIdVar}>
         <{TfmVerVar}>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</{TfmVerVar}>
+        <CompileRemovedItem>{CompileRemovedItem}</CompileRemovedItem>
     </PropertyGroup>
+    <ItemGroup>
+        <{CompileRemovedItem} Include=""@(Compile)"" />
+    </ItemGroup>
 ");
 
     foreach (var grp in matchConds.GroupBy(t => t.Cond)) {
-        _ = sb.Append($@"
+        _ = sb.Append(CultureInfo.InvariantCulture, $@"
     <ItemGroup Condition=""!{grp.Key}"">");
         foreach (var (f, _) in grp) {
             var escaped = SecurityElement.Escape(f);
             _ = sb.Append($@"
-        <Compile Remove=""{escaped}"" />
-        <None Include=""{escaped}"" />
-        <__CompileRemoved Include=""{escaped}"" />");
+        <Compile Remove=""{escaped}"" />");
         }
         _ = sb.Append($@"
     </ItemGroup>");
     }
 
     _ = sb.Append($@"
+    <ItemGroup>
+        <{CompileRemovedItem} Remove=""@(Compile)"" />
+        <None Include=""@({CompileRemovedItem})"" />
+    </ItemGroup>
 </Project>");
 
     File.WriteAllText(msbFile, sb.ToString(), Encoding.UTF8);
