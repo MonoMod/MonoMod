@@ -405,6 +405,7 @@ namespace System.Runtime.CompilerServices {
             }
         }
 
+        [CLSCompliant(false)]
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(UIntPtr value) {
             if (UIntPtr.Size == 4) {
@@ -413,6 +414,7 @@ namespace System.Runtime.CompilerServices {
                 AppendFormatted((ulong) value);
             }
         }
+        [CLSCompliant(false)]
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(UIntPtr value, string? format) {
             if (UIntPtr.Size == 4) {
@@ -421,6 +423,7 @@ namespace System.Runtime.CompilerServices {
                 AppendFormatted((ulong) value, format);
             }
         }
+        [CLSCompliant(false)]
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(UIntPtr value, int alignment) {
             if (UIntPtr.Size == 4) {
@@ -429,6 +432,7 @@ namespace System.Runtime.CompilerServices {
                 AppendFormatted((ulong) value, alignment);
             }
         }
+        [CLSCompliant(false)]
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(UIntPtr value, int alignment, string? format) {
             if (UIntPtr.Size == 4) {
