@@ -12,10 +12,10 @@ namespace MonoMod.Core.Utils {
         Rel64 = 0b10,
         Abs32 = 0b01,
         Abs64 = 0b11,
-        PrecodeFixupThunk_Rel32 = 0b100,
-        PrecodeFixupThunk_Rel64 = 0b110,
-        PrecodeFixupThunk_Abs32 = 0b101,
-        PrecodeFixupThunk_Abs64 = 0b111,
+        PrecodeFixupThunkRel32 = 0b100,
+        PrecodeFixupThunkRel64 = 0b110,
+        PrecodeFixupThunkAbs32 = 0b101,
+        PrecodeFixupThunkAbs64 = 0b111,
     }
 
     public static class AddressKindExtensions {

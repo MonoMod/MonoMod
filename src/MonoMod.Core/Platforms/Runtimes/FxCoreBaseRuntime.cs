@@ -1,12 +1,10 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal abstract class FxCoreBaseRuntime : IRuntime {
@@ -102,6 +100,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return method;
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "CreateDelegate throwing is expected and wanted, as it forces the method to be compiled. " +
+            "We don't want those exceptions propagating higher up the stack though.")]
         public virtual RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             // Compile the method handle before getting our hands on the final method handle.
             if (method is DynamicMethod dm) {
@@ -127,7 +128,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         }
 
         // TODO: maybe create helpers to make this not rediculously slow
-        private bool TryInvokeBclCompileMethod(DynamicMethod dm, out RuntimeMethodHandle handle) {
+        private static bool TryInvokeBclCompileMethod(DynamicMethod dm, out RuntimeMethodHandle handle) {
             handle = default;
             if (_RuntimeHelpers__CompileMethod is null || _DynamicMethod_GetMethodDescriptor is null)
                 return false;

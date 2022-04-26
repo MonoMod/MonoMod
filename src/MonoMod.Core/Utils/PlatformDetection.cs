@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
@@ -118,6 +117,9 @@ namespace MonoMod.Core.Utils {
             }
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "This method failing to detect information should not be a hard error. Exceptions thrown because of " +
+            "issues with P/Invoke and the like should not prevent the OS and arch info from being populated.")]
         private static void DetectInfoPosix(ref OSKind os, ref ArchitectureKind arch) {
             try {
                 // we want to call libc's uname() function
@@ -278,6 +280,9 @@ namespace MonoMod.Core.Utils {
             }
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "In old versions of Framework, there is no Version.TryParse, and so we must call the constructor " +
+            "and catch any exception that may ocurr.")]
         private static (RuntimeKind Rt, Version Ver) DetermineRuntimeInfo() {
             var runtime = RuntimeKind.Unknown;
             Version? version = null; // an unknown version

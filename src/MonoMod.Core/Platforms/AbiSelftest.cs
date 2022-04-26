@@ -156,6 +156,10 @@ namespace MonoMod.Core.Platforms {
 
             [MethodImpl(MethodImplOptionsEx.NoInlining)]
             public SelftestRetbufStruct ArgumentOrderTest(ref SelftestArgumentOrder argOrder1, ref SelftestArgumentOrder argOrder2, ref SelftestHelper self) {
+                _ = filler;
+                _ = argOrder1;
+                _ = argOrder2;
+                _ = self;
                 throw new InvalidOperationException("ABI selftest failed! The method was not detoured.");
             }
         }
@@ -361,6 +365,9 @@ namespace MonoMod.Core.Platforms {
 
         [MethodImpl(MethodImplOptionsEx.NoInlining)]
         private static T RetBufTest<T>(ref bool hasBuf1, in bool bufFirst, ref bool hasBuf2) where T : struct {
+            _ = hasBuf1;
+            _ = bufFirst;
+            _ = hasBuf2;
             throw new InvalidOperationException("Call should have been detoured");
         }
 
@@ -429,6 +436,9 @@ namespace MonoMod.Core.Platforms {
 
         [MethodImpl(MethodImplOptionsEx.NoInlining)]
         private static bool PassByValueTest<T>(T value, ref int stackRef, ReadOnlySpan<byte> sentinel) where T : struct {
+            _ = value;
+            _ = stackRef;
+            _ = sentinel;
             throw new InvalidOperationException("Call should have been detoured");
         }
 

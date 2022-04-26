@@ -8,8 +8,16 @@ using System.Threading;
 
 namespace MonoMod.Core.Utils {
 
+    // TODO: make some of these helpers public
+
     internal sealed class AssertionFailedException : Exception {
         private const string AssertFailed = "Assertion failed! ";
+
+        public AssertionFailedException() : base()
+        {
+            Message = "";
+        }
+
         public AssertionFailedException(string? message) : base(AssertFailed + message) {
             Message = message ?? "";
         }

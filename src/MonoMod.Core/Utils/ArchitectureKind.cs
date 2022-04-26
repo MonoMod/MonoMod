@@ -1,4 +1,8 @@
-﻿namespace MonoMod.Core.Utils {
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace MonoMod.Core.Utils {
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "x86_64 is the name of the architecture, at least for Intel. AMD64 is another reasonable name.")]
     public enum ArchitectureKind {
         Unknown,
         Bits64 = 1,

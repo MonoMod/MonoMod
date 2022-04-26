@@ -49,9 +49,12 @@ namespace MonoMod.Core.Platforms {
 
             public MethodBase Target { get; }
 
+            // These fields are disposed if needed, just through some more indirections than is typical.
+#pragma warning disable CA2213 // Disposable fields should be disposed
             private IDisposable? srcPin;
             private IDisposable? dstPin;
             private NativeDetour? nativeDetour;
+#pragma warning restore CA2213 // Disposable fields should be disposed
 
             [MemberNotNullWhen(true, nameof(nativeDetour))]
             public bool IsApplied => nativeDetour is not null;
