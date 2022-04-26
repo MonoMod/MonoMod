@@ -243,7 +243,7 @@ namespace MonoMod.Core.Platforms {
             return null;
         }
 
-        public bool DisableInliningIfPossible(MethodBase method) {
+        public bool TryDisableInlining(MethodBase method) {
             if (SupportedFeatures.Has(RuntimeFeature.DisableInlining)) {
                 Runtime.DisableInlining(method);
                 return true;
