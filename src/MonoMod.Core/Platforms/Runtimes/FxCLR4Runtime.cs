@@ -26,9 +26,6 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 PlatformDetection.RuntimeVersion.Minor >= 5) &&
                 platformTriple.System.DefaultAbi is { } abi) {
                 AbiCore = AbiForCoreFx45X64(abi);
-            } else if (AbiCore is null) {
-                // TODO: run selftests to detect
-                //throw new PlatformNotSupportedException();
             }
         }
 
