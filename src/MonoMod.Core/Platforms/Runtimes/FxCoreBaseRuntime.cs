@@ -185,11 +185,11 @@ namespace MonoMod.Core.Platforms.Runtimes {
                  * - SOME interface methods seem to follow similar rules, but ldftn isn't enough.
                  * - Can't use GetBaseDefinition to check for interface methods as that holds up ALC unloading. (Mapping info is fine though...)
                  */
-                foreach (Type intf in method.DeclaringType.GetInterfaces()) {
+                /*foreach (Type intf in method.DeclaringType.GetInterfaces()) {
                     if (method.DeclaringType.GetInterfaceMap(intf).TargetMethods.Contains(method)) {
                         break;
                     }
-                }
+                }*/
 
                 return method.GetLdftnPointer();
             } else {
