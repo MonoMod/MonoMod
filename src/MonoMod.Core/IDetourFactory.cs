@@ -9,7 +9,11 @@ namespace MonoMod.Core {
 
         FeatureFlags SupportedFeatures { get; }
 
-        ICoreDetour CreateDetour(MethodBase source, MethodBase dest);
+        ICoreDetour CreateDetour(CreateDetourRequest request);
+    }
+
+    public readonly record struct CreateDetourRequest(MethodBase Source, MethodBase Target) {
+        public bool ApplyByDefault { get; init; } = true;
     }
 
     public static class DetourFactory {
@@ -22,5 +26,10 @@ namespace MonoMod.Core {
 
         private static PlatformTripleDetourFactory CreateDefaultFactory()
             => new PlatformTripleDetourFactory(PlatformTriple.Current);
+
+        public static ICoreDetour CreateDetour(this IDetourFactory factory, MethodBase source, MethodBase target, bool applyByDefault = true) {
+            Helpers.ThrowIfNull(factory);
+            return factory.CreateDetour(new CreateDetourRequest(source, target) { ApplyByDefault = applyByDefault });
+        }
     }
 }

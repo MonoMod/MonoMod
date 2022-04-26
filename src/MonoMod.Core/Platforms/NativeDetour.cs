@@ -51,6 +51,7 @@ namespace MonoMod.Core.Platforms {
             if (disposing) {
                 AllocHandle?.Dispose();
             }
+            disposedValue = true;
         }
 
         private void Dispose(bool disposing) {

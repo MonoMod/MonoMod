@@ -5,13 +5,18 @@ using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Core {
-    public interface ICoreDetour {
+    public interface ICoreDetour : IDisposable {
 
         MethodBase Source { get; }
-        MethodBase Destination { get; }
+        MethodBase Target { get; }
+
+        bool IsApplied { get; }
+        bool IsAttached { get; }
 
         void Apply();
         void Undo();
-        void Free();
+
+        void Detatch();
+        void Attach();
     }
 }
