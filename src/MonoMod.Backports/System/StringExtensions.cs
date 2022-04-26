@@ -7,15 +7,33 @@ using System.Runtime.CompilerServices;
 namespace System {
     public static class StringExtensions {
 
-        // TODO: properly polyfill StringComparison checks for old runtimes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Replace(this string self, string oldValue, string newValue, StringComparison comparison) {
             if (self is null)
                 ThrowHelper.ThrowArgumentNullException(nameof(self));
+            if (oldValue is null)
+                ThrowHelper.ThrowArgumentNullException(nameof(oldValue));
+            if (newValue is null)
+                ThrowHelper.ThrowArgumentNullException(nameof(newValue));
+
 #if HAS_STRING_COMPARISON
             return self.Replace(oldValue, newValue, comparison);
 #else
-            return self.Replace(oldValue, newValue);
+            // we're gonna do a bit of tomfoolery
+            var ish = new DefaultInterpolatedStringHandler(oldValue.Length, 0);
+            var from = self.AsSpan();
+            var old = oldValue.AsSpan();
+            while (true) {
+                var idx = from.IndexOf(old, comparison);
+                if (idx < 0) {
+                    ish.AppendFormatted(from);
+                    break;
+                }
+                ish.AppendFormatted(from.Slice(0, idx));
+                ish.AppendLiteral(newValue);
+                from = from.Slice(idx + old.Length);
+            }
+            return ish.ToStringAndClear();
 #endif
         }
 
@@ -26,7 +44,7 @@ namespace System {
 #if HAS_STRING_COMPARISON
             return self.Contains(value, comparison);
 #else
-            return self.Contains(value);
+            return self.AsSpan().Contains(value.AsSpan(), comparison);
 #endif
         }
 
@@ -37,7 +55,8 @@ namespace System {
 #if HAS_STRING_COMPARISON
             return self.GetHashCode(comparison);
 #else
-            return self.GetHashCode();
+
+            return StringComparerEx.FromComparison(comparison).GetHashCode(self);
 #endif
         }
 
@@ -48,7 +67,9 @@ namespace System {
 #if HAS_STRING_COMPARISON
             return self.IndexOf(value, comparison);
 #else
-            return self.IndexOf(value);
+            Span<char> chr = stackalloc char[1];
+            chr[0] = value;
+            return self.AsSpan().IndexOf(chr, comparison);
 #endif
         }
     }
