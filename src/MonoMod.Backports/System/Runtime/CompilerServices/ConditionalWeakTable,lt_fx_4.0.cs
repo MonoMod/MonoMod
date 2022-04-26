@@ -9,7 +9,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace System.Runtime.CompilerServices {
-    public sealed class ConditionalWeakTable<TKey, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+
+    public sealed class ConditionalWeakTable<TKey, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TValue> : ICWTEnumerable<KeyValuePair<TKey, TValue>>
         where TKey : class
         where TValue : class? {
         // Lifetimes of keys and values:
@@ -220,7 +221,7 @@ namespace System.Runtime.CompilerServices {
         /// however, such as not returning entries that were collected or removed after the enumerator
         /// was retrieved but before they were enumerated.
         /// </remarks>
-        IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator() {
+        IEnumerator<KeyValuePair<TKey, TValue>> ICWTEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator() {
             lock (_lock) {
                 Container c = _container;
                 return c is null || c.FirstFreeEntry == 0 ?
@@ -229,7 +230,7 @@ namespace System.Runtime.CompilerServices {
             }
         }
 
-        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<KeyValuePair<TKey, TValue>>) this).GetEnumerator();
+        //IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<KeyValuePair<TKey, TValue>>) this).GetEnumerator();
 
         /// <summary>Provides an enumerator for the table.</summary>
         private sealed class Enumerator : IEnumerator<KeyValuePair<TKey, TValue>> {

@@ -4,11 +4,18 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 
 namespace System.Runtime.CompilerServices {
+
+    // WE use this for our implementation of CWT so that Roslyn always uses this extension method to enumerate it on old frameworks
+    internal interface ICWTEnumerable<T> {
+        IEnumerator<T> GetEnumerator();
+    }
+
     public static class ConditionalWeakTableExtensions {
 #if CWT_NOT_ENUMERABLE
         private static class CWTInfoHolder<TKey, TValue> where TKey : class where TValue : class? {
@@ -26,9 +33,16 @@ namespace System.Runtime.CompilerServices {
         }
 #endif
 
+        [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
+            Justification = "This check is expected to be always true for some targets.")]
         public static IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class? {
-            if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
-
+            if (self is null) {
+                ThrowHelper.ThrowArgumentNullException(nameof(self));
+                // dum dum compiler
+                return null!;
+            } else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwtEnum) {
+                return cwtEnum.GetEnumerator();
+            } else if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
                 return enumerable.GetEnumerator();
             } else {
 #if !CWT_NOT_ENUMERABLE

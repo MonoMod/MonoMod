@@ -4,7 +4,6 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
-using System.Runtime.InteropServices;
 
 namespace System.Runtime.CompilerServices {
     /// <summary>Provides a handler used by the language compiler to process interpolated strings into <see cref="string"/> instances.</summary>
@@ -270,6 +269,15 @@ namespace System.Runtime.CompilerServices {
                 return;
             }
 
+            if (typeof(T) == typeof(IntPtr)) {
+                AppendFormatted(Unsafe.As<T, IntPtr>(ref value));
+                return;
+            }
+            if (typeof(T) == typeof(UIntPtr)) {
+                AppendFormatted(Unsafe.As<T, UIntPtr>(ref value));
+                return;
+            }
+
             // Check first for IFormattable, even though we'll prefer to use ISpanFormattable, as the latter
             // requires the former.  For value types, it won't matter as the type checks devolve into
             // JIT-time constants.  For reference types, they're more likely to implement IFormattable
@@ -308,6 +316,15 @@ namespace System.Runtime.CompilerServices {
             // If there's a custom formatter, always use it.
             if (_hasCustomFormatter) {
                 AppendCustomFormatter(value, format);
+                return;
+            }
+
+            if (typeof(T) == typeof(IntPtr)) {
+                AppendFormatted(Unsafe.As<T, IntPtr>(ref value), format);
+                return;
+            }
+            if (typeof(T) == typeof(UIntPtr)) {
+                AppendFormatted(Unsafe.As<T, UIntPtr>(ref value), format);
                 return;
             }
 
@@ -370,10 +387,12 @@ namespace System.Runtime.CompilerServices {
 
         #region AppendFormatted overloads for IntPtr casting them to normal integer types
         // These are needed because on older runtimes IntPtr and UIntPtr don't implement IFormattable, and so
-        // cannot be formatted with format arguments.
+        // cannot be formatted with format arguments. They are only called via typeof(T) checks in the generic
+        // implementations so that they don't get called by user code, making it incompatable with the real
+        // BCL implementation
 
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(IntPtr value) {
+        private void AppendFormatted(IntPtr value) {
             if (IntPtr.Size == 4) {
                 AppendFormatted((int) value);
             } else {
@@ -381,64 +400,28 @@ namespace System.Runtime.CompilerServices {
             }
         }
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(IntPtr value, string? format) {
+        private void AppendFormatted(IntPtr value, string? format) {
             if (IntPtr.Size == 4) {
                 AppendFormatted((int) value, format);
             } else {
                 AppendFormatted((long) value, format);
             }
         }
-        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(IntPtr value, int alignment) {
-            if (IntPtr.Size == 4) {
-                AppendFormatted((int) value, alignment);
-            } else {
-                AppendFormatted((long) value, alignment);
-            }
-        }
-        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(IntPtr value, int alignment, string? format) {
-            if (IntPtr.Size == 4) {
-                AppendFormatted((int) value, alignment, format);
-            } else {
-                AppendFormatted((long) value, alignment, format);
-            }
-        }
 
-        [CLSCompliant(false)]
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(UIntPtr value) {
+        private void AppendFormatted(UIntPtr value) {
             if (UIntPtr.Size == 4) {
                 AppendFormatted((uint) value);
             } else {
                 AppendFormatted((ulong) value);
             }
         }
-        [CLSCompliant(false)]
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(UIntPtr value, string? format) {
+        private void AppendFormatted(UIntPtr value, string? format) {
             if (UIntPtr.Size == 4) {
                 AppendFormatted((uint) value, format);
             } else {
                 AppendFormatted((ulong) value, format);
-            }
-        }
-        [CLSCompliant(false)]
-        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(UIntPtr value, int alignment) {
-            if (UIntPtr.Size == 4) {
-                AppendFormatted((uint) value, alignment);
-            } else {
-                AppendFormatted((ulong) value, alignment);
-            }
-        }
-        [CLSCompliant(false)]
-        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(UIntPtr value, int alignment, string? format) {
-            if (UIntPtr.Size == 4) {
-                AppendFormatted((uint) value, alignment, format);
-            } else {
-                AppendFormatted((ulong) value, alignment, format);
             }
         }
         #endregion

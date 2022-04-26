@@ -11,6 +11,12 @@ using (DetourFactory.Current.CreateDetour(method, method2, true)) {
     _ = test.TestDetourMethod();
 }
 
+var cwt = new ConditionalWeakTable<object, object>();
+
+foreach (var entry in cwt) {
+    Console.WriteLine(entry);
+}
+
 GC.GetTotalMemory(true);
 
 class TestClass {
@@ -25,7 +31,7 @@ class TestClass {
 
     [MethodImpl(MethodImplOptionsEx.NoInlining)]
     public static FunkyStruct Target(TestClass self) {
-        Console.WriteLine("Method successfully detoured");
+        Console.WriteLine($"Method successfully detoured {self} te");
         return default;
     }
 }

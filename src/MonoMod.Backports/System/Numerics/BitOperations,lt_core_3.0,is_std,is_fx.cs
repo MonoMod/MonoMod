@@ -63,6 +63,7 @@ namespace System.Numerics {
         [CLSCompliant(false)]
         public static bool IsPow2(ulong value) => (value & (value - 1)) == 0 && value != 0;
 
+        /*
         /// <summary>
         /// Evaluate whether a given integral value is a power of 2.
         /// </summary>
@@ -77,6 +78,7 @@ namespace System.Numerics {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
         public static bool IsPow2(nuint value) => (value & (value - 1)) == 0 && value != 0;
+        */
 
         /// <summary>Round the given integral value up to a power of 2.</summary>
         /// <param name="value">The value.</param>
@@ -119,6 +121,7 @@ namespace System.Numerics {
             return value + 1;
         }
 
+        /*
         /// <summary>
         /// Round the given integral value up to a power of 2.
         /// </summary>
@@ -136,6 +139,7 @@ namespace System.Numerics {
                 return (nuint) RoundUpToPowerOf2((uint) value);
             }
         }
+        */
 
         /// <summary>
         /// Count the number of leading zero bits in a mask.
@@ -170,6 +174,7 @@ namespace System.Numerics {
             return LeadingZeroCount(hi);
         }
 
+        /*
         /// <summary>
         /// Count the number of leading zero bits in a mask.
         /// Similar in behavior to the x86 instruction LZCNT.
@@ -184,6 +189,7 @@ namespace System.Numerics {
                 return LeadingZeroCount((uint) value);
             }
         }
+        */
 
         /// <summary>
         /// Returns the integer (floor) log of the specified value, base 2.
@@ -220,6 +226,7 @@ namespace System.Numerics {
             return 32 + Log2(hi);
         }
 
+        /*
         /// <summary>
         /// Returns the integer (floor) log of the specified value, base 2.
         /// Note that by convention, input value 0 returns 0 since log(0) is undefined.
@@ -234,6 +241,7 @@ namespace System.Numerics {
                 return Log2((uint) value);
             }
         }
+        */
 
         /// <summary>
         /// Returns the integer (floor) log of the specified value, base 2.
@@ -406,6 +414,7 @@ namespace System.Numerics {
             return TrailingZeroCount(lo);
         }
 
+        /*
         /// <summary>
         /// Count the number of trailing zero bits in a mask.
         /// Similar in behavior to the x86 instruction TZCNT.
@@ -429,6 +438,7 @@ namespace System.Numerics {
                 return TrailingZeroCount((uint) value);
             }
         }
+        */
 
         /// <summary>
         /// Rotates the specified value left by the specified number of bits.
