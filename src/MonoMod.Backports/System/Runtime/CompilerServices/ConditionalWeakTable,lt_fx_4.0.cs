@@ -5,7 +5,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace System.Runtime.CompilerServices {
@@ -32,6 +31,9 @@ namespace System.Runtime.CompilerServices {
         private readonly object _lock;          // This lock protects all mutation of data in the table.  Readers do not take this lock.
         private volatile Container _container;  // The actual storage for the table; swapped out as the table grows.
         private int _activeEnumeratorRefCount;  // The number of outstanding enumerators on the table
+
+        private CWTEnumerable<TKey, TValue>? lazySelfEnumerable;
+        IEnumerable<KeyValuePair<TKey, TValue>> ICWTEnumerable<KeyValuePair<TKey, TValue>>.SelfEnumerable => lazySelfEnumerable ??= new CWTEnumerable<TKey, TValue>(this);
 
         public ConditionalWeakTable() {
             _lock = new object();
