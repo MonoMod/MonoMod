@@ -58,15 +58,15 @@ namespace MonoMod.Core.Utils {
                 }
                 platID = platID?.ToUpperInvariant() ?? "";
 
-                if (platID.Contains("WIN")) {
+                if (platID.Contains("WIN", StringComparison.Ordinal)) {
                     os = OSKind.Windows;
-                } else if (platID.Contains("MAC") || platID.Contains("OSX")) {
+                } else if (platID.Contains("MAC", StringComparison.Ordinal) || platID.Contains("OSX", StringComparison.Ordinal)) {
                     os = OSKind.OSX;
-                } else if (platID.Contains("LIN")) {
+                } else if (platID.Contains("LIN", StringComparison.Ordinal)) {
                     os = OSKind.Linux;
-                } else if (platID.Contains("BSD")) {
+                } else if (platID.Contains("BSD", StringComparison.Ordinal)) {
                     os = OSKind.BSD;
-                } else if (platID.Contains("UNIX")) {
+                } else if (platID.Contains("UNIX", StringComparison.Ordinal)) {
                     os = OSKind.Posix;
                 }
             }
@@ -167,27 +167,27 @@ namespace MonoMod.Core.Utils {
                 MMDbgLog.Log($"uname() call returned {kernelName} {machineName}");
 
                 // now we want to inspect the fields and select something useful from them
-                if (kernelName.Contains("LINUX")) { // A Linux kernel
+                if (kernelName.Contains("LINUX", StringComparison.Ordinal)) { // A Linux kernel
                     os = OSKind.Linux;
-                } else if (kernelName.Contains("DARWIN")) { // the MacOS kernel
+                } else if (kernelName.Contains("DARWIN", StringComparison.Ordinal)) { // the MacOS kernel
                     os = OSKind.OSX;
-                } else if (kernelName.Contains("BSD")) { // a BSD kernel
+                } else if (kernelName.Contains("BSD", StringComparison.Ordinal)) { // a BSD kernel
                     // Note: I'm fairly sure that the different BSDs vary quite a lot, so it may be worth checking with more specificity here
                     os = OSKind.BSD;
                 }
                 // TODO: fill in other known kernel names
 
-                if (machineName.Contains("X86_64")) {
+                if (machineName.Contains("X86_64", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.x86_64;
-                } else if (machineName.Contains("AMD64")) {
+                } else if (machineName.Contains("AMD64", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.x86_64;
-                } else if (machineName.Contains("X86")) {
+                } else if (machineName.Contains("X86", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.x86;
-                } else if (machineName.Contains("AARCH64")) {
+                } else if (machineName.Contains("AARCH64", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.Arm64;
-                } else if (machineName.Contains("ARM64")) {
+                } else if (machineName.Contains("ARM64", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.Arm64;
-                } else if (machineName.Contains("ARM")) {
+                } else if (machineName.Contains("ARM", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.Arm;
                 }
                 // TODO: fill in other values for machine
