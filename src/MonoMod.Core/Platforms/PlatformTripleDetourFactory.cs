@@ -66,7 +66,9 @@ namespace MonoMod.Core.Platforms {
                 dstPin = triple.PinMethodIfNeeded(realTarget);
 
                 var from = triple.GetNativeMethodBody(Source);
-                var to = triple.GetNativeMethodBody(realTarget);
+                // we don't really want to follow the method thunks for our target, because some runtimes may recompile it
+                // and we want to get that benefit
+                var to = triple.GetNativeMethodBody(realTarget, followThunks: false);
 
                 nativeDetour = triple.CreateNativeDetour(from, to);
             }
