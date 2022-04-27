@@ -5,5 +5,12 @@ using System.Text;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core50Runtime : Core31Runtime {
+
+        private static readonly Guid JitVersionGuid = new Guid(
+            0xa5eec3a4, 0x4176, 0x43a7,
+            0x8c, 0x2b, 0xa0, 0x5b, 0x55, 0x1d, 0x4f, 0x49);
+
+        protected override Guid ExpectedJitVersion => JitVersionGuid;
+        protected override int VtableGetVersionIdentifierIndex => 2;
     }
 }

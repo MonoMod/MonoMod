@@ -1,5 +1,9 @@
 ﻿using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal abstract class CoreBaseRuntime : FxCoreBaseRuntime, INeedsPlatformTripleInit {
@@ -62,6 +66,39 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 platformTriple.System.DefaultAbi is { } abi) {
                 AbiCore = AbiForCoreFx45X64(abi);
             }
+
+            InstallJitHook(JitObject);
         }
+
+        protected virtual string GetClrJitPath() {
+            var currentProc = Process.GetCurrentProcess();
+            var clrjitModule = currentProc.Modules.Cast<ProcessModule>()
+                .FirstOrDefault(m => m.FileName is not null && Path.GetFileNameWithoutExtension(m.FileName).EndsWith("clrjit", StringComparison.Ordinal));
+            if (clrjitModule is null)
+                throw new PlatformNotSupportedException("Could not locate clrjit library");
+
+            Helpers.DAssert(clrjitModule.FileName is not null);
+            return clrjitModule.FileName;
+        }
+
+        private IntPtr? lazyJitObject;
+        protected IntPtr JitObject => lazyJitObject ??= GetJitObject();
+
+        private unsafe IntPtr GetJitObject() {
+            var path = GetClrJitPath();
+
+            if (!DynDll.TryOpenLibrary(path, out var clrjit, true))
+                throw new PlatformNotSupportedException("Could not open clrjit library");
+
+            try {
+                return ((delegate* unmanaged[Stdcall]<IntPtr>) DynDll.GetFunction(clrjit, "getJit"))();
+            } catch {
+                DynDll.CloseLibrary(clrjit);
+                throw;
+            }
+        }
+
+        protected PlatformTriple Triple => platformTriple;
+        protected abstract void InstallJitHook(IntPtr jit);
     }
 }
