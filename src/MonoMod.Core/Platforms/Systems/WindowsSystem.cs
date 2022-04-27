@@ -42,22 +42,34 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         // if the provided backup isn't large enough, the data isn't backed up
-        public unsafe void PatchExecutableData(IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup) {
+        public unsafe void PatchData(PatchTargetKind patchKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup) {
             // TODO: should this be thread-safe? It definitely is not right now.
 
             // Update the protection of this
-            // Because Windows is Windows, we don't actually need to do anything except make sure we're in RWX
-            SetProtection(patchTarget, data.Length);
+            if (patchKind == PatchTargetKind.Executable) {
+                // Because Windows is Windows, we don't actually need to do anything except make sure we're in RWX
+                ProtectRWX(patchTarget, data.Length);
+            } else {
+                ProtectRW(patchTarget, data.Length);
+            }
 
             var target = new Span<byte>((void*) patchTarget, data.Length);
             // now we copy target to backup, then data to target, then flush the instruction cache
             _ = target.TryCopyTo(backup);
             data.CopyTo(target);
 
-            FlushInstructionCache(patchTarget, data.Length);
+            if (patchKind == PatchTargetKind.Executable) {
+                FlushInstructionCache(patchTarget, data.Length);
+            }
         }
 
-        private static void SetProtection(IntPtr addr, nint size) {
+        private static void ProtectRW(IntPtr addr, nint size) {
+            if (!Interop.Windows.VirtualProtect(addr, size, Interop.Windows.PAGE.READWRITE, out _)) {
+                throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
+            }
+        }
+
+        private static void ProtectRWX(IntPtr addr, nint size) {
             if (!Interop.Windows.VirtualProtect(addr, size, Interop.Windows.PAGE.EXECUTE_READWRITE, out _)) {
                 throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
             }

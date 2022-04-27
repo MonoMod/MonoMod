@@ -47,7 +47,7 @@ namespace MonoMod.Core.Platforms {
 
         private void UndoCore(bool disposing) {
             // literally just patch again, but the other direction
-            triple.System.PatchExecutableData(Source, DetourBackup.Span, default);
+            triple.System.PatchData(PatchTargetKind.Executable, Source, DetourBackup.Span, default);
             if (disposing) {
                 AllocHandle?.Dispose();
             }

@@ -270,7 +270,7 @@ namespace MonoMod.Core.Platforms {
             var backup = undoable ? new byte[detourInfo.Size] : null;
 
             // now we can apply the detour through the system
-            System.PatchExecutableData(from, detourData, backup);
+            System.PatchData(PatchTargetKind.Executable, from, detourData, backup);
 
             // and now we just create the NativeDetour object, if its supposed to be undoable
             if (undoable) {

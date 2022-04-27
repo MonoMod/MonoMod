@@ -11,6 +11,11 @@ namespace MonoMod.Core.Platforms {
 
         IMemoryAllocator MemoryAllocator { get; }
 
-        void PatchExecutableData(IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup);
+        void PatchData(PatchTargetKind targetKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup);
+    }
+
+    public enum PatchTargetKind {
+        Executable,
+        ReadOnly,
     }
 }
