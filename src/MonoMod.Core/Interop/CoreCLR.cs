@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using static MonoMod.Core.Interop.CoreCLR.V30;
 
 namespace MonoMod.Core.Interop {
     internal static unsafe class CoreCLR {
@@ -9,18 +8,44 @@ namespace MonoMod.Core.Interop {
             // There are more, but I don't particularly care about them
         }
 
-        public record struct InvokeCompileMethodPtr(
-            delegate*<
-                IntPtr, // method
-                IntPtr, // ICorJitCompiler*
-                IntPtr, // ICorJitInfo*
-                in CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
-                uint,
-                out byte*,
-                out uint,
-                CorJitResult
-            > InvokeCompileMethod
-        );
+        public struct InvokeCompileMethodPtr {
+            private IntPtr methodPtr;
+            public InvokeCompileMethodPtr(
+                delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitCompiler*
+                    IntPtr, // ICorJitInfo*
+                    in V30.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
+                    uint,
+                    out byte*,
+                    out uint,
+                    CorJitResult
+                > ptr
+            ) {
+                methodPtr = (IntPtr) ptr;
+            }
+
+            public delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitCompiler*
+                    IntPtr, // ICorJitInfo*
+                    in V30.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
+                    uint,
+                    out byte*,
+                    out uint,
+                    CorJitResult
+                > InvokeCompileMethod 
+                => (delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitCompiler*
+                    IntPtr, // ICorJitInfo*
+                    in V30.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
+                    uint,
+                    out byte*,
+                    out uint,
+                    CorJitResult
+                >) methodPtr;
+        }
 
         public class V30 {
             [StructLayout(LayoutKind.Sequential)]

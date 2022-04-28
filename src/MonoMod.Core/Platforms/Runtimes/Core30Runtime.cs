@@ -5,6 +5,8 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using static MonoMod.Core.Interop.CoreCLR;
+using System.Runtime.InteropServices;
 using MC = Mono.Cecil;
 
 namespace MonoMod.Core.Platforms.Runtimes {
@@ -36,14 +38,24 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private JitHookHelpersHolder? lazyJitHookHelpers;
         protected unsafe JitHookHelpersHolder JitHookHelpers => Helpers.GetOrInitWithLock(ref lazyJitHookHelpers, sync, &CreateJitHookHelpers, this);
 
+        // src/inc/corinfo.h line 220
         // d609bed1-7831-49fc-bd49-b6f054dd4d46
         private static readonly Guid JitVersionGuid = new Guid(
-            0xd609bed1, 0x7831, 0x49fc,
-            0xbd, 0x49, 0xb6, 0xf0, 0x54, 0xdd, 0x4d, 0x46);
+            0xd609bed1,
+            0x7831,
+            0x49fc,
+            0xbd, 0x49, 0xb6, 0xf0, 0x54, 0xdd, 0x4d, 0x46
+        );
 
         protected virtual Guid ExpectedJitVersion => JitVersionGuid;
 
-        protected virtual int VtableGetVersionIdentifierIndex => 4;
+        protected virtual int VtableIndexICorJitCompilerGetVersionGuid => 4;
+        protected virtual int VtableIndexICorJitCompilerCompileMethod => 0;
+
+        protected virtual InvokeCompileMethodPtr InvokeCompileMethodPtr => V30.InvokeCompileMethodPtr;
+
+        protected virtual Delegate CastCompileHookToRealType(Delegate del)
+            => del.CastDelegate<V30.CompileMethodDelegate>();
 
         protected static unsafe IntPtr* GetVTableEntry(IntPtr @object, int index)
             => (*(IntPtr**) @object) + index;
@@ -51,17 +63,127 @@ namespace MonoMod.Core.Platforms.Runtimes {
             => *GetVTableEntry(@object, index);
 
         private unsafe void CheckVersionGuid(IntPtr jit) {
-            var getVersionIdentPtr = (delegate* unmanaged[Thiscall]<IntPtr, out Guid, void>) ReadObjectVTable(jit, VtableGetVersionIdentifierIndex);
+            var getVersionIdentPtr = (delegate* unmanaged[Thiscall]<IntPtr, out Guid, void>) ReadObjectVTable(jit, VtableIndexICorJitCompilerGetVersionGuid);
             getVersionIdentPtr(jit, out var guid);
             Helpers.Assert(guid == ExpectedJitVersion,
                 $"JIT version does not match expected JIT version! " +
                 $"expected: {ExpectedJitVersion}, got: {guid}");
         }
 
-        protected override void InstallJitHook(IntPtr jit) {
+        private Delegate? ourCompileMethod;
+
+        protected unsafe override void InstallJitHook(IntPtr jit) {
             CheckVersionGuid(jit);
 
-            // TODO: implement
+            // Get the real compile method vtable slot
+            var compileMethodSlot = GetVTableEntry(jit, VtableIndexICorJitCompilerCompileMethod);
+
+            // create our compileMethod delegate
+            var ourCompileMethodDelegate = CastCompileHookToRealType(CreateCompileMethodDelegate(*compileMethodSlot));
+            ourCompileMethod = ourCompileMethodDelegate; // stash it away so that it stays alive forever
+
+            var ourCompileMethodPtr = Marshal.GetFunctionPointerForDelegate(ourCompileMethodDelegate);
+
+            // invoke our CompileMethodPtr through ICMP to ensure that the JIT has compiled any needed thunks
+            InvokeCompileMethodToPrepare(ourCompileMethodPtr);
+
+            // and now we can install our method pointer as a JIT hook
+            Span<byte> ptrData = stackalloc byte[sizeof(IntPtr)];
+            MemoryMarshal.Write(ptrData, ref ourCompileMethodPtr);
+
+            Triple.System.PatchData(PatchTargetKind.ReadOnly, (IntPtr) compileMethodSlot, ptrData, default);
+        }
+
+        // runtimes should override this if they need to significantly change the shape of CompileMethod
+        protected unsafe virtual Delegate CreateCompileMethodDelegate(IntPtr compileMethod) {
+            var del = new JitHookDelegateHolder(this, InvokeCompileMethodPtr, compileMethod).CompileMethodHook;
+            return del;
+        }
+
+        protected unsafe virtual void InvokeCompileMethodToPrepare(IntPtr method) {
+            InvokeCompileMethodPtr.InvokeCompileMethod(method, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _);
+        }
+
+        private sealed class JitHookDelegateHolder {
+            public readonly Core30Runtime Runtime;
+            public readonly JitHookHelpersHolder JitHookHelpers;
+            public readonly InvokeCompileMethodPtr InvokeCompileMethodPtr;
+            public readonly IntPtr CompileMethodPtr;
+
+            public JitHookDelegateHolder(Core30Runtime runtime, InvokeCompileMethodPtr icmp, IntPtr compileMethod) {
+                Runtime = runtime;
+                JitHookHelpers = runtime.JitHookHelpers;
+                InvokeCompileMethodPtr = icmp;
+                CompileMethodPtr = compileMethod;
+
+                // eagerly call ICMP to ensure that it's JITted before installing the hook
+                unsafe { icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _); }
+
+                // ensure the static constructor has been called
+                _ = hookEntrancy;
+                hookEntrancy = 0;
+            }
+
+            [ThreadStatic]
+            private static int hookEntrancy;
+            public unsafe CorJitResult CompileMethodHook(
+                IntPtr jit, // ICorJitCompiler*
+                IntPtr corJitInfo, // ICorJitInfo*
+                in V30.CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
+                uint flags,
+                out byte* nativeEntry,
+                out uint nativeSizeOfCode) {
+
+                nativeEntry = null;
+                nativeSizeOfCode = 0;
+
+                if (jit == IntPtr.Zero)
+                    return CorJitResult.CORJIT_OK;
+
+                hookEntrancy++;
+                try {
+
+                    /* We've silenced any exceptions thrown by this in the past but it turns out this can throw?!
+                     * Let's hope that all runtimes we're hooking the JIT of know how to deal with this - oh wait, not all do!
+                     * FIXME: Linux .NET Core pre-5.0 (and sometimes even 5.0) can die in real_compileMethod on invalid IL?!
+                     * -ade
+                     */
+                    var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
+                        jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+
+                    if (hookEntrancy == 1) {
+                        try {
+                            // This is the top level JIT entry point, do our custom stuff
+                            RuntimeTypeHandle[]? genericClassArgs = null;
+                            RuntimeTypeHandle[]? genericMethodArgs = null;
+
+                            if (methodInfo.args.sigInst.classInst != null) {
+                                genericClassArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.classInstCount];
+                                for (int i = 0; i < genericClassArgs.Length; i++) {
+                                    genericClassArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo.args.sigInst.classInst[i]).TypeHandle;
+                                }
+                            }
+                            if (methodInfo.args.sigInst.methInst != null) {
+                                genericMethodArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.methInstCount];
+                                for (int i = 0; i < genericMethodArgs.Length; i++) {
+                                    genericMethodArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo.args.sigInst.methInst[i]).TypeHandle;
+                                }
+                            }
+
+                            RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
+                            RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo.ftn);
+
+                            //JitHookCore(declaringType, method, (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
+                        } catch {
+                            // eat the exception so we don't accidentally bubble up to native code
+                        }
+                    }
+
+                    return result;
+                } finally {
+                    hookEntrancy--;
+                }
+            }
         }
 
         protected sealed class JitHookHelpersHolder {
@@ -76,6 +198,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public readonly CreateRuntimeMethodHandleD CreateRuntimeMethodHandle;
             public readonly GetDeclaringTypeOfMethodHandleD GetDeclaringTypeOfMethodHandle;
             public readonly GetTypeFromNativeHandleD GetTypeFromNativeHandle;
+
+            public RuntimeMethodHandle CreateHandleForHandlePointer(IntPtr handle)
+                => CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
 
             public JitHookHelpersHolder(Core30Runtime runtime) {
 
@@ -230,8 +355,6 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private static readonly FieldInfo RuntimeAssemblyPtrField = Type.GetType("System.Reflection.RuntimeAssembly")!
             .GetField("m_assembly", BindingFlags.Instance | BindingFlags.NonPublic)!;
         protected virtual unsafe void MakeAssemblySystemAssembly(Assembly assembly) {
-
-
             // RuntimeAssembly.m_assembly is a DomainAssembly*,
             // which contains an Assembly*,
             // which contains a PEAssembly*,

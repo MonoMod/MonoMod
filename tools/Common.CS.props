@@ -33,7 +33,8 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- XML documentation warning. TODO: We should probably remove this at some point and ensure that MM is fully documented. -->
     <NoWarn>$(NoWarn);CA1716</NoWarn> <!-- Members have name shared with primitive type. -->
 
-    <RoslynVersion>4.1.0</RoslynVersion>
+    <!-- We use a prerelease version of Roslyn to fix a bug with inferring delegate types  -->
+    <RoslynVersion>4.2.0-4.final</RoslynVersion>
     <MSBuildRequiredVersion>17.0.0</MSBuildRequiredVersion>
   </PropertyGroup>
 

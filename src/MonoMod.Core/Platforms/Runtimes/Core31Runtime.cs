@@ -1,9 +1,15 @@
-﻿using System;
+﻿using MonoMod.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core31Runtime : Core30Runtime {
+        protected override InvokeCompileMethodPtr InvokeCompileMethodPtr => V31.InvokeCompileMethodPtr;
+
+        protected override Delegate CastCompileHookToRealType(Delegate del)
+            => del.CastDelegate<V31.CompileMethodDelegate>();
     }
 }
