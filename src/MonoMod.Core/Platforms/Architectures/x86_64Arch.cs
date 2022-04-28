@@ -67,7 +67,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                             0x0f, 0x85, Bd, Bd, Bd, Bd
                             // TODO: somehow encode a check that the ??1s are the same
                             // I somehow doubt that that's necessary, but hey
-                        }), 
+                        }),
 
                     // PrecodeFixupThunk (CLR 4+)
                     new(new(AddressKind.PrecodeFixupThunkRel32, 5),
@@ -81,7 +81,9 @@ namespace MonoMod.Core.Platforms.Architectures {
                         // call {PRECODE FIXUP THUNK}
                         0xe8, Ad, Ad, Ad, Ad,
                         // int 3
-                        0xcc)
+                        0xcc),
+
+                    null
                 );
             } else {
                 // TODO: Mono

@@ -69,7 +69,6 @@ namespace MonoMod.Core.Platforms {
                     var argOrder = SelftestArgumentOrder.None;
                     SelftestHelper helper = default;
                     
-                    // TODO: this selftest is failing to set argOrder on .NET 5/6 x86
                     _ = helper.ArgumentOrderTest(ref argOrder, ref argOrder, ref helper);
 
                     if (argOrder == SelftestArgumentOrder.None) {
