@@ -301,7 +301,11 @@ namespace MonoMod.Core.Platforms {
             var entry = (nint) Runtime.GetMethodEntryPoint(method);
 
             do {
-                var span = new ReadOnlySpan<byte>((void*) entry, archMatchCollection.MaxMinLength);
+                var readableLen = System.GetSizeOfReadableMemory(entry, archMatchCollection.MaxMinLength);
+
+                // we still have to limit it like this because otherwise it'll scan and find *other* stubs
+                // if we want to, we could scan for an arch-specific padding pattern and use that to limit instead
+                var span = new ReadOnlySpan<byte>((void*) entry, Math.Min((int) readableLen, archMatchCollection.MaxMinLength));
 
                 if (!archMatchCollection.TryFindMatch(span, out var addr, out var match, out var offset, out var length))
                     break;

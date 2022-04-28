@@ -81,6 +81,34 @@ namespace MonoMod.Core.Platforms.Systems {
             }
         }
 
+        public unsafe nint GetSizeOfReadableMemory(nint start, nint guess) {
+            nint knownSize = 0;
+
+            do {
+                if (Interop.Windows.VirtualQuery(start, out var buf, sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) == 0) {
+                    // VirtualQuery failed, return 0
+                    return 0;
+                }
+
+                const Interop.Windows.PAGE ReadableMask = 
+                    Interop.Windows.PAGE.READONLY
+                    | Interop.Windows.PAGE.READWRITE
+                    | Interop.Windows.PAGE.EXECUTE_READ
+                    | Interop.Windows.PAGE.EXECUTE_READWRITE;
+
+                var isReadable = (buf.Protect & ReadableMask) != 0;
+
+                if (!isReadable)
+                    return knownSize;
+
+                var nextPage = (nint) buf.BaseAddress + buf.RegionSize;
+                knownSize += nextPage - start;
+                start = nextPage;
+            } while (knownSize < guess);
+
+            return knownSize;
+        }
+
         private static unsafe Exception LogAllSections(int error, IntPtr src, nint size, [CallerMemberName] string from = "") {
             Exception ex = new Win32Exception(error);
             if (MMDbgLog.Writer == null)

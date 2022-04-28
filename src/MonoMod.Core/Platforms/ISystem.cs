@@ -11,6 +11,8 @@ namespace MonoMod.Core.Platforms {
 
         IMemoryAllocator MemoryAllocator { get; }
 
+        nint GetSizeOfReadableMemory(IntPtr start, nint guess);
+
         void PatchData(PatchTargetKind targetKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup);
     }
 
