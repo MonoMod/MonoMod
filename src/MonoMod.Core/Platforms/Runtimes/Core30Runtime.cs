@@ -12,7 +12,7 @@ using MC = Mono.Cecil;
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core30Runtime : CoreBaseRuntime {
 
-        public override RuntimeFeature Features => base.Features | RuntimeFeature.DisableInlining;
+        public override RuntimeFeature Features => base.Features | RuntimeFeature.DisableInlining | RuntimeFeature.CompileMethodHook;
 
         public unsafe override void DisableInlining(MethodBase method) {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
@@ -173,7 +173,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
                             RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo.ftn);
 
-                            //JitHookCore(declaringType, method, (IntPtr) nativeEntry, nativeSizeOfCode, genericClassArgs, genericMethodArgs);
+                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) nativeEntry, nativeSizeOfCode);
                         } catch {
                             // eat the exception so we don't accidentally bubble up to native code
                         }

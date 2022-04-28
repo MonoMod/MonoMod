@@ -13,6 +13,8 @@ namespace MonoMod.Core.Platforms {
 
         Abi? Abi { get; }
 
+        event OnMethodCompiledCallback? OnMethodCompiled;
+
         MethodBase GetIdentifiable(MethodBase method);
         RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
@@ -22,4 +24,6 @@ namespace MonoMod.Core.Platforms {
 
         IntPtr GetMethodEntryPoint(MethodBase method);
     }
+
+    public delegate void OnMethodCompiledCallback(MethodBase? method, IntPtr codeStart, ulong codeSize);
 }

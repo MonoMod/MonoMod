@@ -1,6 +1,7 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -197,6 +198,53 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 // Your typical method.
                 var handle = GetMethodHandle(method);
                 return handle.GetFunctionPointer();
+            }
+        }
+
+        public event OnMethodCompiledCallback? OnMethodCompiled;
+
+        protected virtual void OnMethodCompiledCore(
+            RuntimeTypeHandle declaringType,
+            RuntimeMethodHandle methodHandle,
+            ReadOnlyMemory<RuntimeTypeHandle>? genericTypeArguments,
+            ReadOnlyMemory<RuntimeTypeHandle>? genericMethodArguments,
+            IntPtr methodBodyStart,
+            ulong methodBodySize
+        ) {
+            try {
+                var declType = Type.GetTypeFromHandle(declaringType);
+                if (genericTypeArguments is { } gte && declType.IsGenericTypeDefinition) {
+                    var typeArr = new Type[gte.Length];
+                    for (int i = 0; i < gte.Length; i++) {
+                        typeArr[i] = Type.GetTypeFromHandle(gte.Span[i]);
+                    }
+                    declType = declType.MakeGenericType(typeArr);
+                }
+
+                var method = MethodBase.GetMethodFromHandle(methodHandle, declType.TypeHandle);
+
+                // When method is null, there are several possibilities
+                // One of them is that it's a P/Invoke, and declType is the P/Invoke IL stub helper class
+                // In that case, we can sometimes iterate through the methods of that class to find the one wich a matching MethodHandle
+                // It is worth noting, though, that the P/Invoke stubs that are compiled are reused based on signature, and so are not at all
+                // means of uniquely identifying P/Invoke targets.
+                // https://github.com/dotnet/runtime/blob/c7f926c69725369545671305a3b1c4d4391d80f4/docs/design/coreclr/botr/clr-abi.md#hidden-parameters
+                if (method is null) {
+                    foreach (var meth in declType.GetMethods((BindingFlags) (-1))) {
+                        if (meth.MethodHandle.Value == methodHandle.Value) {
+                            method = meth;
+                            break;
+                        }
+                    }
+                }
+
+                try {
+                    OnMethodCompiled?.Invoke(method, methodBodyStart, methodBodySize);
+                } catch (Exception e) {
+                    MMDbgLog.Log($"Error executing OnMethodCompiled event: {e}");
+                }
+            } catch (Exception e) {
+                MMDbgLog.Log($"Error in OnMethodCompiledCore: {e}");
             }
         }
     }
