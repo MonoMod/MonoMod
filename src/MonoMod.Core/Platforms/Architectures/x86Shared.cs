@@ -30,8 +30,10 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             if (sizeHint >= x86Shared.Rel32Kind.Instance.Size && (x86Shared.Is32Bit(rel) || x86Shared.Is32Bit(-rel))) {
                 unsafe {
-                    if (*((byte*) from + 5) != 0x5f) { // because Rel32 uses an E9 jump, the byte that would be immediately following the jump
-                        info = new(from, to, x86Shared.Rel32Kind.Instance, null);   //   must not be 0x5f, otherwise it would be picked up by the matcher on line 39
+                    if (*((byte*) from + 5) != 0x5f) {
+                        // because Rel32 uses an E9 jump, the byte that would be immediately following the jump
+                        //   must not be 0x5f, otherwise it would be picked up by the matcher on line 44 of x86_64Arch
+                        info = new(from, to, x86Shared.Rel32Kind.Instance, null);
                         return true;
                     }
                 }

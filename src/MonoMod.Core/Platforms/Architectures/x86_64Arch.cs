@@ -1,5 +1,4 @@
-﻿using MonoMod.Core.Platforms.Architectures.x86Shared;
-using MonoMod.Core.Utils;
+﻿using MonoMod.Core.Utils;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
