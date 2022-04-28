@@ -159,10 +159,14 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "Ownership of the allocation is transferred correctly.")]
-        public NativeDetourInfo ComputeDetourInfo(nint from, nint to) {
+        public NativeDetourInfo ComputeDetourInfo(nint from, nint to, int sizeHint) {
+            if (sizeHint < 0) {
+                sizeHint = int.MaxValue;
+            }
+
             long rel = (long) to - ((long) from + 5);
 
-            if (Is32Bit(rel) || Is32Bit(-rel)) {
+            if (sizeHint >= Rel32Kind.Instance.Size && (Is32Bit(rel) || Is32Bit(-rel))) {
                 unsafe {
                     if (*((byte*) from + 5) != 0x5f) // because Rel32 uses an E9 jump, the byte that would be immediately following the jump
                         return new(from, to, Rel32Kind.Instance, null);   //   must not be 0x5f, otherwise it would be picked up by the matcher on line 39
@@ -171,10 +175,16 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             var target = from + 6;
             var memRequest = new AllocationRequest(target, target + int.MinValue, target + int.MaxValue, IntPtr.Size);
-            if (platformTriple.System.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
+            if (sizeHint >= Abs64SplitKind.Instance.Size && platformTriple.System.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
                 return new(from, to, Abs64SplitKind.Instance, allocated);
             }
 
+            if (sizeHint >= Abs64Kind.Instance.Size) {
+                return new(from, to, Abs64Kind.Instance, null);
+            }
+
+            // TODO: more, smaller detours
+            MMDbgLog.Log($"Size too small for all known detour kinds; defaulting to Abs64. provided size: {sizeHint}");
             return new(from, to, Abs64Kind.Instance, null);
         }
 

@@ -254,8 +254,8 @@ namespace MonoMod.Core.Platforms {
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public NativeDetour? CreateNativeDetour(IntPtr from, IntPtr to, bool undoable = true) {
-            var detourInfo = Architecture.ComputeDetourInfo(from, to);
+        public NativeDetour? CreateNativeDetour(IntPtr from, IntPtr to, bool undoable = true, int detourMaxSize = -1) {
+            var detourInfo = Architecture.ComputeDetourInfo(from, to, detourMaxSize);
 
             // detours are usually fairly small, so we'll stackalloc it
             Span<byte> detourData = stackalloc byte[detourInfo.Size];
