@@ -152,14 +152,17 @@ namespace MonoMod.Core.Platforms {
 
                 if (maybeKind is not { } kind) {
                     // if we couldn't identify it, it's too large to go in register and must be passed by pointer
-                    return TypeClassification.PointerToMemory;
+
+                    // TODO: if the platform uses a stack-based calling convention, like x86, then this is incorrect
+                    // too large structs become ByVal if not a return value, not ByRef
+                    return TypeClassification.ByRef;
                 }
 
                 var compareTo = isReturn ? ReturnedByValue : PassedByValue;
 
                 return (kind & compareTo) == kind 
-                     ? TypeClassification.Register // the type is passed by value
-                     : TypeClassification.PointerToMemory; // the type is passed with a return buffer or byref
+                     ? TypeClassification.ByVal // the type is passed by value
+                     : TypeClassification.ByRef; // the type is passed with a return buffer or byref
             }
         }
     }

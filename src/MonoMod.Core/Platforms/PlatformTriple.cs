@@ -373,8 +373,8 @@ namespace MonoMod.Core.Platforms {
                 // if from has `this` and to doesn't, then we need to fix up the abi
                 var returnClass = Abi.Classify(retType, true);
 
-                // only if the return class is PointerToMemory do we need to do something
-                if (returnClass == TypeClassification.PointerToMemory) {
+                // only if the return class is ByRef do we need to do something
+                if (returnClass == TypeClassification.ByRef) {
                     var thisType = from.GetThisParamType();
                     var retPtrType = retType.MakeByRefType();
 

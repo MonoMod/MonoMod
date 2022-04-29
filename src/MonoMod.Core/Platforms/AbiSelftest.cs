@@ -17,7 +17,7 @@ namespace MonoMod.Core.Platforms {
             Helpers.ThrowIfNull(triple);
 
             bool returnsRetbuf;
-            SelftestArgumentOrder argOrder;
+            ArgOrderInfo argOrder;
             StructKindFlags returnByVal, passByVal;
 
             lock (SelftestLock) {
@@ -29,15 +29,11 @@ namespace MonoMod.Core.Platforms {
             // TODO: selftest generic pointer position somehow
 
             var classifier = new SelftestClassifier(returnByVal, passByVal);
-            var argOrderArr = argOrder switch {
-                SelftestArgumentOrder.RetThisArgs => new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
-                SelftestArgumentOrder.ThisRetArgs => new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments },
-                SelftestArgumentOrder.ThisArgsRet => new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments, SpecialArgumentKind.ReturnBuffer },
-                SelftestArgumentOrder.RetArgsThis => new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments, SpecialArgumentKind.ThisPointer },
-                SelftestArgumentOrder.ArgsThisRet => new[] { SpecialArgumentKind.UserArguments, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer },
-                SelftestArgumentOrder.ArgsRetThis => new[] { SpecialArgumentKind.UserArguments, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer },
-                _ => throw new InvalidOperationException("Invalid argument order"),
-            };
+            var argOrderArr = new SpecialArgumentKind[3];
+
+            argOrderArr[argOrder.ThisPos - 1] = SpecialArgumentKind.ThisPointer;
+            argOrderArr[argOrder.RetPos - 1] = SpecialArgumentKind.ReturnBuffer;
+            argOrderArr[argOrder.ArgsPos - 1] = SpecialArgumentKind.UserArguments;
 
             return new(
                 argOrderArr,
@@ -58,22 +54,23 @@ namespace MonoMod.Core.Platforms {
         private static readonly MethodInfo SelftestHelper_ArgumentOrderTest = typeof(SelftestHelper).GetMethod(nameof(SelftestHelper.ArgumentOrderTest), AllFlgs)!;
         private static readonly MethodInfo Self_ArgumentOrderTestTarget = typeof(AbiSelftest).GetMethod(nameof(ArgumentOrderTestTarget), AllFlgs)!;
 
-        private static SelftestArgumentOrder DetectArgumentOrder(PlatformTriple triple) {
-
+        private static ArgOrderInfo DetectArgumentOrder(PlatformTriple triple) {
             using (triple.PinMethodIfNeeded(SelftestHelper_ArgumentOrderTest))
             using (triple.PinMethodIfNeeded(Self_ArgumentOrderTestTarget)) {
                 var from = triple.GetNativeMethodBody(SelftestHelper_ArgumentOrderTest);
                 var to = triple.GetNativeMethodBody(Self_ArgumentOrderTestTarget);
 
                 using (triple.CreateNativeDetour(from, to)) {
-                    var argOrder = SelftestArgumentOrder.None;
+                    ArgOrderInfo argOrder = default;
                     SelftestHelper helper = default;
                     
-                    _ = helper.ArgumentOrderTest(ref argOrder, ref argOrder, ref helper);
+                    _ = helper.ArgumentOrderTest(ref argOrder, ref helper, ref argOrder);
 
-                    if (argOrder == SelftestArgumentOrder.None) {
+                    if (!argOrder.Set) {
                         throw new PlatformNotSupportedException($"Selftest 1 failed! Argument order was not assigned");
                     }
+
+                    argOrder.PushOrder = DetermineStackPushOrder();
 
                     return argOrder;
                 }
@@ -93,61 +90,56 @@ namespace MonoMod.Core.Platforms {
             ArgsRetThis, // ????????
         }
 
-        private static unsafe IntPtr ArgumentOrderTestTarget(IntPtr a, IntPtr b, IntPtr c, IntPtr d, IntPtr e) {
-            if (c == d) {
-                // c and d are the first two user arguments
-                if (b == e) {
-                    // b is the this pointer
-                    Unsafe.AsRef<SelftestArgumentOrder>((void*) c) = SelftestArgumentOrder.RetThisArgs;
-                    return a; // return the this ptr to be safe
-                } else if (a == e) {
-                    // a is the this pointer
-                    Unsafe.AsRef<SelftestArgumentOrder>((void*) c) = SelftestArgumentOrder.ThisRetArgs;
-                    return b;
-                } else {
-                    // huh???
-                    ThrowFunkyAbi(a, b, c, d, e);
-                }
-            } else if (b == c) {
-                // b and c are the first two user arguments
-                if (a == d) {
-                    // a is the this ptr, b c d are user args, and e is the ret buffer
-                    Unsafe.AsRef<SelftestArgumentOrder>((void*) b) = SelftestArgumentOrder.ThisArgsRet;
-                    return e;
-                } else if (d == e) {
-                    // a is the ret buffer, b c d are user args, and e is the this ptr
-                    Unsafe.AsRef<SelftestArgumentOrder>((void*) b) = SelftestArgumentOrder.RetArgsThis;
-                    return a;
-                } else {
-                    // huh???
-                    ThrowFunkyAbi(a, b, c, d, e);
-                }
-            } else if (a == b) {
-                // a and b are the first two user arguments
-                if (c == d) {
-                    // d is the this ptr, e is the ret buffer
-                    Unsafe.AsRef<SelftestArgumentOrder>((void*) a) = SelftestArgumentOrder.ArgsThisRet;
-                    return e;
-                } else if (c == e) {
-                    // e is the this ptr, d is the ret buffer
-                    Unsafe.AsRef<SelftestArgumentOrder>((void*) a) = SelftestArgumentOrder.ArgsRetThis;
-                    return d;
-                } else {
-                    // huh???
-                    ThrowFunkyAbi(a, b, c, d, e);
-                }
-            }
+        private enum StackPushOrder {
+            RightToLeft,
+            LeftToRight,
+        }
 
-            // huh???
-            ThrowFunkyAbi(a, b, c, d, e);
-            // stoopid compiler thinks ThrowFunkyAbi can return for some reason
-            throw new InvalidOperationException();
+        private struct ArgOrderInfo {
+            public bool Set;
+            public byte RetPos;
+            public byte ThisPos;
+            public byte ArgsPos;
+            public StackPushOrder PushOrder;
+
+            public static nint PushOrderOffset;
+
+            static ArgOrderInfo() {
+                ArgOrderInfo info = default;
+                PushOrderOffset = Unsafe.ByteOffset(
+                    ref Unsafe.As<ArgOrderInfo, byte>(ref info),
+                    ref Unsafe.As<StackPushOrder, byte>(ref info.PushOrder));
+            }
         }
 
         private struct SelftestRetbufStruct {
             public readonly long L1;
             public readonly short S1;
             public readonly byte B1;
+            public readonly long L2;
+            public readonly long L3;
+        }
+        
+        // These are used to detect the order that arguments are pushed to the stack.
+        // TODO: make it work with more than 2 enregistered arguments
+
+        // To prevent stack corruption, we need this method to set up a stack frame.
+        [MethodImpl(MethodImplOptionsEx.NoInlining | MethodImplOptionsEx.NoOptimization)]
+        private unsafe static StackPushOrder DetermineStackPushOrder() {
+            // We also use this struct to ensure that the stack frame is fairly large to minimize corruption.
+            SelftestRetbufStruct filler = default;
+            _ = filler;
+
+            var fn = (delegate*<nint, nint, nint, StackPushOrder>) (void*) (delegate*<nint, nint, nint, nint, StackPushOrder>) &GetStackPushOrderTarget;
+            return fn(0, 0x300, 0x300);
+        }
+
+        // TODO: somehow determine how many args are passed in register, so that this works consistently
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        private static StackPushOrder GetStackPushOrderTarget(nint _arg1, nint _arg2, nint a, nint b) {
+            return _arg2 == b
+                ? StackPushOrder.LeftToRight
+                : StackPushOrder.RightToLeft;
         }
 
         // this is a struct because I can control the address of a struct much more easily than I can a class
@@ -155,12 +147,93 @@ namespace MonoMod.Core.Platforms {
             private readonly SelftestRetbufStruct filler;
 
             [MethodImpl(MethodImplOptionsEx.NoInlining)]
-            public SelftestRetbufStruct ArgumentOrderTest(ref SelftestArgumentOrder argOrder1, ref SelftestArgumentOrder argOrder2, ref SelftestHelper self) {
+            public SelftestRetbufStruct ArgumentOrderTest(ref ArgOrderInfo argOrder1, ref SelftestHelper self, ref ArgOrderInfo argOrder2) {
                 _ = filler;
                 _ = argOrder1;
-                _ = argOrder2;
                 _ = self;
+                _ = argOrder2;
                 throw new InvalidOperationException("ABI selftest failed! The method was not detoured.");
+            }
+        }
+
+        private static unsafe IntPtr ArgumentOrderTestTarget(IntPtr a, IntPtr b, IntPtr c, IntPtr d, IntPtr e) {
+            if (c == e) {
+                // c and e are the first and third user arguments
+                ref var order = ref Unsafe.AsRef<ArgOrderInfo>((void*) c);
+                order.Set = true;
+                return CEArgs(ref order, a, b, c, d, e);
+            } else if (b == d) {
+                // b and d are the first and third user arguments
+                ref var order = ref Unsafe.AsRef<ArgOrderInfo>((void*) b);
+                order.Set = true;
+                return BDArgs(ref order, a, b, c, d, e);
+            } else if (a == c) {
+                // a and c are the first and third user arguments
+                ref var order = ref Unsafe.AsRef<ArgOrderInfo>((void*) a);
+                order.Set = true;
+                return ACArgs(ref order, a, b, c, d, e);
+            }
+
+            // huh???
+            ThrowFunkyAbi(a, b, c, d, e);
+            // stoopid compiler thinks ThrowFunkyAbi can return for some reason
+            return IntPtr.Zero;
+
+            static IntPtr CEArgs(ref ArgOrderInfo order, IntPtr a, IntPtr b, IntPtr c, IntPtr d, IntPtr e) {
+                order.ArgsPos = 3;
+                if (b == d) {
+                    // b is the this pointer
+                    order.RetPos = 1;
+                    order.ThisPos = 2;
+                    return a; // return the this ptr to be safe
+                } else if (a == d) {
+                    // a is the this pointer
+                    order.RetPos = 2;
+                    order.ThisPos = 1;
+                    return b;
+                } else {
+                    // huh???
+                    ThrowFunkyAbi(a, b, c, d, e);
+                    return IntPtr.Zero;
+                }
+            }
+
+            static IntPtr BDArgs(ref ArgOrderInfo order, IntPtr a, IntPtr b, IntPtr c, IntPtr d, IntPtr e) {
+                order.ArgsPos = 2;
+                if (a == c) {
+                    // a is the this ptr, b c d are user args, and e is the ret buffer
+                    order.RetPos = 3;
+                    order.ThisPos = 1;
+                    return e;
+                } else if (c == e) {
+                    // a is the ret buffer, b c d are user args, and e is the this ptr
+                    order.RetPos = 1;
+                    order.ThisPos = 3;
+                    return a;
+                } else {
+                    // huh???
+                    ThrowFunkyAbi(a, b, c, d, e);
+                    return IntPtr.Zero;
+                }
+            }
+
+            static IntPtr ACArgs(ref ArgOrderInfo order, IntPtr a, IntPtr b, IntPtr c, IntPtr d, IntPtr e) {
+                order.ArgsPos = 1;
+                if (b == d) {
+                    // d is the this ptr, e is the ret buffer
+                    order.RetPos = 3;
+                    order.ThisPos = 2;
+                    return e;
+                } else if (b == e) {
+                    // e is the this ptr, d is the ret buffer
+                    order.RetPos = 2;
+                    order.ThisPos = 3;
+                    return d;
+                } else {
+                    // huh???
+                    ThrowFunkyAbi(a, b, c, d, e);
+                    return IntPtr.Zero;
+                }
             }
         }
         #endregion
@@ -256,8 +329,31 @@ namespace MonoMod.Core.Platforms {
             return val < 0x1000; // we give a vairly generous page of space for them to be in
         }
 
-        private static (StructKindFlags ByValRet, StructKindFlags ByValPass) DetectStructPassing(PlatformTriple triple, SelftestArgumentOrder argOrder) {
+        [ThreadStatic]
+        private static int StackGrowthDirection;
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        private unsafe static int ComputeStackGrowthDirection() {
+            int local = 0;
+            return StackGrowthDirection = GetStackGrowthDirection(ref local);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        private unsafe static int GetStackGrowthDirection(ref int lowerLocal) {
+            int higherLocal = 0;
+
+            var dir = (nint) Unsafe.AsPointer(ref higherLocal) - (nint) Unsafe.AsPointer(ref lowerLocal);
+
+            if (dir < 0)
+                return -1;
+            else
+                return 1;
+        }
+
+        private static (StructKindFlags ByValRet, StructKindFlags ByValPass) DetectStructPassing(PlatformTriple triple, ArgOrderInfo argOrder) {
             StructKindFlags ret = 0, pass = 0;
+
+            _ = ComputeStackGrowthDirection();
 
             TestPassReturnStruct<HfaFloat1>(triple, argOrder, StructKindFlags.HfaFloat1, ref ret, ref pass);
             TestPassReturnStruct<HfaFloat2>(triple, argOrder, StructKindFlags.HfaFloat2, ref ret, ref pass);
@@ -317,7 +413,7 @@ namespace MonoMod.Core.Platforms {
             return (ret, pass);
         }
 
-        private static void TestPassReturnStruct<T>(PlatformTriple triple, SelftestArgumentOrder argOrder, StructKindFlags flag, ref StructKindFlags byvalReturn, ref StructKindFlags byvalPass) where T : struct {
+        private static void TestPassReturnStruct<T>(PlatformTriple triple, ArgOrderInfo argOrder, StructKindFlags flag, ref StructKindFlags byvalReturn, ref StructKindFlags byvalPass) where T : struct {
             byvalReturn |= GetFlagFor(TestReturnForStruct<T>(triple, argOrder), flag);
             byvalPass |= GetFlagFor(TestPassByValue<T>(triple), flag);
         }
@@ -327,18 +423,10 @@ namespace MonoMod.Core.Platforms {
         private static readonly MethodInfo Self_RetBufTestTarget = typeof(AbiSelftest).GetMethod(nameof(RetBufTestTarget), AllFlgs)!;
 
         [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
-        private static bool TestReturnForStruct<T>(PlatformTriple triple, SelftestArgumentOrder argOrder) where T : struct {
+        private static bool TestReturnForStruct<T>(PlatformTriple triple, ArgOrderInfo argOrder) where T : struct {
             var RetBufTest_T = Self_RetBufTest.MakeGenericMethod(typeof(T));
 
-            var bufferIsFirst = argOrder switch {
-                SelftestArgumentOrder.RetThisArgs => true,
-                SelftestArgumentOrder.ThisRetArgs => true,
-                SelftestArgumentOrder.ThisArgsRet => false,
-                SelftestArgumentOrder.RetArgsThis => true,
-                SelftestArgumentOrder.ArgsThisRet => false,
-                SelftestArgumentOrder.ArgsRetThis => false,
-                _ => true, // if the argument order is unknown, default to true
-            };
+            var bufferIsFirst = argOrder.RetPos < argOrder.ArgsPos;
 
             using (triple.PinMethodIfNeeded(RetBufTest_T))
             using (triple.PinMethodIfNeeded(Self_RetBufTestTarget)) {
@@ -346,7 +434,6 @@ namespace MonoMod.Core.Platforms {
                 var to = triple.GetNativeMethodBody(Self_RetBufTestTarget);
 
                 using (triple.CreateNativeDetour(from, to)) {
-                    T value = default;
                     bool hasBuf = false;
 
                     // the JIT actually gives the return buffer a different address, possibly *because* we're also passing it in as a byref
@@ -354,14 +441,81 @@ namespace MonoMod.Core.Platforms {
                     // we *can* however rely on them being fairly close, as they're both on the stack
                     // that *also* means that we don't actually need `ref value`
                     // removing it also removes the potential issues caused by stack spillage
-                    value = RetBufTest<T>(ref hasBuf, bufferIsFirst, ref hasBuf);
-                    _ = value; // make the compiler not yell at me
+                    InvokeRetButTest<T>(ref hasBuf, bufferIsFirst, ref hasBuf);
 
                     // we return true if it has no retbuf
                     return !hasBuf;
                 }
             }
         }
+
+        // We make sure that this doesn't get inlined or ooptimized to stave off stack corruption
+        [MethodImpl(MethodImplOptionsEx.NoInlining | MethodImplOptionsEx.NoOptimization)]
+        private unsafe static void InvokeRetButTest<T>(ref bool hasBuf1, in bool bufFirst, ref bool hasBuf2) where T : struct {
+            //   To be able to identify if/when stack spill happens and causes argument confusion, we need to be sure that invalid
+            // stack accesses in the argument range give consistent values. To do this, we 1. create a large stack-allocated buffer
+            // that we fill with a known pattern, then 2. fill further down the stack with that value.
+
+            // We reuse this local in several places to be sure that it's placed above the stackalloc data.
+            nuint nPtr;
+            nint addr = 0;
+
+            int sizeofNuint = sizeof(nuint);
+            nuint fillValue = unchecked((nuint) (nint) (-1));
+
+            const int manualFillAmount = 48; // this is the number of POINTERS to fill below our locals
+
+            nint n = sizeofNuint * (manualFillAmount / 2); // initialize with stackalloc size
+
+            var stackGrows = StackGrowthDirection;
+
+            static nuint LowestPtr(int grows, nuint a, nuint b) {
+                if (grows < 0) {
+                    if (a < b) {
+                        return a;
+                    } else {
+                        return b;
+                    }
+                } else {
+                    if (a > b) {
+                        return a;
+                    } else {
+                        return b;
+                    }
+                }
+            }
+
+            nPtr = (nuint) Unsafe.AsPointer(ref n);
+            nPtr = LowestPtr(stackGrows, nPtr, (nuint) Unsafe.AsPointer(ref addr));
+            nPtr = LowestPtr(stackGrows, nPtr, (nuint) Unsafe.AsPointer(ref nPtr));
+            nPtr = LowestPtr(stackGrows, nPtr, (nuint) Unsafe.AsPointer(ref stackGrows));
+            nPtr = LowestPtr(stackGrows, nPtr, (nuint) Unsafe.AsPointer(ref sizeofNuint));
+            nPtr = LowestPtr(stackGrows, nPtr, (nuint) Unsafe.AsPointer(ref fillValue));
+
+            nPtr = (nuint) ((nint) nPtr + (sizeofNuint * stackGrows)); // don't want to accidentally overwrite one of the locals we care about
+
+            // We can't use stackalloc because the runtime inserts buffer overflow checks when using stackalloc.
+            // Instead, to give us some buffer space, we create some bogus locals.
+
+            nint a = 0, b = 0;
+            RU(ref a); RU(ref b);
+
+            // After this point, we will be destroying the stack. No calls are permitted until our actual RetBufTest call.
+
+            // This is *wildly* unsafe, but what did you expect from intentionally smashing the stack?
+            // We'll cross our fingers and hope that the stack is writable for this long.
+            for (n = 0; n < manualFillAmount; n++) {
+                addr = (nint) nPtr + (stackGrows * sizeofNuint * n);
+                *(nuint*) addr = fillValue;
+            }
+
+            // The stack is now sufficiently smashed for us to be able to distinguish stuff in RetBufTest.
+
+            _ = RetBufTest<T>(ref hasBuf1, in bufFirst, ref hasBuf2);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        private static void RU(ref nint x) { _ = x; }
 
         [MethodImpl(MethodImplOptionsEx.NoInlining)]
         private static T RetBufTest<T>(ref bool hasBuf1, in bool bufFirst, ref bool hasBuf2) where T : struct {
@@ -372,7 +526,22 @@ namespace MonoMod.Core.Platforms {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
-        private static unsafe void RetBufTestTarget(IntPtr a, IntPtr b, IntPtr c, IntPtr d) {
+        private static unsafe void RetBufTestTarget(nint a, nint b, nint c, nint d) {
+            // Fix up potential stack push order mishaps
+            if (a is -1) {
+                a = b;
+                b = c;
+                c = d;
+                d = -1;
+            } else if (b is -1) {
+                b = c;
+                c = d;
+                d = -1;
+            } else if (c is -1) {
+                c = d;
+                d = -1;
+            }
+
             if (a == c) {
                 // a and d are hasBuf
                 ref var hasBuf = ref Unsafe.AsRef<bool>((void*) a);
@@ -429,40 +598,50 @@ namespace MonoMod.Core.Platforms {
 
                 using (triple.CreateNativeDetour(from, to)) {
                     int stackRef = 0;
-                    return PassByValueTest(value, ref stackRef, sentinelData);
+                    return PassByValueTest(value, -1, ref stackRef, sentinelData);
                 }
             }
         }
 
         [MethodImpl(MethodImplOptionsEx.NoInlining)]
-        private static bool PassByValueTest<T>(T value, ref int stackRef, ReadOnlySpan<byte> sentinel) where T : struct {
+        private static bool PassByValueTest<T>(T value, nint regVal, ref int stackRef, ReadOnlySpan<byte> sentinel) where T : struct {
             _ = value;
             _ = stackRef;
+            _ = regVal;
             _ = sentinel;
             throw new InvalidOperationException("Call should have been detoured");
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
-        private static unsafe bool PassByValueTarget(IntPtr value, IntPtr stackRef, ReadOnlySpan<byte> sentinel) {
-            // the first check we do is see if the value directly in `value` matches our sentinel
-            // if it does, chances are it's properly passed by value in register
-            Span<byte> valueData = stackalloc byte[Math.Max(IntPtr.Size, sentinel.Length)];
-            MemoryMarshal.Write(valueData, ref value);
-
-            if (valueData.Slice(0, sentinel.Length).SequenceEqual(sentinel)) {
-                // the by-value value matches our sentinel, pass-by-value success
+        private static unsafe bool PassByValueTarget(nint a, nint b, nint c, ReadOnlySpan<byte> sentinel) {
+            // First, we check if a == -1, because that means that value was passed not in-register, and we'll consider that by-value
+            if (a == -1) {
                 return true;
             }
 
-            // if our sentinel test failed, we'll compare value to stackRef to see if we think they're close
-            if (IsClose(stackRef, value)) {
-                // if they're close, it's probably pass by reference
-                return false;
+            // If b == -1, then the value was somehow sent in register, so we load stackRef and do our other logic
+            if (b == -1) {
+                var stackRef = c;
+
+                // check if the value directly in `value` matches our sentinel
+                // if it does, chances are it's properly passed by value in register
+                Span<byte> valueData = stackalloc byte[Math.Max(IntPtr.Size, sentinel.Length)];
+                MemoryMarshal.Write(valueData, ref a);
+
+                if (valueData.Slice(0, sentinel.Length).SequenceEqual(sentinel)) {
+                    // the by-value value matches our sentinel, pass-by-value success
+                    return true;
+                }
+
+                // if our sentinel test failed, we'll compare value to stackRef to see if we think they're close
+                if (IsClose(stackRef, a)) {
+                    // if they're close, it's probably pass by reference
+                    return false;
+                }
             }
 
-            // if neither match, make a *wild* guess that it's by-value, our sentinel shenanigans just didn't work.
-            // this is because the stack reference is *going* to be fairly close to the value if its byref, at least
-            // on any sane platform.
+            // if neither of them are -1, then what probably happened is it got passed in multiple registers
+            // in that case, we'll assume that it passed by-value
             return true;
         }
 

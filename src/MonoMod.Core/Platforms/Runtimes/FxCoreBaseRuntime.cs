@@ -42,16 +42,16 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 TypeCode.Int32 or TypeCode.UInt32 ||
                 type == typeof(IntPtr) || type == typeof(UIntPtr)) {
                 // if it's one of these primitives, it's always passed in register
-                return TypeClassification.Register;
+                return TypeClassification.ByVal;
             }
 
             // if the type is a 64-bit integer and we're checking return, it's passed in register
             if (isReturn && typeCode is TypeCode.Int64 or TypeCode.UInt64) {
-                return TypeClassification.Register;
+                return TypeClassification.ByVal;
             }
 
             // all others are passed on stack (or in our parlance, PointerToMemory, even if it's not actually a pointer)
-            return TypeClassification.PointerToMemory;
+            return TypeClassification.ByRef;
         }
 
         protected FxCoreBaseRuntime() {
@@ -61,7 +61,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 AbiCore = new Abi(
                     new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments, SpecialArgumentKind.GenericContext },
                     ClassifyRyuJitX86,
-                    ReturnsReturnBuffer: false // The ABI document doesn't actually specify, so this is just my guess.
+                    ReturnsReturnBuffer: true
                     );
             }
         }
