@@ -15,6 +15,11 @@
     <OutputType>Library</OutputType>
     <SignAssembly>skip</SignAssembly>
     <Nullable>annotations</Nullable>
+
+    <XunitVersion>2.*</XunitVersion>
+    <XunitVsRunnerVersion>$(XunitVersion)</XunitVsRunnerVersion>
+    <!-- 2.4.5 drops support for net452 -->
+    <XunitVsRunnerVersion Condition="'$(TargetFramework)' == 'net452'">[2.*,2.4.3]</XunitVsRunnerVersion>
   </PropertyGroup>
 
   <!-- Dependencies -->
@@ -43,14 +48,14 @@
       <Version Condition="'$(TargetFramework)' == 'netcoreapp2.0'">2.0.0</Version>
       <Version Condition="'$(TargetFramework)' == 'netcoreapp2.1'">2.0.3</Version>
     </PackageReference>
-    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.analyzers" Version="0.10.*" />
-    <PackageReference Include="xunit.core" Version="2.*" />
-    <PackageReference Include="xunit.runner.console" Version="2.*">
+    <PackageReference Include="xunit.core" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.runner.console" Version="$(XunitVersion)">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.*">
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVsRunnerVersion)">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
