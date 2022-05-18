@@ -11,7 +11,7 @@ namespace MonoMod.Core.Platforms {
 
         RuntimeFeature Features { get; }
 
-        Abi? Abi { get; }
+        Abi Abi { get; }
 
         event OnMethodCompiledCallback? OnMethodCompiled;
 

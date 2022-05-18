@@ -20,7 +20,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         protected Abi? AbiCore;
 
-        public Abi? Abi => AbiCore;
+        public Abi Abi => AbiCore ?? throw new PlatformNotSupportedException($"The runtime's Abi field is not set, and is unusable ({GetType()})");
 
         private static TypeClassification ClassifyRyuJitX86(Type type, bool isReturn) {
 
