@@ -14,6 +14,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         public override RuntimeFeature Features => base.Features | RuntimeFeature.DisableInlining | RuntimeFeature.CompileMethodHook;
 
+        public Core30Runtime(ISystem system) : base(system) { }
+
         public unsafe override void DisableInlining(MethodBase method) {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
             // mdcNotInline = 0x2000
@@ -91,7 +93,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             Span<byte> ptrData = stackalloc byte[sizeof(IntPtr)];
             MemoryMarshal.Write(ptrData, ref ourCompileMethodPtr);
 
-            Triple.System.PatchData(PatchTargetKind.ReadOnly, (IntPtr) compileMethodSlot, ptrData, default);
+            System.PatchData(PatchTargetKind.ReadOnly, (IntPtr) compileMethodSlot, ptrData, default);
         }
 
         // runtimes should override this if they need to significantly change the shape of CompileMethod
@@ -354,6 +356,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         private static readonly FieldInfo RuntimeAssemblyPtrField = Type.GetType("System.Reflection.RuntimeAssembly")!
             .GetField("m_assembly", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
         protected virtual unsafe void MakeAssemblySystemAssembly(Assembly assembly) {
             // RuntimeAssembly.m_assembly is a DomainAssembly*,
             // which contains an Assembly*,

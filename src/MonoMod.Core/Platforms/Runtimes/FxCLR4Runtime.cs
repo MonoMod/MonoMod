@@ -6,25 +6,19 @@ using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Core.Platforms.Runtimes {
-    internal class FxCLR4Runtime : FxBaseRuntime, INeedsPlatformTripleInit {
+    internal class FxCLR4Runtime : FxBaseRuntime {
 
-        private PlatformTriple platformTriple;
+        private ISystem system;
 
-        public FxCLR4Runtime() {
-            platformTriple = null!;
-        }
+        public FxCLR4Runtime(ISystem system) {
+            this.system = system;
 
-        void INeedsPlatformTripleInit.Initialize(PlatformTriple triple) {
-            platformTriple = triple;
-        }
-
-        void INeedsPlatformTripleInit.PostInit() {
             // the only place I could find the actual version number of 4.5 (without just testing myself on a Win7 VM) is here:
             // https://stackoverflow.com/a/11512846
             if (PlatformDetection.Architecture == ArchitectureKind.x86_64 &&
                 (PlatformDetection.RuntimeVersion.Revision >= 17379 ||
                 PlatformDetection.RuntimeVersion.Minor >= 5) &&
-                platformTriple.System.DefaultAbi is { } abi) {
+                system.DefaultAbi is { } abi) {
                 AbiCore = AbiForCoreFx45X64(abi);
             }
         }

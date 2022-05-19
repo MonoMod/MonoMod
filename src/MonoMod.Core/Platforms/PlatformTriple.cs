@@ -11,23 +11,19 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Platforms {
-    public interface INeedsPlatformTripleInit {
-        void Initialize(PlatformTriple triple);
-        void PostInit();
-    }
     public sealed class PlatformTriple {
-        public static IRuntime CreateCurrentRuntime()
+        public static IRuntime CreateCurrentRuntime(ISystem system)
             => PlatformDetection.Runtime switch {
-                RuntimeKind.Framework => Runtimes.FxBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion),
-                RuntimeKind.CoreCLR => Runtimes.CoreBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion),
+                RuntimeKind.Framework => Runtimes.FxBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
+                RuntimeKind.CoreCLR => Runtimes.CoreBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
                 RuntimeKind.Mono => throw new NotImplementedException(),
                 var kind => throw new PlatformNotSupportedException($"Runtime kind {kind} not supported"),
             };
 
-        public static IArchitecture CreateCurrentArchitecture()
+        public static IArchitecture CreateCurrentArchitecture(ISystem system)
             => PlatformDetection.Architecture switch {
                 ArchitectureKind.x86 => new Architectures.x86Arch(),
-                ArchitectureKind.x86_64 => new Architectures.x86_64Arch(),
+                ArchitectureKind.x86_64 => new Architectures.x86_64Arch(system),
                 ArchitectureKind.Arm => throw new NotImplementedException(),
                 ArchitectureKind.Arm64 => throw new NotImplementedException(),
                 var kind => throw new PlatformNotSupportedException($"Architecture kind {kind} not supported"),
@@ -53,64 +49,34 @@ namespace MonoMod.Core.Platforms {
         private static PlatformTriple? lazyCurrent;
         public static unsafe PlatformTriple Current => Helpers.GetOrInitWithLock(ref lazyCurrent, lazyCurrentLock, &CreateCurrent);
 
-        public enum InitializationStatus {
-            Uninitialized,
-            InterfacesAvailable,
-            InterfacesPartialInited,
-            InterfacesInited,
-            Complete,
+        private static PlatformTriple CreateCurrent() {
+            var sys = CreateCurrentSystem();
+            var arch = CreateCurrentArchitecture(sys);
+            var runtime = CreateCurrentRuntime(sys);
+            return new(arch, sys, runtime);
         }
-
-        public InitializationStatus Status { get; private set; }
-
-        private static PlatformTriple CreateCurrent()
-            => new(CreateCurrentArchitecture(), CreateCurrentSystem(), CreateCurrentRuntime());
 
         public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime) {
             Helpers.ThrowIfNull(architecture);
             Helpers.ThrowIfNull(system);
             Helpers.ThrowIfNull(runtime);
 
-            Status = InitializationStatus.Uninitialized;
-
             Architecture = architecture;
             System = system;
             Runtime = runtime;
 
-            Status = InitializationStatus.InterfacesAvailable;
-
-            // init the interface implementations
-            InitIfNeeded(architecture, out var archIniter);
-            InitIfNeeded(system, out var sysIniter);
-            InitIfNeeded(runtime, out var rtIniter);
-
             // eagerly initialize this so that the check functions get as much inlined as possible
             SupportedFeatures = new(Architecture.Features, System.Features, Runtime.Features);
 
-            Status = InitializationStatus.InterfacesPartialInited;
+            InitIfNeeded(Architecture);
+            InitIfNeeded(System);
+            InitIfNeeded(Runtime);
 
-            archIniter?.PostInit();
-            sysIniter?.PostInit();
-            rtIniter?.PostInit();
-
-            Status = InitializationStatus.InterfacesInited;
-
-            Abi = GetAbi();
-
-            Status = InitializationStatus.Complete;
+            Abi = Runtime.Abi;
         }
 
-        private Abi GetAbi() {
-            return Runtime.Abi;
-        }
-
-        private void InitIfNeeded(object obj, out INeedsPlatformTripleInit? initer) {
-            if (obj is INeedsPlatformTripleInit init) {
-                initer = init;
-                init.Initialize(this);
-            } else {
-                initer = null;
-            }
+        private static void InitIfNeeded(object obj) {
+            (obj as IInitialize)?.Initialize();
         }
 
         public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);

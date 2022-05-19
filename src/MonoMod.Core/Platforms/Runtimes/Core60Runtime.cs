@@ -7,6 +7,8 @@ using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core60Runtime : Core50Runtime {
+        public Core60Runtime(ISystem system) : base(system) { }
+
         // src/coreclr/inc/jiteeversionguid.h line 46
         // 5ed35c58-857b-48dd-a818-7c0136dc9f73
         private static readonly Guid JitVersionGuid = new Guid(

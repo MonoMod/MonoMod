@@ -6,9 +6,9 @@ using System.IO;
 using System.Linq;
 
 namespace MonoMod.Core.Platforms.Runtimes {
-    internal abstract class CoreBaseRuntime : FxCoreBaseRuntime, INeedsPlatformTripleInit {
+    internal abstract class CoreBaseRuntime : FxCoreBaseRuntime, IInitialize {
 
-        public static CoreBaseRuntime CreateForVersion(Version version) {
+        public static CoreBaseRuntime CreateForVersion(Version version, ISystem system) {
 
             switch (version.Major) {
                 case 2:
@@ -20,18 +20,18 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 case 3:
                     // .NET Core 3.x
                     return version.Minor switch {
-                        0 => new Core30Runtime(),
-                        1 => new Core31Runtime(),
+                        0 => new Core30Runtime(system),
+                        1 => new Core31Runtime(system),
                         _ => throw new PlatformNotSupportedException($"Unknown .NET Core 3.x minor version {version.Minor}"),
                     };
 
                 case 5:
                     // .NET 5.0.x
-                    return new Core50Runtime();
+                    return new Core50Runtime(system);
 
                 case 6:
                     // .NET 6.0.x
-                    return new Core60Runtime();
+                    return new Core60Runtime(system);
 
                 /*
                 case 7:
@@ -51,22 +51,18 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         public override RuntimeKind Target => RuntimeKind.CoreCLR;
 
-        private PlatformTriple platformTriple;
+        protected ISystem System { get; }
 
-        protected CoreBaseRuntime() {
-            platformTriple = null!;
-        }
+        protected CoreBaseRuntime(ISystem system) {
+            System = system;
 
-        void INeedsPlatformTripleInit.Initialize(PlatformTriple triple) {
-            platformTriple = triple;
-        }
-
-        void INeedsPlatformTripleInit.PostInit() {
             if (PlatformDetection.Architecture == ArchitectureKind.x86_64 &&
-                platformTriple.System.DefaultAbi is { } abi) {
+                system.DefaultAbi is { } abi) {
                 AbiCore = AbiForCoreFx45X64(abi);
             }
+        }
 
+        void IInitialize.Initialize() {
             InstallJitHook(JitObject);
         }
 
@@ -98,7 +94,6 @@ namespace MonoMod.Core.Platforms.Runtimes {
             }
         }
 
-        protected PlatformTriple Triple => platformTriple;
         protected abstract void InstallJitHook(IntPtr jit);
     }
 }

@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Platforms.Architectures {
-    internal class x86_64Arch : IArchitecture, INeedsPlatformTripleInit {
+    internal class x86_64Arch : IArchitecture {
         public ArchitectureKind Target => ArchitectureKind.x86_64;
 
         public ArchitectureFeature Features => ArchitectureFeature.Immediate64;
@@ -126,14 +126,10 @@ namespace MonoMod.Core.Platforms.Architectures {
             }
         }
 
-        private PlatformTriple platformTriple = null!;
+        private readonly ISystem system;
 
-        void INeedsPlatformTripleInit.Initialize(PlatformTriple triple) {
-            platformTriple = triple;
-        }
-
-        void INeedsPlatformTripleInit.PostInit() {
-            // no-op
+        public x86_64Arch(ISystem system) {
+            this.system = system;
         }
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
@@ -146,7 +142,7 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             var target = from + 6;
             var memRequest = new AllocationRequest(target, target + int.MinValue, target + int.MaxValue, IntPtr.Size);
-            if (sizeHint >= Abs64SplitKind.Instance.Size && platformTriple.System.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
+            if (sizeHint >= Abs64SplitKind.Instance.Size && system.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
                 return new(from, to, Abs64SplitKind.Instance, allocated);
             }
 
