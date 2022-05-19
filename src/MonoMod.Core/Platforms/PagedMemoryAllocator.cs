@@ -8,6 +8,8 @@ using MonoMod.Backports;
 using System.Numerics;
 using MonoMod.Core.Utils;
 
+using BitOperations = System.Numerics.BitOperationsEx;
+
 namespace MonoMod.Core.Platforms {
     public abstract class MemoryPageAllocatorBase {
         public abstract uint PageSize { get; }
@@ -221,7 +223,7 @@ namespace MonoMod.Core.Platforms {
 
             pageSize = (nint) alloc.PageSize;
 
-            pageSizeIsPow2 = (pageSize & (pageSize - 1)) == 0; // BitOperations.IsPow2, because .NET 5 doesn't expose that
+            pageSizeIsPow2 = BitOperations.IsPow2(pageSize);
             pageBaseMask = (~(nint) 0) << BitOperations.TrailingZeroCount(pageSize);
         }
 
@@ -260,23 +262,10 @@ namespace MonoMod.Core.Platforms {
             }
         }
 
-        // .NET 5 doesn't expose BitOperations.RoundUpToPowerOf2
-        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        private static uint RoundUpToPowerOf2(uint value) {
-            // Based on https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-            --value;
-            value |= value >> 1;
-            value |= value >> 2;
-            value |= value >> 4;
-            value |= value >> 8;
-            value |= value >> 16;
-            return value + 1;
-        }
-
         private void InsertAllocatedPage(Page page) {
             if (pageCount == allocationList.Length) {
                 // we need to expand the allocationList
-                var newSize = (int) RoundUpToPowerOf2((uint) allocationList.Length);
+                var newSize = (int) BitOperations.RoundUpToPowerOf2((uint) allocationList.Length);
                 Array.Resize(ref allocationList, newSize);
             }
 
