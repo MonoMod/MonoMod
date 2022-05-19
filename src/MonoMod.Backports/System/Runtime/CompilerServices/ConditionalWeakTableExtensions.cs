@@ -66,10 +66,10 @@ namespace System.Runtime.CompilerServices {
                 ThrowHelper.ThrowArgumentNullException(nameof(self));
                 // dum dum compiler
                 return null!;
-            } else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwtEnum) {
-                return cwtEnum.GetEnumerator();
             } else if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
                 return enumerable.GetEnumerator();
+            } else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwtEnum) {
+                return cwtEnum.GetEnumerator();
             } else {
 #if !CWT_NOT_ENUMERABLE
                 throw new PlatformNotSupportedException("This version of MonoMod.Backports was built targeting a version of the framework " +

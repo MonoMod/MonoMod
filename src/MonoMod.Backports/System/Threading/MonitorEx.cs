@@ -5,6 +5,9 @@
 using System.Runtime.CompilerServices;
 
 namespace System.Threading {
+    /// <summary>
+    /// Extensions to <see cref="MONITOR"/> providing consistent access to APIs introduced after the type.
+    /// </summary>
     public static class MonitorEx {
 
 #if HAS_MONITOR_ENTER_BYREF

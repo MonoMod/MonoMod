@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 
 namespace System.Numerics {
     /// <summary>
-    /// Extensions to <see cref="BitOperations"/>, which provides consistent access to APIs introduced after .NET Core 3.0.
+    /// Extensions to <see cref="StringComparer"/> providing consistent access to APIs introduced after the type.
     /// </summary>
     public static class BitOperationsEx {
         #region IsPow2
