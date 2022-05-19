@@ -67,16 +67,116 @@ namespace MonoMod.Core.Utils {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static void Assert([DoesNotReturnIf(false)] bool value, string? message = null, [CallerArgumentExpression("value")] string expr = "") {
+        public static void Assert([DoesNotReturnIf(false)] bool value,
+            string? message = null,
+            [CallerArgumentExpression("value")] string expr = ""
+        ) {
             if (!value)
                 ThrowAssertionFailed(message, expr);
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         [Conditional("DEBUG")]
-        public static void DAssert([DoesNotReturnIf(false)] bool value, string? message = null, [CallerArgumentExpression("value")] string expr = "") {
+        public static void DAssert([DoesNotReturnIf(false)] bool value, 
+            string? message = null, 
+            [CallerArgumentExpression("value")] string expr = ""
+        ) {
             if (!value)
                 ThrowAssertionFailed(message, expr);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static void Assert([DoesNotReturnIf(false)] bool value,
+            [InterpolatedStringHandlerArgument("value")] AssertionInterpolatedStringHandler message,
+            [CallerArgumentExpression("value")] string expr = ""
+        ) {
+            if (!value)
+                ThrowAssertionFailed(message.ToStringAndClear(), expr);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        [Conditional("DEBUG")]
+        public static void DAssert([DoesNotReturnIf(false)] bool value,
+            [InterpolatedStringHandlerArgument("value")] AssertionInterpolatedStringHandler message,
+            [CallerArgumentExpression("value")] string expr = ""
+        ) {
+            if (!value)
+                ThrowAssertionFailed(message.ToStringAndClear(), expr);
+        }
+
+        [InterpolatedStringHandler]
+        public ref struct AssertionInterpolatedStringHandler {
+            private DefaultInterpolatedStringHandler handler;
+            private readonly bool enabled;
+
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public AssertionInterpolatedStringHandler(int literalLen, int formattedCount, bool assertValue) {
+                if (!assertValue) {
+                    enabled = true;
+                    handler = new(literalLen, formattedCount);
+                } else {
+                    enabled = false;
+                    handler = default;
+                }
+            }
+
+            public override string ToString() => handler.ToString();
+            public string ToStringAndClear() => handler.ToStringAndClear();
+
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendLiteral(string s) {
+                if (!enabled)
+                    return;
+                handler.AppendLiteral(s);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted(string? s) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(s);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted(string? s, int alignment = 0, string? format = default) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(s, alignment, format);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted(ReadOnlySpan<char> s) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(s);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted(ReadOnlySpan<char> s, int alignment = 0, string? format = default) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(s, alignment, format);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted<T>(T value) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(value);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted<T>(T value, int alignment) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(value, alignment);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted<T>(T value, string? format) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(value, format);
+            }
+            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+            public void AppendFormatted<T>(T value, int alignment, string? format) {
+                if (!enabled)
+                    return;
+                handler.AppendFormatted(value, alignment, format);
+            }
         }
 
         [MethodImpl(MethodImplOptionsEx.NoInlining)]
