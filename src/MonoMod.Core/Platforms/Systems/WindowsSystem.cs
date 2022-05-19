@@ -23,9 +23,9 @@ namespace MonoMod.Core.Platforms.Systems {
         private static TypeClassification ClassifyX64(Type type, bool isReturn) {
             var size = type.GetManagedSize();
             if (size is 1 or 2 or 4 or 8) {
-                return TypeClassification.ByVal;
+                return TypeClassification.InRegister;
             } else {
-                return TypeClassification.ByRef;
+                return TypeClassification.ByReference;
             }
         }
 

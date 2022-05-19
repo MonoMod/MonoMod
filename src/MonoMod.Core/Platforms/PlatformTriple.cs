@@ -269,7 +269,7 @@ namespace MonoMod.Core.Platforms {
                 var returnClass = Abi.Classify(retType, true);
 
                 // only if the return class is ByRef do we need to do something
-                if (returnClass == TypeClassification.ByRef) {
+                if (returnClass == TypeClassification.ByReference) {
                     var thisType = from.GetThisParamType();
                     var retPtrType = retType.MakeByRefType();
 

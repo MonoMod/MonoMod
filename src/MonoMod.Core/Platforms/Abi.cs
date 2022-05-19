@@ -6,8 +6,9 @@ using System.Text;
 
 namespace MonoMod.Core.Platforms {
     public enum TypeClassification {
-        ByVal,
-        ByRef,
+        InRegister,
+        ByReference,
+        OnStack
     }
 
     public delegate TypeClassification Classifier(Type type, bool isReturn);
@@ -30,13 +31,13 @@ namespace MonoMod.Core.Platforms {
             Helpers.ThrowIfNull(type);
 
             if (type == typeof(void))
-                return TypeClassification.ByVal;
+                return TypeClassification.InRegister; // void can't be a parameter, and doesn't need a return buffer
             if (!type.IsValueType)
-                return TypeClassification.ByVal;
+                return TypeClassification.InRegister; // while it won't *always* go in register, it will if it can
             if (type.IsPointer)
-                return TypeClassification.ByVal;
+                return TypeClassification.InRegister; // same as above
             if (type.IsByRef)
-                return TypeClassification.ByVal;
+                return TypeClassification.InRegister; // same as above
 
             return Classifier(type, isReturn);
         }

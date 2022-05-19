@@ -42,16 +42,20 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 TypeCode.Int32 or TypeCode.UInt32 ||
                 type == typeof(IntPtr) || type == typeof(UIntPtr)) {
                 // if it's one of these primitives, it's always passed in register
-                return TypeClassification.ByVal;
+                return TypeClassification.InRegister;
             }
 
             // if the type is a 64-bit integer and we're checking return, it's passed in register
             if (isReturn && typeCode is TypeCode.Int64 or TypeCode.UInt64) {
-                return TypeClassification.ByVal;
+                return TypeClassification.InRegister;
             }
 
-            // all others are passed on stack (or in our parlance, PointerToMemory, even if it's not actually a pointer)
-            return TypeClassification.ByRef;
+            // all others are passed on stack, or in a return buffer
+            if (isReturn) {
+                return TypeClassification.ByReference;
+            } else {
+                return TypeClassification.OnStack;
+            }
         }
 
         protected FxCoreBaseRuntime() {
