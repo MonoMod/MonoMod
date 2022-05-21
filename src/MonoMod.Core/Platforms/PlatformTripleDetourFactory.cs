@@ -20,8 +20,8 @@ namespace MonoMod.Core.Platforms {
         public FeatureFlags SupportedFeatures => triple.SupportedFeatures;
 
         public ICoreDetour CreateDetour(CreateDetourRequest request) {
-            Helpers.ThrowIfNull(request.Source);
-            Helpers.ThrowIfNull(request.Target);
+            Helpers.ThrowIfArgumentNull(request.Source);
+            Helpers.ThrowIfArgumentNull(request.Target);
 
             if (!triple.TryDisableInlining(request.Source))
                 MMDbgLog.Log($"Could not disable inlining of method {request.Source.GetID()}; detours may not be reliable");

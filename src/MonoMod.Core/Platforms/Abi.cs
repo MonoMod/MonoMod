@@ -28,7 +28,7 @@ namespace MonoMod.Core.Platforms {
         ) {
 
         public TypeClassification Classify(Type type, bool isReturn) {
-            Helpers.ThrowIfNull(type);
+            Helpers.ThrowIfArgumentNull(type);
 
             if (type == typeof(void))
                 return TypeClassification.InRegister; // void can't be a parameter, and doesn't need a return buffer

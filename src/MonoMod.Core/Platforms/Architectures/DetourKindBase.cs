@@ -11,7 +11,7 @@ namespace MonoMod.Core.Platforms.Architectures {
         public abstract int GetBytes(IntPtr from, IntPtr to, Span<byte> buffer, object? data, out IDisposable? allocHandle);
 
         public static int GetDetourBytes(NativeDetourInfo info, Span<byte> buffer, out IDisposable? allocHandle) {
-            Helpers.ThrowIfNull(info.InternalKind);
+            Helpers.ThrowIfArgumentNull(info.InternalKind);
             if (buffer.Length < info.Size)
                 throw new ArgumentException("Buffer too short", nameof(buffer));
 

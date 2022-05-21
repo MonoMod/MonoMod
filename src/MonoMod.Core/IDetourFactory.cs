@@ -28,7 +28,7 @@ namespace MonoMod.Core {
             => new PlatformTripleDetourFactory(PlatformTriple.Current);
 
         public static ICoreDetour CreateDetour(this IDetourFactory factory, MethodBase source, MethodBase target, bool applyByDefault = true) {
-            Helpers.ThrowIfNull(factory);
+            Helpers.ThrowIfArgumentNull(factory);
             return factory.CreateDetour(new CreateDetourRequest(source, target) { ApplyByDefault = applyByDefault });
         }
     }

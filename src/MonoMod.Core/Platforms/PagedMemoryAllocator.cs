@@ -217,7 +217,7 @@ namespace MonoMod.Core.Platforms {
         private readonly bool pageSizeIsPow2;
 
         public PagedMemoryAllocator(MemoryPageAllocatorBase alloc) {
-            Helpers.ThrowIfNull(alloc);
+            Helpers.ThrowIfArgumentNull(alloc);
 
             pageAlloc = alloc;
 

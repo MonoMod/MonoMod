@@ -10,7 +10,7 @@ namespace MonoMod.Core.Utils {
 
     // TODO: make some of these helpers public
 
-    internal sealed class AssertionFailedException : Exception {
+    public sealed class AssertionFailedException : Exception {
         private const string AssertFailed = "Assertion failed! ";
 
         public AssertionFailedException() : base()
@@ -36,8 +36,8 @@ namespace MonoMod.Core.Utils {
         public override string Message { get; }
     }
 
-    internal static class Helpers {
-        public const bool IsDebug =
+    public static class Helpers {
+        internal const bool IsDebug =
 #if DEBUG
             true;
 #else
@@ -55,9 +55,16 @@ namespace MonoMod.Core.Utils {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static void ThrowIfNull<T>([NotNull] T? arg, [CallerArgumentExpression("arg")] string name = "") {
+        public static void ThrowIfArgumentNull<T>([NotNull] T? arg, [CallerArgumentExpression("arg")] string name = "") {
             if (arg is null)
                 ThrowArgumentNull(name);
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static T ThrowIfNull<T>([NotNull] T? arg, [CallerArgumentExpression("arg")] string name = "") {
+            if (arg is null)
+                ThrowArgumentNull(name);
+            return arg;
         }
 
         [MethodImpl(MethodImplOptionsEx.NoInlining)]

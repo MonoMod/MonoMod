@@ -57,9 +57,9 @@ namespace MonoMod.Core.Platforms {
         }
 
         public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime) {
-            Helpers.ThrowIfNull(architecture);
-            Helpers.ThrowIfNull(system);
-            Helpers.ThrowIfNull(runtime);
+            Helpers.ThrowIfArgumentNull(architecture);
+            Helpers.ThrowIfArgumentNull(system);
+            Helpers.ThrowIfArgumentNull(runtime);
 
             Architecture = architecture;
             System = system;
@@ -95,7 +95,7 @@ namespace MonoMod.Core.Platforms {
         /// </remarks>
         /// <param name="method">The method to prepare.</param>
         public void Prepare(MethodBase method) {
-            Helpers.ThrowIfNull(method);
+            Helpers.ThrowIfArgumentNull(method);
 
             if (method.IsGenericMethodDefinition) {
                 throw new ArgumentException("Cannot prepare generic method definition", nameof(method));
@@ -255,8 +255,8 @@ namespace MonoMod.Core.Platforms {
         }
 
         public MethodBase GetRealDetourTarget(MethodBase from, MethodBase to) {
-            Helpers.ThrowIfNull(from);
-            Helpers.ThrowIfNull(to);
+            Helpers.ThrowIfArgumentNull(from);
+            Helpers.ThrowIfArgumentNull(to);
 
             to = GetIdentifiable(to);
 

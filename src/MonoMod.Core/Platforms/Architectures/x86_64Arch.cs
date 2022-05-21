@@ -112,7 +112,7 @@ namespace MonoMod.Core.Platforms.Architectures {
             public override int Size => 1 + 1 + 4;
 
             public override int GetBytes(IntPtr from, IntPtr to, Span<byte> buffer, object? data, out IDisposable? allocHandle) {
-                Helpers.ThrowIfNull(data);
+                Helpers.ThrowIfArgumentNull(data);
                 var alloc = (IAllocatedMemory) data;
 
                 buffer[0] = 0xff;
