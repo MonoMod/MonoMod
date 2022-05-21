@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
 
@@ -55,6 +56,7 @@ namespace MonoMod.RuntimeDetour {
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config, applyByDefault) { }
         #endregion
 
+        private readonly IDetourFactory factory;
         public PlatformTriple Platform { get; }
 
         public DetourConfig? Config { get; }
@@ -77,6 +79,7 @@ namespace MonoMod.RuntimeDetour {
         public Detour(MethodBase source, MethodInfo target, DetourConfig? config, bool applyByDefault) {
             Config = config;
             Platform = PlatformTriple.Current;
+            factory = DetourFactory.Current;
 
             Source = Platform.GetIdentifiable(source);
             Target = target;
@@ -90,20 +93,30 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
+        public bool IsValid => !disposedValue;
+
         private bool isApplied;
+        public bool IsApplied => Volatile.Read(ref isApplied);
+
+        private void CheckDisposed() {
+            if (disposedValue)
+                throw new ObjectDisposedException(ToString());
+        }
 
         public void Apply() {
-            if (isApplied)
+            CheckDisposed();
+            if (IsApplied)
                 return;
-            isApplied = true;
-            state.AddDetour(DetourFactory.Current, this);
+            Volatile.Write(ref isApplied, true);
+            state.AddDetour(factory, this);
         }
 
         public void Undo() {
-            if (!isApplied)
+            CheckDisposed();
+            if (!IsApplied)
                 return;
-            state.RemoveDetour(DetourFactory.Current, this);
-            isApplied = false;
+            Volatile.Write(ref isApplied, value: false);
+            state.RemoveDetour(factory, this);
         }
 
         // TODO: is there something better we can do here? something that maybe lets us reuse trampolines, or generally avoid
@@ -127,7 +140,7 @@ namespace MonoMod.RuntimeDetour {
             // Instead, we create and return a DynamicMethod calling the "chained trampoline."
 
             // TODO: this likely isn't safe, because the trampolines will be reused
-            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+            using (var dmd = new DynamicMethodDefinition(
                 $"Trampoline<{sig}>?{GetHashCode()}", sig.ReturnType, (Type[])sig.Parameters
             )) {
                 ILProcessor il = dmd.GetILProcessor();
