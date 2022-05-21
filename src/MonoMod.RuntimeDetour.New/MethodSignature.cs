@@ -28,8 +28,8 @@ namespace MonoMod.RuntimeDetour {
             var methParams = method.GetParameters();
             parameters = new Type[methParams.Length + thisCount];
 
-            for (var i = thisCount; i < parameters.Length + thisCount; i++) {
-                parameters[i] = methParams[i].ParameterType;
+            for (var i = thisCount; i < parameters.Length; i++) {
+                parameters[i] = methParams[i - thisCount].ParameterType;
             }
 
             if (!method.IsStatic) {
@@ -73,7 +73,7 @@ namespace MonoMod.RuntimeDetour {
             foreach (var type in parameters) {
                 hc.Add(type);
             }
-            return hc.GetHashCode();
+            return hc.ToHashCode();
         }
     }
 }
