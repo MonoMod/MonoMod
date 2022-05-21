@@ -150,6 +150,8 @@ namespace MonoMod.Core.Platforms {
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
         public NativeDetour? CreateNativeDetour(IntPtr from, IntPtr to, bool undoable = true, int detourMaxSize = -1) {
+            Helpers.Assert(from != to, $"Cannot detour a method to itself! (from: {from}, to: {to})");
+
             var detourInfo = Architecture.ComputeDetourInfo(from, to, detourMaxSize);
 
             // detours are usually fairly small, so we'll stackalloc it
@@ -159,7 +161,7 @@ namespace MonoMod.Core.Platforms {
             var size = Architecture.GetDetourBytes(detourInfo, detourData, out var allocHandle);
 
             // these should be the same
-            Helpers.Assert(size == detourInfo.Size);
+            Helpers.DAssert(size == detourInfo.Size);
 
             // allocate a backup if needed
             var backup = undoable ? new byte[detourInfo.Size] : null;
