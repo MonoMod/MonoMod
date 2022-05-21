@@ -172,7 +172,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         // inlining disabling is up to each individual runtime
         public abstract void DisableInlining(MethodBase method);
 
-        public IntPtr GetMethodEntryPoint(MethodBase method) {
+        public virtual IntPtr GetMethodEntryPoint(MethodBase method) {
             method = GetIdentifiable(method);
 
             if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
