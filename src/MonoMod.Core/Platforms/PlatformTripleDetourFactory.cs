@@ -176,7 +176,6 @@ namespace MonoMod.Core.Platforms {
             public bool IsAttached { get; private set; } = true;
 
             public void Apply() {
-                NativeDetour? oldDetour = null;
                 lock (nativeDetour) {
                     if (IsApplied)
                         throw new InvalidOperationException("Cannot apply a detour which is already applied");
@@ -191,7 +190,8 @@ namespace MonoMod.Core.Platforms {
                         var from = triple.GetNativeMethodBody(Source);
                         var to = triple.GetNativeMethodBody(realTarget);
 
-                        ReplaceDetourInLock(nativeDetour, triple.CreateNativeDetour(from, to), out oldDetour);
+                        ReplaceDetourInLock(nativeDetour, triple.CreateNativeDetour(from, to), out NativeDetour? oldDetour);
+                        Helpers.DAssert(oldDetour is null);
                     } catch {
                         nativeDetour.IsApplied = false;
                         throw;
@@ -199,20 +199,22 @@ namespace MonoMod.Core.Platforms {
                         nativeDetour.IsApplying = false;
                     }
                 }
-
-                ReplaceDetourOutOfLock(oldDetour);
-                oldDetour?.Dispose();
             }
 
             public void Undo() {
-                NativeDetour? oldDetour;
                 lock (nativeDetour) {
                     if (!IsApplied)
                         throw new InvalidOperationException("Cannot undo a detour which is not applied");
-                    UndoCore(out oldDetour);
+                    try {
+                        nativeDetour.IsApplying = true;
+                        UndoCore(out NativeDetour? oldDetour);
+                        // we want to do this in-lock to make sure that it gets cleaned up properly
+                        ReplaceDetourOutOfLock(oldDetour);
+                        oldDetour?.Dispose();
+                    } finally {
+                        nativeDetour.IsApplying = false;
+                    }
                 }
-                ReplaceDetourOutOfLock(oldDetour);
-                oldDetour?.Dispose();
             }
 
             private void UndoCore(out NativeDetour? oldDetour) {
@@ -260,6 +262,8 @@ namespace MonoMod.Core.Platforms {
                         ReplaceDetourOutOfLock(oldDetour);
                         oldDetour?.Dispose();
                     } else {
+                        // TODO: move these GCHandle allocs to the point where IsAttached is set to false
+
                         // otherwise, we need to ensure the pins live forever, and make the native detour ManualOnly and dispose it
                         _ = GCHandle.Alloc(Interlocked.Exchange(ref srcPin, null));
                         _ = GCHandle.Alloc(Interlocked.Exchange(ref dstPin, null));

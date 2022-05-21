@@ -7,35 +7,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace MonoMod.Core.Utils {
-
-    // TODO: make some of these helpers public
-
-    public sealed class AssertionFailedException : Exception {
-        private const string AssertFailed = "Assertion failed! ";
-
-        public AssertionFailedException() : base()
-        {
-            Message = "";
-        }
-
-        public AssertionFailedException(string? message) : base(AssertFailed + message) {
-            Message = message ?? "";
-        }
-
-        public AssertionFailedException(string? message, Exception innerException) : base(AssertFailed + message, innerException) {
-            Message = message ?? "";
-        }
-
-        public AssertionFailedException(string? message, string expression) : base($"{AssertFailed}{expression} {message}") {
-            Message = message ?? "";
-            Expression = expression;
-        }
-
-        public string Expression { get; } = "";
-
-        public override string Message { get; }
-    }
-
     public static class Helpers {
         internal const bool IsDebug =
 #if DEBUG
