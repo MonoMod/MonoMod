@@ -12,7 +12,6 @@ namespace MonoMod.RuntimeDetour {
         MethodInfo InvokeTarget { get; }
         MethodBase NextTrampoline { get; }
 
-        // TODO: add a way to store detour parent nodes to make removing detours far easier
-
+        object? ManagerData { get; set; }
     }
 }

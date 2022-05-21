@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;
 var method2 = typeof(TestClass).GetMethod(nameof(TestClass.Target))!;
+var method3 = typeof(TestClass).GetMethod(nameof(TestClass.Target2))!;
 
 /*using (DetourFactory.Current.CreateDetour(method, method2, true)) {
     var test = new TestClass();
@@ -23,6 +24,20 @@ GC.GetTotalMemory(true);*/
 using (var detour = new Detour(method, method2)) {
     var test = new TestClass();
     _ = test.TestDetourMethod();
+    detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+}
+
+{
+    var test = new TestClass();
+    _ = test.TestDetourMethod();
+}
+
+using (var detour = new Detour(method, method2))
+using (var detour2 = new Detour(method, method3)) {
+    var test = new TestClass();
+    _ = test.TestDetourMethod();
+    detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    detour2.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
 }
 
 class TestClass {
@@ -38,6 +53,12 @@ class TestClass {
     [MethodImpl(MethodImplOptionsEx.NoInlining)]
     public static FunkyStruct Target(TestClass self) {
         Console.WriteLine($"Method successfully detoured {self} te");
+        return default;
+    }
+
+    [MethodImpl(MethodImplOptionsEx.NoInlining)]
+    public static FunkyStruct Target2(TestClass self) {
+        Console.WriteLine($"Method successfully detoured {self} 2");
         return default;
     }
 }

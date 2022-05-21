@@ -18,27 +18,73 @@ namespace MonoMod.RuntimeDetour {
             private ICoreDetour? trampolineDetour;
 
             private void Assert() {
-                Helpers.Assert((Next is null) == (trampolineDetour is null));
+                if (Next is not null)
+                    Helpers.Assert(trampolineDetour is not null);
+            }
+
+            private void UpdateDetours(IDetourFactory factory, MethodBase fallback) {
+                var detourSrc = NextTrampoline;
+                var detourTarget = Next?.Entry ?? fallback;
+                trampolineDetour = factory.CreateDetour(detourSrc, detourTarget, applyByDefault: true);
+            }
+
+            private static void UnlinkDetour(ref ICoreDetour? trampolineDetour) {
+                if (trampolineDetour is not null) {
+                    trampolineDetour.Undo();
+                    trampolineDetour.Dispose();
+                    trampolineDetour = null;
+                }
             }
 
             public void InsertAfter(IDetourFactory factory, Node newNext, MethodBase fallback) {
                 Assert();
+                Next?.Assert();
 
-                throw new NotImplementedException();
+                // TODO: do something to minimize the amount of time a detour isn't present
+
+                // first, we unhook this trampoline detour
+                UnlinkDetour(ref trampolineDetour);
+
+                // then update our linked list, and update the detours for it
+                newNext.Next = Next;
+                Next = newNext;
+
+                UpdateDetours(factory, fallback);
+                Next.UpdateDetours(factory, fallback);
 
                 Assert();
+                Next?.Assert();
+            }
+
+            public void RemoveNext(IDetourFactory factory, MethodBase fallback) {
+                Assert();
+                Next?.Assert();
+
+                var oldNext = Next;
+                Helpers.DAssert(oldNext is not null);
+                Next = oldNext.Next;
+
+                // break the link to the old next node
+                UnlinkDetour(ref trampolineDetour);
+                // then update our own detour to target the new next method
+                UpdateDetours(factory, fallback);
+
+                // now the detour chain is correct, we just want to clean up oldNext
+                UnlinkDetour(ref oldNext.trampolineDetour);
+
+                Assert();
+                Next?.Assert();
             }
         }
 
         private sealed class DetourNode : Node {
-            public readonly IDetour Detour;
-
             public DetourNode(IDetour detour) {
-                Detour = detour;
+                Entry = detour.InvokeTarget;
+                NextTrampoline = detour.NextTrampoline;
             }
 
-            public override MethodBase Entry => Detour.InvokeTarget;
-            public override MethodBase NextTrampoline => Detour.NextTrampoline;
+            public override MethodBase Entry { get; }
+            public override MethodBase NextTrampoline { get; }
         }
 
         internal class DetourState {
@@ -66,7 +112,6 @@ namespace MonoMod.RuntimeDetour {
 
             public void AddDetour(IDetourFactory factory, IDetour detour) {
                 lock (detourList) {
-
                     Node node = detourList;
                     while (node.Next is not null) {
                         // TODO: stop when we've found where we want to be
@@ -74,8 +119,26 @@ namespace MonoMod.RuntimeDetour {
                         node = node.Next;
                     }
 
+             
                     var newNode = new DetourNode(detour);
+                    detour.ManagerData = newNode;
                     node.InsertAfter(factory, newNode, ILCopy);
+                }
+            }
+
+            public void RemoveDetour(IDetourFactory factory, IDetour detour) {
+                lock (detourList) {
+                    Node node = detourList;
+                    var mgrData = detour.ManagerData;
+                    while (node.Next is not null) {
+                        if (ReferenceEquals(node.Next, mgrData))
+                            break;
+
+                        node = node.Next;
+                    }
+
+                    detour.ManagerData = null;
+                    node.RemoveNext(factory, ILCopy);
                 }
             }
         }
