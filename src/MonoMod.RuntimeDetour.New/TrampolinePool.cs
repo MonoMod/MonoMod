@@ -33,6 +33,11 @@ namespace MonoMod.RuntimeDetour {
             return dmd.StubCriticalDetour().Generate();
         }
 
+        public static void Return(MethodInfo trampoline) {
+            var pool = PoolForSig(MethodSignature.ForMethod(trampoline));
+            pool.Add(new(trampoline));
+        }
+
         private static readonly ConstructorInfo Exception_ctor
             = typeof(Exception).GetConstructor(new Type[] { typeof(string) })?? throw new InvalidOperationException();
 

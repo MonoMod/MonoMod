@@ -88,6 +88,7 @@ namespace MonoMod.RuntimeDetour {
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
                 // TODO: set large fields to null
+                TrampolinePool.Return(trampoline);
                 disposedValue = true;
             }
         }
