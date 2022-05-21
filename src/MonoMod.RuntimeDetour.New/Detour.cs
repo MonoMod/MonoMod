@@ -21,7 +21,7 @@ namespace MonoMod.RuntimeDetour {
             : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method) { }
 
-        public Detour(MethodBase source, MethodBase target)
+        public Detour(MethodBase source, MethodInfo target)
             : this(source, target, null) { }
 
         public Detour(Expression<Action> source, Expression<Action> target, bool applyByDefault)
@@ -31,7 +31,7 @@ namespace MonoMod.RuntimeDetour {
             : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, applyByDefault) { }
 
-        public Detour(MethodBase source, MethodBase target, bool applyByDefault)
+        public Detour(MethodBase source, MethodInfo target, bool applyByDefault)
             : this(source, target, null, applyByDefault) { }
 
         public Detour(Expression<Action> source, Expression<Action> target, DetourConfig? config)
@@ -41,7 +41,7 @@ namespace MonoMod.RuntimeDetour {
             : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config) { }
 
-        public Detour(MethodBase source, MethodBase target, DetourConfig? config)
+        public Detour(MethodBase source, MethodInfo target, DetourConfig? config)
             : this(source, target, config, ApplyByDefault) { }
 
         public Detour(Expression<Action> source, Expression<Action> target, DetourConfig? config, bool applyByDefault)
@@ -57,18 +57,21 @@ namespace MonoMod.RuntimeDetour {
         public DetourConfig? Config { get; }
 
         public MethodBase Source { get; }
-        public MethodBase Target { get; }
+        public MethodInfo Target { get; }
 
-        MethodInfo IDetour.InvokeTarget => throw new NotImplementedException();
+        MethodInfo IDetour.InvokeTarget => Target;
 
-        MethodBase IDetour.NextTrampoline => throw new NotImplementedException();
+        private readonly MethodInfo trampoline;
+        MethodBase IDetour.NextTrampoline => trampoline;
 
-        public Detour(MethodBase source, MethodBase target, DetourConfig? config, bool applyByDefault) {
+        public Detour(MethodBase source, MethodInfo target, DetourConfig? config, bool applyByDefault) {
             Config = config;
             Platform = PlatformTriple.Current;
 
             Source = Platform.GetIdentifiable(source);
             Target = target;
+
+            trampoline = TrampolinePool.Rent(MethodSignature.ForMethod(source));
         }
 
     }
