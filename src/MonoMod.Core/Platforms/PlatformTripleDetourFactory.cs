@@ -34,36 +34,56 @@ namespace MonoMod.Core.Platforms {
         }
 
         private sealed class Detour : ICoreDetour {
-            private readonly object sync = new();
             private readonly PlatformTriple triple;
             private readonly MethodBase realTarget;
             private readonly CompileMethodHook? compileMethodHook;
+
+            private sealed class DetourBox {
+                public bool IsDetourReleased;
+
+                private bool applyDetours;
+                public bool IsApplied {
+                    get => Volatile.Read(ref applyDetours);
+                    set {
+                        Volatile.Write(ref applyDetours, value);
+                        Thread.MemoryBarrier();
+                    }
+                }
+
+                private bool isApplying;
+                public bool IsApplying {
+                    get => Volatile.Read(ref isApplying);
+                    set {
+                        Volatile.Write(ref isApplying, value);
+                        Thread.MemoryBarrier();
+                    }
+                }
+
+                public NativeDetour? Detour;
+            }
 
             // TODO: don't have a OnMethodCompiled subscription for each Detour
             public Detour(PlatformTriple triple, MethodBase src, MethodBase dst) {
                 this.triple = triple;
                 Source = src;
                 Target = dst;
-                nativeDetour = new(null);
+                nativeDetour = new();
 
                 realTarget = triple.GetRealDetourTarget(src, dst);
 
                 if (triple.SupportedFeatures.Has(RuntimeFeature.CompileMethodHook)) {
-                    compileMethodHook = new CompileMethodHook(sync, triple, src, realTarget, nativeDetour);
+                    compileMethodHook = new CompileMethodHook(triple, src, realTarget, nativeDetour);
                     triple.Runtime.OnMethodCompiled += compileMethodHook.OnMethodCompiled;
                 }
             }
 
             private sealed class CompileMethodHook {
-                private readonly object sync;
                 private readonly PlatformTriple triple;
                 private readonly MethodBase src;
                 private readonly MethodBase target;
-                private readonly StrongBox<NativeDetour?> nativeDetour;
-                public bool IsDetourReleased;
+                private readonly DetourBox nativeDetour;
 
-                public CompileMethodHook(object sync, PlatformTriple triple, MethodBase src, MethodBase target, StrongBox<NativeDetour?> nativeDetour) {
-                    this.sync = sync;
+                public CompileMethodHook(PlatformTriple triple, MethodBase src, MethodBase target, DetourBox nativeDetour) {
                     this.triple = triple;
                     this.src = src;
                     this.target = target;
@@ -73,28 +93,70 @@ namespace MonoMod.Core.Platforms {
                 public void OnMethodCompiled(MethodBase? method, IntPtr codeStart, ulong codeSize) {
                     if (method is null)
                         return;
-                    if (nativeDetour.Value is null)
-                        return;
-                    if (method != src)
+
+                    if (!nativeDetour.IsApplied)
                         return;
 
+                    method = triple.GetIdentifiable(method);
+                    var isFrom = method.Equals(src);
+                    var isTo = method.Equals(target);
+                    if (!isFrom && !isTo)
+                        return;
+                    Helpers.DAssert(!(isFrom && isTo));
+
                     NativeDetour? oldDetour;
-                    lock (sync) {
-                        var to = triple.GetNativeMethodBody(target, followThunks: false);
-                        var newDetour = triple.CreateNativeDetour(codeStart, to, detourMaxSize: (int) codeSize);
-                        oldDetour = Interlocked.Exchange(ref nativeDetour.Value, newDetour);
-                        if (Volatile.Read(ref IsDetourReleased)) {
-                            newDetour?.MakeManualOnly();
+                    lock (nativeDetour) {
+                        if (nativeDetour.IsApplying)
+                            return;
+
+                        try {
+                            nativeDetour.IsApplying = true;
+
+                            IntPtr from, to;
+
+                            var detour = nativeDetour.Detour;
+
+                            if (detour is not null) {
+                                (from, to) = (detour.Source, detour.Destination);
+                                if (isFrom) {
+                                    from = codeStart;
+                                } else {
+                                    to = codeStart;
+                                }
+                            } else {
+                                if (isFrom) {
+                                    from = codeStart;
+                                    to = triple.GetNativeMethodBody(target);
+                                } else {
+                                    from = triple.GetNativeMethodBody(src);
+                                    to = codeStart;
+                                }
+                            }
+
+                            var newDetour = triple.CreateNativeDetour(from, to, detourMaxSize: (int) codeSize);
+                            ReplaceDetourInLock(nativeDetour, newDetour, out oldDetour);
+                        } finally {
+                            nativeDetour.IsApplying = false;
                         }
                     }
 
-                    // we want to make sure our old detour is set to Automatic, then just release it to be cleaned up on the next GC, which
-                    // we'll presume is *after* the new method body is in place
-                    if (oldDetour is { } old && !old.IsAutoUndone) {
-                        old.MakeAutomatic();
-                    }
+                    ReplaceDetourOutOfLock(oldDetour);
+                }
+            }
 
-                    GC.KeepAlive(oldDetour); // after this point, we'll consider it dead
+            private static void ReplaceDetourInLock(DetourBox nativeDetour, NativeDetour? newDetour, out NativeDetour? oldDetour) {
+                Thread.MemoryBarrier();
+                oldDetour = Interlocked.Exchange(ref nativeDetour.Detour, newDetour);
+                if (Volatile.Read(ref nativeDetour.IsDetourReleased)) {
+                    newDetour?.MakeManualOnly();
+                }
+            }
+
+            private static void ReplaceDetourOutOfLock(NativeDetour? oldDetour) {
+                // we want to make sure our old detour is set to Automatic, then just release it to be cleaned up on the next GC, which
+                // we'll presume is *after* the new method body is in place
+                if (oldDetour is { } old && !old.IsAutoUndone) {
+                    old.MakeAutomatic();
                 }
             }
 
@@ -106,64 +168,80 @@ namespace MonoMod.Core.Platforms {
 #pragma warning disable CA2213 // Disposable fields should be disposed
             private IDisposable? srcPin;
             private IDisposable? dstPin;
-            private readonly StrongBox<NativeDetour?> nativeDetour;
 #pragma warning restore CA2213 // Disposable fields should be disposed
+            private readonly DetourBox nativeDetour;
 
-            public bool IsApplied => nativeDetour.Value is not null;
+            public bool IsApplied => nativeDetour.IsApplied;
 
             public bool IsAttached { get; private set; } = true;
 
             public void Apply() {
-                lock (sync) {
+                NativeDetour? oldDetour = null;
+                lock (nativeDetour) {
                     if (IsApplied)
                         throw new InvalidOperationException("Cannot apply a detour which is already applied");
 
-                    srcPin = triple.PinMethodIfNeeded(Source);
-                    dstPin = triple.PinMethodIfNeeded(realTarget);
+                    try {
+                        nativeDetour.IsApplying = true;
+                        nativeDetour.IsApplied = true;
 
-                    var from = triple.GetNativeMethodBody(Source);
-                    // we don't really want to follow the method thunks for our target, because some runtimes may recompile it
-                    // and we want to get that benefit
-                    var to = triple.GetNativeMethodBody(realTarget, followThunks: false);
+                        srcPin = triple.PinMethodIfNeeded(Source);
+                        dstPin = triple.PinMethodIfNeeded(realTarget);
 
-                    nativeDetour.Value = triple.CreateNativeDetour(from, to);
+                        var from = triple.GetNativeMethodBody(Source);
+                        var to = triple.GetNativeMethodBody(realTarget);
+
+                        ReplaceDetourInLock(nativeDetour, triple.CreateNativeDetour(from, to), out oldDetour);
+                    } catch {
+                        nativeDetour.IsApplied = false;
+                        throw;
+                    } finally {
+                        nativeDetour.IsApplying = false;
+                    }
                 }
+
+                ReplaceDetourOutOfLock(oldDetour);
+                oldDetour?.Dispose();
             }
 
             public void Undo() {
-                lock (sync) {
+                NativeDetour? oldDetour;
+                lock (nativeDetour) {
                     if (!IsApplied)
                         throw new InvalidOperationException("Cannot undo a detour which is not applied");
-                    UndoCore();
+                    UndoCore(out oldDetour);
                 }
+                ReplaceDetourOutOfLock(oldDetour);
+                oldDetour?.Dispose();
             }
 
-            private void UndoCore() {
-                Interlocked.Exchange(ref nativeDetour.Value, null)?.Undo();
+            private void UndoCore(out NativeDetour? oldDetour) {
+                nativeDetour.IsApplied = false;
                 Interlocked.Exchange(ref srcPin, null)?.Dispose();
                 Interlocked.Exchange(ref dstPin, null)?.Dispose();
+                ReplaceDetourInLock(nativeDetour, null, out oldDetour);
             }
 
             public void Attach() {
-                lock (sync) {
+                lock (nativeDetour) {
                     if (IsAttached)
                         throw new InvalidOperationException("Cannot attach an already attached detour");
-                    nativeDetour.Value?.MakeAutomatic();
+                    nativeDetour.Detour?.MakeAutomatic();
                     IsAttached = true;
-                    if (compileMethodHook is { } cmh) {
-                        Volatile.Write(ref cmh.IsDetourReleased, false);
-                    }
+
+                    Volatile.Write(ref nativeDetour.IsDetourReleased, false);
+                    Thread.MemoryBarrier();
                 }
             }
 
             public void Detatch() {
-                lock (sync) {
+                lock (nativeDetour) {
                     if (!IsAttached)
                         throw new InvalidOperationException("Cannot detatch an already detached detour");
-                    nativeDetour.Value?.MakeManualOnly();
-                    if (compileMethodHook is { } cmh) {
-                        Volatile.Write(ref cmh.IsDetourReleased, true);
-                    }
+                    nativeDetour.Detour?.MakeManualOnly();
+
+                    Volatile.Write(ref nativeDetour.IsDetourReleased, true);
+                    Thread.MemoryBarrier();
                 }
             }
 
@@ -178,7 +256,9 @@ namespace MonoMod.Core.Platforms {
                             // if this detour applied a callback, remove it
                             triple.Runtime.OnMethodCompiled -= compileMethodHook.OnMethodCompiled;
                         }
-                        UndoCore();
+                        UndoCore(out var oldDetour);
+                        ReplaceDetourOutOfLock(oldDetour);
+                        oldDetour?.Dispose();
                     } else {
                         // otherwise, we need to ensure the pins live forever, and make the native detour ManualOnly and dispose it
                         _ = GCHandle.Alloc(Interlocked.Exchange(ref srcPin, null));
@@ -188,7 +268,7 @@ namespace MonoMod.Core.Platforms {
                         // if we *do* have a compileMethodHook, then it should stick around to ensure that
                         // the detour remains properly updated
                         if (compileMethodHook is null) {
-                            var detour = Interlocked.Exchange(ref nativeDetour.Value, null);
+                            var detour = Interlocked.Exchange(ref nativeDetour.Detour, null);
                             if (detour is not null && disposing) {
                                 detour.Dispose();
                             }

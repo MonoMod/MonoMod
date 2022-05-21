@@ -179,8 +179,8 @@ namespace MonoMod.Core.Platforms {
             }
         }
 
-        public IntPtr GetNativeMethodBody(MethodBase method, bool followThunks = true) {
-            if (followThunks && SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking)) {
+        public IntPtr GetNativeMethodBody(MethodBase method) {
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking)) {
                 return GetNativeMethodBodyWalk(method);
             } else {
                 return GetNativeMethodBodyDirect(method);
