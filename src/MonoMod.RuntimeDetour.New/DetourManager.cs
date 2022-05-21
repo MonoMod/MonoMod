@@ -24,8 +24,10 @@ namespace MonoMod.RuntimeDetour {
 
             private void UpdateDetours(IDetourFactory factory, MethodBase fallback) {
                 var detourSrc = NextTrampoline;
-                var detourTarget = Next?.Entry ?? fallback;
-                trampolineDetour = factory.CreateDetour(detourSrc, detourTarget, applyByDefault: true);
+                var detourTarget = Next?.Entry;
+                if (detourTarget is not null || (detourTarget is null && this is not RootNode)) {
+                    trampolineDetour = factory.CreateDetour(detourSrc, detourTarget ?? fallback, applyByDefault: true);
+                }
             }
 
             private static void UnlinkDetour(ref ICoreDetour? trampolineDetour) {
@@ -87,6 +89,17 @@ namespace MonoMod.RuntimeDetour {
             public override MethodBase NextTrampoline { get; }
         }
 
+        // The root node is the existing method. It's NextTrampoline is the method, which is the same
+        // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
+        private sealed class RootNode : Node {
+            public override MethodBase Entry => NextTrampoline;
+            public override MethodBase NextTrampoline { get; }
+
+            public RootNode(MethodBase method) {
+                NextTrampoline = method;
+            }
+        }
+
         internal class DetourState {
             public readonly MethodBase Source;
             public readonly MethodBase ILCopy;
@@ -95,17 +108,6 @@ namespace MonoMod.RuntimeDetour {
                 Source = src;
                 ILCopy = src.CreateILCopy();
                 detourList = new(src);
-            }
-
-            // The root node is the existing method. It's NextTrampoline is the method, which is the same
-            // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
-            private sealed class RootNode : Node {
-                public override MethodBase Entry => NextTrampoline;
-                public override MethodBase NextTrampoline { get; }
-
-                public RootNode(MethodBase method) {
-                    NextTrampoline = method;
-                }
             }
 
             private readonly RootNode detourList;

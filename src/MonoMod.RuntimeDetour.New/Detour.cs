@@ -106,6 +106,9 @@ namespace MonoMod.RuntimeDetour {
             isApplied = false;
         }
 
+        // TODO: is there something better we can do here? something that maybe lets us reuse trampolines, or generally avoid
+        // codegen that doesn't need to happen?
+
         /// <summary>
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
