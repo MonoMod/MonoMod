@@ -27,9 +27,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             // we couldn't get one from the pool, so we'll create one
-            using var dmd = new DynamicMethodDefinition(
-                $"Trampoline<{sig}>", sig.ReturnType, (Type[]) sig.Parameters
-            );
+            using var dmd = sig.CreateDmd($"Trampoline<{sig}>");
             return dmd.StubCriticalDetour().Generate();
         }
 

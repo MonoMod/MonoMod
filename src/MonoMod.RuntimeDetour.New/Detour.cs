@@ -140,9 +140,7 @@ namespace MonoMod.RuntimeDetour {
             // Instead, we create and return a DynamicMethod calling the "chained trampoline."
 
             // TODO: this likely isn't safe, because the trampolines will be reused
-            using (var dmd = new DynamicMethodDefinition(
-                $"Trampoline<{sig}>?{GetHashCode()}", sig.ReturnType, (Type[])sig.Parameters
-            )) {
+            using (var dmd = sig.CreateDmd($"Trampoline<{sig}>?{GetHashCode()}")) {
                 ILProcessor il = dmd.GetILProcessor();
 
                 for (var i = 0; i < 32; i++) {

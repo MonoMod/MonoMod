@@ -2,6 +2,7 @@
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -15,9 +16,16 @@ namespace MonoMod.RuntimeDetour {
         public int ParameterCount => parameters.Length;
         public IEnumerable<Type> Parameters => parameters;
 
+        public Type? FirstParameter => parameters.Length >= 1 ? parameters[0] : null;
+
         public MethodSignature(Type returnType, Type[] parameters) {
             ReturnType = returnType;
             this.parameters = parameters;
+        }
+
+        public MethodSignature(Type returnType, IEnumerable<Type> parameters) {
+            ReturnType = returnType;
+            this.parameters = parameters.ToArray();
         }
 
         public MethodSignature(MethodBase method) {
@@ -37,21 +45,50 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        public override string ToString() {
-            var sb = new StringBuilder();
-            _ = sb.Append(ReturnType.ToString())
-                .Append('(');
-            for (var i = 0; i < parameters.Length; i++) {
-                if (i != 0)
-                    _ = sb.Append(',');
-                _ = sb.Append(parameters[i].ToString());
-            }
-            return sb.Append(')').ToString();
-        }
-
         private static readonly ConditionalWeakTable<MethodBase, MethodSignature> sigMap = new();
         public static MethodSignature ForMethod(MethodBase method)
             => sigMap.GetValue(method, m => new(m));
+
+        private sealed class CompatableComparer : IEqualityComparer<Type> {
+            public static readonly CompatableComparer Instance = new();
+            public bool Equals(Type? x, Type? y) {
+                if (ReferenceEquals(x, y))
+                    return true;
+                if (x is null || y is null)
+                    return false;
+                return x.IsCompatible(y);
+            }
+
+            public int GetHashCode([DisallowNull] Type obj) {
+                throw new NotSupportedException();
+            }
+        }
+
+        public bool IsCompatibleWith(MethodSignature other) {
+            Helpers.ThrowIfArgumentNull(other);
+            return ReturnType.IsCompatible(other.ReturnType)
+                && parameters.SequenceEqual(other.Parameters, CompatableComparer.Instance);
+        }
+
+        public DynamicMethodDefinition CreateDmd(string name) {
+            return new(name, ReturnType, parameters);
+        }
+
+        public override string ToString() {
+            var literals = 2 + parameters.Length - 1;
+            var holes = 1 + parameters.Length;
+
+            var sh = new DefaultInterpolatedStringHandler(literals, holes);
+            sh.AppendFormatted(ReturnType);
+            sh.AppendLiteral(" (");
+            for (var i = 0; i < parameters.Length; i++) {
+                if (i != 0)
+                    sh.AppendLiteral(", ");
+                sh.AppendFormatted(parameters[i]);
+            }
+            sh.AppendLiteral(")");
+            return sh.ToStringAndClear();
+        }
 
         public bool Equals(MethodSignature? other) {
             if (other is null)
