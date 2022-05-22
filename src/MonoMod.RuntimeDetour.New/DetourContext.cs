@@ -1,6 +1,8 @@
-﻿using MonoMod.RuntimeDetour.Utils;
+﻿using MonoMod.Core;
+using MonoMod.RuntimeDetour.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 
@@ -41,6 +43,7 @@ namespace MonoMod.RuntimeDetour {
         public DetourConfig? DetourConfig => TryGetDetourConfig(out var cfg) ? cfg : null;
         protected abstract bool TryGetDetourConfig(out DetourConfig? config);
 
+        public static DetourConfig? CurrentDetourConfig => TryGetCurrentDetourConfig(out var cfg) ? cfg : null;
         public static bool TryGetCurrentDetourConfig(out DetourConfig? config) {
             var scope = current;
             while (scope is not null) {
@@ -54,13 +57,34 @@ namespace MonoMod.RuntimeDetour {
             return false;
         }
 
-        public static DetourConfig? CurrentDetourConfig => TryGetCurrentDetourConfig(out var cfg) ? cfg : null;
 
+
+        public IDetourFactory? DetourFactory => TryGetDetourFactory(out var fac) ? fac : null;
+        protected abstract bool TryGetDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory);
+
+        public static IDetourFactory? CurrentDetourFactory => TryGetCurrentDetourFactory(out var fac) ? fac : null;
+        public static bool TryGetCurrentDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+            var scope = current;
+            while (scope is not null) {
+                if (scope.Context.TryGetDetourFactory(out var fac)) {
+                    detourFactory = fac;
+                    return true;
+                }
+                scope = scope.Prev;
+            }
+            detourFactory = null;
+            return false;
+        }
     }
 
     public class EmptyDetourContext : DetourContext {
         protected override bool TryGetDetourConfig(out DetourConfig? config) {
             config = null;
+            return false;
+        }
+
+        protected override bool TryGetDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+            detourFactory = null;
             return false;
         }
     }
@@ -72,6 +96,17 @@ namespace MonoMod.RuntimeDetour {
         }
         protected override bool TryGetDetourConfig(out DetourConfig? config) {
             config = cfg;
+            return true;
+        }
+    }
+
+    public class DetourFactoryContext : EmptyDetourContext {
+        private readonly IDetourFactory fac;
+        public DetourFactoryContext(IDetourFactory fac) {
+            this.fac = fac;
+        }
+        protected override bool TryGetDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+            detourFactory = fac;
             return true;
         }
     }

@@ -54,19 +54,20 @@ namespace MonoMod.RuntimeDetour {
         public Detour(Expression source, Expression target, DetourConfig? config, bool applyByDefault)
             : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, 
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config, applyByDefault) { }
+
+        public Detour(MethodBase source, MethodInfo target, DetourConfig? config, bool applyByDefault)
+            : this(source, target, GetDefaultFactory(), config, applyByDefault) { }
         #endregion
 
         private static DetourConfig? GetDefaultConfig() {
-            if (DetourContext.TryGetCurrentDetourConfig(out var cfg)) {
-                return cfg;
-            } else {
-                return null;
-            }
+            return DetourContext.TryGetCurrentDetourConfig(out var cfg) ? cfg : null;
+        }
+
+        private static IDetourFactory GetDefaultFactory() {
+            return DetourContext.TryGetCurrentDetourFactory(out var fac) ? fac : DetourFactory.Current;
         }
 
         private readonly IDetourFactory factory;
-        public PlatformTriple Platform { get; }
-
         public DetourConfig? Config { get; }
 
         public MethodBase Source { get; }
@@ -84,12 +85,15 @@ namespace MonoMod.RuntimeDetour {
 
         private readonly DetourManager.DetourState state;
 
-        public Detour(MethodBase source, MethodInfo target, DetourConfig? config, bool applyByDefault) {
-            Config = config;
-            Platform = PlatformTriple.Current;
-            factory = DetourFactory.Current;
+        public Detour(MethodBase source, MethodInfo target, IDetourFactory factory, DetourConfig? config, bool applyByDefault) {
+            Helpers.ThrowIfArgumentNull(source);
+            Helpers.ThrowIfArgumentNull(target);
+            Helpers.ThrowIfArgumentNull(factory);
 
-            Source = Platform.GetIdentifiable(source);
+            Config = config;
+            this.factory = factory;
+
+            Source = source;
             Target = target;
 
             trampoline = TrampolinePool.Rent(MethodSignature.ForMethod(source));
