@@ -27,10 +27,14 @@ using (var detour = new Detour(method, method2)) {
     detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
 }
 
+Console.WriteLine();
+
 {
     var test = new TestClass();
     _ = test.TestDetourMethod();
 }
+
+Console.WriteLine();
 
 using (var detour = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!)))
 using (var detour2 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!))) {

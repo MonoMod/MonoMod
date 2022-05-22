@@ -26,7 +26,7 @@ namespace MonoMod.RuntimeDetour {
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method) { }
 
         public Detour(MethodBase source, MethodInfo target)
-            : this(source, target, null) { }
+            : this(source, target, GetDefaultConfig()) { }
 
         public Detour(Expression<Action> source, Expression<Action> target, bool applyByDefault)
             : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, applyByDefault) { }
@@ -36,7 +36,7 @@ namespace MonoMod.RuntimeDetour {
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, applyByDefault) { }
 
         public Detour(MethodBase source, MethodInfo target, bool applyByDefault)
-            : this(source, target, null, applyByDefault) { }
+            : this(source, target, GetDefaultConfig(), applyByDefault) { }
 
         public Detour(Expression<Action> source, Expression<Action> target, DetourConfig? config)
             : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, config) { }
@@ -55,6 +55,14 @@ namespace MonoMod.RuntimeDetour {
             : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, 
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config, applyByDefault) { }
         #endregion
+
+        private static DetourConfig? GetDefaultConfig() {
+            if (DetourContext.TryGetCurrentDetourConfig(out var cfg)) {
+                return cfg;
+            } else {
+                return null;
+            }
+        }
 
         private readonly IDetourFactory factory;
         public PlatformTriple Platform { get; }
