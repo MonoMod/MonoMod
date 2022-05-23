@@ -39,13 +39,31 @@ using (new DetourFactoryContext(DetourFactory.Current).Use()) {
 
     Console.WriteLine();
 
-    using (var detour = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!)))
-    using (var detour2 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!))) {
+    using (var detour = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!),
+        config: new("fwTest2")))
+    using (var detour2 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!),
+        config: new DetourConfig("fwTest3", priority: 4).WithBefore("fwTest2"))) {
         var test = new TestClass();
         _ = test.TestDetourMethod();
         detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
         detour2.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
     }
+}
+
+Console.WriteLine();
+
+using (var detour = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!),
+    config: new("fwTest2")))
+using (var detour2 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!),
+    config: new DetourConfig("fwTest3", priority: 4).WithBefore("fwTest2")))
+using (var detour3 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target3(null!)))
+using (var detour4 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target4(null!))) {
+    var test = new TestClass();
+    _ = test.TestDetourMethod();
+    detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    detour2.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    detour3.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    detour4.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
 }
 
 class TestClass {
@@ -67,6 +85,18 @@ class TestClass {
     [MethodImpl(MethodImplOptionsEx.NoInlining)]
     public static FunkyStruct Target2(TestClass self) {
         Console.WriteLine($"Method successfully detoured {self} 2");
+        return default;
+    }
+
+    [MethodImpl(MethodImplOptionsEx.NoInlining)]
+    public static FunkyStruct Target3(TestClass self) {
+        Console.WriteLine($"Method successfully detoured {self} 3");
+        return default;
+    }
+
+    [MethodImpl(MethodImplOptionsEx.NoInlining)]
+    public static FunkyStruct Target4(TestClass self) {
+        Console.WriteLine($"Method successfully detoured {self} 4");
         return default;
     }
 }

@@ -68,6 +68,8 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private readonly IDetourFactory factory;
+        IDetourFactory IDetour.Factory => factory;
+
         public DetourConfig? Config { get; }
 
         public MethodBase Source { get; }
@@ -120,7 +122,7 @@ namespace MonoMod.RuntimeDetour {
             if (IsApplied)
                 return;
             Volatile.Write(ref isApplied, true);
-            state.AddDetour(factory, this);
+            state.AddDetour(this);
         }
 
         public void Undo() {
@@ -128,7 +130,7 @@ namespace MonoMod.RuntimeDetour {
             if (!IsApplied)
                 return;
             Volatile.Write(ref isApplied, value: false);
-            state.RemoveDetour(factory, this);
+            state.RemoveDetour(this);
         }
 
         // TODO: is there something better we can do here? something that maybe lets us reuse trampolines, or generally avoid
@@ -182,13 +184,12 @@ namespace MonoMod.RuntimeDetour {
 
         protected virtual void Dispose(bool disposing) {
             if (!disposedValue) {
+                Undo();
+
                 if (disposing) {
-                    // TODO: dispose managed state (managed objects)
+                    TrampolinePool.Return(trampoline);
                 }
 
-                Undo();
-                GC.ReRegisterForFinalize(trampoline);
-                TrampolinePool.Return(trampoline);
                 disposedValue = true;
             }
         }

@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using MonoMod.Core;
 using System.Reflection;
-using System.Text;
 
 namespace MonoMod.RuntimeDetour {
     internal interface IDetour {
 
+        IDetourFactory Factory { get; }
         DetourConfig? Config { get; }
 
         MethodInfo InvokeTarget { get; }
