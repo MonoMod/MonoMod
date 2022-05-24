@@ -38,16 +38,24 @@ namespace MonoMod.RuntimeDetour {
 
         public DataScope Use() => PushContext(this);
 
+        public static DetourConfig? GetDefaultConfig() {
+            return TryGetCurrentConfig(out var cfg) ? cfg : null;
+        }
+
+        public static IDetourFactory GetDefaultFactory() {
+            return TryGetCurrentFactory(out var fac) ? fac : DetourFactory.Current;
+        }
 
 
-        public DetourConfig? DetourConfig => TryGetDetourConfig(out var cfg) ? cfg : null;
-        protected abstract bool TryGetDetourConfig(out DetourConfig? config);
 
-        public static DetourConfig? CurrentDetourConfig => TryGetCurrentDetourConfig(out var cfg) ? cfg : null;
-        public static bool TryGetCurrentDetourConfig(out DetourConfig? config) {
+        public DetourConfig? Config => TryGetConfig(out var cfg) ? cfg : null;
+        protected abstract bool TryGetConfig(out DetourConfig? config);
+
+        public static DetourConfig? CurrentConfig => TryGetCurrentConfig(out var cfg) ? cfg : null;
+        public static bool TryGetCurrentConfig(out DetourConfig? config) {
             var scope = current;
             while (scope is not null) {
-                if (scope.Context.TryGetDetourConfig(out var cfg)) {
+                if (scope.Context.TryGetConfig(out var cfg)) {
                     config = cfg;
                     return true;
                 }
@@ -59,14 +67,14 @@ namespace MonoMod.RuntimeDetour {
 
 
 
-        public IDetourFactory? DetourFactory => TryGetDetourFactory(out var fac) ? fac : null;
-        protected abstract bool TryGetDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory);
+        public IDetourFactory? Factory => TryGetFactory(out var fac) ? fac : null;
+        protected abstract bool TryGetFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory);
 
-        public static IDetourFactory? CurrentDetourFactory => TryGetCurrentDetourFactory(out var fac) ? fac : null;
-        public static bool TryGetCurrentDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+        public static IDetourFactory? CurrentFactory => TryGetCurrentFactory(out var fac) ? fac : null;
+        public static bool TryGetCurrentFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
             var scope = current;
             while (scope is not null) {
-                if (scope.Context.TryGetDetourFactory(out var fac)) {
+                if (scope.Context.TryGetFactory(out var fac)) {
                     detourFactory = fac;
                     return true;
                 }
@@ -78,12 +86,12 @@ namespace MonoMod.RuntimeDetour {
     }
 
     public class EmptyDetourContext : DetourContext {
-        protected override bool TryGetDetourConfig(out DetourConfig? config) {
+        protected override bool TryGetConfig(out DetourConfig? config) {
             config = null;
             return false;
         }
 
-        protected override bool TryGetDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+        protected override bool TryGetFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
             detourFactory = null;
             return false;
         }
@@ -94,7 +102,7 @@ namespace MonoMod.RuntimeDetour {
         public DetourConfigContext(DetourConfig? cfg) {
             this.cfg = cfg;
         }
-        protected override bool TryGetDetourConfig(out DetourConfig? config) {
+        protected override bool TryGetConfig(out DetourConfig? config) {
             config = cfg;
             return true;
         }
@@ -105,7 +113,7 @@ namespace MonoMod.RuntimeDetour {
         public DetourFactoryContext(IDetourFactory fac) {
             this.fac = fac;
         }
-        protected override bool TryGetDetourFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+        protected override bool TryGetFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
             detourFactory = fac;
             return true;
         }

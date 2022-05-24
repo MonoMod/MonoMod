@@ -26,7 +26,7 @@ namespace MonoMod.RuntimeDetour {
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method) { }
 
         public Detour(MethodBase source, MethodInfo target)
-            : this(source, target, GetDefaultConfig()) { }
+            : this(source, target, DetourContext.GetDefaultConfig()) { }
 
         public Detour(Expression<Action> source, Expression<Action> target, bool applyByDefault)
             : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, applyByDefault) { }
@@ -36,7 +36,7 @@ namespace MonoMod.RuntimeDetour {
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, applyByDefault) { }
 
         public Detour(MethodBase source, MethodInfo target, bool applyByDefault)
-            : this(source, target, GetDefaultConfig(), applyByDefault) { }
+            : this(source, target, DetourContext.GetDefaultConfig(), applyByDefault) { }
 
         public Detour(Expression<Action> source, Expression<Action> target, DetourConfig? config)
             : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, config) { }
@@ -56,16 +56,8 @@ namespace MonoMod.RuntimeDetour {
                   ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config, applyByDefault) { }
 
         public Detour(MethodBase source, MethodInfo target, DetourConfig? config, bool applyByDefault)
-            : this(source, target, GetDefaultFactory(), config, applyByDefault) { }
+            : this(source, target, DetourContext.GetDefaultFactory(), config, applyByDefault) { }
         #endregion
-
-        private static DetourConfig? GetDefaultConfig() {
-            return DetourContext.TryGetCurrentDetourConfig(out var cfg) ? cfg : null;
-        }
-
-        private static IDetourFactory GetDefaultFactory() {
-            return DetourContext.TryGetCurrentDetourFactory(out var fac) ? fac : DetourFactory.Current;
-        }
 
         private readonly IDetourFactory factory;
         IDetourFactory IDetour.Factory => factory;
