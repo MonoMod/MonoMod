@@ -28,10 +28,12 @@ namespace MonoMod.RuntimeDetour {
             this.parameters = parameters.ToArray();
         }
 
-        public MethodSignature(MethodBase method) {
+        public MethodSignature(MethodBase method) : this(method, false) { }
+
+        public MethodSignature(MethodBase method, bool ignoreThis) {
             ReturnType = (method as MethodInfo)?.ReturnType ?? typeof(void);
 
-            var thisCount = method.IsStatic ? 0 : 1;
+            var thisCount = ignoreThis || method.IsStatic ? 0 : 1;
 
             var methParams = method.GetParameters();
             parameters = new Type[methParams.Length + thisCount];
@@ -40,14 +42,17 @@ namespace MonoMod.RuntimeDetour {
                 parameters[i] = methParams[i - thisCount].ParameterType;
             }
 
-            if (!method.IsStatic) {
+            if (!ignoreThis && !method.IsStatic) {
                 parameters[0] = method.GetThisParamType();
             }
         }
 
-        private static readonly ConditionalWeakTable<MethodBase, MethodSignature> sigMap = new();
-        public static MethodSignature ForMethod(MethodBase method)
-            => sigMap.GetValue(method, m => new(m));
+        private static readonly ConditionalWeakTable<MethodBase, MethodSignature> thisSigMap = new();
+        private static readonly ConditionalWeakTable<MethodBase, MethodSignature> noThisSigMap = new();
+        public static MethodSignature ForMethod(MethodBase method) => ForMethod(method, false);
+        public static MethodSignature ForMethod(MethodBase method, bool ignoreThis) {
+            return (ignoreThis ? noThisSigMap : thisSigMap).GetValue(method, m => new(m, ignoreThis));
+        }
 
         private sealed class CompatableComparer : IEqualityComparer<Type> {
             public static readonly CompatableComparer Instance = new();

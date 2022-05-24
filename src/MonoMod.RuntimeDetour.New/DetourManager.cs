@@ -454,15 +454,15 @@ namespace MonoMod.RuntimeDetour {
             }
 
             private void RemoveNoConfigDetour(IDetour detour, DetourChainNode node) {
-                var chain = noConfigChain;
+                ref var chain = ref noConfigChain;
                 while (chain is not null) {
-                    if (ReferenceEquals(chain.Next, node)) {
-                        chain.Next = node.Next;
+                    if (ReferenceEquals(chain, node)) {
+                        chain = node.Next;
                         node.Next = null;
                         break;
                     }
 
-                    chain = chain.Next;
+                    chain = ref chain.Next;
                 }
 
                 UpdateChain(detour.Factory);

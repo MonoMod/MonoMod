@@ -70,8 +70,6 @@ namespace MonoMod.RuntimeDetour {
         MethodInfo IDetour.InvokeTarget => Target;
 
         private readonly MethodInfo trampoline;
-        private bool disposedValue;
-
         MethodBase IDetour.NextTrampoline => trampoline;
 
         private object? managerData;
@@ -90,7 +88,18 @@ namespace MonoMod.RuntimeDetour {
             Source = source;
             Target = target;
 
-            trampoline = TrampolinePool.Rent(MethodSignature.ForMethod(source));
+            if (!target.IsStatic) {
+                throw new ArgumentException("Target method is not static", nameof(target));
+            }
+
+            var srcSig = MethodSignature.ForMethod(source);
+            var dstSig = MethodSignature.ForMethod(target);
+
+            if (!srcSig.IsCompatibleWith(dstSig)) {
+                throw new ArgumentException($"Target method is not compatible with source method (src: {srcSig}, dst: {dstSig})");
+            }
+
+            trampoline = TrampolinePool.Rent(srcSig);
 
             state = DetourManager.GetDetourState(source);
 
@@ -99,6 +108,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
+        private bool disposedValue;
         public bool IsValid => !disposedValue;
 
         private bool isApplied;

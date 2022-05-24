@@ -3,10 +3,12 @@ using MonoMod.Core;
 using MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
+using static System.Net.Mime.MediaTypeNames;
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;
 var method2 = typeof(TestClass).GetMethod(nameof(TestClass.Target))!;
 var method3 = typeof(TestClass).GetMethod(nameof(TestClass.Target2))!;
+var targetHook = typeof(TestClass).GetMethod(nameof(TestClass.TargetHook))!;
 
 /*using (DetourFactory.Current.CreateDetour(method, method2, true)) {
     var test = new TestClass();
@@ -20,6 +22,13 @@ foreach (var entry in cwt) {
 }
 
 GC.GetTotalMemory(true);*/
+
+using (var hook = new Hook(method, targetHook, null, DetourContext.GetDefaultFactory(), null, true)) {
+    var test = new TestClass();
+    _ = test.TestDetourMethod();
+}
+
+Console.WriteLine();
 
 using (new DetourFactoryContext(DetourFactory.Current).Use()) {
 
@@ -80,6 +89,12 @@ class TestClass {
     public static FunkyStruct Target(TestClass self) {
         Console.WriteLine($"Method successfully detoured {self} te");
         return default;
+    }
+
+    [MethodImpl(MethodImplOptionsEx.NoInlining)]
+    public static FunkyStruct TargetHook(Func<TestClass, FunkyStruct> orig, TestClass self) {
+        Console.WriteLine($"Method successfully detoured {self} hook");
+        return orig(self);
     }
 
     [MethodImpl(MethodImplOptionsEx.NoInlining)]
