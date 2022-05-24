@@ -5,7 +5,13 @@ namespace MonoMod.RuntimeDetour {
     public class DetourConfig {
         public string Id { get; }
         public int? Priority { get; }
+        /// <summary>
+        /// The detour IDs to run before this detour.
+        /// </summary>
         public IEnumerable<string> Before { get; }
+        /// <summary>
+        /// The detour IDs to run after this detour.
+        /// </summary>
         public IEnumerable<string> After { get; }
 
         public DetourConfig(string id, int? priority = null, IEnumerable<string>? before = null, IEnumerable<string>? after = null) {

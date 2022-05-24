@@ -141,6 +141,11 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
+        /// <remarks>
+        /// If this method is not called within a call to the detoured method, the behaviour of the generated trampoline is undefined.
+        /// It will likely work as long as there isn't a concurrent update to the detour chain, but there are no protections against
+        /// that going wrong.
+        /// </remarks>
         public MethodBase GenerateTrampoline() {
             /*MethodBase remoteTrampoline = OnGenerateTrampoline?.InvokeWhileNull<MethodBase>(this, signature);
             if (remoteTrampoline != null)
@@ -180,6 +185,11 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Generate a new DynamicMethod with which you can invoke the previous state.
         /// </summary>
+        /// <remarks>
+        /// If this method is not called within a call to the detoured method, the behaviour of the generated trampoline is undefined.
+        /// It will likely work as long as there isn't a concurrent update to the detour chain, but there are no protections against
+        /// that going wrong.
+        /// </remarks>
         public T GenerateTrampoline<T>() where T : Delegate {
             return GenerateTrampoline().CreateDelegate<T>();
         }

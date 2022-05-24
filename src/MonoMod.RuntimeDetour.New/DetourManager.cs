@@ -1,4 +1,5 @@
-﻿using Mono.Cecil.Cil;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Utils;
@@ -13,7 +14,7 @@ using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     internal static class DetourManager {
-
+        #region Detour chain
         private abstract class ChainNode {
 
             public ChainNode? Next;
@@ -108,6 +109,8 @@ namespace MonoMod.RuntimeDetour {
             public readonly MethodBase SyncProxy;
             public readonly DetourSyncInfo SyncInfo = new();
             private readonly DataScope<DynamicReferenceManager.CellRef> syncProxyRefScope;
+
+            public bool HasILHook;
 
             public RootChainNode(MethodBase method) {
                 Sig = MethodSignature.ForMethod(method);
@@ -208,43 +211,59 @@ namespace MonoMod.RuntimeDetour {
 
                 syncDetour ??= factory.CreateDetour(Entry, SyncProxy, applyByDefault: false);
 
-                if (Next is null && syncDetour.IsApplied) {
+                if (!HasILHook && Next is null && syncDetour.IsApplied) {
                     syncDetour.Undo();
-                } else if (Next is not null && !syncDetour.IsApplied) {
+                } else if ((HasILHook || Next is not null) && !syncDetour.IsApplied) {
                     syncDetour.Apply();
                 }
             }
         }
+        #endregion
 
-        private sealed class DepListNode {
+        #region ILHook chain
+        private class ILHookEntry {
+            public readonly IDetourFactory Factory;
+            public readonly DetourConfig? Config;
+            public readonly ILContext.Manipulator Manip;
+
+            public ILHookEntry(IILHook hook) {
+                Manip = hook.Manip;
+                Config = hook.Config;
+                Factory = hook.Factory;
+            }
+        }
+        #endregion
+
+        #region DepGraph
+        private sealed class DepListNode<TNode> {
             public readonly DetourConfig Config;
-            public readonly DetourChainNode ChainNode;
+            public readonly TNode ChainNode;
 
-            public DepListNode? Next;
+            public DepListNode<TNode>? Next;
 
-            public DepListNode(DetourConfig config, DetourChainNode chainNode) {
+            public DepListNode(DetourConfig config, TNode chainNode) {
                 Config = config;
                 ChainNode = chainNode;
             }
         }
 
-        private sealed class DepGraphNode {
-            public readonly DepListNode ListNode;
+        private sealed class DepGraphNode<TNode> {
+            public readonly DepListNode<TNode> ListNode;
             public DetourConfig Config => ListNode.Config;
-            public readonly List<DepGraphNode> BeforeThis = new();
+            public readonly List<DepGraphNode<TNode>> BeforeThis = new();
             public bool Visiting;
             public bool Visited;
 
-            public DepGraphNode(DepListNode listNode) {
+            public DepGraphNode(DepListNode<TNode> listNode) {
                 ListNode = listNode;
             }
         }
 
-        private sealed class DepGraph {
-            private readonly List<DepGraphNode> nodes = new();
-            public DepListNode? ListHead;
+        private sealed class DepGraph<TNode> {
+            private readonly List<DepGraphNode<TNode>> nodes = new();
+            public DepListNode<TNode>? ListHead;
 
-            private static void PrioInsert(List<DepGraphNode> list, DepGraphNode node) {
+            private static void PrioInsert(List<DepGraphNode<TNode>> list, DepGraphNode<TNode> node) {
                 if (node.Config.Priority is not { } nPrio) {
                     list.Add(node);
                     return;
@@ -271,7 +290,7 @@ namespace MonoMod.RuntimeDetour {
                 list.Insert(insertIdx, node);
             }
 
-            public void Insert(DepGraphNode node) {
+            public void Insert(DepGraphNode<TNode> node) {
                 node.ListNode.Next = null;
                 node.BeforeThis.Clear();
                 node.Visited = false;
@@ -334,7 +353,7 @@ namespace MonoMod.RuntimeDetour {
                 UpdateList();
             }
 
-            public void Remove(DepGraphNode node) {
+            public void Remove(DepGraphNode<TNode> node) {
                 nodes.Remove(node);
                 foreach (var cur in nodes) {
                     cur.BeforeThis.Remove(node);
@@ -348,7 +367,7 @@ namespace MonoMod.RuntimeDetour {
                 UpdateList();
             }
 
-            private readonly DepListNode dummyListNode = new(null!, null!);
+            private readonly DepListNode<TNode> dummyListNode = new(null!, default!);
 
             private void UpdateList() {
                 var dummy = dummyListNode;
@@ -361,7 +380,7 @@ namespace MonoMod.RuntimeDetour {
                 ListHead = dummy.Next;
             }
 
-            private void InsertListNode(ref DepListNode nextHolder, DepGraphNode node) {
+            private void InsertListNode(ref DepListNode<TNode> nextHolder, DepGraphNode<TNode> node) {
                 if (node.Visiting) {
                     throw new InvalidOperationException("Cycle detected");
                 }
@@ -386,20 +405,23 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
         }
+        #endregion
 
         internal class DetourState {
             public readonly MethodBase Source;
             public readonly MethodBase ILCopy;
+            public MethodBase EndOfChain;
 
             private readonly object sync = new();
 
             public DetourState(MethodBase src) {
                 Source = src;
                 ILCopy = src.CreateILCopy();
+                EndOfChain = ILCopy;
                 detourList = new(src);
             }
 
-            private readonly DepGraph graph = new();
+            private readonly DepGraph<ChainNode> detourGraph = new();
             private readonly RootChainNode detourList;
             private ChainNode? noConfigChain;
 
@@ -410,10 +432,10 @@ namespace MonoMod.RuntimeDetour {
 
                     var cnode = new DetourChainNode(detour);
                     if (cnode.Config is { } cfg) {
-                        var listNode = new DepListNode(cfg, cnode);
-                        var graphNode = new DepGraphNode(listNode);
+                        var listNode = new DepListNode<ChainNode>(cfg, cnode);
+                        var graphNode = new DepGraphNode<ChainNode>(listNode);
 
-                        graph.Insert(graphNode);
+                        detourGraph.Insert(graphNode);
 
                         detour.ManagerData = graphNode;
                     } else {
@@ -433,7 +455,7 @@ namespace MonoMod.RuntimeDetour {
                         case null:
                             throw new InvalidOperationException("Trying to remove detour which wasn't added");
 
-                        case DepGraphNode gn:
+                        case DepGraphNode<ChainNode> gn:
                             RemoveGraphDetour(detour, gn);
                             break;
 
@@ -447,8 +469,8 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            private void RemoveGraphDetour(IDetour detour, DepGraphNode node) {
-                graph.Remove(node);
+            private void RemoveGraphDetour(IDetour detour, DepGraphNode<ChainNode> node) {
+                detourGraph.Remove(node);
                 UpdateChain(detour.Factory);
                 node.ListNode.ChainNode.Remove();
             }
@@ -469,8 +491,107 @@ namespace MonoMod.RuntimeDetour {
                 node.Remove();
             }
 
+            private readonly DepGraph<ILHookEntry> ilhookGraph = new();
+            private readonly List<ILHookEntry> noConfigIlhooks = new();
+
+            public void AddILHook(IILHook ilhook) {
+                lock (sync) {
+                    if (ilhook.ManagerData is not null)
+                        throw new InvalidOperationException("Trying to add an IL hook which was already added");
+
+                    var entry = new ILHookEntry(ilhook);
+                    if (entry.Config is { } cfg) {
+                        var listNode = new DepListNode<ILHookEntry>(cfg, entry);
+                        var graphNode = new DepGraphNode<ILHookEntry>(listNode);
+
+                        ilhookGraph.Insert(graphNode);
+
+                        ilhook.ManagerData = graphNode;
+                    } else {
+                        noConfigIlhooks.Add(entry);
+                        ilhook.ManagerData = entry;
+                    }
+
+                    UpdateEndOfChain();
+                    UpdateChain(ilhook.Factory);
+                }
+            }
+
+            public void RemoveILHook(IILHook ilhook) {
+                lock (sync) {
+                    switch (ilhook.ManagerData) {
+                        case null:
+                            throw new InvalidOperationException("Trying to remove IL hook which wasn't added");
+
+                        case DepGraphNode<ILHookEntry> gn:
+                            RemoveGraphILHook(ilhook, gn);
+                            break;
+
+                        case ILHookEntry cn:
+                            RemoveNoConfigILHook(ilhook, cn);
+                            break;
+
+                        default:
+                            throw new InvalidOperationException("Trying to remove IL hook with unknown manager data");
+                    }
+                }
+            }
+
+            private void RemoveGraphILHook(IILHook ilhook, DepGraphNode<ILHookEntry> node) {
+                ilhookGraph.Remove(node);
+                UpdateEndOfChain();
+                UpdateChain(ilhook.Factory);
+            }
+
+            private void RemoveNoConfigILHook(IILHook ilhook, ILHookEntry node) {
+                noConfigIlhooks.Remove(node);
+                UpdateEndOfChain();
+                UpdateChain(ilhook.Factory);
+            }
+
+            private void UpdateEndOfChain() {
+                if (noConfigIlhooks.Count == 0 && ilhookGraph.ListHead is null) {
+                    detourList.HasILHook = false;
+                    EndOfChain = ILCopy;
+                    return;
+                }
+
+                detourList.HasILHook = true;
+
+                using var dmd = new DynamicMethodDefinition(Source);
+
+                var def = dmd.Definition;
+                var cur = ilhookGraph.ListHead;
+                while (cur is not null) {
+                    InvokeManipulator(def, cur.ChainNode.Manip);
+                    cur = cur.Next;
+                }
+
+                foreach (var node in noConfigIlhooks) {
+                    InvokeManipulator(def, node.Manip);
+                }
+
+                EndOfChain = dmd.Generate();
+            }
+
+            private static void InvokeManipulator(MethodDefinition def, ILContext.Manipulator cb) {
+                using var il = new ILContext(def);
+                il.ReferenceBag = RuntimeILReferenceBag.Instance;
+                il.Invoke(cb);
+                if (il.IsReadOnly) {
+                    il.Dispose();
+                    return;
+                }
+
+                // Free the now useless MethodDefinition and ILProcessor references.
+                // This also prevents clueless people from storing the ILContext elsewhere
+                // and reusing it outside of the IL manipulation context.
+                il.MakeReadOnly();
+                return;
+            }
+
             private void UpdateChain(IDetourFactory updatingFactory) {
-                var graphNode = graph.ListHead;
+                var graphNode = detourGraph.ListHead;
 
                 ChainNode? chain = null;
                 ref var next = ref chain;
@@ -498,7 +619,7 @@ namespace MonoMod.RuntimeDetour {
                         fac ??= (chain as DetourChainNode)?.Factory;
                         // and if that doesn't exist, then the updating factory
                         fac ??= updatingFactory;
-                        chain.UpdateDetour(fac, ILCopy);
+                        chain.UpdateDetour(fac, EndOfChain);
 
                         chain = chain.Next;
                     }

@@ -1,9 +1,10 @@
-﻿using MonoMod.Backports;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Backports;
+using MonoMod.Cil;
 using MonoMod.Core;
 using MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
-using static System.Net.Mime.MediaTypeNames;
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;
 var method2 = typeof(TestClass).GetMethod(nameof(TestClass.Target))!;
@@ -24,8 +25,19 @@ foreach (var entry in cwt) {
 GC.GetTotalMemory(true);*/
 
 using (var hook = new Hook(method, targetHook, null, DetourContext.GetDefaultFactory(), null, true)) {
-    var test = new TestClass();
-    _ = test.TestDetourMethod();
+
+    using (var h = new ILHook(
+        method,
+        il => {
+            var c = new ILCursor(il);
+            c.Emit(OpCodes.Ldarg_0);
+            c.Emit(OpCodes.Call, method2);
+            c.Emit(OpCodes.Pop);
+        }, DetourContext.GetDefaultFactory(), null, true
+    )) {
+        var test = new TestClass();
+        _ = test.TestDetourMethod();
+    }
 }
 
 Console.WriteLine();
