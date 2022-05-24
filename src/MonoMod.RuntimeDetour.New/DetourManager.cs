@@ -1,11 +1,15 @@
-﻿using MonoMod.Core;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Cil;
+using MonoMod.Core;
 using MonoMod.Core.Utils;
 using MonoMod.RuntimeDetour.Utils;
+using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     internal static class DetourManager {
@@ -22,7 +26,7 @@ namespace MonoMod.RuntimeDetour {
             private MethodBase? lastTarget;
             private ICoreDetour? trampolineDetour;
 
-            public void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
+            public virtual void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
                 var to = Next?.Entry;
                 if (to is null && DetourToFallback) {
                     to = fallback;
@@ -73,16 +77,142 @@ namespace MonoMod.RuntimeDetour {
             public IDetourFactory Factory { get; }
         }
 
+        private sealed class DetourSyncInfo {
+            public int ActiveCalls;
+            public bool UpdatingChain;
+
+            public void WaitForChainUpdate() {
+                var spin = new SpinWait();
+                while (Volatile.Read(ref UpdatingChain)) {
+                    spin.SpinOnce();
+                }
+            }
+
+            public void WaitForNoActiveCalls() {
+                var spin = new SpinWait();
+                while (Volatile.Read(ref ActiveCalls) > 0) {
+                    spin.SpinOnce();
+                }
+            }
+        }
+
         // The root node is the existing method. It's NextTrampoline is the method, which is the same
         // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
         private sealed class RootChainNode : ChainNode {
-            public override MethodBase Entry => NextTrampoline;
+            public override MethodBase Entry { get; }
             public override MethodBase NextTrampoline { get; }
             public override DetourConfig? Config => null;
-            public override bool DetourToFallback => false;
+            public override bool DetourToFallback => true; // we do want to detour to fallback, because our sync proxy might be waiting to call the method
+
+            public readonly MethodSignature Sig;
+            public readonly MethodBase SyncProxy;
+            public readonly DetourSyncInfo SyncInfo = new();
+            private readonly DataScope<DynamicReferenceManager.CellRef> syncProxyRefScope;
 
             public RootChainNode(MethodBase method) {
-                NextTrampoline = method;
+                Sig = MethodSignature.ForMethod(method);
+                Entry = method;
+                NextTrampoline = TrampolinePool.Rent(Sig);
+                SyncProxy = GenerateSyncProxy(out syncProxyRefScope);
+            }
+
+            private static readonly FieldInfo DetourSyncInfo_ActiveCalls = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.ActiveCalls))!;
+            private static readonly FieldInfo DetourSyncInfo_UpdatingChain = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.UpdatingChain))!;
+            private static readonly MethodInfo DetourSyncInfo_WaitForChainUpdate = typeof(DetourSyncInfo).GetMethod(nameof(DetourSyncInfo.WaitForChainUpdate))!;
+
+            private static readonly MethodInfo Interlocked_Increment
+                = typeof(Interlocked).GetMethod(nameof(Interlocked.Increment), BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int).MakeByRefType() }, null)!;
+            private static readonly MethodInfo Interlocked_Decrement
+                = typeof(Interlocked).GetMethod(nameof(Interlocked.Decrement), BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int).MakeByRefType() }, null)!;
+
+            private MethodBase GenerateSyncProxy(out DataScope<DynamicReferenceManager.CellRef> scope) {
+                using var dmd = Sig.CreateDmd($"SyncProxy<{Entry.GetID()}>");
+
+                var method = dmd.Definition;
+                var module = dmd.Module;
+                var il = dmd.GetILProcessor();
+
+                var syncInfoTypeRef = module.ImportReference(typeof(DetourSyncInfo));
+                var syncInfoVar = new VariableDefinition(syncInfoTypeRef);
+                il.Body.Variables.Add(syncInfoVar);
+
+                scope = il.EmitNewTypedReference(SyncInfo, out _);
+                il.Emit(OpCodes.Stloc, syncInfoVar);
+
+                il.Emit(OpCodes.Ldloc, syncInfoVar);
+                il.Emit(OpCodes.Volatile);
+                il.Emit(OpCodes.Ldfld, module.ImportReference(DetourSyncInfo_UpdatingChain));
+
+                var nowaitIns = il.Create(OpCodes.Nop);
+                il.Emit(OpCodes.Brfalse_S, nowaitIns);
+
+                il.Emit(OpCodes.Ldloc, syncInfoVar);
+                il.Emit(OpCodes.Call, module.ImportReference(DetourSyncInfo_WaitForChainUpdate));
+
+                // TODO: maybe increment in the wait helper, and jump directly to the try block
+
+                il.Append(nowaitIns);
+                il.Emit(OpCodes.Ldloc, syncInfoVar);
+                il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
+                il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Increment));
+                il.Emit(OpCodes.Pop);
+
+                VariableDefinition? returnVar = null;
+                if (Sig.ReturnType != typeof(void)) {
+                    returnVar = new(method.ReturnType);
+                    il.Body.Variables.Add(returnVar);
+                }
+
+                var eh = new ExceptionHandler(ExceptionHandlerType.Finally);
+                il.Body.ExceptionHandlers.Add(eh);
+
+                {
+                    var i = il.Create(OpCodes.Nop);
+                    il.Append(i);
+                    eh.TryStart = i;
+                }
+
+                foreach (var p in method.Parameters) {
+                    il.Emit(OpCodes.Ldarg, p);
+                }
+                il.Emit(OpCodes.Call, module.ImportReference(NextTrampoline));
+                if (returnVar is not null) {
+                    il.Emit(OpCodes.Stloc, returnVar);
+                }
+
+                var beforeReturnIns = il.Create(OpCodes.Nop);
+                il.Emit(OpCodes.Leave_S, beforeReturnIns);
+
+                var finallyStartIns = il.Create(OpCodes.Ldloc, syncInfoVar);
+                eh.TryEnd = eh.HandlerStart = finallyStartIns;
+                il.Append(finallyStartIns);
+                il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
+                il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Decrement));
+                il.Emit(OpCodes.Pop);
+                il.Emit(OpCodes.Endfinally);
+                eh.HandlerEnd = beforeReturnIns;
+
+                il.Append(beforeReturnIns);
+                if (returnVar is not null) {
+                    il.Emit(OpCodes.Ldloc, returnVar);
+                }
+                il.Emit(OpCodes.Ret);
+
+                return dmd.Generate();
+            }
+
+            private ICoreDetour? syncDetour;
+
+            public override void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
+                base.UpdateDetour(factory, fallback);
+
+                syncDetour ??= factory.CreateDetour(Entry, SyncProxy, applyByDefault: false);
+
+                if (Next is null && syncDetour.IsApplied) {
+                    syncDetour.Undo();
+                } else if (Next is not null && !syncDetour.IsApplied) {
+                    syncDetour.Apply();
+                }
             }
         }
 
@@ -357,17 +487,23 @@ namespace MonoMod.RuntimeDetour {
                 // our chain is now fully built, with the head in chain
                 detourList.Next = chain; // detourList is the head of the real chain, and represents the original method
 
-                chain = detourList;
-                while (chain is not null) {
-                    // we want to use the factory for the next node first
-                    var fac = (chain.Next as DetourChainNode)?.Factory;
-                    // then, if that doesn't exist, the current factory
-                    fac ??= (chain as DetourChainNode)?.Factory;
-                    // and if that doesn't exist, then the updating factory
-                    fac ??= updatingFactory;
-                    chain.UpdateDetour(fac, ILCopy);
+                Volatile.Write(ref detourList.SyncInfo.UpdatingChain, true);
+                detourList.SyncInfo.WaitForNoActiveCalls();
+                try {
+                    chain = detourList;
+                    while (chain is not null) {
+                        // we want to use the factory for the next node first
+                        var fac = (chain.Next as DetourChainNode)?.Factory;
+                        // then, if that doesn't exist, the current factory
+                        fac ??= (chain as DetourChainNode)?.Factory;
+                        // and if that doesn't exist, then the updating factory
+                        fac ??= updatingFactory;
+                        chain.UpdateDetour(fac, ILCopy);
 
-                    chain = chain.Next;
+                        chain = chain.Next;
+                    }
+                } finally {
+                    Volatile.Write(ref detourList.SyncInfo.UpdatingChain, false);
                 }
             }
         }

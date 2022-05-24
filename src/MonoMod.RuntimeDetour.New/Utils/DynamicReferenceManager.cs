@@ -55,7 +55,7 @@ namespace MonoMod.RuntimeDetour.Utils {
                     }
 
                     cellRef.Index = nextEmpty++;
-                    while (nextEmpty < arr.Length && arr[nextEmpty] is null)
+                    while (nextEmpty < arr.Length && arr[nextEmpty] is not null)
                         nextEmpty++;
 
                     cell = new Cell() { Value = value };

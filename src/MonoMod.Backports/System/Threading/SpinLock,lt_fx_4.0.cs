@@ -682,6 +682,7 @@ namespace System.Threading {
             SpinOnceCore(DefaultSleep1Threshold);
         }
 
+        // SpinOnce(int) is only available in Core 3+
         /// <summary>
         /// Performs a single spin.
         /// </summary>
@@ -696,7 +697,7 @@ namespace System.Threading {
         /// This is typically called in a loop, and may change in behavior based on the number of times a
         /// <see cref="SpinOnce()"/> has been called thus far on this instance.
         /// </remarks>
-        public void SpinOnce(int sleep1Threshold) {
+        internal void SpinOnce(int sleep1Threshold) {
             if (sleep1Threshold < -1) {
                 throw new ArgumentOutOfRangeException(nameof(sleep1Threshold), sleep1Threshold, "Need positive or -1 value");
             }
