@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
-    <PackageId>MonoMod.RuntimeDetour</PackageId>
+    <PackageId>MonoMod.RuntimeDetour.New</PackageId>
     <Description>Flexible and easily extensible runtime detouring library. Wrap, replace and manipulate (Mono.Cecil) methods at runtime.</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 

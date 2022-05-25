@@ -9,7 +9,8 @@
                       Reference="false" ReferenceOutputAssembly="false" 
                       OutputItemType="BackportsFilter" Private="false"
                       SetTargetFramework="TargetFramework=net6.0"
-                      SkipGetTargetFrameworkProperties="true" />
+                      SkipGetTargetFrameworkProperties="true"
+                      Pack="false"/>
   </ItemGroup>
 
   <PropertyGroup>

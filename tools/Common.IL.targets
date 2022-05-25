@@ -15,7 +15,7 @@
     <ProjectReference Include="$(MMSourcePath)MonoMod.ILHelpers.Patcher\MonoMod.ILHelpers.Patcher.csproj" 
                       Reference="false" ReferenceOutputAssembly="false"
                       OutputItemType="ILVersionPatcher"
-                      Private="false"
+                      Private="false" Pack="false"
                       SetTargetFramework="TargetFramework=net6.0"
                       SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>

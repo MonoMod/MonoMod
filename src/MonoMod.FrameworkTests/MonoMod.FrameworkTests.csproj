@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <!--<PlatformTarget>x86</PlatformTarget>-->
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
