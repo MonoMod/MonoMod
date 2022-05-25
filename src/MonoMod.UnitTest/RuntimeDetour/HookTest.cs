@@ -1,8 +1,10 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -19,15 +21,15 @@ namespace MonoMod.UnitTest {
 
                 // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
 
-                IDetour hookTestMethodA = new Hook(
+                using var hookTestMethodA = new Hook(
                     typeof(TestObject).GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
                     typeof(HookTest).GetMethod("TestMethod_A", BindingFlags.Static | BindingFlags.Public)
                 );
-                IDetour hookTestStaticMethodA = new Hook(
+                using var hookTestStaticMethodA = new Hook(
                     typeof(TestObject).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
                     typeof(HookTest).GetMethod("TestStaticMethod_A", BindingFlags.Static | BindingFlags.Public)
                 );
-                IDetour hookTestVoidMethodA = new Hook(
+                using var hookTestVoidMethodA = new Hook(
                     typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                     typeof(HookTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
                 );
@@ -35,17 +37,17 @@ namespace MonoMod.UnitTest {
                 TestObject.TestStep(42, 12, 1);
                 Console.WriteLine();
 
-                IDetour hookTestMethodB = new Hook(
+                using var hookTestMethodB = new Hook(
                     typeof(TestObject).GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
                     typeof(HookTest).GetMethod("TestMethod_B", BindingFlags.Static | BindingFlags.Public)
                 );
-                IDetour hookTestStaticMethodB = new Hook(
+                using var hookTestStaticMethodB = new Hook(
                     typeof(TestObject).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
                     new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
                         return orig(a, b) + 2;
                     })
                 );
-                IDetour hookTestVoidMethodB = new Hook(
+                using var hookTestVoidMethodB = new Hook(
                     typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                     new Action<Action<int, int>, int, int>((orig, a, b) => {
                         Console.WriteLine("Hook B");

@@ -1,8 +1,10 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
