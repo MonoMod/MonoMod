@@ -1,12 +1,8 @@
 ﻿using Mono.Cecil.Cil;
 using MonoMod.Core;
-using MonoMod.Core.Platforms;
 using MonoMod.Core.Utils;
-using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
@@ -17,6 +13,7 @@ namespace MonoMod.RuntimeDetour {
 
         public const bool ApplyByDefault = true;
 
+        // Note: We don't provide all variants with IDetourFactory because providing IDetourFactory is expected to be fairly rare
         #region Constructor overloads
         public Detour(Expression<Action> source, Expression<Action> target)
             : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body) { }

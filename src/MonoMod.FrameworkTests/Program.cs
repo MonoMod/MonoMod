@@ -24,7 +24,7 @@ foreach (var entry in cwt) {
 
 GC.GetTotalMemory(true);*/
 
-using (var hook = new Hook(method, targetHook, null, DetourContext.GetDefaultFactory(), null, true)) {
+using (var hook = new Hook(method, targetHook)) {
 
     using (var h = new ILHook(
         method,
@@ -33,7 +33,7 @@ using (var hook = new Hook(method, targetHook, null, DetourContext.GetDefaultFac
             c.Emit(OpCodes.Ldarg_0);
             c.Emit(OpCodes.Call, method2);
             c.Emit(OpCodes.Pop);
-        }, DetourContext.GetDefaultFactory(), null, true
+        }
     )) {
         var test = new TestClass();
         _ = test.TestDetourMethod();

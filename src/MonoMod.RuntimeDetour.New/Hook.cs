@@ -1,18 +1,108 @@
-﻿using Mono.Cecil;
-using Mono.Cecil.Cil;
+﻿using Mono.Cecil.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Utils;
 using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     public class Hook : IDetour, IDisposable {
+
+        private const bool ApplyByDefault = true;
+
+        // Note: We don't provide all variants with IDetourFactory because providing IDetourFactory is expected to be fairly rare
+        #region Constructor overloads
+        #region No targetObj
+        public Hook(Expression<Action> source, Expression<Action> target)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body) { }
+
+        public Hook(Expression source, Expression target)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method) { }
+
+        public Hook(MethodBase source, MethodInfo target)
+            : this(source, target, DetourContext.GetDefaultConfig()) { }
+
+        public Hook(Expression<Action> source, Expression<Action> target, bool applyByDefault)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, applyByDefault) { }
+
+        public Hook(Expression source, Expression target, bool applyByDefault)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, applyByDefault) { }
+
+        public Hook(MethodBase source, MethodInfo target, bool applyByDefault)
+            : this(source, target, DetourContext.GetDefaultConfig(), applyByDefault) { }
+
+        public Hook(Expression<Action> source, Expression<Action> target, DetourConfig? config)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, config) { }
+
+        public Hook(Expression source, Expression target, DetourConfig? config)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config) { }
+
+        public Hook(MethodBase source, MethodInfo target, DetourConfig? config)
+            : this(source, target, config, ApplyByDefault) { }
+
+        public Hook(Expression<Action> source, Expression<Action> target, DetourConfig? config, bool applyByDefault)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, config, applyByDefault) { }
+
+        public Hook(Expression source, Expression target, DetourConfig? config, bool applyByDefault)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config, applyByDefault) { }
+
+        public Hook(MethodBase source, MethodInfo target, DetourConfig? config, bool applyByDefault)
+            : this(source, target, DetourContext.GetDefaultFactory(), config, applyByDefault) { }
+
+        public Hook(MethodBase source, MethodInfo target, IDetourFactory factory, DetourConfig? config, bool applyByDefault)
+            : this(source, target, null, factory, config, applyByDefault) { }
+        #endregion
+        #region With targetObj
+        public Hook(Expression<Action> source, Expression<Action> target, object? targetObj)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, targetObj) { }
+
+        public Hook(Expression source, Expression target, object? targetObj)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj) { }
+
+        public Hook(MethodBase source, MethodInfo target, object? targetObj)
+            : this(source, target, targetObj, DetourContext.GetDefaultConfig()) { }
+
+        public Hook(Expression<Action> source, Expression<Action> target, object? targetObj, bool applyByDefault)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, targetObj, applyByDefault) { }
+
+        public Hook(Expression source, Expression target, object? targetObj, bool applyByDefault)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj, applyByDefault) { }
+
+        public Hook(MethodBase source, MethodInfo target, object? targetObj, bool applyByDefault)
+            : this(source, target, targetObj, DetourContext.GetDefaultConfig(), applyByDefault) { }
+
+        public Hook(Expression<Action> source, Expression<Action> target, object? targetObj, DetourConfig? config)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, targetObj, config) { }
+
+        public Hook(Expression source, Expression target, object? targetObj, DetourConfig? config)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj, config) { }
+
+        public Hook(MethodBase source, MethodInfo target, object? targetObj, DetourConfig? config)
+            : this(source, target, targetObj, config, ApplyByDefault) { }
+
+        public Hook(Expression<Action> source, Expression<Action> target, object? targetObj, DetourConfig? config, bool applyByDefault)
+            : this(Helpers.ThrowIfNull(source).Body, Helpers.ThrowIfNull(target).Body, targetObj, config, applyByDefault) { }
+
+        public Hook(Expression source, Expression target, object? targetObj, DetourConfig? config, bool applyByDefault)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj, config, applyByDefault) { }
+
+        public Hook(MethodBase source, MethodInfo target, object? targetObj, DetourConfig? config, bool applyByDefault)
+            : this(source, target, targetObj, DetourContext.GetDefaultFactory(), config, applyByDefault) { }
+        #endregion
+        #endregion
+
 
         private readonly IDetourFactory factory;
         IDetourFactory IDetour.Factory => factory;
