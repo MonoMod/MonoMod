@@ -101,6 +101,46 @@ namespace MonoMod.RuntimeDetour {
         public Hook(MethodBase source, MethodInfo target, object? targetObj, DetourConfig? config, bool applyByDefault)
             : this(source, target, targetObj, DetourContext.GetDefaultFactory(), config, applyByDefault) { }
         #endregion
+        #region Delegate target
+        public Hook(Expression<Action> source, Delegate target)
+            : this(Helpers.ThrowIfNull(source).Body, target) { }
+
+        public Hook(Expression source, Delegate target)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target) { }
+
+        public Hook(MethodBase source, Delegate target)
+            : this(source, target, DetourContext.GetDefaultConfig()) { }
+
+        public Hook(Expression<Action> source, Delegate target, bool applyByDefault)
+            : this(Helpers.ThrowIfNull(source).Body, target, applyByDefault) { }
+
+        public Hook(Expression source, Delegate target, bool applyByDefault)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target, applyByDefault) { }
+
+        public Hook(MethodBase source, Delegate target, bool applyByDefault)
+            : this(source, target, DetourContext.GetDefaultConfig(), applyByDefault) { }
+
+        public Hook(Expression<Action> source, Delegate target, DetourConfig? config)
+            : this(Helpers.ThrowIfNull(source).Body, target, config) { }
+
+        public Hook(Expression source, Delegate target, DetourConfig? config)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target, config) { }
+
+        public Hook(MethodBase source, Delegate target, DetourConfig? config)
+            : this(source, target, config, ApplyByDefault) { }
+
+        public Hook(Expression<Action> source, Delegate target, DetourConfig? config, bool applyByDefault)
+            : this(Helpers.ThrowIfNull(source).Body, target, config, applyByDefault) { }
+
+        public Hook(Expression source, Delegate target, DetourConfig? config, bool applyByDefault)
+            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target, config, applyByDefault) { }
+
+        public Hook(MethodBase source, Delegate target, DetourConfig? config, bool applyByDefault)
+            : this(source, target, DetourContext.GetDefaultFactory(), config, applyByDefault) { }
+
+        public Hook(MethodBase source, Delegate target, IDetourFactory factory, DetourConfig? config, bool applyByDefault)
+            : this(source, Helpers.ThrowIfNull(target).Method, target.Target, factory, config, applyByDefault) { }
+        #endregion
         #endregion
 
 
@@ -189,10 +229,12 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            var hookData = new HookData(target,
-                nextDelegateType is not null
-                ? trampoline.CreateDelegate(nextDelegateType)
-                : null);
+            var hookData = target is not null || nextDelegateType is not null
+                ? new HookData(target,
+                    nextDelegateType is not null
+                    ? trampoline.CreateDelegate(nextDelegateType)
+                    : null)
+                : null;
 
             using (var dmd = srcSig.CreateDmd($"Hook<{Target.GetID()}>")) {
                 var module = dmd.Module;
@@ -202,8 +244,12 @@ namespace MonoMod.RuntimeDetour {
                 var dataLoc = new VariableDefinition(module.ImportReference(typeof(HookData)));
                 il.Body.Variables.Add(dataLoc);
 
-                scope = il.EmitNewTypedReference(hookData, out _);
-                il.Emit(OpCodes.Stloc, dataLoc);
+                if (hookData is not null) {
+                    scope = il.EmitNewTypedReference(hookData, out _);
+                    il.Emit(OpCodes.Stloc, dataLoc);
+                } else {
+                    scope = default;
+                }
 
                 // first load the target object, if needed
                 if (!Target.IsStatic) {
