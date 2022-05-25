@@ -139,10 +139,19 @@ namespace MonoMod.RuntimeDetour {
             : this(source, target, DetourContext.GetDefaultFactory(), config, applyByDefault) { }
 
         public Hook(MethodBase source, Delegate target, IDetourFactory factory, DetourConfig? config, bool applyByDefault)
-            : this(source, Helpers.ThrowIfNull(target).Method, target.Target, factory, config, applyByDefault) { }
+            : this(source, GetDelegateHookInfo(Helpers.ThrowIfNull(target), out var targetObj), targetObj, factory, config, applyByDefault) { }
         #endregion
         #endregion
 
+        private static MethodInfo GetDelegateHookInfo(Delegate del, out object? target) {
+            if (del.GetInvocationList().Length == 1) {
+                target = del.Target;
+                return del.Method;
+            } else {
+                target = del;
+                return del.GetType().GetMethod("Invoke") ?? throw new InvalidOperationException("Could not get Invoke method of delegate");
+            }
+        }
 
         private readonly IDetourFactory factory;
         IDetourFactory IDetour.Factory => factory;
