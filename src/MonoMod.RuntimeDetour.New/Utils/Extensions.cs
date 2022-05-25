@@ -1,12 +1,5 @@
-﻿using MonoMod.Backports;
-using MonoMod.Utils;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+﻿using MonoMod.Utils;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace MonoMod.RuntimeDetour.Utils {
     internal static class Extensions {

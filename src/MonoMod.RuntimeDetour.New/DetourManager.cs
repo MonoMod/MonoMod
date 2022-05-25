@@ -2,7 +2,6 @@
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Core;
-using MonoMod.Core.Utils;
 using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
@@ -340,7 +339,7 @@ namespace MonoMod.RuntimeDetour {
                             MMDbgLog.Log($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
                         } else {
                             PrioInsert(cur.BeforeThis, node);
-                            isBefore = true;
+                            //isBefore = true;
                         }
                     }
                 }

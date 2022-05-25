@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
+
+    [CLSCompliant(false)] // TODO: remove when MM.Utils gets CLS compliance annotations
     public class ILHook : IILHook, IDisposable {
         private const bool ApplyByDefault = true;
 

@@ -1,10 +1,7 @@
 ﻿using MonoMod.Core;
 using MonoMod.RuntimeDetour.Utils;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
 
 namespace MonoMod.RuntimeDetour {
     public abstract class DetourContext {

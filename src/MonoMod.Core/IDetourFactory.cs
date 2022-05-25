@@ -1,10 +1,12 @@
 ﻿using MonoMod.Backports;
 using MonoMod.Core.Platforms;
 using MonoMod.Core.Utils;
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core {
+    [CLSCompliant(true)]
     public interface IDetourFactory {
 
         FeatureFlags SupportedFeatures { get; }
@@ -12,10 +14,12 @@ namespace MonoMod.Core {
         ICoreDetour CreateDetour(CreateDetourRequest request);
     }
 
+    [CLSCompliant(true)]
     public readonly record struct CreateDetourRequest(MethodBase Source, MethodBase Target) {
         public bool ApplyByDefault { get; init; } = true;
     }
 
+    [CLSCompliant(true)]
     public static class DetourFactory {
         // use the actual type for this so that an inlined getter can see the actual type
         private static PlatformTripleDetourFactory? lazyCurrent;

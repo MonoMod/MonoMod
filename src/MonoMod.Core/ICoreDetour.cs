@@ -2,6 +2,7 @@
 using System.Reflection;
 
 namespace MonoMod.Core {
+    [CLSCompliant(true)]
     public interface ICoreDetour : IDisposable {
 
         MethodBase Source { get; }

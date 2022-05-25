@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.RuntimeDetour.Utils {
 
@@ -9,6 +7,8 @@ namespace MonoMod.RuntimeDetour.Utils {
         public abstract void EndScope(object? data);
     }
 
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types",
+        Justification = "These types are not meant to be compared.")]
     public struct DataScope : IDisposable {
         private readonly ScopeHandlerBase? handler;
         private readonly object? data;
@@ -30,6 +30,8 @@ namespace MonoMod.RuntimeDetour.Utils {
         public abstract void EndScope(T data);
     }
 
+    [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types",
+        Justification = "These types are not meant to be compared.")]
     public struct DataScope<T> : IDisposable {
         private readonly ScopeHandlerBase<T>? handler;
         private readonly T data;

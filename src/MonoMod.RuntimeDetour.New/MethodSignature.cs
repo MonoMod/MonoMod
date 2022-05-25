@@ -6,7 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace MonoMod.RuntimeDetour {
     public class MethodSignature : IEquatable<MethodSignature> {
@@ -75,6 +74,7 @@ namespace MonoMod.RuntimeDetour {
                 && parameters.SequenceEqual(other.Parameters, CompatableComparer.Instance);
         }
 
+        [CLSCompliant(false)]
         public DynamicMethodDefinition CreateDmd(string name) {
             return new(name, ReturnType, parameters);
         }
