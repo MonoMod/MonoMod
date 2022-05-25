@@ -1,15 +1,10 @@
-﻿using MonoMod.Backports;
-using MonoMod.Core.Utils;
+﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace MonoMod.Core.Platforms.Systems {
     internal class WindowsSystem : ISystem {
@@ -36,7 +31,7 @@ namespace MonoMod.Core.Platforms.Systems {
                     ClassifyX64,
                     ReturnsReturnBuffer: true);
             } else {
-                // TODO: perform selftests here instead of throwing
+                // TODO: what is the default Windows x64 ABI?
                 //throw new PlatformNotSupportedException($"Windows on non-x86_64 is currently not supported");
             }
         }
@@ -118,17 +113,17 @@ namespace MonoMod.Core.Platforms.Systems {
             MMDbgLog.Log($"reason: {ex.Message}");
 
             try {
-                IntPtr addr = (IntPtr) 0x00000000000010000;
-                int i = 0;
+                var addr = (IntPtr) 0x00000000000010000;
+                var i = 0;
                 while (true) {
                     if (Interop.Windows.VirtualQuery(addr, out Interop.Windows.MEMORY_BASIC_INFORMATION infoBasic, sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) == 0)
                         break;
 
                     nint srcL = src;
-                    nint srcR = srcL + size;
-                    nint infoL = (nint) infoBasic.BaseAddress;
-                    nint infoR = infoL + (nint) infoBasic.RegionSize;
-                    bool overlap = infoL <= srcR && srcL <= infoR;
+                    var srcR = srcL + size;
+                    var infoL = (nint) infoBasic.BaseAddress;
+                    var infoR = infoL + (nint) infoBasic.RegionSize;
+                    var overlap = infoL <= srcR && srcL <= infoR;
 
                     MMDbgLog.Log($"{(overlap ? "*" : "-")} #{i++}");
                     MMDbgLog.Log($"addr: 0x{infoBasic.BaseAddress:X16}");

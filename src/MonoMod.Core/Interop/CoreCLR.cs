@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
@@ -128,6 +129,10 @@ namespace MonoMod.Core.Interop {
 
         public class V50 : V31 { }
 
+        [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
+            Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
+            "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
+            "needing duplicates.")]
         public class V60 : V50 {
             [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
             public new delegate CorJitResult CompileMethodDelegate(

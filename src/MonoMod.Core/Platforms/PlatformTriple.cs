@@ -108,7 +108,7 @@ namespace MonoMod.Core.Platforms {
                 // we need to get the handles of the type args too
                 var typeArgs = method.GetGenericArguments();
                 var argHandles = new RuntimeTypeHandle[typeArgs.Length];
-                for (int i = 0; i < typeArgs.Length; i++)
+                for (var i = 0; i < typeArgs.Length; i++)
                     argHandles[i] = typeArgs[i].TypeHandle;
 
                 RuntimeHelpers.PrepareMethod(handle, argHandles);
@@ -190,7 +190,7 @@ namespace MonoMod.Core.Platforms {
         }
 
         private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method) {
-            bool regenerated = false;
+            var regenerated = false;
 
             var archMatchCollection = Architecture.KnownMethodThunks;
 
@@ -204,7 +204,7 @@ namespace MonoMod.Core.Platforms {
                 // if we want to, we could scan for an arch-specific padding pattern and use that to limit instead
                 var span = new ReadOnlySpan<byte>((void*) entry, Math.Min((int) readableLen, archMatchCollection.MaxMinLength));
 
-                if (!archMatchCollection.TryFindMatch(span, out var addr, out var match, out var offset, out var length))
+                if (!archMatchCollection.TryFindMatch(span, out var addr, out var match, out var offset, out _))
                     break;
 
                 var lastEntry = entry;

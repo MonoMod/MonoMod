@@ -1,9 +1,5 @@
-﻿using MonoMod.Core.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Reflection;
-using System.Text;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class FxCLR2Runtime : FxBaseRuntime {

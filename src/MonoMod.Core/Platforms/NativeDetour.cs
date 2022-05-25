@@ -10,9 +10,7 @@ namespace MonoMod.Core.Platforms {
         public ReadOnlyMemory<byte> DetourBackup { get; }
         public IntPtr Source { get; }
         public IntPtr Destination { get; }
-
-        private bool isAutoUndone = true;
-        public bool IsAutoUndone => isAutoUndone;
+        public bool IsAutoUndone { get; private set; } = true;
 
         internal NativeDetour(PlatformTriple triple, IntPtr src, IntPtr dest, ReadOnlyMemory<byte> backup, IDisposable? allocHandle) {
             this.triple = triple;
@@ -24,12 +22,12 @@ namespace MonoMod.Core.Platforms {
 
         public void MakeManualOnly() {
             CheckDisposed();
-            isAutoUndone = false;
+            IsAutoUndone = false;
         }
 
         public void MakeAutomatic() {
             CheckDisposed();
-            isAutoUndone = true;
+            IsAutoUndone = true;
         }
 
         /// <summary>
@@ -56,7 +54,7 @@ namespace MonoMod.Core.Platforms {
 
         private void Dispose(bool disposing) {
             if (!disposedValue) {
-                if (isAutoUndone) {
+                if (IsAutoUndone) {
                     UndoCore(disposing);
                 } else {
                     // create a gc handle to the allocHandle

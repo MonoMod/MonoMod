@@ -8,6 +8,7 @@ using System.Reflection.Emit;
 using static MonoMod.Core.Interop.CoreCLR;
 using System.Runtime.InteropServices;
 using MC = Mono.Cecil;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core30Runtime : CoreBaseRuntime {
@@ -30,7 +31,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
               + 1 // BYTE m_chunkIndex
               + 2 // WORD m_wSlotNumber
               ;
-            ushort* m_wFlags = (ushort*) (((byte*) handle.Value) + offset);
+            var m_wFlags = (ushort*) (((byte*) handle.Value) + offset);
             *m_wFlags |= 0x2000;
         }
 
@@ -128,6 +129,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             [ThreadStatic]
             private static int hookEntrancy;
+
+            [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+                Justification = "We want to swallow exceptions here to prevent them from bubbling out of the JIT")]
             public unsafe CorJitResult CompileMethodHook(
                 IntPtr jit, // ICorJitCompiler*
                 IntPtr corJitInfo, // ICorJitInfo*
@@ -161,13 +165,13 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                             if (methodInfo.args.sigInst.classInst != null) {
                                 genericClassArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.classInstCount];
-                                for (int i = 0; i < genericClassArgs.Length; i++) {
+                                for (var i = 0; i < genericClassArgs.Length; i++) {
                                     genericClassArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo.args.sigInst.classInst[i]).TypeHandle;
                                 }
                             }
                             if (methodInfo.args.sigInst.methInst != null) {
                                 genericMethodArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.methInstCount];
-                                for (int i = 0; i < genericMethodArgs.Length; i++) {
+                                for (var i = 0; i < genericMethodArgs.Length; i++) {
                                     genericMethodArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo.args.sigInst.methInst[i]).TypeHandle;
                                 }
                             }
@@ -214,7 +218,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     Helpers.DAssert(getLoaderAllocator is not null);
 
                     MethodInfo invokeWrapper;
-                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                    using (var dmd = new DynamicMethodDefinition(
                             "MethodHandle_GetLoaderAllocator", typeof(object), new Type[] { typeof(IntPtr) }
                         )) {
                         var il = dmd.GetILGenerator();
@@ -244,7 +248,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     Helpers.DAssert(getDeclaringType is not null);
 
                     MethodInfo invokeWrapper;
-                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                    using (var dmd = new DynamicMethodDefinition(
                             "GetDeclaringTypeOfMethodHandle", typeof(Type), new Type[] { typeof(IntPtr) }
                         )) {
                         var il = dmd.GetILGenerator();
@@ -269,7 +273,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     Helpers.DAssert(runtimeMethodInfoStubCtor is not null);
 
                     MethodInfo runtimeMethodInfoStubCtorWrapper;
-                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                    using (var dmd = new DynamicMethodDefinition(
                             "new RuntimeMethodInfoStub", runtimeMethodInfoStub, runtimeMethodInfoStubCtorArgs
                         )) {
                         ILGenerator il = dmd.GetILGenerator();
@@ -288,7 +292,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     ConstructorInfo ctor = typeof(RuntimeMethodHandle).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).First();
 
                     MethodInfo ctorWrapper;
-                    using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+                    using (var dmd = new DynamicMethodDefinition(
                             "new RuntimeMethodHandle", typeof(RuntimeMethodHandle), new Type[] { typeof(object) }
                         )) {
                         ILGenerator il = dmd.GetILGenerator();
@@ -366,10 +370,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             const int PEFILE_SYSTEM = 0x01;
 
-            IntPtr domAssembly = (IntPtr) RuntimeAssemblyPtrField.GetValue(assembly)!;
+            var domAssembly = (IntPtr) RuntimeAssemblyPtrField.GetValue(assembly)!;
 
             // DomainAssembly in src/coreclr/src/vm/domainfile.h
-            int domOffset =
+            var domOffset =
                 IntPtr.Size + // VTable ptr
                               // DomainFile
                 IntPtr.Size + // PTR_AppDomain               m_pDomain;
@@ -394,10 +398,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     sizeof(int); // padding to align the next TADDR (which is a void*) (m_hExposedModuleObject)
             }
 
-            IntPtr pAssembly = *(IntPtr*) (((byte*) domAssembly) + domOffset);
+            var pAssembly = *(IntPtr*) (((byte*) domAssembly) + domOffset);
 
             // Assembly in src/coreclr/src/vm/assembly.hpp
-            int pAssemOffset =
+            var pAssemOffset =
                 IntPtr.Size + // PTR_BaseDomain        m_pDomain;
                 IntPtr.Size + // PTR_ClassLoader       m_pClassLoader;
                 IntPtr.Size + // PTR_MethodDesc        m_pEntryPoint;
@@ -407,7 +411,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             IntPtr peAssembly = *(IntPtr*) (((byte*) pAssembly) + pAssemOffset);
 
             // PEAssembly in src/coreclr/src/vm/pefile.h
-            int peAssemOffset =
+            var peAssemOffset =
                 IntPtr.Size + // VTable ptr
                               // PEFile
                 IntPtr.Size + // PTR_PEImage              m_identity;
@@ -421,7 +425,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 sizeof(int) + // Volatile<LONG>           m_refCount; // fuck C long
                 +0; // here is out int (flags)
 
-            int* flags = (int*) (((byte*) peAssembly) + peAssemOffset);
+            var flags = (int*) (((byte*) peAssembly) + peAssemOffset);
             *flags |= PEFILE_SYSTEM;
         }
     }

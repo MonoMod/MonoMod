@@ -7,6 +7,12 @@ using System.Linq;
 using System.Security;
 using System.Text;
 
+[assembly: CLSCompliant(false)]
+
+const string TfmIdVar = "___tfmid";
+const string TfmVerVar = "___tfmver";
+const string CompileRemovedItem = "___CompileRemoved";
+
 if (args.Length < 1) {
     Console.Error.WriteLine("Usage: filter <filter|gen> <args>...");
     return 1;
@@ -84,10 +90,6 @@ static int FilterForTfm(string[] args) {
 
     return 0;
 }
-
-const string TfmIdVar = "___tfmid";
-const string TfmVerVar = "___tfmver";
-const string CompileRemovedItem = "___CompileRemoved";
 
 static int GenerateMSBuildFile(string[] args) {
     if (args.Length < 3) {

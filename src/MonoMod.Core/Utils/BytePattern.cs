@@ -43,7 +43,7 @@ namespace MonoMod.Core.Utils {
             var patternAlloc = new byte[pattern.Length * 2].AsMemory();
             var patternData = patternAlloc.Slice(0, pattern.Length);
             var bitmaskData = patternAlloc.Slice(pattern.Length);
-            for (int i = 0; i < pattern.Length; i++) {
+            for (var i = 0; i < pattern.Length; i++) {
                 var @byte = pattern.Span[i];
                 var mask = (byte) ((@byte & MaskMask) >> 8);
                 var data = (byte) (@byte & ~MaskMask);
@@ -110,14 +110,14 @@ namespace MonoMod.Core.Utils {
                 throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
 
             // first, we do a pass to compute how many segments we need
-            int segmentCount = 0;
-            SegmentKind lastKind = SegmentKind.AnyRepeating; // start with an AnyRepeating so that we implicitly ignore leading AnyRepeating
-            int segmentLength = 0;
-            int addrLength = 0;
-            int minLength = 0;
-            int firstSegmentStart = -1;
+            var segmentCount = 0;
+            var lastKind = SegmentKind.AnyRepeating; // start with an AnyRepeating so that we implicitly ignore leading AnyRepeating
+            var segmentLength = 0;
+            var addrLength = 0;
+            var minLength = 0;
+            var firstSegmentStart = -1;
 
-            for (int i = 0; i < patternLength; i++) {
+            for (var i = 0; i < patternLength; i++) {
                 var thisSegmentKind = kindForIdx(pattern, i);
 
                 minLength += thisSegmentKind switch {
@@ -159,7 +159,7 @@ namespace MonoMod.Core.Utils {
             lastKind = SegmentKind.AnyRepeating;
             segmentLength = 0;
 
-            for (int i = firstSegmentStart; i < patternLength && segmentCount <= segments.Length; i++) {
+            for (var i = firstSegmentStart; i < patternLength && segmentCount <= segments.Length; i++) {
                 var thisSegmentKind = kindForIdx(pattern, i);
 
                 if (thisSegmentKind != lastKind) {
@@ -204,7 +204,7 @@ namespace MonoMod.Core.Utils {
             ReadOnlySpan<byte> patternSpan = pattern.Span;
             // set up address buffer
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
-            bool result = TryMatchAtImpl(patternSpan, data, addr, out length, 0);
+            var result = TryMatchAtImpl(patternSpan, data, addr, out length, 0);
             address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
             return result;
         }
@@ -220,8 +220,8 @@ namespace MonoMod.Core.Utils {
         }
 
         private bool TryMatchAtImpl(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length, int startAtSegment) {
-            int pos = 0;
-            int segmentIdx = startAtSegment;
+            var pos = 0;
+            var segmentIdx = startAtSegment;
 
             while (segmentIdx < segments.Length) {
                 PatternSegment segment = segments[segmentIdx];
@@ -277,7 +277,7 @@ namespace MonoMod.Core.Utils {
 
                             // to do this, we can just forward to the ScanForNextLiteral method
                             // this has the advantage of giving us automatic backtracking due to the mutual recursion
-                            bool result = ScanForNextLiteral(patternSpan, data.Slice(pos), addrBuf, out int offs, out int sublen, segmentIdx);
+                            var result = ScanForNextLiteral(patternSpan, data.Slice(pos), addrBuf, out var offs, out var sublen, segmentIdx);
                             // our final length now is just pos+offs+sublen
                             length = pos + offs + sublen;
                             return result;
@@ -309,7 +309,7 @@ namespace MonoMod.Core.Utils {
             ReadOnlySpan<byte> patternSpan = pattern.Span;
 
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
-            bool result = ScanForNextLiteral(patternSpan, data, addr, out offset, out length, 0);
+            var result = ScanForNextLiteral(patternSpan, data, addr, out offset, out length, 0);
             address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
             return result;
         }
@@ -332,9 +332,9 @@ namespace MonoMod.Core.Utils {
                 return false;
             }
 
-            int scanOffsFromBase = 0;
+            var scanOffsFromBase = 0;
             do {
-                int scannedOffs = data.Slice(baseOffs + scanOffsFromBase).IndexOf(literalSegment.SliceOf(patternSpan));
+                var scannedOffs = data.Slice(baseOffs + scanOffsFromBase).IndexOf(literalSegment.SliceOf(patternSpan));
                 if (scannedOffs < 0) {
                     // we didn't find the literal 
                     offset = length = 0;
@@ -366,7 +366,7 @@ namespace MonoMod.Core.Utils {
                 throw new ArgumentOutOfRangeException(nameof(segmentIndexId));
             }
 
-            int litOffset = 0;
+            var litOffset = 0;
             for (; segmentIndexId < segments.Length; segmentIndexId++) {
                 PatternSegment segment = segments[segmentIndexId];
                 if (segment.Kind is SegmentKind.Literal) {

@@ -1,8 +1,5 @@
 ﻿using MonoMod.Core.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace MonoMod.Core.Platforms.Architectures {
     internal sealed class x86Arch : IArchitecture {
@@ -16,8 +13,8 @@ namespace MonoMod.Core.Platforms.Architectures {
         private static BytePatternCollection CreateKnownMethodThunks() {
             const ushort An = BytePattern.SAnyValue;
             const ushort Ad = BytePattern.SAddressValue;
-            const byte Bn = BytePattern.BAnyValue;
-            const byte Bd = BytePattern.BAddressValue;
+            //const byte Bn = BytePattern.BAnyValue;
+            //const byte Bd = BytePattern.BAddressValue;
 
             if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
                 return new BytePatternCollection(

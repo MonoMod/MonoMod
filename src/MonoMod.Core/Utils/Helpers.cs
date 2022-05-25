@@ -82,81 +82,6 @@ namespace MonoMod.Core.Utils {
                 ThrowAssertionFailed(message.ToStringAndClear(), expr);
         }
 
-        [InterpolatedStringHandler]
-        public ref struct AssertionInterpolatedStringHandler {
-            private DefaultInterpolatedStringHandler handler;
-            private readonly bool enabled;
-
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public AssertionInterpolatedStringHandler(int literalLen, int formattedCount, bool assertValue) {
-                if (!assertValue) {
-                    enabled = true;
-                    handler = new(literalLen, formattedCount);
-                } else {
-                    enabled = false;
-                    handler = default;
-                }
-            }
-
-            public override string ToString() => handler.ToString();
-            public string ToStringAndClear() => handler.ToStringAndClear();
-
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendLiteral(string s) {
-                if (!enabled)
-                    return;
-                handler.AppendLiteral(s);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted(string? s) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(s);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted(string? s, int alignment = 0, string? format = default) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(s, alignment, format);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted(ReadOnlySpan<char> s) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(s);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted(ReadOnlySpan<char> s, int alignment = 0, string? format = default) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(s, alignment, format);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted<T>(T value) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(value);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted<T>(T value, int alignment) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(value, alignment);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted<T>(T value, string? format) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(value, format);
-            }
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            public void AppendFormatted<T>(T value, int alignment, string? format) {
-                if (!enabled)
-                    return;
-                handler.AppendFormatted(value, alignment, format);
-            }
-        }
-
         [MethodImpl(MethodImplOptionsEx.NoInlining)]
         [DoesNotReturn]
         private static void ThrowAssertionFailed(string? msg, string expr) {
@@ -250,7 +175,7 @@ namespace MonoMod.Core.Utils {
                 goto Equal;
 
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
-            nint n = (nint) (void*) length;
+            var n = (nint) (void*) length;
 
             if ((byte*) n >= (byte*) sizeof(nuint)) {
                 nuint mask;
@@ -269,7 +194,7 @@ namespace MonoMod.Core.Utils {
             }
 
             while ((byte*) n > (byte*) i) {
-                byte mask = Unsafe.AddByteOffset(ref maskBytes, i);
+                var mask = Unsafe.AddByteOffset(ref maskBytes, i);
                 if ((Unsafe.AddByteOffset(ref first, i) & mask) != (Unsafe.AddByteOffset(ref second, i) & mask))
                     goto NotEqual;
                 i += 1;
@@ -280,6 +205,81 @@ namespace MonoMod.Core.Utils {
 
             NotEqual: // Workaround for https://github.com/dotnet/coreclr/issues/13549
             return false;
+        }
+    }
+
+    [InterpolatedStringHandler]
+    public ref struct AssertionInterpolatedStringHandler {
+        private DefaultInterpolatedStringHandler handler;
+        private readonly bool enabled;
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public AssertionInterpolatedStringHandler(int literalLen, int formattedCount, bool assertValue) {
+            if (!assertValue) {
+                enabled = true;
+                handler = new(literalLen, formattedCount);
+            } else {
+                enabled = false;
+                handler = default;
+            }
+        }
+
+        public override string ToString() => handler.ToString();
+        public string ToStringAndClear() => handler.ToStringAndClear();
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendLiteral(string s) {
+            if (!enabled)
+                return;
+            handler.AppendLiteral(s);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(string? s) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(s);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(string? s, int alignment = 0, string? format = default) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(s, alignment, format);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(ReadOnlySpan<char> s) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(s);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted(ReadOnlySpan<char> s, int alignment = 0, string? format = default) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(s, alignment, format);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted<T>(T value) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(value);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted<T>(T value, int alignment) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(value, alignment);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted<T>(T value, string? format) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(value, format);
+        }
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public void AppendFormatted<T>(T value, int alignment, string? format) {
+            if (!enabled)
+                return;
+            handler.AppendFormatted(value, alignment, format);
         }
     }
 }

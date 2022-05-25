@@ -1,7 +1,6 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -207,6 +206,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         public event OnMethodCompiledCallback? OnMethodCompiled;
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "We catch exceptions here to log them and not ignore them, as this method's caller would.")]
         protected virtual void OnMethodCompiledCore(
             RuntimeTypeHandle declaringType,
             RuntimeMethodHandle methodHandle,
@@ -219,7 +220,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 var declType = Type.GetTypeFromHandle(declaringType);
                 if (genericTypeArguments is { } gte && declType.IsGenericTypeDefinition) {
                     var typeArr = new Type[gte.Length];
-                    for (int i = 0; i < gte.Length; i++) {
+                    for (var i = 0; i < gte.Length; i++) {
                         typeArr[i] = Type.GetTypeFromHandle(gte.Span[i]);
                     }
                     declType = declType.MakeGenericType(typeArr);

@@ -18,7 +18,7 @@ namespace MonoMod {
         public static bool Debugging;
 
         static MMDbgLog() {
-            bool enabled =
+            var enabled =
 #if MONOMOD_DBGLOG
                 true;
 #else
@@ -47,7 +47,7 @@ namespace MonoMod {
             if (Writer != null)
                 return;
 
-            string? path = Environment.GetEnvironmentVariable("MONOMOD_DBGLOG_PATH");
+            var path = Environment.GetEnvironmentVariable("MONOMOD_DBGLOG_PATH");
             if (path == "-") {
                 Writer = Console.Out;
                 return;
@@ -62,7 +62,7 @@ namespace MonoMod {
                     File.Delete(path);
             } catch { }
             try {
-                string? dir = Path.GetDirectoryName(path);
+                var dir = Path.GetDirectoryName(path);
                 if (dir is not null && !Directory.Exists(dir))
                     _ = Directory.CreateDirectory(dir);
                 Writer = new StreamWriter(new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete), Encoding.UTF8);

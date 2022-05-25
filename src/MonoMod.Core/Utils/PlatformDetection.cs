@@ -136,7 +136,7 @@ namespace MonoMod.Core.Utils {
                     fixed (byte* bufPtr = buffer) {
                         if (PosixUname(os, bufPtr) < 0) {
                             // uh-oh, uname failed. Log the error if we can  get it and return normally.
-                            string msg = new Win32Exception(Marshal.GetLastWin32Error()).Message;
+                            var msg = new Win32Exception(Marshal.GetLastWin32Error()).Message;
                             MMDbgLog.Log($"uname() syscall failed! {msg}");
                             return;
                         }
@@ -149,14 +149,14 @@ namespace MonoMod.Core.Utils {
                 var kernelName = GetCString(buffer, out var nullByteOffs).ToUpperInvariant();
                 buffer = buffer.Slice(nullByteOffs);
 
-                for (int i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
+                for (var i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
                     if (i != 0) {
                         // skip a string
                         nullByteOffs = buffer.IndexOf((byte)0);
                         buffer = buffer.Slice(nullByteOffs);
                     }
                     // then advance to the next one
-                    int j = 0;
+                    var j = 0;
                     for (; j < buffer.Length && buffer[j] == 0; j++) { }
                     buffer = buffer.Slice(j);
                 }
@@ -221,7 +221,7 @@ namespace MonoMod.Core.Utils {
         private static bool CheckWine() {
             // wine_get_version can be missing because of course it can.
             // General purpose env var.
-            string? env = Environment.GetEnvironmentVariable("MONOMOD_WINE");
+            var env = Environment.GetEnvironmentVariable("MONOMOD_WINE");
             if (env == "1")
                 return true;
             if (env == "0")
@@ -284,16 +284,16 @@ namespace MonoMod.Core.Utils {
             Justification = "In old versions of Framework, there is no Version.TryParse, and so we must call the constructor " +
             "and catch any exception that may ocurr.")]
         private static (RuntimeKind Rt, Version Ver) DetermineRuntimeInfo() {
-            var runtime = RuntimeKind.Unknown;
+            RuntimeKind runtime;
             Version? version = null; // an unknown version
 
-            bool isMono =
+            var isMono =
                 // This is what everyone expects.
                 Type.GetType("Mono.Runtime") != null ||
                 // .NET Core BCL running on Mono, see https://github.com/dotnet/runtime/blob/main/src/libraries/Common/tests/TestUtilities/System/PlatformDetection.cs
                 Type.GetType("Mono.RuntimeStructs") != null;
 
-            bool isCoreBcl = typeof(object).Assembly.GetName().Name == "System.Private.CoreLib";
+            var isCoreBcl = typeof(object).Assembly.GetName().Name == "System.Private.CoreLib";
 
             if (isMono) {
                 runtime = RuntimeKind.Mono;
@@ -310,7 +310,7 @@ namespace MonoMod.Core.Utils {
 
             // RuntimeInformation is present in FX 4.7.1+ and all netstandard and Core releases, however its location varies
             // In FX, it is in mscorlib
-            Type? rti = Type.GetType("System.Runtime.InteropServices.RuntimeInformation");
+            var rti = Type.GetType("System.Runtime.InteropServices.RuntimeInformation");
             // however, in Core, its in System.Runtime.InteropServices.RuntimeInformation
             rti ??= Type.GetType("System.Runtime.InteropServices.RuntimeInformation, System.Runtime.InteropServices.RuntimeInformation");
 
