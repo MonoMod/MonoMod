@@ -1,25 +1,12 @@
 ﻿using MonoMod.Core;
 using MonoMod.Core.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace MonoMod.UnitTest.Core {
     public class BytePatternCollectionTests {
         [Fact]
         public void TestBytePattern() {
-
-            var runtimeFlgs = RuntimeFeature.GenericSharing | RuntimeFeature.CompileMethodHook | RuntimeFeature.DisableInlining;
-
-            Assert.True(runtimeFlgs.Has(RuntimeFeature.CompileMethodHook));
-            Assert.False(runtimeFlgs.Has(RuntimeFeature.PreciseGC));
-
-            _ = PlatformDetection.OS;
-            _ = PlatformDetection.Runtime;
 
             const ushort An = BytePattern.SAnyValue;
             const ushort Ad = BytePattern.SAddressValue;
