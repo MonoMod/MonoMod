@@ -92,7 +92,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             typeof(RuntimeMethodHandle).Assembly.GetType("System.IRuntimeMethodInfo")?.GetMethod("get_Value");
 
         private static readonly MethodInfo? _RuntimeHelpers__CompileMethod =
-            typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static);
+            typeof(RuntimeHelpers).GetMethod("_CompileMethod", BindingFlags.NonPublic | BindingFlags.Static) ??
+            typeof(RuntimeHelpers).GetMethod("CompileMethod", BindingFlags.NonPublic | BindingFlags.Static); // the underscore is not present in .NET 6
         private static readonly Type? RtH_CM_FirstArg = _RuntimeHelpers__CompileMethod?.GetParameters()[0].ParameterType;
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesIntPtr = RtH_CM_FirstArg?.FullName == "System.IntPtr";
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo = RtH_CM_FirstArg?.FullName == "System.IRuntimeMethodInfo";
