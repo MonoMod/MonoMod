@@ -15,7 +15,8 @@ namespace MonoMod.UnitTest {
 
         public static bool IsHook;
 
-        [Fact]
+        // TODO: reenable when new RuntimeDetour has DynamicHookGen
+        [Fact(Skip = "New RuntimeDetour doesn't have DynamicHookGen yet")]
         public void TestDynamicHookGen() {
             Assert.Equal(42, TestMethod(1, 2));
 

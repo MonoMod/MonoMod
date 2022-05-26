@@ -1,10 +1,11 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
@@ -17,7 +18,7 @@ namespace MonoMod.UnitTest {
 
         [Fact]
         public void TestPtrRefMagic() {
-            Color c = new Color();
+            var c = new Color();
 
             IsHook = false;
             ManipColor(ref c, 0x0A, 0xDE, 0xEE, 0x80);
@@ -55,7 +56,7 @@ namespace MonoMod.UnitTest {
 
         [Fact]
         public void TestStructMethod() {
-            ColorRGBA c = new ColorRGBA();
+            var c = new ColorRGBA();
             c.A = 5;
 
             IsHook = false;
@@ -76,7 +77,7 @@ namespace MonoMod.UnitTest {
 
         [Fact]
         public void TestStructToString() {
-            ColorRGBA c = new ColorRGBA() {
+            var c = new ColorRGBA() {
                 R = 1,
                 G = 2,
                 B = 3,

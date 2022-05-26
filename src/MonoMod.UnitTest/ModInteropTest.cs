@@ -1,10 +1,6 @@
 ﻿using Xunit;
 using MonoMod.ModInterop;
-using MonoMod.RuntimeDetour;
-using MonoMod.Utils;
 using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
     public class ModInteropTest {

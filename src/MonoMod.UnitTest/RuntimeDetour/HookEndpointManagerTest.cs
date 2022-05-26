@@ -36,7 +36,8 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        [Fact]
+        // TODO: re-enable when new RuntimeDetour supports HookEndpointManager
+        [Fact(Skip = "New RuntimeDetour doesn't yet support HookEndpointManager")]
         public void TestHookEndpointManager() {
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.

@@ -23,7 +23,7 @@ namespace MonoMod.UnitTest {
 
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.
-            HashSet<Hook> hooks = new HashSet<Hook>();
+            var hooks = new HashSet<Hook>();
 
             long memPre = GC.GetTotalMemory(true);
             long memPost;

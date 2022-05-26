@@ -5,11 +5,8 @@ extern alias New;
 
 using Xunit;
 using New::MonoMod.RuntimeDetour;
-using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Text;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
 
@@ -24,10 +21,10 @@ namespace MonoMod.UnitTest {
             DoNothing();
             Assert.True(DidNothing);
 
-            using (ILHook h = new ILHook(
+            using (var h = new ILHook(
                 typeof(ILHookTest).GetMethod("DoNothing"),
                 il => {
-                    ILCursor c = new ILCursor(il);
+                    var c = new ILCursor(il);
                     c.Emit(OpCodes.Ldarg_0);
                     c.Emit(OpCodes.Ldc_I4_0);
                     c.Emit(OpCodes.Stfld, typeof(ILHookTest).GetField("DidNothing", BindingFlags.NonPublic | BindingFlags.Instance));

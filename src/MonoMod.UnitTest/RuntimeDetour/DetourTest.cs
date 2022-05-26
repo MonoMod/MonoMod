@@ -1,8 +1,10 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -18,21 +20,20 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine();
 
                 // Three examples of using Detour.
-                // Note that if you need non-layered, low-level hooks, you can use NativeDetour instead.
                 // This is also why the variable type is IDetour.
                 // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
-                IDetour detourTestMethodA = new Detour(
+                using var detourTestMethodA = new Detour(
                     () => default(TestObject).TestMethod(default, default),
                     () => TestMethod_A(default, default, default)
                 );
-                // Method references as delegates.
-                IDetour detourTestStaticMethodA = new Detour<Func<int, int, int>>(
-                    TestObject.TestStaticMethod,
-                    TestStaticMethod_A
+
+                using var detourTestStaticMethodA = new Detour(
+                    () => TestObject.TestStaticMethod(default, default),
+                    () => TestStaticMethod_A(default, default)
                 );
                 // MethodBase, old syntax.
                 // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
-                IDetour detourTestVoidMethodA = new Detour(
+                using var detourTestVoidMethodA = new Detour(
                     typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                     typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
                 );
@@ -42,15 +43,15 @@ namespace MonoMod.UnitTest {
                 detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
                 Console.WriteLine();
 
-                IDetour detourTestMethodB = new Detour(
+                using var detourTestMethodB = new Detour(
                     () => default(TestObject).TestMethod(default, default),
                     () => TestMethod_B(default, default, default)
                 );
-                IDetour detourTestStaticMethodB = new Detour(
+                using var detourTestStaticMethodB = new Detour(
                      () => TestObject.TestStaticMethod(default, default),
                      () => TestStaticMethod_B(default, default)
                 );
-                IDetour detourTestVoidMethodB = new Detour(
+                using var detourTestVoidMethodB = new Detour(
                      () => TestObject.TestVoidMethod(default, default),
                      () => TestVoidMethod_B(default, default)
                 );

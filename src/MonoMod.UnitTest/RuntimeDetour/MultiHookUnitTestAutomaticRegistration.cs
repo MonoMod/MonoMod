@@ -1,7 +1,9 @@
 ﻿#pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using MonoMod.Cil;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,9 +30,7 @@ namespace MonoMod.UnitTest {
                         orig(self);
                         h1Run = true;
                     }),
-                    new HookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 hIL = new ILHook(
                     typeof(OnIL).GetMethod("DoNothing"),
@@ -40,9 +40,7 @@ namespace MonoMod.UnitTest {
                             hILRun = true;
                         });
                     },
-                    new ILHookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h1Run = false;
                 hILRun = false;
@@ -63,19 +61,15 @@ namespace MonoMod.UnitTest {
                             hILRun = true;
                         });
                     },
-                    new ILHookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h1 = new Hook(
-                   typeof(OnIL).GetMethod("DoNothing"),
-                   new Action<Action<OnIL>, OnIL>((orig, self) => {
-                       orig(self);
-                       h1Run = true;
-                   }),
-                   new HookConfig {
-                       ManualApply = false
-                   }
+                    typeof(OnIL).GetMethod("DoNothing"),
+                    new Action<Action<OnIL>, OnIL>((orig, self) => {
+                        orig(self);
+                        h1Run = true;
+                    }),
+                    applyByDefault: true
                );
                 h1Run = false;
                 hILRun = false;
@@ -107,9 +101,7 @@ namespace MonoMod.UnitTest {
                         orig(self);
                         h1Run = true;
                     }),
-                    new HookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h2 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -117,9 +109,7 @@ namespace MonoMod.UnitTest {
                         orig(self);
                         h2Run = true;
                     }),
-                    new HookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -129,9 +119,7 @@ namespace MonoMod.UnitTest {
                             hILRun = true;
                         });
                     },
-                    new ILHookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h1Run = false;
                 h2Run = false;
@@ -153,9 +141,7 @@ namespace MonoMod.UnitTest {
                         orig(self);
                         h1Run = true;
                     }),
-                    new HookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -165,9 +151,7 @@ namespace MonoMod.UnitTest {
                             hILRun = true;
                         });
                     },
-                    new ILHookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h2 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -175,9 +159,7 @@ namespace MonoMod.UnitTest {
                         orig(self);
                         h2Run = true;
                     }),
-                    new HookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h1Run = false;
                 h2Run = false;
@@ -201,9 +183,7 @@ namespace MonoMod.UnitTest {
                             hILRun = true;
                         });
                     },
-                    new ILHookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h1 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -211,9 +191,7 @@ namespace MonoMod.UnitTest {
                         orig(self);
                         h1Run = true;
                     }),
-                    new HookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );
                 h2 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
@@ -221,9 +199,7 @@ namespace MonoMod.UnitTest {
                         orig(self);
                         h2Run = true;
                     }),
-                    new HookConfig {
-                        ManualApply = false
-                    }
+                    applyByDefault: true
                 );                
                 h1Run = false;
                 h2Run = false;

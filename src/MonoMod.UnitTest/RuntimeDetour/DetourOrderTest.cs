@@ -1,14 +1,13 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Reflection.Emit;
-using System.Text;
 using System.Collections.Generic;
 
 namespace MonoMod.UnitTest {
@@ -36,7 +35,7 @@ namespace MonoMod.UnitTest {
                 order[2],
                 order[3],
             };
-            List<string> actual = new List<string>();
+            var actual = new List<string>();
 
             using (new Hook(
                 original,
@@ -51,11 +50,9 @@ namespace MonoMod.UnitTest {
                     actual.Add(order[1]);
                     return orig(a, b) + b;
                 }),
-                new HookConfig() {
-                    After = new [] { "A" }
-                }
+                new DetourConfig("AfterA").AddAfter("A")
             ))
-            using (new DetourContext("A"))
+            using (new DetourConfigContext(new("A")).Use())
             using (new Hook(
                 original,
                 new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
@@ -69,9 +66,7 @@ namespace MonoMod.UnitTest {
                     actual.Add(order[3]);
                     return orig(a, b) * b;
                 }),
-                new HookConfig() {
-                    Before = new[] { "A" }
-                }
+                new DetourConfig("BeforeA").AddBefore("A")
             )) {
                 TestMethod(2, 3);
                 Assert.Equal(expected, actual);

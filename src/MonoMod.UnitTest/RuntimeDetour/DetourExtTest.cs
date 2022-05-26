@@ -1,21 +1,22 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Reflection.Emit;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
-using System.Data.SqlClient;
-using Mono.Cecil;
-using MonoMod.RuntimeDetour.Platforms;
 using System.Globalization;
 using System.Collections.Generic;
+#if NETFRAMEWORK
+using System.Data.SqlClient;
+using MonoMod.Utils;
+#endif
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -29,7 +30,7 @@ namespace MonoMod.UnitTest {
                 // Just to verify that having a first chance exception handler doesn't introduce any conflicts.
                 AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
 
-#if true
+#if false // NativeDetour doesn't exist in new RuntimeDetour
                 using (NativeDetour d = new NativeDetour(
                     // .GetNativeStart() to enforce a native detour.
                     typeof(TestObject).GetMethod("TestStaticMethod").Pin().GetNativeStart(),
@@ -66,7 +67,7 @@ namespace MonoMod.UnitTest {
 #endif
 
                 // This wasn't provided by anyone and instead is just an internal test.
-#if true
+#if false // See above
                 MethodInfo dummyA = typeof(DetourExtTest).GetMethod("DummyA").Pin();
                 MethodInfo dummyB = typeof(DetourExtTest).GetMethod("DummyB").Pin();
                 MethodInfo dummyC = (MethodInfo) dm;
@@ -96,7 +97,7 @@ namespace MonoMod.UnitTest {
                 // which is why this test only applies to Mono, preferably on Linux to verify if flagging
                 // regions of code as read-writable and then read-executable works for AOT'd code.
 #if false
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(Encoding).GetMethod("GetEncoding", new Type[] { typeof(string) }),
                     new Func<Func<string, Encoding>, string, Encoding>((orig, name) => {
                         if (name == "IBM437")
@@ -112,9 +113,9 @@ namespace MonoMod.UnitTest {
                 // TextWriter's methods (including all overrides) were unable to be hooked on some runtimes.
                 // FIXME: .NET 5 introduces similar behavior for macOS and Linux, but RD isn't ready for that. See DetourRuntimeNETPlatform for more info.
 #if true
-                using (MemoryStream ms = new MemoryStream()) {
+                using (var ms = new MemoryStream()) {
 
-                    using (StreamWriter writer = new StreamWriter(ms, Encoding.UTF8, 1024, true)) {
+                    using (var writer = new StreamWriter(ms, Encoding.UTF8, 1024, true)) {
                         // In case anyone needs to debug this mess anytime in the future ever again:
                         /*/
                         MethodBase m = typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) });
@@ -127,7 +128,7 @@ namespace MonoMod.UnitTest {
                         // Debugger.Break();
                         writer.Write("A");
 
-                        using (Hook h = new Hook(
+                        using (var h = new Hook(
                             typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) }),
                             new Action<Action<StreamWriter, string>, StreamWriter, string>((orig, self, value) => {
                                 orig(self, "-");
@@ -142,7 +143,7 @@ namespace MonoMod.UnitTest {
 
                     ms.Seek(0, SeekOrigin.Begin);
 
-                    using (StreamReader reader = new StreamReader(ms, Encoding.UTF8, false, 1024, true)) {
+                    using (var reader = new StreamReader(ms, Encoding.UTF8, false, 1024, true)) {
                         Assert.Equal("A-C", reader.ReadToEnd());
                     }
 
@@ -152,7 +153,7 @@ namespace MonoMod.UnitTest {
 #if NETFRAMEWORK && true
                 Assert.Equal("A", new SqlCommand("A").CommandText);
 
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(SqlCommand).GetConstructor(new Type[] { typeof(string) }),
                     new Action<Action<SqlCommand, string>, SqlCommand, string>((orig, self, value) => {
                         orig(self, "-");
@@ -174,7 +175,7 @@ namespace MonoMod.UnitTest {
                     Assert.NotEqual("", e.StackTrace.Trim());
                 }
 
-                using (Hook h = ReflectionHelper.IsMono ?
+                using (var h = ReflectionHelper.IsMono ?
                     // Mono
                     new Hook(
                         typeof(Exception).GetMethod("GetStackTrace", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance),
@@ -213,12 +214,12 @@ namespace MonoMod.UnitTest {
                 // Theoretically this should be a DynamicMethodDefinition test but who knows what else this will unearth.
 #if true
                 try {
-                    new Thrower(1);
+                    _ = new Thrower(1);
                 } catch (Exception e) {
                     Assert.Equal("1", e.Message);
                 }
 
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(Thrower).GetConstructor(new Type[] { typeof(int) }),
                     new Action<Action<Thrower, int>, Thrower, int>((orig, self, a) => {
                         try {
@@ -229,14 +230,14 @@ namespace MonoMod.UnitTest {
                     })
                 )) {
                     try {
-                        new Thrower(1);
+                        _ = new Thrower(1);
                     } catch (Exception e) {
                         Assert.Equal("1 + 2 = 3", e.Message);
                     }
                 }
 
                 try {
-                    new Thrower(1);
+                    _ = new Thrower(1);
                 } catch (Exception e) {
                     Assert.Equal("1", e.Message);
                 }
@@ -244,7 +245,7 @@ namespace MonoMod.UnitTest {
 
                 // This was provided by tModLoader.
 #if true
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(Process).GetMethod("Start", BindingFlags.Public | BindingFlags.Instance),
                     new Func<Func<Process, bool>, Process, bool>((orig, self) => {
                         return orig(self);
@@ -261,7 +262,7 @@ namespace MonoMod.UnitTest {
                     B = 22222222
                 }, DummyTwoInts());
 
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(DetourExtTest).GetMethod("DummyTwoInts", BindingFlags.NonPublic | BindingFlags.Instance),
                     new Func<Func<DetourExtTest, TwoInts>, DetourExtTest, TwoInts>((orig, self) => {
                         TwoInts rv = orig(self);
@@ -285,13 +286,13 @@ namespace MonoMod.UnitTest {
                 // This was provided by a Harmony user.
                 // The "struct virtual override" edge case fix itself has got a weird edge case with "struct interface implementations".
                 // Note that .NET Framework differs too heavily and .NET Core 2.1 and older inline the getter.
-#if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER && false // These cases are to do with generics, not anything with struct overrides.
                 Assert.Equal(
                     new KeyValuePair<int, int>(default, default),
                     new Dictionary<int, int>().GetEnumerator().Current
                 );
 
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(Dictionary<int, int>.Enumerator).GetMethod("get_Current"),
                     new hook_DictionaryEnumeratorCurrentIntInt(DictionaryEnumeratorCurrentIntInt)
                 )) {
@@ -311,7 +312,7 @@ namespace MonoMod.UnitTest {
                     new Dictionary<string, int>().GetEnumerator().Current
                 );
 
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(Dictionary<string, int>.Enumerator).GetMethod("get_Current"),
                     new hook_DictionaryEnumeratorCurrentStringInt(DictionaryEnumeratorCurrentStringInt)
                 )) {
@@ -338,7 +339,7 @@ namespace MonoMod.UnitTest {
                     }.Magic
                 );
 
-                using (Hook h = new Hook(
+                using (var h = new Hook(
                     typeof(TwoInts).GetMethod("get_Magic", BindingFlags.Public | BindingFlags.Instance),
                     new Func<Func<IntPtr, int>, IntPtr, int>((orig, self) => {
                         int rv = orig(self);

@@ -1,10 +1,7 @@
 ﻿using Xunit;
-using MonoMod.ModInterop;
-using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using System;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Linq;
 
 namespace MonoMod.UnitTest {

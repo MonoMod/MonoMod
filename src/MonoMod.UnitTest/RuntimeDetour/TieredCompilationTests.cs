@@ -1,4 +1,6 @@
-﻿using MonoMod.RuntimeDetour;
+﻿extern alias New;
+
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,10 +36,10 @@ namespace MonoMod.UnitTest {
         }
 
         private static void TestFrom() {
-            Stopwatch sw = new Stopwatch();
-            for (int loop = 0; loop < 5; loop++) {
+            var sw = new Stopwatch();
+            for (var loop = 0; loop < 5; loop++) {
                 // first we make sure From qualifies for recomp
-                for (int i = 0; i < 1000; i++) {
+                for (var i = 0; i < 1000; i++) {
                     TargetHit = false;
                     From();
                     if (!TargetHit) {

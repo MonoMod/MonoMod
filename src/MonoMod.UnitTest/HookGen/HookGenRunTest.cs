@@ -14,7 +14,8 @@ using System.Collections.Generic;
 namespace MonoMod.UnitTest {
     [Collection("HookGen")]
     public class HookGenRunTest {
-        [Fact]
+        // TODO: re-enable when HookGen uses new RuntimeDetour
+        [Fact(Skip = "HookGen still uses old RuntimeDetour")]
         public void TestHookGenRun() {
             string outputPath = Path.Combine(Environment.CurrentDirectory, "testdump", "MonoMod.UnitTest.Hooks.dll");
             try {

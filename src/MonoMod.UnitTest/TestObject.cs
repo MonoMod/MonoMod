@@ -1,9 +1,7 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 
 using Xunit;
-using MonoMod.RuntimeDetour;
 using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {

@@ -2,16 +2,13 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 using Xunit;
-using MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using MonoMod.Utils;
-using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MC = Mono.Cecil;
-using CIL = Mono.Cecil.Cil;
+using MonoMod.Core.Platforms;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -31,25 +28,25 @@ namespace MonoMod.UnitTest {
             // The JIT hook might already be set up thanks to previous tests.
             TestJitHookMissingMethodStep();
 
-            Assert.NotNull(DetourHelper.Runtime);
+            Assert.NotNull(PlatformTriple.Current);
 
             // The JIT hook is definitely applied at this point.
             TestJitHookMissingMethodStep();
         }
 
         private void TestJitHookMissingMethodStep() {
-            int id = ID++;
-            string @namespace = "MonoMod.UnitTest";
-            string @name = "JitHookRegressionTestHelper" + id;
-            string @fullName = @namespace + "." + @name;
+            var id = ID++;
+            var @namespace = "MonoMod.UnitTest";
+            var @name = "JitHookRegressionTestHelper" + id;
+            var @fullName = @namespace + "." + @name;
 
             Assembly asm;
 
-            using (ModuleDefinition module = ModuleDefinition.CreateModule(@fullName, new ModuleParameters() {
+            using (var module = ModuleDefinition.CreateModule(@fullName, new ModuleParameters() {
                 Kind = ModuleKind.Dll,
                 ReflectionImporterProvider = MMReflectionImporter.Provider
             })) {
-                TypeDefinition type = new TypeDefinition(
+                var type = new TypeDefinition(
                     @namespace,
                     @name,
                     MC.TypeAttributes.Public | MC.TypeAttributes.Abstract | MC.TypeAttributes.Sealed
@@ -58,7 +55,7 @@ namespace MonoMod.UnitTest {
                 };
                 module.Types.Add(type);
 
-                MethodDefinition method = new MethodDefinition(@name,
+                var method = new MethodDefinition(@name,
                     MC.MethodAttributes.Public | MC.MethodAttributes.Static | MC.MethodAttributes.HideBySig,
                     module.TypeSystem.Void
                 );

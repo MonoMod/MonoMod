@@ -3,17 +3,12 @@
 #pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Text;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using MC = Mono.Cecil;
-using CIL = Mono.Cecil.Cil;
 using System.Runtime.Loader;
 
 namespace MonoMod.UnitTest {
@@ -37,7 +32,7 @@ namespace MonoMod.UnitTest {
         private void WaitForWeakReferenceToDie(WeakReference weakref) {
             // FIXME: Figure out why the reference stays alive with .NET Core 3.1, sometimes 3.0
 #if NET5_0_OR_GREATER
-            for (int i = 0; i < 60 && weakref.IsAlive; i++) {
+            for (var i = 0; i < 60 && weakref.IsAlive; i++) {
                 GC.Collect();
                 GC.Collect();
                 GC.WaitForFullGCComplete();

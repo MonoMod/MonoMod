@@ -1,14 +1,12 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+extern alias New;
+
 using Xunit;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Reflection.Emit;
-using System.Text;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -24,7 +22,7 @@ namespace MonoMod.UnitTest {
             DoNothing();
             Assert.True(DidNothing);
 
-            using (Hook h = new Hook(
+            using (var h = new Hook(
                 typeof(DetourEmptyTest).GetMethod("DoNothing"),
                 new Action<DetourEmptyTest>(self => {
                     DidNothing = false;

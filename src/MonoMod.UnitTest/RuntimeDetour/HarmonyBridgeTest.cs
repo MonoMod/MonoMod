@@ -16,7 +16,8 @@ using Harmony;
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
     public class HarmonyBridgeTest {
-        [Fact]
+        // TODO: re-enable when new RuntimeDetour supports HarmonyDetourBridge
+        [Fact(Skip = "New RuntimeDetour doesn't have HarmonyDetourBridge yet")]
         public void TestHarmonyBridge() {
             Assert.True(HarmonyDetourBridge.Init());
 

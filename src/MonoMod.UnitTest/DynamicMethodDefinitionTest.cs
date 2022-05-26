@@ -1,19 +1,19 @@
-﻿using Xunit;
-using Mono.Cecil;
+﻿extern alias New;
+
+using Xunit;
 using Mono.Cecil.Cil;
-using MonoMod.ModInterop;
-using MonoMod.RuntimeDetour;
+using New::MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
-using System.Text;
 using MonoMod.Cil;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 using System.Diagnostics;
 using System.Linq;
+using Mono.Cecil;
+using MonoMod.Core.Platforms;
 
 namespace MonoMod.UnitTest {
     public class DynamicMethodDefinitionTest {
@@ -25,7 +25,7 @@ namespace MonoMod.UnitTest {
             Assert.Equal(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
             MethodInfo original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
-            MethodBase patched;
+            MethodInfo patched;
             using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(original)) {
                 Assert.Equal("i", dmd.Definition.Parameters[0].Name);
 
@@ -124,17 +124,15 @@ namespace MonoMod.UnitTest {
             // Verify that we can still obtain the real DynamicMethod.
             // .NET uses a wrapping RTDynamicMethod to avoid leaking the mutable DynamicMethod.
             // Mono uses RuntimeMethodInfo without any link to the original DynamicMethod.
-            if (ReflectionHelper.IsMono)
-                stacker.Pin();
+            var triple = PlatformTriple.Current;
+            using var pin = triple.PinMethodIfNeeded(stacker);
             StackTrace stack = ((Func<StackTrace>) stacker.CreateDelegate(typeof(Func<StackTrace>)))();
             MethodBase stacked = stack.GetFrames().First(f => f.GetMethod()?.IsDynamicMethod() ?? false).GetMethod();
             Assert.NotEqual(stacker, stacked);
-            Assert.Equal(stacker, stacked.GetIdentifiable());
-            Assert.Equal(stacker.GetNativeStart(), stacked.GetNativeStart());
+            Assert.Equal(stacker, triple.GetIdentifiable(stacked));
+            Assert.Equal(triple.GetNativeMethodBody(stacker), triple.GetNativeMethodBody(stacked));
             // This will always be true on .NET and only be true on Mono if the method is still pinned.
-            Assert.IsAssignableFrom<DynamicMethod>(stacked.GetIdentifiable());
-            if (ReflectionHelper.IsMono)
-                stacker.Unpin();
+            Assert.IsAssignableFrom<DynamicMethod>(triple.GetIdentifiable(stacked));
         }
 
         public const string StringOriginal = "Hello from ExampleMethod!";

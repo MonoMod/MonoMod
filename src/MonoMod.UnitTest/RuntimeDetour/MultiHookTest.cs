@@ -1,7 +1,9 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
-using MonoMod.RuntimeDetour;
+extern alias New;
+
+using New::MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
 using MonoMod.Cil;
@@ -24,9 +26,7 @@ namespace MonoMod.UnitTest {
                     orig(self);
                     h1Run = true;
                 }),
-                new HookConfig {
-                    ManualApply = true
-                }
+                applyByDefault: false
             );
             h2 = new Hook(
                 typeof(ManualMultiHookTest).GetMethod("DoNothing"),
@@ -34,21 +34,17 @@ namespace MonoMod.UnitTest {
                     orig(self);
                     h2Run = true;
                 }),
-                new HookConfig {
-                    ManualApply = true
-                }
+                applyByDefault: false
             );
             hIL = new ILHook(
                 typeof(ManualMultiHookTest).GetMethod("DoNothing"),
                 il => {
-                    ILCursor c = new ILCursor(il);
+                    var c = new ILCursor(il);
                     c.EmitDelegate<Action>(() => {
                         hILRun = true;
                     });
                 },
-                new ILHookConfig {
-                    ManualApply = true
-                }
+                applyByDefault: false
             );
             h1Run = false;
             h2Run = false;

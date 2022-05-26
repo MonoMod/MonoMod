@@ -17,7 +17,7 @@ namespace MonoMod.UnitTest {
     public class NativeDetourTest {
         private static bool DidNothing = true;
 
-        [PlatformFact("Windows", "Unix")]
+        [PlatformFact("Windows", "Unix", Skip = "New RuntimeDetour doesn't support detouring native methods (via P/Invoke)")]
         public void TestNativeDetours() {
             // https://github.com/dotnet/coreclr/pull/8263
             dt_rand d_not_rand = not_rand;
