@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
-    internal static unsafe class CoreCLR {
+    internal static unsafe partial class CoreCLR {
         public enum CorJitResult {
             CORJIT_OK = 0,
             // There are more, but I don't particularly care about them
@@ -128,48 +127,5 @@ namespace MonoMod.Core.Interop {
         public class V31 : V30 { }
 
         public class V50 : V31 { }
-
-        [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
-            Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
-            "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
-            "needing duplicates.")]
-        public class V60 : V50 {
-            [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-            public new delegate CorJitResult CompileMethodDelegate(
-                IntPtr thisPtr, // ICorJitCompiler*
-                IntPtr corJitInfo, // ICorJitInfo*
-                in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
-                uint flags,
-                out byte* nativeEntry,
-                out uint nativeSizeOfCode
-            );
-
-            public new static InvokeCompileMethodPtr InvokeCompileMethodPtr => new(&InvokeCompileMethod);
-
-            public new static CorJitResult InvokeCompileMethod(
-                IntPtr functionPtr,
-                IntPtr thisPtr, // ICorJitCompiler*
-                IntPtr corJitInfo, // ICorJitInfo*
-                in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
-                uint flags,
-                out byte* nativeEntry,
-                out uint nativeSizeOfCode
-            ) {
-                // this is present so that we can pre-JIT this method by calling it
-                if (functionPtr == IntPtr.Zero) {
-                    nativeEntry = null;
-                    nativeSizeOfCode = 0;
-                    return CorJitResult.CORJIT_OK;
-                }
-
-                var fnPtr =
-                    (delegate* unmanaged[Thiscall]<
-                        IntPtr, IntPtr, in CORINFO_METHOD_INFO,
-                        uint, out byte*, out uint,
-                        CorJitResult
-                    >) functionPtr;
-                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
-            }
-        }
     }
 }

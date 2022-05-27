@@ -36,6 +36,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 return *(IntPtr*) ((long) handle.Value + 8 + IntPtr.Size + 8 + IntPtr.Size + IntPtr.Size + IntPtr.Size);
             }
 
+            var md = (V60.MethodDesc*) handle.Value;
+            var ptr = md->GetMethodEntryPoint();
+
             const int m_wFlags_offset =
                 2 // UINT16 m_wFlags3AndTokenRemainder
               + 1 // BYTE m_chunkIndex

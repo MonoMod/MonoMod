@@ -39,7 +39,7 @@
         )
 
         .maxstack 8
-        .locals (
+        .locals init (
             [0] !!T
         )
 

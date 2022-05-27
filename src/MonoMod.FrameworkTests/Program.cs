@@ -89,7 +89,7 @@ using (var detour4 = new Detour(() => new TestClass().TestDetourMethod(), () => 
 
 class TestClass {
     [MethodImpl(MethodImplOptionsEx.NoInlining)]
-    public FunkyStruct TestDetourMethod() {
+    public virtual FunkyStruct TestDetourMethod() {
         var factory = DetourFactory.Current;
 
         Console.WriteLine(factory.SupportedFeatures);
