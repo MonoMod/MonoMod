@@ -9,7 +9,7 @@ namespace MonoMod.Core.Interop {
             Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
             "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
             "needing duplicates.")]
-        public class V60 : V50 {
+        public partial class V60 : V50 {
             [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
             public new delegate CorJitResult CompileMethodDelegate(
                 IntPtr thisPtr, // ICorJitCompiler*
@@ -395,9 +395,22 @@ namespace MonoMod.Core.Interop {
                 public VTableIndir2_t* Value;
             }
 
+            private static class MultipurposeSlotHelpers {
+                public static byte OffsetOfMp1() {
+                    MethodTable t = default;
+                    return (byte) ((byte*) &t.union_pPerInstInfo_ElementTypeHnd_pMultipurposeSlot1 - (byte*) &t);
+                }
+                public static byte OffsetOfMp2() {
+                    MethodTable t = default;
+                    return (byte) ((byte*) &t.union_p_InterfaceMap_pMultipurposeSlot2 - (byte*) &t);
+                }
+                public static byte RegularOffset(int index) {
+                    return (byte) (sizeof(MethodTable) + index * IntPtr.Size - 2 * IntPtr.Size);
+                }
+            }
 
             [StructLayout(LayoutKind.Sequential)]
-            public struct MethodTable {
+            public partial struct MethodTable {
 
                 public uint m_dwFlags;
                 public uint m_BaseSize;
@@ -496,25 +509,11 @@ namespace MonoMod.Core.Interop {
 
                 public bool HasSingleNonVirtualSlot => m_wFlags2.Has(Flags2.HasSingleNonVirtualSlot);
 
-                private static byte OffsetOfMp1() {
-                    MethodTable t = default;
-                    return (byte) ((byte*) &t.union_pPerInstInfo_ElementTypeHnd_pMultipurposeSlot1 - (byte*) &t);
-                }
-                private static byte OffsetOfMp2() {
-                    MethodTable t = default;
-                    return (byte) ((byte*) &t.union_p_InterfaceMap_pMultipurposeSlot2 - (byte*) &t);
-                }
-                private static byte RegularOffset(int index) {
-                    return (byte) (sizeof(MethodTable) + index * IntPtr.Size - 2 * IntPtr.Size);
-                }
-
                 // https://github.com/dotnet/runtime/blob/v6.0.5/src/coreclr/vm/methodtable.cpp#L318
-                private static readonly byte[] c_NonVirtualSlotsOffsets = new byte[] {
-                    OffsetOfMp1(), OffsetOfMp2(),
-                    OffsetOfMp1(), RegularOffset(2),
-                    OffsetOfMp2(), RegularOffset(2),
-                    RegularOffset(2), RegularOffset(3),
-                };
+                [Attributes.MultipurposeSlotOffsetTable(3, typeof(MultipurposeSlotHelpers))]
+                private static partial byte[] GetNonVirtualSlotsOffsets();
+
+                private static readonly byte[] c_NonVirtualSlotsOffsets = GetNonVirtualSlotsOffsets();
 
                 public nint GetNonVirtualSlotsPtr() {
                     return GetMultipurposeSlotPtr(Flags2.HasNonVirtualSlots, c_NonVirtualSlotsOffsets);

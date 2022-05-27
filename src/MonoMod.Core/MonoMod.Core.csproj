@@ -16,4 +16,14 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="$(MMSourcePath)MonoMod.Core.SourceGen\MonoMod.Core.SourceGen.csproj"
+                      Reference="false" ReferenceOutputAssembly="false"
+                      OutputItemType="Analyzer" Private="false"
+                      PrivateAssets="all"
+                      SetTargetFramework="TargetFramework=netstandard2.0"
+                      SkipGetTargetFrameworkProperties="true"
+                      Pack="false"/>
+  </ItemGroup>
+
 </Project>
