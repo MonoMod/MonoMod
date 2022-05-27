@@ -28,33 +28,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             => base.Features & ~RuntimeFeature.RequiresBodyThunkWalking;
 
         private unsafe IntPtr GetMethodBodyPtr(MethodBase method, RuntimeMethodHandle handle) {
-            // This probably applies to some older runtimes too, might even change on a per platform basis, is still fresh,
-            // might not work with AOT'd stuff and Wine, but at least it gets us past all the relevant stubs.
-
-            if (method.IsDynamicMethod()) {
-                // standard fields (8) | ???? (ptr) | ???? (8) | ???? (ptr) | ???? (ptr) | ???? (ptr) | real ptr
-                return *(IntPtr*) ((long) handle.Value + 8 + IntPtr.Size + 8 + IntPtr.Size + IntPtr.Size + IntPtr.Size);
-            }
-
             var md = (V60.MethodDesc*) handle.Value;
-            var ptr = md->GetMethodEntryPoint();
-
-            const int m_wFlags_offset =
-                2 // UINT16 m_wFlags3AndTokenRemainder
-              + 1 // BYTE m_chunkIndex
-              + 1 // BYTE m_bFlags2
-              + 2 // WORD m_wSlotNumber
-              ;
-            var m_wFlags = (ushort*) (((byte*) handle.Value) + m_wFlags_offset);
-
-            // Check for mdcHasNonVtableSlot
-            if ((*m_wFlags & 0x0008) == 0x0008) {
-                // standard fields (8) | ???? (ptr) | real ptr
-                return *(IntPtr*) ((long) handle.Value + 8 + IntPtr.Size);
-            }
-
-            // standard fields (8) | real ptr
-            return *(IntPtr*) ((long) handle.Value + 8);
+            return (IntPtr) md->GetNativeCode();
         }
 
         public override unsafe IntPtr GetMethodEntryPoint(MethodBase method) {

@@ -174,8 +174,58 @@ namespace MonoMod.Core.Interop {
                     (nuint) sizeof(ComPlusCallMethodDesc),
                     (nuint) sizeof(DynamicMethodDesc_64),
 
-                    // there are also a bunch which are used for fast size lookup with optional sizes, but GetBaseSize doesn't use them, so I don't care
+                    // this table also has a bunch of sizes it uses for fast size lookups, but for us, pregenerating that table is a *mess*
                 };
+
+                public nuint SizeOf(bool includeNonVtable = true, bool includeMethodImpl = true, bool includeComPlus = true, bool includeNativeCode = true) {
+                    var size = GetBaseSize()
+                        // All of the extra fields are just one pointer size
+                        + (includeNonVtable && m_wFlags.Has(MethodDescClassification.HasNonVtableSlot) ? (nuint) sizeof(void*) : 0)
+                        + (includeMethodImpl && m_wFlags.Has(MethodDescClassification.MethodImpl) ? (nuint) sizeof(void*) : 0)
+                        + (includeComPlus && m_wFlags.Has(MethodDescClassification.HasComPlusCallInfo) ? (nuint) sizeof(void*) : 0)
+                        + (includeNativeCode && m_wFlags.Has(MethodDescClassification.HasNativeCodeSlot) ? (nuint) sizeof(void*) : 0);
+
+                    //#ifdef FEATURE_PREJIT
+                    if (includeNativeCode && HasNativeCodeSlot) {
+                        size += ((nuint) GetAddrOfNativeCodeSlot() & 1u) != 0 ? (nuint) sizeof(void*) : 0;
+                    }
+                    //#endif
+
+                    return size;
+                }
+
+                public void* GetNativeCode() {
+                    if (HasNativeCodeSlot) {
+                        var pCode = *(void**) ((nuint) GetAddrOfNativeCodeSlot() & ~(nuint) 1u); // 1u = FIXUP_LIST_MASK
+                        /*
+                        #ifdef TARGET_ARM
+                                if (pCode != NULL)
+                                    pCode |= THUMB_CODE;
+                        #endif
+                        */
+                        return pCode;
+                    }
+
+                    if (!HasStableEntryPoint || HasPrecode)
+                        return null;
+
+                    return GetStableEntryPoint();
+                }
+
+                public void* GetStableEntryPoint() {
+                    return GetMethodEntryPoint();
+                }
+
+                public bool HasStableEntryPoint => m_bFlags2.Has(Flags2.HasStableEntryPoint);
+
+                public bool HasPrecode => m_bFlags2.Has(Flags2.HasPrecode);
+
+                public bool HasNativeCodeSlot => m_wFlags.Has(MethodDescClassification.HasNativeCodeSlot);
+
+                public void* GetAddrOfNativeCodeSlot() {
+                    var size = SizeOf(includeComPlus: false, includeNativeCode: false);
+                    return Unsafe.AsPointer(ref Unsafe.AddByteOffset(ref this, size));
+                }
 
                 public nuint GetBaseSize() => GetBaseSize(Classification);
 
@@ -237,6 +287,9 @@ namespace MonoMod.Core.Interop {
                 public uint m_padding;
             }
 
+            [StructLayout(LayoutKind.Sequential)]
+            public struct DynamicResolver { }
+
             [Flags]
             public enum DynamicMethodDesc_ExtendedFlags {
                 Attrs = 0x0000FFFF,
@@ -266,6 +319,7 @@ namespace MonoMod.Core.Interop {
             public struct DynamicMethodDesc_64 {
                 public StoredSigMethodDesc_64 @base;
                 public byte* m_pszMethodName; // PTR_CUTF8
+                public DynamicResolver* m_pResolver;
 
                 // THIS ONLY EXISTS IN 32-BIT
                 //public uint m_dwExtendedFlags;
