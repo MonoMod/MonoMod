@@ -1,20 +1,21 @@
 ﻿using Microsoft.CodeAnalysis;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace MonoMod.Core.SourceGen {
     internal class TypeSourceContext {
         private readonly List<INamedTypeSymbol> containingTypes = new();
         private readonly string? namespaceName;
 
-        public TypeSourceContext(ISymbol working) {
+        public TypeSourceContext(ISymbol working) : this(working.ContainingType) {
+        }
+
+        public TypeSourceContext(INamedTypeSymbol innermostType) {
             INamedTypeSymbol? outerType = null;
-            ISymbol currentSym = working;
-            while (currentSym.ContainingType is not null) {
-                outerType = currentSym.ContainingType;
+            while (innermostType is not null) {
+                outerType = innermostType;
                 containingTypes.Add(outerType);
-                currentSym = outerType;
+                innermostType = innermostType.ContainingType;
             }
 
             var ns = outerType?.ContainingNamespace;
@@ -29,7 +30,7 @@ namespace MonoMod.Core.SourceGen {
 
         public string FullContextName => namespaceName + (namespaceName is not null ? "." : "") + string.Join(".", containingTypes.Select(t => t.Name));
 
-        public void AppendEnterContext(CodeBuilder builder) {
+        public void AppendEnterContext(CodeBuilder builder, string additionalModifiers = "") {
             if (namespaceName != null) {
                 builder.WriteLine($"namespace {namespaceName} {{")
                     .IncreaseIndent();
@@ -40,7 +41,7 @@ namespace MonoMod.Core.SourceGen {
                 var isStruct = type.IsValueType;
                 var isRef = type.IsReferenceType;
 
-                builder.WriteLine($"partial {(isRec ? "record" : "")}{(isRef && !isRec ? "class" : "")} {(isStruct ? "struct" : "")} {type.Name} {{")
+                builder.WriteLine($"{additionalModifiers} partial {(isRec ? "record" : "")}{(isRef && !isRec ? "class" : "")} {(isStruct ? "struct" : "")} {type.Name} {{")
                     .IncreaseIndent();
             }
         }

@@ -92,7 +92,7 @@ namespace MonoMod.Core.SourceGen.Interop
             builder.WriteHeader();
 
             BuildSourceFor(builder, field, out var fieldName);
-            spc.AddSource($"MpSlot_{fieldName}.g.cs", sb.ToString());
+            spc.AddSource($"{fieldName}.g.cs", sb.ToString());
         }
 
         private static void BuildSourceFor(CodeBuilder builder, GenerationInfo info, out string fieldName) {
