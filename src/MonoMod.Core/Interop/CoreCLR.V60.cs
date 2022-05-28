@@ -242,6 +242,17 @@ namespace MonoMod.Core.Interop {
                         return false;
                     }
                 }
+
+                public bool TryAsDynamic(out DynamicMethodDescPtr ptr) {
+                    if (Classification == MethodClassification.Dynamic) {
+                        // TODO: select the appropriate vtable
+                        ptr = new(Unsafe.AsPointer(ref this), DynamicMethodDesc_64.FatVtable_);
+                        return true;
+                    } else {
+                        ptr = default;
+                        return false;
+                    }
+                }
             }
 
             [StructLayout(LayoutKind.Sequential)]
@@ -267,8 +278,23 @@ namespace MonoMod.Core.Interop {
                 public nuint SizeOf => (nuint) sizeof(MethodDescChunk) + (Size * MethodDesc.Alignment);
             }
 
+            [Attributes.FatInterface]
+            public partial struct StoredSigMethodDescPtr {
+                private partial void* GetPSig();
+                public void* m_pSig {
+                    [Attributes.FatInterfaceIgnore]
+                    get => GetPSig();
+                }
+                private partial uint GetCSig();
+                public uint m_cSig {
+                    [Attributes.FatInterfaceIgnore]
+                    get => GetCSig();
+                }
+            }
+
             [StructLayout(LayoutKind.Sequential)]
-            public struct StoredSigMethodDesc_64 {
+            [Attributes.FatInterfaceImpl(typeof(StoredSigMethodDescPtr))]
+            public partial struct StoredSigMethodDesc_64 {
                 public MethodDesc @base;
                 public void* m_pSig;
                 public uint m_cSig;
@@ -276,15 +302,57 @@ namespace MonoMod.Core.Interop {
                 // THIS ONLY EXISTS IN 64-BIT
                 public uint m_dwExtendedFlags;
 
+                // StoredSigMethodDescPtr impl
+                private void* GetPSig() => m_pSig;
+                private uint GetCSig() => m_cSig;
             }
 
             [StructLayout(LayoutKind.Sequential)]
-            public struct FCallMethodDesc_64 {
+            [Attributes.FatInterfaceImpl(typeof(StoredSigMethodDescPtr))]
+            public partial struct StoredSigMethodDesc_32 {
+                public MethodDesc @base;
+                public void* m_pSig;
+                public uint m_cSig;
+
+                // THIS ONLY EXISTS IN 64-BIT
+                //public uint m_dwExtendedFlags;
+
+                // StoredSigMethodDescPtr impl
+                private void* GetPSig() => m_pSig;
+                private uint GetCSig() => m_cSig;
+            }
+
+            [Attributes.FatInterface]
+            public partial struct FCallMethodDescPtr {
+                private partial uint GetECallID();
+                public uint m_dwECallID {
+                    [Attributes.FatInterfaceIgnore]
+                    get => GetECallID();
+                }
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            [Attributes.FatInterfaceImpl(typeof(FCallMethodDescPtr))]
+            public partial struct FCallMethodDesc_64 {
                 public MethodDesc @base;
                 public uint m_dwECallID;
 
                 // THIS ONLY EXISTS IN 64-BIT
                 public uint m_padding;
+
+                private uint GetECallID() => m_dwECallID;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            [Attributes.FatInterfaceImpl(typeof(FCallMethodDescPtr))]
+            public partial struct FCallMethodDesc_32 {
+                public MethodDesc @base;
+                public uint m_dwECallID;
+
+                // THIS ONLY EXISTS IN 64-BIT
+                //public uint m_padding;
+
+                private uint GetECallID() => m_dwECallID;
             }
 
             [StructLayout(LayoutKind.Sequential)]
@@ -315,8 +383,15 @@ namespace MonoMod.Core.Interop {
                 StackArgSize = 0xFFC0000, // native stack arg size for IL stubs
             }
 
+            [Attributes.FatInterface]
+            public partial struct DynamicMethodDescPtr {
+                private partial DynamicMethodDesc_ExtendedFlags GetFlags();
+                public DynamicMethodDesc_ExtendedFlags Flags => GetFlags();
+            }
+
             [StructLayout(LayoutKind.Sequential)]
-            public struct DynamicMethodDesc_64 {
+            [Attributes.FatInterfaceImpl(typeof(DynamicMethodDescPtr))]
+            public partial struct DynamicMethodDesc_64 {
                 public StoredSigMethodDesc_64 @base;
                 public byte* m_pszMethodName; // PTR_CUTF8
                 public DynamicResolver* m_pResolver;
@@ -324,19 +399,45 @@ namespace MonoMod.Core.Interop {
                 // THIS ONLY EXISTS IN 32-BIT
                 //public uint m_dwExtendedFlags;
 
-                public DynamicMethodDesc_ExtendedFlags Flags => (DynamicMethodDesc_ExtendedFlags) @base.m_dwExtendedFlags;
+                private DynamicMethodDesc_ExtendedFlags GetFlags() => (DynamicMethodDesc_ExtendedFlags) @base.m_dwExtendedFlags;
+                public DynamicMethodDesc_ExtendedFlags Flags => GetFlags();
             }
 
             [StructLayout(LayoutKind.Sequential)]
-            public struct ArrayMethodDesc_64 {
-                public StoredSigMethodDesc_64 @base;
+            [Attributes.FatInterfaceImpl(typeof(DynamicMethodDescPtr))]
+            public partial struct DynamicMethodDesc_32 {
+                public StoredSigMethodDesc_32 @base;
+                public byte* m_pszMethodName; // PTR_CUTF8
+                public DynamicResolver* m_pResolver;
 
-                public enum ArrayFunc {
-                    Get = 0,
-                    Set = 1,
-                    Address = 2,
-                    Ctor = 3,
-                }
+                // THIS ONLY EXISTS IN 32-BIT
+                public uint m_dwExtendedFlags;
+
+                private DynamicMethodDesc_ExtendedFlags GetFlags() => (DynamicMethodDesc_ExtendedFlags) m_dwExtendedFlags;
+                public DynamicMethodDesc_ExtendedFlags Flags => GetFlags();
+            }
+
+            [Attributes.FatInterface]
+            public partial struct ArrayMethodDescPtr {
+            }
+
+            public enum ArrayFunc {
+                Get = 0,
+                Set = 1,
+                Address = 2,
+                Ctor = 3,
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            [Attributes.FatInterfaceImpl(typeof(ArrayMethodDescPtr))]
+            public partial struct ArrayMethodDesc_64 {
+                public StoredSigMethodDesc_64 @base;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            [Attributes.FatInterfaceImpl(typeof(ArrayMethodDescPtr))]
+            public partial struct ArrayMethodDesc_32 {
+                public StoredSigMethodDesc_32 @base;
             }
 
             [StructLayout(LayoutKind.Sequential)]
@@ -363,7 +464,7 @@ namespace MonoMod.Core.Interop {
             }
 
             [StructLayout(LayoutKind.Sequential)]
-            public struct NDirectMethodDesc_other {
+            public partial struct NDirectMethodDesc_other {
                 public MethodDesc @base;
 
                 [StructLayout(LayoutKind.Sequential)]
@@ -383,9 +484,20 @@ namespace MonoMod.Core.Interop {
                 NDirect ndirect;
             }
 
+            [Attributes.FatInterface]
+            public partial struct EEImplMethodDescPtr {
+            }
+
             [StructLayout(LayoutKind.Sequential)]
-            public struct EEImplMethodDesc_64 {
+            [Attributes.FatInterfaceImpl(typeof(EEImplMethodDescPtr))]
+            public partial struct EEImplMethodDesc_64 {
                 public StoredSigMethodDesc_64 @base;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            [Attributes.FatInterfaceImpl(typeof(EEImplMethodDescPtr))]
+            public partial struct EEImplMethodDesc_32 {
+                public StoredSigMethodDesc_32 @base;
             }
 
             [StructLayout(LayoutKind.Sequential)]
