@@ -163,16 +163,86 @@ namespace MonoMod.Core.Interop {
                     return MethodTable->GetSlot(SlotNumber);
                 }
 
+                public bool TryAsFCall(out FCallMethodDescPtr md) {
+                    if (Classification == MethodClassification.FCall) {
+                        md = new(Unsafe.AsPointer(ref this), FCallMethodDescPtr.CurrentVtable);
+                        return true;
+                    } else {
+                        md = default;
+                        return false;
+                    }
+                }
+
+                public bool TryAsNDirect(out NDirectMethodDescPtr md) {
+                    if (Classification == MethodClassification.NDirect) {
+                        md = new(Unsafe.AsPointer(ref this), NDirectMethodDescPtr.CurrentVtable);
+                        return true;
+                    } else {
+                        md = default;
+                        return false;
+                    }
+                }
+
+                public bool TryAsEEImpl(out EEImplMethodDescPtr md) {
+                    if (Classification == MethodClassification.EEImpl) {
+                        md = new(Unsafe.AsPointer(ref this), EEImplMethodDescPtr.CurrentVtable);
+                        return true;
+                    } else {
+                        md = default;
+                        return false;
+                    }
+                }
+
+                public bool TryAsArray(out ArrayMethodDescPtr md) {
+                    if (Classification == MethodClassification.Array) {
+                        md = new(Unsafe.AsPointer(ref this), ArrayMethodDescPtr.CurrentVtable);
+                        return true;
+                    } else {
+                        md = default;
+                        return false;
+                    }
+                }
+
+                public bool TryAsInstantiated(out InstantiatedMethodDesc* md) {
+                    if (Classification == MethodClassification.Instantiated) {
+                        md = (InstantiatedMethodDesc*) Unsafe.AsPointer(ref this);
+                        return true;
+                    } else {
+                        md = default;
+                        return false;
+                    }
+                }
+
+                public bool TryAsComPlusCall(out ComPlusCallMethodDesc* md) {
+                    if (Classification == MethodClassification.ComInterop) {
+                        md = (ComPlusCallMethodDesc*) Unsafe.AsPointer(ref this);
+                        return true;
+                    } else {
+                        md = default;
+                        return false;
+                    }
+                }
+
+                public bool TryAsDynamic(out DynamicMethodDescPtr md) {
+                    if (Classification == MethodClassification.Dynamic) {
+                        md = new(Unsafe.AsPointer(ref this), DynamicMethodDescPtr.CurrentVtable);
+                        return true;
+                    } else {
+                        md = default;
+                        return false;
+                    }
+
+                }
+
                 private static readonly nuint[] s_ClassificationSizeTable = new nuint[] {
                     (nuint) sizeof(MethodDesc),
-                    // TODO: vary based on the correct platform
-                    (nuint) sizeof(FCallMethodDesc_64),
-                    (nuint) sizeof(NDirectMethodDesc_other),
-                    (nuint) sizeof(EEImplMethodDesc_64),
-                    (nuint) sizeof(ArrayMethodDesc_64),
+                    (nuint) FCallMethodDescPtr.CurrentSize,
+                    (nuint) NDirectMethodDescPtr.CurrentSize,
+                    (nuint) EEImplMethodDescPtr.CurrentSize,
+                    (nuint) ArrayMethodDescPtr.CurrentSize,
                     (nuint) sizeof(InstantiatedMethodDesc),
                     (nuint) sizeof(ComPlusCallMethodDesc),
-                    (nuint) sizeof(DynamicMethodDesc_64),
+                    (nuint) DynamicMethodDescPtr.CurrentSize,
 
                     // this table also has a bunch of sizes it uses for fast size lookups, but for us, pregenerating that table is a *mess*
                 };
@@ -232,27 +302,6 @@ namespace MonoMod.Core.Interop {
                 public static nuint GetBaseSize(MethodClassification classification) {
                     return s_ClassificationSizeTable[(int) classification];
                 }
-
-                public bool TryAsInstantiated(out InstantiatedMethodDesc* ptr) {
-                    if (Classification == MethodClassification.Instantiated) {
-                        ptr = (InstantiatedMethodDesc*) Unsafe.AsPointer(ref this);
-                        return true;
-                    } else {
-                        ptr = null;
-                        return false;
-                    }
-                }
-
-                public bool TryAsDynamic(out DynamicMethodDescPtr ptr) {
-                    if (Classification == MethodClassification.Dynamic) {
-                        // TODO: select the appropriate vtable
-                        ptr = new(Unsafe.AsPointer(ref this), DynamicMethodDesc_64.FatVtable_);
-                        return true;
-                    } else {
-                        ptr = default;
-                        return false;
-                    }
-                }
             }
 
             [StructLayout(LayoutKind.Sequential)]
@@ -280,6 +329,11 @@ namespace MonoMod.Core.Interop {
 
             [Attributes.FatInterface]
             public partial struct StoredSigMethodDescPtr {
+                public static IntPtr[] CurrentVtable { get; }
+                    = IntPtr.Size == 8 ? StoredSigMethodDesc_64.FatVtable_ : StoredSigMethodDesc_32.FatVtable_;
+                public static int CurrentSize { get; }
+                    = IntPtr.Size == 8 ? sizeof(StoredSigMethodDesc_64) : sizeof(StoredSigMethodDesc_32);
+
                 private partial void* GetPSig();
                 public void* m_pSig {
                     [Attributes.FatInterfaceIgnore]
@@ -324,6 +378,11 @@ namespace MonoMod.Core.Interop {
 
             [Attributes.FatInterface]
             public partial struct FCallMethodDescPtr {
+                public static IntPtr[] CurrentVtable { get; }
+                    = IntPtr.Size == 8 ? FCallMethodDesc_64.FatVtable_ : FCallMethodDesc_32.FatVtable_;
+                public static int CurrentSize { get; }
+                    = IntPtr.Size == 8 ? sizeof(FCallMethodDesc_64) : sizeof(FCallMethodDesc_32);
+
                 private partial uint GetECallID();
                 public uint m_dwECallID {
                     [Attributes.FatInterfaceIgnore]
@@ -385,6 +444,11 @@ namespace MonoMod.Core.Interop {
 
             [Attributes.FatInterface]
             public partial struct DynamicMethodDescPtr {
+                public static IntPtr[] CurrentVtable { get; }
+                    = IntPtr.Size == 8 ? DynamicMethodDesc_64.FatVtable_ : DynamicMethodDesc_32.FatVtable_;
+                public static int CurrentSize { get; }
+                    = IntPtr.Size == 8 ? sizeof(DynamicMethodDesc_64) : sizeof(DynamicMethodDesc_32);
+
                 private partial DynamicMethodDesc_ExtendedFlags GetFlags();
                 public DynamicMethodDesc_ExtendedFlags Flags => GetFlags();
             }
@@ -419,6 +483,10 @@ namespace MonoMod.Core.Interop {
 
             [Attributes.FatInterface]
             public partial struct ArrayMethodDescPtr {
+                public static IntPtr[] CurrentVtable { get; }
+                    = IntPtr.Size == 8 ? ArrayMethodDesc_64.FatVtable_ : ArrayMethodDesc_32.FatVtable_;
+                public static int CurrentSize { get; }
+                    = IntPtr.Size == 8 ? sizeof(ArrayMethodDesc_64) : sizeof(ArrayMethodDesc_32);
             }
 
             public enum ArrayFunc {
@@ -463,7 +531,20 @@ namespace MonoMod.Core.Interop {
                 NDirectPopulated = 0x8000,
             }
 
+            [Attributes.FatInterface]
+            public partial struct NDirectMethodDescPtr {
+                public static IntPtr[] CurrentVtable { get; }
+                    = PlatformDetection.Architecture == ArchitectureKind.x86
+                        ? NDirectMethodDesc_x86.FatVtable_
+                        : NDirectMethodDesc_other.FatVtable_;
+                public static int CurrentSize { get; }
+                    = PlatformDetection.Architecture == ArchitectureKind.x86
+                        ? sizeof(NDirectMethodDesc_x86)
+                        : sizeof(NDirectMethodDesc_other);
+            }
+
             [StructLayout(LayoutKind.Sequential)]
+            [Attributes.FatInterfaceImpl(typeof(NDirectMethodDescPtr))]
             public partial struct NDirectMethodDesc_other {
                 public MethodDesc @base;
 
@@ -484,8 +565,34 @@ namespace MonoMod.Core.Interop {
                 NDirect ndirect;
             }
 
+            [StructLayout(LayoutKind.Sequential)]
+            [Attributes.FatInterfaceImpl(typeof(NDirectMethodDescPtr))]
+            public partial struct NDirectMethodDesc_x86 {
+                public MethodDesc @base;
+
+                [StructLayout(LayoutKind.Sequential)]
+                public struct NDirect {
+                    public void* m_pNativeNDirectTarget;
+                    public byte* m_pszEntrypointName; // PTR_CUTF8
+                    public nuint union_pszLibName_dwECallID;
+                    public NDirectWriteableData* m_pWriteableData;
+                    public void* m_pImportThunkGlue;
+                    public uint m_DefaultDllImportSearchPathsAttributeValue; // ULONG
+                    public NDirectMethodDesc_Flags m_wFlags;
+                    // THIS ONLY EXISTS ON X86
+                    public ushort m_cbStackArgumentSize;
+                    public MethodDesc* m_pStubMD;
+                }
+
+                NDirect ndirect;
+            }
+
             [Attributes.FatInterface]
             public partial struct EEImplMethodDescPtr {
+                public static IntPtr[] CurrentVtable { get; }
+                    = IntPtr.Size == 8 ? EEImplMethodDesc_64.FatVtable_ : EEImplMethodDesc_32.FatVtable_;
+                public static int CurrentSize { get; }
+                    = IntPtr.Size == 8 ? sizeof(EEImplMethodDesc_64) : sizeof(EEImplMethodDesc_32);
             }
 
             [StructLayout(LayoutKind.Sequential)]
