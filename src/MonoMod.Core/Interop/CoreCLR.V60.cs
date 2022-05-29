@@ -286,11 +286,60 @@ namespace MonoMod.Core.Interop {
                     return GetMethodEntryPoint();
                 }
 
+                public bool HasNonVtableSlot => m_wFlags.Has(MethodDescClassification.HasNonVtableSlot);
+
                 public bool HasStableEntryPoint => m_bFlags2.Has(Flags2.HasStableEntryPoint);
 
                 public bool HasPrecode => m_bFlags2.Has(Flags2.HasPrecode);
 
                 public bool HasNativeCodeSlot => m_wFlags.Has(MethodDescClassification.HasNativeCodeSlot);
+
+                public bool IsUnboxingStub => m_bFlags2.Has(Flags2.IsUnboxingStub);
+
+                public bool HasMethodInstantiation => TryAsInstantiated(out var inst) && inst->IMD_HasMethodInstantiation;
+                public bool IsGenericMethodDefinition => TryAsInstantiated(out var inst) && inst->IMD_IsGenericMethodDefinition;
+                public bool IsInstantiatingStub
+                    => !IsUnboxingStub && TryAsInstantiated(out var inst) && inst->IMD_IsWrapperStubWithInstantiations;
+
+                public bool IsWrapperStub => IsUnboxingStub || IsInstantiatingStub;
+
+                public bool IsTightlyBoundToMethodTable {
+                    get {
+                        if (!HasNonVtableSlot) {
+                            return true;
+                        }
+
+                        if (HasMethodInstantiation) {
+                            return IsGenericMethodDefinition;
+                        }
+
+                        if (IsWrapperStub) {
+                            return false;
+                        }
+
+                        return true;
+                    }
+                }
+
+                // https://github.com/dotnet/runtime/blob/v6.0.5/src/coreclr/vm/genmeth.cpp#L151
+                public static MethodDesc* FindTightlyBoundWrappedMethodDesc(MethodDesc* pMD) {
+                    if (pMD->IsUnboxingStub && pMD->TryAsInstantiated(out var inst))
+                        pMD = inst->IMD_GetWrappedMethodDesc();
+
+                    if (!pMD->IsTightlyBoundToMethodTable)
+                        pMD = pMD->GetCanonicalMethodTable()->GetParallelMethodDesc(pMD);
+                    Helpers.DAssert(pMD->IsTightlyBoundToMethodTable);
+
+                    if (pMD->IsUnboxingStub) {
+                        // TODO: get next method
+                        // MethodTable::IntroducedMethodIterator::GetNext
+                    }
+                    Helpers.DAssert(!pMD->IsUnboxingStub);
+
+                    return pMD;
+                }
+
+                public MethodTable* GetCanonicalMethodTable() => MethodTable->GetCanonicalMethodTable();
 
                 public void* GetAddrOfNativeCodeSlot() {
                     var size = SizeOf(includeComPlus: false, includeNativeCode: false);
@@ -645,6 +694,15 @@ namespace MonoMod.Core.Interop {
 
                 public Flags m_wFlags2;
                 public ushort m_wNumGenericArgs;
+
+                public bool IMD_HasMethodInstantiation => IMD_IsGenericMethodDefinition ? true : m_pPerInstInfo != null;
+                public bool IMD_IsGenericMethodDefinition => (m_wFlags2 & Flags.KindMask) == Flags.GenericMethodDefinition;
+                public bool IMD_IsWrapperStubWithInstantiations => (m_wFlags2 & Flags.KindMask) == Flags.WrapperStubWithInstantiations;
+
+                public MethodDesc* IMD_GetWrappedMethodDesc() {
+                    Helpers.Assert(IMD_IsWrapperStubWithInstantiations);
+                    return (MethodDesc*) union_pDictLayout_pWrappedMethodDesc;
+                }
             }
 
             [StructLayout(LayoutKind.Sequential)]
@@ -730,6 +788,66 @@ namespace MonoMod.Core.Interop {
                 public void* union_p_InterfaceMap_pMultipurposeSlot2;
 
                 // then vtable/nonvirutal slots, overflow multipurpose slots, optional members, generic dict pointers, interface map, generic inst dict
+
+                public MethodTable* GetCanonicalMethodTable() {
+                    var addr = (nuint) union_pEEClass_pCanonMT;
+                    if ((addr & 2) == 0)
+                        return (MethodTable*) addr;
+                    if ((addr & 1) != 0)
+                        return *(MethodTable**) (addr - 3);
+                    return (MethodTable*) (addr - 2);
+                }
+
+                public MethodDesc* GetParallelMethodDesc(MethodDesc* pDefMD) {
+                    return GetMethodDescForSlot(pDefMD->SlotNumber);
+                }
+
+                // enum_flag_Category_Mask == enum_flag_Category_Interface
+                public bool IsInterface => (m_dwFlags & 0x000F0000) == 0x000C0000;
+
+                public MethodDesc* GetMethodDescForSlot(uint slotNumber) {
+                    var pCode = GetRestoredSlot(slotNumber);
+
+                    if (IsInterface && slotNumber < GetNumVirtuals()) {
+                        // TODO: MethodDesc::GetMethodDescFromStubAddr
+                    }
+
+                    // TODO: ExecutionManager::GetCodeMethodDesc, which calls EECodeInfo::Init, which calls a bunch of other stuff
+                    throw new NotImplementedException();
+                }
+
+                public void* GetRestoredSlot(uint slotNumber) {
+                    var pMT = (MethodTable*) Unsafe.AsPointer(ref this);
+
+                    while (true) {
+                        pMT = pMT->GetCanonicalMethodTable();
+                        Helpers.DAssert(pMT is not null);
+
+                        var slot = pMT->GetSlot(slotNumber);
+
+                        if (slot != null // I'm still not sure if FEATURE_PREJIT is set for our stuff
+                        /*#ifdef FEATURE_PREJIT
+                                    && !pMT->GetLoaderModule()->IsVirtualImportThunk(slot)
+                        #endif*/
+                        ) {
+                            return slot;
+                        }
+
+                        pMT = pMT->GetParentMethodTable();
+                    }
+                }
+
+                public bool HasIndirectParent => (m_dwFlags & 0x00800000) != 0; // enum_flag_HasIndirectParent
+
+                public MethodTable* GetParentMethodTable() {
+                    var ptr = m_pParentMethodTable;
+                    // TODO: RelativeFixupPointer when needed
+                    if (HasIndirectParent) {
+                        return *(MethodTable**) ptr; // I'm not sure if this is actually correct
+                    } else {
+                        return (MethodTable*) ptr;
+                    }
+                }
 
                 public void* GetSlot(uint slotNumber) {
                     var pSlot = GetSlotPtrRaw(slotNumber);
