@@ -4,13 +4,16 @@ using MonoMod.Cil;
 using MonoMod.Core;
 using MonoMod.RuntimeDetour;
 using System;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 
+/*
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;
 var method2 = typeof(TestClass).GetMethod(nameof(TestClass.Target))!;
 var method3 = typeof(TestClass).GetMethod(nameof(TestClass.Target2))!;
 var targetHook = typeof(TestClass).GetMethod(nameof(TestClass.TargetHook))!;
-
+*/
 /*using (DetourFactory.Current.CreateDetour(method, method2, true)) {
     var test = new TestClass();
     _ = test.TestDetourMethod();
@@ -23,7 +26,7 @@ foreach (var entry in cwt) {
 }
 
 GC.GetTotalMemory(true);*/
-
+/*
 using (var hook = new Hook(method, targetHook)) {
 
     using (var h = new ILHook(
@@ -86,6 +89,27 @@ using (var detour4 = new Detour(() => new TestClass().TestDetourMethod(), () => 
     detour3.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
     detour4.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
 }
+*/
+
+#if NET45_OR_GREATER
+using System.Threading.Tasks;
+
+var sb = new StringBuilder();
+var sw = new StringWriter();
+
+using (new Hook(() => default(TextWriter)!.WriteLineAsync(ArrayEx.Empty<char>()), (Delegate)WriteLineAsyncPatch)) {
+    var chrs = new char[] { 'a', 'b', 'c' };
+    await sw.WriteLineAsync(chrs);
+}
+
+static Task WriteLineAsyncPatch(Func<TextWriter, char[], Task> orig, TextWriter writer, char[] buffer) {
+    Console.WriteLine("WriteLineAsync called");
+    return orig(writer, buffer);
+}
+#endif
+
+Console.WriteLine("Done!");
+
 
 class TestClass {
     [MethodImpl(MethodImplOptionsEx.NoInlining)]

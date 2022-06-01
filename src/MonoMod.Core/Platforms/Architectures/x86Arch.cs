@@ -19,7 +19,7 @@ namespace MonoMod.Core.Platforms.Architectures {
             if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
                 return new BytePatternCollection(
                     // .NET Framework
-                    new(new(AddressKind.Rel32, 0xc),
+                    new(new(AddressKind.Rel32, 0x10),
                         // mov ... (mscorlib_ni!???)
                         0xb8, An, An, An, An,
                         // nop

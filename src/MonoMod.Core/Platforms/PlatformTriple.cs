@@ -219,7 +219,11 @@ namespace MonoMod.Core.Platforms {
                     entry = meaning.ProcessAddress(entry, offset, addr);
                 }
 
-                entry = NotThePreStub(lastEntry, entry);
+                entry = NotThePreStub(lastEntry, entry, out var wasPreStub);
+                if (wasPreStub) {
+                    Prepare(method);
+                    goto ReloadFuncPtr;
+                }
             } while (true);
 
             return entry;
@@ -231,7 +235,7 @@ namespace MonoMod.Core.Platforms {
 
         private IntPtr ThePreStub = IntPtr.Zero;
 
-        private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed) {
+        private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed, out bool wasPreStub) {
             if (ThePreStub == IntPtr.Zero) {
                 ThePreStub = (IntPtr) (-2);
 
@@ -251,7 +255,9 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            return (ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/) ? ptrGot : ptrParsed;
+            wasPreStub = ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/;
+
+            return wasPreStub ? ptrGot : ptrParsed;
         }
 
         public MethodBase GetRealDetourTarget(MethodBase from, MethodBase to) {
