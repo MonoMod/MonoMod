@@ -232,11 +232,17 @@ namespace MonoMod.RuntimeDetour {
             public readonly IDetourFactory Factory;
             public readonly DetourConfig? Config;
             public readonly ILContext.Manipulator Manip;
+            public ILContext? CurrentContext;
+            public ILContext? LastContext;
 
             public ILHookEntry(IILHook hook) {
                 Manip = hook.Manip;
                 Config = hook.Config;
                 Factory = hook.Factory;
+            }
+
+            public void Remove() {
+                LastContext?.Dispose();
             }
         }
         #endregion
@@ -548,12 +554,16 @@ namespace MonoMod.RuntimeDetour {
                 ilhookGraph.Remove(node);
                 UpdateEndOfChain();
                 UpdateChain(ilhook.Factory);
+                CleanILContexts();
+                node.ListNode.ChainNode.Remove();
             }
 
             private void RemoveNoConfigILHook(IILHook ilhook, ILHookEntry node) {
                 noConfigIlhooks.Remove(node);
                 UpdateEndOfChain();
                 UpdateChain(ilhook.Factory);
+                CleanILContexts();
+                node.Remove();
             }
 
             private void UpdateEndOfChain() {
@@ -570,21 +580,23 @@ namespace MonoMod.RuntimeDetour {
                 var def = dmd.Definition;
                 var cur = ilhookGraph.ListHead;
                 while (cur is not null) {
-                    InvokeManipulator(def, cur.ChainNode.Manip);
+                    InvokeManipulator(cur.ChainNode, def);
                     cur = cur.Next;
                 }
 
                 foreach (var node in noConfigIlhooks) {
-                    InvokeManipulator(def, node.Manip);
+                    InvokeManipulator(node, def);
                 }
 
                 EndOfChain = dmd.Generate();
             }
 
-            private static void InvokeManipulator(MethodDefinition def, ILContext.Manipulator cb) {
-                using var il = new ILContext(def);
+            private static void InvokeManipulator(ILHookEntry entry, MethodDefinition def) {
+                //entry.LastContext?.Dispose(); // we can't safely clean up the old context until after we've updated the chain to point at the new method
+                var il = new ILContext(def);
+                entry.CurrentContext = il;
                 il.ReferenceBag = RuntimeILReferenceBag.Instance;
-                il.Invoke(cb);
+                il.Invoke(entry.Manip);
                 if (il.IsReadOnly) {
                     il.Dispose();
                     return;
@@ -595,6 +607,26 @@ namespace MonoMod.RuntimeDetour {
                 // and reusing it outside of the IL manipulation context.
                 il.MakeReadOnly();
                 return;
+            }
+
+            private void CleanILContexts() {
+                var cur = ilhookGraph.ListHead;
+                while (cur is not null) {
+                    CleanContext(cur.ChainNode);
+                    cur = cur.Next;
+                }
+
+                foreach (var node in noConfigIlhooks) {
+                    CleanContext(node);
+                }
+
+                static void CleanContext(ILHookEntry entry) {
+                    if (entry.CurrentContext == entry.LastContext)
+                        return;
+                    var old = entry.LastContext;
+                    entry.LastContext = entry.CurrentContext;
+                    old?.Dispose();
+                }
             }
 
             private void UpdateChain(IDetourFactory updatingFactory) {
