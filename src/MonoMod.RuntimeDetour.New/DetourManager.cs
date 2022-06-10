@@ -82,6 +82,7 @@ namespace MonoMod.RuntimeDetour {
             public bool UpdatingChain;
 
             public void WaitForChainUpdate() {
+                _ = Interlocked.Decrement(ref ActiveCalls);
                 var spin = new SpinWait();
                 while (Volatile.Read(ref UpdatingChain)) {
                     spin.SpinOnce();
@@ -141,23 +142,30 @@ namespace MonoMod.RuntimeDetour {
                 scope = il.EmitNewTypedReference(SyncInfo, out _);
                 il.Emit(OpCodes.Stloc, syncInfoVar);
 
-                il.Emit(OpCodes.Ldloc, syncInfoVar);
-                il.Emit(OpCodes.Volatile);
-                il.Emit(OpCodes.Ldfld, module.ImportReference(DetourSyncInfo_UpdatingChain));
+                var checkWait = il.Create(OpCodes.Nop);
+                il.Append(checkWait);
 
-                var nowaitIns = il.Create(OpCodes.Nop);
-                il.Emit(OpCodes.Brfalse_S, nowaitIns);
-
-                il.Emit(OpCodes.Ldloc, syncInfoVar);
-                il.Emit(OpCodes.Call, module.ImportReference(DetourSyncInfo_WaitForChainUpdate));
-
-                // TODO: maybe increment in the wait helper, and jump directly to the try block
-
-                il.Append(nowaitIns);
+                // first increment ActiveCalls
                 il.Emit(OpCodes.Ldloc, syncInfoVar);
                 il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
                 il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Increment));
                 il.Emit(OpCodes.Pop);
+
+                // then check UpdatingChain
+                il.Emit(OpCodes.Ldloc, syncInfoVar);
+                il.Emit(OpCodes.Volatile);
+                il.Emit(OpCodes.Ldfld, module.ImportReference(DetourSyncInfo_UpdatingChain));
+
+                var noWait = il.Create(OpCodes.Nop);
+                il.Emit(OpCodes.Brfalse_S, noWait);
+
+                // if UpdatingChain was true, wait for that to finish, then jump back up to the top, because WaitForChainUpdate decrements
+                il.Emit(OpCodes.Ldloc, syncInfoVar);
+                il.Emit(OpCodes.Call, module.ImportReference(DetourSyncInfo_WaitForChainUpdate));
+                il.Emit(OpCodes.Br_S, checkWait);
+
+                // if UpdatingChain was false, we're good to continue
+                il.Append(noWait);
 
                 VariableDefinition? returnVar = null;
                 if (Sig.ReturnType != typeof(void)) {
