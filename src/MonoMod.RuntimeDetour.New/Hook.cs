@@ -1,4 +1,5 @@
-﻿using Mono.Cecil.Cil;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Utils;
 using MonoMod.RuntimeDetour.Utils;
@@ -185,9 +186,8 @@ namespace MonoMod.RuntimeDetour {
             Source = source;
             Target = target;
 
-            trampoline = TrampolinePool.Rent(MethodSignature.ForMethod(source));
 
-            realTarget = PrepareRealTarget(targetObject, out delegateObjectScope);
+            realTarget = PrepareRealTarget(targetObject, out trampoline, out delegateObjectScope);
 
             state = DetourManager.GetDetourState(source);
 
@@ -208,9 +208,8 @@ namespace MonoMod.RuntimeDetour {
         private static readonly FieldInfo HookData_Target = typeof(HookData).GetField(nameof(HookData.Target))!;
         private static readonly FieldInfo HookData_InvokeNext = typeof(HookData).GetField(nameof(HookData.InvokeNext))!;
 
-        private MethodInfo PrepareRealTarget(object? target, out DataScope<DynamicReferenceManager.CellRef> scope) {
+        private MethodInfo PrepareRealTarget(object? target, out MethodInfo trampoline, out DataScope<DynamicReferenceManager.CellRef> scope) {
             var srcSig = MethodSignature.ForMethod(Source);
-            var trampSig = MethodSignature.ForMethod(trampoline);
             var dstSig = MethodSignature.ForMethod(Target, ignoreThis: true); // the dest sig we don't want to consider its this param
 
             if (target is null && !Target.IsStatic) {
@@ -229,14 +228,21 @@ namespace MonoMod.RuntimeDetour {
                 throw new ArgumentException("Target method is not compatible with source method");
             }
 
+            var trampSig = srcSig;
+
             var delegateInvoke = nextDelegateType?.GetMethod("Invoke");
             if (delegateInvoke is not null) {
                 // we want to check that the delegate invoke is also compatible with the source sig
                 var invokeSig = MethodSignature.ForMethod(delegateInvoke, ignoreThis: true);
-                if (!invokeSig.IsCompatibleWith(trampSig)) {
-                    throw new ArgumentException("Target method's delegate parameter is not compatible with the source method");
-                }
+                // if it takes a delegate parameter, the trampoline signature should match that delegate
+                trampSig = invokeSig;
             }
+
+            if (!trampSig.IsCompatibleWith(srcSig)) {
+                throw new ArgumentException("Target method's delegate parameter is not compatible with the source method");
+            }
+
+            trampoline = TrampolinePool.Rent(trampSig);
 
             var hookData = target is not null || nextDelegateType is not null
                 ? new HookData(target,

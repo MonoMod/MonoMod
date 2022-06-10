@@ -152,7 +152,7 @@ namespace MonoMod.Core.Interop {
                 public MethodTable* MethodTable => MethodDescChunk->m_methodTable;
 
                 public void* GetMethodEntryPoint() {
-                    if (m_wFlags.Has(MethodDescClassification.HasNonVtableSlot)) {
+                    if (HasNonVtableSlot) {
                         var size = GetBaseSize();
                         var pSlot = ((byte*) Unsafe.AsPointer(ref this)) + size;
                         return MethodDescChunk->m_flagsAndTokenRange.Has(V60.MethodDescChunk.Flags.IsZapped)

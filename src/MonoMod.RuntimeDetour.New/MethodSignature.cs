@@ -70,6 +70,8 @@ namespace MonoMod.RuntimeDetour {
 
         public bool IsCompatibleWith(MethodSignature other) {
             Helpers.ThrowIfArgumentNull(other);
+            if (ReferenceEquals(this, other))
+                return true;
             return ReturnType.IsCompatible(other.ReturnType)
                 && parameters.SequenceEqual(other.Parameters, CompatableComparer.Instance);
         }
