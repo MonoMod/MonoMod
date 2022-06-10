@@ -326,17 +326,38 @@ namespace MonoMod.Core.Interop {
                     if (pMD->IsUnboxingStub && pMD->TryAsInstantiated(out var inst))
                         pMD = inst->IMD_GetWrappedMethodDesc();
 
+                    // this may not actually be necessary for any of the MDs we see, so we'll leave it in its incomplete state
+                    // until it actually proves to be an issue
                     if (!pMD->IsTightlyBoundToMethodTable)
                         pMD = pMD->GetCanonicalMethodTable()->GetParallelMethodDesc(pMD);
                     Helpers.DAssert(pMD->IsTightlyBoundToMethodTable);
 
                     if (pMD->IsUnboxingStub) {
-                        // TODO: get next method
-                        // MethodTable::IntroducedMethodIterator::GetNext
+                        pMD = GetNextIntroducedMethod(pMD);
                     }
                     Helpers.DAssert(!pMD->IsUnboxingStub);
 
                     return pMD;
+                }
+
+                public static MethodDesc* GetNextIntroducedMethod(MethodDesc* pMD) {
+                    var pChunk = pMD->MethodDescChunk;
+
+                    var pNext = (nuint) pMD + pMD->SizeOf();
+                    var pEnd = (nuint) pChunk + pChunk->SizeOf;
+
+                    if (pNext < pEnd) {
+                        return (MethodDesc*) pNext;
+                    } else {
+                        Helpers.DAssert(pNext == pEnd);
+
+                        pChunk = pChunk->m_next;
+                        if (pChunk is not null) {
+                            return pChunk->FirstMethodDesc;
+                        } else {
+                            return null;
+                        }
+                    }
                 }
 
                 public MethodTable* GetCanonicalMethodTable() => MethodTable->GetCanonicalMethodTable();

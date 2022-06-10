@@ -235,6 +235,7 @@ namespace MonoMod.Core.Platforms {
 
         private IntPtr ThePreStub = IntPtr.Zero;
 
+        // TODO: make this something actually runtime-dependent
         private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed, out bool wasPreStub) {
             if (ThePreStub == IntPtr.Zero) {
                 ThePreStub = (IntPtr) (-2);
@@ -277,6 +278,7 @@ namespace MonoMod.Core.Platforms {
                 var returnClass = Abi.Classify(retType, true);
 
                 // only if the return class is ByRef do we need to do something
+                // TODO: perform better decisions based on the ABI argument order and return class
                 if (returnClass == TypeClassification.ByReference) {
                     var thisType = from.GetThisParamType();
                     var retPtrType = retType.MakeByRefType();

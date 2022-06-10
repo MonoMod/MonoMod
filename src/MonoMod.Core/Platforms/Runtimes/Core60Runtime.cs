@@ -30,6 +30,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private unsafe IntPtr GetMethodBodyPtr(MethodBase method, RuntimeMethodHandle handle) {
             var md = (V60.MethodDesc*) handle.Value;
 
+            md = V60.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+
             return (IntPtr) md->GetNativeCode();
         }
 
