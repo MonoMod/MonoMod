@@ -1,5 +1,4 @@
-﻿using Mono.Cecil;
-using Mono.Cecil.Cil;
+﻿using Mono.Cecil.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Utils;
 using MonoMod.RuntimeDetour.Utils;

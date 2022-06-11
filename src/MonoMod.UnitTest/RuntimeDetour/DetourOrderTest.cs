@@ -71,9 +71,11 @@ namespace MonoMod.UnitTest {
                 TestMethod(2, 3);
 
                 var mdi = DetourManager.GetDetourInfo(original);
-                foreach (var d in mdi.Detours) {
-                    var config = d.Config;
-                    Assert.True(d.IsApplied);
+                using (mdi.WithLock()) {
+                    foreach (var d in mdi.Detours) {
+                        var config = d.Config;
+                        Assert.True(d.IsApplied);
+                    }
                 }
 
                 Assert.Equal(expected, actual);

@@ -448,9 +448,12 @@ namespace MonoMod.RuntimeDetour {
             internal readonly RootChainNode detourList;
             private ChainNode? noConfigChain;
 
-            private readonly object sync = new();
+            internal SpinLock detourLock = new(true);
+
             public void AddDetour(IDetour detour) {
-                lock (sync) {
+                var lockTaken = false;
+                try {
+                    detourLock.Enter(ref lockTaken);
                     if (detour.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add a detour which was already added");
 
@@ -470,11 +473,16 @@ namespace MonoMod.RuntimeDetour {
                     }
 
                     UpdateChain(detour.Factory);
+                } finally {
+                    if (lockTaken)
+                        detourLock.Exit(true);
                 }
             }
 
             public void RemoveDetour(IDetour detour) {
-                lock (sync) {
+                var lockTaken = false;
+                try {
+                    detourLock.Enter(ref lockTaken);
                     switch (detour.ManagerData) {
                         case null:
                             throw new InvalidOperationException("Trying to remove detour which wasn't added");
@@ -490,6 +498,9 @@ namespace MonoMod.RuntimeDetour {
                         default:
                             throw new InvalidOperationException("Trying to remove detour with unknown manager data");
                     }
+                } finally {
+                    if (lockTaken)
+                        detourLock.Exit(true);
                 }
             }
 
@@ -519,7 +530,9 @@ namespace MonoMod.RuntimeDetour {
             private readonly List<ILHookEntry> noConfigIlhooks = new();
 
             public void AddILHook(IILHook ilhook) {
-                lock (sync) {
+                var lockTaken = false;
+                try {
+                    detourLock.Enter(ref lockTaken);
                     if (ilhook.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add an IL hook which was already added");
 
@@ -538,11 +551,16 @@ namespace MonoMod.RuntimeDetour {
 
                     UpdateEndOfChain();
                     UpdateChain(ilhook.Factory);
+                } finally {
+                    if (lockTaken)
+                        detourLock.Exit(true);
                 }
             }
 
             public void RemoveILHook(IILHook ilhook) {
-                lock (sync) {
+                var lockTaken = false;
+                try {
+                    detourLock.Enter(ref lockTaken);
                     switch (ilhook.ManagerData) {
                         case null:
                             throw new InvalidOperationException("Trying to remove IL hook which wasn't added");
@@ -558,6 +576,9 @@ namespace MonoMod.RuntimeDetour {
                         default:
                             throw new InvalidOperationException("Trying to remove IL hook with unknown manager data");
                     }
+                } finally {
+                    if (lockTaken)
+                        detourLock.Exit(true);
                 }
             }
 
@@ -711,6 +732,31 @@ namespace MonoMod.RuntimeDetour {
             }
 
             return existingInfo;
+        }
+
+        public void EnterLock(ref bool lockTaken) {
+            state.detourLock.Enter(ref lockTaken);
+        }
+
+        public void ExitLock() {
+            state.detourLock.Exit(true);
+        }
+
+        public Lock WithLock() => new(this);
+
+        public ref struct Lock {
+            private readonly MethodDetourInfo mdi;
+            private readonly bool lockTaken;
+            internal Lock(MethodDetourInfo mdi) {
+                this.mdi = mdi;
+                lockTaken = false;
+                mdi.EnterLock(ref lockTaken);
+            }
+
+            public void Dispose() {
+                if (lockTaken)
+                    mdi.ExitLock();
+            }
         }
     }
 
