@@ -35,7 +35,7 @@
     <NoWarn>$(NoWarn);CA1003</NoWarn> <!-- Change event to use EventHandler<EventArgs> -->
 
     <!-- We use a prerelease version of Roslyn to fix a bug with inferring delegate types  -->
-    <RoslynVersion>4.2.0-4.final</RoslynVersion>
+    <RoslynVersion>4.2.0</RoslynVersion>
     <MSBuildRequiredVersion>17.0.0</MSBuildRequiredVersion>
   </PropertyGroup>
 
