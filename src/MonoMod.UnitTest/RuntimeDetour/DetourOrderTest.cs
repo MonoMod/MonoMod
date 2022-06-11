@@ -69,6 +69,13 @@ namespace MonoMod.UnitTest {
                 new DetourConfig("BeforeA").AddBefore("A")
             )) {
                 TestMethod(2, 3);
+
+                var mdi = DetourManager.GetDetourInfo(original);
+                foreach (var d in mdi.Detours) {
+                    var config = d.Config;
+                    Assert.True(d.IsApplied);
+                }
+
                 Assert.Equal(expected, actual);
             }
 

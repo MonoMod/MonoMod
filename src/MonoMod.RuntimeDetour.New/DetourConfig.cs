@@ -17,8 +17,16 @@ namespace MonoMod.RuntimeDetour {
         public DetourConfig(string id, int? priority = null, IEnumerable<string>? before = null, IEnumerable<string>? after = null) {
             Id = id;
             Priority = priority;
-            Before = before ?? Enumerable.Empty<string>();
-            After = after ?? Enumerable.Empty<string>();
+            Before = AsFixedSize(before ?? Enumerable.Empty<string>());
+            After = AsFixedSize(after ?? Enumerable.Empty<string>());
+        }
+
+        private static IEnumerable<string> AsFixedSize(IEnumerable<string> enumerable) {
+            if (enumerable == Enumerable.Empty<string>())
+                return enumerable;
+            if (enumerable is ICollection<string>)
+                return enumerable;
+            return enumerable.ToArray();
         }
 
         public DetourConfig WithPriority(int? priority) => new(Id, priority, Before, After);

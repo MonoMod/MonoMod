@@ -5,16 +5,18 @@ using MonoMod.Core;
 using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
-    internal static class DetourManager {
+    public static class DetourManager {
         #region Detour chain
-        private abstract class ChainNode {
+        internal abstract class ChainNode {
 
             public ChainNode? Next;
 
@@ -25,6 +27,8 @@ namespace MonoMod.RuntimeDetour {
 
             private MethodBase? lastTarget;
             private ICoreDetour? trampolineDetour;
+
+            public bool IsApplied { get; private set; }
 
             public virtual void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
                 var to = Next?.Entry;
@@ -49,6 +53,7 @@ namespace MonoMod.RuntimeDetour {
                 }
 
                 lastTarget = to;
+                IsApplied = true;
             }
 
             public void Remove() {
@@ -60,10 +65,11 @@ namespace MonoMod.RuntimeDetour {
                 }
                 lastTarget = null;
                 Next = null;
+                IsApplied = false;
             }
         }
 
-        private sealed class DetourChainNode : ChainNode {
+        internal sealed class DetourChainNode : ChainNode {
             public DetourChainNode(IDetour detour) {
                 Entry = detour.InvokeTarget;
                 NextTrampoline = detour.NextTrampoline;
@@ -75,9 +81,11 @@ namespace MonoMod.RuntimeDetour {
             public override MethodBase NextTrampoline { get; }
             public override DetourConfig? Config { get; }
             public IDetourFactory Factory { get; }
+
+            public DetourInfo? DetourInfo;
         }
 
-        private sealed class DetourSyncInfo {
+        internal sealed class DetourSyncInfo {
             public int ActiveCalls;
             public bool UpdatingChain;
 
@@ -99,7 +107,7 @@ namespace MonoMod.RuntimeDetour {
 
         // The root node is the existing method. It's NextTrampoline is the method, which is the same
         // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
-        private sealed class RootChainNode : ChainNode {
+        internal sealed class RootChainNode : ChainNode {
             public override MethodBase Entry { get; }
             public override MethodBase NextTrampoline { get; }
             public override DetourConfig? Config => null;
@@ -248,7 +256,7 @@ namespace MonoMod.RuntimeDetour {
         #endregion
 
         #region DepGraph
-        private sealed class DepListNode<TNode> {
+        internal sealed class DepListNode<TNode> {
             public readonly DetourConfig Config;
             public readonly TNode ChainNode;
 
@@ -260,7 +268,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private sealed class DepGraphNode<TNode> {
+        internal sealed class DepGraphNode<TNode> {
             public readonly DepListNode<TNode> ListNode;
             public DetourConfig Config => ListNode.Config;
             public readonly List<DepGraphNode<TNode>> BeforeThis = new();
@@ -272,7 +280,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private sealed class DepGraph<TNode> {
+        internal sealed class DepGraph<TNode> {
             private readonly List<DepGraphNode<TNode>> nodes = new();
             public DepListNode<TNode>? ListHead;
 
@@ -420,12 +428,11 @@ namespace MonoMod.RuntimeDetour {
         }
         #endregion
 
-        internal class DetourState {
+        internal sealed class DetourState {
             public readonly MethodBase Source;
             public readonly MethodBase ILCopy;
             public MethodBase EndOfChain;
 
-            private readonly object sync = new();
 
             public DetourState(MethodBase src) {
                 Source = src;
@@ -434,10 +441,14 @@ namespace MonoMod.RuntimeDetour {
                 detourList = new(src);
             }
 
+            private MethodDetourInfo? info;
+            public MethodDetourInfo Info => info ??= new(this);
+
             private readonly DepGraph<ChainNode> detourGraph = new();
-            private readonly RootChainNode detourList;
+            internal readonly RootChainNode detourList;
             private ChainNode? noConfigChain;
 
+            private readonly object sync = new();
             public void AddDetour(IDetour detour) {
                 lock (sync) {
                     if (detour.ManagerData is not null)
@@ -668,9 +679,94 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private static ConcurrentDictionary<MethodBase, DetourState> detourStates = new();
+        private static readonly ConcurrentDictionary<MethodBase, DetourState> detourStates = new();
 
-        public static DetourState GetDetourState(MethodBase method)
+        internal static DetourState GetDetourState(MethodBase method)
             => detourStates.GetOrAdd(method, m => new(m));
+
+        public static MethodDetourInfo GetDetourInfo(MethodBase method)
+            => GetDetourState(method).Info;
+    }
+
+    public sealed class MethodDetourInfo {
+        internal readonly DetourManager.DetourState state;
+        internal MethodDetourInfo(DetourManager.DetourState state) {
+            this.state = state;
+        }
+
+        public MethodBase Method => state.Source;
+
+        public bool HasActiveCall => Volatile.Read(ref state.detourList.SyncInfo.ActiveCalls) > 0;
+
+        private DetourCollection? lazyDetours;
+        public DetourCollection Detours => lazyDetours ??= new(this);
+
+        public DetourInfo? FirstDetour
+            => state.detourList.Next is DetourManager.DetourChainNode cn ? GetDetourInfo(cn) : null;
+
+        internal DetourInfo GetDetourInfo(DetourManager.DetourChainNode node) {
+            var existingInfo = node.DetourInfo;
+            if (existingInfo is null || existingInfo.MethodInfo != this) {
+                return node.DetourInfo = new(node, this);
+            }
+
+            return existingInfo;
+        }
+    }
+
+    public sealed class DetourCollection : IEnumerable<DetourInfo> {
+        private readonly MethodDetourInfo mdi;
+        internal DetourCollection(MethodDetourInfo mdi)
+            => this.mdi = mdi;
+
+        public Enumerator GetEnumerator() => new(mdi);
+
+        IEnumerator<DetourInfo> IEnumerable<DetourInfo>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        // TODO: track and check version to keep note of when the chain changes
+        public struct Enumerator : IEnumerator<DetourInfo> {
+            private readonly MethodDetourInfo mdi;
+            private DetourManager.ChainNode? curNode;
+
+            internal Enumerator(MethodDetourInfo mdi) {
+                this.mdi = mdi;
+                curNode = mdi.state.detourList;
+            }
+
+            public DetourInfo Current => mdi.GetDetourInfo((DetourManager.DetourChainNode) curNode!);
+
+            object IEnumerator.Current => Current;
+
+            [MemberNotNullWhen(true, nameof(curNode))]
+            public bool MoveNext() {
+                curNode = curNode?.Next;
+                return curNode is not null;
+            }
+
+            public void Reset() {
+                curNode = mdi.state.detourList;
+            }
+
+            public void Dispose() { }
+        }
+    }
+
+    public sealed class DetourInfo {
+        private readonly DetourManager.DetourChainNode detour;
+
+        internal DetourInfo(DetourManager.DetourChainNode detour, MethodDetourInfo methodInfo) {
+            this.detour = detour;
+            MethodInfo = methodInfo;
+        }
+
+        public MethodDetourInfo MethodInfo { get; }
+
+        public bool IsApplied => detour.IsApplied;
+        public DetourConfig? Config => detour.Config;
+
+        public DetourInfo? Next
+            => detour.Next is DetourManager.DetourChainNode cn ? MethodInfo.GetDetourInfo(cn) : null;
     }
 }
