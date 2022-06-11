@@ -36,6 +36,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         }
 
         public override unsafe IntPtr GetMethodEntryPoint(MethodBase method) {
+            method = GetIdentifiable(method);
             var handle = GetMethodHandle(method);
 
             GetPtr:

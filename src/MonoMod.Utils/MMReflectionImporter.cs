@@ -270,9 +270,23 @@ namespace MonoMod.Utils {
                 field = field.Module.ResolveField(field.MetadataToken);
             }
 
+            var typeRef = _ImportReference(field.FieldType, declaringType);
+
+            // I'm pretty sure that the order here actually matters, but I don't know what order System.Reflection returns it in
+            var modReqs = field.GetRequiredCustomModifiers();
+            var modOpts = field.GetOptionalCustomModifiers();
+            foreach (var mod in modReqs) {
+                var modRef = _ImportReference(mod, declaringType);
+                typeRef = new RequiredModifierType(modRef, typeRef);
+            }
+            foreach (var mod in modOpts) {
+                var modRef = _ImportReference(mod, declaringType);
+                typeRef = new OptionalModifierType(modRef, typeRef);
+            }
+
             return CachedFields[fieldOrig] = new FieldReference(
                 field.Name,
-                _ImportReference(field.FieldType, declaringType),
+                typeRef,
                 declaringType
             );
         }
