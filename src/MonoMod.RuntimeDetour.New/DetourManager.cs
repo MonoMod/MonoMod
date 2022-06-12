@@ -236,12 +236,15 @@ namespace MonoMod.RuntimeDetour {
         #endregion
 
         #region ILHook chain
-        private class ILHookEntry {
+        internal class ILHookEntry {
             public readonly IDetourFactory Factory;
             public readonly DetourConfig? Config;
             public readonly ILContext.Manipulator Manip;
             public ILContext? CurrentContext;
             public ILContext? LastContext;
+            public bool IsApplied;
+
+            public ILHookInfo? HookInfo;
 
             public ILHookEntry(IILHook hook) {
                 Manip = hook.Manip;
@@ -250,6 +253,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             public void Remove() {
+                IsApplied = false;
                 LastContext?.Dispose();
             }
         }
@@ -449,6 +453,7 @@ namespace MonoMod.RuntimeDetour {
             private ChainNode? noConfigChain;
 
             internal SpinLock detourLock = new(true);
+            internal int detourChainVersion;
 
             public void AddDetour(IDetour detour) {
                 var lockTaken = false;
@@ -458,6 +463,7 @@ namespace MonoMod.RuntimeDetour {
                         throw new InvalidOperationException("Trying to add a detour which was already added");
 
                     var cnode = new DetourChainNode(detour);
+                    detourChainVersion++;
                     if (cnode.Config is { } cfg) {
                         var listNode = new DepListNode<ChainNode>(cfg, cnode);
                         var graphNode = new DepGraphNode<ChainNode>(listNode);
@@ -483,6 +489,7 @@ namespace MonoMod.RuntimeDetour {
                 var lockTaken = false;
                 try {
                     detourLock.Enter(ref lockTaken);
+                    detourChainVersion++;
                     switch (detour.ManagerData) {
                         case null:
                             throw new InvalidOperationException("Trying to remove detour which wasn't added");
@@ -526,9 +533,10 @@ namespace MonoMod.RuntimeDetour {
                 node.Remove();
             }
 
-            private readonly DepGraph<ILHookEntry> ilhookGraph = new();
-            private readonly List<ILHookEntry> noConfigIlhooks = new();
+            internal readonly DepGraph<ILHookEntry> ilhookGraph = new();
+            internal readonly List<ILHookEntry> noConfigIlhooks = new();
 
+            internal int ilhookVersion;
             public void AddILHook(IILHook ilhook) {
                 var lockTaken = false;
                 try {
@@ -537,6 +545,7 @@ namespace MonoMod.RuntimeDetour {
                         throw new InvalidOperationException("Trying to add an IL hook which was already added");
 
                     var entry = new ILHookEntry(ilhook);
+                    ilhookVersion++;
                     if (entry.Config is { } cfg) {
                         var listNode = new DepListNode<ILHookEntry>(cfg, entry);
                         var graphNode = new DepGraphNode<ILHookEntry>(listNode);
@@ -561,6 +570,7 @@ namespace MonoMod.RuntimeDetour {
                 var lockTaken = false;
                 try {
                     detourLock.Enter(ref lockTaken);
+                    ilhookVersion++;
                     switch (ilhook.ManagerData) {
                         case null:
                             throw new InvalidOperationException("Trying to remove IL hook which wasn't added");
@@ -625,6 +635,7 @@ namespace MonoMod.RuntimeDetour {
 
             private static void InvokeManipulator(ILHookEntry entry, MethodDefinition def) {
                 //entry.LastContext?.Dispose(); // we can't safely clean up the old context until after we've updated the chain to point at the new method
+                entry.IsApplied = true;
                 var il = new ILContext(def);
                 entry.CurrentContext = il;
                 il.ReferenceBag = RuntimeILReferenceBag.Instance;
@@ -722,13 +733,27 @@ namespace MonoMod.RuntimeDetour {
         private DetourCollection? lazyDetours;
         public DetourCollection Detours => lazyDetours ??= new(this);
 
+        private ILHookCollection? lazyILHooks;
+        public ILHookCollection ILHooks => lazyILHooks ??= new(this);
+
         public DetourInfo? FirstDetour
             => state.detourList.Next is DetourManager.DetourChainNode cn ? GetDetourInfo(cn) : null;
+
+        public bool IsDetoured => state.detourList.Next is not null || state.detourList.HasILHook;
 
         internal DetourInfo GetDetourInfo(DetourManager.DetourChainNode node) {
             var existingInfo = node.DetourInfo;
             if (existingInfo is null || existingInfo.MethodInfo != this) {
                 return node.DetourInfo = new(node, this);
+            }
+
+            return existingInfo;
+        }
+
+        internal ILHookInfo GetILHookInfo(DetourManager.ILHookEntry entry) {
+            var existingInfo = entry.HookInfo;
+            if (existingInfo is null || existingInfo.MethodInfo != this) {
+                return entry.HookInfo = new(entry, this);
             }
 
             return existingInfo;
@@ -771,13 +796,14 @@ namespace MonoMod.RuntimeDetour {
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        // TODO: track and check version to keep note of when the chain changes
         public struct Enumerator : IEnumerator<DetourInfo> {
             private readonly MethodDetourInfo mdi;
             private DetourManager.ChainNode? curNode;
+            private int version;
 
             internal Enumerator(MethodDetourInfo mdi) {
                 this.mdi = mdi;
+                version = mdi.state.detourChainVersion;
                 curNode = mdi.state.detourList;
             }
 
@@ -787,11 +813,14 @@ namespace MonoMod.RuntimeDetour {
 
             [MemberNotNullWhen(true, nameof(curNode))]
             public bool MoveNext() {
+                if (version != mdi.state.detourChainVersion)
+                    throw new InvalidOperationException("The detour chain was modified while enumerating");
                 curNode = curNode?.Next;
                 return curNode is not null;
             }
 
             public void Reset() {
+                version = mdi.state.detourChainVersion;
                 curNode = mdi.state.detourList;
             }
 
@@ -808,11 +837,114 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public MethodDetourInfo MethodInfo { get; }
+        public MethodBase ChainEntry => detour.Entry;
 
         public bool IsApplied => detour.IsApplied;
         public DetourConfig? Config => detour.Config;
 
         public DetourInfo? Next
             => detour.Next is DetourManager.DetourChainNode cn ? MethodInfo.GetDetourInfo(cn) : null;
+    }
+
+    public sealed class ILHookCollection : IEnumerable<ILHookInfo> {
+        private readonly MethodDetourInfo mdi;
+        internal ILHookCollection(MethodDetourInfo mdi)
+            => this.mdi = mdi;
+
+        public Enumerator GetEnumerator() => new(mdi);
+
+        IEnumerator<ILHookInfo> IEnumerable<ILHookInfo>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public struct Enumerator : IEnumerator<ILHookInfo> {
+            private readonly MethodDetourInfo mdi;
+            private DetourManager.DepListNode<DetourManager.ILHookEntry>? listEntry;
+            private List<DetourManager.ILHookEntry>.Enumerator listEnum;
+            private int state;
+            private int version;
+
+            internal Enumerator(MethodDetourInfo mdi) {
+                this.mdi = mdi;
+                version = mdi.state.ilhookVersion;
+                listEntry = null;
+                state = 0;
+                listEnum = default;
+            }
+
+            public ILHookInfo Current
+                => state switch {
+                    0 => throw new InvalidOperationException(), // Current should never be called in state 0
+                    1 => mdi.GetILHookInfo(listEntry!.ChainNode), // in state 1, our value is that of the current list node
+                    2 => mdi.GetILHookInfo(listEnum.Current), // in state 2, our value is the current value of the list enumerator
+                    _ => throw new InvalidOperationException() // all other states are invalid
+                };
+
+            object IEnumerator.Current => Current;
+
+            public bool MoveNext() {
+                if (version != mdi.state.ilhookVersion)
+                    throw new InvalidOperationException("The detour chain was modified while enumerating");
+
+                switch (state) {
+                    case 0:
+                        // we haven't started iterating yet
+                        // start by grabbing the first entry
+                        listEntry = mdi.state.ilhookGraph.ListHead;
+                        state = 1;
+                        goto CheckEnumeratingLL;
+
+                    case 1:
+                        // we're iterating the linked list, grab the next entry
+                        listEntry = listEntry?.Next;
+                        // state stays as 1
+                        goto CheckEnumeratingLL;
+
+                    CheckEnumeratingLL:
+                        // we need to check the value of listEntry for null, and if it's null switch to enumerating the list enumerator
+                        if (listEntry is not null) {
+                            // we have a list entry, we have a value to return
+                            return true;
+                        }
+
+                        // we don't have a value, start list enumeration
+                        listEnum = mdi.state.noConfigIlhooks.GetEnumerator();
+                        state = 2;
+                        goto case 2;
+
+                    case 2:
+                        // we're just enumerating the list, just need to call MoveNext
+                        return listEnum.MoveNext();
+
+                    default:
+                        throw new InvalidOperationException("Invalid state");
+                }
+            }
+
+            public void Reset() {
+                version = mdi.state.ilhookVersion;
+                listEntry = null;
+                state = 0;
+                listEnum = default;
+            }
+
+            public void Dispose() {
+                listEnum.Dispose();
+            }
+        }
+    }
+
+    public sealed class ILHookInfo {
+        private readonly DetourManager.ILHookEntry ilHook;
+
+        internal ILHookInfo(DetourManager.ILHookEntry hook, MethodDetourInfo methodInfo) {
+            ilHook = hook;
+            MethodInfo = methodInfo;
+        }
+
+        public MethodDetourInfo MethodInfo { get; }
+
+        public bool IsApplied => ilHook.IsApplied;
+        public DetourConfig? Config => ilHook.Config;
     }
 }

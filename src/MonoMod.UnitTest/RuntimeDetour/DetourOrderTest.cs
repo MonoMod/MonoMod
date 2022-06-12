@@ -76,6 +76,10 @@ namespace MonoMod.UnitTest {
                         var config = d.Config;
                         Assert.True(d.IsApplied);
                     }
+                    foreach (var i in mdi.ILHooks) {
+                        var config = i.Config;
+                        Assert.True(i.IsApplied);
+                    }
                 }
 
                 Assert.Equal(expected, actual);
