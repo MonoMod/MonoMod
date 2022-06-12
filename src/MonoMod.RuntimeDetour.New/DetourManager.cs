@@ -485,7 +485,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeDetourEvent(DetourApplied, cnode);
+                InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, cnode);
             }
 
             public void RemoveDetour(IDetour detour) {
@@ -516,7 +516,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeDetourEvent(DetourUndone, cnode);
+                InvokeDetourEvent(DetourManager.DetourUndone, DetourUndone, cnode);
             }
 
             private void RemoveGraphDetour(IDetour detour, DepGraphNode<ChainNode> node) {
@@ -574,7 +574,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeILHookEvent(ILHookApplied, entry);
+                InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, entry);
             }
 
             public void RemoveILHook(IILHook ilhook) {
@@ -605,7 +605,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeILHookEvent(ILHookUndone, entry);
+                InvokeILHookEvent(DetourManager.ILHookUndone, ILHookUndone, entry);
             }
 
             private void RemoveGraphILHook(IILHook ilhook, DepGraphNode<ILHookEntry> node) {
@@ -726,21 +726,30 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            private void InvokeDetourEvent(Action<DetourInfo>? evt, DetourChainNode node) {
-                if (evt is not null) {
+            public event Action<DetourInfo>? DetourApplied;
+            public event Action<DetourInfo>? DetourUndone;
+            public event Action<ILHookInfo>? ILHookApplied;
+            public event Action<ILHookInfo>? ILHookUndone;
+
+            private void InvokeDetourEvent(Action<DetourInfo>? evt1, Action<DetourInfo>? evt2, DetourChainNode node) {
+                if (evt1 is not null || evt2 is not null) {
                     var info = Info.GetDetourInfo(node);
-                    evt(info);
+                    evt1?.Invoke(info);
+                    evt2?.Invoke(info);
                 }
             }
 
-            private void InvokeILHookEvent(Action<ILHookInfo>? evt, ILHookEntry entry) {
-                if (evt is not null) {
+            private void InvokeILHookEvent(Action<ILHookInfo>? evt1, Action<ILHookInfo>? evt2, ILHookEntry entry) {
+                if (evt1 is not null || evt2 is not null) {
                     var info = Info.GetILHookInfo(entry);
-                    evt(info);
+                    evt1?.Invoke(info);
+                    evt2?.Invoke(info);
                 }
             }
         }
 
+        // TODO: better support ALCs by making this a CWT
+        // this would require chaning DetourState to not hold a strong reference to the MethodBase, so that our polyfilled CWT actually behaves itself
         private static readonly ConcurrentDictionary<MethodBase, DetourState> detourStates = new();
 
         internal static DetourState GetDetourState(MethodBase method)
@@ -775,6 +784,23 @@ namespace MonoMod.RuntimeDetour {
             => state.detourList.Next is DetourManager.DetourChainNode cn ? GetDetourInfo(cn) : null;
 
         public bool IsDetoured => state.detourList.Next is not null || state.detourList.HasILHook;
+
+        public event Action<DetourInfo>? DetourApplied {
+            add => state.DetourApplied += value;
+            remove => state.DetourApplied -= value;
+        }
+        public event Action<DetourInfo>? DetourUndone {
+            add => state.DetourUndone += value;
+            remove => state.DetourUndone -= value;
+        }
+        public event Action<ILHookInfo>? ILHookApplied {
+            add => state.ILHookApplied += value;
+            remove => state.ILHookApplied -= value;
+        }
+        public event Action<ILHookInfo>? ILHookUndone {
+            add => state.ILHookUndone += value;
+            remove => state.ILHookUndone -= value;
+        }
 
         internal DetourInfo GetDetourInfo(DetourManager.DetourChainNode node) {
             var existingInfo = node.DetourInfo;
@@ -859,7 +885,9 @@ namespace MonoMod.RuntimeDetour {
                 curNode = mdi.state.detourList;
             }
 
-            public void Dispose() { }
+            public void Dispose() {
+                curNode = null;
+            }
         }
     }
 
@@ -965,6 +993,7 @@ namespace MonoMod.RuntimeDetour {
 
             public void Dispose() {
                 listEnum.Dispose();
+                Reset();
             }
         }
     }
