@@ -456,13 +456,14 @@ namespace MonoMod.RuntimeDetour {
             internal int detourChainVersion;
 
             public void AddDetour(IDetour detour) {
+                DetourChainNode cnode;
                 var lockTaken = false;
                 try {
                     detourLock.Enter(ref lockTaken);
                     if (detour.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add a detour which was already added");
 
-                    var cnode = new DetourChainNode(detour);
+                    cnode = new DetourChainNode(detour);
                     detourChainVersion++;
                     if (cnode.Config is { } cfg) {
                         var listNode = new DepListNode<ChainNode>(cfg, cnode);
@@ -483,9 +484,12 @@ namespace MonoMod.RuntimeDetour {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
+
+                InvokeDetourEvent(DetourApplied, cnode);
             }
 
             public void RemoveDetour(IDetour detour) {
+                DetourChainNode cnode;
                 var lockTaken = false;
                 try {
                     detourLock.Enter(ref lockTaken);
@@ -496,10 +500,12 @@ namespace MonoMod.RuntimeDetour {
 
                         case DepGraphNode<ChainNode> gn:
                             RemoveGraphDetour(detour, gn);
+                            cnode = (DetourChainNode) gn.ListNode.ChainNode;
                             break;
 
                         case DetourChainNode cn:
                             RemoveNoConfigDetour(detour, cn);
+                            cnode = cn;
                             break;
 
                         default:
@@ -509,6 +515,8 @@ namespace MonoMod.RuntimeDetour {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
+
+                InvokeDetourEvent(DetourUndone, cnode);
             }
 
             private void RemoveGraphDetour(IDetour detour, DepGraphNode<ChainNode> node) {
@@ -538,13 +546,14 @@ namespace MonoMod.RuntimeDetour {
 
             internal int ilhookVersion;
             public void AddILHook(IILHook ilhook) {
+                ILHookEntry entry;
                 var lockTaken = false;
                 try {
                     detourLock.Enter(ref lockTaken);
                     if (ilhook.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add an IL hook which was already added");
 
-                    var entry = new ILHookEntry(ilhook);
+                    entry = new ILHookEntry(ilhook);
                     ilhookVersion++;
                     if (entry.Config is { } cfg) {
                         var listNode = new DepListNode<ILHookEntry>(cfg, entry);
@@ -564,9 +573,12 @@ namespace MonoMod.RuntimeDetour {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
+
+                InvokeILHookEvent(ILHookApplied, entry);
             }
 
             public void RemoveILHook(IILHook ilhook) {
+                ILHookEntry entry;
                 var lockTaken = false;
                 try {
                     detourLock.Enter(ref lockTaken);
@@ -577,10 +589,12 @@ namespace MonoMod.RuntimeDetour {
 
                         case DepGraphNode<ILHookEntry> gn:
                             RemoveGraphILHook(ilhook, gn);
+                            entry = gn.ListNode.ChainNode;
                             break;
 
                         case ILHookEntry cn:
                             RemoveNoConfigILHook(ilhook, cn);
+                            entry = cn;
                             break;
 
                         default:
@@ -590,6 +604,8 @@ namespace MonoMod.RuntimeDetour {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
+
+                InvokeILHookEvent(ILHookUndone, entry);
             }
 
             private void RemoveGraphILHook(IILHook ilhook, DepGraphNode<ILHookEntry> node) {
@@ -709,6 +725,20 @@ namespace MonoMod.RuntimeDetour {
                     Volatile.Write(ref detourList.SyncInfo.UpdatingChain, false);
                 }
             }
+
+            private void InvokeDetourEvent(Action<DetourInfo>? evt, DetourChainNode node) {
+                if (evt is not null) {
+                    var info = Info.GetDetourInfo(node);
+                    evt(info);
+                }
+            }
+
+            private void InvokeILHookEvent(Action<ILHookInfo>? evt, ILHookEntry entry) {
+                if (evt is not null) {
+                    var info = Info.GetILHookInfo(entry);
+                    evt(info);
+                }
+            }
         }
 
         private static readonly ConcurrentDictionary<MethodBase, DetourState> detourStates = new();
@@ -718,6 +748,11 @@ namespace MonoMod.RuntimeDetour {
 
         public static MethodDetourInfo GetDetourInfo(MethodBase method)
             => GetDetourState(method).Info;
+
+        public static event Action<DetourInfo>? DetourApplied;
+        public static event Action<DetourInfo>? DetourUndone;
+        public static event Action<ILHookInfo>? ILHookApplied;
+        public static event Action<ILHookInfo>? ILHookUndone;
     }
 
     public sealed class MethodDetourInfo {
