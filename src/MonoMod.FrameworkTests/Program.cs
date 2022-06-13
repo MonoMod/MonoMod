@@ -2,6 +2,7 @@
 using MonoMod.Backports;
 using MonoMod.Cil;
 using MonoMod.Core;
+using MonoMod.Core.Platforms;
 using MonoMod.RuntimeDetour;
 using System;
 using System.Diagnostics;
@@ -12,6 +13,15 @@ if (Debugger.IsAttached) {
     Debugger.Break();
 }
 
+var platform = PlatformTriple.Current;
+
+var memAlloc = platform.System.MemoryAllocator;
+
+if (memAlloc.TryAllocateInRange(new((nint) 0x1000000000uL, (nint) 0x10000, (nint) 0xffffffffffuL, 16), out var allocated)) {
+
+
+    allocated.Dispose();
+}
 
 var method = typeof(TestClass).GetMethod(nameof(TestClass.TestDetourMethod))!;
 var method2 = typeof(TestClass).GetMethod(nameof(TestClass.Target))!;
@@ -95,7 +105,7 @@ using (var detour4 = new Detour(() => new TestClass().TestDetourMethod(), () => 
 }
 
 #if NET45_OR_GREATER
-using System.Threading.Tasks;
+//using System.Threading.Tasks;
 
 var sb = new StringBuilder();
 var sw = new StringWriter();
