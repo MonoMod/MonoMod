@@ -104,6 +104,7 @@ using (var detour4 = new Detour(() => new TestClass().TestDetourMethod(), () => 
     detour4.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
 }
 
+/*
 #if NET45_OR_GREATER
 //using System.Threading.Tasks;
 
@@ -120,6 +121,7 @@ static Task WriteLineAsyncPatch(Func<TextWriter, char[], Task> orig, TextWriter 
     return orig(writer, buffer);
 }
 #endif
+*/
 
 Console.WriteLine("Done!");
 
