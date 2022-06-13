@@ -191,7 +191,8 @@ namespace MonoMod.Core.Platforms.Memory {
                     };
                     NormalizeFreeList();
 
-                    if (IsEmpty)                         owner.RegisterForCleanup(this);
+                    if (IsEmpty)
+                        owner.RegisterForCleanup(this);
                 }
             }
         }

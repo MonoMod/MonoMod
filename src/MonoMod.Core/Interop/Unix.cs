@@ -18,6 +18,9 @@ namespace MonoMod.Core.Interop {
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mprotect", SetLastError = true)]
         public static extern unsafe int Mprotect(IntPtr addr, nuint len, Protection prot);
 
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sysconf", SetLastError = true)]
+        public static extern unsafe long Sysconf(SysconfName name);
+
         [Flags]
         public enum Protection : int {
             None = 0x00,
@@ -47,6 +50,45 @@ namespace MonoMod.Core.Interop {
             HugeTLB = 0x40000,
             Sync = 0x80000,
             FixedNoReplace = 0x100000,
+        }
+
+        public enum SysconfName {
+            ArgMax,
+            ChildMax,
+            ClockTick,
+            NGroupsMax,
+            OpenMax,
+            StreamMax,
+            TZNameMax,
+            JobControl,
+            SavedIds,
+            RealtimeSignals,
+            PriorityScheduling,
+            Timers,
+            AsyncIO,
+            PrioritizedIO,
+            SynchronizedIO,
+            FSync,
+            MappedFiles,
+            MemLock,
+            MemLockRange,
+            MemoryProtection,
+            MessagePassing,
+            Semaphores,
+            SharedMemoryObjects,
+            AIOListIOMax,
+            AIOMax,
+            AIOPrioDeltaMax,
+            DelayTimerMax,
+            MQOpenMax,
+            MQPrioMax,
+            Version,
+            PageSize,
+            RTSigMax,
+            SemNSemsMax,
+            SemValueMax,
+            SigQueueMax,
+            TimerMax,
         }
     }
 }

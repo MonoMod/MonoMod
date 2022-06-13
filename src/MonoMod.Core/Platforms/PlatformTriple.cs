@@ -32,7 +32,7 @@ namespace MonoMod.Core.Platforms {
         public static ISystem CreateCurrentSystem()
             => PlatformDetection.OS switch {
                 OSKind.Posix => throw new NotImplementedException(),
-                OSKind.Linux => throw new NotImplementedException(),
+                OSKind.Linux => new Systems.LinuxSystem(),
                 OSKind.Android => throw new NotImplementedException(),
                 OSKind.OSX => throw new NotImplementedException(),
                 OSKind.IOS => throw new NotImplementedException(),
