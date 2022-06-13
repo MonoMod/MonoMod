@@ -12,7 +12,8 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public Abi? DefaultAbi => null;
 
-        public IMemoryAllocator MemoryAllocator { get; } = new MmapPagedMemoryAllocator();
+        private readonly MmapPagedMemoryAllocator allocator = new();
+        public IMemoryAllocator MemoryAllocator => allocator;
 
         public nint GetSizeOfReadableMemory(IntPtr start, nint guess) {
             // don't currently have a good way to do this, so sucks
@@ -36,13 +37,21 @@ namespace MonoMod.Core.Platforms.Systems {
             data.CopyTo(target);
         }
 
-        private static void ProtectRW(IntPtr addr, nint size) {
+        private void RoundToPageBoundary(ref nint addr, ref nint size) {
+            var newAddr = allocator.RoundDownToPageBoundary(addr);
+            size += addr - newAddr;
+            addr = newAddr;
+        }
+
+        private void ProtectRW(IntPtr addr, nint size) {
+            RoundToPageBoundary(ref addr, ref size);
             if (Interop.Unix.Mprotect(addr, (nuint) size, Interop.Unix.Protection.Read | Interop.Unix.Protection.Write) != 0) {
                 throw new Win32Exception();
             }
         }
 
-        private static void ProtectRWX(IntPtr addr, nint size) {
+        private void ProtectRWX(IntPtr addr, nint size) {
+            RoundToPageBoundary(ref addr, ref size);
             if (Interop.Unix.Mprotect(addr, (nuint) size, Interop.Unix.Protection.Read | Interop.Unix.Protection.Write | Interop.Unix.Protection.Execute) != 0) {
                 throw new Win32Exception();
             }

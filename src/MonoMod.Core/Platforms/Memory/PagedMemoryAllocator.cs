@@ -210,7 +210,7 @@ namespace MonoMod.Core.Platforms.Memory {
             pageBaseMask = ~(nint) 0 << BitOperations.TrailingZeroCount(pageSize);
         }
 
-        protected nint RoundDownToPageBoundary(nint addr) {
+        public nint RoundDownToPageBoundary(nint addr) {
             if (pageSizeIsPow2)
                 return addr & pageBaseMask;
             else
