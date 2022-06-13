@@ -10,7 +10,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public SystemFeature Features => SystemFeature.RWXPages | SystemFeature.RXPages;
 
-        public Abi? DefaultAbi => null;
+        public Abi? DefaultAbi => default(Abi);
 
         private readonly MmapPagedMemoryAllocator allocator = new();
         public IMemoryAllocator MemoryAllocator => allocator;
