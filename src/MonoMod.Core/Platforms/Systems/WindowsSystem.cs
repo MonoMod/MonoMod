@@ -1,4 +1,5 @@
-﻿using MonoMod.Core.Utils;
+﻿using MonoMod.Core.Platforms.Memory;
+using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
 using System.ComponentModel;
@@ -151,9 +152,9 @@ namespace MonoMod.Core.Platforms.Systems {
             return ex;
         }
 
-        public IMemoryAllocator MemoryAllocator { get; } = new PagedMemoryAllocator(new PageAllocator());
+        public IMemoryAllocator MemoryAllocator { get; } = new QueryingPagedMemoryAllocator(new PageAllocator());
 
-        private sealed class PageAllocator : MemoryPageAllocatorBase {
+        private sealed class PageAllocator : QueryingMemoryPageAllocatorBase {
             public override uint PageSize { get; }
 
             public PageAllocator() {
