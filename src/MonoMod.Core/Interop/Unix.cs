@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
     internal static class Unix {
@@ -7,5 +8,45 @@ namespace MonoMod.Core.Interop {
 
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "uname", SetLastError = true)]
         public static extern unsafe int Uname(byte* buf);
+
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mmap", SetLastError = true)]
+        public static extern unsafe IntPtr Mmap(IntPtr addr, nuint length, Protection prot, MmapFlags flags, int fd, int offset);
+
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "munmap", SetLastError = true)]
+        public static extern unsafe int Munmap(IntPtr addr, nuint length);
+
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mprotect", SetLastError = true)]
+        public static extern unsafe int Mprotect(IntPtr addr, nuint len, Protection prot);
+
+        [Flags]
+        public enum Protection : int {
+            None = 0x00,
+            Read = 0x01,
+            Write = 0x02,
+            Execute = 0x04,
+        }
+
+        [Flags]
+        public enum MmapFlags : int {
+            Shared = 0x01,
+            Private = 0x02,
+            SharedValidate = 0x03,
+
+            Fixed = 0x10,
+            Anonymous = 0x20,
+
+            GrowsDown = 0x00100,
+            DenyWrite = 0x00800,
+            [Obsolete("Use Protection.Execute instead", true)]
+            Executable = 0x01000,
+            Locked = 0x02000,
+            NoReserve = 0x04000,
+            Populate = 0x08000,
+            NonBlock = 0x10000,
+            Stack = 0x20000,
+            HugeTLB = 0x40000,
+            Sync = 0x80000,
+            FixedNoReplace = 0x100000,
+        }
     }
 }
