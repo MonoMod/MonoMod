@@ -21,6 +21,9 @@ namespace MonoMod.Core.Interop {
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sysconf", SetLastError = true)]
         public static extern unsafe long Sysconf(SysconfName name);
 
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mincore", SetLastError = true)]
+        public static extern unsafe int Mincore(IntPtr addr, nuint len, byte* vec);
+
         [Flags]
         public enum Protection : int {
             None = 0x00,

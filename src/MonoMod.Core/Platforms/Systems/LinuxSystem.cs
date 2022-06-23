@@ -1,8 +1,11 @@
-﻿using MonoMod.Core.Platforms.Memory;
+﻿using MonoMod.Core.Interop;
+using MonoMod.Core.Platforms.Memory;
 using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Platforms.Systems {
     internal class LinuxSystem : ISystem {
@@ -10,14 +13,53 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public SystemFeature Features => SystemFeature.RWXPages | SystemFeature.RXPages;
 
-        public Abi? DefaultAbi => default(Abi);
+        private readonly Abi defaultAbi;
+        public Abi? DefaultAbi => defaultAbi;
 
-        private readonly MmapPagedMemoryAllocator allocator = new();
+        private readonly nint PageSize;
+
+        private readonly MmapPagedMemoryAllocator allocator;
         public IMemoryAllocator MemoryAllocator => allocator;
 
+        public static TypeClassification ClassifyAMD64(Type type, bool isReturn) {
+            var totalSize = type.GetManagedSize();
+            if (totalSize > 64 || totalSize % 2 == 1) return TypeClassification.OnStack;
+            return TypeClassification.InRegister;
+        }
+
+        public LinuxSystem() {
+            PageSize = (nint)Unix.Sysconf(Unix.SysconfName.PageSize);
+            allocator = new MmapPagedMemoryAllocator(PageSize);
+
+            if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
+                defaultAbi = new Abi(
+                    new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
+                    ClassifyAMD64,
+                    true
+                );
+            } else {
+                throw new NotImplementedException();
+            }
+        }
+
         public nint GetSizeOfReadableMemory(IntPtr start, nint guess) {
-            // don't currently have a good way to do this, so sucks
-            throw new NotImplementedException();
+            nint currentPage = allocator.RoundDownToPageBoundary(start);
+            if (!allocator.PageAllocated(currentPage)) {
+                return 0;
+            }
+            currentPage += PageSize;
+            
+            nint known = currentPage - start;
+
+            while (known < guess) {
+                if (!allocator.PageAllocated(currentPage)) {
+                    return known;
+                }
+                known += PageSize;
+                currentPage += PageSize;
+            }
+
+            return known;
         }
 
         public unsafe void PatchData(PatchTargetKind patchKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup) {
@@ -45,21 +87,32 @@ namespace MonoMod.Core.Platforms.Systems {
 
         private void ProtectRW(IntPtr addr, nint size) {
             RoundToPageBoundary(ref addr, ref size);
-            if (Interop.Unix.Mprotect(addr, (nuint) size, Interop.Unix.Protection.Read | Interop.Unix.Protection.Write) != 0) {
+            if (Unix.Mprotect(addr, (nuint) size, Unix.Protection.Read | Unix.Protection.Write) != 0) {
                 throw new Win32Exception();
             }
         }
 
         private void ProtectRWX(IntPtr addr, nint size) {
             RoundToPageBoundary(ref addr, ref size);
-            if (Interop.Unix.Mprotect(addr, (nuint) size, Interop.Unix.Protection.Read | Interop.Unix.Protection.Write | Interop.Unix.Protection.Execute) != 0) {
+            if (Unix.Mprotect(addr, (nuint) size, Unix.Protection.Read | Unix.Protection.Write | Unix.Protection.Execute) != 0) {
                 throw new Win32Exception();
             }
         }
 
         private sealed class MmapPagedMemoryAllocator : PagedMemoryAllocator {
-            public MmapPagedMemoryAllocator()
-                : base((nint) Interop.Unix.Sysconf(Interop.Unix.SysconfName.PageSize)) {
+            public MmapPagedMemoryAllocator(nint pageSize)
+                : base(pageSize) {
+            }
+
+            public unsafe bool PageAllocated(nint page) {
+                byte garbage;
+                if (Unix.Mincore(page, 1, &garbage) == -1) {
+                    if (Marshal.GetLastWin32Error() == 12) {  // ENOMEM, page is unallocated
+                        return false;
+                    }
+                    throw new NotImplementedException("Got unimplemented errno for mincore(2)");
+                }
+                return true;
             }
 
             protected override bool TryAllocateNewPage(
@@ -67,19 +120,62 @@ namespace MonoMod.Core.Platforms.Systems {
                 nint targetPage, nint lowPageBound, nint highPageBound,
                 [MaybeNullWhen(false)] out IAllocatedMemory allocated
             ) {
-                var prot = request.Executable ? Interop.Unix.Protection.Execute : Interop.Unix.Protection.None;
-                prot |= Interop.Unix.Protection.Read | Interop.Unix.Protection.Write;
+                var prot = request.Executable ? Unix.Protection.Execute : Unix.Protection.None;
+                prot |= Unix.Protection.Read | Unix.Protection.Write;
+                
+                // number of pages needed to satisfy length requirements
+                nint numPages = request.Size / PageSize + 1;
+                
+                // find the nearest unallocated page within our bounds
+                nint low = targetPage - PageSize;
+                nint high = targetPage;
+                nint ptr = -1;
+                while (low >= lowPageBound || high <= highPageBound) {
+                    
+                    // check above the target page first
+                    if (high <= highPageBound) {
+                        for (nint i = 0; i < numPages; i++) {
+                            if (PageAllocated(high + PageSize * i)) {
+                                high += PageSize;
+                                goto FailHigh;
+                            }
+                        }
+                        // all pages are unallocated, we're done
+                        ptr = high;
+                        break;
+                    }
+                    FailHigh:
+                    if (low >= lowPageBound) {
+                        for (nint i = 0; i < numPages; i++) {
+                            if (PageAllocated(low + PageSize * i)) {
+                                low -= PageSize;
+                                goto FailLow;
+                            }
+                        }
+                        // all pages are unallocated, we're done
+                        ptr = low;
+                        break;
+                    }
+                    FailLow:
+                    { }
+                }
 
-                // we'll just try an mmap
-                var ptr = Interop.Unix.Mmap(targetPage, (nuint) PageSize, prot, Interop.Unix.MmapFlags.Anonymous, -1, 0);
-                if ((nint) ptr == -1) {
-                    // mmap failed, uh oh
+                // unable to find a page within bounds
+                if (ptr == -1) {
+                    allocated = null;
+                    return false;
+                }
+                
+                // mmap the page we found
+                nint mmapPtr = Unix.Mmap(ptr, (nuint)request.Size, prot, Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
+                if (mmapPtr == 0) {
+                    // fuck
                     allocated = null;
                     return false;
                 }
 
                 // create a Page object for the newly mapped memory, even before deciding whether we succeeded or not
-                var page = new Page(this, ptr, (uint) PageSize, request.Executable);
+                var page = new Page(this, mmapPtr, (uint) PageSize, request.Executable);
                 InsertAllocatedPage(page);
 
                 // for simplicity, we'll try to allocate out of the page before checking bounds
@@ -103,7 +199,7 @@ namespace MonoMod.Core.Platforms.Systems {
             }
 
             protected override bool TryFreePage(Page page, [NotNullWhen(false)] out string? errorMsg) {
-                var res = Interop.Unix.Munmap(page.BaseAddr, page.Size);
+                var res = Unix.Munmap(page.BaseAddr, page.Size);
                 if (res != 0) {
                     errorMsg = new Win32Exception().Message;
                     return false;
