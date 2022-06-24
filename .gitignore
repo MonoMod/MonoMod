@@ -242,3 +242,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+
+# Rider configuration files
+.idea/
