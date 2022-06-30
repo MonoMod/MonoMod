@@ -153,7 +153,7 @@ namespace MonoMod.Utils {
         public static DynamicData For(object obj) {
             lock (_DynamicDataMap) {
                 if (!_DynamicDataMap.TryGetValue(obj, out DynamicData data)) {
-                    data = new DynamicData(obj);
+                    data = new DynamicData(obj.GetType(), obj, false);
                     _DynamicDataMap.Add(obj, data);
                 }
                 return data;
