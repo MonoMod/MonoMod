@@ -15,7 +15,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             RuntimeFeature.RequiresMethodIdentification | 
             RuntimeFeature.PreciseGC |
             RuntimeFeature.RequiresBodyThunkWalking |
-            RuntimeFeature.GenericSharing;
+            RuntimeFeature.GenericSharing |
+            RuntimeFeature.HasKnownABI;
 
         protected Abi? AbiCore;
 

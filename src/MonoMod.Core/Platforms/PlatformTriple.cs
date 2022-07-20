@@ -16,7 +16,7 @@ namespace MonoMod.Core.Platforms {
             => PlatformDetection.Runtime switch {
                 RuntimeKind.Framework => Runtimes.FxBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
                 RuntimeKind.CoreCLR => Runtimes.CoreBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
-                RuntimeKind.Mono => throw new NotImplementedException(),
+                RuntimeKind.Mono => new Runtimes.MonoRuntime(),
                 var kind => throw new PlatformNotSupportedException($"Runtime kind {kind} not supported"),
             };
 
