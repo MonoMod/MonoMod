@@ -143,7 +143,12 @@ class TestClass {
     }
 
     [MethodImpl(MethodImplOptionsEx.NoInlining)]
-    public static FunkyStruct TargetHook(Func<TestClass, FunkyStruct> orig, TestClass self) {
+    public static FunkyStruct TargetHook(Func<TestClass?, FunkyStruct> orig, TestClass? self) {
+        if (self is null) {
+            Console.WriteLine("self is null");
+        } else {
+            Console.WriteLine("self is not null");
+        }
         Console.WriteLine($"Method successfully detoured {self} hook");
         return orig(self);
     }

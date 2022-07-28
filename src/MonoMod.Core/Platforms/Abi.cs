@@ -22,8 +22,7 @@ namespace MonoMod.Core.Platforms {
         ReadOnlyMemory<SpecialArgumentKind> ArgumentOrder,
         Classifier Classifier,
         bool ReturnsReturnBuffer
-        ) {
-
+    ) {
         public TypeClassification Classify(Type type, bool isReturn) {
             Helpers.ThrowIfArgumentNull(type);
 

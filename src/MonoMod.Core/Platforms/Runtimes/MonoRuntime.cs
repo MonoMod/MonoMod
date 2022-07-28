@@ -16,8 +16,20 @@ namespace MonoMod.Core.Platforms.Runtimes {
             RuntimeFeature.RequiresMethodIdentification |
             RuntimeFeature.GenericSharing;
 
-        // TODO: Mono ABI
-        public Abi Abi => throw new NotImplementedException();
+        public Abi Abi { get; }
+
+        private readonly ISystem system;
+
+        public MonoRuntime(ISystem system) {
+            this.system = system;
+
+            // see https://github.com/dotnet/runtime/blob/v6.0.5/src/mono/mono/mini/mini-amd64.c line 472, 847, 1735
+            if (system.DefaultAbi is { } abi) {
+                Abi = abi;
+            } else {
+                throw new InvalidOperationException("Cannot use Mono system, because the underlying system doesn't provide a default ABI!");
+            }
+        }
 
         public event OnMethodCompiledCallback? OnMethodCompiled;
 
