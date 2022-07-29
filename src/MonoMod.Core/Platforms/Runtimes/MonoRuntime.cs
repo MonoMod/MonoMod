@@ -14,6 +14,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             RuntimeFeature.DisableInlining |
             RuntimeFeature.RequiresMethodPinning |
             RuntimeFeature.RequiresMethodIdentification |
+            RuntimeFeature.PreciseGC | // some builds use SGen, which is a precise GC, while
+                                    // others, such as Unity, use Boehm, which is a conservative GC.
             RuntimeFeature.GenericSharing;
 
         public Abi Abi { get; }
