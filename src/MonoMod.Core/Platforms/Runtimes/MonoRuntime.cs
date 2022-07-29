@@ -25,6 +25,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             // see https://github.com/dotnet/runtime/blob/v6.0.5/src/mono/mono/mini/mini-amd64.c line 472, 847, 1735
             if (system.DefaultAbi is { } abi) {
+                // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r11 on x64)
                 Abi = abi;
             } else {
                 throw new InvalidOperationException("Cannot use Mono system, because the underlying system doesn't provide a default ABI!");

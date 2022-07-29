@@ -149,6 +149,7 @@ class TestClass {
         } else {
             Console.WriteLine("self is not null");
         }
+        // TODO: Mono dies on the generated call to AppendFormatted for some reason
         Console.WriteLine($"Method successfully detoured {self} hook");
         return orig(self);
     }
