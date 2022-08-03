@@ -104,22 +104,40 @@ namespace MonoMod.Core.Platforms.Systems {
                 : base(pageSize) {
             }
 
+            [SuppressMessage("Design", "CA1032:Implement standard exception constructors")]
+            [SuppressMessage("Design", "CA1064:Exceptions should be public",
+                Justification = "This is used exclusively internally as jank control flow because I'm lazy")]
+            private sealed class SyscallNotImplementedException : Exception { }
+
             public unsafe bool PageAllocated(nint page) {
                 byte garbage;
+                // TODO: Mincore isn't implemented in WSL, and always gives ENOSYS
                 if (Unix.Mincore(page, 1, &garbage) == -1) {
-                    if (Marshal.GetLastWin32Error() == 12) {  // ENOMEM, page is unallocated
+                    var lastError = Marshal.GetLastWin32Error();
+                    if (lastError == 12) {  // ENOMEM, page is unallocated
                         return false;
                     }
-                    throw new NotImplementedException("Got unimplemented errno for mincore(2)");
+                    if (lastError == 38) { // ENOSYS Function not implemented
+                        // TODO: possibly implement /proc/self/maps parsing as a fallback
+                        throw new SyscallNotImplementedException();
+                    }
+                    throw new NotImplementedException($"Got unimplemented errno for mincore(2); errno = {lastError}");
                 }
                 return true;
             }
+
+            private bool canTestPageAllocation = true;
 
             protected override bool TryAllocateNewPage(
                 AllocationRequest request,
                 nint targetPage, nint lowPageBound, nint highPageBound,
                 [MaybeNullWhen(false)] out IAllocatedMemory allocated
             ) {
+                if (!canTestPageAllocation) {
+                    allocated = null;
+                    return false;
+                }
+
                 var prot = request.Executable ? Unix.Protection.Execute : Unix.Protection.None;
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
                 
@@ -130,34 +148,41 @@ namespace MonoMod.Core.Platforms.Systems {
                 nint low = targetPage - PageSize;
                 nint high = targetPage;
                 nint ptr = -1;
-                while (low >= lowPageBound || high <= highPageBound) {
-                    
-                    // check above the target page first
-                    if (high <= highPageBound) {
-                        for (nint i = 0; i < numPages; i++) {
-                            if (PageAllocated(high + PageSize * i)) {
-                                high += PageSize;
-                                goto FailHigh;
+
+                try {
+                    while (low >= lowPageBound || high <= highPageBound) {
+
+                        // check above the target page first
+                        if (high <= highPageBound) {
+                            for (nint i = 0; i < numPages; i++) {
+                                if (PageAllocated(high + PageSize * i)) {
+                                    high += PageSize;
+                                    goto FailHigh;
+                                }
                             }
+                            // all pages are unallocated, we're done
+                            ptr = high;
+                            break;
                         }
-                        // all pages are unallocated, we're done
-                        ptr = high;
-                        break;
-                    }
-                    FailHigh:
-                    if (low >= lowPageBound) {
-                        for (nint i = 0; i < numPages; i++) {
-                            if (PageAllocated(low + PageSize * i)) {
-                                low -= PageSize;
-                                goto FailLow;
+                        FailHigh:
+                        if (low >= lowPageBound) {
+                            for (nint i = 0; i < numPages; i++) {
+                                if (PageAllocated(low + PageSize * i)) {
+                                    low -= PageSize;
+                                    goto FailLow;
+                                }
                             }
+                            // all pages are unallocated, we're done
+                            ptr = low;
+                            break;
                         }
-                        // all pages are unallocated, we're done
-                        ptr = low;
-                        break;
+                        FailLow:
+                        { }
                     }
-                    FailLow:
-                    { }
+                } catch (SyscallNotImplementedException) {
+                    canTestPageAllocation = false;
+                    allocated = null;
+                    return false;
                 }
 
                 // unable to find a page within bounds
