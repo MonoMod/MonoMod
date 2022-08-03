@@ -64,6 +64,12 @@
         <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
+
+      <ItemGroup>
+        <!-- For Core 2.1, we need this to make sure it doesn't include the shim assemblies in the package -->
+        <PackageReference Update="Microsoft.NETCore.App" Pack="false" />
+      </ItemGroup>
+      
       <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. ->
       <ItemGroup>
         <PackageReference Include="System.Reflection.TypeExtensions" Version="$(NETShimVersion)" />
