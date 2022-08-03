@@ -13,13 +13,16 @@ if (Debugger.IsAttached) {
     Debugger.Break();
 }
 
+// do this nice and early so we can manage to track it in windbg
+_ = TestClass.TargetHook(_ => default, null);
+_ = TestClass.TargetHook(_ => default, new());
+
 var platform = PlatformTriple.Current;
 
 var memAlloc = platform.System.MemoryAllocator;
 
 if (memAlloc.TryAllocateInRange(new((nint) 0x1000000000uL, (nint) 0x10000, (nint) 0xffffffffffuL, 16), out var allocated)) {
-
-
+    Console.WriteLine($"Allocated at {allocated.BaseAddress:x16}");
     allocated.Dispose();
 }
 
@@ -149,7 +152,6 @@ class TestClass {
         } else {
             Console.WriteLine("self is not null");
         }
-        // TODO: Mono dies on the generated call to AppendFormatted for some reason
         Console.WriteLine($"Method successfully detoured {self} hook");
         return orig(self);
     }

@@ -27,7 +27,14 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             // see https://github.com/dotnet/runtime/blob/v6.0.5/src/mono/mono/mini/mini-amd64.c line 472, 847, 1735
             if (system.DefaultAbi is { } abi) {
-                // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r11 on x64)
+                // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r10 on x64)
+                if (PlatformDetection.OS is OSKind.Windows && PlatformDetection.Architecture is ArchitectureKind.x86_64) {
+                    // on x86_64, it seems like Mono always uses this, ret, args order
+                    // TODO: there are probably other platforms that have this same argument order, 
+                    abi = abi with {
+                        ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments }
+                    };
+                }
                 Abi = abi;
             } else {
                 throw new InvalidOperationException("Cannot use Mono system, because the underlying system doesn't provide a default ABI!");
