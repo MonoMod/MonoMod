@@ -39,7 +39,7 @@
     <ProjectReference Include="..\MonoMod.RuntimeDetour.New\MonoMod.RuntimeDetour.New.csproj">
       <Aliases>New</Aliases>
     </ProjectReference>
-    <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />
+    <!--<ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />-->
     <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
   </ItemGroup>
 
@@ -51,7 +51,7 @@
       <Version Condition="'$(TargetFramework)' == 'netcoreapp2.1'">2.0.3</Version>
     </PackageReference>
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.analyzers" Version="0.10.*" />
+    <PackageReference Include="xunit.analyzers" Version="1.*" />
     <PackageReference Include="xunit.core" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.console" Version="$(XunitVersion)">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>

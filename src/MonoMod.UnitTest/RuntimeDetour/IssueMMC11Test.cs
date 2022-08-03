@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 namespace MonoMod.UnitTest {
     public unsafe class IssueMMC11Test {
 
+#if false
         [Fact(Skip = "New RuntimeDetour doesn't expose a .Pin(). That is instead managed entirely in Core, entirely transparently.")]
         public void TestIssueMMC11() {
             MethodInfo method = typeof(TestStruct).GetMethod("TestMethod");
@@ -20,6 +21,7 @@ namespace MonoMod.UnitTest {
                 method.Unpin();
             }
         }
+#endif
 
         public struct TestStruct {
             public string Value;

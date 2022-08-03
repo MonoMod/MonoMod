@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>MonoMod.RuntimeDetour.New</AssemblyName>
-    <PackageId>MonoMod.RuntimeDetour.New</PackageId>
+    <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
+    <PackageId>MonoMod.RuntimeDetour</PackageId>
     <Description>Flexible and easily extensible runtime detouring library. Wrap, replace and manipulate (Mono.Cecil) methods at runtime.</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 

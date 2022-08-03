@@ -5,7 +5,11 @@
   <PropertyGroup>
     <AssemblyName>MonoMod.Core</AssemblyName>
     <PackageId>MonoMod.Core</PackageId>
-    <Description>Flexible and easily extensible runtime detouring library. Wrap, replace and manipulate (Mono.Cecil) methods at runtime.</Description>
+    <Description>
+      <![CDATA[The code functionality for runtime detouring. Use `DetourFactory.Current` to get a DetourFactory capable of installing unique method detours.
+      
+      WARNING: THIS IS A LOW-LEVEL LIBRARY THAT IS DIFFICULT TO USE ON ITS OWN. If possible, use MonoMod.RuntimeDetour instead.]]>
+    </Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
   </PropertyGroup>
 

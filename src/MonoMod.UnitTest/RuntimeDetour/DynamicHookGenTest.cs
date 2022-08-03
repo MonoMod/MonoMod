@@ -1,6 +1,8 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+#if false // TODO: re-enable when we figure out where DynamicHookGen should go
+
 using Xunit;
 using MonoMod.RuntimeDetour;
 using System;
@@ -64,3 +66,4 @@ namespace MonoMod.UnitTest {
 
     }
 }
+#endif

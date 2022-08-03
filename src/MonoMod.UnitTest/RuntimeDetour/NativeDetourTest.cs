@@ -1,6 +1,8 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
+#if false // NativeDetour doesn't exist anymore, and MM.Core doesn't currently support P/Invoke detours
+
 using Xunit;
 using MonoMod.RuntimeDetour;
 using System;
@@ -173,3 +175,4 @@ namespace MonoMod.UnitTest {
 
     }
 }
+#endif

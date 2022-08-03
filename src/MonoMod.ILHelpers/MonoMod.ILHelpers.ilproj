@@ -1,3 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.IL/6.0.0">
   <!-- LMAO this doesn't actually need anything, everything it needs is in tools/Common.IL.{props,targets} -->
+
+  <PropertyGroup>
+    <Descripton>A collection of IL helpers for MonoMod, including a backport of System.Runtime.CompilerServices.Unsafe.</Descripton>
+  </PropertyGroup>
+  
 </Project>

@@ -10,4 +10,8 @@
     <RootNamespace><![CDATA[ ]]></RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <Description>A set of backports of new BCL features to all frameworks which MonoMod supports.</Description>
+  </PropertyGroup>
+
 </Project>
