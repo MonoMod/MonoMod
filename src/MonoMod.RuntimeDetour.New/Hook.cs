@@ -251,9 +251,9 @@ namespace MonoMod.RuntimeDetour {
                 : null;
 
             using (var dmd = srcSig.CreateDmd($"Hook<{Target.GetID()}>")) {
-                var module = dmd.Module;
-                var method = dmd.Definition;
                 var il = dmd.GetILProcessor();
+                var module = dmd.Module!;
+                var method = dmd.Definition!;
 
                 var dataLoc = new VariableDefinition(module.ImportReference(typeof(HookData)));
                 il.Body.Variables.Add(dataLoc);

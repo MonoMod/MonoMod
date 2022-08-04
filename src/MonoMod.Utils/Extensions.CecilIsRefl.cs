@@ -23,7 +23,7 @@ namespace MonoMod.Utils {
         /// <param name="minfo">The System.Reflection member reference.</param>
         /// <param name="mref">The Mono.Cecil member reference.</param>
         /// <returns>True if both references share the same signature, false otherwise.</returns>
-        public static bool Is(this MemberInfo minfo, MemberReference mref)
+        public static bool Is(this MemberInfo? minfo, MemberReference? mref)
             => mref.Is(minfo);
         /// <summary>
         /// Check if the signatures of a given System.Reflection and Mono.Cecil member reference match.
@@ -31,16 +31,18 @@ namespace MonoMod.Utils {
         /// <param name="mref">The Mono.Cecil member reference.</param>
         /// <param name="minfo">The System.Reflection member reference.</param>
         /// <returns>True if both references share the same signature, false otherwise.</returns>
-        public static bool Is(this MemberReference mref, MemberInfo minfo) {
-            if (mref == null)
+        public static bool Is(this MemberReference? mref, MemberInfo? minfo) {
+            if (mref is null)
+                return false;
+            if (minfo is null)
                 return false;
 
-            TypeReference mrefDecl = mref.DeclaringType;
+            TypeReference? mrefDecl = mref.DeclaringType;
             if (mrefDecl?.FullName == "<Module>")
                 mrefDecl = null;
 
             if (mref is GenericParameter genParamRef) {
-                if (!(minfo is Type genParamInfo))
+                if (minfo is not Type genParamInfo)
                     return false;
                 
                 if (!genParamInfo.IsGenericParameter) {
@@ -151,7 +153,7 @@ namespace MonoMod.Utils {
                 // Avoid converting nested type separators between + (.NET) and / (cecil)
                 if (mrefDecl != null)
                     return mref.Name == typeInfo.Name;
-                return mref.FullName == typeInfo.FullName.Replace("+", "/", StringComparison.Ordinal);
+                return mref.FullName == typeInfo.FullName?.Replace("+", "/", StringComparison.Ordinal);
 
             } else if (minfo is Type)
                 return false;
@@ -198,7 +200,7 @@ namespace MonoMod.Utils {
                 } else if (methodInfo.IsGenericMethod)
                     return false;
 
-                Relinker resolver = null;
+                Relinker? resolver = null;
                 resolver = (paramMemberRef, ctx) => paramMemberRef is TypeReference paramTypeRef ? ResolveParameter(paramTypeRef) : paramMemberRef;
                 TypeReference ResolveParameter(TypeReference paramTypeRef) {
                     if (paramTypeRef is GenericParameter paramGenParamTypeRef) {

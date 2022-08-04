@@ -7,7 +7,7 @@ using System.Text;
 namespace MonoMod.Utils {
     public class GenericMethodInstantiationComparer : IEqualityComparer<MethodBase> {
         // this may be null on Mono, so we just don't support the magic this does there
-        internal static Type CannonicalFillType = typeof(object).Assembly.GetType("System.__Canon");
+        internal static Type? CannonicalFillType = typeof(object).Assembly.GetType("System.__Canon");
 
         private readonly IEqualityComparer<Type> genericTypeComparer;
 
@@ -16,14 +16,14 @@ namespace MonoMod.Utils {
             genericTypeComparer = typeComparer;
         }
 
-        public bool Equals(MethodBase x, MethodBase y) {
+        public bool Equals(MethodBase? x, MethodBase? y) {
             if (x is null && y is null)
                 return true;
             if (x is null || y is null)
                 return false;
 
-            bool xGeneric = (x.IsGenericMethod && !x.ContainsGenericParameters) || (x.DeclaringType?.IsGenericType ?? false);
-            bool yGeneric = (y.IsGenericMethod && !y.ContainsGenericParameters) || (y.DeclaringType?.IsGenericType ?? false);
+            var xGeneric = (x.IsGenericMethod && !x.ContainsGenericParameters) || (x.DeclaringType?.IsGenericType ?? false);
+            var yGeneric = (y.IsGenericMethod && !y.ContainsGenericParameters) || (y.DeclaringType?.IsGenericType ?? false);
             if (xGeneric != yGeneric)
                 return false; // they're clearly different
             if (!xGeneric) // if we get here, they're the same so we only test one
@@ -31,7 +31,7 @@ namespace MonoMod.Utils {
 
             // here we're looking at 2 generic methods
             // so lets start by looking at their declaring types
-            if (!genericTypeComparer.Equals(x.DeclaringType, y.DeclaringType))
+            if (!genericTypeComparer.Equals(x.DeclaringType!, y.DeclaringType!))
                 return false;
 
             MethodBase xDef;// = xi.GetActualGenericMethodDefinition();

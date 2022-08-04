@@ -24,7 +24,8 @@ namespace MonoMod.Utils {
         public static bool Is(this MemberReference member, Type type, string name) {
             if (member == null)
                 return false;
-            return member.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == type.FullName.Replace("+", "/", StringComparison.Ordinal) && member.Name == name;
+            return member.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == type.FullName?.Replace("+", "/", StringComparison.Ordinal)
+                && member.Name == name;
         }
 
         public static bool Is(this MethodReference method, string fullName) {
@@ -63,11 +64,13 @@ namespace MonoMod.Utils {
 
             if (name.Contains(" ", StringComparison.Ordinal)) {
                 // ReturnType MethodName(ArgType,ArgType)
-                if (method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == type.FullName.Replace("+", "/", StringComparison.Ordinal) && method.GetID(withType: false).Replace("+", "/", StringComparison.Ordinal) == name.Replace("+", "/", StringComparison.Ordinal))
+                if (method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == type.FullName?.Replace("+", "/", StringComparison.Ordinal)
+                    && method.GetID(withType: false).Replace("+", "/", StringComparison.Ordinal) == name.Replace("+", "/", StringComparison.Ordinal))
                     return true;
             }
 
-            return method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == type.FullName.Replace("+", "/", StringComparison.Ordinal) && method.Name == name;
+            return method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == type.FullName?.Replace("+", "/", StringComparison.Ordinal)
+                && method.Name == name;
         }
 
         #endregion

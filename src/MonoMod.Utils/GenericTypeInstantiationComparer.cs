@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace MonoMod.Utils {
     public class GenericTypeInstantiationComparer : IEqualityComparer<Type> {
-        private static Type CannonicalFillType = GenericMethodInstantiationComparer.CannonicalFillType;
+        private static Type? CannonicalFillType = GenericMethodInstantiationComparer.CannonicalFillType;
 
-        public bool Equals(Type x, Type y) {
+        public bool Equals(Type? x, Type? y) {
             if (x is null && y is null)
                 return true;
             if (x is null || y is null)

@@ -17,7 +17,7 @@ namespace MonoMod.ModInterop {
                 return;
             Registered.Add(type);
 
-            string prefix = type.Assembly.GetName().Name;
+            var prefix = type.Assembly.GetName().Name;
             foreach (ModExportNameAttribute attrib in type.GetCustomAttributes(typeof(ModExportNameAttribute), false)) {
                 prefix = attrib.Name;
             }
@@ -35,7 +35,7 @@ namespace MonoMod.ModInterop {
 
             // Refresh all existing fields and methods.
             foreach (FieldInfo field in Fields) {
-                if (!Methods.TryGetValue(field.GetModImportName(), out List<MethodInfo> methods)) {
+                if (!Methods.TryGetValue(field.GetModImportName(), out var methods)) {
                     field.SetValue(null, null);
                     continue;
                 }
@@ -55,14 +55,14 @@ namespace MonoMod.ModInterop {
             }
         }
 
-        public static void RegisterModExport(this MethodInfo method, string prefix = null) {
+        public static void RegisterModExport(this MethodInfo method, string? prefix = null) {
             if (!method.IsPublic || !method.IsStatic)
                 throw new MemberAccessException("Utility must be public static");
             string name = method.Name;
             if (!string.IsNullOrEmpty(prefix))
                 name = prefix + "." + name;
 
-            if (!Methods.TryGetValue(name, out List<MethodInfo> methods))
+            if (!Methods.TryGetValue(name, out var methods))
                 Methods[name] = methods = new List<MethodInfo>();
 
             if (!methods.Contains(method))
@@ -74,8 +74,10 @@ namespace MonoMod.ModInterop {
                 return attrib.Name;
             }
 
-            foreach (ModImportNameAttribute attrib in field.DeclaringType.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
-                return attrib.Name + "." + field.Name;
+            if (field.DeclaringType is not null) {
+                foreach (ModImportNameAttribute attrib in field.DeclaringType.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
+                    return attrib.Name + "." + field.Name;
+                }
             }
 
             return field.Name;

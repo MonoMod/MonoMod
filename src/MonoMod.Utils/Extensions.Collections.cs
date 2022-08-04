@@ -42,7 +42,7 @@ namespace MonoMod.Utils {
         /// <summary>
         /// See <see cref="List{T}.AddRange(IEnumerable{T})"/>
         /// </summary>
-        public static void AddRange<K, V>(this Dictionary<K, V> dict, Dictionary<K, V> other) {
+        public static void AddRange<K, V>(this Dictionary<K, V> dict, Dictionary<K, V> other) where K : notnull {
             foreach (KeyValuePair<K, V> entry in other)
                 dict.Add(entry.Key, entry.Value);
         }

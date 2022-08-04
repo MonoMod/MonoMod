@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 
 namespace System {
     /// <summary>
-    /// Extensions to <see cref="StringComparer"/> providing consistent access to APIs introduced after the type.
+    /// Extensions to <see cref="Array"/> providing consistent access to APIs introduced after the type.
     /// </summary>
     public static class ArrayEx {
 #if !HAS_EMPTY

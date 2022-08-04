@@ -46,7 +46,7 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <typeparam name="T">The delegate type.</typeparam>
         /// <returns>A MethodInfo invoking a delegate of the given type.</returns>
-        MethodInfo GetDelegateInvoker<T>() where T : Delegate;
+        MethodInfo? GetDelegateInvoker<T>() where T : Delegate;
     }
 
     /// <summary>
@@ -75,21 +75,21 @@ namespace MonoMod.Cil {
         public int Store<T>(T t) => InnerBag<T>.Store(t);
         public void Clear<T>(int id) => InnerBag<T>.Clear(id);
 
-        private static readonly Dictionary<Type, WeakReference> invokerCache = new Dictionary<Type, WeakReference>();
-        public MethodInfo GetDelegateInvoker<T>() where T : Delegate {
+        private static readonly Dictionary<Type, WeakReference?> invokerCache = new();
+        public MethodInfo? GetDelegateInvoker<T>() where T : Delegate {
             Type t = typeof(T);
-            MethodInfo invoker;
+            MethodInfo? invoker;
 
-            if (invokerCache.TryGetValue(t, out WeakReference invokerRef)) {
+            if (invokerCache.TryGetValue(t, out var invokerRef)) {
                 if (invokerRef == null)
                     return null;
 
-                invoker = invokerRef.Target as MethodInfo;
-                if (invokerRef.IsAlive)
+                invoker = (MethodInfo?)invokerRef.Target;
+                if (invoker is not null)
                     return invoker;
             }
 
-            MethodInfo delInvoke = t.GetMethod("Invoke");
+            var delInvoke = t.GetMethod("Invoke")!;
             ParameterInfo[] args = delInvoke.GetParameters();
             if (args.Length == 0) {
                 invokerCache[t] = null;
@@ -102,13 +102,13 @@ namespace MonoMod.Cil {
                 return invoker;
             }
 
-            Type[] argTypes = new Type[args.Length + 1];
-            for (int i = 0; i < args.Length; i++)
+            var argTypes = new Type[args.Length + 1];
+            for (var i = 0; i < args.Length; i++)
                 argTypes[i] = args[i].ParameterType;
             argTypes[args.Length] = typeof(T);
 
-            using (DynamicMethodDefinition dmdInvoke = new DynamicMethodDefinition(
-                $"MMIL:Invoke<{delInvoke.DeclaringType.FullName}>",
+            using (var dmdInvoke = new DynamicMethodDefinition(
+                $"MMIL:Invoke<{delInvoke.DeclaringType?.FullName}>",
                 delInvoke.ReturnType, argTypes
             )) {
                 ILProcessor il = dmdInvoke.GetILProcessor();
@@ -117,7 +117,7 @@ namespace MonoMod.Cil {
                 il.Emit(OpCodes.Ldarg, args.Length);
 
                 // Load the rest of the args
-                for (int i = 0; i < args.Length; i++)
+                for (var i = 0; i < args.Length; i++)
                     il.Emit(OpCodes.Ldarg, i);
 
                 // Invoke the delegate and return its result.
@@ -131,14 +131,14 @@ namespace MonoMod.Cil {
         }
 
         public static class InnerBag<T> {
-            private static T[] array = new T[4];
+            private static T?[] array = new T[4];
             private static int count;
 
             public static T Get(int id) {
                 lock (_storeLock)
-                    return array[id];
+                    return array[id] ?? throw new InvalidOperationException();
             }
-            public static readonly MethodInfo Getter = typeof(InnerBag<T>).GetMethod("Get");
+            public static readonly MethodInfo Getter = typeof(InnerBag<T>).GetMethod("Get")!;
 
             private static readonly object _storeLock = new object();
             public static int Store(T t) {
@@ -168,19 +168,19 @@ namespace MonoMod.Cil {
                 funcs = invokers.Where(m => m.ReturnType != typeof(void)).ToArray();
             }
 
-            public static MethodInfo GetInvoker(MethodInfo signature) {
+            public static MethodInfo? GetInvoker(MethodInfo signature) {
                 if ((signature.ReturnTypeCustomAttributes.GetCustomAttributes(true)?.Length ?? 0) > 0 ||
                     signature.ReturnType.IsByRef || signature.ReturnType.IsMarshalByRef)
                     return null;
 
-                bool isFunc = signature.ReturnType != typeof(void);
+                var isFunc = signature.ReturnType != typeof(void);
                 ParameterInfo[] sigParams = signature.GetParameters();
-                int numParams = sigParams.Length;
+                var numParams = sigParams.Length;
                 if (numParams > actions.Length)
                     return null;
 
-                Type[] genericParams = new Type[sigParams.Length + (isFunc ? 1 : 0)];
-                for (int i = 0; i < numParams; i++) {
+                var genericParams = new Type[sigParams.Length + (isFunc ? 1 : 0)];
+                for (var i = 0; i < numParams; i++) {
                     ParameterInfo sigParam = sigParams[i];
                     if (sigParam.Attributes != System.Reflection.ParameterAttributes.None ||
                         (sigParam.GetCustomAttributes(true)?.Length ?? 0) > 0 ||

@@ -26,7 +26,7 @@ namespace MonoMod.Utils {
         /// <param name="withType">Whether the type ID should be included or not. System.Reflection avoids it by default.</param>
         /// <param name="simple">Whether the ID should be "simple" (name only).</param>
         /// <returns>The ID.</returns>
-        public static string GetID(this MethodReference method, string name = null, string type = null, bool withType = true, bool simple = false) {
+        public static string GetID(this MethodReference method, string? name = null, string? type = null, bool withType = true, bool simple = false) {
             StringBuilder builder = new StringBuilder();
 
             if (simple) {
@@ -132,25 +132,25 @@ namespace MonoMod.Utils {
         /// <param name="proxyMethod">Whether the method is regarded as a proxy method or not. Setting this paramater to true will skip the first parameter.</param>
         /// <param name="simple">Whether the ID should be "simple" (name only).</param>
         /// <returns>The ID.</returns>
-        public static string GetID(this System.Reflection.MethodBase method, string name = null, string type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {
-            while (method is System.Reflection.MethodInfo && method.IsGenericMethod && !method.IsGenericMethodDefinition)
-                method = ((System.Reflection.MethodInfo) method).GetGenericMethodDefinition();
+        public static string GetID(this MethodBase method, string? name = null, string? type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {
+            while (method is MethodInfo && method.IsGenericMethod && !method.IsGenericMethodDefinition)
+                method = ((MethodInfo) method).GetGenericMethodDefinition();
 
             StringBuilder builder = new StringBuilder();
 
             if (simple) {
                 if (withType && (type != null || method.DeclaringType != null))
-                    builder.Append(type ?? method.DeclaringType.FullName).Append("::");
+                    builder.Append(type ?? method.DeclaringType!.FullName).Append("::");
                 builder.Append(name ?? method.Name);
                 return builder.ToString();
             }
 
             builder
-                .Append((method as System.Reflection.MethodInfo)?.ReturnType?.FullName ?? "System.Void")
-                .Append(" ");
+                .Append((method as MethodInfo)?.ReturnType?.FullName ?? "System.Void")
+                .Append(' ');
 
             if (withType && (type != null || method.DeclaringType != null))
-                builder.Append(type ?? method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal)).Append("::");
+                builder.Append(type ?? method.DeclaringType!.FullName?.Replace("+", "/", StringComparison.Ordinal)).Append("::");
 
             builder
                 .Append(name ?? method.Name);
@@ -168,9 +168,9 @@ namespace MonoMod.Utils {
 
             builder.Append("(");
 
-            System.Reflection.ParameterInfo[] parameters = method.GetParameters();
+            ParameterInfo[] parameters = method.GetParameters();
             for (int i = proxyMethod ? 1 : 0; i < parameters.Length; i++) {
-                System.Reflection.ParameterInfo parameter = parameters[i];
+                ParameterInfo parameter = parameters[i];
                 if (i > (proxyMethod ? 1 : 0))
                     builder.Append(",");
 

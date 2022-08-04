@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MonoMod.Utils {
     public sealed class LazyDisposable : IDisposable {
-        public event Action OnDispose;
+        public event Action? OnDispose;
 
         public LazyDisposable() {
         }
@@ -20,8 +20,8 @@ namespace MonoMod.Utils {
     }
 
     public sealed class LazyDisposable<T> : IDisposable {
-        private T Instance;
-        public event Action<T> OnDispose;
+        private T? Instance;
+        public event Action<T>? OnDispose;
 
         public LazyDisposable(T instance) {
             Instance = instance;
@@ -32,7 +32,7 @@ namespace MonoMod.Utils {
         }
 
         public void Dispose() {
-            OnDispose?.Invoke(Instance);
+            OnDispose?.Invoke(Instance!);
             Instance = default;
         }
     }

@@ -14,10 +14,10 @@ namespace MonoMod.Utils {
     static class DynamicMethodHelper {
 
         // Used in EmitReference.
-        private static List<object> References = new List<object>();
-        public static object GetReference(int id) => References[id];
+        private static List<object?> References = new();
+        public static object? GetReference(int id) => References[id];
         public static void SetReference(int id, object obj) => References[id] = obj;
-        private static int AddReference(object obj) {
+        private static int AddReference(object? obj) {
             lock (References) {
                 References.Add(obj);
                 return References.Count - 1;
@@ -25,8 +25,8 @@ namespace MonoMod.Utils {
         }
         public static void FreeReference(int id) => References[id] = null;
 
-        private static readonly MethodInfo _GetMethodFromHandle = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
-        private static readonly MethodInfo _GetReference = typeof(DynamicMethodHelper).GetMethod("GetReference");
+        private static readonly MethodInfo _GetMethodFromHandle = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) })!;
+        private static readonly MethodInfo _GetReference = typeof(DynamicMethodHelper).GetMethod("GetReference")!;
 
         /// <summary>
         /// Fill the DynamicMethod with a stub.

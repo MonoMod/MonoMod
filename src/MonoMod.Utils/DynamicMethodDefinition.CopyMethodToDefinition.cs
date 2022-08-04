@@ -18,15 +18,15 @@ namespace MonoMod.Utils {
 #endif
     sealed partial class DynamicMethodDefinition {
 
-        private static OpCode[] _CecilOpCodes1X;
-        private static OpCode[] _CecilOpCodes2X;
+        private static OpCode[] _CecilOpCodes1X = null!;
+        private static OpCode[] _CecilOpCodes2X = null!;
 
         private static void _InitCopier() {
             _CecilOpCodes1X = new OpCode[0xe1];
             _CecilOpCodes2X = new OpCode[0x1f];
 
             foreach (FieldInfo field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                OpCode opcode = (OpCode) field.GetValue(null);
+                var opcode = (OpCode) field.GetValue(null)!;
                 if (opcode.OpCodeType == OpCodeType.Nternal)
                     continue;
 
@@ -38,23 +38,21 @@ namespace MonoMod.Utils {
         }
 
         private void _CopyMethodToDefinition() {
-            MethodBase method = OriginalMethod;
+            MethodBase method = OriginalMethod ?? throw new InvalidOperationException();
             Module moduleFrom = method.Module;
-            System.Reflection.MethodBody bodyFrom = method.GetMethodBody();
-            byte[] data = bodyFrom?.GetILAsByteArray();
-            if (data == null)
-                throw new NotSupportedException("Body-less method");
+            System.Reflection.MethodBody bodyFrom = method.GetMethodBody() ?? throw new NotSupportedException("Body-less method");
+            var data = bodyFrom.GetILAsByteArray() ?? throw new InvalidOperationException();
 
-            MethodDefinition def = Definition;
+            MethodDefinition def = Definition ?? throw new InvalidOperationException();
             ModuleDefinition moduleTo = def.Module;
             Mono.Cecil.Cil.MethodBody bodyTo = def.Body;
             ILProcessor processor = bodyTo.GetILProcessor();
 
-            Type[] typeArguments = null;
-            if (method.DeclaringType.IsGenericType)
+            Type[]? typeArguments = null;
+            if (method.DeclaringType?.IsGenericType ?? false)
                 typeArguments = method.DeclaringType.GetGenericArguments();
 
-            Type[] methodArguments = null;
+            Type[]? methodArguments = null;
             if (method.IsGenericMethod)
                 methodArguments = method.GetGenericArguments();
 
@@ -65,8 +63,8 @@ namespace MonoMod.Utils {
                 bodyTo.Variables.Add(new VariableDefinition(type));
             }
 
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(data))) {
-                for (Instruction instr = null, prev = null; reader.BaseStream.Position < reader.BaseStream.Length; prev = instr) {
+            using (var reader = new BinaryReader(new MemoryStream(data))) {
+                for (Instruction? instr = null, prev = null; reader.BaseStream.Position < reader.BaseStream.Length; prev = instr) {
                     int offset = (int) reader.BaseStream.Position;
                     instr = Instruction.Create(OpCodes.Nop);
                     byte op = reader.ReadByte();
@@ -84,14 +82,14 @@ namespace MonoMod.Utils {
                 switch (instr.OpCode.OperandType) {
                     case OperandType.ShortInlineBrTarget:
                     case OperandType.InlineBrTarget:
-                        instr.Operand = GetInstruction((int) instr.Operand);
+                        instr.Operand = GetInstruction((int) instr.Operand!);
                         break;
 
                     case OperandType.InlineSwitch:
-                        int[] offsets = (int[]) instr.Operand;
+                        int[] offsets = (int[]) instr.Operand!;
                         Instruction[] targets = new Instruction[offsets.Length];
                         for (int i = 0; i < offsets.Length; i++)
-                            targets[i] = GetInstruction(offsets[i]);
+                            targets[i] = GetInstruction(offsets[i])!;
                         instr.Operand = targets;
                         break;
                 }
@@ -208,13 +206,13 @@ namespace MonoMod.Utils {
                             return moduleTo.ImportReference(resolvedType);
 
                         case TokenResolutionMode.Method:
-                            MethodBase resolvedMethod = moduleFrom.ResolveMethod(token, typeArguments, methodArguments);
-                            resolvedMethod.GetRealDeclaringType()?.FixReflectionCacheAuto();
+                            var resolvedMethod = moduleFrom.ResolveMethod(token, typeArguments, methodArguments);
+                            resolvedMethod?.GetRealDeclaringType()?.FixReflectionCacheAuto();
                             return moduleTo.ImportReference(resolvedMethod);
 
                         case TokenResolutionMode.Field:
-                            FieldInfo resolvedField = moduleFrom.ResolveField(token, typeArguments, methodArguments);
-                            resolvedField.GetRealDeclaringType()?.FixReflectionCacheAuto();
+                            var resolvedField = moduleFrom.ResolveField(token, typeArguments, methodArguments);
+                            resolvedField?.GetRealDeclaringType()?.FixReflectionCacheAuto();
                             return moduleTo.ImportReference(resolvedField);
 
                         case TokenResolutionMode.Any:
@@ -232,7 +230,7 @@ namespace MonoMod.Utils {
                                     return moduleTo.ImportReference(i);
 
                                 case var resolved:
-                                    throw new NotSupportedException($"Invalid resolved member type {resolved.GetType()}");
+                                    throw new NotSupportedException($"Invalid resolved member type {resolved?.GetType()}");
                             }
 
                         default:
@@ -278,7 +276,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            Instruction GetInstruction(int offset) {
+            Instruction? GetInstruction(int offset) {
                 int last = bodyTo.Instructions.Count - 1;
                 if (offset < 0 || offset > bodyTo.Instructions[last].Offset)
                     return null;

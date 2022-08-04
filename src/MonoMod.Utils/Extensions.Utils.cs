@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -25,19 +26,19 @@ namespace MonoMod.Utils {
         /// <param name="val">The initial value and first parameter.</param>
         /// <param name="args">Any other arguments that may be passed.</param>
         /// <returns>The result of all delegates.</returns>
-        public static T InvokePassing<T>(this MulticastDelegate md, T val, params object[] args) {
+        public static T? InvokePassing<T>(this MulticastDelegate md, T val, params object?[] args) {
             if (md == null)
                 return val;
 
-            object[] args_ = new object[args.Length + 1];
+            var args_ = new object?[args.Length + 1];
             args_[0] = val;
             Array.Copy(args, 0, args_, 1, args.Length);
 
             Delegate[] ds = md.GetInvocationList();
-            for (int i = 0; i < ds.Length; i++)
+            for (var i = 0; i < ds.Length; i++)
                 args_[0] = ds[i].DynamicInvoke(args_);
 
-            return (T) args_[0];
+            return (T?) args_[0];
         }
 
         /// <summary>
@@ -48,8 +49,8 @@ namespace MonoMod.Utils {
                 return true;
 
             Delegate[] ds = md.GetInvocationList();
-            for (int i = 0; i < ds.Length; i++)
-                if (!((bool) ds[i].DynamicInvoke(args)))
+            for (var i = 0; i < ds.Length; i++)
+                if (!(bool) ds[i].DynamicInvoke(args)!)
                     return false;
 
             return true;
@@ -63,8 +64,8 @@ namespace MonoMod.Utils {
                 return false;
 
             Delegate[] ds = md.GetInvocationList();
-            for (int i = 0; i < ds.Length; i++)
-                if ((bool) ds[i].DynamicInvoke(args))
+            for (var i = 0; i < ds.Length; i++)
+                if ((bool) ds[i].DynamicInvoke(args)!)
                     return true;
 
             return false;
@@ -73,13 +74,13 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Invokes all delegates in the invocation list, as long as the previously invoked delegate returns null.
         /// </summary>
-        public static T InvokeWhileNull<T>(this MulticastDelegate md, params object[] args) where T : class {
+        public static T? InvokeWhileNull<T>(this MulticastDelegate? md, params object[] args) where T : class {
             if (md == null)
                 return null;
 
             Delegate[] ds = md.GetInvocationList();
-            for (int i = 0; i < ds.Length; i++) {
-                T result = (T) ds[i].DynamicInvoke(args);
+            for (var i = 0; i < ds.Length; i++) {
+                var result = (T?) ds[i].DynamicInvoke(args);
                 if (result != null)
                     return result;
             }
@@ -137,7 +138,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="source">The input delegate.</param>
         /// <returns>The output delegate.</returns>
-        public static T CastDelegate<T>(this Delegate source) where T : class => source.CastDelegate(typeof(T)) as T;
+        public static T CastDelegate<T>(this Delegate source) where T : Delegate => (T)source.CastDelegate(typeof(T));
 
         /// <summary>
         /// Cast a delegate from one type to another. Compatible with delegates holding an invocation list (combined delegates).
@@ -145,32 +146,33 @@ namespace MonoMod.Utils {
         /// <param name="source">The input delegate.</param>
         /// <param name="type">The wanted output delegate type.</param>
         /// <returns>The output delegate.</returns>
-        public static Delegate CastDelegate(this Delegate source, Type type) {
+        [return: NotNullIfNotNull("source")]
+        public static Delegate? CastDelegate(this Delegate? source, Type type) {
             if (source == null)
                 return null;
 
-            Delegate[] delegates = source.GetInvocationList();
+            var delegates = source.GetInvocationList();
             if (delegates.Length == 1)
                 return delegates[0].Method.CreateDelegate(type, delegates[0].Target);
 
-            Delegate[] delegatesDest = new Delegate[delegates.Length];
+            var delegatesDest = new Delegate?[delegates.Length];
             for (int i = 0; i < delegates.Length; i++)
                 delegatesDest[i] = delegates[i].CastDelegate(type);
-            return Delegate.Combine(delegatesDest);
+            return Delegate.Combine(delegatesDest)!;
         }
 
-        public static bool TryCastDelegate<T>(this Delegate source, out T result) where T : class {
+        public static bool TryCastDelegate<T>(this Delegate source, [MaybeNullWhen(false)] out T result) where T : Delegate {
             if (source is T cast) {
                 result = cast;
                 return true;
             }
 
-            bool rv = source.TryCastDelegate(typeof(T), out Delegate resultDel);
-            result = resultDel as T;
+            var rv = source.TryCastDelegate(typeof(T), out var resultDel);
+            result = (T?) resultDel;
             return rv;
         }
 
-        public static bool TryCastDelegate(this Delegate source, Type type, out Delegate result) {
+        public static bool TryCastDelegate(this Delegate source, Type type, [MaybeNullWhen(false)] out Delegate? result) {
             result = null;
             if (source == null)
                 return false;
@@ -182,7 +184,7 @@ namespace MonoMod.Utils {
                     return true;
                 }
 
-                Delegate[] delegatesDest = new Delegate[delegates.Length];
+                var delegatesDest = new Delegate[delegates.Length];
                 for (int i = 0; i < delegates.Length; i++)
                     delegatesDest[i] = delegates[i].CastDelegate(type);
                 result = Delegate.Combine(delegatesDest);
@@ -196,12 +198,12 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Print the exception to the console, including extended loading / reflection data useful for mods.
         /// </summary>
-        public static void LogDetailed(this Exception e, string tag = null) {
+        public static void LogDetailed(this Exception? e, string? tag = null) {
             if (tag == null) {
                 Console.WriteLine("--------------------------------");
                 Console.WriteLine("Detailed exception log:");
             }
-            for (Exception e_ = e; e_ != null; e_ = e_.InnerException) {
+            for (Exception? e_ = e; e_ != null; e_ = e_.InnerException) {
                 Console.WriteLine("--------------------------------");
                 Console.WriteLine(e_.GetType().FullName + ": " + e_.Message + "\n" + e_.StackTrace);
                 if (e_ is ReflectionTypeLoadException rtle) {
@@ -212,21 +214,21 @@ namespace MonoMod.Utils {
                         LogDetailed(rtle.LoaderExceptions[i], tag + (tag == null ? "" : ", ") + "rtle:" + i);
                     }
                 }
-                if (e_ is TypeLoadException) {
-                    Console.WriteLine("TypeLoadException.TypeName: " + ((TypeLoadException) e_).TypeName);
+                if (e_ is TypeLoadException tlex) {
+                    Console.WriteLine("TypeLoadException.TypeName: " + tlex.TypeName);
                 }
-                if (e_ is BadImageFormatException) {
-                    Console.WriteLine("BadImageFormatException.FileName: " + ((BadImageFormatException) e_).FileName);
+                if (e_ is BadImageFormatException formatex) {
+                    Console.WriteLine("BadImageFormatException.FileName: " + formatex.FileName);
                 }
             }
         }
 
         // This only exists in .NET Framework 4.5+ and .NET Standard 1.0+,
         // but it's scientifically proven that .NET Framework 4.0 doesn't really exist.
-        private static readonly Type t_StateMachineAttribute =
+        private static readonly Type? t_StateMachineAttribute =
             typeof(object).Assembly
             .GetType("System.Runtime.CompilerServices.StateMachineAttribute");
-        private static readonly PropertyInfo p_StateMachineType =
+        private static readonly PropertyInfo? p_StateMachineType =
             t_StateMachineAttribute?.GetProperty("StateMachineType");
 
         /// <summary>
@@ -234,8 +236,8 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="method">The method creating the state machine.</param>
         /// <returns>The "main" method in the state machine.</returns>
-        public static MethodInfo GetStateMachineTarget(this MethodInfo method) {
-            if (p_StateMachineType == null)
+        public static MethodInfo? GetStateMachineTarget(this MethodInfo method) {
+            if (p_StateMachineType is null || t_StateMachineAttribute is null)
                 return null;
 
             foreach (Attribute attrib in method.GetCustomAttributes(false))
@@ -260,7 +262,7 @@ namespace MonoMod.Utils {
             if (method.DeclaringType != null && method.DeclaringType.IsGenericType) {
                 Type type = method.DeclaringType.GetGenericTypeDefinition();
                 RuntimeMethodHandle handle = method.MethodHandle;
-                method = MethodBase.GetMethodFromHandle(handle, type.TypeHandle);
+                method = MethodBase.GetMethodFromHandle(handle, type.TypeHandle)!;
             }
 
             return method;

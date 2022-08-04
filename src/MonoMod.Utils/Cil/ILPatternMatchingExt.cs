@@ -11,6 +11,7 @@ using Mono.Cecil.Cil;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
 using MonoMod.Cil;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Cil {
     public static class ILPatternMatchingExt {
@@ -18,8 +19,8 @@ namespace MonoMod.Cil {
         public static bool Match(this Instruction instr, OpCode opcode)
             => instr.OpCode == opcode;
         public static bool Match<T>(this Instruction instr, OpCode opcode, T value)
-            => instr.Match(opcode, out T v) && (v?.Equals(value) ?? value == null);
-        public static bool Match<T>(this Instruction instr, OpCode opcode, out T value) {
+            => instr.Match<T>(opcode, out var v) && (v?.Equals(value) ?? value is null);
+        public static bool Match<T>(this Instruction instr, OpCode opcode, [MaybeNullWhen(false)] out T value) {
             if (instr.OpCode == opcode) {
                 value = (T) instr.Operand;
                 return true;
@@ -401,9 +402,9 @@ namespace MonoMod.Cil {
             => instr.MatchJmp(out var v) && v.Is(value);
         public static bool MatchJmp(this Instruction instr, MethodReference value)
             => instr.MatchJmp(out var v) && v == value;
-        public static bool MatchJmp(this Instruction instr, out MethodReference value) {
+        public static bool MatchJmp(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
             if (instr.OpCode == OpCodes.Jmp) {
-                value = instr.Operand as MethodReference;
+                value = (MethodReference)instr.Operand;
                 return true;
             }
             value = default;
@@ -420,9 +421,9 @@ namespace MonoMod.Cil {
             => instr.MatchCall(out var v) && v.Is(value);
         public static bool MatchCall(this Instruction instr, MethodReference value)
             => instr.MatchCall(out var v) && v == value;
-        public static bool MatchCall(this Instruction instr, out MethodReference value) {
+        public static bool MatchCall(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
             if (instr.OpCode == OpCodes.Call) {
-                value = instr.Operand as MethodReference;
+                value = (MethodReference)instr.Operand;
                 return true;
             }
             value = default;
@@ -439,9 +440,9 @@ namespace MonoMod.Cil {
             => instr.MatchCallvirt(out var v) && v.Is(value);
         public static bool MatchCallvirt(this Instruction instr, MethodReference value)
             => instr.MatchCallvirt(out var v) && v == value;
-        public static bool MatchCallvirt(this Instruction instr, out MethodReference value) {
+        public static bool MatchCallvirt(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
             if (instr.OpCode == OpCodes.Callvirt) {
-                value = instr.Operand as MethodReference;
+                value = (MethodReference)instr.Operand;
                 return true;
             }
             value = default;
@@ -458,9 +459,9 @@ namespace MonoMod.Cil {
             => instr.MatchCallOrCallvirt(out var v) && v.Is(value);
         public static bool MatchCallOrCallvirt(this Instruction instr, MethodReference value)
             => instr.MatchCallOrCallvirt(out var v) && v == value;
-        public static bool MatchCallOrCallvirt(this Instruction instr, out MethodReference value) {
+        public static bool MatchCallOrCallvirt(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
             if (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) {
-                value = instr.Operand as MethodReference;
+                value = (MethodReference)instr.Operand;
                 return true;
             }
             value = default;
@@ -469,7 +470,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchCalli(this Instruction instr, IMethodSignature value)
             => instr.MatchCalli(out var v) && v == value;
-        public static bool MatchCalli(this Instruction instr, out IMethodSignature value) {
+        public static bool MatchCalli(this Instruction instr, [MaybeNullWhen(false)] out IMethodSignature value) {
             if (instr.OpCode == OpCodes.Calli) {
                 value = (IMethodSignature) instr.Operand;
                 return true;
@@ -633,7 +634,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBr(this Instruction instr, ILLabel value)
             => instr.MatchBr(out var v) && v == value;
-        public static bool MatchBr(this Instruction instr, out ILLabel value) {
+        public static bool MatchBr(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Br ||
                 instr.OpCode == OpCodes.Br_S) {
                 value = (ILLabel) instr.Operand;
@@ -645,7 +646,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBrfalse(this Instruction instr, ILLabel value)
             => instr.MatchBrfalse(out var v) && v == value;
-        public static bool MatchBrfalse(this Instruction instr, out ILLabel value) {
+        public static bool MatchBrfalse(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Brfalse ||
                 instr.OpCode == OpCodes.Brfalse_S) {
                 value = (ILLabel) instr.Operand;
@@ -657,7 +658,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBrtrue(this Instruction instr, ILLabel value)
             => instr.MatchBrtrue(out var v) && v == value;
-        public static bool MatchBrtrue(this Instruction instr, out ILLabel value) {
+        public static bool MatchBrtrue(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Brtrue ||
                 instr.OpCode == OpCodes.Brtrue_S) {
                 value = (ILLabel) instr.Operand;
@@ -669,7 +670,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBeq(this Instruction instr, ILLabel value)
             => instr.MatchBeq(out var v) && v == value;
-        public static bool MatchBeq(this Instruction instr, out ILLabel value) {
+        public static bool MatchBeq(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Beq ||
                 instr.OpCode == OpCodes.Beq_S) {
                 value = (ILLabel) instr.Operand;
@@ -681,7 +682,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBge(this Instruction instr, ILLabel value)
             => instr.MatchBge(out var v) && v == value;
-        public static bool MatchBge(this Instruction instr, out ILLabel value) {
+        public static bool MatchBge(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Bge ||
                 instr.OpCode == OpCodes.Bge_S) {
                 value = (ILLabel) instr.Operand;
@@ -693,7 +694,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBgt(this Instruction instr, ILLabel value)
             => instr.MatchBgt(out var v) && v == value;
-        public static bool MatchBgt(this Instruction instr, out ILLabel value) {
+        public static bool MatchBgt(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Bgt ||
                 instr.OpCode == OpCodes.Bgt_S) {
                 value = (ILLabel) instr.Operand;
@@ -705,7 +706,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBle(this Instruction instr, ILLabel value)
             => instr.MatchBle(out var v) && v == value;
-        public static bool MatchBle(this Instruction instr, out ILLabel value) {
+        public static bool MatchBle(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Ble ||
                 instr.OpCode == OpCodes.Ble_S) {
                 value = (ILLabel) instr.Operand;
@@ -717,7 +718,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBlt(this Instruction instr, ILLabel value)
             => instr.MatchBlt(out var v) && v == value;
-        public static bool MatchBlt(this Instruction instr, out ILLabel value) {
+        public static bool MatchBlt(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Blt ||
                 instr.OpCode == OpCodes.Blt_S) {
                 value = (ILLabel) instr.Operand;
@@ -729,7 +730,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBneUn(this Instruction instr, ILLabel value)
             => instr.MatchBneUn(out var v) && v == value;
-        public static bool MatchBneUn(this Instruction instr, out ILLabel value) {
+        public static bool MatchBneUn(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Bne_Un ||
                 instr.OpCode == OpCodes.Bne_Un_S) {
                 value = (ILLabel) instr.Operand;
@@ -741,7 +742,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBgeUn(this Instruction instr, ILLabel value)
             => instr.MatchBgeUn(out var v) && v == value;
-        public static bool MatchBgeUn(this Instruction instr, out ILLabel value) {
+        public static bool MatchBgeUn(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Bge_Un ||
                 instr.OpCode == OpCodes.Bge_Un_S) {
                 value = (ILLabel) instr.Operand;
@@ -753,7 +754,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBgtUn(this Instruction instr, ILLabel value)
             => instr.MatchBgtUn(out var v) && v == value;
-        public static bool MatchBgtUn(this Instruction instr, out ILLabel value) {
+        public static bool MatchBgtUn(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Bgt_Un ||
                 instr.OpCode == OpCodes.Bgt_Un_S) {
                 value = (ILLabel) instr.Operand;
@@ -765,7 +766,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBleUn(this Instruction instr, ILLabel value)
             => instr.MatchBleUn(out var v) && v == value;
-        public static bool MatchBleUn(this Instruction instr, out ILLabel value) {
+        public static bool MatchBleUn(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Ble_Un ||
                 instr.OpCode == OpCodes.Ble_Un_S) {
                 value = (ILLabel) instr.Operand;
@@ -777,7 +778,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchBltUn(this Instruction instr, ILLabel value)
             => instr.MatchBltUn(out var v) && v == value;
-        public static bool MatchBltUn(this Instruction instr, out ILLabel value) {
+        public static bool MatchBltUn(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Blt_Un ||
                 instr.OpCode == OpCodes.Blt_Un_S) {
                 value = (ILLabel) instr.Operand;
@@ -789,7 +790,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchSwitch(this Instruction instr, ILLabel[] value)
             => instr.MatchSwitch(out var v) && v.SequenceEqual(value);
-        public static bool MatchSwitch(this Instruction instr, out ILLabel[] value) {
+        public static bool MatchSwitch(this Instruction instr, [MaybeNullWhen(false)] out ILLabel[] value) {
             if (instr.OpCode == OpCodes.Switch) {
                 value = (ILLabel[]) instr.Operand;
                 return true;
@@ -1093,7 +1094,7 @@ namespace MonoMod.Cil {
             => instr.MatchCpobj(out var v) && v.Is(value);
         public static bool MatchCpobj(this Instruction instr, TypeReference value)
             => instr.MatchCpobj(out var v) && v == value;
-        public static bool MatchCpobj(this Instruction instr, out TypeReference value) {
+        public static bool MatchCpobj(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Cpobj) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1110,7 +1111,7 @@ namespace MonoMod.Cil {
             => instr.MatchLdobj(out var v) && v.Is(value);
         public static bool MatchLdobj(this Instruction instr, TypeReference value)
             => instr.MatchLdobj(out var v) && v == value;
-        public static bool MatchLdobj(this Instruction instr, out TypeReference value) {
+        public static bool MatchLdobj(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Ldobj) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1121,7 +1122,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchLdstr(this Instruction instr, string value)
             => instr.MatchLdstr(out var v) && v == value;
-        public static bool MatchLdstr(this Instruction instr, out string value) {
+        public static bool MatchLdstr(this Instruction instr, [MaybeNullWhen(false)] out string value) {
             if (instr.OpCode == OpCodes.Ldstr) {
                 value = (string) instr.Operand;
                 return true;
@@ -1150,9 +1151,9 @@ namespace MonoMod.Cil {
             => instr.MatchNewobj(out var v) && v.Is(value);
         public static bool MatchNewobj(this Instruction instr, MethodReference value)
             => instr.MatchNewobj(out var v) && v == value;
-        public static bool MatchNewobj(this Instruction instr, out MethodReference value) {
+        public static bool MatchNewobj(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
             if (instr.OpCode == OpCodes.Newobj) {
-                value = instr.Operand as MethodReference;
+                value = (MethodReference)instr.Operand;
                 return true;
             }
             value = default;
@@ -1167,7 +1168,7 @@ namespace MonoMod.Cil {
             => instr.MatchCastclass(out var v) && v.Is(value);
         public static bool MatchCastclass(this Instruction instr, TypeReference value)
             => instr.MatchCastclass(out var v) && v == value;
-        public static bool MatchCastclass(this Instruction instr, out TypeReference value) {
+        public static bool MatchCastclass(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Castclass) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1184,7 +1185,7 @@ namespace MonoMod.Cil {
             => instr.MatchIsinst(out var v) && v.Is(value);
         public static bool MatchIsinst(this Instruction instr, TypeReference value)
             => instr.MatchIsinst(out var v) && v == value;
-        public static bool MatchIsinst(this Instruction instr, out TypeReference value) {
+        public static bool MatchIsinst(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Isinst) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1208,7 +1209,7 @@ namespace MonoMod.Cil {
             => instr.MatchUnbox(out var v) && v.Is(value);
         public static bool MatchUnbox(this Instruction instr, TypeReference value)
             => instr.MatchUnbox(out var v) && v == value;
-        public static bool MatchUnbox(this Instruction instr, out TypeReference value) {
+        public static bool MatchUnbox(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Unbox) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1234,7 +1235,7 @@ namespace MonoMod.Cil {
             => instr.MatchLdfld(out var v) && v.Is(value);
         public static bool MatchLdfld(this Instruction instr, FieldReference value)
             => instr.MatchLdfld(out var v) && v == value;
-        public static bool MatchLdfld(this Instruction instr, out FieldReference value) {
+        public static bool MatchLdfld(this Instruction instr, [MaybeNullWhen(false)] out FieldReference value) {
             if (instr.OpCode == OpCodes.Ldfld) {
                 value = (FieldReference) instr.Operand;
                 return true;
@@ -1253,7 +1254,7 @@ namespace MonoMod.Cil {
             => instr.MatchLdflda(out var v) && v.Is(value);
         public static bool MatchLdflda(this Instruction instr, FieldReference value)
             => instr.MatchLdflda(out var v) && v == value;
-        public static bool MatchLdflda(this Instruction instr, out FieldReference value) {
+        public static bool MatchLdflda(this Instruction instr, [MaybeNullWhen(false)] out FieldReference value) {
             if (instr.OpCode == OpCodes.Ldflda) {
                 value = (FieldReference) instr.Operand;
                 return true;
@@ -1272,7 +1273,7 @@ namespace MonoMod.Cil {
             => instr.MatchStfld(out var v) && v.Is(value);
         public static bool MatchStfld(this Instruction instr, FieldReference value)
             => instr.MatchStfld(out var v) && v == value;
-        public static bool MatchStfld(this Instruction instr, out FieldReference value) {
+        public static bool MatchStfld(this Instruction instr, [MaybeNullWhen(false)] out FieldReference value) {
             if (instr.OpCode == OpCodes.Stfld) {
                 value = (FieldReference) instr.Operand;
                 return true;
@@ -1291,7 +1292,7 @@ namespace MonoMod.Cil {
             => instr.MatchLdsfld(out var v) && v.Is(value);
         public static bool MatchLdsfld(this Instruction instr, FieldReference value)
             => instr.MatchLdsfld(out var v) && v == value;
-        public static bool MatchLdsfld(this Instruction instr, out FieldReference value) {
+        public static bool MatchLdsfld(this Instruction instr, [MaybeNullWhen(false)] out FieldReference value) {
             if (instr.OpCode == OpCodes.Ldsfld) {
                 value = (FieldReference) instr.Operand;
                 return true;
@@ -1310,7 +1311,7 @@ namespace MonoMod.Cil {
             => instr.MatchLdsflda(out var v) && v.Is(value);
         public static bool MatchLdsflda(this Instruction instr, FieldReference value)
             => instr.MatchLdsflda(out var v) && v == value;
-        public static bool MatchLdsflda(this Instruction instr, out FieldReference value) {
+        public static bool MatchLdsflda(this Instruction instr, [MaybeNullWhen(false)] out FieldReference value) {
             if (instr.OpCode == OpCodes.Ldsflda) {
                 value = (FieldReference) instr.Operand;
                 return true;
@@ -1329,7 +1330,7 @@ namespace MonoMod.Cil {
             => instr.MatchStsfld(out var v) && v.Is(value);
         public static bool MatchStsfld(this Instruction instr, FieldReference value)
             => instr.MatchStsfld(out var v) && v == value;
-        public static bool MatchStsfld(this Instruction instr, out FieldReference value) {
+        public static bool MatchStsfld(this Instruction instr, [MaybeNullWhen(false)] out FieldReference value) {
             if (instr.OpCode == OpCodes.Stsfld) {
                 value = (FieldReference) instr.Operand;
                 return true;
@@ -1346,7 +1347,7 @@ namespace MonoMod.Cil {
             => instr.MatchStobj(out var v) && v.Is(value);
         public static bool MatchStobj(this Instruction instr, TypeReference value)
             => instr.MatchStobj(out var v) && v == value;
-        public static bool MatchStobj(this Instruction instr, out TypeReference value) {
+        public static bool MatchStobj(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Stobj) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1433,7 +1434,7 @@ namespace MonoMod.Cil {
             => instr.MatchBox(out var v) && v.Is(value);
         public static bool MatchBox(this Instruction instr, TypeReference value)
             => instr.MatchBox(out var v) && v == value;
-        public static bool MatchBox(this Instruction instr, out TypeReference value) {
+        public static bool MatchBox(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Box) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1450,7 +1451,7 @@ namespace MonoMod.Cil {
             => instr.MatchNewarr(out var v) && v.Is(value);
         public static bool MatchNewarr(this Instruction instr, TypeReference value)
             => instr.MatchNewarr(out var v) && v == value;
-        public static bool MatchNewarr(this Instruction instr, out TypeReference value) {
+        public static bool MatchNewarr(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Newarr) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1474,7 +1475,7 @@ namespace MonoMod.Cil {
             => instr.MatchLdelema(out var v) && v.Is(value);
         public static bool MatchLdelema(this Instruction instr, TypeReference value)
             => instr.MatchLdelema(out var v) && v == value;
-        public static bool MatchLdelema(this Instruction instr, out TypeReference value) {
+        public static bool MatchLdelema(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Ldelema) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1624,7 +1625,7 @@ namespace MonoMod.Cil {
             => instr.MatchLdelemAny(out var v) && v.Is(value);
         public static bool MatchLdelemAny(this Instruction instr, TypeReference value)
             => instr.MatchLdelemAny(out var v) && v == value;
-        public static bool MatchLdelemAny(this Instruction instr, out TypeReference value) {
+        public static bool MatchLdelemAny(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Ldelem_Any) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1641,7 +1642,7 @@ namespace MonoMod.Cil {
             => instr.MatchStelemAny(out var v) && v.Is(value);
         public static bool MatchStelemAny(this Instruction instr, TypeReference value)
             => instr.MatchStelemAny(out var v) && v == value;
-        public static bool MatchStelemAny(this Instruction instr, out TypeReference value) {
+        public static bool MatchStelemAny(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Stelem_Any) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1658,7 +1659,7 @@ namespace MonoMod.Cil {
             => instr.MatchUnboxAny(out var v) && v.Is(value);
         public static bool MatchUnboxAny(this Instruction instr, TypeReference value)
             => instr.MatchUnboxAny(out var v) && v == value;
-        public static bool MatchUnboxAny(this Instruction instr, out TypeReference value) {
+        public static bool MatchUnboxAny(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Unbox_Any) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1731,7 +1732,7 @@ namespace MonoMod.Cil {
             => instr.MatchRefanyval(out var v) && v.Is(value);
         public static bool MatchRefanyval(this Instruction instr, TypeReference value)
             => instr.MatchRefanyval(out var v) && v == value;
-        public static bool MatchRefanyval(this Instruction instr, out TypeReference value) {
+        public static bool MatchRefanyval(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Refanyval) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1755,7 +1756,7 @@ namespace MonoMod.Cil {
             => instr.MatchMkrefany(out var v) && v.Is(value);
         public static bool MatchMkrefany(this Instruction instr, TypeReference value)
             => instr.MatchMkrefany(out var v) && v == value;
-        public static bool MatchMkrefany(this Instruction instr, out TypeReference value) {
+        public static bool MatchMkrefany(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Mkrefany) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -1766,7 +1767,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchLdtoken(this Instruction instr, IMetadataTokenProvider value)
             => instr.MatchLdtoken(out var v) && v == value;
-        public static bool MatchLdtoken(this Instruction instr, out IMetadataTokenProvider value) {
+        public static bool MatchLdtoken(this Instruction instr, [MaybeNullWhen(false)] out IMetadataTokenProvider value) {
             if (instr.OpCode == OpCodes.Ldtoken) {
                 value = (IMetadataTokenProvider) instr.Operand;
                 return true;
@@ -1861,7 +1862,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchLeave(this Instruction instr, ILLabel value)
             => instr.MatchLeave(out var v) && v == value;
-        public static bool MatchLeave(this Instruction instr, out ILLabel value) {
+        public static bool MatchLeave(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Leave) {
                 value = (ILLabel) instr.Operand;
                 return true;
@@ -1872,7 +1873,7 @@ namespace MonoMod.Cil {
 
         public static bool MatchLeaveS(this Instruction instr, ILLabel value)
             => instr.MatchLeaveS(out var v) && v == value;
-        public static bool MatchLeaveS(this Instruction instr, out ILLabel value) {
+        public static bool MatchLeaveS(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
             if (instr.OpCode == OpCodes.Leave_S) {
                 value = (ILLabel) instr.Operand;
                 return true;
@@ -1947,9 +1948,9 @@ namespace MonoMod.Cil {
             => instr.MatchLdftn(out var v) && v.Is(value);
         public static bool MatchLdftn(this Instruction instr, MethodReference value)
             => instr.MatchLdftn(out var v) && v == value;
-        public static bool MatchLdftn(this Instruction instr, out MethodReference value) {
+        public static bool MatchLdftn(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
             if (instr.OpCode == OpCodes.Ldftn) {
-                value = instr.Operand as MethodReference;
+                value = (MethodReference)instr.Operand;
                 return true;
             }
             value = default;
@@ -1966,9 +1967,9 @@ namespace MonoMod.Cil {
             => instr.MatchLdvirtftn(out var v) && v.Is(value);
         public static bool MatchLdvirtftn(this Instruction instr, MethodReference value)
             => instr.MatchLdvirtftn(out var v) && v == value;
-        public static bool MatchLdvirtftn(this Instruction instr, out MethodReference value) {
+        public static bool MatchLdvirtftn(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
             if (instr.OpCode == OpCodes.Ldvirtftn) {
-                value = instr.Operand as MethodReference;
+                value = (MethodReference)instr.Operand;
                 return true;
             }
             value = default;
@@ -2106,7 +2107,7 @@ namespace MonoMod.Cil {
             => instr.MatchInitobj(out var v) && v.Is(value);
         public static bool MatchInitobj(this Instruction instr, TypeReference value)
             => instr.MatchInitobj(out var v) && v == value;
-        public static bool MatchInitobj(this Instruction instr, out TypeReference value) {
+        public static bool MatchInitobj(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Initobj) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -2123,7 +2124,7 @@ namespace MonoMod.Cil {
             => instr.MatchConstrained(out var v) && v.Is(value);
         public static bool MatchConstrained(this Instruction instr, TypeReference value)
             => instr.MatchConstrained(out var v) && v == value;
-        public static bool MatchConstrained(this Instruction instr, out TypeReference value) {
+        public static bool MatchConstrained(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Constrained) {
                 value = (TypeReference) instr.Operand;
                 return true;
@@ -2172,7 +2173,7 @@ namespace MonoMod.Cil {
             => instr.MatchSizeof(out var v) && v.Is(value);
         public static bool MatchSizeof(this Instruction instr, TypeReference value)
             => instr.MatchSizeof(out var v) && v == value;
-        public static bool MatchSizeof(this Instruction instr, out TypeReference value) {
+        public static bool MatchSizeof(this Instruction instr, [MaybeNullWhen(false)] out TypeReference value) {
             if (instr.OpCode == OpCodes.Sizeof) {
                 value = (TypeReference) instr.Operand;
                 return true;

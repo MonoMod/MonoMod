@@ -10,7 +10,7 @@ namespace MonoMod.Utils {
 #endif
     static class GCListener {
 
-        public static event Action OnCollect;
+        public static event Action? OnCollect;
         private static bool Unloading;
 
         static GCListener() {

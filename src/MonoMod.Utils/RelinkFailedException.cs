@@ -13,28 +13,28 @@ namespace MonoMod.Utils {
         public const string DefaultMessage = "MonoMod failed relinking";
 
         public IMetadataTokenProvider MTP;
-        public IMetadataTokenProvider Context;
+        public IMetadataTokenProvider? Context;
 
-        public RelinkFailedException(IMetadataTokenProvider mtp, IMetadataTokenProvider context = null)
+        public RelinkFailedException(IMetadataTokenProvider mtp, IMetadataTokenProvider? context = null)
             : this(_Format(DefaultMessage, mtp, context), mtp, context) {
         }
 
         public RelinkFailedException(string message,
-            IMetadataTokenProvider mtp, IMetadataTokenProvider context = null)
+            IMetadataTokenProvider mtp, IMetadataTokenProvider? context = null)
             : base(message) {
             MTP = mtp;
             Context = context;
         }
 
         public RelinkFailedException(string message, Exception innerException,
-            IMetadataTokenProvider mtp, IMetadataTokenProvider context = null)
+            IMetadataTokenProvider mtp, IMetadataTokenProvider? context = null)
             : base(message ?? _Format(DefaultMessage, mtp, context), innerException) {
             MTP = mtp;
             Context = context;
         }
 
         protected static string _Format(string message,
-            IMetadataTokenProvider mtp, IMetadataTokenProvider context) {
+            IMetadataTokenProvider mtp, IMetadataTokenProvider? context) {
             if (mtp == null && context == null)
                 return message;
 

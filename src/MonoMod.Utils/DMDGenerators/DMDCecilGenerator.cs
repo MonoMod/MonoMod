@@ -20,18 +20,18 @@ namespace MonoMod.Utils {
 #endif
     sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator> {
 
-        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object context) {
-            MethodDefinition def = dmd.Definition;
-            TypeDefinition typeDef = context as TypeDefinition;
+        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object? context) {
+            MethodDefinition def = dmd.Definition ?? throw new InvalidOperationException();
+            var typeDef = context as TypeDefinition;
 
-            bool moduleIsTemporary = false;
-            ModuleDefinition module = typeDef?.Module;
-            HashSet<string> accessChecksIgnored = null;
-            if (typeDef == null) {
+            var moduleIsTemporary = false;
+            var module = typeDef?.Module;
+            HashSet<string>? accessChecksIgnored = null;
+            if (typeDef is null || module is null) {
                 moduleIsTemporary = true;
                 accessChecksIgnored = new HashSet<string>();
 
-                string name = dmd.GetDumpName("Cecil");
+                var name = dmd.GetDumpName("Cecil");
                 module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
                     Kind = ModuleKind.Dll,
 #if !CECIL0_9
@@ -42,7 +42,7 @@ namespace MonoMod.Utils {
                 module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_UnverifiableCodeAttribute)));
 
                 if (dmd.Debug) {
-                    CustomAttribute caDebug = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_DebuggableAttribute));
+                    var caDebug = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_DebuggableAttribute));
                     caDebug.ConstructorArguments.Add(new CustomAttributeArgument(
                         module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
                         DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
@@ -63,14 +63,14 @@ namespace MonoMod.Utils {
 
             try {
 
-                MethodDefinition clone = null;
+                MethodDefinition? clone = null;
 
-                TypeReference tr_IsVolatile = new TypeReference("System.Runtime.CompilerServices", "IsVolatile", module, module.TypeSystem.CoreLibrary);
+                var tr_IsVolatile = new TypeReference("System.Runtime.CompilerServices", "IsVolatile", module, module.TypeSystem.CoreLibrary);
 
 #pragma warning disable IDE0039 // Use local function
                 Relinker relinker = (mtp, ctx) => {
                     if (mtp == def)
-                        return clone;
+                        return clone!;
                     return module.ImportReference(mtp);
                 };
 #pragma warning restore IDE0039 // Use local function
@@ -157,10 +157,11 @@ namespace MonoMod.Utils {
                     clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, type.Relink(relinker, clone)));
                 }
 
-                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"))) {
-                    string dir = Path.GetFullPath(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"));
-                    string name = module.Name + ".dll";
-                    string path = Path.Combine(dir, name);
+                var envDmdDump = Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP");
+                if (!string.IsNullOrEmpty(envDmdDump)) {
+                    var dir = Path.GetFullPath(envDmdDump);
+                    var name = module.Name + ".dll";
+                    var path = Path.Combine(dir, name);
                     dir = Path.GetDirectoryName(path);
                     if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                         Directory.CreateDirectory(dir);
@@ -172,13 +173,15 @@ namespace MonoMod.Utils {
 
                 Assembly asm = ReflectionHelper.Load(module);
 
-                return asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false)
-                    .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+                return asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false)!
+                    .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
+                    ?? throw new InvalidOperationException("Could not find generated method");
 
             } finally {
 #if !CECIL0_9
                 if (moduleIsTemporary)
                     module.Dispose();
+                module = null;
 #endif
             }
         }

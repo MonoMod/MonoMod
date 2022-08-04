@@ -12,7 +12,7 @@ namespace MonoMod.Cil {
         /// <summary>
         /// The target instruction this label points at.
         /// </summary>
-        public Instruction Target;
+        public Instruction? Target;
         
         /// <summary>
         /// All instructions using this label.
@@ -25,7 +25,7 @@ namespace MonoMod.Cil {
             Context._Labels.Add(this);
         }
 
-        internal ILLabel(ILContext context, Instruction target)
+        internal ILLabel(ILContext context, Instruction? target)
             : this(context) {
             Target = target;
         }

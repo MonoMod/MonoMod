@@ -21,12 +21,13 @@ namespace MonoMod.Utils {
         // https://github.com/mono/mono/blob/1317cf06da06682419f8f4b0c9810ad5d5d3ac3a/mcs/class/corlib/System.Reflection.Emit/SignatureHelper.cs#L55
         private static readonly FieldInfo f_SignatureHelper_module =
             typeof(SignatureHelper).GetField("m_module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance) ??
-            typeof(SignatureHelper).GetField("module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            typeof(SignatureHelper).GetField("module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Could not get module field for SignatureHelper");
 
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, ICallSiteGenerator signature)
             => signature.ToCallSite(moduleTo);
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, SignatureHelper signature)
-            => moduleTo.ImportCallSite(f_SignatureHelper_module.GetValue(signature) as Module, signature.GetSignature());
+            => moduleTo.ImportCallSite((Module)f_SignatureHelper_module.GetValue(signature)!, signature.GetSignature());
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, int token)
             => moduleTo.ImportCallSite(moduleFrom, moduleFrom.ResolveSignature(token));
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, byte[] data) {

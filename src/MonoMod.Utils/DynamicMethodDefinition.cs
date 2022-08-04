@@ -1,19 +1,13 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System.Linq;
 using System.Diagnostics;
-using System.ComponentModel;
 using System.Security;
-using System.Security.Permissions;
-using System.Diagnostics.SymbolStore;
-using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
-using System.Globalization;
+using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
@@ -48,24 +42,22 @@ namespace MonoMod.Utils {
 
         public static bool IsDynamicILAvailable => !_PreferCecil;
 
-        internal static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
-        internal static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(new Type[] { });
-        internal static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new Type[] { typeof(string) });
+        internal static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) })!;
+        internal static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(ArrayEx.Empty<Type>())!;
+        internal static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[] { typeof(string) })!;
 
         internal static readonly Type t__IDMDGenerator = typeof(_IDMDGenerator);
         internal static readonly Dictionary<string, _IDMDGenerator> _DMDGeneratorCache = new Dictionary<string, _IDMDGenerator>();
 
-        [Obsolete("Use OriginalMethod instead.")]
-        public MethodBase Method => OriginalMethod;
-        public MethodBase OriginalMethod { get; private set; }
-        private MethodDefinition _Definition;
-        public MethodDefinition Definition => _Definition;
-        private ModuleDefinition _Module;
-        public ModuleDefinition Module => _Module;
+        public MethodBase? OriginalMethod { get; private set; }
+        private MethodDefinition? _Definition;
+        public MethodDefinition? Definition => _Definition;
+        private ModuleDefinition? _Module;
+        public ModuleDefinition? Module => _Module;
 
-        public string Name;
+        public string? Name;
 
-        public Type OwnerType;
+        public Type? OwnerType;
 
         public bool Debug = false;
 
@@ -91,15 +83,21 @@ namespace MonoMod.Utils {
             _CreateDynModule(name, returnType, parameterTypes);
         }
 
+        [MemberNotNull(nameof(Definition))]
         public ILProcessor GetILProcessor() {
+            if (Definition is null)
+                throw new InvalidOperationException();
             return Definition.Body.GetILProcessor();
         }
 
+        [MemberNotNull(nameof(Definition))]
         public ILGenerator GetILGenerator() {
+            if (Definition is null)
+                throw new InvalidOperationException();
             return new Cil.CecilILGenerator(Definition.Body.GetILProcessor()).GetProxy();
         }
 
-        private ModuleDefinition _CreateDynModule(string name, Type returnType, Type[] parameterTypes) {
+        private ModuleDefinition _CreateDynModule(string name, Type? returnType, Type[] parameterTypes) {
             ModuleDefinition module = _Module = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
                 Kind = ModuleKind.Dll,
 #if !CECIL0_9
@@ -127,11 +125,11 @@ namespace MonoMod.Utils {
         }
 
         public void Reload() {
-            MethodBase orig = OriginalMethod;
+            var orig = OriginalMethod;
             if (orig == null)
                 throw new InvalidOperationException();
 
-            ModuleDefinition module = null;
+            ModuleDefinition? module = null;
 
             try {
                 _Definition = null;
@@ -158,7 +156,7 @@ namespace MonoMod.Utils {
 
                 _CopyMethodToDefinition();
 
-                MethodDefinition def = Definition;
+                var def = Definition ?? throw new InvalidOperationException();
                 if (!orig.IsStatic) {
                     def.Parameters[0].Name = "this";
                 }
@@ -177,10 +175,10 @@ namespace MonoMod.Utils {
 
         public MethodInfo Generate()
             => Generate(null);
-        public MethodInfo Generate(object context) {
-            string typeName = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
+        public MethodInfo Generate(object? context) {
+            var typeName = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
 
-            switch (typeName?.ToLower(CultureInfo.InvariantCulture)) {
+            switch (typeName?.ToLowerInvariant()) {
                 case "dynamicmethod":
                 case "dm":
                     return DMDEmitDynamicMethodGenerator.Generate(this, context);
@@ -196,13 +194,15 @@ namespace MonoMod.Utils {
                     return DMDCecilGenerator.Generate(this, context);
 
                 default:
-                    Type type = ReflectionHelper.GetType(typeName);
-                    if (type != null) {
-                        if (!t__IDMDGenerator.IsCompatible(type))
-                            throw new ArgumentException($"Invalid DMDGenerator type: {typeName}");
-                        if (!_DMDGeneratorCache.TryGetValue(typeName, out _IDMDGenerator gen))
-                            _DMDGeneratorCache[typeName] = gen = Activator.CreateInstance(type) as _IDMDGenerator;
-                        return gen.Generate(this, context);
+                    if (typeName is not null) {
+                        var type = ReflectionHelper.GetType(typeName);
+                        if (type != null) {
+                            if (!t__IDMDGenerator.IsCompatible(type))
+                                throw new ArgumentException($"Invalid DMDGenerator type: {typeName}");
+                            if (!_DMDGeneratorCache.TryGetValue(typeName, out var gen))
+                                _DMDGeneratorCache[typeName] = gen = (_IDMDGenerator) Activator.CreateInstance(type)!;
+                            return gen.Generate(this, context);
+                        }
                     }
 
                     if (_PreferCecil)
@@ -219,7 +219,7 @@ namespace MonoMod.Utils {
                     // This is a non-issue in .NET Core, yet it could still be an issue in mono.
                     // https://github.com/dotnet/coreclr/issues/1764
 #if NETFRAMEWORK
-                    if (Definition.Body.ExceptionHandlers.Any(eh =>
+                    if (Definition!.Body.ExceptionHandlers.Any(eh =>
                         eh.HandlerType == ExceptionHandlerType.Fault ||
                         eh.HandlerType == ExceptionHandlerType.Filter
                     ))
@@ -234,7 +234,7 @@ namespace MonoMod.Utils {
             if (_IsDisposed)
                 return;
             _IsDisposed = true;
-            _Module.Dispose();
+            _Module?.Dispose();
         }
 
         public string GetDumpName(string type) {

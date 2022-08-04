@@ -17,10 +17,10 @@ namespace MonoMod.Utils {
             "Invoke", BindingFlags.Public | BindingFlags.Instance, null,
             new Type[] { typeof(object), typeof(object[]) },
             null
-        );
+        )!;
 
         private static MethodBuilder _CreateMethodProxy(MethodBuilder context, MethodInfo target) {
-            TypeBuilder tb = (TypeBuilder) context.DeclaringType;
+            TypeBuilder tb = (TypeBuilder) context.DeclaringType!;
             string name = $".dmdproxy<{target.Name.Replace('.', '_')}>?{target.GetHashCode()}";
             MethodBuilder mb;
 
@@ -58,7 +58,7 @@ namespace MonoMod.Utils {
                 Type argType = args[i];
                 bool argIsByRef = argType.IsByRef;
                 if (argIsByRef)
-                    argType = argType.GetElementType();
+                    argType = argType.GetElementType() ?? argType;
                 bool argIsValueType = argType.IsValueType;
                 if (argIsValueType) {
                     il.Emit(OpCodes.Box, argType);

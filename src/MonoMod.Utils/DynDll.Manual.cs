@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.ComponentModel;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
@@ -17,7 +18,7 @@ namespace MonoMod.Utils {
         #region kernel32 imports
 
         [DllImport("kernel32", SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
+        private static extern IntPtr GetModuleHandle(string? lpModuleName);
         [DllImport("kernel32", SetLastError = true)]
         private static extern IntPtr LoadLibrary(string lpFileName);
         [DllImport("kernel32", SetLastError = true)]
@@ -30,7 +31,7 @@ namespace MonoMod.Utils {
         #region dl imports
 
         [DllImport("dl", EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        private static extern IntPtr dl_dlopen(string filename, int flags);
+        private static extern IntPtr dl_dlopen(string? filename, int flags);
         [DllImport("dl", EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private static extern bool dl_dlclose(IntPtr handle);
         [DllImport("dl", EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
@@ -43,7 +44,7 @@ namespace MonoMod.Utils {
         #region libdl.so.2 imports
 
         [DllImport("libdl.so.2", EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        private static extern IntPtr dl2_dlopen(string filename, int flags);
+        private static extern IntPtr dl2_dlopen(string? filename, int flags);
         [DllImport("libdl.so.2", EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private static extern bool dl2_dlclose(IntPtr handle);
         [DllImport("libdl.so.2", EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
@@ -57,7 +58,7 @@ namespace MonoMod.Utils {
 
         private static int dlVersion = 1;
 
-        private static IntPtr dlopen(string filename, int flags) {
+        private static IntPtr dlopen(string? filename, int flags) {
             while (true) {
                 try {
                     switch (dlVersion) {
@@ -133,7 +134,7 @@ namespace MonoMod.Utils {
                 dlerror();
         }
 
-        private static bool CheckError(out Exception exception) {
+        private static bool CheckError([NotNullWhen(false)] out Exception? exception) {
             if (PlatformHelper.Is(Platform.Windows)) {
                 int errorCode = Marshal.GetLastWin32Error();
                 if (errorCode != 0) {

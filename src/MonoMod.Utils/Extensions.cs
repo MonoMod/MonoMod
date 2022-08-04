@@ -23,14 +23,14 @@ namespace MonoMod.Utils {
 
         // Use this source file for any extensions which don't deserve their own source files.
 
-        private static readonly object[] _NoArgs = new object[0];
+        private static readonly object?[] _NoArgs = ArrayEx.Empty<object?>();
 
         private static readonly Dictionary<Type, FieldInfo> fmap_mono_assembly = new Dictionary<Type, FieldInfo>();
         // Old versions of Mono which lack the arch field in MonoAssemblyName don't parse ProcessorArchitecture.
         private static readonly bool _MonoAssemblyNameHasArch =
             new AssemblyName("Dummy, ProcessorArchitecture=MSIL").ProcessorArchitecture == ProcessorArchitecture.MSIL;
 
-        private static readonly Type _RTDynamicMethod =
+        private static readonly Type? _RTDynamicMethod =
             typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic | BindingFlags.Public);
 
         /// <summary>
@@ -61,10 +61,12 @@ namespace MonoMod.Utils {
             if (member.DeclaringType == member.ReflectedType)
                 return member;
 
-            int mt = member.MetadataToken;
-            foreach (MemberInfo other in member.DeclaringType.GetMembers((BindingFlags) (-1))) {
-                if (other.MetadataToken == mt)
-                    return (T) other;
+            if (member.DeclaringType is not null) {
+                var mt = member.MetadataToken;
+                foreach (MemberInfo other in member.DeclaringType.GetMembers((BindingFlags) (-1))) {
+                    if (other.MetadataToken == mt)
+                        return (T) other;
+                }
             }
 
             return member;
@@ -85,17 +87,18 @@ namespace MonoMod.Utils {
             // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L247
             // https://github.com/mono/mono/blob/ee3a669dc30689af8c8919afc61d226683a1aaa3/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L258
             
-            Type asmType = asm?.GetType();
+            var asmType = asm.GetType();
             if (asmType == null)
                 return;
 
             // _mono_assembly has changed places between Mono versions.
-            FieldInfo f_mono_assembly;
+            FieldInfo? f_mono_assembly;
             lock (fmap_mono_assembly) {
                 if (!fmap_mono_assembly.TryGetValue(asmType, out f_mono_assembly)) {
                     f_mono_assembly =
                         asmType.GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance) ??
-                        asmType.GetField("dynamic_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                        asmType.GetField("dynamic_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                        ?? throw new InvalidOperationException("Could not find assembly field for Mono");
                     fmap_mono_assembly[asmType] = f_mono_assembly;
                 }
             }
@@ -104,15 +107,17 @@ namespace MonoMod.Utils {
 
             // Assemblies marked as corlib_internal are hidden from AppDomain.GetAssemblies()
             // Make sure that at least the ReflectionHelper can find anything inside of them.
-            AssemblyName name = new AssemblyName(asm.FullName);
+            var name = asm.GetName();
             lock (ReflectionHelper.AssemblyCache) {
-                WeakReference asmRef = new WeakReference(asm);
+                var asmRef = new WeakReference(asm);
                 ReflectionHelper.AssemblyCache[asm.GetRuntimeHashedFullName()] = asmRef;
                 ReflectionHelper.AssemblyCache[name.FullName] = asmRef;
-                ReflectionHelper.AssemblyCache[name.Name] = asmRef;
+                if (name.Name is not null) {
+                    ReflectionHelper.AssemblyCache[name.Name] = asmRef;
+                }
             }
             
-            long asmPtr = 0L;
+            var asmPtr = 0L;
             // For AssemblyBuilders, dynamic_assembly is of type UIntPtr which doesn't cast to IntPtr
             switch (f_mono_assembly.GetValue(asm)) {
                 case IntPtr i:
@@ -123,7 +128,7 @@ namespace MonoMod.Utils {
                     break;
             }
             
-            int offs =
+            var offs =
                 // ref_count (4 + padding)
                 IntPtr.Size +
                 // basedir
@@ -193,13 +198,15 @@ namespace MonoMod.Utils {
 
             // Fake DynamicMethods aren't part of their declaring type.
             // Sounds obvious, but seems like the only real method to verify that it's a fake DynamicMethod.
-            foreach (MethodInfo other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
-                if (method == other)
-                    return false;
+            if (method.DeclaringType is not null) {
+                foreach (MethodInfo other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                    if (method == other)
+                        return false;
+            }
             return true;
         }
 
-        public static object SafeGetTarget(this WeakReference weak) {
+        public static object? SafeGetTarget(this WeakReference weak) {
             try {
                 return weak.Target;
             } catch (InvalidOperationException) {

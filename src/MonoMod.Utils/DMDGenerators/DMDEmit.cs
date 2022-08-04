@@ -23,32 +23,32 @@ namespace MonoMod.Utils {
 
         static _DMDEmit() {
             foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                System.Reflection.Emit.OpCode reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null);
+                var reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null)!;
                 _ReflOpCodes[reflOpCode.Value] = reflOpCode;
             }
 
             foreach (FieldInfo field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                Mono.Cecil.Cil.OpCode cecilOpCode = (Mono.Cecil.Cil.OpCode) field.GetValue(null);
+                var cecilOpCode = (Mono.Cecil.Cil.OpCode) field.GetValue(null)!;
                 _CecilOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
         }
 
         public static void Generate(DynamicMethodDefinition dmd, MethodBase _mb, ILGenerator il) {
-            MethodDefinition def = dmd.Definition;
-            DynamicMethod dm = _mb as DynamicMethod;
+            MethodDefinition def = dmd.Definition ?? throw new InvalidOperationException();
+            var dm = _mb as DynamicMethod;
 #if NETFRAMEWORK
-            MethodBuilder mb = _mb as MethodBuilder;
-            ModuleBuilder moduleBuilder = mb?.Module as ModuleBuilder;
+            var mb = _mb as MethodBuilder;
+            var moduleBuilder = mb?.Module as ModuleBuilder;
             // moduleBuilder.Assembly sometimes avoids the .Assembly override under mysterious circumstances.
-            AssemblyBuilder assemblyBuilder = (mb?.DeclaringType as TypeBuilder)?.Assembly as AssemblyBuilder;
-            HashSet<Assembly> accessChecksIgnored = null;
+            var assemblyBuilder = (mb?.DeclaringType as TypeBuilder)?.Assembly as AssemblyBuilder;
+            HashSet<Assembly>? accessChecksIgnored = null;
             if (mb != null) {
                 accessChecksIgnored = new HashSet<Assembly>();
             }
 #endif
 
 #if !CECIL0_9
-            MethodDebugInformation defInfo = dmd.Debug ? def.DebugInformation : null;
+            var defInfo = dmd.Debug ? def.DebugInformation : null;
 #endif
 
             if (dm != null) {
@@ -77,7 +77,7 @@ namespace MonoMod.Utils {
             ).ToArray();
 
             // Pre-pass - Set up label map.
-            Dictionary<Instruction, Label> labelMap = new Dictionary<Instruction, Label>();
+            var labelMap = new Dictionary<Instruction, Label>();
             foreach (Instruction instr in def.Body.Instructions) {
                 if (instr.Operand is Instruction[] targets) {
                     foreach (Instruction target in targets)
@@ -91,19 +91,19 @@ namespace MonoMod.Utils {
             }
 
 #if NETFRAMEWORK && !CECIL0_9
-            Dictionary<Document, ISymbolDocumentWriter> infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
+            var infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
 #endif
 
-            int paramOffs = def.HasThis ? 1 : 0;
-            object[] emitArgs = new object[2];
-            bool checkTryEndEarly = false;
+            var paramOffs = def.HasThis ? 1 : 0;
+            var emitArgs = new object?[2];
+            var checkTryEndEarly = false;
             foreach (Instruction instr in def.Body.Instructions) {
                 if (labelMap.TryGetValue(instr, out Label label))
                     il.MarkLabel(label);
 
 #if NETFRAMEWORK && !CECIL0_9
-                SequencePoint instrInfo = defInfo?.GetSequencePoint(instr);
-                if (mb != null && instrInfo != null) {
+                var instrInfo = defInfo?.GetSequencePoint(instr);
+                if (mb is not null && instrInfo is not null && infoDocCache is not null && moduleBuilder is not null) {
                     if (!infoDocCache.TryGetValue(instrInfo.Document, out ISymbolDocumentWriter infoDoc)) {
                         infoDocCache[instrInfo.Document] = infoDoc = moduleBuilder.DefineDocument(
                             instrInfo.Document.Url,
@@ -128,7 +128,7 @@ namespace MonoMod.Utils {
                     } else if (handler.HandlerStart == instr) {
                         switch (handler.HandlerType) {
                             case ExceptionHandlerType.Filter:
-                                il.BeginCatchBlock(null);
+                                il.BeginExceptFilterBlock();
                                 break;
                             case ExceptionHandlerType.Catch:
                                 il.BeginCatchBlock(handler.CatchType.ResolveReflection());
@@ -185,11 +185,11 @@ namespace MonoMod.Utils {
 #if NETFRAMEWORK
                         if (mb != null && member != null) {
                             // See DMDGenerator.cs for the explanation of this forced .?
-                            Module module = member?.Module;
+                            var module = member.Module;
                             if (module == null)
                                 continue;
-                            Assembly asm = module.Assembly;
-                            if (asm != null && !accessChecksIgnored.Contains(asm)) {
+                            var asm = module.Assembly;
+                            if (asm != null && accessChecksIgnored is not null && assemblyBuilder is not null && !accessChecksIgnored.Contains(asm)) {
                                 // while (member.DeclaringType != null)
                                 //     member = member.DeclaringType;
                                 assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, new object[] {
@@ -207,10 +207,13 @@ namespace MonoMod.Utils {
                             continue;
                         }
 #if NETFRAMEWORK
-                        operand = csite.ResolveReflection(mb.Module);
-#else
-                        throw new NotSupportedException();
+                        if (mb is not null) {
+                            operand = csite.ResolveReflection(mb.Module);
+                        } else
 #endif
+                        {
+                            throw new NotSupportedException();
+                        }
                     }
 
 #if NETFRAMEWORK
@@ -260,13 +263,13 @@ namespace MonoMod.Utils {
             }
         }
 
-        public static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type> modReq = null, List<Type> modOpt = null) {
-            if (modReq == null)
+        public static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type>? modReq = null, List<Type>? modOpt = null) {
+            if (modReq is null)
                 modReq = new List<Type>();
             else
                 modReq.Clear();
 
-            if (modOpt == null)
+            if (modOpt is null)
                 modOpt = new List<Type>();
             else
                 modOpt.Clear();

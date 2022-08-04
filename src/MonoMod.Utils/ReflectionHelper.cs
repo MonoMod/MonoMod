@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.IO;
 using System.Text;
 using AssemblyHashAlgorithm = Mono.Cecil.AssemblyHashAlgorithm;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
@@ -47,7 +48,7 @@ namespace MonoMod.Utils {
                     ResolveReflectionCache[cacheKey] = new WeakReference(value);
                 }
             }
-            return value;
+            return value!;
         }
 
         public static Assembly Load(ModuleDefinition module) {
@@ -87,11 +88,11 @@ namespace MonoMod.Utils {
             return asm;
         }
 
-        public static Type GetType(string name) {
+        public static Type? GetType(string name) {
             if (string.IsNullOrEmpty(name))
                 return null;
 
-            Type type = Type.GetType(name);
+            var type = Type.GetType(name);
             if (type != null)
                 return type;
 
@@ -133,20 +134,21 @@ namespace MonoMod.Utils {
         }
 
         public static Type ResolveReflection(this TypeReference mref)
-            => _ResolveReflection(mref, null) as Type;
+            => (Type) _ResolveReflection(mref, null);
         public static MethodBase ResolveReflection(this MethodReference mref)
-            => _ResolveReflection(mref, null) as MethodBase;
+            => (MethodBase) _ResolveReflection(mref, null);
         public static FieldInfo ResolveReflection(this FieldReference mref)
-            => _ResolveReflection(mref, null) as FieldInfo;
+            => (FieldInfo) _ResolveReflection(mref, null);
         public static PropertyInfo ResolveReflection(this PropertyReference mref)
-            => _ResolveReflection(mref, null) as PropertyInfo;
+            => (PropertyInfo) _ResolveReflection(mref, null);
         public static EventInfo ResolveReflection(this EventReference mref)
-            => _ResolveReflection(mref, null) as EventInfo;
+            => (EventInfo) _ResolveReflection(mref, null);
 
         public static MemberInfo ResolveReflection(this MemberReference mref)
             => _ResolveReflection(mref, null);
 
-        private static MemberInfo _ResolveReflection(MemberReference mref, Module[] modules) {
+        [return: NotNullIfNotNull("mref")]
+        private static MemberInfo? _ResolveReflection(MemberReference? mref, Module[]? modules) {
             if (mref == null)
                 return null;
 
@@ -167,13 +169,13 @@ namespace MonoMod.Utils {
              * even more often than that.
              */
 
-            TypeReference tscope =
+            var tscope =
                 mref.DeclaringType ??
                 mref as TypeReference ??
                 null;
 
-            string asmName;
-            string moduleName;
+            string? asmName;
+            string? moduleName;
 
             switch (tscope?.Scope) {
                 case AssemblyNameReference asmNameRef:
@@ -202,12 +204,12 @@ namespace MonoMod.Utils {
             cacheKey = $"{cacheKey} | {asmName ?? "NOASSEMBLY"}, {moduleName ?? "NOMODULE"}";
 
             lock (ResolveReflectionCache) {
-                if (ResolveReflectionCache.TryGetValue(cacheKey, out WeakReference cachedRef) &&
+                if (ResolveReflectionCache.TryGetValue(cacheKey, out var cachedRef) &&
                     cachedRef != null && cachedRef.SafeGetTarget() is MemberInfo cached)
                     return cached;
             }
 
-            Type type;
+            Type? type;
 
             // Special cases.
             if (mref is GenericParameter genParam) {
@@ -217,11 +219,11 @@ namespace MonoMod.Utils {
 
             if (mref is MethodReference method && mref.DeclaringType is ArrayType) {
                 // ArrayType holds special methods.
-                type = _ResolveReflection(mref.DeclaringType, modules) as Type;
+                type = (Type)_ResolveReflection(mref.DeclaringType, modules);
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
-                string methodID = method.GetID(withType: false);
-                MethodBase found = 
+                var methodID = method.GetID(withType: false);
+                var found = 
                     type.GetMethods(_BindingFlagsAll).Cast<MethodBase>()
                     .Concat(type.GetConstructors(_BindingFlagsAll))
                     .FirstOrDefault(m => m.GetID(withType: false) == methodID);
@@ -252,7 +254,7 @@ namespace MonoMod.Utils {
             nullifyModules = true;
 
             if (modules == null) {
-                Assembly[] asms = null;
+                Assembly[]? asms = null;
 
                 if (tryAssemblyCache && refetchingModules) {
                     refetchingModules = false;
@@ -261,18 +263,18 @@ namespace MonoMod.Utils {
 
                 if (tryAssemblyCache)
                     lock (AssemblyCache)
-                        if (AssemblyCache.TryGetValue(asmName, out WeakReference asmRef) &&
+                        if (AssemblyCache.TryGetValue(asmName!, out var asmRef) &&
                             asmRef.SafeGetTarget() is Assembly asm)
                             asms = new Assembly[] { asm };
 
                 if (asms == null) {
                     if (!refetchingModules)
                         lock (AssembliesCache)
-                            if (AssembliesCache.TryGetValue(asmName, out WeakReference[] asmRefs))
+                            if (AssembliesCache.TryGetValue(asmName!, out var asmRefs))
                                 asms = asmRefs
                                     .Select(asmRef => asmRef.SafeGetTarget() as Assembly)
                                     .Where(asm => asm != null)
-                                    .ToArray();
+                                    .ToArray()!;
                 }
 
                 if (asms == null) {
@@ -291,7 +293,7 @@ namespace MonoMod.Utils {
                      * - ade
                      */
 
-                    int split = asmName.IndexOf(AssemblyHashNameTag, StringComparison.Ordinal);
+                    int split = asmName!.IndexOf(AssemblyHashNameTag, StringComparison.Ordinal);
                     if (split != -1 && int.TryParse(asmName.Substring(split + 2), out int hash)) {
                         asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetHashCode() == hash).ToArray();
                         if (asms.Length == 0)
@@ -317,7 +319,7 @@ namespace MonoMod.Utils {
                     (string.IsNullOrEmpty(moduleName) ?
                         asms.SelectMany(asm => asm.GetModules()) :
                         asms.Select(asm => asm.GetModule(moduleName))
-                    ).Where(mod => mod != null).ToArray();
+                    ).Where(mod => mod != null).ToArray()!;
 
                 if (modules.Length == 0)
                     throw new Exception($"Cannot resolve assembly / module {asmName} / {moduleName}");
@@ -328,9 +330,7 @@ namespace MonoMod.Utils {
                     throw new ArgumentException("Type <Module> cannot be resolved to a runtime reflection type");
 
                 if (mref is TypeSpecification ts) {
-                    type = _ResolveReflection(ts.ElementType, null) as Type;
-                    if (type == null)
-                        return null;
+                    type = (Type) _ResolveReflection(ts.ElementType, null);
 
                     if (ts.IsByReference)
                         return _Cache(cacheKey, type.MakeByRefType());
@@ -339,10 +339,10 @@ namespace MonoMod.Utils {
                         return _Cache(cacheKey, type.MakePointerType());
 
                     if (ts.IsArray)
-                        return _Cache(cacheKey, (ts as ArrayType).IsVector ? type.MakeArrayType() : type.MakeArrayType((ts as ArrayType).Dimensions.Count));
+                        return _Cache(cacheKey, ((ArrayType)ts).IsVector ? type.MakeArrayType() : type.MakeArrayType(((ArrayType)ts).Dimensions.Count));
 
                     if (ts.IsGenericInstance)
-                        return _Cache(cacheKey, type.MakeGenericType((ts as GenericInstanceType).GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray()));
+                        return _Cache(cacheKey, type.MakeGenericType(((GenericInstanceType)ts).GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray()!));
 
                 } else {
                     type = modules
@@ -356,17 +356,16 @@ namespace MonoMod.Utils {
                         goto RefetchModules;
                 }
 
-                return _Cache(cacheKey, type);
+                return _Cache(cacheKey, type!);
             }
 
-            bool typeless = mref.DeclaringType.FullName == "<Module>";
+            bool typeless = mref.DeclaringType?.FullName == "<Module>";
 
-            MemberInfo member;
+            MemberInfo? member;
 
             if (mref is GenericInstanceMethod mrefGenMethod) {
                 member = _ResolveReflection(mrefGenMethod.ElementMethod, modules);
-                member = (member as MethodInfo)?.MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray());
-
+                member = (member as MethodInfo)?.MakeGenericMethod(mrefGenMethod.GenericArguments.Select(arg => _ResolveReflection(arg, null) as Type).ToArray()!);
             } else if (typeless) {
                 if (mref is MethodReference)
                     member = modules
@@ -380,19 +379,19 @@ namespace MonoMod.Utils {
                     throw new NotSupportedException($"Unsupported <Module> member type {mref.GetType().FullName}");
 
             } else {
-                Type declType = _ResolveReflection(mref.DeclaringType, modules) as Type;
+                var declType = (Type?) _ResolveReflection(mref.DeclaringType, modules);
 
                 if (mref is MethodReference)
-                    member = declType
+                    member = declType!
                         .GetMethods(_BindingFlagsAll).Cast<MethodBase>()
                         .Concat(declType.GetConstructors(_BindingFlagsAll))
                         .FirstOrDefault(m => mref.Is(m));
                 else if (mref is FieldReference) 
-                    member = declType
+                    member = declType!
                         .GetFields(_BindingFlagsAll)
                         .FirstOrDefault(m => mref.Is(m));
                 else
-                    member = declType
+                    member = declType!
                         .GetMembers(_BindingFlagsAll)
                         .FirstOrDefault(m => mref.Is(m));
             }
@@ -400,7 +399,7 @@ namespace MonoMod.Utils {
             if (member == null && !refetchingModules)
                 goto RefetchModules;
 
-            return _Cache(cacheKey, member);
+            return _Cache(cacheKey, member!);
         }
 
         public static SignatureHelper ResolveReflection(this CallSite csite, Module context)

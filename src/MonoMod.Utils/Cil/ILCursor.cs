@@ -64,14 +64,14 @@ namespace MonoMod.Cil {
         public ILContext Context { get; }
 
         // private state
-        private Instruction _next;
-        private ILLabel[] _afterLabels;
+        private Instruction? _next;
+        private ILLabel[]? _afterLabels;
         private SearchTarget _searchTarget;
 
         /// <summary>
         /// The instruction immediately following the cursor position or null if the cursor is at the end of the instruction list.
         /// </summary>
-        public Instruction Next {
+        public Instruction? Next {
             get => _next;
             set => Goto(value);
         }
@@ -200,7 +200,7 @@ namespace MonoMod.Cil {
         /// <param name="moveType">Where to move in relation to the target instruction and incoming labels (branches)</param>
         /// <param name="setTarget">Whether to set the `SearchTarget` and skip the target instruction with the next search function</param>
         /// <returns>this</returns>
-        public ILCursor Goto(Instruction insn, MoveType moveType = MoveType.Before, bool setTarget = false) {
+        public ILCursor Goto(Instruction? insn, MoveType moveType = MoveType.Before, bool setTarget = false) {
             if (moveType == MoveType.After)
                 // Moving past the end of the method shouldn't move any further, nor wrap around.
                 _next = insn?.Next;
@@ -403,7 +403,7 @@ namespace MonoMod.Cil {
         /// Set the target of a label to the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
         /// <param name="label">The label to mark</param>
-        public void MarkLabel(ILLabel label) {
+        public void MarkLabel(ILLabel? label) {
             if (label == null)
                 label = new ILLabel(Context);
 
@@ -444,7 +444,7 @@ namespace MonoMod.Cil {
         /// </summary>
         public ILCursor Remove() {
             int index = Index;
-            _Retarget(Next.Next, MoveType.Before);
+            _Retarget(Next?.Next, MoveType.Before);
             Instrs.RemoveAt(index);
             return this;
         }
@@ -463,7 +463,7 @@ namespace MonoMod.Cil {
         /// <summary>
         /// Move the cursor and all labels the cursor is positioned after to a target instruction
         /// </summary>
-        private void _Retarget(Instruction next, MoveType moveType) {
+        private void _Retarget(Instruction? next, MoveType moveType) {
             if (_afterLabels != null)
                 foreach (ILLabel label in _afterLabels)
                     label.Target = next;
@@ -638,7 +638,7 @@ namespace MonoMod.Cil {
         /// <param name="memberName">The accessed member name.</param>
         /// <returns>this</returns>
         public ILCursor Emit<T>(OpCode opcode, string memberName)
-            => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).FirstOrDefault()));
+            => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).First()));
 
         #endregion
 
@@ -677,8 +677,8 @@ namespace MonoMod.Cil {
 
             int id = EmitReference(cb);
 
-            MethodInfo delInvoke = typeof(T).GetMethod("Invoke");
-            MethodInfo invoker = Context.ReferenceBag.GetDelegateInvoker<T>();
+            var delInvoke = typeof(T).GetMethod("Invoke")!;
+            var invoker = Context.ReferenceBag.GetDelegateInvoker<T>();
             if (invoker != null) {
                 // Prevent the invoker from getting GC'd early, f.e. when it's a DynamicMethod.
                 AddReference(invoker);

@@ -41,7 +41,7 @@ namespace MonoMod.Utils {
         }
 
         private static bool InternalTryOpenLibraryMapping(string name, out IntPtr libraryPtr, bool skipMapping, int? flags) {
-            if (name != null && !skipMapping && Mappings.TryGetValue(name, out List<DynDllMapping> mappingList)) {
+            if (name != null && !skipMapping && Mappings.TryGetValue(name, out var mappingList)) {
                 foreach (DynDllMapping mapping in mappingList) {
                     if (InternalTryOpenLibraryMapping(mapping.LibraryName, out libraryPtr, true, mapping.Flags))
                         return true;

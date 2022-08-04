@@ -21,7 +21,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static TypeDefinition SafeResolve(this TypeReference r) {
+        public static TypeDefinition? SafeResolve(this TypeReference r) {
             try {
                 return r.Resolve();
             } catch {
@@ -34,7 +34,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static FieldDefinition SafeResolve(this FieldReference r) {
+        public static FieldDefinition? SafeResolve(this FieldReference r) {
             try {
                 return r.Resolve();
             } catch {
@@ -47,7 +47,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static MethodDefinition SafeResolve(this MethodReference r) {
+        public static MethodDefinition? SafeResolve(this MethodReference r) {
             try {
                 return r.Resolve();
             } catch {
@@ -60,7 +60,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static PropertyDefinition SafeResolve(this PropertyReference r) {
+        public static PropertyDefinition? SafeResolve(this PropertyReference r) {
             try {
                 return r.Resolve();
             } catch {
@@ -74,7 +74,7 @@ namespace MonoMod.Utils {
         /// <param name="cap">The attribute provider.</param>
         /// <param name="attribute">The custom attribute name.</param>
         /// <returns>The first matching custom attribute, or null if no matching attribute has been found.</returns>
-        public static CustomAttribute GetCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
+        public static CustomAttribute? GetCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
             if (cap == null || !cap.HasCustomAttributes)
                 return null;
             foreach (CustomAttribute attrib in cap.CustomAttributes)
@@ -174,7 +174,7 @@ namespace MonoMod.Utils {
 
             bool callingBaseType = false;
             try {
-                TypeDefinition baseType = caller.DeclaringType;
+                TypeDefinition? baseType = caller.DeclaringType;
                 while ((baseType = baseType.BaseType?.SafeResolve()) != null)
                     if (baseType.GetPatchFullName() == calledTypeName) {
                         callingBaseType = true;

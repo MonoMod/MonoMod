@@ -2,17 +2,9 @@
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Linq;
 using System.Diagnostics;
-using System.ComponentModel;
-using System.Security.Permissions;
-using System.Security;
-using System.Diagnostics.SymbolStore;
 using System.IO;
 
 namespace MonoMod.Utils {
@@ -23,15 +15,15 @@ namespace MonoMod.Utils {
 
         private static readonly bool _MBCanRunAndCollect = Enum.IsDefined(typeof(AssemblyBuilderAccess), "RunAndCollect");
 
-        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object context) {
-            TypeBuilder typeBuilder = context as TypeBuilder;
+        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object? context) {
+            var typeBuilder = context as TypeBuilder;
             MethodBuilder method = GenerateMethodBuilder(dmd, typeBuilder);
             typeBuilder = (TypeBuilder) method.DeclaringType;
             Type type = typeBuilder.CreateType();
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"))) {
-                string path = method.Module.FullyQualifiedName;
-                string name = Path.GetFileName(path);
-                string dir = Path.GetDirectoryName(path);
+                var path = method.Module.FullyQualifiedName;
+                var name = Path.GetFileName(path);
+                var dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 if (File.Exists(path))
@@ -41,18 +33,18 @@ namespace MonoMod.Utils {
             return type.GetMethod(method.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
         }
 
-        public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder typeBuilder) {
-            MethodBase orig = dmd.OriginalMethod;
-            MethodDefinition def = dmd.Definition;
+        public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder) {
+            MethodBase orig = dmd.OriginalMethod ?? throw new InvalidOperationException();
+            MethodDefinition def = dmd.Definition ?? throw new InvalidOperationException();
 
             if (typeBuilder == null) {
-                string dumpDir = Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP");
+                var dumpDir = Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP");
                 if (string.IsNullOrEmpty(dumpDir)) {
                     dumpDir = null;
                 } else {
                     dumpDir = Path.GetFullPath(dumpDir);
                 }
-                bool collect = string.IsNullOrEmpty(dumpDir) && _MBCanRunAndCollect;
+                var collect = string.IsNullOrEmpty(dumpDir) && _MBCanRunAndCollect;
                 AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
                         Name = dmd.GetDumpName("MethodBuilder")

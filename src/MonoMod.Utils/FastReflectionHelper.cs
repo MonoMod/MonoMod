@@ -5,13 +5,13 @@ using System.Collections.Generic;
 using System.Reflection;
 
 namespace MonoMod.Utils {
-    public delegate object FastReflectionDelegate(object target, params object[] args);
+    public delegate object? FastReflectionDelegate(object? target, params object?[]? args);
     public static class FastReflectionHelper {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
-        private static readonly Dictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new Dictionary<MethodInfo, FastReflectionDelegate>();
+        private static readonly Dictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new();
 
         private static FastReflectionDelegate _CreateFastDelegate(MethodBase method, bool directBoxValueAccess = true) {
-            DynamicMethodDefinition dmd = new DynamicMethodDefinition($"FastReflection<{method.GetID(simple: true)}>", typeof(object), _DynamicMethodDelegateArgs);
+            using var dmd = new DynamicMethodDefinition($"FastReflection<{method.GetID(simple: true)}>", typeof(object), _DynamicMethodDelegateArgs);
             ILProcessor il = dmd.GetILProcessor();
 
             ParameterInfo[] args = method.GetParameters();
@@ -20,17 +20,17 @@ namespace MonoMod.Utils {
 
             if (!method.IsStatic) {
                 il.Emit(OpCodes.Ldarg_0);
-                if (method.DeclaringType.IsValueType) {
+                if (method.DeclaringType?.IsValueType ?? false) {
                     il.Emit(OpCodes.Unbox_Any, method.DeclaringType);
                 }
             }
 
             for (int i = 0; i < args.Length; i++) {
-                Type argType = args[i].ParameterType;
-                bool argIsByRef = argType.IsByRef;
+                var argType = args[i].ParameterType;
+                var argIsByRef = argType.IsByRef;
                 if (argIsByRef)
-                    argType = argType.GetElementType();
-                bool argIsValueType = argType.IsValueType;
+                    argType = argType.GetElementType() ?? argType;
+                var argIsValueType = argType.IsValueType;
 
                 if (argIsByRef && argIsValueType && !directBoxValueAccess) {
                     // Used later when storing back the reference to the new box in the array.
@@ -58,7 +58,7 @@ namespace MonoMod.Utils {
                                 il.Emit(OpCodes.Unbox, argType);
                                 if (generateLocalBoxValuePtr) {
                                     generateLocalBoxValuePtr = false;
-                                    dmd.Definition.Body.Variables.Add(new VariableDefinition(new PinnedType(new PointerType(dmd.Definition.Module.TypeSystem.Void))));
+                                    dmd.Definition!.Body.Variables.Add(new VariableDefinition(new PinnedType(new PointerType(dmd.Definition.Module.TypeSystem.Void))));
                                 }
                                 il.Emit(OpCodes.Stloc_0);
 
@@ -77,16 +77,16 @@ namespace MonoMod.Utils {
             }
 
             if (method.IsConstructor) {
-                il.Emit(OpCodes.Newobj, method as ConstructorInfo);
+                il.Emit(OpCodes.Newobj, (ConstructorInfo)method);
             } else if (method.IsFinal || !method.IsVirtual) {
-                il.Emit(OpCodes.Call, method as MethodInfo);
+                il.Emit(OpCodes.Call, (MethodInfo)method);
             } else {
-                il.Emit(OpCodes.Callvirt, method as MethodInfo);
+                il.Emit(OpCodes.Callvirt, (MethodInfo)method);
             }
 
-            Type returnType = method.IsConstructor ? method.DeclaringType : (method as MethodInfo).ReturnType;
+            var returnType = method.IsConstructor ? method.DeclaringType : ((MethodInfo)method).ReturnType;
             if (returnType != typeof(void)) {
-                if (returnType.IsValueType) {
+                if (returnType is not null && returnType.IsValueType) {
                     il.Emit(OpCodes.Box, returnType);
                 }
             } else {
@@ -101,7 +101,7 @@ namespace MonoMod.Utils {
         public static FastReflectionDelegate CreateFastDelegate(this MethodInfo method, bool directBoxValueAccess = true)
             => GetFastDelegate(method, directBoxValueAccess);
         public static FastReflectionDelegate GetFastDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
-            if (_MethodCache.TryGetValue(method, out FastReflectionDelegate dmd))
+            if (_MethodCache.TryGetValue(method, out var dmd))
                 return dmd;
 
             dmd = _CreateFastDelegate(method, directBoxValueAccess);

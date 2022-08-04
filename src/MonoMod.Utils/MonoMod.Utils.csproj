@@ -6,7 +6,7 @@
     <PackageId>MonoMod.Utils</PackageId>
     <Description>Utilities and smaller MonoMod "components" (f.e. ModInterop, DynDll, DynData). Can be used for your own mods. Required by all other MonoMod components.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
-    <Nullable>annotations</Nullable>
+    <Nullable>enable</Nullable>
     <MMReferenceUtils>false</MMReferenceUtils>
   </PropertyGroup>
 

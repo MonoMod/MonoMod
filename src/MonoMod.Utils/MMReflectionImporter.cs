@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.IO;
 using System.Security;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
@@ -89,7 +90,7 @@ namespace MonoMod.Utils {
             };
         }
 
-        private bool TryGetCachedType(Type type, out TypeReference typeRef, GenericImportKind importKind) {
+        private bool TryGetCachedType(Type type, [MaybeNullWhen(false)] out TypeReference typeRef, GenericImportKind importKind) {
             if (importKind == GenericImportKind.Definition) {
                 typeRef = null;
                 return false;
@@ -112,7 +113,7 @@ namespace MonoMod.Utils {
         }
 
         public AssemblyNameReference ImportReference(Assembly asm) {
-            if (CachedAsms.TryGetValue(asm, out AssemblyNameReference asmRef))
+            if (CachedAsms.TryGetValue(asm, out var asmRef))
                 return asmRef;
 
             asmRef = Default.ImportReference(asm.GetName());
@@ -123,7 +124,7 @@ namespace MonoMod.Utils {
         }
 
         public TypeReference ImportModuleType(Module module, IGenericParameterProvider context) {
-            if (CachedModuleTypes.TryGetValue(module, out TypeReference typeRef))
+            if (CachedModuleTypes.TryGetValue(module, out var typeRef))
                 return typeRef;
 
             // See https://github.com/jbevain/cecil/blob/06da31930ff100cef48aef677c4ceeee858e6c04/Mono.Cecil/ModuleDefinition.cs#L1018
@@ -152,7 +153,7 @@ namespace MonoMod.Utils {
         }
 
         private TypeReference _ImportReference(Type type, IGenericParameterProvider context, GenericImportKind importKind = GenericImportKind.Open) {
-            if (TryGetCachedType(type, out TypeReference typeRef, importKind)) {
+            if (TryGetCachedType(type, out var typeRef, importKind)) {
                 return _IsGenericInstance(type, importKind) ? _ImportGenericInstance(type, context, typeRef) : typeRef;
             }
 
@@ -161,14 +162,14 @@ namespace MonoMod.Utils {
 
             if (type.HasElementType) {
                 if (type.IsByRef)
-                    return SetCachedType(type, new ByReferenceType(_ImportReference(type.GetElementType(), context)), importKind);
+                    return SetCachedType(type, new ByReferenceType(_ImportReference(type.GetElementType()!, context)), importKind);
 
                 if (type.IsPointer)
-                    return SetCachedType(type, new PointerType(_ImportReference(type.GetElementType(), context)), importKind);
+                    return SetCachedType(type, new PointerType(_ImportReference(type.GetElementType()!, context)), importKind);
 
                 if (type.IsArray) {
-                    ArrayType at = new ArrayType(_ImportReference(type.GetElementType(), context), type.GetArrayRank());
-                    if (type != type.GetElementType().MakeArrayType()) {
+                    var at = new ArrayType(_ImportReference(type.GetElementType()!, context), type.GetArrayRank());
+                    if (type != type.GetElementType()!.MakeArrayType()) {
                         // Non-SzArray
                         // TODO: Find a way to get the bounds without instantiating the array type!
                         /*
@@ -210,7 +211,7 @@ namespace MonoMod.Utils {
             );
 
             if (type.IsNested)
-                typeRef.DeclaringType = _ImportReference(type.DeclaringType, context, importKind);
+                typeRef.DeclaringType = _ImportReference(type.DeclaringType!, context, importKind);
             else if (type.Namespace != null)
                 typeRef.Namespace = type.Namespace;
 
@@ -223,7 +224,7 @@ namespace MonoMod.Utils {
 
         private static TypeReference ImportGenericParameter(Type type, IGenericParameterProvider context) {
             if (context is MethodReference ctxMethodRef) {
-                MethodBase dclMethod = type.DeclaringMethod;
+                var dclMethod = type.DeclaringMethod;
                 if (dclMethod != null) {
                     return ctxMethodRef.GenericParameters[type.GenericParameterPosition];
                 } else {
@@ -231,7 +232,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            Type dclType = type.DeclaringType;
+            var dclType = type.DeclaringType;
             if (dclType == null)
                 throw new InvalidOperationException();
 
@@ -253,13 +254,13 @@ namespace MonoMod.Utils {
         }
 
         public FieldReference ImportReference(FieldInfo field, IGenericParameterProvider context) {
-            if (CachedFields.TryGetValue(field, out FieldReference fieldRef))
+            if (CachedFields.TryGetValue(field, out var fieldRef))
                 return fieldRef;
 
             if (UseDefault)
                 return CachedFields[field] = Default.ImportReference(field, context);
 
-            Type declType = field.DeclaringType;
+            var declType = field.DeclaringType;
             TypeReference declaringType = declType != null ? ImportReference(declType, context) : ImportModuleType(field.Module, context);
 
             FieldInfo fieldOrig = field;
@@ -267,7 +268,7 @@ namespace MonoMod.Utils {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
                 // Luckily the metadata tokens match up.
-                field = field.Module.ResolveField(field.MetadataToken);
+                field = field.Module.ResolveField(field.MetadataToken)!;
             }
 
             var typeRef = _ImportReference(field.FieldType, declaringType);
@@ -297,7 +298,7 @@ namespace MonoMod.Utils {
         }
 
         private MethodReference _ImportReference(MethodBase method, IGenericParameterProvider context, GenericImportKind importKind) {
-            if (CachedMethods.TryGetValue(method, out MethodReference methodRef) && importKind == GenericImportKind.Open)
+            if (CachedMethods.TryGetValue(method, out var methodRef) && importKind == GenericImportKind.Open)
                 return methodRef;
 
             if (method is MethodInfo target && target.IsDynamicMethod())
@@ -308,7 +309,7 @@ namespace MonoMod.Utils {
 
             if (method.IsGenericMethod && !method.IsGenericMethodDefinition ||
                 method.IsGenericMethod && method.IsGenericMethodDefinition && importKind == GenericImportKind.Open) {
-                GenericInstanceMethod gim = new GenericInstanceMethod(_ImportReference((method as MethodInfo).GetGenericMethodDefinition(), context, GenericImportKind.Definition));
+                var gim = new GenericInstanceMethod(_ImportReference(((MethodInfo)method).GetGenericMethodDefinition(), context, GenericImportKind.Definition));
                 foreach (Type arg in method.GetGenericArguments())
                     // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(_ImportReference(arg, context));
@@ -316,7 +317,7 @@ namespace MonoMod.Utils {
                 return CachedMethods[method] = gim;
             }
 
-            Type declType = method.DeclaringType;
+            var declType = method.DeclaringType;
             methodRef = new MethodReference(
                 method.Name,
                 _ImportReference(typeof(void), context),
@@ -333,7 +334,7 @@ namespace MonoMod.Utils {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
                 // Luckily the metadata tokens match up.
-                method = method.Module.ResolveMethod(method.MetadataToken);
+                method = method.Module.ResolveMethod(method.MetadataToken)!;
             }
 
             if (method.IsGenericMethodDefinition)

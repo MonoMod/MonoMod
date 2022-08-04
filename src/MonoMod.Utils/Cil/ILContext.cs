@@ -57,7 +57,7 @@ namespace MonoMod.Cil {
         /// <summary>
         /// Events which run when the context will be disposed.
         /// </summary>
-        public event Action OnDispose;
+        public event Action? OnDispose;
         /// <summary>
         /// The current reference bag. Used for methods such as EmitReference and EmitDelegate.
         /// </summary>
@@ -105,8 +105,8 @@ namespace MonoMod.Cil {
         /// If the method is altered prior to calling MakeReadOnly or afterwards by accessing the method directly, the results are undefined.
         /// </remarks>
         public void MakeReadOnly() {
-            Method = null;
-            IL = null;
+            Method = null!;
+            IL = null!;
             // Labels hold references to Instructions, which can keep
             // all other Instructions in all referenced modules alive.
             // _Labels.Clear doesn't shrink the backing array.
@@ -158,7 +158,9 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="instr">The instruction to get the index of.</param>
         /// <returns>The instruction index, or the end of the method body if it hasn't been found.</returns>
-        public int IndexOf(Instruction instr) {
+        public int IndexOf(Instruction? instr) {
+            if (instr is null)
+                return Instrs.Count;
             int index = Instrs.IndexOf(instr);
             return index == -1 ? Instrs.Count : index;
         }
@@ -168,7 +170,7 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="instr">The instruction to get all labels for.</param>
         /// <returns>All labels targeting the given instruction.</returns>
-        public IEnumerable<ILLabel> GetIncomingLabels(Instruction instr)
+        public IEnumerable<ILLabel> GetIncomingLabels(Instruction? instr)
             => _Labels.Where(l => l.Target == instr);
 
         /// <summary>
@@ -210,7 +212,7 @@ namespace MonoMod.Cil {
             return builder.ToString();
         }
 
-        internal static StringBuilder ToString(StringBuilder builder, Instruction instr) {
+        internal static StringBuilder ToString(StringBuilder builder, Instruction? instr) {
             if (instr == null)
                 return builder;
 

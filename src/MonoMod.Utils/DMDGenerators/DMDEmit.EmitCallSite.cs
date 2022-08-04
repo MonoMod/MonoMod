@@ -13,32 +13,32 @@ namespace MonoMod.Utils {
     internal static partial class _DMDEmit {
 
         // Mono
-        private static readonly MethodInfo _ILGen_make_room =
+        private static readonly MethodInfo? _ILGen_make_room =
             typeof(ILGenerator).GetMethod("make_room", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo _ILGen_emit_int =
+        private static readonly MethodInfo? _ILGen_emit_int =
             typeof(ILGenerator).GetMethod("emit_int", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo _ILGen_ll_emit =
+        private static readonly MethodInfo? _ILGen_ll_emit =
             typeof(ILGenerator).GetMethod("ll_emit", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // .NET
-        private static readonly MethodInfo _ILGen_EnsureCapacity =
+        private static readonly MethodInfo? _ILGen_EnsureCapacity =
             typeof(ILGenerator).GetMethod("EnsureCapacity", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo _ILGen_PutInteger4 =
+        private static readonly MethodInfo? _ILGen_PutInteger4 =
             typeof(ILGenerator).GetMethod("PutInteger4", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo _ILGen_InternalEmit =
+        private static readonly MethodInfo? _ILGen_InternalEmit =
             typeof(ILGenerator).GetMethod("InternalEmit", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo _ILGen_UpdateStackSize =
+        private static readonly MethodInfo? _ILGen_UpdateStackSize =
             typeof(ILGenerator).GetMethod("UpdateStackSize", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private static readonly FieldInfo f_DynILGen_m_scope =
+        private static readonly FieldInfo? f_DynILGen_m_scope =
             typeof(ILGenerator).Assembly
             .GetType("System.Reflection.Emit.DynamicILGenerator")?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly FieldInfo f_DynScope_m_tokens =
+        private static readonly FieldInfo? f_DynScope_m_tokens =
             typeof(ILGenerator).Assembly
             .GetType("System.Reflection.Emit.DynamicScope")?.GetField("m_tokens", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Based on https://referencesource.microsoft.com/#mscorlib/system/reflection/mdimport.cs,74bfbae3c61889bc
-        private static readonly Type[] CorElementTypes = new Type[] {
+        private static readonly Type?[] CorElementTypes = new Type?[] {
             null,
             typeof(void),
             typeof(bool),
@@ -64,24 +64,24 @@ namespace MonoMod.Utils {
              * https://github.com/dotnet/coreclr/blob/0fbd855e38bc3ec269479b5f6bf561dcfd67cbb6/src/System.Private.CoreLib/src/System/Reflection/Emit/SignatureHelper.cs#L57
              */
 
-            List<object> _tokens = null;
+            List<object>? _tokens = null;
             int _GetTokenForType(Type v) {
-                _tokens.Add(v.TypeHandle);
+                _tokens!.Add(v.TypeHandle);
                 return _tokens.Count - 1 | 0x02000000 /* (int) MetadataTokenType.TypeDef */;
             }
             int _GetTokenForSig(byte[] v) {
-                _tokens.Add(v);
+                _tokens!.Add(v);
                 return _tokens.Count - 1 | 0x11000000 /* (int) MetadataTokenType.Signature */;
             }
 #if !NETSTANDARD
-            DynamicILInfo _info = null;
+            DynamicILInfo? _info = null;
             if (ReflectionHelper.IsMono) {
                 // GetDynamicILInfo throws "invalid signature" in .NET - let's hope for the best for mono...
                 _info = dm.GetDynamicILInfo();
             } else {
 #endif
                 // For .NET, we need to access DynamicScope m_scope and its List<object> m_tokens
-                _tokens = f_DynScope_m_tokens.GetValue(f_DynILGen_m_scope.GetValue(il)) as List<object>;
+                _tokens = (List<object>)f_DynScope_m_tokens!.GetValue(f_DynILGen_m_scope!.GetValue(il))!;
 #if !NETSTANDARD
             }
 
@@ -174,14 +174,14 @@ namespace MonoMod.Utils {
 
             if (_ILGen_emit_int != null) {
                 // Mono
-                _ILGen_make_room.Invoke(il, new object[] { 6 });
-                _ILGen_ll_emit.Invoke(il, new object[] { opcode });
-                _ILGen_emit_int.Invoke(il, new object[] { GetTokenForSig(signature) });
+                _ILGen_make_room!.Invoke(il, new object[] { 6 });
+                _ILGen_ll_emit!.Invoke(il, new object[] { opcode });
+                _ILGen_emit_int!.Invoke(il, new object[] { GetTokenForSig(signature) });
 
             } else {
                 // .NET
-                _ILGen_EnsureCapacity.Invoke(il, new object[] { 7 });
-                _ILGen_InternalEmit.Invoke(il, new object[] { opcode });
+                _ILGen_EnsureCapacity!.Invoke(il, new object[] { 7 });
+                _ILGen_InternalEmit!.Invoke(il, new object[] { opcode });
 
                 // The only IL instruction that has VarPop behaviour, that takes a
                 // Signature token as a parameter is calli.  Pop the parameters and
@@ -190,10 +190,10 @@ namespace MonoMod.Utils {
                 // SignatureHelper.
                 if (opcode.StackBehaviourPop == System.Reflection.Emit.StackBehaviour.Varpop) {
                     // Pop the arguments and native function pointer off the stack.
-                    _ILGen_UpdateStackSize.Invoke(il, new object[] { opcode, -csite.Parameters.Count - 1 });
+                    _ILGen_UpdateStackSize!.Invoke(il, new object[] { opcode, -csite.Parameters.Count - 1 });
                 }
 
-                _ILGen_PutInteger4.Invoke(il, new object[] { GetTokenForSig(signature) });
+                _ILGen_PutInteger4!.Invoke(il, new object[] { GetTokenForSig(signature) });
             }
 
             void AddArgument(Type clsArgument, Type[] requiredCustomModifiers, Type[] optionalCustomModifiers) {
@@ -297,11 +297,11 @@ namespace MonoMod.Utils {
                         AddOneArgTypeHelper(t);
                 } else if (clsArgument.IsByRef) {
                     AddElementType(0x10 /* CorElementType.ByRef */);
-                    clsArgument = clsArgument.GetElementType();
+                    clsArgument = clsArgument.GetElementType() ?? clsArgument;
                     AddOneArgTypeHelper(clsArgument);
                 } else if (clsArgument.IsPointer) {
                     AddElementType(0x0F /* CorElementType.Ptr */);
-                    AddOneArgTypeHelper(clsArgument.GetElementType());
+                    AddOneArgTypeHelper(clsArgument.GetElementType() ?? clsArgument);
                 } else if (clsArgument.IsArray) {
 #if false
                         if (clsArgument.IsArray && clsArgument == clsArgument.GetElementType().MakeArrayType()) { // .IsSZArray unavailable.
@@ -313,7 +313,7 @@ namespace MonoMod.Utils {
                     {
                         AddElementType(0x14 /* CorElementType.Array */);
 
-                        AddOneArgTypeHelper(clsArgument.GetElementType());
+                        AddOneArgTypeHelper(clsArgument.GetElementType() ?? clsArgument);
 
                         // put the rank information
                         int rank = clsArgument.GetArrayRank();

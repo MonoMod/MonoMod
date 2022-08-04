@@ -10,6 +10,8 @@ using Mono.Cecil;
 using System.Text;
 using Mono.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Collections.Concurrent;
+using System.Drawing;
 
 namespace MonoMod.Utils {
 #if !MONOMOD_INTERNAL
@@ -17,28 +19,27 @@ namespace MonoMod.Utils {
 #endif
     static partial class Extensions {
 
-        private static readonly Dictionary<Type, int> _GetManagedSizeCache = new Dictionary<Type, int>() {
-            { typeof(void), 0 }
-        };
-        private static MethodInfo _GetManagedSizeHelper;
+        private static readonly ConcurrentDictionary<Type, int> _GetManagedSizeCache = new(new[] {
+            new KeyValuePair<Type, int>(typeof(void), 0)
+        });
+
+        private static MethodInfo? _GetManagedSizeHelper;
         /// <summary>
         /// Get the managed size of a given type. This matches an IL-level sizeof(t), even if it cannot be determined normally in C#.
         /// Note that sizeof(t) != Marshal.SizeOf(t), f.e. when t is char.
         /// </summary>
         /// <param name="t">The type to get the size from.</param>
         /// <returns>The managed type size.</returns>
-        public static int GetManagedSize(this Type t) {
-            if (_GetManagedSizeCache.TryGetValue(t, out int size))
-                return size;
+        public static int GetManagedSize(this Type t)
+            => _GetManagedSizeCache.GetOrAdd(t, ComputeManagedSize);
 
-            if (_GetManagedSizeHelper == null) {
-                _GetManagedSizeHelper = typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf));
+        private static int ComputeManagedSize(Type t) {
+            var szHelper = _GetManagedSizeHelper;
+            if (szHelper is null) {
+                _GetManagedSizeHelper = szHelper = typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf))!;
             }
 
-            size =  (_GetManagedSizeHelper.MakeGenericMethod(t).CreateDelegate<Func<int>>() as Func<int>)();
-            lock (_GetManagedSizeCache) {
-                return _GetManagedSizeCache[t] = size;
-            }
+            return szHelper.MakeGenericMethod(t).CreateDelegate<Func<int>>()();
         }
 
         /// <summary>
@@ -47,7 +48,7 @@ namespace MonoMod.Utils {
         /// <param name="method">The method to obtain the "this" parameter type from.</param>
         /// <returns>The "this" parameter type.</returns>
         public static Type GetThisParamType(this MethodBase method) {
-            Type type = method.DeclaringType;
+            Type type = method.DeclaringType!;
             if (type.IsValueType)
                 type = type.MakeByRefType();
             return type;
@@ -65,7 +66,7 @@ namespace MonoMod.Utils {
         /// <param name="m">The method to get a native function pointer for.</param>
         /// <returns>The native function pointer.</returns>
         public static IntPtr GetLdftnPointer(this MethodBase m) {
-            if (_GetLdftnPointerCache.TryGetValue(m, out Func<IntPtr> func))
+            if (_GetLdftnPointerCache.TryGetValue(m, out var func))
                 return func();
 
             using DynamicMethodDefinition dmd = new DynamicMethodDefinition(

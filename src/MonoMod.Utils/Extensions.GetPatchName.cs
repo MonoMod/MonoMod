@@ -31,7 +31,7 @@ namespace MonoMod.Utils {
         private static string GetPatchName(this ICustomAttributeProvider cap) {
             string name;
 
-            CustomAttribute patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
+            var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
             if (patchAttrib != null) {
                 name = (string) patchAttrib.ConstructorArguments[0].Value;
                 int dotIndex = name.LastIndexOf('.');
@@ -47,7 +47,7 @@ namespace MonoMod.Utils {
         }
         private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
             if (cap is TypeReference type) {
-                CustomAttribute patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
+                var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
                 string name;
 
                 if (patchAttrib != null) {
@@ -66,10 +66,10 @@ namespace MonoMod.Utils {
                 else if (type.IsNested)
                     name = type.DeclaringType.GetPatchFullName() + "/" + name;
 
-                if (mr is TypeSpecification) {
+                if (mr is TypeSpecification specification) {
                     // Collect TypeSpecifications and append formats back to front.
-                    List<TypeSpecification> formats = new List<TypeSpecification>();
-                    TypeSpecification ts = (TypeSpecification) mr;
+                    var formats = new List<TypeSpecification>();
+                    TypeSpecification? ts = specification;
                     do {
                         formats.Add(ts);
                     } while ((ts = (ts.ElementType as TypeSpecification)) != null);

@@ -42,15 +42,15 @@ namespace MonoMod.Utils {
 #else
             // For old Mono, get from a private property to accurately get the platform.
             // static extern PlatformID Platform
-            PropertyInfo p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
-            string platID;
+            var p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
+            string? platID;
             if (p_Platform != null) {
-                platID = p_Platform.GetValue(null, new object[0]).ToString();
+                platID = p_Platform.GetValue(null, ArrayEx.Empty<object?>())?.ToString();
             } else {
                 // For .NET and newer Mono, use the usual value.
                 platID = Environment.OSVersion.Platform.ToString();
             }
-            platID = platID.ToLower(CultureInfo.InvariantCulture);
+            platID = platID?.ToLower(CultureInfo.InvariantCulture) ?? "";
 
             if (platID.Contains("win")) {
                 _current = Platform.Windows;
@@ -83,9 +83,9 @@ namespace MonoMod.Utils {
             }
 
             // Is64BitOperatingSystem has been added in .NET Framework 4.0
-            MethodInfo m_get_Is64BitOperatingSystem = typeof(Environment).GetProperty("Is64BitOperatingSystem")?.GetGetMethod();
+            var m_get_Is64BitOperatingSystem = typeof(Environment).GetProperty("Is64BitOperatingSystem")?.GetGetMethod();
             if (m_get_Is64BitOperatingSystem != null)
-                _current |= (((bool) m_get_Is64BitOperatingSystem.Invoke(null, new object[0])) ? Platform.Bits64 : 0);
+                _current |= (((bool) m_get_Is64BitOperatingSystem.Invoke(null, ArrayEx.Empty<object?>())!) ? Platform.Bits64 : 0);
             else
                 _current |= (IntPtr.Size >= 8 ? Platform.Bits64 : 0);
 
@@ -105,11 +105,11 @@ namespace MonoMod.Utils {
                  */
                 try {
                     string arch;
-                    using (Process uname = Process.Start(new ProcessStartInfo("uname", "-m") {
+                    using (var uname = Process.Start(new ProcessStartInfo("uname", "-m") {
                         UseShellExecute = false,
                         RedirectStandardOutput = true
                     })) {
-                        arch = uname.StandardOutput.ReadLine().Trim();
+                        arch = uname!.StandardOutput.ReadLine()!.Trim();
                     }
 
                     if (arch.StartsWith("aarch", StringComparison.Ordinal) || arch.StartsWith("arm", StringComparison.Ordinal))
@@ -155,7 +155,7 @@ namespace MonoMod.Utils {
         }
 
 
-        private static string _librarySuffix;
+        private static string? _librarySuffix;
 
         public static string LibrarySuffix {
             get {
@@ -177,7 +177,7 @@ namespace MonoMod.Utils {
         private static bool CheckWine() {
             // wine_get_version can be missing because of course it can.
             // General purpose env var.
-            string env = Environment.GetEnvironmentVariable("MONOMOD_WINE");
+            string? env = Environment.GetEnvironmentVariable("MONOMOD_WINE");
             if (env == "1")
                 return true;
             if (env == "0")

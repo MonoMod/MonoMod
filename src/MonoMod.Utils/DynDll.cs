@@ -20,9 +20,9 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Extension method wrapping Marshal.GetDelegateForFunctionPointer
         /// </summary>
-        public static T AsDelegate<T>(this IntPtr s) where T : class {
+        public static T AsDelegate<T>(this IntPtr s) where T : Delegate {
 #pragma warning disable CS0618 // Type or member is obsolete
-            return Marshal.GetDelegateForFunctionPointer(s, typeof(T)) as T;
+            return (T)Marshal.GetDelegateForFunctionPointer(s, typeof(T));
 #pragma warning restore CS0618 // Type or member is obsolete
         }
 
@@ -32,7 +32,7 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="type">The type containing the DynDllImport delegate fields.</param>
         /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
-        public static void ResolveDynDllImports(this Type type, Dictionary<string, List<DynDllMapping>> mappings = null)
+        public static void ResolveDynDllImports(this Type type, Dictionary<string, List<DynDllMapping>>? mappings = null)
             => InternalResolveDynDllImports(type, null, mappings);
 
         /// <summary>
@@ -41,10 +41,10 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="instance">An instance of a type containing the DynDllImport delegate fields.</param>
         /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
-        public static void ResolveDynDllImports(object instance, Dictionary<string, List<DynDllMapping>> mappings = null)
+        public static void ResolveDynDllImports(object instance, Dictionary<string, List<DynDllMapping>>? mappings = null)
             => InternalResolveDynDllImports(instance.GetType(), instance, mappings);
 
-        private static void InternalResolveDynDllImports(Type type, object instance, Dictionary<string, List<DynDllMapping>> mappings) {
+        private static void InternalResolveDynDllImports(Type type, object? instance, Dictionary<string, List<DynDllMapping>>? mappings) {
             BindingFlags fieldFlags = BindingFlags.Public | BindingFlags.NonPublic;
             if (instance == null)
                 fieldFlags |= BindingFlags.Static;
@@ -59,7 +59,7 @@ namespace MonoMod.Utils {
 
                     IntPtr libraryPtr = IntPtr.Zero;
 
-                    if (mappings != null && mappings.TryGetValue(attrib.LibraryName, out List<DynDllMapping> mappingList)) {
+                    if (mappings != null && mappings.TryGetValue(attrib.LibraryName, out var mappingList)) {
                         bool mappingFound = false;
 
                         foreach (var mapping in mappingList) {
@@ -94,7 +94,7 @@ namespace MonoMod.Utils {
                 }
 
                 if (!found)
-                    throw new EntryPointNotFoundException($"No matching entry point found for {field.Name} in {field.DeclaringType.FullName}");
+                    throw new EntryPointNotFoundException($"No matching entry point found for {field.Name} in {field.DeclaringType?.FullName}");
             }
         }
 

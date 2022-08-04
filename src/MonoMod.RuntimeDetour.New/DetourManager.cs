@@ -139,9 +139,9 @@ namespace MonoMod.RuntimeDetour {
             private MethodBase GenerateSyncProxy(out DataScope<DynamicReferenceManager.CellRef> scope) {
                 using var dmd = Sig.CreateDmd($"SyncProxy<{Entry.GetID()}>");
 
-                var method = dmd.Definition;
-                var module = dmd.Module;
                 var il = dmd.GetILProcessor();
+                var method = dmd.Definition;
+                var module = dmd.Module!;
 
                 var syncInfoTypeRef = module.ImportReference(typeof(DetourSyncInfo));
                 var syncInfoVar = new VariableDefinition(syncInfoTypeRef);
@@ -635,7 +635,7 @@ namespace MonoMod.RuntimeDetour {
 
                 using var dmd = new DynamicMethodDefinition(Source);
 
-                var def = dmd.Definition;
+                var def = dmd.Definition!;
                 var cur = ilhookGraph.ListHead;
                 while (cur is not null) {
                     InvokeManipulator(cur.ChainNode, def);

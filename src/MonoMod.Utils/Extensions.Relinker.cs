@@ -4,6 +4,7 @@ using Mono.Collections.Generic;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,7 +18,7 @@ namespace MonoMod.Utils {
     /// <param name="mtp">The reference (metadata token provider) to relink.</param>
     /// <param name="context">The generic context provided to relink generic references.</param>
     /// <returns>A relinked reference.</returns>
-    public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider context);
+    public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider? context);
 #if !MONOMOD_INTERNAL
     public
 #endif
@@ -29,10 +30,11 @@ namespace MonoMod.Utils {
         /// <param name="o">The original method.</param>
         /// <param name="c">The method definition to apply the cloning process onto, or null to create a new method.</param>
         /// <returns>A clone of the original method.</returns>
-        public static MethodDefinition Clone(this MethodDefinition o, MethodDefinition c = null) {
-            if (o == null)
+        [return: NotNullIfNotNull("o")]
+        public static MethodDefinition? Clone(this MethodDefinition? o, MethodDefinition? c = null) {
+            if (o is null)
                 return null;
-            if (c == null)
+            if (c is null)
                 c = new MethodDefinition(o.Name, o.Attributes, o.ReturnType);
             c.Name = o.Name;
             c.Attributes = o.Attributes;
@@ -78,17 +80,18 @@ namespace MonoMod.Utils {
         /// <param name="bo">The original method body.</param>
         /// <param name="m">The method which will own the newly cloned method body.</param>
         /// <returns>A clone of the original method body.</returns>
-        public static MethodBody Clone(this MethodBody bo, MethodDefinition m) {
+        [return: NotNullIfNotNull("bo")]
+        public static MethodBody? Clone(this MethodBody? bo, MethodDefinition m) {
             if (bo == null)
                 return null;
 
-            MethodBody bc = new MethodBody(m);
+            var bc = new MethodBody(m);
             bc.MaxStackSize = bo.MaxStackSize;
             bc.InitLocals = bo.InitLocals;
             bc.LocalVarToken = bo.LocalVarToken;
 
             bc.Instructions.AddRange(bo.Instructions.Select(o => {
-                Instruction c = Instruction.Create(OpCodes.Nop);
+                var c = Instruction.Create(OpCodes.Nop);
                 c.OpCode = o.OpCode;
                 c.Operand = o.Operand;
                 c.Offset = o.Offset;
@@ -104,7 +107,7 @@ namespace MonoMod.Utils {
             }
 
             bc.ExceptionHandlers.AddRange(bo.ExceptionHandlers.Select(o => {
-                ExceptionHandler c = new ExceptionHandler(o.HandlerType);
+                var c = new ExceptionHandler(o.HandlerType);
                 c.TryStart = o.TryStart == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.TryStart)];
                 c.TryEnd = o.TryEnd == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.TryEnd)];
                 c.FilterStart = o.FilterStart == null ? null : bc.Instructions[bo.Instructions.IndexOf(o.FilterStart)];
@@ -115,14 +118,14 @@ namespace MonoMod.Utils {
             }));
 
             bc.Variables.AddRange(bo.Variables.Select(o => {
-                VariableDefinition c = new VariableDefinition(o.VariableType);
+                var c = new VariableDefinition(o.VariableType);
                 return c;
             }));
 
 #if !CECIL0_9
             m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations); // Abstract. TODO: Implement deep CustomDebugInformations copy.
             m.DebugInformation.SequencePoints.AddRange(bo.Method.DebugInformation.SequencePoints.Select(o => {
-                SequencePoint c = new SequencePoint(bc.Instructions.FirstOrDefault(i => i.Offset == o.Offset), o.Document);
+                var c = new SequencePoint(bc.Instructions.FirstOrDefault(i => i.Offset == o.Offset), o.Document);
                 c.StartLine = o.StartLine;
                 c.StartColumn = o.StartColumn;
                 c.EndLine = o.EndLine;
@@ -134,8 +137,12 @@ namespace MonoMod.Utils {
             return bc;
         }
 
-        private static readonly System.Reflection.FieldInfo f_GenericParameter_position = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        private static readonly System.Reflection.FieldInfo f_GenericParameter_type = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        private static readonly System.Reflection.FieldInfo f_GenericParameter_position
+            = typeof(GenericParameter).GetField("position", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("No field 'position' on GenericParameter");
+        private static readonly System.Reflection.FieldInfo f_GenericParameter_type
+            = typeof(GenericParameter).GetField("type", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("No field 'type' on GenericParameter");
         /// <summary>
         /// Force-update a generic parameter's position and type.
         /// </summary>
@@ -155,10 +162,10 @@ namespace MonoMod.Utils {
         /// <param name="provider">The new context.</param>
         /// <param name="orig">The original generic parameter.</param>
         /// <returns>A generic parameter provided by the given context which matches the original generic parameter.</returns>
-        public static GenericParameter ResolveGenericParameter(this IGenericParameterProvider provider, GenericParameter orig) {
+        public static GenericParameter? ResolveGenericParameter(this IGenericParameterProvider provider, GenericParameter orig) {
             // This can be true for T[,].Get in "Enter the Gungeon"
-            if (provider is GenericParameter && ((GenericParameter) provider).Name == orig.Name)
-                return (GenericParameter) provider;
+            if (provider is GenericParameter genericParam && genericParam.Name == orig.Name)
+                return genericParam;
 
             foreach (GenericParameter param in provider.GenericParameters)
                 if (param.Name == orig.Name)
@@ -190,16 +197,20 @@ namespace MonoMod.Utils {
         /// <param name="relinker">The relinker to use during the relinking process.</param>
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
-        public static IMetadataTokenProvider Relink(this IMetadataTokenProvider mtp, Relinker relinker, IGenericParameterProvider context) {
-            if (mtp is TypeReference) return ((TypeReference) mtp).Relink(relinker, context);
+        [return: NotNullIfNotNull("mtp")]
+        public static IMetadataTokenProvider? Relink(this IMetadataTokenProvider? mtp, Relinker relinker, IGenericParameterProvider context) {
+            return mtp switch {
+                TypeReference tr => tr.Relink(relinker, context),
 #if !CECIL0_10
-            if (mtp is GenericParameterConstraint) return ((GenericParameterConstraint) mtp).Relink(relinker, context);
+                GenericParameterConstraint constraint => constraint.Relink(relinker, context),
 #endif
-            if (mtp is MethodReference) return ((MethodReference) mtp).Relink(relinker, context);
-            if (mtp is FieldReference) return ((FieldReference) mtp).Relink(relinker, context);
-            if (mtp is ParameterDefinition) return ((ParameterDefinition) mtp).Relink(relinker, context);
-            if (mtp is CallSite) return ((CallSite) mtp).Relink(relinker, context);
-            throw new InvalidOperationException($"MonoMod can't handle metadata token providers of the type {mtp.GetType()}");
+                MethodReference mr => mr.Relink(relinker, context),
+                FieldReference fr => fr.Relink(relinker, context),
+                ParameterDefinition pd => pd.Relink(relinker, context),
+                CallSite cs => cs.Relink(relinker, context),
+                null => null,
+                _ => throw new InvalidOperationException($"MonoMod can't handle metadata token providers of the type {mtp.GetType()}")
+            };
         }
 
         /// <summary>
@@ -209,8 +220,9 @@ namespace MonoMod.Utils {
         /// <param name="relinker">The relinker to use during the relinking process.</param>
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
-        public static TypeReference Relink(this TypeReference type, Relinker relinker, IGenericParameterProvider context) {
-            if (type == null)
+        [return: NotNullIfNotNull("type")]
+        public static TypeReference? Relink(this TypeReference? type, Relinker relinker, IGenericParameterProvider? context) {
+            if (type is null)
                 return null;
 
             if (type is TypeSpecification ts) {
@@ -229,8 +241,8 @@ namespace MonoMod.Utils {
                     return new PinnedType(relinkedElem);
 
                 if (type.IsArray) {
-                    ArrayType at = new ArrayType(relinkedElem, ((ArrayType) type).Rank);
-                    for (int i = 0; i < at.Rank; i++)
+                    var at = new ArrayType(relinkedElem, ((ArrayType) type).Rank);
+                    for (var i = 0; i < at.Rank; i++)
                         // It's a struct.
                         at.Dimensions[i] = ((ArrayType) type).Dimensions[i];
                     return at;
@@ -243,16 +255,16 @@ namespace MonoMod.Utils {
                     return new OptionalModifierType(((OptionalModifierType) type).ModifierType.Relink(relinker, context), relinkedElem);
 
                 if (type.IsGenericInstance) {
-                    GenericInstanceType git = new GenericInstanceType(relinkedElem);
+                    var git = new GenericInstanceType(relinkedElem);
                     foreach (TypeReference genArg in ((GenericInstanceType) type).GenericArguments)
                         git.GenericArguments.Add(genArg?.Relink(relinker, context));
                     return git;
                 }
 
                 if (type.IsFunctionPointer) {
-                    FunctionPointerType fp = (FunctionPointerType) type;
+                    var fp = (FunctionPointerType) type;
                     fp.ReturnType = fp.ReturnType.Relink(relinker, context);
-                    for (int i = 0; i < fp.Parameters.Count; i++)
+                    for (var i = 0; i < fp.Parameters.Count; i++)
                         fp.Parameters[i].ParameterType = fp.Parameters[i].ParameterType.Relink(relinker, context);
                     return fp;
                 }
@@ -261,7 +273,7 @@ namespace MonoMod.Utils {
             }
 
             if (type.IsGenericParameter && context != null) {
-                GenericParameter genParam = context.ResolveGenericParameter((GenericParameter) type);
+                var genParam = context.ResolveGenericParameter((GenericParameter) type);
                 if (genParam == null)
                     throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
                 for (int i = 0; i < genParam.Constraints.Count; i++)
@@ -281,11 +293,12 @@ namespace MonoMod.Utils {
         /// <param name="relinker">The relinker to use during the relinking process.</param>
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
-        public static GenericParameterConstraint Relink(this GenericParameterConstraint constraint, Relinker relinker, IGenericParameterProvider context) {
+        [return: NotNullIfNotNull("constraint")]
+        public static GenericParameterConstraint? Relink(this GenericParameterConstraint? constraint, Relinker relinker, IGenericParameterProvider context) {
             if (constraint == null)
                 return null;
 
-            GenericParameterConstraint relink = new GenericParameterConstraint(constraint.ConstraintType.Relink(relinker, context));
+            var relink = new GenericParameterConstraint(constraint.ConstraintType.Relink(relinker, context));
 
             foreach (CustomAttribute attrib in constraint.CustomAttributes)
                 relink.CustomAttributes.Add(attrib.Relink(relinker, context));

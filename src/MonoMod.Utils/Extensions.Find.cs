@@ -24,7 +24,7 @@ namespace MonoMod.Utils {
         /// <param name="id">The method ID.</param>
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
-        public static MethodDefinition FindMethod(this TypeDefinition type, string id, bool simple = true) {
+        public static MethodDefinition? FindMethod(this TypeDefinition type, string id, bool simple = true) {
             if (simple && !id.Contains(" ", StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
                 foreach (MethodDefinition method in type.Methods)
@@ -54,7 +54,7 @@ namespace MonoMod.Utils {
         /// <param name="id">The method ID.</param>
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
-        public static MethodDefinition FindMethodDeep(this TypeDefinition type, string id, bool simple = true) {
+        public static MethodDefinition? FindMethodDeep(this TypeDefinition type, string id, bool simple = true) {
             return type.FindMethod(id, simple) ?? type.BaseType?.Resolve()?.FindMethodDeep(id, simple);
         }
 
@@ -65,7 +65,7 @@ namespace MonoMod.Utils {
         /// <param name="id">The method ID.</param>
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
-        public static MethodInfo FindMethod(this Type type, string id, bool simple = true) {
+        public static MethodInfo? FindMethod(this Type type, string id, bool simple = true) {
             MethodInfo[] methods = type.GetMethods(
                 BindingFlags.Instance | BindingFlags.Static |
                 BindingFlags.Public | BindingFlags.NonPublic
@@ -100,7 +100,7 @@ namespace MonoMod.Utils {
         /// <param name="id">The method ID.</param>
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
-        public static MethodInfo FindMethodDeep(this Type type, string id, bool simple = true) {
+        public static MethodInfo? FindMethodDeep(this Type type, string id, bool simple = true) {
             return type.FindMethod(id, simple) ?? type.BaseType?.FindMethodDeep(id, simple);
         }
 
@@ -110,7 +110,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type to search in.</param>
         /// <param name="name">The property name.</param>
         /// <returns>The first matching property or null.</returns>
-        public static PropertyDefinition FindProperty(this TypeDefinition type, string name) {
+        public static PropertyDefinition? FindProperty(this TypeDefinition type, string name) {
             foreach (PropertyDefinition prop in type.Properties)
                 if (prop.Name == name)
                     return prop;
@@ -122,7 +122,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type to search in.</param>
         /// <param name="name">The property name.</param>
         /// <returns>The first matching property or null.</returns>
-        public static PropertyDefinition FindPropertyDeep(this TypeDefinition type, string name) {
+        public static PropertyDefinition? FindPropertyDeep(this TypeDefinition type, string name) {
             return type.FindProperty(name) ?? type.BaseType?.Resolve()?.FindPropertyDeep(name);
         }
 
@@ -132,7 +132,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type to search in.</param>
         /// <param name="name">The field name.</param>
         /// <returns>The first matching field or null.</returns>
-        public static FieldDefinition FindField(this TypeDefinition type, string name) {
+        public static FieldDefinition? FindField(this TypeDefinition type, string name) {
             foreach (FieldDefinition field in type.Fields)
                 if (field.Name == name)
                     return field;
@@ -144,7 +144,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type to search in.</param>
         /// <param name="name">The field name.</param>
         /// <returns>The first matching field or null.</returns>
-        public static FieldDefinition FindFieldDeep(this TypeDefinition type, string name) {
+        public static FieldDefinition? FindFieldDeep(this TypeDefinition type, string name) {
             return type.FindField(name) ?? type.BaseType?.Resolve()?.FindFieldDeep(name);
         }
 
@@ -154,7 +154,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type to search in.</param>
         /// <param name="name">The event name.</param>
         /// <returns>The first matching event or null.</returns>
-        public static EventDefinition FindEvent(this TypeDefinition type, string name) {
+        public static EventDefinition? FindEvent(this TypeDefinition type, string name) {
             foreach (EventDefinition eventDef in type.Events)
                 if (eventDef.Name == name)
                     return eventDef;
@@ -166,7 +166,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type to search in.</param>
         /// <param name="name">The event name.</param>
         /// <returns>The first matching event or null.</returns>
-        public static EventDefinition FindEventDeep(this TypeDefinition type, string name) {
+        public static EventDefinition? FindEventDeep(this TypeDefinition type, string name) {
             return type.FindEvent(name) ?? type.BaseType?.Resolve()?.FindEventDeep(name);
         }
 

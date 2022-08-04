@@ -1,9 +1,5 @@
-﻿using Mono.Cecil.Cil;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Reflection;
-using System.Text;
 
 namespace MonoMod.Utils.Cil {
     /// <summary>
@@ -41,9 +37,9 @@ namespace MonoMod.Utils.Cil {
         public abstract void Emit(System.Reflection.Emit.OpCode opcode, float arg);
         public abstract void Emit(System.Reflection.Emit.OpCode opcode, string str);
         public abstract void Emit(System.Reflection.Emit.OpCode opcode, Type cls);
-        public abstract void EmitCall(System.Reflection.Emit.OpCode opcode, MethodInfo methodInfo, Type[] optionalParameterTypes);
-        public abstract void EmitCalli(System.Reflection.Emit.OpCode opcode, CallingConventions callingConvention, Type returnType, Type[] parameterTypes, Type[] optionalParameterTypes);
-        public abstract void EmitCalli(System.Reflection.Emit.OpCode opcode, System.Runtime.InteropServices.CallingConvention unmanagedCallConv, Type returnType, Type[] parameterTypes);
+        public abstract void EmitCall(System.Reflection.Emit.OpCode opcode, MethodInfo methodInfo, Type[]? optionalParameterTypes);
+        public abstract void EmitCalli(System.Reflection.Emit.OpCode opcode, CallingConventions callingConvention, Type? returnType, Type[]? parameterTypes, Type[]? optionalParameterTypes);
+        public abstract void EmitCalli(System.Reflection.Emit.OpCode opcode, System.Runtime.InteropServices.CallingConvention unmanagedCallConv, Type? returnType, Type[]? parameterTypes);
         public abstract void EmitWriteLine(System.Reflection.Emit.LocalBuilder localBuilder);
         public abstract void EmitWriteLine(FieldInfo fld);
         public abstract void EmitWriteLine(string value);
