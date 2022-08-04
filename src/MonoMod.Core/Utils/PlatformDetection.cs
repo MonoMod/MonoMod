@@ -125,7 +125,7 @@ namespace MonoMod.Core.Utils {
                 // we want to call libc's uname() function
                 // the fields we're interested in are sysname and machine, which are field 0 and 4 respectively.
 
-                // Unfortunately for us, the size of the utsname struct depends heavily ont he platform. Fortunately for us,
+                // Unfortunately for us, the size of the utsname struct depends heavily on the platform. Fortunately for us,
                 // the returned data is all null-terminated strings. Hopefully, the unused data in the fields are filled with
                 // zeroes or untouched, which will allow us to easily scan for the strings.
 

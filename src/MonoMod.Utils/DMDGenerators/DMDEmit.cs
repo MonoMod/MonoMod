@@ -128,7 +128,7 @@ namespace MonoMod.Utils {
                     } else if (handler.HandlerStart == instr) {
                         switch (handler.HandlerType) {
                             case ExceptionHandlerType.Filter:
-                                il.BeginExceptFilterBlock();
+                                il.BeginCatchBlock(null!); // This parameter should be null for filter blocks, even though the compiler doesn't thihnk so.
                                 break;
                             case ExceptionHandlerType.Catch:
                                 il.BeginCatchBlock(handler.CatchType.ResolveReflection());

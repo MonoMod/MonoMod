@@ -30,10 +30,10 @@ namespace MonoMod.UnitTest {
                 "BeforeA",
             };
             string[] expected = {
+                order[3],
+                order[2],
                 order[1],
                 order[0], // "Default" can end up anywhere.
-                order[2],
-                order[3],
             };
             var actual = new List<string>();
 
