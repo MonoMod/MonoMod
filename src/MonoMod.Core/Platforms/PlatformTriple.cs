@@ -194,10 +194,10 @@ namespace MonoMod.Core.Platforms {
 
             var archMatchCollection = Architecture.KnownMethodThunks;
 
+            nint prevEntry = -1;
+
             ReloadFuncPtr:
             var entry = (nint) Runtime.GetMethodEntryPoint(method);
-
-            nint prevEntry = -1;
             do {
                 if (prevEntry == entry) {
                     // we're in a loop, break out
