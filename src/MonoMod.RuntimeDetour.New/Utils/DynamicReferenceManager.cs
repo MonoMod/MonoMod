@@ -108,7 +108,7 @@ namespace MonoMod.RuntimeDetour.Utils {
         internal static object? GetValue(int index, int hash) => GetValue(new(index, hash));
         internal static T? GetValueT<T>(int index, int hash) => GetValue<T>(new(index, hash));
 
-        // TODO: fix SetValue to actually do the right thing with concurrend resizing additions
+        // TODO: fix SetValue to actually do the right thing with concurrent resizing additions
         public static void SetValue(CellRef cellRef, object? value) => GetCellRef(cellRef) = value;
         public static void SetValue<T>(CellRef cellRef, T? value) {
             ref var cell = ref GetCellRef(cellRef);

@@ -54,6 +54,14 @@ namespace MonoMod.Utils {
             if ((other.IsPointer || other.IsByRef) && type == typeof(IntPtr))
                 return true;
 
+            // If both types are pointers, we'll assume the user knows what they're doing since they're using unsafe anyway
+            if (type.IsPointer && other.IsPointer)
+                return true;
+
+            // if one is a pointer, and the other is a byref, then we can forgo underlying type checks for the same reason as above
+            if (type.IsByRef && other.IsPointer)
+                return true;
+
             return false;
         }
 
