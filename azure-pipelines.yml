@@ -33,9 +33,10 @@ variables:
   solution: '**/*.sln'
   buildConfiguration: 'Release'
   buildPlatform: 'Any CPU'
-  xunit: '{0}{1}/.nuget/packages/xunit.runner.console/2.4.1/tools/{2}/xunit.console.{3} MonoMod.UnitTest/bin/Release/{2}/MonoMod.UnitTest.dll -xml testresults.{4}.{2}.xml {5}'
+  xunitVer: '2.4.2'
+  xunit: '{0}{1}/.nuget/packages/xunit.runner.console/$(xunitVer)/tools/{2}/xunit.console.{3} artifacts/bin/MonoMod.UnitTest/Release/{6}/MonoMod.UnitTest.dll -xml testresults.{4}.{6}.xml {5}'
 
-name: '$(Date:yy.MM.dd)$(Rev:.rr)'
+name: '$(Date:yy.MM.dd)$(Rev:.rr)-prerelease'
 
 pool:
   vmImage: '$(imageName)'
@@ -85,15 +86,14 @@ steps:
   displayName: 'dotnet: Restore'
   inputs:
     command: 'restore'
-    projects: 'MonoMod*/*.csproj'
+    arguments: '-p:XunitVersion="$(xunitVer)"'
 
 # Build using core. Mono's msbuild started to cause too many issues.
 - task: DotNetCoreCLI@2
   displayName: 'dotnet: Build'
   inputs:
     command: 'build'
-    projects: 'MonoMod*/*.csproj'
-    arguments: '--configuration $(buildConfiguration) "/p:Configuration=$(buildConfiguration)"'
+    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)"'
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
@@ -108,17 +108,23 @@ steps:
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'net5.0'
+- template: 'azure-pipelines-postbuild.yml'
+  parameters:
+    targetFramework: 'net6.0'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
   displayName: 'Artifacts: Pack: nupkgs'
   continueOnError: true
   inputs:
-    command: 'pack'
+    #command: 'pack'
+    command: 'custom' # if you use command: pack, then you *have* to set packagesToPack, despite not providing it doing the right thing
+    custom: 'pack'
+    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -o $(Build.ArtifactStagingDirectory)/nupkgs'
     nobuild: true
     configuration: '$(buildConfiguration)'
     versioningScheme: 'byBuildNumber'
-    packagesToPack: 'MonoMod@(|.Common|.Utils|.RuntimeDetour|.RuntimeDetour.HookGen)/*.csproj'
+    #packagesToPack: 'MonoMod@(|.Common|.Utils|.RuntimeDetour|.RuntimeDetour.HookGen)/*.csproj'
     packDirectory: '$(Build.ArtifactStagingDirectory)/nupkgs'
 - task: PublishBuildArtifacts@1
   displayName: 'Artifacts: Publish: nupkgs'
@@ -134,21 +140,21 @@ steps:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/*.nupkg'
     publishVstsFeed: '572c97eb-dbaa-4a55-90e5-1d05431535bd/72ad568d-c548-4599-8b0a-9ea52b45bbbd'
-- task: PowerShell@2
-  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
-  displayName: 'Artifacts: Prepare: MonoMod.Common to nuget.org'
-  continueOnError: true
-  inputs:
-    filePath: 'azure-pipelines-prepushcommon.ps1'
-    arguments: '$(Build.ArtifactStagingDirectory)/nupkgs/MonoMod.Common.*.nupkg'
-- task: NuGetCommand@2
-  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
-  displayName: 'Artifacts: Push: MonoMod.Common to nuget.org'
-  inputs:
-    command: 'push'
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/MonoMod.Common.*.nupkg'
-    nuGetFeedType: 'external'
-    publishFeedCredentials: 'NuGet MonoMod'
+#- task: PowerShell@2
+#  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
+#  displayName: 'Artifacts: Prepare: MonoMod.Common to nuget.org'
+#  continueOnError: true
+#  inputs:
+#    filePath: 'azure-pipelines-prepushcommon.ps1'
+#    arguments: '$(Build.ArtifactStagingDirectory)/nupkgs/MonoMod.Common.*.nupkg'
+#- task: NuGetCommand@2
+#  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
+#  displayName: 'Artifacts: Push: MonoMod.Common to nuget.org'
+#  inputs:
+#    command: 'push'
+#    packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/MonoMod.Common.*.nupkg'
+#    nuGetFeedType: 'external'
+#    publishFeedCredentials: 'NuGet MonoMod'
 
 # Run tests.
 # I've tried to simplify this mess. It's impossible. --ade
@@ -156,144 +162,90 @@ steps:
   condition: and(always(), contains(variables.testers, ';fx;'))
   displayName: 'Test: fx: net452'
   inputs:
-    script: ${{format(variables.xunit, '', '%userprofile%', 'net452', 'exe', 'fx', '')}}
+    script: ${{format(variables.xunit, '', '%userprofile%', 'net452', 'exe', 'fx', '', 'net46')}}
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';fx;'))
-  displayName: 'Test: Publish: fx: net452'
+  displayName: 'Test: Publish: fx: net46'
   inputs:
     testResultsFormat: 'xUnit'
-    testResultsFiles: '**/testresults.fx.net452.xml'
-    testRunTitle: 'Tests @ $(jobArchName) fx net452'
+    testResultsFiles: '**/testresults.fx.net46.xml'
+    testRunTitle: 'Tests @ $(jobArchName) fx net46'
 
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';mono;'))
-  displayName: 'Test: mono: net452'
+  displayName: 'Test: mono: net46'
   inputs:
-    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'mono', '')}}
+    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'mono', '', 'net46')}}
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';mono;'))
-  displayName: 'Test: Publish: mono: net452'
+  displayName: 'Test: Publish: mono: net46'
   inputs:
     testResultsFormat: 'xUnit'
-    testResultsFiles: '**/testresults.mono.net452.xml'
-    testRunTitle: 'Tests @ $(jobArchName) mono net452'
+    testResultsFiles: '**/testresults.mono.net46.xml'
+    testRunTitle: 'Tests @ $(jobArchName) mono net46'
 
 - task: CmdLine@2
   condition: and(always(), contains(variables.testers, ';monoslow;'))
-  displayName: 'Test: monoslow: net452'
+  displayName: 'Test: monoslow: net46'
   inputs:
-    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'monoslow', '-parallel none -appdomains denied -verbose')}}
+    script: ${{format(variables.xunit, 'mono --debug ', '~', 'net452', 'exe', 'monoslow', '-parallel none -appdomains denied -verbose', 'net46')}}
 - task: PublishTestResults@2
   condition: and(always(), contains(variables.testers, ';monoslow;'))
-  displayName: 'Test: Publish: monoslow: net452'
+  displayName: 'Test: Publish: monoslow: net46'
   inputs:
     testResultsFormat: 'xUnit'
-    testResultsFiles: '**/testresults.monoslow.net452.xml'
-    testRunTitle: 'Tests @ $(jobArchName) monoslow net452'
+    testResultsFiles: '**/testresults.monoslow.net46.xml'
+    testRunTitle: 'Tests @ $(jobArchName) monoslow net46'
+    
+# All of the .NET Core tests run via azure-pipelines-coretest.yml, and have an optional 'arch' parameter to allow specific arch selection
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(true, contains(variables.testers, ';core2.1;'))
+    targetFramework: 'netcoreapp2.1'
 
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core2.1;'))
-  displayName: 'Test: core: netcoreapp2.1'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp2.1 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp2.1.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core2.1;'))
-  displayName: 'Test: Publish: core: netcoreapp2.1'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp2.1.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp2.1'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(true, contains(variables.testers, ';core3;'))
+    targetFramework: 'netcoreapp3.0'
+    arch: 'x64'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(contains(variables.testers, ';core3;'), eq(variables.textx86, 'true'))
+    targetFramework: 'netcoreapp3.0'
+    arch: 'x86'
 
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core3;'))
-  displayName: 'Test: core: netcoreapp3.0'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.0.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core3;'))
-  displayName: 'Test: Publish: core: netcoreapp3.0'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp3.0.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.0'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(true, contains(variables.testers, ';core3.1;'))
+    targetFramework: 'netcoreapp3.1'
+    arch: 'x64'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(contains(variables.testers, ';core3.1;'), eq(variables.textx86, 'true'))
+    targetFramework: 'netcoreapp3.1'
+    arch: 'x86'
 
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core3;'), eq(variables.textx86, 'true'))
-  displayName: 'Test: core: netcoreapp3.0-x86'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.0-x86.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core3;'), eq(variables.textx86, 'true'))
-  displayName: 'Test: Publish: core: netcoreapp3.0-x86'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp3.0-x86.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.0-x86'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(true, contains(variables.testers, ';core5;'))
+    targetFramework: 'net5.0'
+    arch: 'x64'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(contains(variables.testers, ';core5;'), eq(variables.textx86, 'true'))
+    targetFramework: 'net5.0'
+    arch: 'x86'
 
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core3.1;'))
-  displayName: 'Test: core: netcoreapp3.1'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.1 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.1.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core3.1;'))
-  displayName: 'Test: Publish: core: netcoreapp3.1'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp3.1.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.1'
-
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core3.1;'), eq(variables.textx86, 'true'))
-  displayName: 'Test: core: netcoreapp3.1-x86'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f netcoreapp3.1 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.netcoreapp3.1-x86.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core3.1;'), eq(variables.textx86, 'true'))
-  displayName: 'Test: Publish: core: netcoreapp3.1-x86'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.netcoreapp3.1-x86.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core netcoreapp3.1-x86'
-
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core5;'))
-  displayName: 'Test: core: net5.0'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net5.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net5.0.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core5;'))
-  displayName: 'Test: Publish: core: net5.0'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.net5.0.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core net5.0'
-
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core5;'), eq(variables.textx86, 'true'))
-  displayName: 'Test: core: net5.0-x86'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net5.0 --arch x86 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net5.0-x86.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core5;'), eq(variables.textx86, 'true'))
-  displayName: 'Test: Publish: core: net5.0-x86'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.net5.0-x86.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core net5.0-x86'
-
-- task: CmdLine@2
-  condition: and(always(), contains(variables.testers, ';core6;'))
-  displayName: 'Test: core: net6.0'
-  inputs:
-    script: 'dotnet test --no-build --configuration ${{variables.buildConfiguration}} -f net6.0 MonoMod.UnitTest/MonoMod.UnitTest.csproj -l:"trx;LogFileName=testresults.core.net6.0.trx"'
-- task: PublishTestResults@2
-  condition: and(always(), contains(variables.testers, ';core6;'))
-  displayName: 'Test: Publish: core: net6.0'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/testresults.core.net6.0.trx'
-    testRunTitle: 'Tests @ $(jobArchName) core net6.0'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(true, contains(variables.testers, ';core6;'))
+    targetFramework: 'net6.0'
+    arch: 'x64'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(contains(variables.testers, ';core6;'), eq(variables.textx86, 'true'))
+    targetFramework: 'net6.0'
+    arch: 'x86'
 
 # Rebuild and publish the DocFX page.
 - task: PowerShell@2

@@ -24,6 +24,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BCABFBF3-BB48-4C21-9A52-E140015570A9}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		azure-pipelines-coretest.yml = azure-pipelines-coretest.yml
 		azure-pipelines-docfx.ps1 = azure-pipelines-docfx.ps1
 		azure-pipelines-postbuild.yml = azure-pipelines-postbuild.yml
 		azure-pipelines-prepushcommon.ps1 = azure-pipelines-prepushcommon.ps1
@@ -42,7 +43,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Backports.Filter", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.RuntimeDetour.New", "src\MonoMod.RuntimeDetour.New\MonoMod.RuntimeDetour.New.csproj", "{D3345345-B097-4BFF-89B8-007A21A5BFD8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.Core.SourceGen", "src\MonoMod.Core.SourceGen\MonoMod.Core.SourceGen.csproj", "{ADB985C0-CCAD-40D0-AA63-2BD192470969}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Core.SourceGen", "src\MonoMod.Core.SourceGen\MonoMod.Core.SourceGen.csproj", "{ADB985C0-CCAD-40D0-AA63-2BD192470969}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

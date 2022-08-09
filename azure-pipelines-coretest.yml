@@ -1,0 +1,45 @@
+parameters:
+- name: targetFramework
+  type: string
+  default: ''
+- name: buildConfiguration
+  type: string
+  default: 'Release'
+- name: arch
+  type: string
+  default: ''
+- name: condition
+  type: string
+  default: true
+
+
+steps:
+- ${{ if eq(length('${{parameters.arch}}'), 0) }}:
+  - task: CmdLine@2
+    condition: and(always(), ${{parameters.condition}})
+    displayName: 'Test: core: ${{parameters.targetFramework}}'
+    inputs:
+      script: |
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}.trx"
+  - task: PublishTestResults@2
+    condition: and(always(), ${{parameters.condition}})
+    displayName: 'Test: Publish: core: ${{parameters.targetFramework}}'
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '**/testresults.core.${{parameters.targetFramework}}.trx'
+      testRunTitle: 'Tests @ $(jobArchName) core ${{parameters.targetFramework}}'
+      
+- ${{ if ne(length('${{parameters.arch}}'), 0) }}:
+  - task: CmdLine@2
+    condition: and(always(), ${{parameters.condition}})
+    displayName: 'Test: core: ${{parameters.targetFramework}}-${{parameters.arch}}'
+    inputs:
+      script: |
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} --arch '${{parameters.arch}}' -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx"
+  - task: PublishTestResults@2
+    condition: and(always(), ${{parameters.condition}})
+    displayName: 'Test: Publish: core: ${{parameters.targetFramework}}-${{parameters.arch}}'
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '**/testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx'
+      testRunTitle: 'Tests @ $(jobArchName) core ${{parameters.targetFramework}}-${{parameters.arch}}'

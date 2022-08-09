@@ -16,7 +16,7 @@
     <SignAssembly>skip</SignAssembly>
     <Nullable>annotations</Nullable>
 
-    <XunitVersion>2.*</XunitVersion>
+    <XunitVersion Condition="'$(XunitVersion)' == ''">2.*</XunitVersion>
     <XunitVsRunnerVersion>$(XunitVersion)</XunitVsRunnerVersion>
     <!-- 2.4.5 drops support for net452 -->
     <XunitVsRunnerVersion Condition="'$(TargetFramework)' == 'net46'">[2.*,2.4.3]</XunitVsRunnerVersion>
