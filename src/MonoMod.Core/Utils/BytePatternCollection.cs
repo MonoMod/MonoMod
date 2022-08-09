@@ -320,6 +320,8 @@ namespace MonoMod.Core.Utils {
                         continue;
 
                     foreach (var pattern in patterns) {
+                        if (offset != 0 && pattern.MustMatchAtStart)
+                            continue;
                         if (pattern.TryMatchAt(data.Slice(offset - coll.Offset), addrBuf, out length)) {
                             offset -= coll.Offset;
                             matchingPattern = pattern;

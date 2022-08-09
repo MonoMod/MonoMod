@@ -183,13 +183,13 @@ namespace MonoMod.Core.Platforms {
 
         public IntPtr GetNativeMethodBody(MethodBase method) {
             if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking)) {
-                return GetNativeMethodBodyWalk(method);
+                return GetNativeMethodBodyWalk(method, reloadPtr: true);
             } else {
                 return GetNativeMethodBodyDirect(method);
             }
         }
 
-        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method) {
+        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr) {
             var regenerated = false;
 
             var archMatchCollection = Architecture.KnownMethodThunks;
@@ -211,6 +211,7 @@ namespace MonoMod.Core.Platforms {
                 // if we want to, we could scan for an arch-specific padding pattern and use that to limit instead
                 var span = new ReadOnlySpan<byte>((void*) entry, Math.Min((int) readableLen, archMatchCollection.MaxMinLength));
 
+                // TODO: be more limiting with which patterns can be scanned forward and which cannot
                 if (!archMatchCollection.TryFindMatch(span, out var addr, out var match, out var offset, out _))
                     break;
 
@@ -219,16 +220,22 @@ namespace MonoMod.Core.Platforms {
                 var meaning = match.AddressMeaning;
                 if (meaning.Kind.IsPrecodeFixup() && !regenerated) {
                     var precode = meaning.ProcessAddress(entry, offset, addr);
-                    MMDbgLog.Log($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
-                    Prepare(method);
-                    goto ReloadFuncPtr;
+                    if (reloadPtr) {
+                        MMDbgLog.Log($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
+                        Prepare(method);
+                        //regenerated = true;
+                        goto ReloadFuncPtr;
+                    } else {
+                        entry = precode;
+                    }
                 } else {
                     entry = meaning.ProcessAddress(entry, offset, addr);
                 }
 
                 entry = NotThePreStub(lastEntry, entry, out var wasPreStub);
-                if (wasPreStub) {
+                if (wasPreStub && reloadPtr) {
                     Prepare(method);
+                    //regenerated = true;
                     goto ReloadFuncPtr;
                 }
             } while (true);
@@ -250,17 +257,17 @@ namespace MonoMod.Core.Platforms {
                 // FIXME: Find a better less likely called NGEN'd candidate that points to ThePreStub.
                 // This was "found" by tModLoader.
                 // Can be missing in .NET 5.0 outside of Windows for some reason.
-                var mi = typeof(System.Net.HttpWebRequest).Assembly
-                    .GetType("System.Net.Connection")
-                    ?.GetMethod("SubmitRequest", BindingFlags.NonPublic | BindingFlags.Instance);
 
-                if (mi != null) {
-                    ThePreStub = GetNativeMethodBody(mi);
-                    MMDbgLog.Log($"ThePreStub: 0x{(long) ThePreStub:X16}");
-                } else if (PlatformDetection.OS.Is(OSKind.Windows)) {
-                    // FIXME: This should be -1 (always return ptrGot) on all plats, but SubmitRequest is Windows-only?
-                    ThePreStub = (IntPtr) (-1);
-                }
+                // Instead of using any specific method on System.Net.Connection, we just check all of them, as (hopefully) most aren't called by this point
+                var pre = typeof(System.Net.HttpWebRequest).Assembly
+                    .GetType("System.Net.Connection")
+                    ?.GetMethods()
+                    .GroupBy(m => GetNativeMethodBodyWalk(m, reloadPtr: false))
+                    .First(g => g.Count() > 1)
+                    .Key ?? (nint) (-1);
+
+                ThePreStub = pre;
+                MMDbgLog.Log($"ThePreStub: 0x{ThePreStub:X16}");
             }
 
             wasPreStub = ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/;

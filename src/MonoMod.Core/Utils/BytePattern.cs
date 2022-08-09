@@ -24,6 +24,7 @@ namespace MonoMod.Core.Utils {
         public int MinLength { get; }
 
         public AddressMeaning AddressMeaning { get; }
+        public bool MustMatchAtStart { get; }
 
         private enum SegmentKind {
             Literal, MaskedLiteral, Any, AnyRepeating, Address,
@@ -34,9 +35,12 @@ namespace MonoMod.Core.Utils {
             public ReadOnlyMemory<T> SliceOf<T>(ReadOnlyMemory<T> mem) => mem.Slice(Start, Length);
         }
 
-        public BytePattern(AddressMeaning meaning, params ushort[] pattern) : this(meaning, pattern.AsMemory()) { }
-        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<ushort> pattern) {
+        public BytePattern(AddressMeaning meaning, params ushort[] pattern) : this(meaning, false, pattern.AsMemory()) { }
+        public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, params ushort[] pattern) : this(meaning, mustMatchAtStart, pattern.AsMemory()) { }
+        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<ushort> pattern) : this(meaning, false, pattern) { }
+        public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<ushort> pattern) {
             AddressMeaning = meaning;
+            MustMatchAtStart = mustMatchAtStart;
             (segments, MinLength, AddressBytes) = ComputeSegmentsFromShort(pattern);
 
             // this mess splits the ushort pattern array into 
@@ -58,8 +62,10 @@ namespace MonoMod.Core.Utils {
             bitmask = bitmaskData;
         }
 
-        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) {
+        public BytePattern(AddressMeaning meaning, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) : this(meaning, false, mask, pattern) { }
+        public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) {
             AddressMeaning = meaning;
+            MustMatchAtStart = mustMatchAtStart;
             (segments, MinLength, AddressBytes) = ComputeSegmentsFromMaskPattern(mask, pattern);
             this.pattern = pattern;
             bitmask = mask;
@@ -309,7 +315,13 @@ namespace MonoMod.Core.Utils {
             ReadOnlySpan<byte> patternSpan = pattern.Span;
 
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
-            var result = ScanForNextLiteral(patternSpan, data, addr, out offset, out length, 0);
+            bool result;
+            if (MustMatchAtStart) {
+                offset = 0;
+                result = TryMatchAtImpl(patternSpan, data, addr, out length, 0);
+            } else {
+                result = ScanForNextLiteral(patternSpan, data, addr, out offset, out length, 0);
+            }
             address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
             return result;
         }
@@ -321,7 +333,12 @@ namespace MonoMod.Core.Utils {
             }
 
             ReadOnlySpan<byte> patternSpan = pattern.Span;
-            return ScanForNextLiteral(patternSpan, data, addrBuf, out offset, out length, 0);
+            if (MustMatchAtStart) {
+                offset = 0;
+                return TryMatchAtImpl(patternSpan, data, addrBuf, out length, 0);
+            } else {
+                return ScanForNextLiteral(patternSpan, data, addrBuf, out offset, out length, 0);
+            }
         }
 
         private bool ScanForNextLiteral(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length, int segmentIndex) {

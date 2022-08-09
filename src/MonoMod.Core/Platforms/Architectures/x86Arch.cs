@@ -19,7 +19,7 @@ namespace MonoMod.Core.Platforms.Architectures {
             if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
                 return new BytePatternCollection(
                     // .NET Framework
-                    new(new(AddressKind.Rel32, 0x10),
+                    new(new(AddressKind.Rel32, 0x10), // UNKNOWN mustMatchAtStart
                         // mov ... (mscorlib_ni!???)
                         0xb8, An, An, An, An,
                         // nop
@@ -30,21 +30,21 @@ namespace MonoMod.Core.Platforms.Architectures {
                         0xe9, Ad, Ad, Ad, Ad),
 
                     // .NET Core
-                    new(new(AddressKind.Rel32, 5),
+                    new(new(AddressKind.Rel32, 5), mustMatchAtStart: true,
                         // jmp {DELTA}
                         0xe9, Ad, Ad, Ad, Ad,
                         // pop rdi
                         0x5f),
 
                     // PrecodeFixupThunk (CLR 4+)
-                    new(new(AddressKind.PrecodeFixupThunkRel32, 5),
+                    new(new(AddressKind.PrecodeFixupThunkRel32, 5), mustMatchAtStart: true,
                         // call {PRECODE FIXUP THUNK}
                         0xe8, Ad, Ad, Ad, Ad,
                         // pop rsi(?) (is this even consistent?)
                         0x5e),
 
                     // PrecodeFixupThunk (CLR 2)
-                    new(new(AddressKind.PrecodeFixupThunkRel32, 5),
+                    new(new(AddressKind.PrecodeFixupThunkRel32, 5), mustMatchAtStart: true,
                         // call {PRECODE FIXUP THUNK}
                         0xe8, Ad, Ad, Ad, Ad,
                         // int 3
