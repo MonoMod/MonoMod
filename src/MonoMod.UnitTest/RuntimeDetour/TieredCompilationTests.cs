@@ -23,6 +23,8 @@ namespace MonoMod.UnitTest {
         //   in release mode. In debug mode, it will never fail.
         //
 
+        // TODO: it seems like this fails on Linux x64, but only Core 3.1 and 5
+
         [Fact]
         public void WithTieredCompilation() {
             if (Environment.GetEnvironmentVariable("MM_TEST_DEBUG_TIERED_COMP") != null) {
