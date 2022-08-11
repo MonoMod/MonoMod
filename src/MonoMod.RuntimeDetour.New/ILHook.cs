@@ -124,7 +124,9 @@ namespace MonoMod.RuntimeDetour {
 
         protected virtual void Dispose(bool disposing) {
             if (!disposedValue) {
-                Undo();
+                hook.IsValid = false;
+                if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))
+                    Undo();
 
                 if (disposing) {
                     // TODO: dispose managed state (managed objects)

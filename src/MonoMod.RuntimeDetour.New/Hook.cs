@@ -342,7 +342,8 @@ namespace MonoMod.RuntimeDetour {
         protected virtual void Dispose(bool disposing) {
             if (!disposedValue) {
                 detour.IsValid = false;
-                Undo();
+                if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))
+                    Undo();
                 delegateObjectScope.Dispose();
 
                 if (disposing) {
