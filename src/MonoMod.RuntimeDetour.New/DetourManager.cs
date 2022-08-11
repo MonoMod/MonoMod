@@ -480,6 +480,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
+                // TODO: make sure this ACTUALLY called outside of the lock
                 InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, detour);
             }
 
@@ -512,6 +513,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
+                // TODO: make sure this ACTUALLY called outside of the lock
                 InvokeDetourEvent(DetourManager.DetourUndone, DetourUndone, detour);
             }
 
@@ -571,6 +573,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
+                // TODO: make sure this ACTUALLY called outside of the lock
                 InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, ilhook);
             }
 
@@ -603,6 +606,7 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
+                // TODO: make sure this ACTUALLY called outside of the lock
                 InvokeILHookEvent(DetourManager.ILHookUndone, ILHookUndone, ilhook);
             }
 

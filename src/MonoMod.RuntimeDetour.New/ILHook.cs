@@ -85,6 +85,7 @@ namespace MonoMod.RuntimeDetour {
         private bool disposedValue;
         public bool IsValid => !disposedValue;
         public bool IsApplied => hook.IsApplied;
+        public ILHookInfo HookInfo => state.Info.GetILHookInfo(hook);
 
         private void CheckDisposed() {
             if (disposedValue)

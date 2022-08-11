@@ -106,8 +106,9 @@ namespace MonoMod.RuntimeDetour {
 
         private bool disposedValue;
         public bool IsValid => !disposedValue;
-
         public bool IsApplied => detour.IsApplied;
+
+        public DetourInfo DetourInfo => state.Info.GetDetourInfo(detour);
 
         private void CheckDisposed() {
             if (disposedValue)
