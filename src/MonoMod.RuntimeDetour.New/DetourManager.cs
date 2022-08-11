@@ -70,19 +70,16 @@ namespace MonoMod.RuntimeDetour {
         }
 
         internal sealed class DetourChainNode : ChainNode {
-            public DetourChainNode(IDetour detour) {
-                Entry = detour.InvokeTarget;
-                NextTrampoline = detour.NextTrampoline;
-                Config = detour.Config;
-                Factory = detour.Factory;
+            public DetourChainNode(SingleDetourState detour) {
+                Detour = detour;
             }
 
-            public override MethodBase Entry { get; }
-            public override MethodBase NextTrampoline { get; }
-            public override DetourConfig? Config { get; }
-            public IDetourFactory Factory { get; }
+            public readonly SingleDetourState Detour;
 
-            public DetourInfo? DetourInfo;
+            public override MethodBase Entry => Detour.InvokeTarget;
+            public override MethodBase NextTrampoline => Detour.NextTrampoline;
+            public override DetourConfig? Config => Detour.Config;
+            public IDetourFactory Factory => Detour.Factory;
         }
 
         internal sealed class DetourSyncInfo {
@@ -237,19 +234,17 @@ namespace MonoMod.RuntimeDetour {
 
         #region ILHook chain
         internal class ILHookEntry {
-            public readonly IDetourFactory Factory;
-            public readonly DetourConfig? Config;
-            public readonly ILContext.Manipulator Manip;
+            public readonly SingleILHookState Hook;
+
+            public IDetourFactory Factory => Hook.Factory;
+            public DetourConfig? Config => Hook.Config;
+            public ILContext.Manipulator Manip => Hook.Manip;
             public ILContext? CurrentContext;
             public ILContext? LastContext;
             public bool IsApplied;
 
-            public ILHookInfo? HookInfo;
-
-            public ILHookEntry(IILHook hook) {
-                Manip = hook.Manip;
-                Config = hook.Config;
-                Factory = hook.Factory;
+            public ILHookEntry(SingleILHookState hook) {
+                Hook = hook;
             }
 
             public void Remove() {
@@ -437,7 +432,6 @@ namespace MonoMod.RuntimeDetour {
             public readonly MethodBase ILCopy;
             public MethodBase EndOfChain;
 
-
             public DetourState(MethodBase src) {
                 Source = src;
                 ILCopy = src.CreateILCopy();
@@ -455,11 +449,12 @@ namespace MonoMod.RuntimeDetour {
             internal SpinLock detourLock = new(true);
             internal int detourChainVersion;
 
-            public void AddDetour(IDetour detour) {
+            public void AddDetour(SingleDetourState detour, bool takeLock = true) {
                 DetourChainNode cnode;
                 var lockTaken = false;
                 try {
-                    detourLock.Enter(ref lockTaken);
+                    if (takeLock)
+                        detourLock.Enter(ref lockTaken);
                     if (detour.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add a detour which was already added");
 
@@ -485,16 +480,17 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, cnode);
+                InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, detour);
             }
 
-            public void RemoveDetour(IDetour detour) {
+            public void RemoveDetour(SingleDetourState detour, bool takeLock = true) {
                 DetourChainNode cnode;
                 var lockTaken = false;
                 try {
-                    detourLock.Enter(ref lockTaken);
+                    if (takeLock)
+                        detourLock.Enter(ref lockTaken);
                     detourChainVersion++;
-                    switch (detour.ManagerData) {
+                    switch (Interlocked.Exchange(ref detour.ManagerData, null)) {
                         case null:
                             throw new InvalidOperationException("Trying to remove detour which wasn't added");
 
@@ -516,16 +512,16 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeDetourEvent(DetourManager.DetourUndone, DetourUndone, cnode);
+                InvokeDetourEvent(DetourManager.DetourUndone, DetourUndone, detour);
             }
 
-            private void RemoveGraphDetour(IDetour detour, DepGraphNode<ChainNode> node) {
+            private void RemoveGraphDetour(SingleDetourState detour, DepGraphNode<ChainNode> node) {
                 detourGraph.Remove(node);
                 UpdateChain(detour.Factory);
                 node.ListNode.ChainNode.Remove();
             }
 
-            private void RemoveNoConfigDetour(IDetour detour, DetourChainNode node) {
+            private void RemoveNoConfigDetour(SingleDetourState detour, DetourChainNode node) {
                 ref var chain = ref noConfigChain;
                 while (chain is not null) {
                     if (ReferenceEquals(chain, node)) {
@@ -545,11 +541,12 @@ namespace MonoMod.RuntimeDetour {
             internal readonly List<ILHookEntry> noConfigIlhooks = new();
 
             internal int ilhookVersion;
-            public void AddILHook(IILHook ilhook) {
+            public void AddILHook(SingleILHookState ilhook, bool takeLock = true) {
                 ILHookEntry entry;
                 var lockTaken = false;
                 try {
-                    detourLock.Enter(ref lockTaken);
+                    if (takeLock)
+                        detourLock.Enter(ref lockTaken);
                     if (ilhook.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add an IL hook which was already added");
 
@@ -574,16 +571,17 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, entry);
+                InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, ilhook);
             }
 
-            public void RemoveILHook(IILHook ilhook) {
+            public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true) {
                 ILHookEntry entry;
                 var lockTaken = false;
                 try {
-                    detourLock.Enter(ref lockTaken);
+                    if (takeLock)
+                        detourLock.Enter(ref lockTaken);
                     ilhookVersion++;
-                    switch (ilhook.ManagerData) {
+                    switch (Interlocked.Exchange(ref ilhook.ManagerData, null)) {
                         case null:
                             throw new InvalidOperationException("Trying to remove IL hook which wasn't added");
 
@@ -605,10 +603,10 @@ namespace MonoMod.RuntimeDetour {
                         detourLock.Exit(true);
                 }
 
-                InvokeILHookEvent(DetourManager.ILHookUndone, ILHookUndone, entry);
+                InvokeILHookEvent(DetourManager.ILHookUndone, ILHookUndone, ilhook);
             }
 
-            private void RemoveGraphILHook(IILHook ilhook, DepGraphNode<ILHookEntry> node) {
+            private void RemoveGraphILHook(SingleILHookState ilhook, DepGraphNode<ILHookEntry> node) {
                 ilhookGraph.Remove(node);
                 UpdateEndOfChain();
                 UpdateChain(ilhook.Factory);
@@ -616,7 +614,7 @@ namespace MonoMod.RuntimeDetour {
                 node.ListNode.ChainNode.Remove();
             }
 
-            private void RemoveNoConfigILHook(IILHook ilhook, ILHookEntry node) {
+            private void RemoveNoConfigILHook(SingleILHookState ilhook, ILHookEntry node) {
                 noConfigIlhooks.Remove(node);
                 UpdateEndOfChain();
                 UpdateChain(ilhook.Factory);
@@ -731,7 +729,7 @@ namespace MonoMod.RuntimeDetour {
             public event Action<ILHookInfo>? ILHookApplied;
             public event Action<ILHookInfo>? ILHookUndone;
 
-            private void InvokeDetourEvent(Action<DetourInfo>? evt1, Action<DetourInfo>? evt2, DetourChainNode node) {
+            private void InvokeDetourEvent(Action<DetourInfo>? evt1, Action<DetourInfo>? evt2, SingleDetourState node) {
                 if (evt1 is not null || evt2 is not null) {
                     var info = Info.GetDetourInfo(node);
                     evt1?.Invoke(info);
@@ -739,12 +737,56 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            private void InvokeILHookEvent(Action<ILHookInfo>? evt1, Action<ILHookInfo>? evt2, ILHookEntry entry) {
+            private void InvokeILHookEvent(Action<ILHookInfo>? evt1, Action<ILHookInfo>? evt2, SingleILHookState entry) {
                 if (evt1 is not null || evt2 is not null) {
                     var info = Info.GetILHookInfo(entry);
                     evt1?.Invoke(info);
                     evt2?.Invoke(info);
                 }
+            }
+        }
+
+        internal sealed class SingleDetourState {
+
+            public readonly IDetourFactory Factory;
+            public readonly DetourConfig? Config;
+
+            public readonly MethodInfo InvokeTarget;
+            public readonly MethodBase NextTrampoline;
+
+            public object? ManagerData;
+
+            public DetourInfo? DetourInfo;
+
+            public bool IsValid;
+            public bool IsApplied => Volatile.Read(ref ManagerData) is not null;
+
+            public SingleDetourState(IDetour dt) {
+                Factory = dt.Factory;
+                Config = dt.Config;
+                InvokeTarget = dt.InvokeTarget;
+                NextTrampoline = dt.NextTrampoline;
+                IsValid = true;
+            }
+        }
+
+        internal sealed class SingleILHookState {
+            public readonly IDetourFactory Factory;
+            public readonly DetourConfig? Config;
+            public readonly ILContext.Manipulator Manip;
+
+            public object? ManagerData;
+
+            public ILHookInfo? HookInfo;
+
+            public bool IsValid;
+            public bool IsApplied => Volatile.Read(ref ManagerData) is not null;
+
+            public SingleILHookState(IILHook hk) {
+                Factory = hk.Factory;
+                Config = hk.Config;
+                Manip = hk.Manip;
+                IsValid = true;
             }
         }
 
@@ -781,7 +823,7 @@ namespace MonoMod.RuntimeDetour {
         public ILHookCollection ILHooks => lazyILHooks ??= new(this);
 
         public DetourInfo? FirstDetour
-            => state.detourList.Next is DetourManager.DetourChainNode cn ? GetDetourInfo(cn) : null;
+            => state.detourList.Next is DetourManager.DetourChainNode cn ? GetDetourInfo(cn.Detour) : null;
 
         public bool IsDetoured => state.detourList.Next is not null || state.detourList.HasILHook;
 
@@ -802,19 +844,19 @@ namespace MonoMod.RuntimeDetour {
             remove => state.ILHookUndone -= value;
         }
 
-        internal DetourInfo GetDetourInfo(DetourManager.DetourChainNode node) {
+        internal DetourInfo GetDetourInfo(DetourManager.SingleDetourState node) {
             var existingInfo = node.DetourInfo;
-            if (existingInfo is null || existingInfo.MethodInfo != this) {
-                return node.DetourInfo = new(node, this);
+            if (existingInfo is null || existingInfo.Method!= this) {
+                return node.DetourInfo = new(this, node);
             }
 
             return existingInfo;
         }
 
-        internal ILHookInfo GetILHookInfo(DetourManager.ILHookEntry entry) {
+        internal ILHookInfo GetILHookInfo(DetourManager.SingleILHookState entry) {
             var existingInfo = entry.HookInfo;
-            if (existingInfo is null || existingInfo.MethodInfo != this) {
-                return entry.HookInfo = new(entry, this);
+            if (existingInfo is null || existingInfo.Method!= this) {
+                return entry.HookInfo = new(this, entry);
             }
 
             return existingInfo;
@@ -868,7 +910,7 @@ namespace MonoMod.RuntimeDetour {
                 curNode = mdi.state.detourList;
             }
 
-            public DetourInfo Current => mdi.GetDetourInfo((DetourManager.DetourChainNode) curNode!);
+            public DetourInfo Current => mdi.GetDetourInfo(((DetourManager.DetourChainNode) curNode!).Detour);
 
             object IEnumerator.Current => Current;
 
@@ -889,24 +931,6 @@ namespace MonoMod.RuntimeDetour {
                 curNode = null;
             }
         }
-    }
-
-    public sealed class DetourInfo {
-        private readonly DetourManager.DetourChainNode detour;
-
-        internal DetourInfo(DetourManager.DetourChainNode detour, MethodDetourInfo methodInfo) {
-            this.detour = detour;
-            MethodInfo = methodInfo;
-        }
-
-        public MethodDetourInfo MethodInfo { get; }
-        public MethodBase ChainEntry => detour.Entry;
-
-        public bool IsApplied => detour.IsApplied;
-        public DetourConfig? Config => detour.Config;
-
-        public DetourInfo? Next
-            => detour.Next is DetourManager.DetourChainNode cn ? MethodInfo.GetDetourInfo(cn) : null;
     }
 
     public sealed class ILHookCollection : IEnumerable<ILHookInfo> {
@@ -938,8 +962,8 @@ namespace MonoMod.RuntimeDetour {
             public ILHookInfo Current
                 => state switch {
                     0 => throw new InvalidOperationException(), // Current should never be called in state 0
-                    1 => mdi.GetILHookInfo(listEntry!.ChainNode), // in state 1, our value is that of the current list node
-                    2 => mdi.GetILHookInfo(listEnum.Current), // in state 2, our value is the current value of the list enumerator
+                    1 => mdi.GetILHookInfo(listEntry!.ChainNode.Hook), // in state 1, our value is that of the current list node
+                    2 => mdi.GetILHookInfo(listEnum.Current.Hook), // in state 2, our value is the current value of the list enumerator
                     _ => throw new InvalidOperationException() // all other states are invalid
                 };
 
@@ -998,17 +1022,125 @@ namespace MonoMod.RuntimeDetour {
         }
     }
 
-    public sealed class ILHookInfo {
-        private readonly DetourManager.ILHookEntry ilHook;
+    public abstract class DetourBase {
+        public MethodDetourInfo Method { get; }
 
-        internal ILHookInfo(DetourManager.ILHookEntry hook, MethodDetourInfo methodInfo) {
-            ilHook = hook;
-            MethodInfo = methodInfo;
+        private protected DetourBase(MethodDetourInfo method)
+            => Method = method;
+
+        protected abstract bool IsAppliedCore();
+        protected abstract DetourConfig? ConfigCore();
+
+        public bool IsApplied => IsAppliedCore();
+        public DetourConfig? Config => ConfigCore();
+
+        // I'm still not sure if I'm happy with this being publicly exposed...
+
+        public void Apply() {
+            ref var spinLock = ref Method.state.detourLock;
+            var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
+            try {
+                if (!lockTaken)
+                    spinLock.Enter(ref lockTaken);
+
+                ApplyCore();
+            } finally {
+                if (lockTaken)
+                    spinLock.Exit(true);
+            }
         }
 
-        public MethodDetourInfo MethodInfo { get; }
+        public void Undo() {
+            ref var spinLock = ref Method.state.detourLock;
+            var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
+            try {
+                if (!lockTaken)
+                    spinLock.Enter(ref lockTaken);
 
-        public bool IsApplied => ilHook.IsApplied;
-        public DetourConfig? Config => ilHook.Config;
+                UndoCore();
+            } finally {
+                if (lockTaken)
+                    spinLock.Exit(true);
+            }
+        }
+
+        protected abstract void ApplyCore();
+        protected abstract void UndoCore();
+    }
+
+    public sealed class DetourInfo : DetourBase {
+        private readonly DetourManager.SingleDetourState detour;
+
+        internal DetourInfo(MethodDetourInfo method, DetourManager.SingleDetourState detour) : base(method) {
+            this.detour = detour;
+        }
+
+        protected override bool IsAppliedCore() => detour.IsApplied;
+        protected override DetourConfig? ConfigCore() => detour.Config;
+
+        protected override void ApplyCore() {
+            if (detour.IsApplied) {
+                throw new InvalidOperationException("Detour is already applied");
+            }
+
+            if (!detour.IsValid) {
+                throw new InvalidOperationException("Detour is no longer valid");
+            }
+
+            Method.state.AddDetour(detour, false);
+        }
+
+        protected override void UndoCore() {
+            if (!detour.IsApplied) {
+                throw new InvalidOperationException("Detour is not currently applied");
+            }
+
+            Method.state.RemoveDetour(detour, false);
+        }
+
+        public MethodBase Entry => detour.InvokeTarget;
+
+        internal DetourManager.DetourChainNode? ChainNode
+            => detour.ManagerData switch {
+                DetourManager.DetourChainNode cn => cn,
+                DetourManager.DepGraphNode<DetourManager.ChainNode> gn => (DetourManager.DetourChainNode) gn.ListNode.ChainNode,
+                _ => null,
+            };
+
+        public DetourInfo? Next
+            => ChainNode?.Next is DetourManager.DetourChainNode cn ? Method.GetDetourInfo(cn.Detour) : null;
+    }
+
+    public sealed class ILHookInfo : DetourBase {
+        private readonly DetourManager.SingleILHookState hook;
+
+        internal ILHookInfo(MethodDetourInfo method, DetourManager.SingleILHookState hook) : base(method) {
+            this.hook = hook;
+        }
+
+        protected override bool IsAppliedCore() => hook.IsApplied;
+        protected override DetourConfig? ConfigCore() => hook.Config;
+
+        protected override void ApplyCore() {
+            if (hook.IsApplied) {
+                throw new InvalidOperationException("ILHook is already applied");
+            }
+
+            if (!hook.IsValid) {
+                throw new InvalidOperationException("ILHook is no longer valid");
+            }
+
+            Method.state.AddILHook(hook, false);
+        }
+
+        protected override void UndoCore() {
+            if (!hook.IsApplied) {
+                throw new InvalidOperationException("ILHook is not currently applied");
+            }
+
+            Method.state.RemoveILHook(hook, false);
+        }
+
+        public MethodInfo ManipulatorMethod => hook.Manip.Method;
     }
 }

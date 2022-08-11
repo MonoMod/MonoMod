@@ -10,15 +10,11 @@ namespace MonoMod.RuntimeDetour {
 
         MethodInfo InvokeTarget { get; }
         MethodBase NextTrampoline { get; }
-
-        object? ManagerData { get; set; }
     }
 
     internal interface IILHook {
         IDetourFactory Factory { get; }
         DetourConfig? Config { get; }
         ILContext.Manipulator Manip { get; }
-
-        object? ManagerData { get; set; }
     }
 }

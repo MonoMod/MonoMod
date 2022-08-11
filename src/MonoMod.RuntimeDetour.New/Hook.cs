@@ -168,10 +168,8 @@ namespace MonoMod.RuntimeDetour {
         private readonly MethodInfo trampoline;
         MethodBase IDetour.NextTrampoline => trampoline;
 
-        private object? managerData;
-        object? IDetour.ManagerData { get => managerData; set => managerData = value; }
-
         private readonly DetourManager.DetourState state;
+        private readonly DetourManager.SingleDetourState detour;
 
         private readonly DataScope<DynamicReferenceManager.CellRef> delegateObjectScope;
 
@@ -189,6 +187,7 @@ namespace MonoMod.RuntimeDetour {
             realTarget = PrepareRealTarget(targetObject, out trampoline, out delegateObjectScope);
 
             state = DetourManager.GetDetourState(source);
+            detour = new(this);
 
             if (applyByDefault) {
                 Apply();
@@ -307,29 +306,41 @@ namespace MonoMod.RuntimeDetour {
 
         public void Apply() {
             CheckDisposed();
-            if (IsApplied)
-                return;
-            Volatile.Write(ref isApplied, true);
-            state.AddDetour(this);
+
+            var lockTaken = false;
+            try {
+                state.detourLock.Enter(ref lockTaken);
+                if (IsApplied)
+                    return;
+                state.AddDetour(detour, !lockTaken);
+            } finally {
+                if (lockTaken)
+                    state.detourLock.Exit(true);
+            }
         }
 
         public void Undo() {
             CheckDisposed();
-            if (!IsApplied)
-                return;
-            Volatile.Write(ref isApplied, value: false);
-            state.RemoveDetour(this);
-        }
 
+            var lockTaken = false;
+            try {
+                state.detourLock.Enter(ref lockTaken);
+                if (!IsApplied)
+                    return;
+                state.RemoveDetour(detour, !lockTaken);
+            } finally {
+                if (lockTaken)
+                    state.detourLock.Exit(true);
+            }
+        }
 
         private bool disposedValue;
         public bool IsValid => !disposedValue;
-
-        private bool isApplied;
-        public bool IsApplied => Volatile.Read(ref isApplied);
+        public bool IsApplied => detour.IsApplied;
 
         protected virtual void Dispose(bool disposing) {
             if (!disposedValue) {
+                detour.IsValid = false;
                 Undo();
                 delegateObjectScope.Dispose();
 

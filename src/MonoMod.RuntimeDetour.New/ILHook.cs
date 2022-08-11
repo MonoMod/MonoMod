@@ -61,10 +61,8 @@ namespace MonoMod.RuntimeDetour {
 
         ILContext.Manipulator IILHook.Manip => Manipulator;
 
-        private object? managerData;
-        object? IILHook.ManagerData { get => managerData; set => managerData = value; }
-
         private readonly DetourManager.DetourState state;
+        private readonly DetourManager.SingleILHookState hook;
 
         public ILHook(MethodBase method, ILContext.Manipulator manipulator, IDetourFactory factory, DetourConfig? config, bool applyByDefault) {
             Helpers.ThrowIfArgumentNull(method);
@@ -77,19 +75,16 @@ namespace MonoMod.RuntimeDetour {
             this.factory = factory;
 
             state = DetourManager.GetDetourState(method);
+            hook = new(this);
 
             if (applyByDefault) {
                 Apply();
             }
         }
 
-
-        private bool isApplied;
-        public bool IsApplied => Volatile.Read(ref isApplied);
-
-
         private bool disposedValue;
         public bool IsValid => !disposedValue;
+        public bool IsApplied => hook.IsApplied;
 
         private void CheckDisposed() {
             if (disposedValue)
@@ -98,20 +93,33 @@ namespace MonoMod.RuntimeDetour {
 
         public void Apply() {
             CheckDisposed();
-            if (IsApplied)
-                return;
-            Volatile.Write(ref isApplied, true);
-            state.AddILHook(this);
+
+            var lockTaken = false;
+            try {
+                state.detourLock.Enter(ref lockTaken);
+                if (IsApplied)
+                    return;
+                state.AddILHook(hook, !lockTaken);
+            } finally {
+                if (lockTaken)
+                    state.detourLock.Exit(true);
+            }
         }
 
         public void Undo() {
             CheckDisposed();
-            if (!IsApplied)
-                return;
-            Volatile.Write(ref isApplied, value: false);
-            state.RemoveILHook(this);
-        }
 
+            var lockTaken = false;
+            try {
+                state.detourLock.Enter(ref lockTaken);
+                if (!IsApplied)
+                    return;
+                state.RemoveILHook(hook, !lockTaken);
+            } finally {
+                if (lockTaken)
+                    state.detourLock.Exit(true);
+            }
+        }
 
         protected virtual void Dispose(bool disposing) {
             if (!disposedValue) {
