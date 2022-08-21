@@ -115,7 +115,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         public void Dispose() {
-            if (!IsDisposed)
+            if (IsDisposed)
                 return;
             IsDisposed = true;
             Last = null;
