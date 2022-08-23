@@ -5,10 +5,10 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using static MonoMod.RuntimeDetour.Utils.DynamicReferenceManager;
 
 namespace MonoMod.RuntimeDetour.Utils {
-    internal static class DynamicReferenceManager {
+    // TODO: move this into MonoMod.Utils
+    public static class DynamicReferenceManager {
 
         public struct CellRef {
             public int Index { get; internal set; }
