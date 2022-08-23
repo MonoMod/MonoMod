@@ -54,7 +54,14 @@
     <_TFMIdentifier>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</_TFMIdentifier>
 
   </PropertyGroup>
-  
+
+  <ItemGroup Condition="'$(_TFMIdentifier)' == '.NETFramework'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+    
   <Choose>
     <When Condition="'$(_TFMIdentifier)' == '.NETCoreApp'">
       <!-- .NET Core -->
@@ -117,11 +124,6 @@
       <ItemGroup>
         <!-- <Reference Include="mscorlib" /> -->
         <Reference Include="System" />
-        <!-- .NET Framework 4.0+ reference assemblies aren't always available system-wide. -->
-        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.*">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
       </ItemGroup>
     </When>
     
@@ -135,11 +137,6 @@
       <ItemGroup>
         <!-- <Reference Include="mscorlib" /> -->
         <Reference Include="System" />
-        <!-- .NET Framework 3.5 reference assemblies aren't always available system-wide. -->
-        <PackageReference Include="jnm2.ReferenceAssemblies.net35" Version="1.*">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
       </ItemGroup>
     </When>
   </Choose>
