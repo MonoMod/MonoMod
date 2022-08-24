@@ -13,10 +13,12 @@ using System.Diagnostics.CodeAnalysis;
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core30Runtime : CoreBaseRuntime {
 
-        public override RuntimeFeature Features => base.Features | RuntimeFeature.DisableInlining | RuntimeFeature.CompileMethodHook;
+        public override RuntimeFeature Features => base.Features | RuntimeFeature.CompileMethodHook;
 
         public Core30Runtime(ISystem system) : base(system) { }
 
+        // See FxCoreBaseRuntime. The location of the NoInlining flag in MDs has been *very* consistent over time.
+        /*
         public unsafe override void DisableInlining(MethodBase method) {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
             // mdcNotInline = 0x2000
@@ -34,6 +36,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             var m_wFlags = (ushort*) (((byte*) handle.Value) + offset);
             *m_wFlags |= 0x2000;
         }
+        */
 
         private static JitHookHelpersHolder CreateJitHookHelpers(Core30Runtime self) => new(self);
 

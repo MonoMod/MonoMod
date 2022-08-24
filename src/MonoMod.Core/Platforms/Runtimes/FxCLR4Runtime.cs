@@ -20,9 +20,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             }
         }
 
-        public override void DisableInlining(MethodBase method) {
+        /*public override void DisableInlining(MethodBase method) {
             // the base classes don't specify RuntimeFeature.DisableInlining, so this should never be called
             throw new PlatformNotSupportedException();
-        }
+        }*/
     }
 }

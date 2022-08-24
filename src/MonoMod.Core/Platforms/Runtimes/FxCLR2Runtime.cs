@@ -1,11 +1,25 @@
-﻿using System;
+﻿using MonoMod.Core.Utils;
+using System;
 using System.Reflection;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class FxCLR2Runtime : FxBaseRuntime {
+
+        private readonly ISystem system;
+        public FxCLR2Runtime(ISystem system) : base() {
+            this.system = system;
+
+            if (AbiCore is null) {
+                // TODO: where is the generic context passed on CLR 2?
+                AbiCore = system.DefaultAbi;
+            }
+        }
+        /*
+        public override RuntimeFeature Features => base.Features & ~RuntimeFeature.DisableInlining;
+        // TODO: figure out how to disable inlining on CLR 2
         public override void DisableInlining(MethodBase method) {
-            // the base classes don't specify RuntimeFeature.DisableInlining, so this should never be called
             throw new PlatformNotSupportedException();
         }
+        */
     }
 }
