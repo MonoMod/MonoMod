@@ -8,8 +8,16 @@ steps:
   continueOnError: true
   inputs:
     sourceFolder: '$(Agent.BuildDirectory)'
-    # the leading **/ shouldn't be necessary
-    contents: '**/artifacts/bin/**/${{parameters.buildConfiguration}}/${{parameters.targetFramework}}/!(xunit.*|System.*|Microsoft.*|*.Tests.dll|*.pdb)'
+    # the leading **/ shouldn't be necessary, but it seems to be
+    contents: |
+        **/artifacts/bin/**/${{parameters.buildConfiguration}}/${{parameters.targetFramework}}/**/*
+        !**/MonoMod.FrameworkTests/**/*
+        !**/Monomod.Backports.Filter/**/*
+        !**/MonoMod.UnitTest/**/*
+        !**/xunit.*
+        !**/testhost*
+        !**/System.*
+        !**/Microsoft.*
     targetFolder: '$(Build.ArtifactStagingDirectory)/${{parameters.targetFramework}}'
     cleanTargetFolder: true
     overWrite: true
