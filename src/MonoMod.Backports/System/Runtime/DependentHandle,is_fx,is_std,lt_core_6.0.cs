@@ -45,7 +45,8 @@ namespace System.Runtime {
 
             ~DependentHolder() {
                 // if the target still exists, resurrect ourselves and our dependent.
-                if (TargetHandle.Target is not null) {
+                if (!AppDomain.CurrentDomain.IsFinalizingForUnload() && !Environment.HasShutdownStarted
+                    && TargetHandle.IsAllocated && TargetHandle.Target is not null) {
                     GC.ReRegisterForFinalize(this);
                 } else {
                     GCHandle.FromIntPtr(dependent).Free();
