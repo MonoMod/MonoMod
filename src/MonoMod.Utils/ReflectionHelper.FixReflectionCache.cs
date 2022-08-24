@@ -116,7 +116,15 @@ namespace MonoMod.Utils {
         private static Array _GetArray(object? cache, MethodInfo getter) {
             // Get and discard once, otherwise we might not be getting the actual backing array.
             getter.Invoke(cache, _CacheGetterArgs);
-            return (Array) getter.Invoke(cache, _CacheGetterArgs)!;
+            var obj = getter.Invoke(cache, _CacheGetterArgs)!;
+            if (obj is Array array)
+                return array;
+            if (getter.ReturnType is { Namespace: "System.Reflection", Name: "CerArrayList`1" } cerArrayListType) {
+                var m_array = cerArrayListType.GetField("m_array", _BindingFlagsAll)!;
+                // TODO: assert m_array is non-null
+                return (Array) m_array.GetValue(obj)!;
+            }
+            throw new InvalidOperationException($"Unknown reflection cache type {obj.GetType()}");
         }
 
         private static void _FixReflectionCacheOrder<T>(Array? orig) where T : MemberInfo {
