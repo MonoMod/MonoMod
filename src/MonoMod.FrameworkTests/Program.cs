@@ -1,17 +1,38 @@
-﻿using Mono.Cecil.Cil;
-using MonoMod.Backports;
+﻿#define MM
+//#define HARMONY
+
+#if MM
+using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Platforms;
 using MonoMod.RuntimeDetour;
+using MonoMod.RuntimeDetour.Utils;
+using MonoMod.Utils;
+#endif
+#if HARMONY
+extern alias harmony;
+using harmony::HarmonyLib;
+#endif
+
+using MonoMod.Backports;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+#if NETFRAMEWORK
+internal static class Program { 
+[LoaderOptimization(LoaderOptimization.MultiDomainHost)]
+public static void Main() {
+#endif
+
+Console.WriteLine("Attach debugger now, then press enter to break");
 Console.ReadLine();
 if (Debugger.IsAttached) {
     Debugger.Break();
 }
+
+#if false
 
 // do this nice and early so we can manage to track it in windbg
 _ = TestClass.TargetHook(_ => default, null);
@@ -179,3 +200,99 @@ struct FunkyStruct {
     public long A;
     public byte B;
 }
+#else
+// FX AppDomain shenanigans
+#if NETFRAMEWORK
+
+#if MM
+_ = PlatformTriple.Current;
+#endif
+#if HARMONY
+var hm = new Harmony("firstDomain");
+#endif
+
+var st = new StackTrace(0, true);
+Console.WriteLine(st);
+
+var domain = AppDomain.CreateDomain("dom2", AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation);
+var domainCodeType = typeof(DomainHookCode);
+var code = (DomainHookCode) domain.CreateInstanceAndUnwrap(domainCodeType.Assembly.FullName, domainCodeType.FullName);
+
+code.DoPatch();
+DoInvokeToUpperInvariant();
+
+GC.KeepAlive(code);
+GC.KeepAlive(domain);
+
+[MethodImpl(MethodImplOptionsEx.NoInlining)]
+static void DoInvokeToUpperInvariant() {
+    var res = "hello, world!".ToUpperInvariant();
+    Console.WriteLine(res);
+}
+
+#if NETFRAMEWORK
+}
+}
+#endif
+
+public class DomainHookCode : MarshalByRefObject {
+    private static void DoStackTraceInit() {
+        var st = new StackTrace(0, true);
+        Console.WriteLine(st);
+    }
+
+#if MM
+    public DomainHookCode() {
+        // We have to resolve a stack trace which asks for file info scan through a DMD to prevent hard-crashes when doing domain shenanigans
+        using (var dmd = new DynamicMethodDefinition("test dmd", typeof(void), ArrayEx.Empty<Type>())) {
+            var il = dmd.GetILProcessor();
+            using var typedRef = il.EmitNewTypedReference(DoStackTraceInit, out _);
+            il.Emit(OpCodes.Callvirt, typeof(Action).GetMethod(nameof(Action.Invoke))!);
+            il.Emit(OpCodes.Ldnull);
+            il.Emit(OpCodes.Call, typeof(GC).GetMethod(nameof(GC.KeepAlive))!);
+            il.Emit(OpCodes.Ret);
+            _ = dmd.Generate().Invoke(null, null);
+        }
+        _ = ToUpperHook(null!, "");
+    }
+
+    private Hook? hook;
+    public void DoPatch() {
+        Console.WriteLine("Doing patch");
+        hook = new(() => "".ToUpperInvariant(), () => ToUpperHook(null!, null!));
+    }
+
+    private static string ToUpperHook(Func<string, string> orig, string inst) {
+        if (orig is null)
+            return "";
+        Debugger.Break();
+        var trace = new StackTrace(0, true);
+        return orig(inst) + " hooked " + trace;
+    }
+#endif
+#if HARMONY
+    public DomainHookCode() => DoStackTraceInit();
+    private Harmony? harmony;
+    public void DoPatch() {
+        harmony = new("domain hook");
+        var method = AccessTools.DeclaredMethod(typeof(string), nameof(string.ToUpperInvariant));
+        var prefix = AccessTools.DeclaredMethod(typeof(DomainHookCode), nameof(ToUpperPrefix));
+        var postfix = AccessTools.DeclaredMethod(typeof(DomainHookCode), nameof(ToUpperPostfix));
+        harmony.Patch(method, prefix: new(prefix), postfix: new(postfix));
+    }
+
+    private static void ToUpperPrefix(out string __state) {
+        Debugger.Break();
+        var trace = new StackTrace(0, true);
+        __state = " hooked " + trace;
+    }
+
+    private static void ToUpperPostfix(ref string __result, string __state) {
+        __result += __state;
+    }
+#endif
+}
+
+#endif
+
+#endif
