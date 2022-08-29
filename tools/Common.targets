@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
 
-  <!-- This contains common stuff that specific packages may wish to disable. -->
-  
-  
+  <!-- NuGet Information -->
+  <Import Project="$(MMToolsPath)NuGet.targets" />
+
+  <!-- This contains common stuff that specific packages may wish to disable. -->  
   <!-- Include the language-specific targets file, if it exists -->
   <Import Project="$(MMLanguageTargets)" Condition="Exists('$(MMLanguageTargets)')" />
 
