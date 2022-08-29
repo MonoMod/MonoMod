@@ -13,8 +13,15 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Repository>https://github.com/MonoMod/MonoMod</Repository>
     <PackageProjectUrl>https://github.com/MonoMod</PackageProjectUrl>
+
+    <PackageIcon>icon.png</PackageIcon>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
+    <!-- TODO: Add PackageReadmeFile -->
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MMRootPath)icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <!-- We have literally no reason not to use SourceLink -->
   <PropertyGroup>
