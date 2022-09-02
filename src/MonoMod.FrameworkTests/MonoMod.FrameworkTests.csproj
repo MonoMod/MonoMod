@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Core\MonoMod.Core.csproj" />
     <ProjectReference Include="..\MonoMod.RuntimeDetour.New\MonoMod.RuntimeDetour.New.csproj" />
+    <ProjectReference Include="..\..\external\iced.csproj" />
   </ItemGroup>
 
 </Project>

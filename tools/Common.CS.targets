@@ -33,6 +33,9 @@
     <Compile Include="$(MMCommonPath)Shared\**\*.cs" Condition="'$(MMSharedSourceFiles)' == 'true'">
       <Link>Shared/%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Compile>
+    <Compile Include="$(MMCommonPath)MethodImplOptionBackportsAlias.cs" Condition="'$(MMMethodImplAlias)' == 'true'">
+      <Link>Shared/%(Filename)%(Extension)</Link>
+    </Compile>
   </ItemGroup>
   
   <!-- ILHelpers reference -->
