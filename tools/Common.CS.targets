@@ -67,7 +67,7 @@
       <PropertyGroup>
         <DefineConstants>$(DefineConstants)</DefineConstants>
         <DefineConstants>CECIL0_11;$(DefineConstants)</DefineConstants>
-        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">$(NewCecilVersion)</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
 
@@ -96,7 +96,7 @@
       <PropertyGroup>
         <DefineConstants>NETSTANDARD;$(DefineConstants)</DefineConstants>
         <DefineConstants>CECIL0_11;$(DefineConstants)</DefineConstants>
-        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">$(NewCecilVersion)</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
       <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. -->
@@ -118,7 +118,7 @@
       <PropertyGroup>
         <DefineConstants>NETFRAMEWORK4;$(DefineConstants)</DefineConstants>
         <DefineConstants>CECIL0_11;$(DefineConstants)</DefineConstants>
-        <CecilVersion Condition="'$(CecilVersion)' == ''">0.11.*</CecilVersion>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">$(NewCecilVersion)</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
         <!-- <Reference Include="mscorlib" /> -->
@@ -131,7 +131,7 @@
       <PropertyGroup>
         <DefineConstants>NETFRAMEWORK3;$(DefineConstants)</DefineConstants>
         <DefineConstants>CECIL0_10;$(DefineConstants)</DefineConstants>
-        <CecilVersion Condition="'$(CecilVersion)' == ''">0.10.*</CecilVersion>
+        <CecilVersion Condition="'$(CecilVersion)' == ''">$(OldCecilVersion)</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
         <!-- <Reference Include="mscorlib" /> -->

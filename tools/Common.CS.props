@@ -34,6 +34,9 @@
     <NoWarn>$(NoWarn);CA1716</NoWarn> <!-- Members have name shared with primitive type. -->
     <NoWarn>$(NoWarn);CA1003</NoWarn> <!-- Change event to use EventHandler<EventArgs> -->
 
+    <NewCecilVersion>0.11.4</NewCecilVersion>
+    <OldCecilVersion>0.10.4</OldCecilVersion>
+    
     <!-- We use a prerelease version of Roslyn to fix a bug with inferring delegate types  -->
     <RoslynVersion>4.2.0</RoslynVersion>
     <MSBuildRequiredVersion>17.0.0</MSBuildRequiredVersion>
