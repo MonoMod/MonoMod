@@ -52,7 +52,6 @@
 
   <PropertyGroup>
     <_TFMIdentifier>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</_TFMIdentifier>
-
   </PropertyGroup>
 
   <ItemGroup Condition="'$(_TFMIdentifier)' == '.NETFramework'">

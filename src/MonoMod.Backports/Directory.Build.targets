@@ -26,7 +26,8 @@
 
   <Import Project="$(_MSBPropsFile)" Condition="Exists('$(_MSBPropsFile)')"/>
   
-  <Target Name="_GenerateSortedItemsList" DependsOnTargets="_ComputeFilterBinaryPath" BeforeTargets="_GenerateCompileDependencyCache">
+  <Target Name="_GenerateSortedItemsList" DependsOnTargets="_ComputeFilterBinaryPath" BeforeTargets="_GenerateCompileDependencyCache"
+          Condition="'$(dotnet-nugetize)' == ''">
     <!-- TODO: come up with a better way to sort items -->
     <WriteLinesToFile File="$(_ToSortPath)" Overwrite="true" WriteOnlyWhenDifferent="true" Lines="@(Compile);@($(CompileRemovedItem))" />
     
@@ -93,7 +94,8 @@
   </Target>
 
   <Target Name="_GenerateBPPropsFile" DependsOnTargets="_WriteFileOptions;_ComputeFilterBinaryPath"
-          Inputs="$(_FileOptionsPath);$(_BackportsFilterBinary)" Outputs="$(_MSBPropsFile)">
+          Inputs="$(_FileOptionsPath);$(_BackportsFilterBinary)" Outputs="$(_MSBPropsFile)"
+          Condition="'$(dotnet-nugetize)' == ''">
     <ItemGroup>
       <_GenArguments Include="$(_FileOptionsPath)"/>
       <_GenArguments Include="$(_MSBPropsFile)" />
@@ -115,7 +117,8 @@
   </Target>
 
   <Target Name="_RunFilterOnFiles" DependsOnTargets="_WriteFileOptions;_ComputeFilterBinaryPath"
-          Inputs="$(_FileOptionsPath);$(_BackportsFilterBinary)" Outputs="$(_ToRemovePath)">
+          Inputs="$(_FileOptionsPath);$(_BackportsFilterBinary)" Outputs="$(_ToRemovePath)"
+          Condition="'$(dotnet-nugetize)' == ''">
     <ItemGroup>
       <_FilterArguments Include="$(_FileOptionsPath)"/>
       <_FilterArguments Include="$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))" />

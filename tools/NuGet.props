@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="$(MMRootPath)icon.png" Pack="true" PackagePath="\" />
+    <PackageFile Include="$(MMRootPath)icon.png" PackagePath="%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- We have literally no reason not to use SourceLink -->
@@ -39,7 +39,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <!-- NuGetizer for better control over NuGet package generation with dotnet pack -->
-    <PackageReference Include="NuGetizer" Version="0.8.0">
+    <PackageReference Include="NuGetizer" Version="0.9.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

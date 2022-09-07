@@ -27,6 +27,7 @@
   <Target Name="PatchMetadataVersion"
           Inputs="$(MSBuildAllProjects);@(ILVersionPatcher);@(IntermediateAssembly)"
           Outputs="@(IntermediateAssembly->'$(_PatchMetaOutputDir)%(Filename)%(Extension)')"
+          Condition="'$(dotnet-nugetize)' == ''"
           AfterTargets="CoreCompile"
           BeforeTargets="_TimeStampAfterCompile;AfterCompile">
     <PropertyGroup>
