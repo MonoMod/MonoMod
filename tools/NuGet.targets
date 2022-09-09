@@ -2,7 +2,34 @@
 <Project>
 
   <PropertyGroup>
+    <!-- Allow easily changing the prefix of the package names -->
     <PackageId Condition="'$(BuildPackageBaseName)' != ''">$([System.String]::Copy('$(PackageId)').Replace('MonoMod', '$(BuildPackageBaseName)'))</PackageId>
+
+    <!-- Infer the name of docs stuff for this project -->
+    <PackageDocsName Condition="'$(PackageDocsName)' == ''">$([System.String]::Copy('$(MSBuildProjectName)').Replace('MonoMod.', ''))</PackageDocsName>
+    
+    <!-- Infer the name of the README for this package -->
+    <PackageReadmeName Condition="'$(PackageReadmeName)' == '' and '$(PackageReadmeFile)' == ''">$(PackageDocsName)</PackageReadmeName>
+    <PackageReadmeName Condition="'$(ReadmeNameHasPrefix)' == 'true' and '$(PackageReadmeName)' != ''">README.$(PackageReadmeName)</PackageReadmeName>
+    <_PackageReadmePath Condition="'$(PackageReadmeName)' != ''">$(MMDocsPath)$(PackageReadmeName).md</_PackageReadmePath>
   </PropertyGroup>
+
+  <!-- Include the docs in the project listing -->
+  <ItemGroup>
+    <None Include="$(MMDocsPath)$(PackageDocsName)**\*" Link="__docs\%(RecursivePath)%(Filename)%(Extension)" Pack="false" />
+  </ItemGroup>
+
+  <!-- Include package readme if it exists -->
+  <Choose>
+    <When Condition="'$(_PackageReadmePath)' != '' and Exists('$(_PackageReadmePath)')">
+      <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+      </PropertyGroup>
+
+      <ItemGroup>
+        <None Include="$(_PackageReadmePath)" Link="README.md" PackagePath="README.md" />
+      </ItemGroup>
+    </When>
+  </Choose>
 
 </Project>

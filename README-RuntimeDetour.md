@@ -2,6 +2,7 @@
 
 Creating a new detour looks like this most of the time:
 
+<!-- #usage -->
 ```cs
 // Create a Detour (or a Hook).
 using (var d = new Detour(methodInfoFrom, methodInfoTo))
@@ -10,7 +11,9 @@ using (var d = new Detour(methodInfoFrom, methodInfoTo))
     // If the object is collected by the garbage collector, the detour is also undone.
 }
 ```
+<!-- #usage -->
 
+<!-- #types -->
 ## Detour Types
 
 There are 3 managed detour types that are available:
@@ -41,6 +44,8 @@ one of the before or after fields caused it to be placed differently. The before
 
 Any detours with no `DetourConfig` get run in an arbitrary order after all those with a `DetourConfig`.
 
+<!-- #types -->
+<!-- #chain -->
 ## The Detour Chain
 
 All detours whose source method is the same are part of one *detour chain*. When the source method is called,
@@ -57,6 +62,8 @@ modification is complete before execution. Notably, though, **this means that in
 while the detour chain is not on the stack is not thread-safe, nor is it guaranteed to actually invoke the
 delegate chain as it exists at the moment of invocation.** Always invoke the original method, and never delay
 invocation of the original delegate.
+
+<!-- #chain -->
 
 ## Detour Order Calculation details
 

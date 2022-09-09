@@ -23,6 +23,7 @@
     <MMRootPath>$(MMToolsPath)..\</MMRootPath>
     <MMSourcePath>$(MMRootPath)src\</MMSourcePath>
     <MMArtifactsPath>$(MMRootPath)artifacts\</MMArtifactsPath>
+    <MMDocsPath>$(MMRootPath)docs\</MMDocsPath>
 
     <!-- These properties make the build outputs land out-of-source for easy fully clean rebuilds -->
 		<PackageOutputPath>$(MMArtifactsPath)packages\$(Configuration)\</PackageOutputPath>

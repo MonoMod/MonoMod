@@ -1,7 +1,9 @@
 # MonoMod
+<!-- #links -->
 <a href="https://discord.gg/jm7GCZB"><img align="right" alt="MonoMod Discord" src="https://discordapp.com/api/guilds/295566538981769216/embed.png?style=banner2" /></a>
 General purpose .NET assembly modding "basework", powered by [cecil](https://github.com/jbevain/cecil/).  
 *<sup>MIT-licensed.</sup>*
+<!-- #links -->
 
 [![Build status](https://img.shields.io/azure-devops/build/MonoMod/MonoMod/1.svg?style=flat-square)](https://dev.azure.com/MonoMod/MonoMod/_build/latest?definitionId=1) ![Deployment status](https://img.shields.io/azure-devops/release/MonoMod/572c97eb-dbaa-4a55-90e5-1d05431535bd/1/1.svg?style=flat-square)
 
