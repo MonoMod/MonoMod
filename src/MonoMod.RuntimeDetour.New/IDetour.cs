@@ -8,6 +8,7 @@ namespace MonoMod.RuntimeDetour {
         IDetourFactory Factory { get; }
         DetourConfig? Config { get; }
 
+        MethodInfo PublicTarget { get; }
         MethodInfo InvokeTarget { get; }
         MethodBase NextTrampoline { get; }
     }

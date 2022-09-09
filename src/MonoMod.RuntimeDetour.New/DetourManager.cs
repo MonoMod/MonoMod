@@ -755,6 +755,7 @@ namespace MonoMod.RuntimeDetour {
             public readonly IDetourFactory Factory;
             public readonly DetourConfig? Config;
 
+            public readonly MethodInfo PublicTarget;
             public readonly MethodInfo InvokeTarget;
             public readonly MethodBase NextTrampoline;
 
@@ -768,6 +769,7 @@ namespace MonoMod.RuntimeDetour {
             public SingleDetourState(IDetour dt) {
                 Factory = dt.Factory;
                 Config = dt.Config;
+                PublicTarget = dt.PublicTarget;
                 InvokeTarget = dt.InvokeTarget;
                 NextTrampoline = dt.NextTrampoline;
                 IsValid = true;
@@ -1102,7 +1104,7 @@ namespace MonoMod.RuntimeDetour {
             Method.state.RemoveDetour(detour, false);
         }
 
-        public MethodBase Entry => detour.InvokeTarget;
+        public MethodBase Entry => detour.PublicTarget;
 
         internal DetourManager.DetourChainNode? ChainNode
             => detour.ManagerData switch {

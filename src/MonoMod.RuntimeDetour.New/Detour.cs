@@ -64,6 +64,7 @@ namespace MonoMod.RuntimeDetour {
         public MethodBase Source { get; }
         public MethodInfo Target { get; }
 
+        MethodInfo IDetour.PublicTarget => Target;
         MethodInfo IDetour.InvokeTarget => Target;
 
         private readonly MethodInfo trampoline;

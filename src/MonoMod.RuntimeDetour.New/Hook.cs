@@ -160,6 +160,7 @@ namespace MonoMod.RuntimeDetour {
 
         public MethodBase Source { get; }
         public MethodInfo Target { get; }
+        MethodInfo IDetour.PublicTarget => Target;
 
         private readonly MethodInfo realTarget;
         MethodInfo IDetour.InvokeTarget => realTarget;
