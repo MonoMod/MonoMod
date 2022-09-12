@@ -23,7 +23,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static void Remove(MethodBase method, Delegate hookDelegate) {
             if (Hooks.TryGetValue((method, hookDelegate), out var hook)) {
                 Hooks.Remove((method, hookDelegate));
-                hook.Undo();
+                hook.Dispose();
             }
         }
 
@@ -36,18 +36,18 @@ namespace MonoMod.RuntimeDetour.HookGen {
         public static void Unmodify(MethodBase method, Delegate callback) {
             if (ILHooks.TryGetValue((method, callback), out var hook)) {
                 ILHooks.Remove((method, callback));
-                hook.Undo();
+                hook.Dispose();
             }
         }
 
         public static void Clear() {
             foreach (var hook in Hooks.Values)
-                hook.Undo();
+                hook.Dispose();
 
             Hooks.Clear();
 
             foreach (var hook in ILHooks.Values)
-                hook.Undo();
+                hook.Dispose();
 
             ILHooks.Clear();
         }
