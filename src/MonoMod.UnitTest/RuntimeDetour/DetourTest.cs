@@ -31,10 +31,12 @@ namespace MonoMod.UnitTest {
                     () => TestObject.TestStaticMethod(default, default),
                     () => TestStaticMethod_A(default, default)
                 );
+                Console.ReadLine();
+
                 // MethodBase, old syntax.
                 // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
                 using var detourTestVoidMethodA = new Hook(
-                    typeof(TestObject).GetMethod("Detour", BindingFlags.Static | BindingFlags.Public),
+                    typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
                     typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
                 );
                 Console.WriteLine("Detours: A");
