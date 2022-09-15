@@ -113,7 +113,7 @@ namespace MonoMod.UnitTest {
             Assert.Equal(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 1337 }));
 
             // Detour the original method to the patched DynamicMethod, then run the patched method.
-            using (new Detour(original, patched)) {
+            using (new Hook(original, patched)) {
                 // The detour is only active in this block.
                 Assert.Equal(Tuple.Create(StringPatched, 6), ExampleMethod(3));
             }

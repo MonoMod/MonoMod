@@ -22,44 +22,44 @@ namespace MonoMod.UnitTest {
                 // Three examples of using Detour.
                 // This is also why the variable type is IDetour.
                 // System.Linq.Expressions, thanks to leo (HookedMethod) for telling me about how to (ab)use MethodCallExpression!
-                using var detourTestMethodA = new Detour(
+                using var detourTestMethodA = new Hook(
                     () => default(TestObject).TestMethod(default, default),
                     () => TestMethod_A(default, default, default)
                 );
 
-                using var detourTestStaticMethodA = new Detour(
+                using var detourTestStaticMethodA = new Hook(
                     () => TestObject.TestStaticMethod(default, default),
                     () => TestStaticMethod_A(default, default)
                 );
                 // MethodBase, old syntax.
                 // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
-                using var detourTestVoidMethodA = new Detour(
-                    typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
+                using var detourTestVoidMethodA = new Hook(
+                    typeof(TestObject).GetMethod("Detour", BindingFlags.Static | BindingFlags.Public),
                     typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
                 );
                 Console.WriteLine("Detours: A");
                 TestObject.TestStep(42, 12, 1);
-                Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
-                detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
+                //Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
+                //detourTestVoidMethodA.GenerateTrampoline<Action<int, int>>()(2, 3);
                 Console.WriteLine();
 
-                using var detourTestMethodB = new Detour(
+                using var detourTestMethodB = new Hook(
                     () => default(TestObject).TestMethod(default, default),
                     () => TestMethod_B(default, default, default)
                 );
-                using var detourTestStaticMethodB = new Detour(
+                using var detourTestStaticMethodB = new Hook(
                      () => TestObject.TestStaticMethod(default, default),
                      () => TestStaticMethod_B(default, default)
                 );
-                using var detourTestVoidMethodB = new Detour(
+                using var detourTestVoidMethodB = new Hook(
                      () => TestObject.TestVoidMethod(default, default),
                      () => TestVoidMethod_B(default, default)
                 );
                 Console.WriteLine("Detours: A + B");
                 TestObject.TestStep(120, 8, 2);
-                Console.WriteLine("Testing trampoline, should invoke hook A, TestVoidMethod(2, 3)");
-                Action<int, int> trampolineTestVoidMethodB = detourTestVoidMethodB.GenerateTrampoline<Action<int, int>>();
-                trampolineTestVoidMethodB(2, 3);
+                //Console.WriteLine("Testing trampoline, should invoke hook A, TestVoidMethod(2, 3)");
+                //Action<int, int> trampolineTestVoidMethodB = detourTestVoidMethodB.GenerateTrampoline<Action<int, int>>();
+                //trampolineTestVoidMethodB(2, 3);
                 Console.WriteLine();
 
                 detourTestMethodA.Undo();
@@ -67,8 +67,8 @@ namespace MonoMod.UnitTest {
                 detourTestVoidMethodA.Undo();
                 Console.WriteLine("Detours: B");
                 TestObject.TestStep(120, 8, 2);
-                Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
-                trampolineTestVoidMethodB(2, 3);
+                //Console.WriteLine("Testing trampoline, should invoke orig, TestVoidMethod(2, 3)");
+                //trampolineTestVoidMethodB(2, 3);
                 Console.WriteLine();
 
                 detourTestMethodB.Undo();

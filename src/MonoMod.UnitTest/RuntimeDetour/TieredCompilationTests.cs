@@ -32,7 +32,7 @@ namespace MonoMod.UnitTest {
                 Console.ReadLine();
             }
 
-            using (new Detour(() => From(), () => To())) {
+            using (new Hook(() => From(), () => To())) {
                 TestFrom();
             }
         }

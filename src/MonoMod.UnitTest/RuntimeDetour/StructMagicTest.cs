@@ -24,7 +24,7 @@ namespace MonoMod.UnitTest {
             ManipColor(ref c, 0x0A, 0xDE, 0xEE, 0x80);
             CheckColor(c, 0x0A, 0xDE, 0xEE, 0x80);
 
-            using (new Detour(
+            using (new Hook(
                 typeof(StructMagicTest).GetMethod("ManipColor"),
                 typeof(StructMagicTest).GetMethod("ManipColorHook")
             )) {

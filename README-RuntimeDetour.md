@@ -4,8 +4,8 @@ Creating a new detour looks like this most of the time:
 
 <!-- #usage -->
 ```cs
-// Create a Detour (or a Hook).
-using (var d = new Detour(methodInfoFrom, methodInfoTo))
+// Create a Hook.
+using (var d = new Hook(methodInfoFrom, methodInfoTo))
 {
     // When the detour goes out-of-scope (and thus has Dispose() called), the detour is undone.
     // If the object is collected by the garbage collector, the detour is also undone.
@@ -16,25 +16,19 @@ using (var d = new Detour(methodInfoFrom, methodInfoTo))
 <!-- #types -->
 ## Detour Types
 
-There are 3 managed detour types that are available:
+There are 2 managed detour types that are available:
 
- 1. `Detour` - This is the simplest detour type. It creates a detour from one method to another. The signatures
-    of these methods must match nearly exactly, and the target method must be static. This does not provide an
-    easy way to call the next detour in the chain (more on that later) or the original implementation of the 
-    method. It *does* provide on the `Detour` object itself a `GenerateTrampoline<T>()` method which generates
-    a delegate which invokes the next detour in the chain. **Note: this delegate can be very dangerous. See
-    [The Detour Chain](#the-detour-chain) for more information on this.**
- 2. `Hook` - This is effectively `Detour` but better. It sits as part of the same detour chain as `Detour`
+ 1. `Hook` - This is effectively `Detour` but better. It sits as part of the same detour chain as `Detour`
     objects. The target of the hook may be a delegate, and so may be an instance method associated with some
     object. Hook targets may also take as their first parameter a delegate with a signature matching the detour
     source. This delegate, when called, will invoke the next detour in the chain, or the original if this is the last detour in the chain. **Note: this delegate should usually only be called while the hook method
     is on the stack. See [The Detour Chain](#the-detour-chain) for more information.**
- 3. `ILHook` - This is a different kind of detour. If you're familiar with Harmony, this is effectively a
+ 2. `ILHook` - This is a different kind of detour. If you're familiar with Harmony, this is effectively a
     transpiler. When you construct an ILHook, you provide a delegate which gets provided an `ILContext` which
     can be used to modify the IL of the method. If multiple ILHooks are present for the same method, the order
     the manipulators are invoked is the same as the order detours in a detour chain would be.
 
-Each detour (`Detour`, `Hook`, or `ILHook`) may have an associated `DetourConfig`. Each detour config must have
+Each detour (`Hook` or `ILHook`) may have an associated `DetourConfig`. Each detour config must have
 an ID--this will typically be the name of the mod which applies the hook. They also have a list of IDs which
 detours associated with this config will run before, and a similar list that they will run after. If some config `A` wants to run before `B`, and `B` wants to run before `A`, the resulting order is unspecified. The
 MonoMod debug log will make a note of this.
@@ -50,7 +44,7 @@ Any detours with no `DetourConfig` get run in an arbitrary order after all those
 
 All detours whose source method is the same are part of one *detour chain*. When the source method is called,
 the first detour in the chain gets called. That detour then has complete control over how that function behaves.
-It may, at any point, invoke the delegate (gotten from `Detour.GenerateTrampoline<T>()` or the delegate
+It may, at any point, invoke the delegate (gotten from the delegate
 parameter to a hook method) to invoke the next detour in the chain. It may pass any parameters, and do anything
 with the return value. 
 
@@ -92,6 +86,7 @@ The *no-config chain* is simply appended to whenever a new detour with no `Detou
 
 The final detour chain is then just the *config chain* followed by the *no-config* chain.
 
+<!-- #hookgen -->
 # Using HookGen
 
 **NOTE: HookGen is not currently updated to use the new RuntimeDetour!**
@@ -159,6 +154,9 @@ On.Celeste.PlayerHair.GetHairColor += OnGetHairColor;
 // Remove a hook.
 On.Celeste.PlayerHair.GetHairColor -= OnGetHairColor;
 ```
+<!-- #hookgen -->
+
+# **NOTE: Everything below this point is outdated!
 
 # Technical details - RuntimeDetour is an onion
 The RuntimeDetour namespace is split up into the following "layers", bottom to top:

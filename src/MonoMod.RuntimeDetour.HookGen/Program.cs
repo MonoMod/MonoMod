@@ -12,7 +12,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         static void Main(string[] args) {
             Console.WriteLine("MonoMod.RuntimeDetour.HookGen " + typeof(Program).Assembly.GetName().Version);
             Console.WriteLine("using MonoMod " + typeof(MonoModder).Assembly.GetName().Version);
-            Console.WriteLine("using MonoMod.RuntimeDetour " + typeof(Detour).Assembly.GetName().Version);
+            Console.WriteLine("using MonoMod.RuntimeDetour " + typeof(Hook).Assembly.GetName().Version);
 
             if (args.Length == 0) {
                 Console.WriteLine("No valid arguments (assembly path) passed.");
