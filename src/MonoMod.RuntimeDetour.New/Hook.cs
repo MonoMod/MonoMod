@@ -212,7 +212,11 @@ namespace MonoMod.RuntimeDetour {
             var dstSig = MethodSignature.ForMethod(Target, ignoreThis: true); // the dest sig we don't want to consider its this param
 
             if (target is null && !Target.IsStatic) {
-                throw new ArgumentException("Target method is static, but the target object is not null");
+                throw new ArgumentException("Target method is nonstatic, but no target object was provided");
+            }
+
+            if (target is not null && Target.IsStatic) {
+                throw new ArgumentException("Target method is static, but a target object was provided");
             }
 
             Type? nextDelegateType = null;
@@ -242,13 +246,20 @@ namespace MonoMod.RuntimeDetour {
             }
 
             trampoline = TrampolinePool.Rent(trampSig);
+            // note: even in the below case, where it'll never be used, we still need to *get* a trampoline because the DetourManager
+            //     expects to have one available to it
 
-            var hookData = target is not null || nextDelegateType is not null
-                ? new HookData(target,
-                    nextDelegateType is not null
-                    ? trampoline.CreateDelegate(nextDelegateType)
-                    : null)
-                : null;
+            if (target is null && nextDelegateType is null) {
+                // if both the target and the next delegate type are null, then no proxy method is needed,
+                // and the target method can be used as-is
+                scope = default;
+                return Target;
+            }
+
+            var hookData = new HookData(target,
+                nextDelegateType is not null
+                ? trampoline.CreateDelegate(nextDelegateType)
+                : null);
 
             using (var dmd = srcSig.CreateDmd($"Hook<{Target.GetID()}>")) {
                 var il = dmd.GetILProcessor();
@@ -258,12 +269,8 @@ namespace MonoMod.RuntimeDetour {
                 var dataLoc = new VariableDefinition(module.ImportReference(typeof(HookData)));
                 il.Body.Variables.Add(dataLoc);
 
-                if (hookData is not null) {
-                    scope = il.EmitNewTypedReference(hookData, out _);
-                    il.Emit(OpCodes.Stloc, dataLoc);
-                } else {
-                    scope = default;
-                }
+                scope = il.EmitNewTypedReference(hookData, out _);
+                il.Emit(OpCodes.Stloc, dataLoc);
 
                 // first load the target object, if needed
                 if (!Target.IsStatic) {
