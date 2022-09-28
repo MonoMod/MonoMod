@@ -31,7 +31,7 @@ namespace MonoMod.UnitTest {
                     () => TestObject.TestStaticMethod(default, default),
                     () => TestStaticMethod_A(default, default)
                 );
-                Console.ReadLine();
+                //Console.ReadLine();
 
                 // MethodBase, old syntax.
                 // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
