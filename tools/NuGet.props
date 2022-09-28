@@ -5,7 +5,8 @@
     <PackageId>$(MSBuildProjectName)</PackageId>
     <Authors>0x0ade, DaNike</Authors> <!-- Note: With dotnet pack, <Authors> is also the list of owners. -->
     <Version>$([System.DateTime]::Now.ToString(yy.MM.dd)).00</Version> <!-- Devbuild -->
-    <Version>$(Version)-prerelease</Version> <!-- These builds are all prerelease -->
+    <Version Condition="'$(BuildPrerelease)' == ''">$(Version)-prerelease</Version> <!-- These builds are all prerelease -->
+    <Version Condition="'$(BuildPrerelease)' != ''">$(Version)-$(BuildPrerelease)</Version>
     <Version Condition="'$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version> <!-- Azure Pipelines -->
     
     <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) 0x0ade</Copyright>
