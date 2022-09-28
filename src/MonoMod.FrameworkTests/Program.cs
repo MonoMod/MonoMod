@@ -20,7 +20,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-#if NETFRAMEWORK
+#if false && NETFRAMEWORK
 internal static class Program { 
 [LoaderOptimization(LoaderOptimization.MultiDomainHost)]
 public static void Main() {
@@ -32,7 +32,7 @@ if (Debugger.IsAttached) {
     Debugger.Break();
 }
 
-#if false
+#if true
 
 // do this nice and early so we can manage to track it in windbg
 _ = TestClass.TargetHook(_ => default, null);
@@ -86,10 +86,10 @@ Console.WriteLine();
 using (new DetourFactoryContext(DetourFactory.Current).Use()) {
 
     using (new DetourConfigContext(new("fwTest")).Use())
-    using (var detour = new Detour(method, method2)) {
+    using (var detour = new Hook(method, method2)) {
         var test = new TestClass();
         _ = test.TestDetourMethod();
-        detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+        //detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
     }
 
     Console.WriteLine();
@@ -101,31 +101,31 @@ using (new DetourFactoryContext(DetourFactory.Current).Use()) {
 
     Console.WriteLine();
 
-    using (var detour = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!),
+    using (var detour = new Hook(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!),
         config: new("fwTest2")))
-    using (var detour2 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!),
+    using (var detour2 = new Hook(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!),
         config: new DetourConfig("fwTest3", priority: 4).WithBefore("fwTest2"))) {
         var test = new TestClass();
         _ = test.TestDetourMethod();
-        detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
-        detour2.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+        //detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+        //detour2.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
     }
 }
 
 Console.WriteLine();
 
-using (var detour = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!),
+using (var detour = new Hook(() => new TestClass().TestDetourMethod(), () => TestClass.Target(null!),
     config: new("fwTest2")))
-using (var detour2 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!),
+using (var detour2 = new Hook(() => new TestClass().TestDetourMethod(), () => TestClass.Target2(null!),
     config: new DetourConfig("fwTest3", priority: 4).WithBefore("fwTest2")))
-using (var detour3 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target3(null!)))
-using (var detour4 = new Detour(() => new TestClass().TestDetourMethod(), () => TestClass.Target4(null!))) {
+using (var detour3 = new Hook(() => new TestClass().TestDetourMethod(), () => TestClass.Target3(null!)))
+using (var detour4 = new Hook(() => new TestClass().TestDetourMethod(), () => TestClass.Target4(null!))) {
     var test = new TestClass();
     _ = test.TestDetourMethod();
-    detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
-    detour2.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
-    detour3.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
-    detour4.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    //detour.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    //detour2.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    //detour3.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
+    //detour4.GenerateTrampoline<Func<TestClass, FunkyStruct>>()(test);
 }
 
 /*

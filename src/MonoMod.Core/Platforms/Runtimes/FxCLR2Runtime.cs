@@ -1,8 +1,4 @@
-﻿using MonoMod.Core.Utils;
-using System;
-using System.Reflection;
-
-namespace MonoMod.Core.Platforms.Runtimes {
+﻿namespace MonoMod.Core.Platforms.Runtimes {
     internal class FxCLR2Runtime : FxBaseRuntime {
 
         private readonly ISystem system;

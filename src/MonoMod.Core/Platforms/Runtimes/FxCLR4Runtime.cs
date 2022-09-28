@@ -1,6 +1,10 @@
 ﻿using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
+using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using static MonoMod.Core.Interop.Fx;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class FxCLR4Runtime : FxBaseRuntime {
@@ -18,6 +22,53 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 system.DefaultAbi is { } abi) {
                 AbiCore = AbiForCoreFx45X64(abi);
             }
+        }
+
+
+        public override RuntimeFeature Features
+            => base.Features & ~RuntimeFeature.RequiresBodyThunkWalking;
+
+        // TODO: check to make sure we're running 4.8 before using this
+        private unsafe IntPtr GetMethodBodyPtr(MethodBase method, RuntimeMethodHandle handle) {
+            var md = (V48.MethodDesc*) handle.Value;
+
+            md = V48.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+
+            var ptr = (IntPtr) md->GetNativeCode();
+
+            return ptr;
+        }
+
+        public override unsafe IntPtr GetMethodEntryPoint(MethodBase method) {
+            method = GetIdentifiable(method);
+            var handle = GetMethodHandle(method);
+
+            var didPrepare = false;
+            GetPtr:
+            // get then throw away the function pointer to try to ensure that the pointer is restored
+            RuntimeHelpers.PrepareMethod(handle);
+            var getfnptr = handle.GetFunctionPointer();
+            var ptr = GetMethodBodyPtr(method, handle);
+            MMDbgLog.Log($"GetFunctionPointer() = {getfnptr:X16}");
+            if (ptr != getfnptr)
+            {
+                MMDbgLog.Log($"GetFunctionPointer() != GetMethodBodyPtr() = {ptr:X16}");
+            }
+            if (ptr == IntPtr.Zero) { // the method hasn't been JITted yet
+                if (!didPrepare) {
+                    // TODO: call PlatformTriple.Prepare instead to handle generic methods
+                    RuntimeHelpers.PrepareMethod(handle);
+                    didPrepare = true;
+                    goto GetPtr;
+                } else {
+                    // we've already run a prepare, lets try another approach
+                    ptr = handle.GetFunctionPointer();
+
+                    throw new InvalidOperationException($"Could not get entry point normally, GetFunctionPointer() = {ptr:x16}");
+                }
+            }
+
+            return ptr;
         }
 
         /*public override void DisableInlining(MethodBase method) {

@@ -22,7 +22,7 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
                 return new BytePatternCollection(
-                    // .NET Framework instance NGEN stub
+                    // .NET Framework remoting method stub
                     new(new(AddressKind.Abs64), mustMatchAtStart: true,
                         // test rcx, rcx
                         0x48, 0x85, 0xc9,
@@ -39,7 +39,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                         // mov {TARGET}
                         0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad),
 
-                    /* the full assembly for the NGEN stub is as follows (at leasst on FX 4.8:
+                    /* the full assembly for the remoting stub is as follows (at least on FX 4.8):
                      * 
                      *   test rcx, rcx
                      *   jz .Lisnull ; null test
@@ -52,9 +52,11 @@ namespace MonoMod.Core.Platforms.Architectures {
                      *   jmp rax
                      * .LfoundMT:
                      *   movabs r10, ???
-                     *   movabs rax, ??? ; I think that this pointer is some kind of VSD resolve stub?
+                     *   movabs rax, ??? ; a pointer to the remoting dispatch helper
                      *   jmp rax
                      */
+                    // the purpose of this stub seems ot be checking if the object is actually of the type, because
+                    // if its not, its a transparentproxy, and the remoting code is used instead
 
                     // .NET Core
                     new(new(AddressKind.Rel32, 5), mustMatchAtStart: true,

@@ -876,7 +876,7 @@ namespace MonoMod.Core.Interop {
                         return ((VTableIndir2_t*) pSlot)->Value;
                     } else if ((m_wFlags2 & Flags2.IsZapped) != 0 && slotNumber >= GetNumVirtuals()) {
                         // Non-virtual slots in NGened images are relative pointers
-                        return new RelativePointer(pSlot).Value;
+                        return ((RelativePointer*) pSlot)->Value;
                     } else {
                         return *(void**) pSlot;
                     }
