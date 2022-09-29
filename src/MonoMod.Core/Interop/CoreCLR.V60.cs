@@ -58,6 +58,7 @@ namespace MonoMod.Core.Interop {
                 Dynamic = 7,
             }
 
+            [Flags]
             public enum MethodDescClassification : ushort {
                 ClassificationMask = 0x0007,
                 HasNonVtableSlot = 0x0008,
@@ -251,7 +252,7 @@ namespace MonoMod.Core.Interop {
                     var size = GetBaseSize()
                         // All of the extra fields are just one pointer size
                         + (includeNonVtable && m_wFlags.Has(MethodDescClassification.HasNonVtableSlot) ? (nuint) sizeof(void*) : 0)
-                        + (includeMethodImpl && m_wFlags.Has(MethodDescClassification.MethodImpl) ? (nuint) sizeof(void*) : 0)
+                        + (includeMethodImpl && m_wFlags.Has(MethodDescClassification.MethodImpl) ? (nuint) sizeof(void*) * 2 : 0)
                         + (includeComPlus && m_wFlags.Has(MethodDescClassification.HasComPlusCallInfo) ? (nuint) sizeof(void*) : 0)
                         + (includeNativeCode && m_wFlags.Has(MethodDescClassification.HasNativeCodeSlot) ? (nuint) sizeof(void*) : 0);
 
@@ -273,7 +274,7 @@ namespace MonoMod.Core.Interop {
                                     pCode |= THUMB_CODE;
                         #endif
                         */
-                        return pCode;
+                        if (pCode != null) return pCode;
                     }
 
                     if (!HasStableEntryPoint || HasPrecode)
