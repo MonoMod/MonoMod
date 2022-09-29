@@ -47,13 +47,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             GetPtr:
             // get then throw away the function pointer to try to ensure that the pointer is restored
             RuntimeHelpers.PrepareMethod(handle);
-            var getfnptr = handle.GetFunctionPointer();
+            _ = handle.GetFunctionPointer();
             var ptr = GetMethodBodyPtr(method, handle);
-            MMDbgLog.Log($"GetFunctionPointer() = {getfnptr:X16}");
-            if (ptr != getfnptr)
-            {
-                MMDbgLog.Log($"GetFunctionPointer() != GetMethodBodyPtr() = {ptr:X16}");
-            }
+
             if (ptr == IntPtr.Zero) { // the method hasn't been JITted yet
                 if (!didPrepare) {
                     // TODO: call PlatformTriple.Prepare instead to handle generic methods

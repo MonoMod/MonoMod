@@ -40,7 +40,6 @@ namespace MonoMod.Core.Interop {
             public struct MethodImpl {
                 public uint* pdwSlots;
                 public MethodDesc* pImplementedMD;
-
             }
 
             [StructLayout(LayoutKind.Sequential)]
