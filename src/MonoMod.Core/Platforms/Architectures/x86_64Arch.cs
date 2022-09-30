@@ -75,7 +75,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                             // jmp rax
                             0xff, 0xe0),
 
-                    // Autoscan funkyness
+                    // .NET Core Tiered Compilation thunk
                     new(new(AddressKind.Rel32, 19), mustMatchAtStart: false,
                         new byte[] { // mask
                             0xf0, 0xff, 00, 00, 00, 00, 00, 00, 00, 00, 
@@ -92,6 +92,33 @@ namespace MonoMod.Core.Platforms.Architectures {
                             // TODO: somehow encode a check that the ??1s are the same
                             // I somehow doubt that that's necessary, but hey
                         }),
+
+                    // .NET Core Tiered Compilation thunk, this time with an absolute address
+                    new(new(AddressKind.Abs64), mustMatchAtStart: false,
+                        new byte[] { // mask
+                            0xf0, 0xff, 00, 00, 00, 00, 00, 00, 00, 00,
+                            0xff, 0xff, 0xf0,
+                            0xff, 00,
+                            0xff, 0xff, 00, 00, 00, 00, 00, 00, 00, 00,
+                            0xff, 0xff,
+                        },
+                        new byte[] { // pattern
+                            // movabs ??1, ???
+                            0x40, 0xb8, Bn, Bn, Bn, Bn, Bn, Bn, Bn, Bn,
+                            // dec WORD PTR [??1]
+                            0x66, 0xff, 0x00, 
+                            // jz need_to_recompile
+                            0x74, Bn,
+                            // movabs rax, {PTR}
+                            0x48, 0xb8, Bd, Bd, Bd, Bd, Bd, Bd, Bd, Bd,
+                            // jmp rax
+                            0xff, 0xe0,
+                            // need_to_recompile: ...
+
+                            // TODO: somehow encode a check that the ??1s are the same
+                            // I somehow doubt that that's necessary, but hey
+                        }),
+
 
                     // PrecodeFixupThunk (CLR 4+)
                     new(new(AddressKind.PrecodeFixupThunkRel32, 5), mustMatchAtStart: true,

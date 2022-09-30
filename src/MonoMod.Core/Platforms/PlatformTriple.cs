@@ -191,6 +191,7 @@ namespace MonoMod.Core.Platforms {
 
         private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr) {
             var regenerated = false;
+            var didPrepareLastIter = false;
 
             var archMatchCollection = Architecture.KnownMethodThunks;
 
@@ -199,7 +200,7 @@ namespace MonoMod.Core.Platforms {
             ReloadFuncPtr:
             var entry = (nint) Runtime.GetMethodEntryPoint(method);
             do {
-                if (prevEntry == entry) {
+                if (!didPrepareLastIter && prevEntry == entry) {
                     // we're in a loop, break out
                     break;
                 }
@@ -217,12 +218,15 @@ namespace MonoMod.Core.Platforms {
 
                 var lastEntry = entry;
 
+                didPrepareLastIter = false;
+
                 var meaning = match.AddressMeaning;
                 if (meaning.Kind.IsPrecodeFixup() && !regenerated) {
                     var precode = meaning.ProcessAddress(entry, offset, addr);
                     if (reloadPtr) {
                         MMDbgLog.Log($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
                         Prepare(method);
+                        didPrepareLastIter = true;
                         //regenerated = true;
                         goto ReloadFuncPtr;
                     } else {
