@@ -102,7 +102,7 @@ namespace MonoMod.RuntimeDetour.Utils {
         }
 
         private unsafe struct AllocReferenceCoreData {
-            public delegate*<void*, Cell> CreateCell;
+            public void* CreateCell;
             public void* CreateCellData;
             public void* CellRef;
         }
@@ -132,7 +132,7 @@ namespace MonoMod.RuntimeDetour.Utils {
                 while (nextEmpty < arr.Length && arr[nextEmpty] is not null)
                     nextEmpty++;
 
-                cell = data.CreateCell(data.CreateCellData);
+                cell = ((delegate*<void*, Cell>)data.CreateCell)(data.CreateCellData);
                 cellRef.Hash = cell.GetHashCode();
                 comparand = null;
                 return cellRef.Index;
