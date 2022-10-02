@@ -191,8 +191,12 @@ namespace MonoMod.Core.Platforms.Architectures {
             if (x86Shared.TryRel32Detour(from, to, sizeHint, out var rel32Info))
                 return rel32Info;
 
-            var target = from + 6;
-            var memRequest = new AllocationRequest(target, target + int.MinValue, target + int.MaxValue, IntPtr.Size);
+            var target = (nuint)from + 6;
+            var lowBound = target + unchecked((uint)int.MinValue);
+            if (lowBound > target) lowBound = 0;
+            var highBound = target + int.MaxValue;
+            if (highBound < target) highBound = (nuint) ulong.MaxValue;
+            var memRequest = new AllocationRequest((nint)target, (nint)lowBound, (nint)highBound, IntPtr.Size);
             if (sizeHint >= Abs64SplitKind.Instance.Size && system.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
                 return new(from, to, Abs64SplitKind.Instance, allocated);
             }
