@@ -1,7 +1,10 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -70,12 +73,68 @@ namespace MonoMod.Core.Platforms {
                 realTarget = triple.GetRealDetourTarget(src, dst);
 
                 if (triple.SupportedFeatures.Has(RuntimeFeature.CompileMethodHook)) {
+                    EnsureSubscribed(triple);
                     compileMethodHook = new CompileMethodHook(triple, src, realTarget, nativeDetour);
-                    triple.Runtime.OnMethodCompiled += compileMethodHook.OnMethodCompiled;
+                    compileMethodHook.Subscribe();
+                }
+            }
+
+            private static readonly object subLock = new();
+            private static bool hasSubscribed = false;
+
+            // TODO: this currently assumes a singleton PlatformTriple. That isn't necessarily *always* the case, though it should be.
+            private static void EnsureSubscribed(PlatformTriple triple) {
+                if (Volatile.Read(ref hasSubscribed))
+                    return;
+                lock (subLock) {
+                    if (Volatile.Read(ref hasSubscribed))
+                        return;
+                    Volatile.Write(ref hasSubscribed, true);
+
+                    triple.Runtime.OnMethodCompiled += OnMethodCompiled;
+                }
+            }
+
+            private class RelatedTargetObject {
+                public readonly List<CompileMethodHook> RelatedDetours = new();
+            }
+
+            private static readonly ConditionalWeakTable<MethodBase, RelatedTargetObject> relatedDetours = new();
+            private static void AddRelatedDetour(MethodBase m, CompileMethodHook cmh) {
+                var related = relatedDetours.GetOrCreateValue(m);
+                lock (related) {
+                    related.RelatedDetours.Add(cmh);
+                    if (related.RelatedDetours.Count > 2) {
+                        MMDbgLog.Log($"WARNING: More than 2 related detours for method {m}! This means that the method has been detoured twice. Detour cleanup will fail.");
+                    }
+                }
+            }
+
+            private static void RemoveRelatedDetour(MethodBase m, CompileMethodHook cmh) {
+                var related = relatedDetours.GetOrCreateValue(m);
+                lock (related) {
+                    related.RelatedDetours.Remove(cmh);
+                }
+            }
+
+            private static void OnMethodCompiled(MethodBase? method, IntPtr codeStart, ulong codeSize) {
+                if (method is null) {
+                    return;
+                }
+
+                method = PlatformTriple.Current.GetIdentifiable(method);
+
+                if (relatedDetours.TryGetValue(method, out var related)) {
+                    lock (related) {
+                        foreach (var cmh in related.RelatedDetours) {
+                            cmh.OnMethodCompiled(method, codeStart, codeSize);
+                        }
+                    }
                 }
             }
 
             private sealed class CompileMethodHook {
+
                 private readonly PlatformTriple triple;
                 private readonly MethodBase src;
                 private readonly MethodBase target;
@@ -86,12 +145,21 @@ namespace MonoMod.Core.Platforms {
                     this.src = src;
                     this.target = target;
                     this.nativeDetour = nativeDetour;
+
+                    EnsureSubscribed(triple);
                 }
 
-                public void OnMethodCompiled(MethodBase? method, IntPtr codeStart, ulong codeSize) {
-                    if (method is null)
-                        return;
+                public void Subscribe() {
+                    AddRelatedDetour(src, this);
+                    AddRelatedDetour(target, this);
+                }
 
+                public void Unsubscribe() {
+                    RemoveRelatedDetour(src, this);
+                    RemoveRelatedDetour(target, this);
+                }
+
+                public void OnMethodCompiled(MethodBase method, IntPtr codeStart, ulong codeSize) {
                     if (!nativeDetour.IsApplied)
                         return;
 
@@ -254,7 +322,7 @@ namespace MonoMod.Core.Platforms {
                         // we're attached, we need to undo the detour if its applied
                         if (compileMethodHook is not null) {
                             // if this detour applied a callback, remove it
-                            triple.Runtime.OnMethodCompiled -= compileMethodHook.OnMethodCompiled;
+                            compileMethodHook.Unsubscribe();
                         }
                         UndoCore(out var oldDetour);
                         ReplaceDetourOutOfLock(oldDetour);

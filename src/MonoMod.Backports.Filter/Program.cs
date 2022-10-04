@@ -152,7 +152,17 @@ static int GenerateMSBuildFile(string[] args) {
     </ItemGroup>
 </Project>");
 
-    File.WriteAllText(msbFile, sb.ToString(), Encoding.UTF8);
+    var text = sb.ToString();
+
+    var writeFile = true;
+    if (File.Exists(msbFile)) {
+        var existing = File.ReadAllText(msbFile, Encoding.UTF8);
+        writeFile = existing != text;
+    }
+
+    if (writeFile) {
+        File.WriteAllText(msbFile, sb.ToString(), Encoding.UTF8);
+    }
 
     return 0;
 }
