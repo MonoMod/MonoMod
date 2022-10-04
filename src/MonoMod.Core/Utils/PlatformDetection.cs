@@ -319,6 +319,11 @@ namespace MonoMod.Core.Utils {
             MMDbgLog.Log($"FrameworkDescription: {fxDesc??"(null)"}");
 
             if (fxDesc is not null) {
+                // Example values:
+                // '.NET Framework 4.7.2'
+                // '.NET 6.0.9'
+                // '.NET 6.0.0-rtm.21522.10'
+
                 // If we could get FrameworkDescription, we want to check the start of it for each known runtime
                 const string MonoPrefix = "Mono ";
                 const string NetCore = ".NET Core ";
@@ -344,8 +349,8 @@ namespace MonoMod.Core.Utils {
                     prefixLength = fxDesc.Length;
                 }
 
-                // find the next space, if any, because everything up to that should be the version
-                var space = fxDesc.IndexOf(' ', prefixLength);
+                // find the next dash or space, if any, because everything up to that should be the version
+                var space = Math.Max(fxDesc.IndexOf(' ', prefixLength), fxDesc.IndexOf('-', prefixLength));
                 if (space < 0)
                     space = fxDesc.Length;
 
@@ -354,7 +359,7 @@ namespace MonoMod.Core.Utils {
                 try {
                     version = new Version(versionString);
                 } catch (Exception e) {
-                    MMDbgLog.Log("Invalid version string pulled from FrameworkDescription");
+                    MMDbgLog.Log($"Invalid version string pulled from FrameworkDescription ('{fxDesc}')");
                     MMDbgLog.Log(e.ToString());
                 }
 
