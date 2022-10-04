@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Platforms {
-    public sealed class NativeDetour : IDisposable {
+    public sealed class SimpleNativeDetour : IDisposable {
         private bool disposedValue;
         private readonly PlatformTriple triple;
         private readonly IDisposable? AllocHandle;
@@ -12,7 +12,7 @@ namespace MonoMod.Core.Platforms {
         public IntPtr Destination { get; }
         public bool IsAutoUndone { get; private set; } = true;
 
-        internal NativeDetour(PlatformTriple triple, IntPtr src, IntPtr dest, ReadOnlyMemory<byte> backup, IDisposable? allocHandle) {
+        internal SimpleNativeDetour(PlatformTriple triple, IntPtr src, IntPtr dest, ReadOnlyMemory<byte> backup, IDisposable? allocHandle) {
             this.triple = triple;
             Source = src;
             Destination = dest;
@@ -40,7 +40,7 @@ namespace MonoMod.Core.Platforms {
 
         private void CheckDisposed() {
             if (disposedValue)
-                throw new ObjectDisposedException(nameof(NativeDetour));
+                throw new ObjectDisposedException(nameof(SimpleNativeDetour));
         }
 
         private void UndoCore(bool disposing) {
@@ -65,7 +65,7 @@ namespace MonoMod.Core.Platforms {
             }
         }
 
-        ~NativeDetour() {
+        ~SimpleNativeDetour() {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }
