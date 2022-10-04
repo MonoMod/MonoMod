@@ -350,7 +350,7 @@ namespace MonoMod.Core.Utils {
                 }
 
                 // find the next dash or space, if any, because everything up to that should be the version
-                var space = Math.Max(fxDesc.IndexOf(' ', prefixLength), fxDesc.IndexOf('-', prefixLength));
+                var space = fxDesc.IndexOfAny(new[] { ' ', '-' }, prefixLength);
                 if (space < 0)
                     space = fxDesc.Length;
 
