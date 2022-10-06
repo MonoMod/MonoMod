@@ -188,6 +188,9 @@ namespace MonoMod.Core.Platforms {
                                     from = codeStart;
                                 } else {
                                     to = codeStart;
+                                    // we already have a detour, and are just changing the target, retarget
+                                    detour.ChangeTarget(to);
+                                    return;
                                 }
                             } else {
                                 if (isFrom) {

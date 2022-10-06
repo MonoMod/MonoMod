@@ -1,22 +1,25 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using MonoMod.Core.Utils;
 
 namespace MonoMod.Core.Platforms {
     public sealed class SimpleNativeDetour : IDisposable {
         private bool disposedValue;
         private readonly PlatformTriple triple;
-        private readonly IDisposable? AllocHandle;
+        private NativeDetourInfo detourInfo;
+        private Memory<byte> backup;
+        // TODO: replace this with a StrongReference GCHandle so that it's not in the finalization queue simultaneously
+        private IDisposable? AllocHandle;
 
-        public ReadOnlyMemory<byte> DetourBackup { get; }
-        public IntPtr Source { get; }
-        public IntPtr Destination { get; }
+        public ReadOnlyMemory<byte> DetourBackup => backup;
+        public IntPtr Source => detourInfo.From;
+        public IntPtr Destination => detourInfo.To;
         public bool IsAutoUndone { get; private set; } = true;
 
-        internal SimpleNativeDetour(PlatformTriple triple, IntPtr src, IntPtr dest, ReadOnlyMemory<byte> backup, IDisposable? allocHandle) {
+        internal SimpleNativeDetour(PlatformTriple triple, NativeDetourInfo detourInfo, Memory<byte> backup, IDisposable? allocHandle) {
             this.triple = triple;
-            Source = src;
-            Destination = dest;
-            DetourBackup = backup;
+            this.detourInfo = detourInfo;
+            this.backup = backup;
             AllocHandle = allocHandle;
         }
 
@@ -28,6 +31,48 @@ namespace MonoMod.Core.Platforms {
         public void MakeAutomatic() {
             CheckDisposed();
             IsAutoUndone = true;
+        }
+
+        public void ChangeTarget(IntPtr newTarget) {
+            CheckDisposed();
+
+            // This is effectively the same as PlatformTriple.CreateSimpleDetour, only using the underlying retargeting API
+
+            var retarget = triple.Architecture.ComputeRetargetInfo(detourInfo, newTarget, detourInfo.Size);
+
+            Span<byte> retargetBytes = stackalloc byte[retarget.Size];
+
+            var wroteBytes = triple.Architecture.GetRetargetBytes(detourInfo, retarget, retargetBytes, out var alloc, out var repatch, out var disposeOldAlloc);
+
+            // this is the major place where logic diverges
+            // notably, we want to do nearly completely different things if we need to repatch versus not
+            if (repatch) {
+                // the retarget requires re-patching the source body
+                Helpers.DAssert(retarget.Size == wroteBytes);
+
+                byte[]? newBackup = null;
+                if (retarget.Size > backup.Length) {
+                    // the retarget is actually larger than the old detour, so we need to allocate a new backup array and do some shenanigans to keep it consistent
+                    newBackup = new byte[retarget.Size];
+                }
+                // if the retarget is less than or equal to the size of our backup, then we already have the backup that we need and don't need to do anything more
+
+                triple.System.PatchData(PatchTargetKind.Executable, Source, retargetBytes, newBackup);
+
+                if (newBackup is not null) {
+                    // this means that the retarget is larger, so we want to copy in our old backup
+                    backup.Span.CopyTo(newBackup); // this will overwrite the existing patch in this backup
+                    backup = newBackup;
+                }
+            }
+
+            // we always want to replace our DetourInfo
+            detourInfo = retarget;
+            // and we want to swap the old and new allocations, disposing the old only if disposeOldAlloc
+            (alloc, AllocHandle) = (AllocHandle, alloc);
+            if (disposeOldAlloc) {
+                alloc?.Dispose();
+            }
         }
 
         /// <summary>

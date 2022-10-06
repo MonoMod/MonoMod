@@ -54,6 +54,21 @@ namespace MonoMod.UnitTest {
                     Empty();
                 sw.Reset();
                 // and then try again
+
+                // make sure that To qualifies for recpom too
+                for (var i = 0; i < 1000; i++) {
+                    TargetHit = false;
+                    To();
+                    if (!TargetHit) {
+                        Assert.True(TargetHit, $"iteration {i} of loop {loop}");
+                    }
+                }
+                // then we wait for it by spinning
+                sw.Start();
+                while (sw.ElapsedMilliseconds < 100)
+                    Empty();
+                sw.Reset();
+                // and then try again
             }
         }
 

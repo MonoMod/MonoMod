@@ -172,7 +172,7 @@ namespace MonoMod.Core.Platforms {
             // and now we just create the NativeDetour object, if its supposed to be undoable
             if (undoable) {
                 // if we're undoable, pass the allocHandle to the NativeDetour
-                return new SimpleNativeDetour(this, from, to, backup, allocHandle);
+                return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
             } else {
                 // otherwise, create a GCHandle to it and throw it away
                 _ = GCHandle.Alloc(allocHandle);
