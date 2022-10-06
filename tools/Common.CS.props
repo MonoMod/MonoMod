@@ -16,7 +16,7 @@
     <ImplicitUsings>false</ImplicitUsings>
     
     <EnableNetAnalyzers>true</EnableNetAnalyzers>
-    <AnalysisLevel>6.0</AnalysisLevel>
+    <AnalysisLevel>7.0</AnalysisLevel>
     <!-- Because we're bringing in the package ourselves, we want to turn this off. -->
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-all</AnalysisLevel>
@@ -38,13 +38,13 @@
     <OldCecilVersion>0.10.4</OldCecilVersion>
     
     <!-- We use a prerelease version of Roslyn to fix a bug with inferring delegate types  -->
-    <RoslynVersion>4.2.0</RoslynVersion>
+    <RoslynVersion>4.3.1</RoslynVersion>
     <MSBuildRequiredVersion>17.0.0</MSBuildRequiredVersion>
   </PropertyGroup>
 
   <!-- For our C# projects, we want to pull in the code analyzers -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="6.0.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.0-preview1.22403.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
