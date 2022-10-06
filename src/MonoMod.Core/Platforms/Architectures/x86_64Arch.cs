@@ -155,10 +155,26 @@ namespace MonoMod.Core.Platforms.Architectures {
                 allocHandle = null;
                 return Size;
             }
+
+            public override bool TryGetRetargetInfo(NativeDetourInfo orig, IntPtr to, int maxSize, out NativeDetourInfo retargetInfo) {
+                // we can always trivially retarget an abs64 detour (change the absolute constant)
+                retargetInfo = orig with { To = to };
+                return true;
+            }
+
+
+            public override int DoRetarget(NativeDetourInfo origInfo, IntPtr to, Span<byte> buffer, object? data,
+                out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc) {
+                needsRepatch = true;
+                disposeOldAlloc = true;
+                // the retarget logic for rel32 is just the same as the normal patch
+                // the patcher should repatch the target method with the new bytes, and dispose the old allocation, if present
+                return GetBytes(origInfo.From, to, buffer, data, out allocationHandle);
+            }
         }
 
-        private sealed class Abs64SplitKind : DetourKindBase {
-            public static readonly Abs64SplitKind Instance = new();
+        private sealed class Rel32Ind64Kind : DetourKindBase {
+            public static readonly Rel32Ind64Kind Instance = new();
 
             public override int Size => 1 + 1 + 4;
 
@@ -174,6 +190,34 @@ namespace MonoMod.Core.Platforms.Architectures {
 
                 allocHandle = alloc;
                 return Size;
+            }
+
+            public override bool TryGetRetargetInfo(NativeDetourInfo orig, IntPtr to, int maxSize, out NativeDetourInfo retargetInfo) {
+                // we can always trivially retarget a rel32ind64 detour (change the value in the indirection cell)
+                retargetInfo = orig with { To = to };
+                return true;
+            }
+
+            public override int DoRetarget(NativeDetourInfo origInfo, IntPtr to, Span<byte> buffer, object? data,
+                out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc) {
+
+                if (origInfo.InternalKind == this) {
+                    needsRepatch = false;
+                    disposeOldAlloc = false;
+                    // retarget logic here is trivial, as we will simply be writing the new to into the existing memory allocation
+                    Helpers.ThrowIfArgumentNull(data);
+                    var alloc = (IAllocatedMemory) data;
+
+                    Unsafe.WriteUnaligned(ref alloc.Memory[0], to);
+
+                    allocationHandle = alloc;
+                    return 0; // no repatch is needed 
+                } else {
+                    needsRepatch = true;
+                    disposeOldAlloc = true;
+                    // we're retargeting from something else, so need full repatch
+                    return GetBytes(origInfo.From, to, buffer, data, out allocationHandle);
+                }
             }
         }
 
@@ -197,8 +241,8 @@ namespace MonoMod.Core.Platforms.Architectures {
             var highBound = target + int.MaxValue;
             if (highBound < target) highBound = (nuint) ulong.MaxValue;
             var memRequest = new AllocationRequest((nint)target, (nint)lowBound, (nint)highBound, IntPtr.Size);
-            if (sizeHint >= Abs64SplitKind.Instance.Size && system.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
-                return new(from, to, Abs64SplitKind.Instance, allocated);
+            if (sizeHint >= Rel32Ind64Kind.Instance.Size && system.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
+                return new(from, to, Rel32Ind64Kind.Instance, allocated);
             }
 
             // TODO: more, smaller detours
@@ -211,6 +255,22 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         public int GetDetourBytes(NativeDetourInfo info, Span<byte> buffer, out IDisposable? allocHandle) {
             return DetourKindBase.GetDetourBytes(info, buffer, out allocHandle);
+        }
+
+        public NativeDetourInfo ComputeRetargetInfo(NativeDetourInfo detour, IntPtr to, int maxSizeHint = -1) {
+            x86Shared.FixSizeHint(ref maxSizeHint);
+            if (DetourKindBase.TryFindRetargetInfo(detour, to, maxSizeHint, out var retarget)) {
+                // the detour knows how to retarget itself, we'll use that
+                return retarget;
+            } else {
+                // the detour doesn't know how to retarget itself, lets just compute a new detour to our new target
+                return ComputeDetourInfo(detour.From, to, maxSizeHint);
+            }
+        }
+
+        public int GetRetargetBytes(NativeDetourInfo original, NativeDetourInfo retarget, Span<byte> buffer,
+            out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc) {
+            return DetourKindBase.DoRetarget(original, retarget, buffer, out allocationHandle, out needsRepatch, out disposeOldAlloc);
         }
     }
 }

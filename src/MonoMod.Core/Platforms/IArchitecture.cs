@@ -16,6 +16,11 @@ namespace MonoMod.Core.Platforms {
         /// <param name="buffer">A buffer which will hold the byte sequence. It must be at least <see cref="NativeDetourInfo.Size"/> bytes in length.</param>
         /// <returns>The number of bytes written to the buffer.</returns>
         int GetDetourBytes(NativeDetourInfo info, Span<byte> buffer, out IDisposable? allocationHandle);
+
+        NativeDetourInfo ComputeRetargetInfo(NativeDetourInfo detour, IntPtr to, int maxSizeHint = -1);
+
+        int GetRetargetBytes(NativeDetourInfo original, NativeDetourInfo retarget, Span<byte> buffer,
+            out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc);
     }
 
     public interface INativeDetourKind {

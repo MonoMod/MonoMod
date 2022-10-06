@@ -14,6 +14,29 @@ namespace MonoMod.Core.Platforms.Architectures {
                 allocHandle = null;
                 return Size;
             }
+
+            public override bool TryGetRetargetInfo(NativeDetourInfo orig, IntPtr to, int maxSize, out NativeDetourInfo retargetInfo) {
+                // if we're here, the existing 5f condition cannot be true, so we don't need to check it
+                var rel = to - ((nint)orig.From + 5);
+                if (Is32Bit(rel) || Is32Bit(-rel)) {
+                    // we can keep using the rel32 detour kind, just pointed at the new target
+                    retargetInfo = new(orig.From, to, Instance, null);
+                    return true;
+                }
+
+                // we don't know how to retarget well with this detour kind, tell caller to figure something else out
+                retargetInfo = default;
+                return false;
+            }
+            
+            public override int DoRetarget(NativeDetourInfo origInfo, IntPtr to, Span<byte> buffer, object? data,
+                out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc) {
+                needsRepatch = true;
+                disposeOldAlloc = true;
+                // the retarget logic for rel32 is just the same as the normal patch
+                // the patcher should repatch the target method with the new bytes, and dispose the old allocation, if present
+                return GetBytes(origInfo.From, to, buffer, data, out allocationHandle);
+            }
         }
 
         public static void FixSizeHint(ref int sizeHint) {
