@@ -149,7 +149,7 @@ namespace MonoMod.Core.Platforms {
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public SimpleNativeDetour? CreateSimpleDetour(IntPtr from, IntPtr to, bool undoable = true, int detourMaxSize = -1) {
+        public SimpleNativeDetour CreateSimpleDetour(IntPtr from, IntPtr to, int detourMaxSize = -1) {
             Helpers.Assert(from != to, $"Cannot detour a method to itself! (from: {from}, to: {to})");
 
             var detourInfo = Architecture.ComputeDetourInfo(from, to, detourMaxSize);
@@ -163,22 +163,14 @@ namespace MonoMod.Core.Platforms {
             // these should be the same
             Helpers.DAssert(size == detourInfo.Size);
 
-            // allocate a backup if needed
-            var backup = undoable ? new byte[detourInfo.Size] : null;
+            // allocate a backup
+            var backup = new byte[detourInfo.Size];
 
             // now we can apply the detour through the system
             System.PatchData(PatchTargetKind.Executable, from, detourData, backup);
 
-            // and now we just create the NativeDetour object, if its supposed to be undoable
-            if (undoable) {
-                // if we're undoable, pass the allocHandle to the NativeDetour
-                return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
-            } else {
-                // otherwise, create a GCHandle to it and throw it away
-                _ = GCHandle.Alloc(allocHandle);
-                allocHandle = null;
-                return null;
-            }
+            // and now we just create the NativeDetour object
+            return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
         }
 
         public IntPtr GetNativeMethodBody(MethodBase method) {
