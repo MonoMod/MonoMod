@@ -236,7 +236,7 @@ namespace MonoMod.Utils {
             if (tscope == null)
                 throw new ArgumentException("MemberReference hasn't got a DeclaringType / isn't a TypeReference in itself");
             if (asmName == null && moduleName == null)
-                throw new NotSupportedException($"Unsupported scope type {tscope.Scope.GetType().FullName}");
+                throw new NotSupportedException($"Unsupported scope type {tscope.Scope!.GetType().FullName}");
 
             bool tryAssemblyCache = true;
             bool refetchingModules = false;

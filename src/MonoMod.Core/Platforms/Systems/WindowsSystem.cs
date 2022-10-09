@@ -2,6 +2,7 @@
 using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.CodeDom;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -24,16 +25,26 @@ namespace MonoMod.Core.Platforms.Systems {
                 return TypeClassification.ByReference;
             }
         }
+        private static TypeClassification ClassifyX86(Type type, bool isReturn) {
+            if (!isReturn) return TypeClassification.OnStack;
+
+            if (type.GetManagedSize() is 1 or 2 or 4) return TypeClassification.InRegister;
+            else return TypeClassification.ByReference;
+        }
 
         public WindowsSystem() {
             if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
+                // fastcall
                 DefaultAbi = new Abi(
                     new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
                     ClassifyX64,
                     ReturnsReturnBuffer: true);
-            } else {
-                // TODO: what is the default Windows x64 ABI?
-                //throw new PlatformNotSupportedException($"Windows on non-x86_64 is currently not supported");
+            } else if (PlatformDetection.Architecture is ArchitectureKind.x86) {
+                // cdecl
+                DefaultAbi = new Abi(
+                    new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments },
+                    ClassifyX86,
+                    ReturnsReturnBuffer: true);
             }
         }
 

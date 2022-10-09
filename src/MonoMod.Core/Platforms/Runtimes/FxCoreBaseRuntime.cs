@@ -240,15 +240,15 @@ namespace MonoMod.Core.Platforms.Runtimes {
         ) {
             try {
                 var declType = Type.GetTypeFromHandle(declaringType);
-                if (genericTypeArguments is { } gte && declType.IsGenericTypeDefinition) {
+                if (genericTypeArguments is { } gte && declType!.IsGenericTypeDefinition) {
                     var typeArr = new Type[gte.Length];
                     for (var i = 0; i < gte.Length; i++) {
-                        typeArr[i] = Type.GetTypeFromHandle(gte.Span[i]);
+                        typeArr[i] = Type.GetTypeFromHandle(gte.Span[i])!;
                     }
                     declType = declType.MakeGenericType(typeArr);
                 }
 
-                var method = MethodBase.GetMethodFromHandle(methodHandle, declType.TypeHandle);
+                var method = MethodBase.GetMethodFromHandle(methodHandle, declType!.TypeHandle);
 
                 // When method is null, there are several possibilities
                 // One of them is that it's a P/Invoke, and declType is the P/Invoke IL stub helper class
