@@ -149,6 +149,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 if (jit == IntPtr.Zero)
                     return CorJitResult.CORJIT_OK;
 
+                var lastError = MarshalEx.GetLastPInvokeError();
                 hookEntrancy++;
                 try {
 
@@ -191,6 +192,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     return result;
                 } finally {
                     hookEntrancy--;
+                    MarshalEx.SetLastPInvokeError(lastError);
                 }
             }
         }
