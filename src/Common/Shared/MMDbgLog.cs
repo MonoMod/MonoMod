@@ -65,7 +65,9 @@ namespace MonoMod {
                 var dir = Path.GetDirectoryName(path);
                 if (dir is not null && !Directory.Exists(dir))
                     _ = Directory.CreateDirectory(dir);
-                Writer = new StreamWriter(new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete), Encoding.UTF8);
+                Writer = new StreamWriter(new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete), Encoding.UTF8) {
+                    AutoFlush = true
+                };
             } catch { }
         }
 

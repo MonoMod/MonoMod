@@ -124,6 +124,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 // eagerly call ICMP to ensure that it's JITted before installing the hook
                 unsafe { icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _); }
+                // and the same with MarshalEx.(Get/Set)LastPInvokeError
+                MarshalEx.SetLastPInvokeError(MarshalEx.GetLastPInvokeError());
 
                 // ensure the static constructor has been called
                 _ = hookEntrancy;

@@ -33,12 +33,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     // .NET 6.0.x
                     return new Core60Runtime(system);
 
-                /*
                 case 7:
-                    // .NET 7.0.x
-                    // TODO:
-                    break;
-                */
+                    return new Core70Runtime(system);
 
                 // currently, we need to manually add support for new versions.
                 // TODO: possibly fall back to a JIT GUID check if we can?

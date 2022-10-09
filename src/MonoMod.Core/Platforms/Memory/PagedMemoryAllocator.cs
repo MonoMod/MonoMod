@@ -283,7 +283,7 @@ namespace MonoMod.Core.Platforms.Memory {
             pageCount--;
         }
 
-        private ReadOnlySpan<Page> AllocList => allocationList.AsSpan().Slice(0, pageCount);
+        private ReadOnlySpan<Page> AllocList => allocationList.AsSpan().Slice(0, pageCount)!;
 
         private int GetBoundIndex(IntPtr ptr) {
             var index = AllocList.BinarySearch(new PageAddrComparable(ptr));

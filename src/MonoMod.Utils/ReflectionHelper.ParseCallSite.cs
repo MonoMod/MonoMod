@@ -19,15 +19,21 @@ namespace MonoMod.Utils {
 
         // https://github.com/dotnet/runtime/blob/10717887317beb824e57cdb29417663615211e99/src/coreclr/src/System.Private.CoreLib/src/System/Reflection/Emit/SignatureHelper.cs#L191
         // https://github.com/mono/mono/blob/1317cf06da06682419f8f4b0c9810ad5d5d3ac3a/mcs/class/corlib/System.Reflection.Emit/SignatureHelper.cs#L55
-        private static readonly FieldInfo f_SignatureHelper_module =
+        private static readonly FieldInfo? f_SignatureHelper_module =
             typeof(SignatureHelper).GetField("m_module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance) ??
-            typeof(SignatureHelper).GetField("module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Could not get module field for SignatureHelper");
+            typeof(SignatureHelper).GetField("module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+
+        private static Module GetSignatureHelperModule(SignatureHelper signature) {
+            if (f_SignatureHelper_module == null)
+                throw new InvalidOperationException("Unable to find module field for SignatureHelper");
+
+            return (Module) f_SignatureHelper_module.GetValue(signature)!;
+        }
 
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, ICallSiteGenerator signature)
             => signature.ToCallSite(moduleTo);
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, SignatureHelper signature)
-            => moduleTo.ImportCallSite((Module)f_SignatureHelper_module.GetValue(signature)!, signature.GetSignature());
+            => moduleTo.ImportCallSite(GetSignatureHelperModule(signature), signature.GetSignature());
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, int token)
             => moduleTo.ImportCallSite(moduleFrom, moduleFrom.ResolveSignature(token));
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, byte[] data) {
