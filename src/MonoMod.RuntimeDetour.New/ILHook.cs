@@ -123,7 +123,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         protected virtual void Dispose(bool disposing) {
-            if (!disposedValue) {
+            if (!disposedValue && hook is not null) {
                 hook.IsValid = false;
                 if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))
                     Undo();

@@ -348,7 +348,7 @@ namespace MonoMod.RuntimeDetour {
         public DetourInfo DetourInfo => state.Info.GetDetourInfo(detour);
 
         protected virtual void Dispose(bool disposing) {
-            if (!disposedValue) {
+            if (!disposedValue && detour is not null) {
                 detour.IsValid = false;
                 if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))
                     Undo();
