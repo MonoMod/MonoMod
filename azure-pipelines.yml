@@ -63,18 +63,16 @@ steps:
   displayName: 'Install .NET Core SDK 3.1.x'
   inputs:
     packageType: sdk
-# FIXME: Upgrade to 3.1.x once https://github.com/dotnet/sourcelink/issues/524 is fixed.
-# Example failing build with 3.1.200: https://dev.azure.com/MonoMod/MonoMod/_build/results?buildId=142&view=results
-    version: '3.1.102'
+    version: '3.1.x'
 - task: UseDotNet@2
   condition: contains(variables.testers, ';core5;')
-  displayName: 'Install .NET Core SDK 5.0.x'
+  displayName: 'Install .NET SDK 5.0.x'
   inputs:
     packageType: sdk
     version: '5.0.x'
 - task: UseDotNet@2
   condition: contains(variables.testers, ';core6;')
-  displayName: 'Install .NET Core SDK 6.0.x'
+  displayName: 'Install .NET SDK 6.0.x'
   inputs:
     packageType: sdk
     version: '6.0.x'
