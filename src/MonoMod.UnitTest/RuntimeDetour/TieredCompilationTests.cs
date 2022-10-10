@@ -39,7 +39,7 @@ namespace MonoMod.UnitTest {
 
         private static void TestFrom() {
             var sw = new Stopwatch();
-            for (var loop = 0; loop < 5; loop++) {
+            for (var loop = 0; loop < 50; loop++) {
                 // first we make sure From qualifies for recomp
                 for (var i = 0; i < 1000; i++) {
                     TargetHit = false;

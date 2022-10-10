@@ -65,11 +65,11 @@ namespace MonoMod.Core.Platforms.Architectures {
                         // pop rdi
                         0x5f),
 
-                    // Wine wierdness and generic type handle thunks
+                    // Jump stubs and generic context stubs (generic context stubs should match later
                     new(new(AddressKind.Abs64), mustMatchAtStart: false,
                             // movabs r?, {ptr} ; <-- this is for the generic context pointer, for instance
                             // the instruction encoding is REX.W(B) B8+r ..., where the B bit of REX is set if extended 64-bit regs are used
-                            0xfe_48, 0xf8_b8, An, An, An, An, An, An, An, An,
+                            //0xfe_48, 0xf8_b8, An, An, An, An, An, An, An, An,
                             // movabs rax, {PTR}
                             0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad,
                             // jmp rax
