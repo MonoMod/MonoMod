@@ -10,7 +10,8 @@
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     
     <!-- All MonoMod projects (by default) target these frameworks -->
-    <TargetFrameworks>net35;net452;netstandard2.0;net5.0;net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>net35;net452;netstandard2.0;net5.0;net6.0</TargetFrameworks>
+    <!-- TODO: When .NET 7 goes stable, add it here -->
     <!-- If a project wants to target some subset or other set, then they can just reassign TargetFrameworks in their project file -->
     
     <!-- Conditional compilation constants are used *everywhere*, make sure common ones are set -->

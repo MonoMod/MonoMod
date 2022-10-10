@@ -16,10 +16,8 @@
     <ImplicitUsings>false</ImplicitUsings>
     
     <EnableNetAnalyzers>true</EnableNetAnalyzers>
-    <AnalysisLevel>7.0</AnalysisLevel>
-    <!-- Because we're bringing in the package ourselves, we want to turn this off. -->
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <AnalysisLevel>latest-all</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>7.0-all</AnalysisLevel>
     
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>

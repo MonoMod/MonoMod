@@ -16,7 +16,9 @@
 
   <!-- Include the docs in the project listing -->
   <ItemGroup>
-    <None Include="$(MMDocsPath)$(PackageDocsName)**\*" Link="__docs\%(RecursivePath)%(Filename)%(Extension)" Pack="false" />
+    <None Include="$(MMDocsPath)$(PackageDocsName)\**\*" Pack="false">
+      <Link>__docs\$([MSBuild]::MakeRelative('$(MMDocsPath)$(PackageDocsName)', '%(FullPath)'))</Link>
+    </None>
   </ItemGroup>
 
   <!-- Include package readme if it exists -->

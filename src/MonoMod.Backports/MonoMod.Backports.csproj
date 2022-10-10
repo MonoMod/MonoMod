@@ -2,7 +2,11 @@
 
   <PropertyGroup>
     <!-- We're not going to be having any of the logic that would use the shared sources, so we'll just not include them -->
-    <TargetFrameworks>$(TargetFrameworks);netstandard2.1;netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>$(TargetFrameworks);netstandard2.1;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
+    
+    <!-- Keep .NET 7 conditional while its in preview -->
+    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 17.4.0 And $(NETCoreAppMaximumVersion) &gt;= 7.0">$(TargetFrameworks);net7.0</TargetFrameworks>
+    
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
     <MMReferenceUtils>false</MMReferenceUtils>

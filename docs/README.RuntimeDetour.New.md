@@ -8,7 +8,6 @@
 <!-- include ../README-RuntimeDetour.md#usage -->
 ---
 
-<!-- include ../README.md#links -->
 Visit the [GitHub](https://github.com/MonoMod/MonoMod/) and look for RuntimeDetour for more documentation.
 
 <!-- include ../README-RuntimeDetour.md#types -->

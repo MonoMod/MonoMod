@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <AssemblyName>MonoMod.RuntimeDetour</AssemblyName>
@@ -18,5 +18,5 @@
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Core\MonoMod.Core.csproj" />
   </ItemGroup>
-
+  
 </Project>
