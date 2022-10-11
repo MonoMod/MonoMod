@@ -34,7 +34,12 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     return new Core60Runtime(system);
 
                 case 7:
+                    // .NET 7.0.x
+#if NO_NET7_RUNTIME
+                    throw new PlatformNotSupportedException(".NET 7 Support is not enabled");
+#else
                     return new Core70Runtime(system);
+#endif
 
                 // currently, we need to manually add support for new versions.
                 // TODO: possibly fall back to a JIT GUID check if we can?
