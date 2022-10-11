@@ -208,7 +208,7 @@ steps:
     arch: 'x64'
 - template: 'azure-pipelines-coretest.yml'
   parameters:
-    condition: and(contains(variables.testers, ';core3;'), eq(variables.textx86, 'true'))
+    condition: and(contains(variables.testers, ';core3;'), eq(variables.testx86, 'true'))
     targetFramework: 'netcoreapp3.0'
     arch: 'x86'
 
@@ -219,7 +219,7 @@ steps:
     arch: 'x64'
 - template: 'azure-pipelines-coretest.yml'
   parameters:
-    condition: and(contains(variables.testers, ';core3.1;'), eq(variables.textx86, 'true'))
+    condition: and(contains(variables.testers, ';core3.1;'), eq(variables.testx86, 'true'))
     targetFramework: 'netcoreapp3.1'
     arch: 'x86'
 
@@ -230,7 +230,7 @@ steps:
     arch: 'x64'
 - template: 'azure-pipelines-coretest.yml'
   parameters:
-    condition: and(contains(variables.testers, ';core5;'), eq(variables.textx86, 'true'))
+    condition: and(contains(variables.testers, ';core5;'), eq(variables.testx86, 'true'))
     targetFramework: 'net5.0'
     arch: 'x86'
 
@@ -241,7 +241,7 @@ steps:
     arch: 'x64'
 - template: 'azure-pipelines-coretest.yml'
   parameters:
-    condition: and(contains(variables.testers, ';core6;'), eq(variables.textx86, 'true'))
+    condition: and(contains(variables.testers, ';core6;'), eq(variables.testx86, 'true'))
     targetFramework: 'net6.0'
     arch: 'x86'
 
