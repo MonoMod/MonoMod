@@ -13,6 +13,7 @@ steps:
         **/artifacts/bin/**/${{parameters.buildConfiguration}}/${{parameters.targetFramework}}/**/*
         !**/MonoMod.FrameworkTests/**/*
         !**/Monomod.Backports.Filter/**/*
+        !**/Monomod.ILHelpers.Patcher/**/*
         !**/MonoMod.UnitTest/**/*
         !**/xunit.*
         !**/testhost*
