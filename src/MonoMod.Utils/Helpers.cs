@@ -6,17 +6,17 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace MonoMod.Core.Utils {
+namespace MonoMod.Utils {
     public static class Helpers {
-        internal const bool IsDebug =
-#if DEBUG
-            true;
-#else
-            false;
-#endif
 
-
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static void Swap<T>(ref T a, ref T b) => (b, a) = (a, b);
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static bool Has<T>(this T @enum, T value) where T : struct, Enum {
+            var flgsVal = NumericValue(value);
+            return (NumericValue(@enum) & flgsVal) == flgsVal;
+        }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static ulong NumericValue<T>(T value) where T : struct, Enum {

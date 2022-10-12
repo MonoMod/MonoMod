@@ -1,6 +1,6 @@
 ﻿using Mono.Cecil.Cil;
 using MonoMod.Backports;
-using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;

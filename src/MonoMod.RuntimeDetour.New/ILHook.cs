@@ -1,10 +1,9 @@
 ﻿using MonoMod.Cil;
 using MonoMod.Core;
-using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
 

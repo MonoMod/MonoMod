@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.Utils;
+using System;
 using System.Linq;
 
 namespace MonoMod.Core.Utils {
@@ -271,7 +272,7 @@ namespace MonoMod.Core.Utils {
                                 goto NoMatch;
 
                             ReadOnlySpan<byte> pattern = data.Slice(pos, Math.Min(segment.Length, addrBuf.Length));
-                            Buffer.MemoryCopy(pattern, addrBuf);
+                            pattern.CopyTo(addrBuf);
                             addrBuf = addrBuf.Slice(Math.Min(addrBuf.Length, pattern.Length));
 
                             pos += segment.Length;

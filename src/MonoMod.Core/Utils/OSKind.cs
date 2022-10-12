@@ -1,4 +1,6 @@
-﻿namespace MonoMod.Core.Utils {
+﻿using MonoMod.Utils;
+
+namespace MonoMod.Core.Utils {
     public enum OSKind {
         Unknown = 0,
 

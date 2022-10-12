@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using MonoMod.Core.Utils;
+using MonoMod.Utils;
 
 namespace MonoMod.Core.Platforms.Memory {
     public abstract class QueryingMemoryPageAllocatorBase {

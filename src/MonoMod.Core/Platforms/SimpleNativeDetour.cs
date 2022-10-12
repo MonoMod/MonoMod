@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using MonoMod.Core.Utils;
+using MonoMod.Utils;
 
 namespace MonoMod.Core.Platforms {
     public sealed class SimpleNativeDetour : IDisposable {

@@ -1,6 +1,6 @@
 ﻿using MonoMod.Backports;
 using MonoMod.Core.Platforms;
-using MonoMod.Core.Utils;
+using MonoMod.Utils;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;

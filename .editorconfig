@@ -93,3 +93,6 @@ csharp_style_unused_value_assignment_preference = discard_variable:warning
 dotnet_diagnostic.IDE0005.severity = warning
 dotnet_diagnostic.IDE0046.severity = suggestion
 dotnet_diagnostic.IDE0045.severity = suggestion
+
+# Configure null check validation functions so the compiler does not complain
+dotnet_code_quality.CA1062.null_check_validation_methods = ThrowIfNull|ThrowIfArgumentNull

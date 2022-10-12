@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace MonoMod.Core.Utils {
+namespace MonoMod.Utils {
     [SuppressMessage("Usage", "CA2237:Mark ISerializable types with serializable",
         Justification = "We don't really care about serialization for this exception.")]
     public sealed class AssertionFailedException : Exception {
