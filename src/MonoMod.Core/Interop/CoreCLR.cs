@@ -15,7 +15,7 @@ namespace MonoMod.Core.Interop {
                     IntPtr, // method
                     IntPtr, // ICorJitCompiler*
                     IntPtr, // ICorJitInfo*
-                    in V30.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
+                    in V21.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
                     uint,
                     out byte*,
                     out uint,
@@ -29,7 +29,7 @@ namespace MonoMod.Core.Interop {
                     IntPtr, // method
                     IntPtr, // ICorJitCompiler*
                     IntPtr, // ICorJitInfo*
-                    in V30.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
+                    in V21.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
                     uint,
                     out byte*,
                     out uint,
@@ -39,7 +39,7 @@ namespace MonoMod.Core.Interop {
                     IntPtr, // method
                     IntPtr, // ICorJitCompiler*
                     IntPtr, // ICorJitInfo*
-                    in V30.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
+                    in V21.CORINFO_METHOD_INFO, // CORINFO_METHOD_INFO*
                     uint,
                     out byte*,
                     out uint,
@@ -47,7 +47,7 @@ namespace MonoMod.Core.Interop {
                 >) methodPtr;
         }
 
-        public class V30 {
+        public class V21 {
             [StructLayout(LayoutKind.Sequential)]
             public struct CORINFO_SIG_INST {
                 public uint classInstCount;
@@ -98,6 +98,7 @@ namespace MonoMod.Core.Interop {
 
             public static InvokeCompileMethodPtr InvokeCompileMethodPtr => new(&InvokeCompileMethod);
 
+            // TODO: abstract away CORINFO_METHOD_INFO
             public static CorJitResult InvokeCompileMethod(
                 IntPtr functionPtr,
                 IntPtr thisPtr, // ICorJitCompiler*
@@ -124,7 +125,9 @@ namespace MonoMod.Core.Interop {
             }
         }
 
-        public class V31 : V30 { }
+        public class V30 : V21 { }
+
+        public class V31 : V21 { }
 
         public class V50 : V31 { }
     }

@@ -13,9 +13,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             switch (version.Major) {
                 case 2:
                 case 4:
-                    // .NET Core 2.1 (it actually only seems to give a major version of 4, but 2 is here for safety)
-                    // TODO:
-                    break;
+                    // .NET Core 2.x
+                    // Note that .NET Core 2.x does not return a reasonable number for its version like 2.1, instead it gives 4.6.xxxxxx, like Framework.
+                    return new Core21Runtime(system);
 
                 case 3:
                     // .NET Core 3.x
