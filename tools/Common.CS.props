@@ -15,9 +15,10 @@
     
     <ImplicitUsings>false</ImplicitUsings>
     
-    <EnableNetAnalyzers>true</EnableNetAnalyzers>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <AnalysisLevel>7.0-all</AnalysisLevel>
+    <AnalysisMode>All</AnalysisMode>
+    <AnalysisLevel>6.0</AnalysisLevel>
     
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
@@ -42,7 +43,7 @@
 
   <!-- For our C# projects, we want to pull in the code analyzers -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.0-preview1.22403.2">
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

@@ -13,6 +13,8 @@
     <TargetFrameworks>net35;net452;netstandard2.0;net5.0;net6.0</TargetFrameworks>
     <!-- TODO: When .NET 7 goes stable, add it here -->
     <!-- If a project wants to target some subset or other set, then they can just reassign TargetFrameworks in their project file -->
+
+    <NoWarn>$(NoWarn);NETSDK1138</NoWarn> <!-- Target framework is out of support -->
     
     <!-- Conditional compilation constants are used *everywhere*, make sure common ones are set -->
     <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
