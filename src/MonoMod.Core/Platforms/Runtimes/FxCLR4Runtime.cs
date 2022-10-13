@@ -1,7 +1,5 @@
-﻿using MonoMod.Core.Utils;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 using System;
-using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using static MonoMod.Core.Interop.Fx;

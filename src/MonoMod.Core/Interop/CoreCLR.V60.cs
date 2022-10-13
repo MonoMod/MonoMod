@@ -1,5 +1,4 @@
-﻿using MonoMod.Core.Utils;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;

@@ -1,11 +1,8 @@
-﻿using MonoMod.Core.Utils;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace MonoMod.Core.Platforms {

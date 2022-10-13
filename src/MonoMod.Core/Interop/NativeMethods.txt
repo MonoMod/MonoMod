@@ -1,0 +1,14 @@
+﻿GetSystemInfo
+VirtualAlloc
+VirtualQuery // CsWin32 doesn't generate this
+VirtualProtect
+VirtualFree
+GetCurrentProcess
+FlushInstructionCache
+
+MEM_IMAGE
+MEM_MAPPED
+MEM_PRIVATE
+MEM_COMMIT
+MEM_FREE
+MEM_RESERVE

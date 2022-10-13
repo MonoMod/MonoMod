@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using MonoMod.Utils;
 
 namespace MonoMod.Core.Platforms {
