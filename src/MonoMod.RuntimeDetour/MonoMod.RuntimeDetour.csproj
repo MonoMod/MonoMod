@@ -15,5 +15,10 @@
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="@(Compile)" />
+    <Compile Remove="@(Compile)" />
+  </ItemGroup>
   
 </Project>

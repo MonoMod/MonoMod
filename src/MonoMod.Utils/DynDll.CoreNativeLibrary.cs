@@ -20,10 +20,10 @@ namespace MonoMod.Utils {
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
         /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>The library handle.</returns>
-        public static IntPtr OpenLibrary(string name, bool skipMapping = false, int? flags = null) {
-            if (InternalTryOpenLibraryMapping(name, out IntPtr libraryPtr, skipMapping, flags))
+        public static IntPtr OpenLibrary(string name, bool skipMapping = false) {
+            if (InternalTryOpenLibraryMapping(name, out IntPtr libraryPtr, skipMapping))
                 return libraryPtr;
-            return NativeLibrary.Load(name, Assembly.GetCallingAssembly(), flags != null ? (DllImportSearchPath) flags.Value : (DllImportSearchPath?) null);
+            return NativeLibrary.Load(name, Assembly.GetCallingAssembly(), null);
         }
 
         /// <summary>
@@ -34,16 +34,16 @@ namespace MonoMod.Utils {
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
         /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>True if the handle was obtained, false otherwise.</returns>
-        public static bool TryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping = false, int? flags = null) {
-            if (InternalTryOpenLibraryMapping(name, out libraryPtr, skipMapping, flags))
+        public static bool TryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping = false) {
+            if (InternalTryOpenLibraryMapping(name, out libraryPtr, skipMapping))
                 return true;
-            return NativeLibrary.TryLoad(name, Assembly.GetCallingAssembly(), flags != null ? (DllImportSearchPath) flags.Value : (DllImportSearchPath?) null, out libraryPtr);
+            return NativeLibrary.TryLoad(name, Assembly.GetCallingAssembly(), null, out libraryPtr);
         }
 
-        private static bool InternalTryOpenLibraryMapping(string name, out IntPtr libraryPtr, bool skipMapping, int? flags) {
+        private static bool InternalTryOpenLibraryMapping(string name, out IntPtr libraryPtr, bool skipMapping) {
             if (name != null && !skipMapping && Mappings.TryGetValue(name, out var mappingList)) {
                 foreach (DynDllMapping mapping in mappingList) {
-                    if (InternalTryOpenLibraryMapping(mapping.LibraryName, out libraryPtr, true, mapping.Flags))
+                    if (InternalTryOpenLibraryMapping(mapping.LibraryName, out libraryPtr, true))
                         return true;
                 }
 

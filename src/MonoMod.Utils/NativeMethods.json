@@ -1,0 +1,10 @@
+﻿{
+  "$schema": "https://aka.ms/CsWin32.schema.json",
+  "emitSingleFile": true,
+  "allowMarshaling": false,
+  "className": "Interop",
+  "multiTargetingFriendlyAPIs": false,
+  "public": false,
+  "useSafeHandles": false,
+  "wideCharOnly": true
+}

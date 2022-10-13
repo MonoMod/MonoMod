@@ -141,7 +141,7 @@ namespace MonoMod {
                     bool pdb = DebugSymbolOutputFormat == DebugSymbolFormat.PDB;
                     bool mdb = DebugSymbolOutputFormat == DebugSymbolFormat.MDB;
                     if (DebugSymbolOutputFormat == DebugSymbolFormat.Auto) {
-                        if (((int) PlatformHelper.Current & (int) Platform.Windows) == (int) Platform.Windows)
+                        if (PlatformDetection.OS.Is(OSKind.Windows))
                             pdb = true;
                         else
                             mdb = true;
@@ -2212,7 +2212,7 @@ namespace MonoMod {
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModOnPlatform") {
                     CustomAttributeArgument[] plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
                     for (int i = 0; i < plats.Length; i++) {
-                        if (PlatformHelper.Is((Platform) plats[i].Value)) {
+                        if (PlatformDetection.OS.Is((OSKind) plats[i].Value)) {
                             // status &= true;
                             continue;
                         }

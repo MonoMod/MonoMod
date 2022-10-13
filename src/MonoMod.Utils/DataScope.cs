@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace MonoMod.RuntimeDetour.Utils {
-
+namespace MonoMod.Utils {
     public abstract class ScopeHandlerBase {
         public abstract void EndScope(object? data);
     }

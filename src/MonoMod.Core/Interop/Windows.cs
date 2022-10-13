@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
@@ -98,15 +97,5 @@ namespace MonoMod.Core.Interop {
 
         [DllImport(Kernel32, SetLastError = true)]
         public static extern int VirtualQuery(IntPtr lpAddress, out MEMORY_BASIC_INFORMATION lpBuffer, int dwLength);
-
-        [DllImport(Kernel32, SetLastError = true, CharSet = CharSet.Unicode)]
-        public static extern IntPtr GetModuleHandle(string lpModuleName);
-
-        [SuppressMessage("Globalization", "CA2101:Specify marshaling for P/Invoke string arguments",
-            Justification = "This call needs CharSet = Ansi, and we have BestFitMapping = false and ThrowOnUnmappableChar  = true.")]
-        [DllImport(Kernel32,
-            CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true,
-            BestFitMapping = false, ThrowOnUnmappableChar = true)]
-        public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
     }
 }

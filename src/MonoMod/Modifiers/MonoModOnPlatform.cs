@@ -8,7 +8,7 @@ namespace MonoMod {
     /// </summary>
     [MonoMod__SafeToCopy__]
     public class MonoModOnPlatform : Attribute {
-        public MonoModOnPlatform(params Platform[] p) {
+        public MonoModOnPlatform(params OSKind[] p) {
         }
     }
 }

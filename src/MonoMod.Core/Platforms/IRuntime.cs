@@ -1,4 +1,4 @@
-﻿using MonoMod.Core.Utils;
+﻿using MonoMod.Utils;
 using System;
 using System.Reflection;
 

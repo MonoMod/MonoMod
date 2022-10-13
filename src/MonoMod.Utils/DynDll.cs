@@ -63,7 +63,7 @@ namespace MonoMod.Utils {
                         bool mappingFound = false;
 
                         foreach (var mapping in mappingList) {
-                            if (TryOpenLibrary(mapping.LibraryName, out libraryPtr, true, mapping.Flags)) {
+                            if (TryOpenLibrary(mapping.LibraryName, out libraryPtr, true)) {
                                 mappingFound = true;
                                 break;
                             }
@@ -96,13 +96,6 @@ namespace MonoMod.Utils {
                 if (!found)
                     throw new EntryPointNotFoundException($"No matching entry point found for {field.Name} in {field.DeclaringType?.FullName}");
             }
-        }
-
-        public static class DlopenFlags {
-            public const int RTLD_LAZY = 0x0001;
-            public const int RTLD_NOW = 0x0002;
-            public const int RTLD_LOCAL = 0x0000;
-            public const int RTLD_GLOBAL = 0x0100;
         }
     }
 
@@ -138,16 +131,10 @@ namespace MonoMod.Utils {
         /// </summary>
         public string LibraryName { get; set; }
 
-        /// <summary>
-        /// Platform-dependent loading flags.
-        /// </summary>
-        public int? Flags { get; set; }
-
         /// <param name="libraryName">The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.</param>
         /// <param name="flags">Platform-dependent loading flags.</param>
-		public DynDllMapping(string libraryName, int? flags = null) {
+		public DynDllMapping(string libraryName) {
             LibraryName = libraryName ?? throw new ArgumentNullException(nameof(libraryName));
-            Flags = flags;
         }
 
         public static implicit operator DynDllMapping(string libraryName) {

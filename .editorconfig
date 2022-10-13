@@ -1,9 +1,15 @@
 root = true
 
+[*]
+end_of_line = lf
+indent_style = space
+
+[*.{csproj,ilproj,props,targets}]
+indent_size = 2
+
 [*.{cs,vb}]
 indent_style = space
 indent_size = 4
-end_of_line = lf
 
 # Globalization rules should be "in your face" as the system culture info has actually caused problems!
 # See https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/globalization-warnings

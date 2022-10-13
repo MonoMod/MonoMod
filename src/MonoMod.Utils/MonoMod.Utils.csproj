@@ -9,9 +9,19 @@
     <Nullable>enable</Nullable>
     <MMReferenceUtils>false</MMReferenceUtils>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <AdditionalFiles Include="Interop/NativeMethods.txt" />  
+  </ItemGroup>
+  
 
   <!-- Dependencies -->
   <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.2.63-beta">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Windows.SDK.Win32Metadata" Version="35.0.14-preview" />
     <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>

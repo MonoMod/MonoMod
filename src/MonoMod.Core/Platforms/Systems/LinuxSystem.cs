@@ -1,6 +1,5 @@
 ﻿using MonoMod.Core.Interop;
 using MonoMod.Core.Platforms.Memory;
-using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
 using System.ComponentModel;

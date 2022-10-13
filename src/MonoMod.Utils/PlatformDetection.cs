@@ -5,8 +5,10 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Windows.Win32.System.Diagnostics.Debug;
+using Windows.Win32.Foundation;
 
-namespace MonoMod.Core.Utils {
+namespace MonoMod.Utils {
     public static class PlatformDetection {
         #region OS/Arch
         private static int platInitState;
@@ -201,18 +203,18 @@ namespace MonoMod.Core.Utils {
         }
 
         private static void DetectInfoWindows(ref OSKind os, ref ArchitectureKind arch) {
-            Interop.Windows.GetSystemInfo(out var sysInfo);
+            Windows.Win32.Interop.GetSystemInfo(out var sysInfo);
 
             // we don't update OS here, because Windows
 
-            // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
-            arch = sysInfo.wProcessorArchitecture switch {
-                9 => ArchitectureKind.x86_64,
-                5 => ArchitectureKind.Arm,
-                12 => ArchitectureKind.Arm64,
-                6 => arch, // Itanium. Fuck Itanium.
-                0 => ArchitectureKind.x86,
-                _ => ArchitectureKind.Unknown
+            // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
+            arch = sysInfo.Anonymous.Anonymous.wProcessorArchitecture switch {
+                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_AMD64 => ArchitectureKind.x86_64,
+                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_IA64 => throw new PlatformNotSupportedException("You're running .NET on an Itanium device!?!?"),
+                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_INTEL => ArchitectureKind.x86,
+                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_ARM => ArchitectureKind.Arm,
+                (PROCESSOR_ARCHITECTURE)12 => ArchitectureKind.Arm64,
+                var x => throw new PlatformNotSupportedException($"Unknown Windows processor architecture {x}"),
             };
         }
         #endregion
@@ -236,8 +238,8 @@ namespace MonoMod.Core.Utils {
             if (env == "FALSE")
                 return false;
 
-            IntPtr ntdll = Interop.Windows.GetModuleHandle("ntdll.dll");
-            if (ntdll != IntPtr.Zero && Interop.Windows.GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero)
+            var ntdll = Windows.Win32.Interop.GetModuleHandle("ntdll.dll");
+            if (ntdll != HINSTANCE.Null && Windows.Win32.Interop.GetProcAddress(ntdll, "wine_get_version") != FARPROC.Null)
                 return true;
 
             return false;
