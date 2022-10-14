@@ -73,7 +73,7 @@ namespace MonoMod.RuntimeDetour.Utils {
                 var iters = 0;
                 do {
                     do {
-                        if (++iters > IterLimit || Volatile.Read(ref useLock) > 0) {
+                        if (!lockTaken && (++iters > IterLimit || Volatile.Read(ref useLock) > 0)) {
                             triedTakingLock = true;
                             // first increment useLock to tell other threads to use the lock
                             _ = Interlocked.Increment(ref useLock);
@@ -107,7 +107,6 @@ namespace MonoMod.RuntimeDetour.Utils {
             public void* CellRef;
         }
 
-        // TODO: through sheer bad luck this can loop infinitely, fix it, posisbly with a SpinWait, or falling back to a lock
         private static unsafe DataScope<CellRef> AllocReferenceCore(delegate*<void*, Cell> createCell, void* data, out CellRef cellRef) {
             cellRef = default;
 
@@ -218,6 +217,7 @@ namespace MonoMod.RuntimeDetour.Utils {
                 case RefValueCell: {
                         Helpers.Assert(default(T) == null);
                         var c = Unsafe.As<RefCell>(cell);
+                        Helpers.Assert(c.Value is null or T);
                         return ref Unsafe.As<object?, T?>(ref c.Value!);
                     }
                 case ValueTypeCell: {
@@ -230,6 +230,23 @@ namespace MonoMod.RuntimeDetour.Utils {
             }
         }
 
+        [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
+        private static ref T? GetValueRefUnsafe<T>(CellRef cellRef) {
+            var cell = GetCell(cellRef);
+            // here, we're assuming that our T is correct, hence Unsafe
+            if (default(T) == null) {
+                // this is a reference type
+                Helpers.DAssert(cell.Type == RefValueCell);
+                var c = Unsafe.As<RefCell>(cell);
+                return ref Unsafe.As<object?, T?>(ref c.Value);
+            } else {
+                // this is a value type
+                Helpers.DAssert(cell.Type == ValueTypeCell);
+                var c = Unsafe.As<ValueCell<T>>(cell);
+                return ref c.Value;
+            }
+        }
+
         public static T? GetValue<T>(CellRef cellRef) => GetValueRef<T>(cellRef);
 
         private static readonly MethodInfo Self_GetValue_ii
@@ -238,8 +255,13 @@ namespace MonoMod.RuntimeDetour.Utils {
         private static readonly MethodInfo Self_GetValueT_ii
             = typeof(DynamicReferenceManager).GetMethod(nameof(GetValueT), BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(int), typeof(int) }, null)
             ?? throw new InvalidOperationException("GetValueT doesn't exist?!?!?!?");
+        private static readonly MethodInfo Self_GetValueTUnsafe_ii
+            = typeof(DynamicReferenceManager).GetMethod(nameof(GetValueTUnsafe), BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(int), typeof(int) }, null)
+            ?? throw new InvalidOperationException("GetValueTUnsafe doesn't exist?!?!?!?");
+
         internal static object? GetValue(int index, int hash) => GetValue(new(index, hash));
         internal static T? GetValueT<T>(int index, int hash) => GetValue<T>(new(index, hash));
+        internal static T? GetValueTUnsafe<T>(int index, int hash) => GetValueRefUnsafe<T>(new(index, hash));
 
         public static void SetValue<T>(CellRef cellRef, in T? value) {
             ref var cell = ref GetValueRef<T>(cellRef);
@@ -262,6 +284,14 @@ namespace MonoMod.RuntimeDetour.Utils {
             il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type)));
         }
 
+        internal static void EmitLoadTypedReferenceUnsafe(this ILProcessor il, CellRef cellRef, Type type){
+            Helpers.ThrowIfArgumentNull(il);
+
+            il.Emit(OpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(OpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueTUnsafe_ii.MakeGenericMethod(type)));
+        }
+
         public static DataScope<CellRef> EmitNewReference(this ILProcessor il, object? value, out CellRef cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadReference(il, cellRef);
@@ -270,9 +300,8 @@ namespace MonoMod.RuntimeDetour.Utils {
 
         public static DataScope<CellRef> EmitNewTypedReference<T>(this ILProcessor il, T? value, out CellRef cellRef) {
             var scope = AllocReference(value, out cellRef);
-            EmitLoadTypedReference(il, cellRef, typeof(T));
+            EmitLoadTypedReferenceUnsafe(il, cellRef, typeof(T));
             return scope;
         }
-        // TODO: make EmitNewTypedReference do an 'unsafe' load which bypasses most of the checks in GetValueRef
     }
 }
