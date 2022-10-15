@@ -81,7 +81,9 @@ namespace MonoMod.Utils {
         }
 
         public static unsafe void SetMonoCorlibInternal(this Assembly asm, bool value) {
-            if (!ReflectionHelper.IsMono)
+            // TODO: try to move this impl into MM.Core's platform abstraction
+            // it already has this for CoreCLR, which needs it for *other* reasons
+            if (PlatformDetection.Runtime is not RuntimeKind.Mono)
                 return;
 
             // Mono doesn't know about IgnoresAccessChecksToAttribute,

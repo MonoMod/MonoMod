@@ -179,7 +179,7 @@ namespace MonoMod {
                     return _GACPaths;
 
 
-                if (!ReflectionHelper.IsMono) {
+                if (PlatformDetection.Runtime is not RuntimeKind.Mono) {
                     // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
                     string path = Environment.GetEnvironmentVariable("windir");
                     if (string.IsNullOrEmpty(path))

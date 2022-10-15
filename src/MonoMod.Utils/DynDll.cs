@@ -2,8 +2,6 @@
 using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.ComponentModel;
 using System.Linq;
 
 namespace MonoMod.Utils {
@@ -133,7 +131,7 @@ namespace MonoMod.Utils {
 
         /// <param name="libraryName">The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.</param>
         /// <param name="flags">Platform-dependent loading flags.</param>
-		public DynDllMapping(string libraryName) {
+        public DynDllMapping(string libraryName) {
             LibraryName = libraryName ?? throw new ArgumentNullException(nameof(libraryName));
         }
 

@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 
 namespace MonoMod.Utils.Interop {
@@ -34,13 +33,13 @@ namespace MonoMod.Utils.Interop {
         private static extern IntPtr DL1dlerror();
 
 
-        [DllImport("libdl.so.2", EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DL2, EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlopen(byte* filename, DlopenFlags flags);
-        [DllImport("libdl.so.2", EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DL2, EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool DL2dlclose(IntPtr handle);
-        [DllImport("libdl.so.2", EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DL2, EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlsym(IntPtr handle, byte* symbol);
-        [DllImport("libdl.so.2", EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DL2, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlerror();
 
         private static (byte[]?, ReadOnlyMemory<byte> Utf8) MarshalToUtf8(string? str) {

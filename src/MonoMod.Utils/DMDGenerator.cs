@@ -39,7 +39,7 @@ namespace MonoMod.Utils {
 
         internal static unsafe MethodInfo _Postbuild(MethodInfo mi) {
 
-            if (ReflectionHelper.IsMono) {
+            if (PlatformDetection.Runtime is RuntimeKind.Mono) {
                 // Luckily we're guaranteed to be safe from DynamicMethod -> RuntimeMethodInfo conversions.
                 if (mi is not DynamicMethod && mi.DeclaringType != null) {
                     // get_Assembly is virtual in some versions of Mono (notably older ones and the infamous Unity fork).

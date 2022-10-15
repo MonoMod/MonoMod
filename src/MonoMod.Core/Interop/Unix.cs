@@ -6,8 +6,6 @@ namespace MonoMod.Core.Interop {
         // If this dllimport decl isn't enough to get the runtime to load the right thing, I give up
         public const string LibC = "libc";
 
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "uname", SetLastError = true)]
-        public static extern unsafe int Uname(byte* buf);
 
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mmap", SetLastError = true)]
         public static extern unsafe IntPtr Mmap(IntPtr addr, nuint length, Protection prot, MmapFlags flags, int fd, int offset);

@@ -19,12 +19,6 @@ namespace MonoMod.Utils {
 #endif
     static partial class ReflectionHelper {
 
-        public static readonly bool IsMono =
-            // This is what everyone expects.
-            Type.GetType("Mono.Runtime") != null ||
-            // .NET Core BCL running on Mono, see https://github.com/dotnet/runtime/blob/main/src/libraries/Common/tests/TestUtilities/System/PlatformDetection.cs
-            Type.GetType("Mono.RuntimeStructs") != null;
-
         public static readonly bool IsCore =
             typeof(object).Assembly.GetName().Name == "System.Private.CoreLib";
 
