@@ -17,9 +17,7 @@
 
   <!-- Dependencies -->
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" Version="[0.10.0,0.11]">
-      <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
-    </PackageReference>
+    <PackageReference Include="Mono.Cecil" />
   </ItemGroup>
 
   <ItemGroup>
