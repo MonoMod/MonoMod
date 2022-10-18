@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    class RelinkTargetNotFoundException : RelinkFailedException {
+    public class RelinkTargetNotFoundException : RelinkFailedException {
 
-        public new const string DefaultMessage = "MonoMod relinker failed finding";
+        private const string DefaultMessage = "MonoMod relinker failed finding";
 
         public RelinkTargetNotFoundException(IMetadataTokenProvider mtp, IMetadataTokenProvider? context = null)
-            : base(_Format(DefaultMessage, mtp, context), mtp, context) {
+            : base(Format(DefaultMessage, mtp, context), mtp, context) {
         }
 
         public RelinkTargetNotFoundException(string message,

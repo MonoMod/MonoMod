@@ -1,17 +1,10 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Linq;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.Security.Permissions;
-using System.Security;
-using System.Diagnostics.SymbolStore;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 using MonoMod.Utils.Cil;
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Reflection;
-using MonoMod.Utils;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -78,6 +77,7 @@ namespace MonoMod.Utils {
         #region Misc IL Helpers
 
         public static void ReplaceOperands(this ILProcessor il, object from, object to) {
+            Helpers.ThrowIfArgumentNull(il);
             foreach (Instruction instr in il.Body.Instructions)
                 if (instr.Operand?.Equals(from) ?? from == null)
                     instr.Operand = to;
@@ -88,14 +88,14 @@ namespace MonoMod.Utils {
         #region Base Create / Emit Helpers
 
         public static FieldReference Import(this ILProcessor il, FieldInfo field)
-            => il.Body.Method.Module.ImportReference(field);
+            => Helpers.ThrowIfNull(il).Body.Method.Module.ImportReference(field);
         public static MethodReference Import(this ILProcessor il, MethodBase method)
-            => il.Body.Method.Module.ImportReference(method);
+            => Helpers.ThrowIfNull(il).Body.Method.Module.ImportReference(method);
         public static TypeReference Import(this ILProcessor il, Type type)
-            => il.Body.Method.Module.ImportReference(type);
+            => Helpers.ThrowIfNull(il).Body.Method.Module.ImportReference(type);
         public static MemberReference Import(this ILProcessor il, MemberInfo member) {
-            if (member == null)
-                throw new ArgumentNullException(nameof(member));
+            Helpers.ThrowIfArgumentNull(il);
+            Helpers.ThrowIfArgumentNull(member);
             switch (member) {
                 case FieldInfo info:
                     return il.Import(info);
@@ -109,23 +109,24 @@ namespace MonoMod.Utils {
         }
 
         public static Instruction Create(this ILProcessor il, OpCode opcode, FieldInfo field)
-            => il.Create(opcode, il.Import(field));
+            => Helpers.ThrowIfNull(il).Create(opcode, il.Import(field));
         public static Instruction Create(this ILProcessor il, OpCode opcode, MethodBase method) {
+            Helpers.ThrowIfArgumentNull(il);
             if (method is System.Reflection.Emit.DynamicMethod)
                 return il.Create(opcode, (object) method);
             return il.Create(opcode, il.Import(method));
         }
         public static Instruction Create(this ILProcessor il, OpCode opcode, Type type)
-            => il.Create(opcode, il.Import(type));
+            => Helpers.ThrowIfNull(il).Create(opcode, il.Import(type));
         public static Instruction Create(this ILProcessor il, OpCode opcode, object operand) {
-            Instruction instr = il.Create(OpCodes.Nop);
+            Instruction instr = Helpers.ThrowIfNull(il).Create(OpCodes.Nop);
             instr.OpCode = opcode;
             instr.Operand = operand;
             return instr;
         }
         public static Instruction Create(this ILProcessor il, OpCode opcode, MemberInfo member) {
-            if (member == null)
-                throw new ArgumentNullException(nameof(member));
+            Helpers.ThrowIfArgumentNull(il);
+            Helpers.ThrowIfArgumentNull(member);
             switch (member) {
                 case FieldInfo info:
                     return il.Create(opcode, info);
@@ -139,8 +140,10 @@ namespace MonoMod.Utils {
         }
 
         public static void Emit(this ILProcessor il, OpCode opcode, FieldInfo field)
-            => il.Emit(opcode, il.Import(field));
+            => Helpers.ThrowIfNull(il).Emit(opcode, il.Import(field));
         public static void Emit(this ILProcessor il, OpCode opcode, MethodBase method) {
+            Helpers.ThrowIfArgumentNull(il);
+            Helpers.ThrowIfArgumentNull(method);
             if (method is System.Reflection.Emit.DynamicMethod) {
                 il.Emit(opcode, (object) method);
                 return;
@@ -148,10 +151,10 @@ namespace MonoMod.Utils {
             il.Emit(opcode, il.Import(method));
         }
         public static void Emit(this ILProcessor il, OpCode opcode, Type type)
-            => il.Emit(opcode, il.Import(type));
+            => Helpers.ThrowIfNull(il).Emit(opcode, il.Import(type));
         public static void Emit(this ILProcessor il, OpCode opcode, MemberInfo member) {
-            if (member == null)
-                throw new ArgumentNullException(nameof(member));
+            Helpers.ThrowIfArgumentNull(il);
+            Helpers.ThrowIfArgumentNull(member);
             switch (member) {
                 case FieldInfo info:
                     il.Emit(opcode, info);
@@ -167,7 +170,7 @@ namespace MonoMod.Utils {
             }
         }
         public static void Emit(this ILProcessor il, OpCode opcode, object operand)
-            => il.Append(il.Create(opcode, operand));
+            => Helpers.ThrowIfNull(il).Append(il.Create(opcode, operand));
 
         #endregion
         

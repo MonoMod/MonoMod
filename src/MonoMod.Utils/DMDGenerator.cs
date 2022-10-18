@@ -1,43 +1,28 @@
-﻿using System;
-using System.Reflection;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Linq;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.IO;
+﻿using System.Reflection;
 using System.Reflection.Emit;
 
 namespace MonoMod.Utils {
-#pragma warning disable IDE1006 // Naming Styles
-    internal interface _IDMDGenerator {
-#pragma warning restore IDE1006 // Naming Styles
+    internal interface IDMDGenerator {
         MethodInfo Generate(DynamicMethodDefinition dmd, object? context);
     }
     /// <summary>
     /// A DynamicMethodDefinition "generator", responsible for generating a runtime MethodInfo from a DMD MethodDefinition.
     /// </summary>
     /// <typeparam name="TSelf"></typeparam>
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    abstract class DMDGenerator<TSelf> : _IDMDGenerator where TSelf : DMDGenerator<TSelf>, new() {
+    public abstract class DMDGenerator<TSelf> : IDMDGenerator where TSelf : DMDGenerator<TSelf>, new() {
 
         private static TSelf? _Instance;
 
-        protected abstract MethodInfo _Generate(DynamicMethodDefinition dmd, object? context);
+        protected abstract MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context);
 
-        MethodInfo _IDMDGenerator.Generate(DynamicMethodDefinition dmd, object? context) {
-            return _Postbuild(_Generate(dmd, context));
+        MethodInfo IDMDGenerator.Generate(DynamicMethodDefinition dmd, object? context) {
+            return Postbuild(GenerateCore(dmd, context));
         }
 
         public static MethodInfo Generate(DynamicMethodDefinition dmd, object? context = null)
-            => _Postbuild((_Instance ??= new TSelf())._Generate(dmd, context));
+            => Postbuild((_Instance ??= new TSelf()).GenerateCore(dmd, context));
 
-        internal static unsafe MethodInfo _Postbuild(MethodInfo mi) {
+        internal static unsafe MethodInfo Postbuild(MethodInfo mi) {
 
             if (PlatformDetection.Runtime is RuntimeKind.Mono) {
                 // Luckily we're guaranteed to be safe from DynamicMethod -> RuntimeMethodInfo conversions.

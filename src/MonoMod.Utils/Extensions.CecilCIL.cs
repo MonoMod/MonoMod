@@ -1,21 +1,10 @@
 ﻿using System;
-using System.Reflection;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil.Cil;
 using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         private static readonly Type t_Code = typeof(Code);
         private static readonly Type t_OpCodes = typeof(OpCodes);

@@ -45,21 +45,23 @@ namespace MonoMod.Utils {
             return true;
         }
 
-        public int GetHashCode(Type type) {
-            if (!type.IsGenericType)
-                return type.GetHashCode();
+        public int GetHashCode(Type obj) {
+            Helpers.ThrowIfArgumentNull(obj);
+            if (!obj.IsGenericType)
+                return obj.GetHashCode();
 
+            // TODO: use HashCode
             unchecked {
                 int code = unchecked((int) 0xdeadbeef);
+                code ^= obj.Assembly.GetHashCode();
                 code ^= (code << 16) | (code >> 16);
-                code ^= type.Assembly.GetHashCode();
 
-                if (type.Namespace != null)
-                    code ^= type.Namespace.GetHashCode(StringComparison.Ordinal);
+                if (obj.Namespace != null)
+                    code ^= obj.Namespace.GetHashCode(StringComparison.Ordinal);
 
-                code ^= type.Name.GetHashCode(StringComparison.Ordinal);
+                code ^= obj.Name.GetHashCode(StringComparison.Ordinal);
 
-                Type[] genericParams = type.GetGenericArguments();
+                Type[] genericParams = obj.GetGenericArguments();
 
                 for (int i = 0; i < genericParams.Length; i++) {
                     int offs = i % 8 * 4;

@@ -1,14 +1,8 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Mono.Collections.Generic;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
@@ -19,10 +13,8 @@ namespace MonoMod.Utils {
     /// <param name="context">The generic context provided to relink generic references.</param>
     /// <returns>A relinked reference.</returns>
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider? context);
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    
+    public static partial class Extensions {
 
         /// <summary>
         /// Clone the given method definition.
@@ -163,6 +155,8 @@ namespace MonoMod.Utils {
         /// <param name="orig">The original generic parameter.</param>
         /// <returns>A generic parameter provided by the given context which matches the original generic parameter.</returns>
         public static GenericParameter? ResolveGenericParameter(this IGenericParameterProvider provider, GenericParameter orig) {
+            Helpers.ThrowIfArgumentNull(provider);
+            Helpers.ThrowIfArgumentNull(orig);
             // This can be true for T[,].Get in "Enter the Gungeon"
             if (provider is GenericParameter genericParam && genericParam.Name == orig.Name)
                 return genericParam;
@@ -224,6 +218,7 @@ namespace MonoMod.Utils {
         public static TypeReference? Relink(this TypeReference? type, Relinker relinker, IGenericParameterProvider? context) {
             if (type is null)
                 return null;
+            Helpers.ThrowIfArgumentNull(relinker);
 
             if (type is TypeSpecification ts) {
                 TypeReference relinkedElem = ts.ElementType.Relink(relinker, context);
@@ -315,9 +310,10 @@ namespace MonoMod.Utils {
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
         public static IMetadataTokenProvider Relink(this MethodReference method, Relinker relinker, IGenericParameterProvider context) {
+            Helpers.ThrowIfArgumentNull(method);
             if (method.IsGenericInstance) {
-                GenericInstanceMethod methodg = (GenericInstanceMethod) method;
-                GenericInstanceMethod gim = new GenericInstanceMethod((MethodReference) methodg.ElementMethod.Relink(relinker, context));
+                var methodg = (GenericInstanceMethod) method;
+                var gim = new GenericInstanceMethod((MethodReference) methodg.ElementMethod.Relink(relinker, context));
                 foreach (TypeReference arg in methodg.GenericArguments)
                     // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(arg.Relink(relinker, context));
@@ -325,7 +321,7 @@ namespace MonoMod.Utils {
                 return (MethodReference) relinker(gim, context);
             }
 
-            MethodReference relink = new MethodReference(method.Name, method.ReturnType, method.DeclaringType.Relink(relinker, context));
+            var relink = new MethodReference(method.Name, method.ReturnType, method.DeclaringType.Relink(relinker, context));
 
             relink.CallingConvention = method.CallingConvention;
             relink.ExplicitThis = method.ExplicitThis;
@@ -352,7 +348,9 @@ namespace MonoMod.Utils {
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
         public static CallSite Relink(this CallSite method, Relinker relinker, IGenericParameterProvider context) {
-            CallSite relink = new CallSite(method.ReturnType);
+            Helpers.ThrowIfArgumentNull(method);
+            Helpers.ThrowIfArgumentNull(relinker);
+            var relink = new CallSite(method.ReturnType);
 
             relink.CallingConvention = method.CallingConvention;
             relink.ExplicitThis = method.ExplicitThis;
@@ -376,6 +374,8 @@ namespace MonoMod.Utils {
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
         public static IMetadataTokenProvider Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
+            Helpers.ThrowIfArgumentNull(field);
+            Helpers.ThrowIfArgumentNull(relinker);
             TypeReference declaringType = field.DeclaringType.Relink(relinker, context);
             return relinker(new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType), context);
         }
@@ -388,8 +388,10 @@ namespace MonoMod.Utils {
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
         public static ParameterDefinition Relink(this ParameterDefinition param, Relinker relinker, IGenericParameterProvider context) {
+            Helpers.ThrowIfArgumentNull(param);
+            Helpers.ThrowIfArgumentNull(relinker);
             param = (param.Method as MethodReference)?.Parameters[param.Index] ?? param;
-            ParameterDefinition newParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType.Relink(relinker, context)) {
+            var newParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType.Relink(relinker, context)) {
                 IsIn = param.IsIn,
                 IsLcid = param.IsLcid,
                 IsOptional = param.IsOptional,
@@ -408,7 +410,8 @@ namespace MonoMod.Utils {
         /// <param name="param">The original parameter definition.</param>
         /// <returns>A clone of the original parameter definition.</returns>
         public static ParameterDefinition Clone(this ParameterDefinition param) {
-            ParameterDefinition newParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType) {
+            Helpers.ThrowIfArgumentNull(param);
+            var newParam = new ParameterDefinition(param.Name, param.Attributes, param.ParameterType) {
                 IsIn = param.IsIn,
                 IsLcid = param.IsLcid,
                 IsOptional = param.IsOptional,
@@ -431,7 +434,9 @@ namespace MonoMod.Utils {
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker, IGenericParameterProvider context) {
-            CustomAttribute newAttrib = new CustomAttribute((MethodReference) attrib.Constructor.Relink(relinker, context));
+            Helpers.ThrowIfArgumentNull(attrib);
+            Helpers.ThrowIfArgumentNull(relinker);
+            var newAttrib = new CustomAttribute((MethodReference) attrib.Constructor.Relink(relinker, context));
             foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
                 newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type.Relink(relinker, context), attribArg.Value));
             foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
@@ -451,7 +456,8 @@ namespace MonoMod.Utils {
         /// <param name="attrib">The original custom attribute.</param>
         /// <returns>A clone of the original custom attribute.</returns>
         public static CustomAttribute Clone(this CustomAttribute attrib) {
-            CustomAttribute newAttrib = new CustomAttribute(attrib.Constructor);
+            Helpers.ThrowIfArgumentNull(attrib);
+            var newAttrib = new CustomAttribute(attrib.Constructor);
             foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
                 newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type, attribArg.Value));
             foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
@@ -473,6 +479,8 @@ namespace MonoMod.Utils {
         /// <param name="context">The generic context provided to relink generic references.</param>
         /// <returns>A relinked reference.</returns>
         public static GenericParameter Relink(this GenericParameter param, Relinker relinker, IGenericParameterProvider context) {
+            Helpers.ThrowIfArgumentNull(param);
+            Helpers.ThrowIfArgumentNull(relinker);
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);
@@ -491,6 +499,7 @@ namespace MonoMod.Utils {
         /// <param name="param">The original generic parameter.</param>
         /// <returns>A clone of the original generic parameter.</returns>
         public static GenericParameter Clone(this GenericParameter param) {
+            Helpers.ThrowIfArgumentNull(param);
             GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);

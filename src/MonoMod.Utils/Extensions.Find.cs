@@ -1,21 +1,9 @@
 ﻿using System;
 using System.Reflection;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
-using Mono.Cecil.Cil;
 using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         /// <summary>
         /// Find a method for a given ID.
@@ -25,6 +13,8 @@ namespace MonoMod.Utils {
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
         public static MethodDefinition? FindMethod(this TypeDefinition type, string id, bool simple = true) {
+            Helpers.ThrowIfArgumentNull(type);
+            Helpers.ThrowIfArgumentNull(id);
             if (simple && !id.Contains(" ", StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
                 foreach (MethodDefinition method in type.Methods)
@@ -66,6 +56,7 @@ namespace MonoMod.Utils {
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
         public static MethodInfo? FindMethod(this Type type, string id, bool simple = true) {
+            Helpers.ThrowIfArgumentNull(type);
             MethodInfo[] methods = type.GetMethods(
                 BindingFlags.Instance | BindingFlags.Static |
                 BindingFlags.Public | BindingFlags.NonPublic
@@ -111,6 +102,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The property name.</param>
         /// <returns>The first matching property or null.</returns>
         public static PropertyDefinition? FindProperty(this TypeDefinition type, string name) {
+            Helpers.ThrowIfArgumentNull(type);
             foreach (PropertyDefinition prop in type.Properties)
                 if (prop.Name == name)
                     return prop;
@@ -123,6 +115,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The property name.</param>
         /// <returns>The first matching property or null.</returns>
         public static PropertyDefinition? FindPropertyDeep(this TypeDefinition type, string name) {
+            Helpers.ThrowIfArgumentNull(type);
             return type.FindProperty(name) ?? type.BaseType?.Resolve()?.FindPropertyDeep(name);
         }
 
@@ -133,6 +126,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The field name.</param>
         /// <returns>The first matching field or null.</returns>
         public static FieldDefinition? FindField(this TypeDefinition type, string name) {
+            Helpers.ThrowIfArgumentNull(type);
             foreach (FieldDefinition field in type.Fields)
                 if (field.Name == name)
                     return field;
@@ -145,6 +139,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The field name.</param>
         /// <returns>The first matching field or null.</returns>
         public static FieldDefinition? FindFieldDeep(this TypeDefinition type, string name) {
+            Helpers.ThrowIfArgumentNull(type);
             return type.FindField(name) ?? type.BaseType?.Resolve()?.FindFieldDeep(name);
         }
 
@@ -155,6 +150,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The event name.</param>
         /// <returns>The first matching event or null.</returns>
         public static EventDefinition? FindEvent(this TypeDefinition type, string name) {
+            Helpers.ThrowIfArgumentNull(type);
             foreach (EventDefinition eventDef in type.Events)
                 if (eventDef.Name == name)
                     return eventDef;
@@ -167,6 +163,7 @@ namespace MonoMod.Utils {
         /// <param name="name">The event name.</param>
         /// <returns>The first matching event or null.</returns>
         public static EventDefinition? FindEventDeep(this TypeDefinition type, string name) {
+            Helpers.ThrowIfArgumentNull(type);
             return type.FindEvent(name) ?? type.BaseType?.Resolve()?.FindEventDeep(name);
         }
 

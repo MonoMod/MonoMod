@@ -1,20 +1,8 @@
-﻿using System;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
-using Mono.Cecil.Cil;
+﻿using Mono.Cecil.Cil;
 using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 
-namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+namespace MonoMod.Utils { 
+    public static partial class Extensions {
 
         /// <summary>
         /// Safely resolve a reference, silently discarding any exceptions.

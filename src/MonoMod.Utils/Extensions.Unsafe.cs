@@ -1,23 +1,11 @@
 ﻿using System;
 using System.Reflection;
-using MC = Mono.Cecil;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil.Cil;
-using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
-using System.Drawing;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         private static readonly ConcurrentDictionary<Type, int> _GetManagedSizeCache = new(new[] {
             new KeyValuePair<Type, int>(typeof(void), 0)
@@ -26,12 +14,16 @@ namespace MonoMod.Utils {
         private static MethodInfo? _GetManagedSizeHelper;
         /// <summary>
         /// Get the managed size of a given type. This matches an IL-level sizeof(t), even if it cannot be determined normally in C#.
-        /// Note that sizeof(t) != Marshal.SizeOf(t), f.e. when t is char.
+        /// Note that <c>sizeof(t) != Marshal.SizeOf(t)</c>, f.e. when t is char.
         /// </summary>
+        /// <remarks>
+        /// An IL-level <c>sizeof(t)</c> will return <c>sizeof(IntPtr)</c> for reference types, as it refers to the size on stack or in an object,
+        /// not the size on heap.
+        /// </remarks>
         /// <param name="t">The type to get the size from.</param>
         /// <returns>The managed type size.</returns>
         public static int GetManagedSize(this Type t)
-            => _GetManagedSizeCache.GetOrAdd(t, ComputeManagedSize);
+            => _GetManagedSizeCache.GetOrAdd(Helpers.ThrowIfNull(t), ComputeManagedSize);
 
         private static int ComputeManagedSize(Type t) {
             var szHelper = _GetManagedSizeHelper;
@@ -48,7 +40,7 @@ namespace MonoMod.Utils {
         /// <param name="method">The method to obtain the "this" parameter type from.</param>
         /// <returns>The "this" parameter type.</returns>
         public static Type GetThisParamType(this MethodBase method) {
-            Type type = method.DeclaringType!;
+            Type type = Helpers.ThrowIfNull(method).DeclaringType!;
             if (type.IsValueType)
                 type = type.MakeByRefType();
             return type;
@@ -66,10 +58,11 @@ namespace MonoMod.Utils {
         /// <param name="m">The method to get a native function pointer for.</param>
         /// <returns>The native function pointer.</returns>
         public static IntPtr GetLdftnPointer(this MethodBase m) {
+            Helpers.ThrowIfArgumentNull(m);
             if (_GetLdftnPointerCache.TryGetValue(m, out var func))
                 return func();
 
-            using DynamicMethodDefinition dmd = new DynamicMethodDefinition(
+            using var dmd = new DynamicMethodDefinition(
                 $"GetLdftnPointer<{m.GetID(simple: true)}>",
                 typeof(IntPtr), Type.EmptyTypes
             );

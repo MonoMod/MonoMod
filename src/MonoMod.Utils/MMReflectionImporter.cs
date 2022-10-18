@@ -1,29 +1,17 @@
-﻿#if !CECIL0_9
-using System;
+﻿using System;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Linq;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.IO;
-using System.Security;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    sealed class MMReflectionImporter : IReflectionImporter {
+    public sealed class MMReflectionImporter : IReflectionImporter {
 
         private class _Provider : IReflectionImporterProvider {
             public bool? UseDefault;
             public IReflectionImporter GetReflectionImporter(ModuleDefinition module) {
-                MMReflectionImporter importer = new MMReflectionImporter(module);
+                Helpers.ThrowIfArgumentNull(module);
+                var importer = new MMReflectionImporter(module);
                 if (UseDefault != null)
                     importer.UseDefault = UseDefault.Value;
                 return importer;
@@ -60,11 +48,12 @@ namespace MonoMod.Utils {
         private readonly Dictionary<FieldInfo, FieldReference> CachedFields = new Dictionary<FieldInfo, FieldReference>();
         private readonly Dictionary<MethodBase, MethodReference> CachedMethods = new Dictionary<MethodBase, MethodReference>();
 
-        public bool UseDefault = false;
+        public bool UseDefault { get; set; }
 
         private readonly Dictionary<Type, TypeReference> ElementTypes;
 
         public MMReflectionImporter(ModuleDefinition module) {
+            Helpers.ThrowIfArgumentNull(module);
             Module = module;
             Default = new DefaultReflectionImporter(module);
 
@@ -107,12 +96,14 @@ namespace MonoMod.Utils {
         }
 
         [Obsolete("Please use the Assembly overload instead.")]
-        public AssemblyNameReference ImportReference(AssemblyName asm) {
+        public AssemblyNameReference ImportReference(AssemblyName reference) {
+            Helpers.ThrowIfArgumentNull(reference);
             // Multiple ALCs are pain and you should feel bad if you're not using the Assembly overload. - ade
-            return Default.ImportReference(asm);
+            return Default.ImportReference(reference);
         }
 
         public AssemblyNameReference ImportReference(Assembly asm) {
+            Helpers.ThrowIfArgumentNull(asm);
             if (CachedAsms.TryGetValue(asm, out var asmRef))
                 return asmRef;
 
@@ -123,7 +114,8 @@ namespace MonoMod.Utils {
             return CachedAsms[asm] = asmRef;
         }
 
-        public TypeReference ImportModuleType(Module module, IGenericParameterProvider context) {
+        public TypeReference ImportModuleType(Module module, IGenericParameterProvider? context) {
+            Helpers.ThrowIfArgumentNull(module);
             if (CachedModuleTypes.TryGetValue(module, out var typeRef))
                 return typeRef;
 
@@ -136,23 +128,28 @@ namespace MonoMod.Utils {
             );
         }
 
-        public TypeReference ImportReference(Type type, IGenericParameterProvider context) {
+        public TypeReference ImportReference(Type type, IGenericParameterProvider? context) {
+            Helpers.ThrowIfArgumentNull(type);
             return _ImportReference(type, context, context != null ? GenericImportKind.Open : GenericImportKind.Definition);
         }
 
-        private bool _IsGenericInstance(Type type, GenericImportKind importKind) {
+        private static bool _IsGenericInstance(Type type, GenericImportKind importKind) {
+            Helpers.ThrowIfArgumentNull(type);
             return type.IsGenericType && !type.IsGenericTypeDefinition ||
                    type.IsGenericType && type.IsGenericTypeDefinition && importKind == GenericImportKind.Open;
         }
 
-        private GenericInstanceType _ImportGenericInstance(Type type, IGenericParameterProvider context, TypeReference typeRef) {
-            GenericInstanceType git = new GenericInstanceType(typeRef);
+        private GenericInstanceType _ImportGenericInstance(Type type, IGenericParameterProvider? context, TypeReference typeRef) {
+            Helpers.ThrowIfArgumentNull(type);
+            Helpers.ThrowIfArgumentNull(typeRef);
+            var git = new GenericInstanceType(typeRef);
             foreach (Type arg in type.GetGenericArguments())
                 git.GenericArguments.Add(_ImportReference(arg, context));
             return git;
         }
 
-        private TypeReference _ImportReference(Type type, IGenericParameterProvider context, GenericImportKind importKind = GenericImportKind.Open) {
+        private TypeReference _ImportReference(Type type, IGenericParameterProvider? context, GenericImportKind importKind = GenericImportKind.Open) {
+            Helpers.ThrowIfArgumentNull(type);
             if (TryGetCachedType(type, out var typeRef, importKind)) {
                 return _IsGenericInstance(type, importKind) ? _ImportGenericInstance(type, context, typeRef) : typeRef;
             }
@@ -222,7 +219,8 @@ namespace MonoMod.Utils {
             return SetCachedType(type, typeRef, importKind);
         }
 
-        private static TypeReference ImportGenericParameter(Type type, IGenericParameterProvider context) {
+        private static TypeReference ImportGenericParameter(Type type, IGenericParameterProvider? context) {
+            Helpers.ThrowIfArgumentNull(type);
             if (context is MethodReference ctxMethodRef) {
                 var dclMethod = type.DeclaringMethod;
                 if (dclMethod != null) {
@@ -253,7 +251,8 @@ namespace MonoMod.Utils {
             throw new NotSupportedException();
         }
 
-        public FieldReference ImportReference(FieldInfo field, IGenericParameterProvider context) {
+        public FieldReference ImportReference(FieldInfo field, IGenericParameterProvider? context) {
+            Helpers.ThrowIfArgumentNull(field);
             if (CachedFields.TryGetValue(field, out var fieldRef))
                 return fieldRef;
 
@@ -292,12 +291,14 @@ namespace MonoMod.Utils {
             );
         }
 
-        public MethodReference ImportReference(MethodBase method, IGenericParameterProvider context) {
+        public MethodReference ImportReference(MethodBase method, IGenericParameterProvider? context) {
+            Helpers.ThrowIfArgumentNull(method);
             return _ImportReference(method, context,
                 context != null ? GenericImportKind.Open : GenericImportKind.Definition);
         }
 
-        private MethodReference _ImportReference(MethodBase method, IGenericParameterProvider context, GenericImportKind importKind) {
+        private MethodReference _ImportReference(MethodBase method, IGenericParameterProvider? context, GenericImportKind importKind) {
+            Helpers.ThrowIfArgumentNull(method);
             if (CachedMethods.TryGetValue(method, out var methodRef) && importKind == GenericImportKind.Open)
                 return methodRef;
 
@@ -355,4 +356,3 @@ namespace MonoMod.Utils {
 
     }
 }
-#endif

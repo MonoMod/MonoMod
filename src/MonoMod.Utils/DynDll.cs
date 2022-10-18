@@ -5,10 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class DynDll {
+    public static partial class DynDll {
 
         /// <summary>
         /// Allows you to remap library paths / names and specify loading flags. Useful for cross-platform compatibility. Applies only to DynDll.

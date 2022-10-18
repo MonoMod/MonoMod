@@ -1,29 +1,15 @@
 ﻿using System;
 using System.Reflection;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
-using Mono.Cecil.Cil;
-using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
 
 namespace MonoMod.Utils {
     /// <summary>
     /// Collection of extensions used by MonoMod and other projects.
     /// </summary>
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         // Use this source file for any extensions which don't deserve their own source files.
-
-        private static readonly object?[] _NoArgs = ArrayEx.Empty<object?>();
 
         private static readonly Dictionary<Type, FieldInfo> fmap_mono_assembly = new Dictionary<Type, FieldInfo>();
         // Old versions of Mono which lack the arch field in MonoAssemblyName don't parse ProcessorArchitecture.
@@ -40,7 +26,7 @@ namespace MonoMod.Utils {
         /// <param name="other">The second type.</param>
         /// <returns>True if both types are compatible with each other, false otherwise.</returns>
         public static bool IsCompatible(this Type type, Type other)
-            => _IsCompatible(type, other) || _IsCompatible(other, type);
+            => _IsCompatible(Helpers.ThrowIfNull(type), Helpers.ThrowIfNull(other)) || _IsCompatible(other, type);
         private static bool _IsCompatible(this Type type, Type other) {
             if (type == other)
                 return true;
@@ -66,6 +52,7 @@ namespace MonoMod.Utils {
         }
 
         public static T GetDeclaredMember<T>(this T member) where T : MemberInfo {
+            Helpers.ThrowIfArgumentNull(member);
             if (member.DeclaringType == member.ReflectedType)
                 return member;
 
@@ -85,6 +72,8 @@ namespace MonoMod.Utils {
             // it already has this for CoreCLR, which needs it for *other* reasons
             if (PlatformDetection.Runtime is not RuntimeKind.Mono)
                 return;
+
+            Helpers.ThrowIfArgumentNull(asm);
 
             // Mono doesn't know about IgnoresAccessChecksToAttribute,
             // but it lets some assemblies have unrestricted access.
@@ -165,11 +154,11 @@ namespace MonoMod.Utils {
                 // major, minor, build, revision[, arch] (10 framework / 20 core + padding)
                 (
                     !_MonoAssemblyNameHasArch ? (
-                        ReflectionHelper.IsCore ?
+                        ReflectionHelper.IsCoreBCL ?
                         16 :
                         8
                     ) : (
-                        ReflectionHelper.IsCore ?
+                        ReflectionHelper.IsCoreBCL ?
                         (IntPtr.Size == 4 ? 20 : 24) :
                         (IntPtr.Size == 4 ? 12 : 16)
                     )
@@ -185,11 +174,12 @@ namespace MonoMod.Utils {
                 1 +
                 // dynamic
                 1;
-            byte* corlibInternalPtr = (byte*) (asmPtr + offs);
+            var corlibInternalPtr = (byte*) (asmPtr + offs);
             *corlibInternalPtr = value ? (byte) 1 : (byte) 0;
         }
 
         public static bool IsDynamicMethod(this MethodBase method) {
+            Helpers.ThrowIfArgumentNull(method);
             // .NET throws when trying to get metadata like the token / handle, but has got RTDynamicMethod.
             if (_RTDynamicMethod != null)
                 return method is DynamicMethod || method.GetType() == _RTDynamicMethod;
@@ -217,6 +207,7 @@ namespace MonoMod.Utils {
         }
 
         public static object? SafeGetTarget(this WeakReference weak) {
+            Helpers.ThrowIfArgumentNull(weak);
             try {
                 return weak.Target;
             } catch (InvalidOperationException) {
@@ -230,6 +221,7 @@ namespace MonoMod.Utils {
         }
 
         public static bool SafeGetIsAlive(this WeakReference weak) {
+            Helpers.ThrowIfArgumentNull(weak);
             try {
                 return weak.IsAlive;
             } catch (InvalidOperationException) {

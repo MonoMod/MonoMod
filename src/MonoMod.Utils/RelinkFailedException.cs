@@ -5,18 +5,15 @@ using System.Text;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    class RelinkFailedException : Exception {
+    public class RelinkFailedException : Exception {
 
-        public const string DefaultMessage = "MonoMod failed relinking";
+        private const string DefaultMessage = "MonoMod failed relinking";
 
-        public IMetadataTokenProvider MTP;
-        public IMetadataTokenProvider? Context;
+        public IMetadataTokenProvider MTP { get; }
+        public IMetadataTokenProvider? Context { get; }
 
         public RelinkFailedException(IMetadataTokenProvider mtp, IMetadataTokenProvider? context = null)
-            : this(_Format(DefaultMessage, mtp, context), mtp, context) {
+            : this(Format(DefaultMessage, mtp, context), mtp, context) {
         }
 
         public RelinkFailedException(string message,
@@ -28,17 +25,17 @@ namespace MonoMod.Utils {
 
         public RelinkFailedException(string message, Exception innerException,
             IMetadataTokenProvider mtp, IMetadataTokenProvider? context = null)
-            : base(message ?? _Format(DefaultMessage, mtp, context), innerException) {
+            : base(message ?? Format(DefaultMessage, mtp, context), innerException) {
             MTP = mtp;
             Context = context;
         }
 
-        protected static string _Format(string message,
+        protected static string Format(string message,
             IMetadataTokenProvider mtp, IMetadataTokenProvider? context) {
             if (mtp == null && context == null)
                 return message;
 
-            StringBuilder builder = new StringBuilder(message);
+            var builder = new StringBuilder(message);
             builder.Append(" ");
 
             if (mtp != null)

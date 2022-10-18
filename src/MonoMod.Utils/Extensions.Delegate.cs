@@ -1,21 +1,9 @@
 ﻿using System;
 using System.Reflection;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
-using Mono.Cecil.Cil;
-using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         /// <summary>
         /// Creates a delegate of the specified type from this method.
@@ -50,16 +38,15 @@ namespace MonoMod.Utils {
         /// <param name="target">The object targeted by the delegate.</param>
         /// <returns>The delegate for this method.</returns>
         public static Delegate CreateDelegate(this MethodBase method, Type delegateType, object? target) {
+            Helpers.ThrowIfArgumentNull(method);
+            Helpers.ThrowIfArgumentNull(delegateType);
             if (!typeof(Delegate).IsAssignableFrom(delegateType))
                 throw new ArgumentException("Type argument must be a delegate type!");
             if (method is System.Reflection.Emit.DynamicMethod dm)
                 return dm.CreateDelegate(delegateType, target);
 
-#if NETSTANDARD
-            // Built-in CreateDelegate is available in .NET Standard
-            if (method is System.Reflection.MethodInfo mi)
-                return mi.CreateDelegate(delegateType, target);
-#endif
+            if (method is MethodInfo mi)
+                return Delegate.CreateDelegate(delegateType, target, mi);
 
             RuntimeMethodHandle handle = method.MethodHandle;
             RuntimeHelpers.PrepareMethod(handle);

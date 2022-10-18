@@ -1,22 +1,8 @@
 ﻿using System;
 using System.Reflection;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
-using Mono.Cecil.Cil;
-using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Collections;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class ReflectionHelper {
+    public static partial class ReflectionHelper {
 
         private static Type? t_RuntimeModule =
             typeof(Module).Assembly
@@ -45,7 +31,7 @@ namespace MonoMod.Utils {
 
             // .NET
             if (p_RuntimeModule_RuntimeType != null)
-                return (Type) p_RuntimeModule_RuntimeType.GetValue(module, _NoArgs)!;
+                return (Type) p_RuntimeModule_RuntimeType.GetValue(module, ArrayEx.Empty<object?>())!;
 
             // Mono
             if (f_RuntimeModule__impl != null &&
@@ -56,7 +42,7 @@ namespace MonoMod.Utils {
         }
 
         public static Type? GetRealDeclaringType(this MemberInfo member)
-            => member.DeclaringType ?? member.Module?.GetModuleType();
+            => Helpers.ThrowIfNull(member).DeclaringType ?? member.Module?.GetModuleType();
 
     }
 }

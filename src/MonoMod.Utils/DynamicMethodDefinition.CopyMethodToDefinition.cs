@@ -1,22 +1,13 @@
 ﻿using System;
 using System.Reflection;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Linq;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.Security;
 using System.IO;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    sealed partial class DynamicMethodDefinition {
+    public sealed partial class DynamicMethodDefinition {
 
         private static OpCode[] _CecilOpCodes1X = null!;
         private static OpCode[] _CecilOpCodes2X = null!;

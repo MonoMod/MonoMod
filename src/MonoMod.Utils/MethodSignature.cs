@@ -1,13 +1,11 @@
-﻿using MonoMod.Core.Utils;
-using MonoMod.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.Utils {
     public class MethodSignature : IEquatable<MethodSignature> {
         public Type ReturnType { get; }
 

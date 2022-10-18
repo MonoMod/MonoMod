@@ -1,28 +1,19 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.IO;
 using System.Text;
 using AssemblyHashAlgorithm = Mono.Cecil.AssemblyHashAlgorithm;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class ReflectionHelper {
+    public static partial class ReflectionHelper {
 
-        public static readonly bool IsCore =
+        internal static readonly bool IsCoreBCL =
             typeof(object).Assembly.GetName().Name == "System.Private.CoreLib";
-
-        private static readonly object[] _NoArgs = new object[0];
 
         internal static readonly Dictionary<string, WeakReference/*<Assembly>*/> AssemblyCache = new Dictionary<string, WeakReference>();
         internal static readonly Dictionary<string, WeakReference/*<Assembly>*/[]> AssembliesCache = new Dictionary<string, WeakReference[]>();
@@ -46,7 +37,8 @@ namespace MonoMod.Utils {
         }
 
         public static Assembly Load(ModuleDefinition module) {
-            using (MemoryStream stream = new MemoryStream()) {
+            Helpers.ThrowIfArgumentNull(module);
+            using (var stream = new MemoryStream()) {
                 module.Write(stream);
                 stream.Seek(0, SeekOrigin.Begin);
                 return Load(stream);
@@ -54,13 +46,15 @@ namespace MonoMod.Utils {
         }
 
         public static Assembly Load(Stream stream) {
+            Helpers.ThrowIfArgumentNull(stream);
             Assembly asm;
 
             if (stream is MemoryStream ms) {
                 asm = Assembly.Load(ms.GetBuffer());
             } else {
-                using (MemoryStream copy = new MemoryStream()) {
+                using (var copy = new MemoryStream()) {
 
+                    // TODO: add stream extension to Backports to do a full copy
 #if NETFRAMEWORK
                     byte[] buffer = new byte[4096];
                     int read;
@@ -100,8 +94,10 @@ namespace MonoMod.Utils {
         }
 
         public static void ApplyRuntimeHash(this AssemblyNameReference asmRef, Assembly asm) {
+            Helpers.ThrowIfArgumentNull(asmRef);
+            Helpers.ThrowIfArgumentNull(asm);
             // Mono.Cecil ignores the hash for the most part, allowing us to store whatever we want in it.
-            byte[] hash = new byte[AssemblyHashPrefix.Length + 4];
+            var hash = new byte[AssemblyHashPrefix.Length + 4];
             Array.Copy(AssemblyHashPrefix, 0, hash, 0, AssemblyHashPrefix.Length);
             Array.Copy(BitConverter.GetBytes(asm.GetHashCode()), 0, hash, AssemblyHashPrefix.Length, 4);
             asmRef.HashAlgorithm = unchecked((AssemblyHashAlgorithm) (-1));
@@ -109,10 +105,12 @@ namespace MonoMod.Utils {
         }
 
         public static string GetRuntimeHashedFullName(this Assembly asm) {
+            Helpers.ThrowIfArgumentNull(asm);
             return $"{asm.FullName}{AssemblyHashNameTag}{asm.GetHashCode()}";
         }
 
         public static string GetRuntimeHashedFullName(this AssemblyNameReference asm) {
+            Helpers.ThrowIfArgumentNull(asm);
             if (asm.HashAlgorithm != unchecked((AssemblyHashAlgorithm) (-1)))
                 return asm.FullName;
 
@@ -399,6 +397,8 @@ namespace MonoMod.Utils {
         public static SignatureHelper ResolveReflection(this CallSite csite, Module context)
             => ResolveReflectionSignature(csite, context);
         public static SignatureHelper ResolveReflectionSignature(this IMethodSignature csite, Module context) {
+            Helpers.ThrowIfArgumentNull(csite);
+            Helpers.ThrowIfArgumentNull(context);
             SignatureHelper shelper;
             switch (csite.CallingConvention) {
 #if NETFRAMEWORK

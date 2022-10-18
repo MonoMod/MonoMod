@@ -1,15 +1,10 @@
 ﻿using System;
-using MonoMod.Utils;
 using System.Collections.Generic;
-using Mono.Cecil.Cil;
 using Mono.Cecil;
 using System.Text;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         /// <summary>
         /// Get the "patch name" - the name of the target to patch - for the given member.
@@ -17,6 +12,7 @@ namespace MonoMod.Utils {
         /// <param name="mr">The member to get the patch name for.</param>
         /// <returns>The patch name.</returns>
         public static string GetPatchName(this MemberReference mr) {
+            Helpers.ThrowIfArgumentNull(mr);
             return (mr as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
         }
         /// <summary>
@@ -25,10 +21,12 @@ namespace MonoMod.Utils {
         /// <param name="mr">The member to get the patch name for.</param>
         /// <returns>The patch name.</returns>
         public static string GetPatchFullName(this MemberReference mr) {
+            Helpers.ThrowIfArgumentNull(mr);
             return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
         }
 
         private static string GetPatchName(this ICustomAttributeProvider cap) {
+            Helpers.ThrowIfArgumentNull(cap);
             string name;
 
             var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
@@ -46,6 +44,8 @@ namespace MonoMod.Utils {
             return name.StartsWith("patch_", StringComparison.Ordinal) ? name.Substring(6) : name;
         }
         private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
+            Helpers.ThrowIfArgumentNull(cap);
+            Helpers.ThrowIfArgumentNull(mr);
             if (cap is TypeReference type) {
                 var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
                 string name;
@@ -74,7 +74,7 @@ namespace MonoMod.Utils {
                         formats.Add(ts);
                     } while ((ts = (ts.ElementType as TypeSpecification)) != null);
 
-                    StringBuilder builder = new StringBuilder(name.Length + formats.Count * 4);
+                    var builder = new StringBuilder(name.Length + formats.Count * 4);
                     builder.Append(name);
                     for (int formati = formats.Count - 1; formati > -1; --formati) {
                         ts = formats[formati];

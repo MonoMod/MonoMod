@@ -1,21 +1,11 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.IO;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    // If you've thought DMDEmit.EmitCallSite.cs was bad enough, look away.
-    static partial class ReflectionHelper {
+    public static partial class ReflectionHelper {
 
         // https://github.com/dotnet/runtime/blob/10717887317beb824e57cdb29417663615211e99/src/coreclr/src/System.Private.CoreLib/src/System/Reflection/Emit/SignatureHelper.cs#L191
         // https://github.com/mono/mono/blob/1317cf06da06682419f8f4b0c9810ad5d5d3ac3a/mcs/class/corlib/System.Reflection.Emit/SignatureHelper.cs#L55
@@ -31,13 +21,16 @@ namespace MonoMod.Utils {
         }
 
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, ICallSiteGenerator signature)
-            => signature.ToCallSite(moduleTo);
+            => Helpers.ThrowIfNull(signature).ToCallSite(moduleTo);
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, SignatureHelper signature)
-            => moduleTo.ImportCallSite(GetSignatureHelperModule(signature), signature.GetSignature());
+            => Helpers.ThrowIfNull(moduleTo).ImportCallSite(GetSignatureHelperModule(signature), Helpers.ThrowIfNull(signature).GetSignature());
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, int token)
-            => moduleTo.ImportCallSite(moduleFrom, moduleFrom.ResolveSignature(token));
+            => Helpers.ThrowIfNull(moduleTo).ImportCallSite(moduleFrom, Helpers.ThrowIfNull(moduleFrom).ResolveSignature(token));
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, byte[] data) {
-            CallSite callsite = new CallSite(moduleTo.TypeSystem.Void);
+            Helpers.ThrowIfArgumentNull(moduleTo);
+            Helpers.ThrowIfArgumentNull(moduleFrom);
+            Helpers.ThrowIfArgumentNull(data);
+            var callsite = new CallSite(moduleTo.TypeSystem.Void);
 
             // Based on https://github.com/jbevain/cecil/blob/96026325ee1cb6627a3e4a32b924ab2905f02553/Mono.Cecil/AssemblyReader.cs#L3448
 

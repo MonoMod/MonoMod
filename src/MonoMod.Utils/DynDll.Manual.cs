@@ -1,19 +1,13 @@
 ﻿#if !NETCOREAPP3_0_OR_GREATER
-#pragma warning disable IDE1006 // Naming Styles
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.ComponentModel;
-using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class DynDll {
+    public static partial class DynDll {
 
         static DynDll() {
             // Run a dummy dlerror to resolve it so that it won't interfere with the first call

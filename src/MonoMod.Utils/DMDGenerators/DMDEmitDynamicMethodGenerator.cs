@@ -1,21 +1,17 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using Mono.Cecil;
 using System.Linq;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
+    public sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
 
         private static readonly FieldInfo _DynamicMethod_returnType =
             typeof(DynamicMethod).GetField("returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
             typeof(DynamicMethod).GetField("m_returnType", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Cannot find returnType fieeld on DynamicMethod");
 
-        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object? context) {
+        protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
             var orig = dmd.OriginalMethod;
             var def = dmd.Definition ?? throw new InvalidOperationException();
 

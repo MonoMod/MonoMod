@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Reflection;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System.Linq;
 using System.Diagnostics;
-using System.ComponentModel;
 using System.IO;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
@@ -15,12 +11,9 @@ namespace MonoMod.Utils {
     /// <summary>
     /// A DMDGenerator implementation using Mono.Cecil to build an in-memory assembly.
     /// </summary>
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator> {
+    public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator> {
 
-        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object? context) {
+        protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
             MethodDefinition def = dmd.Definition ?? throw new InvalidOperationException();
             var typeDef = context as TypeDefinition;
 
@@ -34,9 +27,7 @@ namespace MonoMod.Utils {
                 var name = dmd.GetDumpName("Cecil");
                 module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
                     Kind = ModuleKind.Dll,
-#if !CECIL0_9
                     ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
-#endif
                 });
 
                 module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_UnverifiableCodeAttribute)));
@@ -178,11 +169,9 @@ namespace MonoMod.Utils {
                     ?? throw new InvalidOperationException("Could not find generated method");
 
             } finally {
-#if !CECIL0_9
                 if (moduleIsTemporary)
                     module.Dispose();
                 module = null;
-#endif
             }
         }
 

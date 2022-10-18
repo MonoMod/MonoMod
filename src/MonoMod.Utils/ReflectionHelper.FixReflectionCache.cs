@@ -4,10 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class ReflectionHelper {
+    public static partial class ReflectionHelper {
 
         // .NET Framework can break member ordering if using Module.Resolve* on certain members.
 
@@ -64,7 +61,7 @@ namespace MonoMod.Utils {
                     Array properties, fields;
 
                     // All RuntimeTypes MUST have a cache, the getter is non-virtual, it creates on demand and asserts non-null.
-                    entryNew.Cache = cache = p_RuntimeType_Cache.GetValue(rt, _NoArgs)!;
+                    entryNew.Cache = cache = p_RuntimeType_Cache.GetValue(rt, ArrayEx.Empty<object?>())!;
                     entryNew.Properties = properties = _GetArray(cache, m_RuntimeTypeCache_GetPropertyList);
                     entryNew.Fields = fields = _GetArray(cache, m_RuntimeTypeCache_GetFieldList);
 
@@ -92,7 +89,7 @@ namespace MonoMod.Utils {
 
             // The cache can sometimes be invalidated.
             // TODO: Figure out if only the arrays get replaced or if the entire cache object gets replaced!
-            if (entry.Cache != (cache = p_RuntimeType_Cache!.GetValue(type, _NoArgs))) {
+            if (entry.Cache != (cache = p_RuntimeType_Cache!.GetValue(type, ArrayEx.Empty<object?>()))) {
                 entry.Cache = cache;
                 entry.Properties = _GetArray(cache, m_RuntimeTypeCache_GetPropertyList!);
                 entry.Fields = _GetArray(cache, m_RuntimeTypeCache_GetFieldList!);

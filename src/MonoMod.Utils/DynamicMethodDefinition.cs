@@ -10,10 +10,7 @@ using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    sealed partial class DynamicMethodDefinition : IDisposable {
+    public sealed partial class DynamicMethodDefinition : IDisposable {
 
         static DynamicMethodDefinition() {
             _InitCopier();
@@ -48,24 +45,22 @@ namespace MonoMod.Utils {
         internal static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(ArrayEx.Empty<Type>())!;
         internal static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[] { typeof(string) })!;
 
-        internal static readonly Type t__IDMDGenerator = typeof(_IDMDGenerator);
-        internal static readonly Dictionary<string, _IDMDGenerator> _DMDGeneratorCache = new Dictionary<string, _IDMDGenerator>();
+        internal static readonly Type t__IDMDGenerator = typeof(IDMDGenerator);
+        internal static readonly Dictionary<string, IDMDGenerator> _DMDGeneratorCache = new Dictionary<string, IDMDGenerator>();
 
         public MethodBase? OriginalMethod { get; private set; }
-        private MethodDefinition? _Definition;
-        public MethodDefinition? Definition => _Definition;
-        private ModuleDefinition? _Module;
-        public ModuleDefinition? Module => _Module;
+        public MethodDefinition? Definition { get; private set; }
+        public ModuleDefinition? Module { get; private set; }
 
-        public string? Name;
+        public string? Name { get; }
 
-        public Type? OwnerType;
+        public Type? OwnerType { get; }
 
-        public bool Debug = false;
+        public bool Debug { get; init; }
 
         private Guid GUID = Guid.NewGuid();
 
-        private bool _IsDisposed;
+        private bool isDisposed;
 
         internal DynamicMethodDefinition() {
             Debug = Environment.GetEnvironmentVariable("MONOMOD_DMD_DEBUG") == "1";
@@ -77,8 +72,11 @@ namespace MonoMod.Utils {
             Reload();
         }
 
-        public DynamicMethodDefinition(string name, Type returnType, Type[] parameterTypes)
+        public DynamicMethodDefinition(string name, Type? returnType, Type[] parameterTypes)
             : this() {
+            Helpers.ThrowIfArgumentNull(name);
+            Helpers.ThrowIfArgumentNull(parameterTypes);
+
             Name = name;
             OriginalMethod = null;
 
@@ -100,21 +98,21 @@ namespace MonoMod.Utils {
         }
 
         private ModuleDefinition _CreateDynModule(string name, Type? returnType, Type[] parameterTypes) {
-            ModuleDefinition module = _Module = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
+            var module = Module = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
                 Kind = ModuleKind.Dll,
 #if !CECIL0_9
                 ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
 #endif
             });
 
-            TypeDefinition type = new TypeDefinition(
+            var type = new TypeDefinition(
                 "",
                 $"DMD<{name}>?{GetHashCode()}",
                 Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Class
             );
             module.Types.Add(type);
 
-            MethodDefinition def = _Definition = new MethodDefinition(
+            var def = Definition = new MethodDefinition(
                 name,
                 Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
                 returnType != null ? module.ImportReference(returnType) : module.TypeSystem.Void
@@ -134,12 +132,12 @@ namespace MonoMod.Utils {
             ModuleDefinition? module = null;
 
             try {
-                _Definition = null;
+                Definition = null;
 
 #if !CECIL0_9
-                _Module?.Dispose();
+                Module?.Dispose();
 #endif
-                _Module = null;
+                Module = null;
 
                 Type[] argTypes;
                 ParameterInfo[] args = orig.GetParameters();
@@ -165,7 +163,7 @@ namespace MonoMod.Utils {
                 for (int i = 0; i < args.Length; i++)
                     def.Parameters[i + offs].Name = args[i].Name;
 
-                _Module = module;
+                Module = module;
                 module = null;
             } catch {
 #if !CECIL0_9
@@ -202,7 +200,7 @@ namespace MonoMod.Utils {
                             if (!t__IDMDGenerator.IsCompatible(type))
                                 throw new ArgumentException($"Invalid DMDGenerator type: {typeName}");
                             if (!_DMDGeneratorCache.TryGetValue(typeName, out var gen))
-                                _DMDGeneratorCache[typeName] = gen = (_IDMDGenerator) Activator.CreateInstance(type)!;
+                                _DMDGeneratorCache[typeName] = gen = (IDMDGenerator) Activator.CreateInstance(type)!;
                             return gen.Generate(this, context);
                         }
                     }
@@ -233,10 +231,10 @@ namespace MonoMod.Utils {
         }
 
         public void Dispose() {
-            if (_IsDisposed)
+            if (isDisposed)
                 return;
-            _IsDisposed = true;
-            _Module?.Dispose();
+            isDisposed = true;
+            Module?.Dispose();
         }
 
         public string GetDumpName(string type) {

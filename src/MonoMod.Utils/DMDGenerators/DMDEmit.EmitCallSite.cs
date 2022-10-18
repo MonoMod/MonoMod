@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
-using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Linq;
 
 namespace MonoMod.Utils {
     // The following mostly qualifies as r/badcode material.

@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
+    public sealed class WeakReferenceComparer : EqualityComparer<WeakReference> {
 
         public override bool Equals(WeakReference? x, WeakReference? y)
             => ReferenceEquals(x?.SafeGetTarget(), y?.SafeGetTarget()) && x?.SafeGetIsAlive() == y?.SafeGetIsAlive();

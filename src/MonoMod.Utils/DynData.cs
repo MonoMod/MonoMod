@@ -1,28 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
     public sealed class DynData<TTarget> : IDisposable where TTarget : class {
 
-        private static int CreationsInProgress = 0;
-
-        private static readonly object[] _NoArgs = new object[0];
-
         public static event Action<DynData<TTarget>, TTarget?>? OnInitialize;
 
         private static readonly _Data_ _DataStatic = new();
-#if !NETFRAMEWORK3
         private static readonly ConditionalWeakTable<object, _Data_> _DataMap = new();
-#else
-        private static readonly Dictionary<WeakReference, _Data_> _DataMap = new Dictionary<WeakReference, _Data_>(new WeakReferenceComparer());
-        private static readonly HashSet<WeakReference> _DataMapDead = new HashSet<WeakReference>();
-#endif
         private static readonly Dictionary<string, Func<TTarget, object?>> _SpecialGetters = new();
         private static readonly Dictionary<string, Action<TTarget, object?>> _SpecialSetters = new();
 
         private readonly WeakReference? Weak;
+        [SuppressMessage("CodeQuality", "IDE0052:Remove unread private members",
+            Justification = "This is used to keep the target alive.")]
         private TTarget? KeepAlive;
         private readonly _Data_ _Data;
 
@@ -41,13 +35,14 @@ namespace MonoMod.Utils {
                     if (Data.Count == 0)
                         return;
 
-                    foreach (string name in Disposable)
+                    foreach (var name in Disposable)
                         if (Data.TryGetValue(name, out var value) && value is IDisposable valueDisposable)
                             valueDisposable.Dispose();
                     Disposable.Clear();
 
                     Data.Clear();
                 }
+                GC.SuppressFinalize(this);
             }
         }
 
@@ -56,27 +51,6 @@ namespace MonoMod.Utils {
         public Dictionary<string, object?> Data => _Data.Data;
 
         static DynData() {
-#if NETFRAMEWORK3
-            GCListener.OnCollect += () => {
-                if (CreationsInProgress != 0)
-                    return;
-
-                lock (_DataMap) {
-                    foreach (KeyValuePair<WeakReference, _Data_> kvp in _DataMap) {
-                        if (kvp.Key.SafeGetIsAlive())
-                            continue;
-                        _DataMapDead.Add(kvp.Key);
-                        kvp.Value.Dispose();
-                    }
-
-                    foreach (WeakReference weak in _DataMapDead) {
-                        _DataMap.Remove(weak);
-                    }
-
-                    _DataMapDead.Clear();
-                }
-            };
-#endif
 
             foreach (FieldInfo field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                 string name = field.Name;
@@ -89,7 +63,7 @@ namespace MonoMod.Utils {
 
                 var get = prop.GetGetMethod(true);
                 if (get != null) {
-                    _SpecialGetters[name] = (obj) => get.Invoke(obj, _NoArgs);
+                    _SpecialGetters[name] = (obj) => get.Invoke(obj, ArrayEx.Empty<object?>());
                 }
 
                 var set = prop.GetSetMethod(true);
@@ -139,22 +113,13 @@ namespace MonoMod.Utils {
             if (obj != null) {
                 var weak = new WeakReference(obj);
 
-#if NETFRAMEWORK3
-                WeakReference key = weak;
-#else
                 object key = obj;
-#endif
 
-                // Ideally this would be a "no GC region", but that's too new.
-                CreationsInProgress++;
-                lock (_DataMap) {
-                    if (!_DataMap.TryGetValue(key, out var data)) {
-                        data = new _Data_();
-                        _DataMap.Add(key, data);
-                    }
-                    _Data = data;
+                if (!_DataMap.TryGetValue(key, out var data)) {
+                    data = new _Data_();
+                    _DataMap.Add(key, data);
                 }
-                CreationsInProgress--;
+                _Data = data;
                 
                 Weak = weak;
                 if (keepAlive)
@@ -185,6 +150,9 @@ namespace MonoMod.Utils {
 
         private void Dispose(bool disposing) {
             KeepAlive = default;
+            if (disposing) {
+                _Data.Dispose();
+            }
         }
 
         ~DynData() {

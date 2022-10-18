@@ -8,9 +8,10 @@ namespace MonoMod.Utils {
 
     [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types",
         Justification = "These types are not meant to be compared.")]
-    public struct DataScope : IDisposable {
+    public readonly struct DataScope : IDisposable {
         private readonly ScopeHandlerBase? handler;
         private readonly object? data;
+        public object? Data => data;
 
         public DataScope(ScopeHandlerBase handler, object? data) {
             this.handler = handler;
@@ -31,9 +32,10 @@ namespace MonoMod.Utils {
 
     [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types",
         Justification = "These types are not meant to be compared.")]
-    public struct DataScope<T> : IDisposable {
+    public readonly struct DataScope<T> : IDisposable {
         private readonly ScopeHandlerBase<T>? handler;
         private readonly T data;
+        public T Data => data;
 
         public DataScope(ScopeHandlerBase<T> handler, T data) {
             this.handler = handler;

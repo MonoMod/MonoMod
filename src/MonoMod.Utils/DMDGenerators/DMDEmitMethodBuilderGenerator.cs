@@ -8,14 +8,11 @@ using System.Diagnostics;
 using System.IO;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    sealed class DMDEmitMethodBuilderGenerator : DMDGenerator<DMDEmitMethodBuilderGenerator> {
+    public sealed class DMDEmitMethodBuilderGenerator : DMDGenerator<DMDEmitMethodBuilderGenerator> {
 
         private static readonly bool _MBCanRunAndCollect = Enum.IsDefined(typeof(AssemblyBuilderAccess), "RunAndCollect");
 
-        protected override MethodInfo _Generate(DynamicMethodDefinition dmd, object? context) {
+        protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
             var typeBuilder = context as TypeBuilder;
             MethodBuilder method = GenerateMethodBuilder(dmd, typeBuilder);
             typeBuilder = (TypeBuilder) method.DeclaringType;

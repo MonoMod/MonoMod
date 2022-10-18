@@ -8,10 +8,7 @@ using System.ComponentModel;
 using System.Linq;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class DynDll {
+    public static partial class DynDll {
 
         /// <summary>
         /// Open a given library and get its handle.

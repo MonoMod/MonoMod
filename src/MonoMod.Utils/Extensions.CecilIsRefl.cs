@@ -1,21 +1,10 @@
 ﻿using System;
 using System.Reflection;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
-using Mono.Cecil.Cil;
 using Mono.Cecil;
-using System.Text;
 using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         /// <summary>
         /// Check if the signatures of a given System.Reflection and Mono.Cecil member reference match.
@@ -81,11 +70,11 @@ namespace MonoMod.Utils {
                 return false;
 
             // Note: This doesn't work for TypeSpecification, as the reflection-side type.Name changes with some modifiers (f.e. IsArray).
-            if (!(mref is TypeSpecification) && mref.Name != minfo.Name)
+            if (mref is not TypeSpecification && mref.Name != minfo.Name)
                 return false;
 
             if (mref is TypeReference typeRef) {
-                if (!(minfo is Type typeInfo))
+                if (minfo is not Type typeInfo)
                     return false;
 
                 if (typeInfo.IsGenericParameter)
@@ -159,7 +148,7 @@ namespace MonoMod.Utils {
                 return false;
 
             if (mref is MethodReference methodRef) {
-                if (!(minfo is MethodBase methodInfo))
+                if (minfo is not MethodBase methodInfo)
                     return false;
 
                 Collection<ParameterDefinition> paramRefs = methodRef.Parameters;

@@ -1,21 +1,11 @@
 ﻿using System;
 using System.Reflection;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
-using MonoMod.Utils;
-using System.Collections.Generic;
-using Mono.Cecil.Cil;
 using Mono.Cecil;
 using System.Text;
 using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-#if !MONOMOD_INTERNAL
-    public
-#endif
-    static partial class Extensions {
+    public static partial class Extensions {
 
         /// <summary>
         /// Get a reference ID that is similar to the full name, but consistent between System.Reflection and Mono.Cecil.
@@ -27,7 +17,9 @@ namespace MonoMod.Utils {
         /// <param name="simple">Whether the ID should be "simple" (name only).</param>
         /// <returns>The ID.</returns>
         public static string GetID(this MethodReference method, string? name = null, string? type = null, bool withType = true, bool simple = false) {
-            StringBuilder builder = new StringBuilder();
+            Helpers.ThrowIfArgumentNull(method);
+
+            var builder = new StringBuilder();
 
             if (simple) {
                 if (withType && (type != null || method.DeclaringType != null))
@@ -94,7 +86,8 @@ namespace MonoMod.Utils {
         /// <param name="method">The call site to get the ID for.</param>
         /// <returns>The ID.</returns>
         public static string GetID(this Mono.Cecil.CallSite method) {
-            StringBuilder builder = new StringBuilder();
+            Helpers.ThrowIfArgumentNull(method);
+            var builder = new StringBuilder();
 
             builder
                 .Append(method.ReturnType.GetPatchFullName())
@@ -133,10 +126,11 @@ namespace MonoMod.Utils {
         /// <param name="simple">Whether the ID should be "simple" (name only).</param>
         /// <returns>The ID.</returns>
         public static string GetID(this MethodBase method, string? name = null, string? type = null, bool withType = true, bool proxyMethod = false, bool simple = false) {
-            while (method is MethodInfo && method.IsGenericMethod && !method.IsGenericMethodDefinition)
-                method = ((MethodInfo) method).GetGenericMethodDefinition();
+            Helpers.ThrowIfArgumentNull(method);
+            while (method is MethodInfo mi && method.IsGenericMethod && !method.IsGenericMethodDefinition)
+                method = mi.GetGenericMethodDefinition();
 
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
 
             if (simple) {
                 if (withType && (type != null || method.DeclaringType != null))
@@ -176,11 +170,7 @@ namespace MonoMod.Utils {
 
                 bool defined;
                 try {
-#if NETSTANDARD
-                    defined = System.Reflection.CustomAttributeExtensions.IsDefined(parameter, t_ParamArrayAttribute, false);
-#else
                     defined = parameter.GetCustomAttributes(t_ParamArrayAttribute, false).Length != 0;
-#endif
                 } catch (NotSupportedException) {
                     // Newer versions of Mono are stupidly strict and like to throw a NotSupportedException on DynamicMethod args.
                     defined = false;

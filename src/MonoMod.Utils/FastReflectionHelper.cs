@@ -10,7 +10,7 @@ namespace MonoMod.Utils {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
         private static readonly Dictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new();
 
-        private static FastReflectionDelegate _CreateFastDelegate(MethodBase method, bool directBoxValueAccess = true) {
+        private static FastReflectionDelegate CreateFastDelegate(MethodBase method, bool directBoxValueAccess = true) {
             using var dmd = new DynamicMethodDefinition($"FastReflection<{method.GetID(simple: true)}>", typeof(object), _DynamicMethodDelegateArgs);
             ILProcessor il = dmd.GetILProcessor();
 
@@ -104,7 +104,7 @@ namespace MonoMod.Utils {
             if (_MethodCache.TryGetValue(method, out var dmd))
                 return dmd;
 
-            dmd = _CreateFastDelegate(method, directBoxValueAccess);
+            dmd = CreateFastDelegate((MethodBase) method, directBoxValueAccess);
             _MethodCache.Add(method, dmd);
             return dmd;
         }
