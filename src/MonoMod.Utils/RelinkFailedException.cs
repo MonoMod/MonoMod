@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
     public class RelinkFailedException : Exception {
 
-        private const string DefaultMessage = "MonoMod failed relinking";
+        public const string DefaultMessage = "MonoMod failed relinking";
 
         public IMetadataTokenProvider MTP { get; }
         public IMetadataTokenProvider? Context { get; }

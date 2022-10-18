@@ -8,6 +8,7 @@ using System.IO;
 using System.Text;
 using AssemblyHashAlgorithm = Mono.Cecil.AssemblyHashAlgorithm;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 namespace MonoMod.Utils {
     public static partial class ReflectionHelper {

@@ -7,6 +7,7 @@ using Mono.Cecil.Cil;
 using System.Linq;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 using MonoMod.Utils.Cil;
+using System.Diagnostics.SymbolStore;
 
 namespace MonoMod.Utils {
     internal static partial class _DMDEmit {
@@ -83,7 +84,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-#if NETFRAMEWORK && !CECIL0_9
+#if NETFRAMEWORK
             var infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
 #endif
 
@@ -94,7 +95,7 @@ namespace MonoMod.Utils {
                 if (labelMap.TryGetValue(instr, out Label label))
                     il.MarkLabel(label);
 
-#if NETFRAMEWORK && !CECIL0_9
+#if NETFRAMEWORK
                 var instrInfo = defInfo?.GetSequencePoint(instr);
                 if (mb is not null && instrInfo is not null && infoDocCache is not null && moduleBuilder is not null) {
                     if (!infoDocCache.TryGetValue(instrInfo.Document, out ISymbolDocumentWriter infoDoc)) {
