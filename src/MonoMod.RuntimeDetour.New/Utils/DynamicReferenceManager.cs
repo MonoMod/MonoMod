@@ -43,111 +43,54 @@ namespace MonoMod.RuntimeDetour.Utils {
             public override object? BoxValue() => Value!;
         }
 
-        private sealed class Holder {
-            public readonly Cell?[] Cells;
-            public readonly int FirstEmpty;
+        private static SpinLock writeLock = new(false);
+        // TODO: maybe move cells inline, or use blocks of 16 or 32 cells in one object
+        private static volatile Cell?[] cells = new Cell?[16];
+        private static volatile int firstEmptyCell;
 
-            public Holder(Cell?[] cells, int firstEmpty) {
-                Cells = cells;
-                FirstEmpty = firstEmpty;
-            }
-        }
-
-        private static Holder CellHolder = new(new Cell?[16], 0); // default to holding 16 cells
-        private static readonly object lockObj = new();
-        private static int useLock;
-
-        private const int IterLimit = 16;
-
-        private static unsafe void DoUpdateCellList(delegate*<void*, ref Cell?[], ref int, out Cell?, out Cell?, out bool, int> doUpdate, void* data) {
-            Holder holder;
-            Cell?[] arr;
-            int nextEmpty;
-            int updateIndex;
-            var lockTaken = false;
-            var triedTakingLock = false;
-
-            Cell? newVal, comparand;
-
-            try {
-                var iters = 0;
-                do {
-                    do {
-                        if (!lockTaken && (++iters > IterLimit || Volatile.Read(ref useLock) > 0)) {
-                            triedTakingLock = true;
-                            // first increment useLock to tell other threads to use the lock
-                            _ = Interlocked.Increment(ref useLock);
-                            // then take the lock, possibly waiting for other threads
-                            MonitorEx.Enter(lockObj, ref lockTaken);
-                        }
-
-                        holder = Volatile.Read(ref CellHolder);
-                        arr = holder.Cells;
-                        nextEmpty = holder.FirstEmpty;
-
-                        updateIndex = doUpdate(data, ref arr, ref nextEmpty, out newVal, out comparand, out var brk);
-                        if (brk)
-                            return;
-                    } while (Interlocked.CompareExchange(ref arr[updateIndex], newVal, comparand) != comparand);
-                } while (Interlocked.CompareExchange(ref CellHolder, new Holder(arr, nextEmpty), holder) != holder);
-            } finally {
-                if (lockTaken) {
-                    Monitor.Exit(lockObj);
-                }
-                // ensure that we decrement useLock if we incremented it
-                if (triedTakingLock) {
-                    _ = Interlocked.Decrement(ref useLock);
-                }
-            }
-        }
-
-        private unsafe struct AllocReferenceCoreData {
-            public void* CreateCell;
-            public void* CreateCellData;
-            public void* CellRef;
-        }
-
-        private static unsafe DataScope<CellRef> AllocReferenceCore(delegate*<void*, Cell> createCell, void* data, out CellRef cellRef) {
+        private static unsafe DataScope<CellRef> AllocReferenceCore(Cell cell, out CellRef cellRef) {
             cellRef = default;
 
-            var arcd = new AllocReferenceCoreData {
-                CreateCell = createCell,
-                CreateCellData = data,
-                CellRef = Unsafe.AsPointer(ref cellRef)
-            };
+            var lockTaken = false;
+            try {
+                writeLock.Enter(ref lockTaken);
+                // while we have the lock, no other thread will be modifying this array
 
-            DoUpdateCellList(&DoUpdate, Unsafe.AsPointer(ref arcd));
-
-            static int DoUpdate(void* pdata, ref Cell?[] arr, ref int nextEmpty, out Cell? cell, out Cell? comparand, out bool brk) {
-                brk = false;
-                ref var data = ref Unsafe.AsRef<AllocReferenceCoreData>(pdata);
-                ref var cellRef = ref Unsafe.AsRef<CellRef>(data.CellRef);
-
-                if (nextEmpty >= arr.Length) {
-                    Array.Resize(ref arr, arr.Length * 2);
+                var array = cells;
+                if (firstEmptyCell >= array.Length) {
+                    // need to realloc
+                    var newAlloc = new Cell?[array.Length * 2];
+                    Array.Copy(array, newAlloc, array.Length);
+                    // still want to atomically write the new array so readers always have a consistent view
+                    cells = array = newAlloc;
                 }
 
-                cellRef.Index = nextEmpty++;
-                while (nextEmpty < arr.Length && arr[nextEmpty] is not null)
-                    nextEmpty++;
+                // now we're safe to actually allocate a cell
+                var emptyCell = firstEmptyCell;
+                var idx = emptyCell++;
+                while (array[emptyCell] is not null)
+                    emptyCell++;
+                firstEmptyCell = emptyCell;
 
-                cell = ((delegate*<void*, Cell>)data.CreateCell)(data.CreateCellData);
-                cellRef.Hash = cell.GetHashCode();
-                comparand = null;
-                return cellRef.Index;
+                // once we've decided on a cell to use, write it and continue on our way
+                Volatile.Write(ref array[idx], cell);
+                cellRef = new(idx, cell.GetHashCode());
+
+                // the allocation is complete
+            } finally {
+                if (lockTaken)
+                    writeLock.Exit();
             }
 
             return new(ScopeHandler.Instance, cellRef);
         }
 
         private static unsafe DataScope<CellRef> AllocReferenceClass(object? value, out CellRef cellRef) {
-            static Cell Create(void* data) => new RefCell { Value = Unsafe.AsRef<object?>(data) };
-            return AllocReferenceCore(&Create, Unsafe.AsPointer(ref value), out cellRef);
+            return AllocReferenceCore(new RefCell { Value = value }, out cellRef);
         }
 
         private static unsafe DataScope<CellRef> AllocReferenceStruct<T>(in T value, out CellRef cellRef) {
-            static Cell Create(void* data) => new ValueCell<T> { Value = Unsafe.AsRef<T>(data) };
-            return AllocReferenceCore(&Create, Unsafe.AsPointer(ref Unsafe.AsRef(in value)), out cellRef);
+            return AllocReferenceCore(new ValueCell<T> { Value = value }, out cellRef);
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
@@ -162,32 +105,34 @@ namespace MonoMod.RuntimeDetour.Utils {
         private sealed class ScopeHandler : ScopeHandlerBase<CellRef> {
             public static readonly ScopeHandler Instance = new();
             public override unsafe void EndScope(CellRef data) {
-                DoUpdateCellList(&DoUpdate, Unsafe.AsPointer(ref data));
 
-                static int DoUpdate(void* pdata, ref Cell?[] arr, ref int nextEmpty, out Cell? newVal, out Cell? comparand, out bool brk) {
-                    brk = false;
-                    ref var data = ref Unsafe.AsRef<CellRef>(pdata);
+                var lockTaken = false;
+                try {
+                    writeLock.Enter(ref lockTaken);
 
-                    var cell = Volatile.Read(ref arr[data.Index]);
-                    if (cell?.GetHashCode() != data.Hash) {
-                        brk = true;
-                        newVal = null;
-                        comparand = null;
-                        return 0;
+                    var array = cells;
+                    var cell = Volatile.Read(ref array[data.Index]);
+                    if (cell is null || cell.GetHashCode() != data.Hash) {
+                        // the cell is wrong, and this is somehow the second dispose... don't do anything
+                        return;
                     }
 
-                    nextEmpty = Math.Min(nextEmpty, data.Index);
+                    // the cell is correct, zero it
+                    Volatile.Write(ref array[data.Index], null);
+                    // mark this cell as the first empty cell if there isn't one before it
+                    firstEmptyCell = Math.Min(firstEmptyCell, data.Index);
 
-                    newVal = null;
-                    comparand = cell;
-                    return data.Index;
+                    // and we're done
+                } finally {
+                    if (lockTaken)
+                        writeLock.Exit();
                 }
+
             }
         }
 
         private static Cell GetCell(CellRef cellRef) {
-            var holder = Volatile.Read(ref CellHolder);
-            var cell = Volatile.Read(ref holder.Cells[cellRef.Index]);
+            var cell = Volatile.Read(ref cells[cellRef.Index]);
             if (cell is null || cell.GetHashCode() != cellRef.Hash) {
                 throw new ArgumentException("Referenced cell no longer exists", nameof(cellRef));
             }
