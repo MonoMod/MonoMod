@@ -57,7 +57,9 @@ namespace MonoMod.RuntimeDetour.Utils {
                 // while we have the lock, no other thread will be modifying this array
 
                 var array = cells;
-                if (firstEmptyCell >= array.Length) {
+                var emptyCell = firstEmptyCell;
+
+                if (emptyCell >= array.Length) {
                     // need to realloc
                     var newAlloc = new Cell?[array.Length * 2];
                     Array.Copy(array, newAlloc, array.Length);
@@ -66,9 +68,8 @@ namespace MonoMod.RuntimeDetour.Utils {
                 }
 
                 // now we're safe to actually allocate a cell
-                var emptyCell = firstEmptyCell;
                 var idx = emptyCell++;
-                while (array[emptyCell] is not null)
+                while (emptyCell < array.Length && array[emptyCell] is not null)
                     emptyCell++;
                 firstEmptyCell = emptyCell;
 
