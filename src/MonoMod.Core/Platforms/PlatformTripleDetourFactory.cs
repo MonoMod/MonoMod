@@ -167,16 +167,16 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            private class RelatedTargetObject {
+            private class RelatedDetourBag {
                 public readonly MethodBase Method;
                 public readonly List<DetourBox> RelatedDetours = new();
                 public bool IsValid = true;
 
-                public RelatedTargetObject(MethodBase method)
+                public RelatedDetourBag(MethodBase method)
                     => Method = method;
             }
 
-            private static readonly ConcurrentDictionary<MethodBase, RelatedTargetObject> relatedDetours = new();
+            private static readonly ConcurrentDictionary<MethodBase, RelatedDetourBag> relatedDetours = new();
             private static void AddRelatedDetour(MethodBase m, DetourBox cmh) {
             Retry:
                 var related = relatedDetours.GetOrAdd(m, static m => new(m));
@@ -200,6 +200,8 @@ namespace MonoMod.Core.Platforms {
                             Helpers.Assert(relatedDetours.TryRemove(related.Method, out _));
                         }
                     }
+                } else {
+                    MMDbgLog.Log($"WARNING: Attempted to remove a related detour from a method which has no RelatedDetourBag");
                 }
             }
 
