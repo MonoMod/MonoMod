@@ -118,12 +118,42 @@ namespace MonoMod.Core.Platforms {
         }
 
         public MethodBase GetIdentifiable(MethodBase method) {
+            Helpers.ThrowIfArgumentNull(method);
+
             if (SupportedFeatures.Has(RuntimeFeature.RequiresMethodIdentification)) {
                 // see the comment in PinMethodIfNeeded
-                return Runtime.GetIdentifiable(method);
+                method = Runtime.GetIdentifiable(method);
             }
 
-            // if the runtime doesn't require method identification, we just return the provided method implementation.
+            // because the .NET reflcetion APIs are really bad, two MethodBases may not compare equal if they represent the same method
+            // *but were gotten through different means*. Because MemberInfo.ReflectedType exists.
+            // In order to fix this, when getting an identifiable method, we make sure to correct it, by retrieving it directly from its declaring type (or module, as it may be)
+            if (method.ReflectedType != method.DeclaringType) {
+                var parameters = method.GetParameters();
+                var paramTypes = new Type[parameters.Length];
+                for (var i = 0; i < parameters.Length; i++) {
+                    paramTypes[i] = parameters[i].ParameterType;
+                }
+
+                if (method.DeclaringType is null) {
+                    // the method lives on the module, get it from there
+                    var got = method.Module.GetMethod(method.Name, (BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
+                    Helpers.Assert(got is not null, $"orig: {method.GetID()}, module: {method.Module}");
+                    method = got;
+                } else {
+                    // the method has a declaring type, get it there
+                    if (method.IsConstructor) {
+                        var got = method.DeclaringType.GetConstructor((BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
+                        Helpers.Assert(got is not null, $"orig: {method.GetID()}");
+                        method = got;
+                    } else {
+                        var got = method.DeclaringType.GetMethod(method.Name, (BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
+                        Helpers.Assert(got is not null, $"orig: {method.GetID()}");
+                        method = got;
+                    }
+                }
+            }
+
             return method;
         }
 

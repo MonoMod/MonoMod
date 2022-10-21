@@ -1,13 +1,12 @@
 ﻿using Mono.Cecil.Cil;
 using MonoMod.Core;
-using MonoMod.Core.Utils;
+using MonoMod.Core.Platforms;
 using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     public class Hook : IDetour, IDisposable {
@@ -181,7 +180,7 @@ namespace MonoMod.RuntimeDetour {
 
             this.factory = factory;
             Config = config;
-            Source = source;
+            Source = PlatformTriple.Current.GetIdentifiable(source);
             Target = target;
 
 

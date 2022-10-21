@@ -2,6 +2,7 @@
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Core;
+using MonoMod.Core.Platforms;
 using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
@@ -798,10 +799,13 @@ namespace MonoMod.RuntimeDetour {
 
         // TODO: better support ALCs by making this a CWT
         // this would require chaning DetourState to not hold a strong reference to the MethodBase, so that our polyfilled CWT actually behaves itself
+        // MethodBases don't actually have object-identity, so we should keep a dict, but add DetourStates to a 'to free' list when all detours are removed, which is then cleaned on a GC
         private static readonly ConcurrentDictionary<MethodBase, DetourState> detourStates = new();
 
-        internal static DetourState GetDetourState(MethodBase method)
-            => detourStates.GetOrAdd(method, m => new(m));
+        internal static DetourState GetDetourState(MethodBase method) {
+            method = PlatformTriple.Current.GetIdentifiable(method);
+            return detourStates.GetOrAdd(method, static m => new(m));
+        }
 
         public static MethodDetourInfo GetDetourInfo(MethodBase method)
             => GetDetourState(method).Info;

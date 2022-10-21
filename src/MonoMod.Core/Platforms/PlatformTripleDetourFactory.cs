@@ -3,7 +3,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace MonoMod.Core.Platforms {
@@ -138,7 +137,7 @@ namespace MonoMod.Core.Platforms {
 
             public Detour(PlatformTriple triple, MethodBase src, MethodBase dst) {
                 this.triple = triple;
-                Source = src;
+                Source = triple.GetIdentifiable(src);
                 Target = dst;
 
                 realTarget = triple.GetRealDetourTarget(src, dst);

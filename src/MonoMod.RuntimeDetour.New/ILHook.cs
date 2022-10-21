@@ -1,5 +1,6 @@
 ﻿using MonoMod.Cil;
 using MonoMod.Core;
+using MonoMod.Core.Platforms;
 using MonoMod.Utils;
 using System;
 using System.Linq.Expressions;
@@ -68,7 +69,7 @@ namespace MonoMod.RuntimeDetour {
             Helpers.ThrowIfArgumentNull(manipulator);
             Helpers.ThrowIfArgumentNull(factory);
 
-            Method = method;
+            Method = PlatformTriple.Current.GetIdentifiable(method);
             Manipulator = manipulator;
             Config = config;
             this.factory = factory;
