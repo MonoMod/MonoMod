@@ -4,7 +4,7 @@ using Mono.Cecil;
 namespace MonoMod.Utils {
     public class RelinkTargetNotFoundException : RelinkFailedException {
 
-        public const string DefaultMessage = "MonoMod relinker failed finding";
+        public new const string DefaultMessage = "MonoMod relinker failed finding";
 
         public RelinkTargetNotFoundException(IMetadataTokenProvider mtp, IMetadataTokenProvider? context = null)
             : base(Format(DefaultMessage, mtp, context), mtp, context) {

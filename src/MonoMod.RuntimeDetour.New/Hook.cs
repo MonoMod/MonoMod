@@ -1,7 +1,6 @@
 ﻿using Mono.Cecil.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Platforms;
-using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
 using System.Linq;

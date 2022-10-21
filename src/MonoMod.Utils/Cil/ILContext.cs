@@ -44,6 +44,8 @@ namespace MonoMod.Cil {
         public InstrList Instrs => Body.Instructions;
 
         internal List<ILLabel> _Labels = new List<ILLabel>();
+        private bool disposedValue;
+        private readonly List<DataScope<DynamicReferenceManager.CellRef>> managedObjectRefs = new();
         /// <summary>
         /// A readonly list of all defined labels.
         /// </summary>
@@ -58,12 +60,9 @@ namespace MonoMod.Cil {
         /// Events which run when the context will be disposed.
         /// </summary>
         public event Action? OnDispose;
-        /// <summary>
-        /// The current reference bag. Used for methods such as EmitReference and EmitDelegate.
-        /// </summary>
-        public IILReferenceBag ReferenceBag = NopILReferenceBag.Instance;
 
         public ILContext(MethodDefinition method) {
+            Helpers.ThrowIfArgumentNull(method);
             Method = method;
             IL = method.Body.GetILProcessor();
         }
@@ -73,6 +72,7 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="manip">The manipulator to run in this context.</param>
         public void Invoke(Manipulator manip) {
+            Helpers.ThrowIfArgumentNull(manip);
             if (IsReadOnly)
                 throw new InvalidOperationException();
 
@@ -110,7 +110,7 @@ namespace MonoMod.Cil {
             // Labels hold references to Instructions, which can keep
             // all other Instructions in all referenced modules alive.
             // _Labels.Clear doesn't shrink the backing array.
-            _Labels = new List<ILLabel>();
+            _Labels.Capacity = 0;
         }
 
         [Obsolete("Use new ILCursor(il).Goto(index)")]
@@ -177,22 +177,31 @@ namespace MonoMod.Cil {
         /// Bind an arbitary object to an ILContext for static retrieval.
         /// </summary>
         /// <typeparam name="T">The type of the object. The combination of typeparam and id provides the unique static reference.</typeparam>
-        /// <param name="t">The object to store.</param>
+        /// <param name="value">The object to store.</param>
         /// <returns>The id to use in combination with the typeparam for object retrieval.</returns>
-        public int AddReference<T>(T t) {
-            IILReferenceBag bag = ReferenceBag;
-            int id = bag.Store(t);
-            OnDispose += () => bag.Clear<T>(id);
+        public int AddReference<T>(in T? value) {
+            var id = managedObjectRefs.Count;
+            var scope = DynamicReferenceManager.AllocReference(in value, out _);
+            managedObjectRefs.Add(scope);
             return id;
         }
 
-        /// <summary>
-        /// Dispose this context, making it read-only and invoking all OnDispose event listeners.
-        /// </summary>
-        public void Dispose() {
-            OnDispose?.Invoke();
-            OnDispose = null;
-            MakeReadOnly();
+        public T? GetReference<T>(int id) {
+            if (id < 0 || id >= managedObjectRefs.Count)
+                throw new ArgumentOutOfRangeException(nameof(id));
+            return DynamicReferenceManager.GetValue<T>(managedObjectRefs[id].Data);
+        }
+
+        public void SetReference<T>(int id, in T? value) {
+            if (id < 0 || id >= managedObjectRefs.Count)
+                throw new ArgumentOutOfRangeException(nameof(id));
+            DynamicReferenceManager.SetValue(managedObjectRefs[id].Data, in value);
+        }
+
+        public DynamicReferenceManager.CellRef GetReferenceCell(int id) {
+            if (id < 0 || id >= managedObjectRefs.Count)
+                throw new ArgumentOutOfRangeException(nameof(id));
+            return managedObjectRefs[id].Data;
         }
 
         /// <summary>
@@ -203,9 +212,9 @@ namespace MonoMod.Cil {
             if (Method == null)
                 return "// ILContext: READONLY";
 
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
 
-            builder.AppendLine($"// ILContext: {Method}");
+            _ = builder.AppendLine($"// ILContext: {Method}");
             foreach (Instruction instr in Instrs)
                 ToString(builder, instr);
 
@@ -228,5 +237,31 @@ namespace MonoMod.Cil {
             return builder;
         }
 
+        protected virtual void Dispose(bool disposing) {
+            if (!disposedValue) {
+                OnDispose?.Invoke();
+                OnDispose = null;
+
+                foreach (var scope in managedObjectRefs) {
+                    scope.Dispose();
+                }
+                managedObjectRefs.Capacity = 0;
+                MakeReadOnly();
+
+                disposedValue = true;
+            }
+        }
+
+        ~ILContext()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: false);
+        }
+
+        public void Dispose() {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

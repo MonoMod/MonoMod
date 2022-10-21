@@ -8,7 +8,6 @@ using Mono.Cecil.Cil;
 using MonoMod.Utils;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
-using System.ComponentModel;
 
 // Certain paramaters are self-explanatory (f.e. predicates in Goto*), while others are not (f.e. cursors in Find*).
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
@@ -647,22 +646,22 @@ namespace MonoMod.Cil {
         /// <summary>
         /// Bind an arbitary object to an ILContext for static retrieval. See <see cref="ILContext.AddReference{T}(T)"/>
         /// </summary>
-        public int AddReference<T>(T t) => Context.AddReference(t);
+        public int AddReference<T>(in T t) => Context.AddReference(in t);
 
         /// <summary>
         /// Emit the IL to retrieve a stored reference of type <typeparamref name="T"/> with the given <paramref name="id"/> and place it on the stack.
         /// </summary>
         public void EmitGetReference<T>(int id) {
-            Emit(OpCodes.Ldc_I4, id);
-            Emit(OpCodes.Call, Context.ReferenceBag.GetGetter<T>());
+            this.EmitLoadTypedReference(Context.GetReferenceCell(id), typeof(T));
         }
 
         /// <summary>
         /// Store an object in the reference store, and emit the IL to retrieve it and place it on the stack.
         /// </summary>
-        public int EmitReference<T>(T t) {
-            int id = AddReference(t);
-            EmitGetReference<T>(id);
+        public int EmitReference<T>(in T? t) {
+            var id = AddReference(in t);
+            // we can use the UNsafe variant because, in this case, we know for sure that the type will be correct
+            this.EmitLoadTypedReferenceUnsafe(Context.GetReferenceCell(id), typeof(T));
             return id;
         }
 
@@ -670,15 +669,16 @@ namespace MonoMod.Cil {
         /// Emit the IL to invoke a delegate as if it were a method. Stack behaviour matches OpCodes.Call
         /// </summary>
         public int EmitDelegate<T>(T cb) where T : Delegate {
+            Helpers.ThrowIfArgumentNull(cb);
             if (cb.GetInvocationList().Length == 1 && cb.Target == null) { // optimisation for static delegates
                 Emit(OpCodes.Call, cb.Method);
                 return -1;
             }
 
-            int id = EmitReference(cb);
+            var id = EmitReference(cb);
 
             var delInvoke = typeof(T).GetMethod("Invoke")!;
-            var invoker = Context.ReferenceBag.GetDelegateInvoker<T>();
+            var invoker = FastDelegateInvokers.GetDelegateInvoker<T>();
             if (invoker != null) {
                 // Prevent the invoker from getting GC'd early, f.e. when it's a DynamicMethod.
                 AddReference(invoker);

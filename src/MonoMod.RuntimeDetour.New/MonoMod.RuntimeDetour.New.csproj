@@ -17,5 +17,5 @@
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Core\MonoMod.Core.csproj" />
   </ItemGroup>
-  
+
 </Project>

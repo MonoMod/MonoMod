@@ -1,5 +1,4 @@
 ﻿using MonoMod.Core;
-using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
 using System.Diagnostics.CodeAnalysis;

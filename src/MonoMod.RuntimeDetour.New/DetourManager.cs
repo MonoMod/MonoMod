@@ -3,7 +3,6 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Platforms;
-using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 using System;
 using System.Collections;
@@ -657,7 +656,6 @@ namespace MonoMod.RuntimeDetour {
                 entry.IsApplied = true;
                 var il = new ILContext(def);
                 entry.CurrentContext = il;
-                il.ReferenceBag = RuntimeILReferenceBag.Instance;
                 il.Invoke(entry.Manip);
                 if (il.IsReadOnly) {
                     il.Dispose();
@@ -888,7 +886,13 @@ namespace MonoMod.RuntimeDetour {
             internal Lock(MethodDetourInfo mdi) {
                 this.mdi = mdi;
                 lockTaken = false;
-                mdi.EnterLock(ref lockTaken);
+                try {
+                    mdi.EnterLock(ref lockTaken);
+                } catch {
+                    if (lockTaken)
+                        mdi.ExitLock();
+                    throw;
+                }
             }
 
             public void Dispose() {

@@ -7,7 +7,6 @@ using MonoMod.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Platforms;
 using MonoMod.RuntimeDetour;
-using MonoMod.RuntimeDetour.Utils;
 using MonoMod.Utils;
 #endif
 #if HARMONY
