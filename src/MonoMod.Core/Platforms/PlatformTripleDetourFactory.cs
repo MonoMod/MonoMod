@@ -1,5 +1,6 @@
 ﻿using MonoMod.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -167,13 +168,21 @@ namespace MonoMod.Core.Platforms {
             }
 
             private class RelatedTargetObject {
+                public readonly MethodBase Method;
                 public readonly List<DetourBox> RelatedDetours = new();
+                public bool IsValid = true;
+
+                public RelatedTargetObject(MethodBase method)
+                    => Method = method;
             }
 
-            private static readonly ConditionalWeakTable<MethodBase, RelatedTargetObject> relatedDetours = new();
+            private static readonly ConcurrentDictionary<MethodBase, RelatedTargetObject> relatedDetours = new();
             private static void AddRelatedDetour(MethodBase m, DetourBox cmh) {
-                var related = relatedDetours.GetOrCreateValue(m);
+            Retry:
+                var related = relatedDetours.GetOrAdd(m, static m => new(m));
                 lock (related) {
+                    if (!related.IsValid)
+                        goto Retry;
                     related.RelatedDetours.Add(cmh);
                     if (related.RelatedDetours.Count > 2) {
                         MMDbgLog.Log($"WARNING: More than 2 related detours for method {m}! This means that the method has been detoured twice. Detour cleanup will fail.");
@@ -182,13 +191,19 @@ namespace MonoMod.Core.Platforms {
             }
 
             private static void RemoveRelatedDetour(MethodBase m, DetourBox cmh) {
-                var related = relatedDetours.GetOrCreateValue(m);
-                lock (related) {
-                    related.RelatedDetours.Remove(cmh);
+                if (relatedDetours.TryGetValue(m, out var related)) {
+                    lock (related) {
+                        related.RelatedDetours.Remove(cmh);
+                        // if we have no related detours for the method, we want to remove it from the dictionary to not keep the method alive if its in a collectible ALC
+                        if (related.RelatedDetours.Count == 0) {
+                            related.IsValid = false;
+                            Helpers.Assert(relatedDetours.TryRemove(related.Method, out _));
+                        }
+                    }
                 }
             }
 
-            private static void OnMethodCompiled(MethodBase? method, IntPtr codeStart, ulong codeSize) {
+            private static void OnMethodCompiled(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, ulong codeSize) {
                 if (method is null) {
                     return;
                 }

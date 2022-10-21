@@ -265,7 +265,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 }
 
                 try {
-                    OnMethodCompiled?.Invoke(method, methodBodyStart, methodBodySize);
+                    OnMethodCompiled?.Invoke(methodHandle, method, methodBodyStart, methodBodySize);
                 } catch (Exception e) {
                     MMDbgLog.Log($"Error executing OnMethodCompiled event: {e}");
                 }
