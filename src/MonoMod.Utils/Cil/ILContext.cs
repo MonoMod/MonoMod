@@ -110,6 +110,7 @@ namespace MonoMod.Cil {
             // Labels hold references to Instructions, which can keep
             // all other Instructions in all referenced modules alive.
             // _Labels.Clear doesn't shrink the backing array.
+            _Labels.Clear();
             _Labels.Capacity = 0;
         }
 
@@ -245,6 +246,7 @@ namespace MonoMod.Cil {
                 foreach (var scope in managedObjectRefs) {
                     scope.Dispose();
                 }
+                managedObjectRefs.Clear();
                 managedObjectRefs.Capacity = 0;
                 MakeReadOnly();
 
