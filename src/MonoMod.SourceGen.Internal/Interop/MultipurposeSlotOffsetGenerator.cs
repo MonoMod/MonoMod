@@ -14,7 +14,6 @@ namespace MonoMod.SourceGen.Internal.Interop
         private record GenerationInfo(IMethodSymbol Method, SyntaxTokenList Modifiers, int Depth, INamedTypeSymbol HelperType);
 
         public void Initialize(IncrementalGeneratorInitializationContext context) {
-
             var fields = context.SyntaxProvider
                 .CreateSyntaxProvider(IsTargetField, GetSemanticTarget)
                 .Where(static m => m is not null);

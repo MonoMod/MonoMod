@@ -7,10 +7,14 @@ namespace MonoMod.SourceGen.Internal {
         private readonly List<INamedTypeSymbol> containingTypes = new();
         private readonly string? namespaceName;
 
+        public INamedTypeSymbol InnermostType { get; }
+
         public TypeSourceContext(ISymbol working) : this(working.ContainingType) {
         }
 
         public TypeSourceContext(INamedTypeSymbol innermostType) {
+            InnermostType = innermostType;
+
             INamedTypeSymbol? outerType = null;
             while (innermostType is not null) {
                 outerType = innermostType;

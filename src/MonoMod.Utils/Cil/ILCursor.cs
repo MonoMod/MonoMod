@@ -675,15 +675,18 @@ namespace MonoMod.Cil {
                 return -1;
             }
 
-            var id = EmitReference(cb);
+            int id; // we delay the emitting of the reference because we may need to cast it
 
-            var delInvoke = typeof(T).GetMethod("Invoke")!;
-            var invoker = FastDelegateInvokers.GetDelegateInvoker<T>();
-            if (invoker != null) {
+            var invoker = FastDelegateInvokers.GetDelegateInvoker(typeof(T));
+            if (invoker is { } pair) {
+                var cast = cb.CastDelegate(pair.Delegate);
+                id = EmitReference(cast);
                 // Prevent the invoker from getting GC'd early, f.e. when it's a DynamicMethod.
-                AddReference(invoker);
-                Emit(OpCodes.Call, invoker);
+                AddReference(pair.Invoker);
+                Emit(OpCodes.Call, pair.Invoker);
             } else {
+                id = EmitReference(cb);
+                var delInvoke = typeof(T).GetMethod("Invoke")!;
                 Emit(OpCodes.Callvirt, delInvoke);
             }
 

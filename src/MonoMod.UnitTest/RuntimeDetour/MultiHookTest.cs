@@ -8,6 +8,7 @@ using System;
 using System.Runtime.CompilerServices;
 using MonoMod.Cil;
 using Xunit;
+using Mono.Cecil.Cil;
 
 namespace MonoMod.UnitTest {
     public class ManualMultiHookTest {
@@ -40,8 +41,9 @@ namespace MonoMod.UnitTest {
                 typeof(ManualMultiHookTest).GetMethod("DoNothing"),
                 il => {
                     var c = new ILCursor(il);
-                    c.EmitDelegate<Action>(() => {
-                        hILRun = true;
+                    c.Emit(OpCodes.Ldc_I4_1);
+                    c.EmitDelegate<Action<bool>>(v => {
+                        hILRun = v;
                     });
                 },
                 applyByDefault: false
