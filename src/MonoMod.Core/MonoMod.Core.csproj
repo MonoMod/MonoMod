@@ -21,13 +21,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MMSourcePath)MonoMod.Core.SourceGen\MonoMod.Core.SourceGen.csproj"
-                      Reference="false" ReferenceOutputAssembly="false"
-                      OutputItemType="Analyzer" Private="false"
-                      PrivateAssets="all"
-                      SetTargetFramework="TargetFramework=netstandard2.0"
-                      SkipGetTargetFrameworkProperties="true"
-                      Pack="false"/>
+    <ProjectReference Include="..\MonoMod.SourceGen.Internal\MonoMod.SourceGen.Internal.csproj">
+      <Reference>false</Reference>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Analyzer</OutputItemType>
+      <Private>false</Private>
+      <PrivateAssets>all</PrivateAssets>
+      <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <Pack>false</Pack>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

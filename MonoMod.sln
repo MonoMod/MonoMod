@@ -45,7 +45,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Backports.Filter", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.RuntimeDetour.New", "src\MonoMod.RuntimeDetour.New\MonoMod.RuntimeDetour.New.csproj", "{D3345345-B097-4BFF-89B8-007A21A5BFD8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Core.SourceGen", "src\MonoMod.Core.SourceGen\MonoMod.Core.SourceGen.csproj", "{ADB985C0-CCAD-40D0-AA63-2BD192470969}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.SourceGen.Internal", "src\MonoMod.SourceGen.Internal\MonoMod.SourceGen.Internal.csproj", "{ADB985C0-CCAD-40D0-AA63-2BD192470969}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

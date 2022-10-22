@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace MonoMod.Core.SourceGen.Interop
+namespace MonoMod.SourceGen.Internal.Interop
 {
     [Generator]
     public class MultipurposeSlotOffsetGenerator : IIncrementalGenerator {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MonoMod.Core.SourceGen {
+namespace MonoMod.SourceGen.Internal {
     internal class TypeSourceContext {
         private readonly List<INamedTypeSymbol> containingTypes = new();
         private readonly string? namespaceName;

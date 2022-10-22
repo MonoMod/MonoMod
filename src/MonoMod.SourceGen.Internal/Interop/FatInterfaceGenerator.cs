@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace MonoMod.Core.SourceGen.Interop {
+namespace MonoMod.SourceGen.Internal.Interop {
     [Generator]
     public class FatInterfaceGenerator : ISourceGenerator {
         private const string FatInterfaceAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceAttribute";
