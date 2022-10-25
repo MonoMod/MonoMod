@@ -24,6 +24,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         protected override Delegate CastCompileHookToRealType(Delegate del)
             => del.CastDelegate<V60.CompileMethodDelegate>();
 
+#if NET6_USE_RUNTIME_INTROSPECTION
         public override RuntimeFeature Features 
             => base.Features & ~RuntimeFeature.RequiresBodyThunkWalking;
 
@@ -49,5 +50,6 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             return ptr;
         }
+#endif
     }
 }
