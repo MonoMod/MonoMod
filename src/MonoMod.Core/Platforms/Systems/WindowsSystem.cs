@@ -117,7 +117,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
         private static unsafe Exception LogAllSections(int error, IntPtr src, nuint size, [CallerMemberName] string from = "") {
             Exception ex = new Win32Exception(error);
-            if (MMDbgLog.Writer == null)
+            if (!MMDbgLog.IsWritingLog)
                 return ex;
 
             MMDbgLog.Log($"{from} failed for 0x{src:X16} + {size} - logging all memory sections");

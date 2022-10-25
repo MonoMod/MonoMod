@@ -17,19 +17,6 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod.SourceGen.Internal\MonoMod.SourceGen.Internal.csproj">
-      <Reference>false</Reference>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <OutputItemType>Analyzer</OutputItemType>
-      <Private>false</Private>
-      <PrivateAssets>all</PrivateAssets>
-      <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
-      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
-      <Pack>false</Pack>
-    </ProjectReference>
-  </ItemGroup>
-
   <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">

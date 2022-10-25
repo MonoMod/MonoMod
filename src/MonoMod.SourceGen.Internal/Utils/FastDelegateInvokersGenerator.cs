@@ -74,20 +74,20 @@ namespace MonoMod.SourceGen.Internal.Utils {
         private void Execute(SourceProductionContext ctx, GeneratorMethod method) {
             var sb = new StringBuilder();
             var builder = new CodeBuilder(sb);
-            builder.WriteHeader();
+            _ = builder.WriteHeader();
 
             BuildSourceFor(builder, method, out var methodName);
             ctx.AddSource($"{methodName}.g.cs", sb.ToString());
         }
 
-        private void BuildSourceFor(CodeBuilder builder, GeneratorMethod method, out string methodName) {
+        private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod method, out string methodName) {
             var methodSymbol = method.Method;
             var maxArgs = method.MaxArgs;
 
-            builder.WriteLine("using BindingFlags = global::System.Reflection.BindingFlags;");
-            builder.WriteLine("using MethodInfo = global::System.Reflection.MethodInfo;");
-            builder.WriteLine("using Type = global::System.Type;");
-            builder.WriteLine("using Helpers = global::MonoMod.Utils.Helpers;");
+            _ = builder.WriteLine("using BindingFlags = global::System.Reflection.BindingFlags;");
+            _ = builder.WriteLine("using MethodInfo = global::System.Reflection.MethodInfo;");
+            _ = builder.WriteLine("using Type = global::System.Type;");
+            _ = builder.WriteLine("using Helpers = global::MonoMod.Utils.Helpers;");
 
             var ctx = new TypeSourceContext(methodSymbol);
             ctx.AppendEnterContext(builder);
@@ -99,31 +99,31 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
             // first, we want to generate the getter method
             foreach (var mod in method.Modifiers) {
-                builder.Write(mod.Text).Write(' ');
+                _ = builder.Write(mod.Text).Write(' ');
             }
-            builder.WriteLine($"{ReturnType}[] {methodSymbol.Name}() {{").IncreaseIndent();
+            _ = builder.WriteLine($"{ReturnType}[] {methodSymbol.Name}() {{").IncreaseIndent();
 
-            builder.WriteLine($"var array = new {ReturnType}[{maxArgs << 2}];");
+            _ = builder.WriteLine($"var array = new {ReturnType}[{maxArgs << 2}];");
             for (var i = 0; i < (maxArgs << 2); i++) {
                 var name = ComputeNameForIdx(i);
-                builder.Write($"array[{i}] = (").Write(selfTypeof).Write(".GetMethod(\"Invoke").Write(name)
+                _ = builder.Write($"array[{i}] = (").Write(selfTypeof).Write(".GetMethod(\"Invoke").Write(name)
                     .Write("\", BindingFlags.NonPublic | BindingFlags.Static)!, ")
                     .Write("typeof(").Write(name).Write('<');
                 var numArgs = (i & 1) + (i >> 2);
-                builder.Write(new string(',', numArgs));
-                builder.WriteLine(">));");
+                _ = builder.Write(new string(',', numArgs));
+                _ = builder.WriteLine(">));");
             }
-            builder.WriteLine("return array;");
+            _ = builder.WriteLine("return array;");
 
-            builder.DecreaseIndent().WriteLine("}");
+            _ = builder.DecreaseIndent().WriteLine("}");
 
-            builder.WriteLine();
+            _ = builder.WriteLine();
 
             var genericArgsBuilder = new StringBuilder();
 
             // fun fact: with nullable annotations, the compiler adds an attribute to EVERY SINGLE PARAMETER
             // we'll just disable nullable annocations here to avoid this
-            builder.WriteLine("#nullable disable").WriteLine();
+            _ = builder.WriteLine("#nullable disable").WriteLine();
 
             // now we generate the types and methods themselves
             for (var i = 0; i < (maxArgs << 2); i++) {
@@ -136,7 +136,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
                 genericArgsBuilder.Clear();
 
                 // write the delegate definition
-                builder.Write("private delegate ").Write(hasResult ? "TResult" : "void").Write(' ').Write(name);
+                _ = builder.Write("private delegate ").Write(hasResult ? "TResult" : "void").Write(' ').Write(name);
                 genericArgsBuilder.Append('<');
                 if (hasResult)
                     genericArgsBuilder.Append("TResult, ");
@@ -151,40 +151,42 @@ namespace MonoMod.SourceGen.Internal.Utils {
                 genericArgsBuilder.Append('>');
                 var genericArgs = genericArgsBuilder.ToString();
 
-                builder.Write(genericArgs).Write('(');
+                _ = builder.Write(genericArgs).Write('(');
                 if (firstIsByRef)
-                    builder.Write("ref ");
+                    _ = builder.Write("ref ");
 
                 for (var j = 0; j < numRemaining + 1; j++) {
-                    builder.Write($"T{j} _{j}");
+                    _ = builder.Write($"T{j} _{j}");
                     if (j < numRemaining)
-                        builder.Write(", ");
+                        _ = builder.Write(", ");
                 }
-                builder.WriteLine(");");
+                _ = builder.WriteLine(");");
 
                 // write the invoker method
-                builder.Write("private static ").Write(hasResult ? "TResult" : "void").Write(" Invoke").Write(name)
+                _ = builder
+                    .Write("private static ").Write(hasResult ? "TResult" : "void").Write(" Invoke").Write(name)
                     .Write(genericArgs).Write('(');
                 if (firstIsByRef)
-                    builder.Write("ref ");
+                    _ = builder.Write("ref ");
                 for (var j = 0; j < numRemaining + 1; j++) {
-                    builder.Write($"T{j} _{j}, ");
+                    _ = builder.Write($"T{j} _{j}, ");
                 }
                 // now the last arg, which is the delegate arg
-                builder.Write(name).Write(genericArgs).WriteLine(" del)")
+                _ = builder
+                    .Write(name).Write(genericArgs).WriteLine(" del)")
                     .IncreaseIndent().Write("=> Helpers.ThrowIfNull(del)(");
                 if (firstIsByRef)
                     builder.Write("ref ");
                 for (var j = 0; j < numRemaining + 1; j++) {
-                    builder.Write($"_{j}");
+                    _ = builder.Write($"_{j}");
                     if (j < numRemaining)
-                        builder.Write(", ");
+                        _ = builder.Write(", ");
                 }
-                builder.WriteLine(");").DecreaseIndent();
-                builder.WriteLine();
+                _ = builder.WriteLine(");").DecreaseIndent();
+                _ = builder.WriteLine();
             }
 
-            builder.WriteLine("#nullable enable");
+            _ = builder.WriteLine("#nullable enable");
 
             ctx.AppendExitContext(builder);
         }

@@ -33,6 +33,21 @@
     <Compile Include="$(MMCommonPath)Shared\**\*.cs" Condition="'$(MMSharedSourceFiles)' == 'true'">
       <Link>Shared/%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Compile>
+    <!-- Source Generator reference -->
+    <!-- This is dependent on ReferenceBackports because the source generator will assume the presence of Backports -->
+    <ProjectReference Include="$(MMSourcePath)MonoMod.SourceGen.Internal\MonoMod.SourceGen.Internal.csproj" Condition="'$(MMUseSourceGen)' != 'false'">
+      <Reference>false</Reference>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Analyzer</OutputItemType>
+      <Private>false</Private>
+      <PrivateAssets>all</PrivateAssets>
+      <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <Pack>false</Pack>
+    </ProjectReference>
+    <CompilerVisibleProperty Include="AssemblyName" />
+    <CompilerVisibleProperty Include="Version" />
+    <CompilerVisibleProperty Include="RootNamespace" />
   </ItemGroup>
   
   <!-- ILHelpers reference -->

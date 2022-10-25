@@ -9,8 +9,9 @@
     <MMReferenceUtils>false</MMReferenceUtils>
     <MMReferenceBackports>false</MMReferenceBackports>
     <MMReferenceILHelpers>false</MMReferenceILHelpers>
-	
-	  <IsPackable>false</IsPackable>
+    <MMUseSourceGen>false</MMUseSourceGen>
+  
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
