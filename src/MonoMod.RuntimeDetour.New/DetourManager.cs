@@ -341,7 +341,7 @@ namespace MonoMod.RuntimeDetour {
                     }
                     if (node.Config.After.Contains(cur.Config.Id)) {
                         if (isBefore) {
-                            MMDbgLog.Log($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
+                            MMDbgLog.Warning($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
                         } else {
                             PrioInsert(node.BeforeThis, cur);
                             isAfter = true;
@@ -349,7 +349,7 @@ namespace MonoMod.RuntimeDetour {
                     }
                     if (cur.Config.Before.Contains(node.Config.Id)) {
                         if (isBefore) {
-                            MMDbgLog.Log($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
+                            MMDbgLog.Warning($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
                         } else {
                             PrioInsert(node.BeforeThis, cur);
                             isAfter = true;
@@ -357,7 +357,7 @@ namespace MonoMod.RuntimeDetour {
                     }
                     if (cur.Config.After.Contains(node.Config.Id)) {
                         if (isAfter) {
-                            MMDbgLog.Log($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
+                            MMDbgLog.Warning($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
                         } else {
                             PrioInsert(cur.BeforeThis, node);
                             //isBefore = true;

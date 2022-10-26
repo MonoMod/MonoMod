@@ -47,10 +47,10 @@ namespace MonoMod.Core.Platforms.Memory {
 
         private unsafe bool TryAllocNewPage(AllocationRequest request, ref nint page, bool goingUp, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
             if (pageAlloc.TryQueryPage(page, out var isFree, out IntPtr baseAddr, out var allocSize)) {
-                if (!isFree)                     // this is not a free block, so we don't care
+                if (!isFree) // this is not a free block, so we don't care
                     goto Fail;
 
-                if (!pageAlloc.TryAllocatePage(page, PageSize, request.Executable, out var allocBase))                     // allocation failed
+                if (!pageAlloc.TryAllocatePage(page, PageSize, request.Executable, out var allocBase)) // allocation failed
                     goto Fail;
 
                 var pageObj = new Page(this, allocBase, (uint) PageSize, request.Executable);
@@ -69,8 +69,10 @@ namespace MonoMod.Core.Platforms.Memory {
 
                 Fail:
                 // We're failing out, update the page address appropriately
-                if (goingUp)                     page = baseAddr + allocSize;
-else                     page = baseAddr - PageSize;
+                if (goingUp)
+                    page = baseAddr + allocSize;
+                else
+                    page = baseAddr - PageSize;
 
                 allocated = null;
                 return false;
@@ -78,8 +80,10 @@ else                     page = baseAddr - PageSize;
                 // TODO: check GetLastError
 
                 // query failed, fail out
-                if (goingUp)                     page += PageSize;
-else                     page -= PageSize;
+                if (goingUp)
+                    page += PageSize;
+                else
+                    page -= PageSize;
                 allocated = null;
                 return false;
             }

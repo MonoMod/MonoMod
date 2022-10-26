@@ -245,7 +245,7 @@ namespace MonoMod.Core.Platforms {
                 if (meaning.Kind.IsPrecodeFixup() && !regenerated) {
                     var precode = meaning.ProcessAddress(entry, offset, addr);
                     if (reloadPtr) {
-                        MMDbgLog.Log($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
+                        MMDbgLog.Trace($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
                         Prepare(method);
                         didPrepareLastIter = true;
                         //regenerated = true;
@@ -292,7 +292,7 @@ namespace MonoMod.Core.Platforms {
                     .Key ?? (nint) (-1);
 
                 ThePreStub = pre;
-                MMDbgLog.Log($"ThePreStub: 0x{ThePreStub:X16}");
+                MMDbgLog.Trace($"ThePreStub: 0x{ThePreStub:X16}");
             }
 
             wasPreStub = ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/;

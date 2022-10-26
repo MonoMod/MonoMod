@@ -6,59 +6,62 @@ using System.IO;
 using System.Text;
 using System.Threading;
 
-namespace MonoMod {
-    public sealed class DebugLog {
-        public readonly struct MessageHole {
-            public int Start { get; }
-            public int End { get; }
-            public object? Value { get; }
-            public bool IsValueUnrepresentable { get; }
+namespace MonoMod.Logs {
+    public readonly struct MessageHole {
+        public int Start { get; }
+        public int End { get; }
+        public object? Value { get; }
+        public bool IsValueUnrepresentable { get; }
 
-            public MessageHole(int start, int end) {
-                Value = null;
-                IsValueUnrepresentable = true;
-                Start = start;
-                End = end;
-            }
-
-            public MessageHole(int start, int end, object? value) {
-                Value = value;
-                IsValueUnrepresentable = false;
-                Start = start;
-                End = end;
-            }
+        public MessageHole(int start, int end) {
+            Value = null;
+            IsValueUnrepresentable = true;
+            Start = start;
+            End = end;
         }
 
-        public delegate void OnLogMessage(string source, int time, string message);
-        public delegate void OnLogMessageDetailed(string source, int time, string formattedMessage, ReadOnlyMemory<MessageHole> holes);
+        public MessageHole(int start, int end, object? value) {
+            Value = value;
+            IsValueUnrepresentable = false;
+            Start = start;
+            End = end;
+        }
+    }
+
+    public sealed class DebugLog {
+
+        public delegate void OnLogMessage(string source, DateTime time, LogLevel level, string message);
+        public delegate void OnLogMessageDetailed(string source, DateTime time, LogLevel level, string formattedMessage, ReadOnlyMemory<MessageHole> holes);
 
         internal static readonly DebugLog Instance = new();
 
         private sealed class LogMessage {
             public string Source { get; private set; }
-            // this comes from Environment.TickCount
-            // which can be converted to a DateTime with https://stackoverflow.com/a/55974000
-            public int TimeTicks { get; private set; }
+            public DateTime Time { get; private set; }
+            public LogLevel Level { get; private set; }
             public string FormattedMessage { get; private set; }
             public ReadOnlyMemory<MessageHole> FormatHoles { get; private set; }
 
-            public LogMessage(string source, int time, string formatted, ReadOnlyMemory<MessageHole> holes) {
+            public LogMessage(string source, DateTime time, LogLevel level, string formatted, ReadOnlyMemory<MessageHole> holes) {
                 Source = source;
-                TimeTicks = time;
+                Time = time;
+                Level = level;
                 FormattedMessage = formatted;
                 FormatHoles = holes;
             }
 
             public void Clear() {
                 Source = "";
-                TimeTicks = 0;
+                Time = default;
+                Level = default;
                 FormattedMessage = "";
                 FormatHoles = default;
             }
 
-            public void Init(string source, int time, string formatted, ReadOnlyMemory<MessageHole> holes) {
+            public void Init(string source, DateTime time, LogLevel level, string formatted, ReadOnlyMemory<MessageHole> holes) {
                 Source = source;
-                TimeTicks = time;
+                Time = time;
+                Level = level;
                 FormattedMessage = formatted;
                 FormatHoles = holes;
             }
@@ -66,13 +69,13 @@ namespace MonoMod {
             // TODO: what can we do about exceptions thrown in log handlers?
             public void ReportTo(OnLogMessage del) {
                 try {
-                    del(Source, TimeTicks, FormattedMessage);
+                    del(Source, Time, Level, FormattedMessage);
                 } catch { }
             }
 
             public void ReportTo(OnLogMessageDetailed del) {
                 try {
-                    del(Source, TimeTicks, FormattedMessage, FormatHoles);
+                    del(Source, Time, Level, FormattedMessage, FormatHoles);
                 } catch { }
             }
         }
@@ -82,17 +85,17 @@ namespace MonoMod {
         // and this is a cache for our LogMessage objects
         private static readonly ConcurrentBag<WeakReference<LogMessage>> messageObjectCache = new();
 
-        private static LogMessage MakeMessage(string source, int time, string formatted, ReadOnlyMemory<MessageHole> holes) {
+        private static LogMessage MakeMessage(string source, DateTime time, LogLevel level, string formatted, ReadOnlyMemory<MessageHole> holes) {
             while (messageObjectCache.TryTake(out var weakRef)) {
                 if (weakRef.TryGetTarget(out var message)) {
-                    message.Init(source, time, formatted, holes);
+                    message.Init(source, time, level, formatted, holes);
                     weakRefCache.Add(weakRef);
                     return message;
                 }
             }
 
             // we weren't able to get an existing LogMessage object
-            return new(source, time, formatted, holes);
+            return new(source, time, level, formatted, holes);
         }
 
         private static void ReturnMessage(LogMessage message) {
@@ -107,33 +110,43 @@ namespace MonoMod {
         }
 
         #region Log functions
-        public void Write(string source, int time, string message) {
+        public void Write(string source, DateTime time, LogLevel level, string message) {
             if (!ShouldLog) return;
-            PostMessage(MakeMessage(source, time, message, default));
+            PostMessage(MakeMessage(source, time, level, message, default));
         }
 
-        public void Write(string source, int time, ref DebugLogInterpolatedStringHandler message) {
+        public void Write(string source, DateTime time, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
             // we check the handler's enabled field instead of our own HasHandlers because the handler may not have been recording anything in the first place
             if (!message.enabled || !ShouldLog)
                 return;
             var formatted = message.ToStringAndClear(out var holes);
-            PostMessage(MakeMessage(source, time, formatted, holes));
+            PostMessage(MakeMessage(source, time, level, formatted, holes));
         }
 
         
-        internal void LogCore(string source, string message) {
-            Write(source, Environment.TickCount, message);
+        internal void LogCore(string source, LogLevel level, string message) {
+            if (!ShouldLog)
+                return;
+            Write(source, DateTime.UtcNow, level, message);
         }
-        internal void LogCore(string source, ref DebugLogInterpolatedStringHandler message) {
-            Write(source, Environment.TickCount, ref message);
+        internal void LogCore(string source, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
+            if (!message.enabled || !ShouldLog)
+                return;
+            Write(source, DateTime.UtcNow, level, ref message);
         }
         
 
-        public static void Log(string source, string message) {
-            Instance.Write(source, Environment.TickCount, message);
+        public static void Log(string source, LogLevel level, string message) {
+            var instance = Instance;
+            if (!instance.ShouldLog)
+                return;
+            instance.Write(source, DateTime.UtcNow, level, message);
         }
-        public static void Log(string source, ref DebugLogInterpolatedStringHandler message) {
-            Instance.Write(source, Environment.TickCount, ref message);
+        public static void Log(string source, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
+            var instance = Instance;
+            if (!message.enabled || !instance.ShouldLog)
+                return;
+            instance.Write(source, DateTime.UtcNow, level, ref message);
         }
         #endregion
 
@@ -219,6 +232,8 @@ namespace MonoMod {
             }
         }
 
+
+
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "They need to stay alive for the life of the application.")]
         private static void TryInitializeLogToFile(string file, string[]? sourceFilter) {
@@ -237,19 +252,19 @@ namespace MonoMod {
                         AutoFlush = true
                     };
                 }
-                OnLog += (source, time, msg) => {
+                OnLog += (source, time, level, msg) => {
                     if (sourceFilter is not null) {
                         var idx = sourceFilter.AsSpan().BinarySearch(source, comparer);
                         if (idx < 0) // we didn't find the source in the filter list
                             return;
                     }
 
-                    var realTime = Helpers.ConvertTickToDateTime(time);
-                    writer.WriteLine($"[{source}]({realTime}) {msg}");
+                    var realTime = time.ToLocalTime();
+                    writer.WriteLine($"[{source}]({realTime}) {level.FastToString()} {msg}");
                     writer.Flush();
                 };
             } catch (Exception e) {
-                Instance.LogCore("DebugLog", $"Exception while trying to initialize writing logs to a file: {e}");
+                Instance.LogCore("DebugLog", LogLevel.Error, $"Exception while trying to initialize writing logs to a file: {e}");
             }
         }
 

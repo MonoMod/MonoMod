@@ -161,7 +161,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             }
 
             // something funky is going on if we make it here
-            MMDbgLog.Log($"Could not compile DynamicMethod using BCL reflection (_CompileMethod first arg: {RtH_CM_FirstArg})");
+            MMDbgLog.Error($"Could not compile DynamicMethod using BCL reflection (_CompileMethod first arg: {RtH_CM_FirstArg})");
             return false;
         }
 
@@ -267,10 +267,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 try {
                     OnMethodCompiled?.Invoke(methodHandle, method, methodBodyStart, methodBodySize);
                 } catch (Exception e) {
-                    MMDbgLog.Log($"Error executing OnMethodCompiled event: {e}");
+                    MMDbgLog.Error($"Error executing OnMethodCompiled event: {e}");
                 }
             } catch (Exception e) {
-                MMDbgLog.Log($"Error in OnMethodCompiledCore: {e}");
+                MMDbgLog.Error($"Error in OnMethodCompiledCore: {e}");
             }
         }
     }

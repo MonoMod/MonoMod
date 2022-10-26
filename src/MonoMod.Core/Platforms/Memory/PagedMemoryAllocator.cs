@@ -319,7 +319,7 @@ namespace MonoMod.Core.Platforms.Memory {
                 // now we can actually free the associated memory
                 if (!TryFreePage(page, out var error)) {
                     // free failed; log the error and move on
-                    MMDbgLog.Log($"Could not deallocate page! {error}");
+                    MMDbgLog.Error($"Could not deallocate page! {error}");
                 }
             }
 

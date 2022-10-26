@@ -99,7 +99,7 @@ namespace MonoMod.Utils {
                 os = OSKind.Wine;
             }
 
-            MMDbgLog.Log($"Platform info: {os} {arch}");
+            MMDbgLog.Info($"Platform info: {os} {arch}");
             return (os, arch);
         }
 
@@ -139,7 +139,7 @@ namespace MonoMod.Utils {
                         if (PosixUname(os, bufPtr) < 0) {
                             // uh-oh, uname failed. Log the error if we can  get it and return normally.
                             var msg = new Win32Exception(Marshal.GetLastWin32Error()).Message;
-                            MMDbgLog.Log($"uname() syscall failed! {msg}");
+                            MMDbgLog.Error($"uname() syscall failed! {msg}");
                             return;
                         }
                     }
@@ -166,7 +166,7 @@ namespace MonoMod.Utils {
                 // and here we find the machine field
                 var machineName = GetCString(buffer, out _).ToUpperInvariant();
 
-                MMDbgLog.Log($"uname() call returned {kernelName} {machineName}");
+                MMDbgLog.Trace($"uname() call returned {kernelName} {machineName}");
 
                 // now we want to inspect the fields and select something useful from them
                 if (kernelName.Contains("LINUX", StringComparison.Ordinal)) { // A Linux kernel
@@ -194,10 +194,9 @@ namespace MonoMod.Utils {
                 }
                 // TODO: fill in other values for machine
 
-                MMDbgLog.Log($"uname() detected architecture info: {os} {arch}");
+                MMDbgLog.Trace($"uname() detected architecture info: {os} {arch}");
             } catch (Exception e) {
-                MMDbgLog.Log($"Error trying to detect info on POSIX-like system");
-                MMDbgLog.Log(e.ToString());
+                MMDbgLog.Error($"Error trying to detect info on POSIX-like system {e}");
                 return;
             }
         }
@@ -305,10 +304,10 @@ namespace MonoMod.Utils {
                 runtime = RuntimeKind.Framework;
             }
 
-            MMDbgLog.Log($"IsMono: {isMono}, IsCoreBcl: {isCoreBcl}");
+            MMDbgLog.Trace($"IsMono: {isMono}, IsCoreBcl: {isCoreBcl}");
 
             var sysVer = Environment.Version;
-            MMDbgLog.Log($"Returned system version: {sysVer}");
+            MMDbgLog.Trace($"Returned system version: {sysVer}");
 
             // RuntimeInformation is present in FX 4.7.1+ and all netstandard and Core releases, however its location varies
             // In FX, it is in mscorlib
@@ -318,7 +317,7 @@ namespace MonoMod.Utils {
 
             // FrameworkDescription is a string which (is supposed to) describe the runtime
             var fxDesc = (string?) rti?.GetProperty("FrameworkDescription")?.GetValue(null, null);
-            MMDbgLog.Log($"FrameworkDescription: {fxDesc??"(null)"}");
+            MMDbgLog.Trace($"FrameworkDescription: {fxDesc??"(null)"}");
 
             if (fxDesc is not null) {
                 // Example values:
@@ -361,8 +360,7 @@ namespace MonoMod.Utils {
                 try {
                     version = new Version(versionString);
                 } catch (Exception e) {
-                    MMDbgLog.Log($"Invalid version string pulled from FrameworkDescription ('{fxDesc}')");
-                    MMDbgLog.Log(e.ToString());
+                    MMDbgLog.Error($"Invalid version string pulled from FrameworkDescription ('{fxDesc}') {e}");
                 }
 
                 // TODO: map .NET Core 2.1 version to something saner
@@ -374,7 +372,7 @@ namespace MonoMod.Utils {
 
             // TODO: map strange (read: Framework) versions correctly
 
-            MMDbgLog.Log($"Detected runtime: {runtime} {version?.ToString()??"(null)"}");
+            MMDbgLog.Info($"Detected runtime: {runtime} {version?.ToString()??"(null)"}");
 
             return (runtime, version ?? new Version(0, 0));
         }

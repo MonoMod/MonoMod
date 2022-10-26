@@ -49,10 +49,10 @@ namespace MonoMod.Utils {
             var name = dmd.Name ?? $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>";
             Type retType = (orig as MethodInfo)?.ReturnType ?? def.ReturnType.ResolveReflection();
 
-            MMDbgLog.Log($"new DynamicMethod: {retType} {name}({string.Join(",", argTypes.Select(type => type?.ToString()).ToArray())})");
+            MMDbgLog.Trace($"new DynamicMethod: {retType} {name}({string.Join(",", argTypes.Select(type => type?.ToString()).ToArray())})");
             if (orig != null)
-                MMDbgLog.Log($"orig: {(orig as MethodInfo)?.ReturnType?.ToString() ?? "NULL"} {orig.Name}({string.Join(",", orig.GetParameters().Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
-            MMDbgLog.Log($"mdef: {def.ReturnType?.ToString() ?? "NULL"} {name}({string.Join(",", def.Parameters.Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
+                MMDbgLog.Trace($"orig: {(orig as MethodInfo)?.ReturnType?.ToString() ?? "NULL"} {orig.Name}({string.Join(",", orig.GetParameters().Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
+            MMDbgLog.Trace($"mdef: {def.ReturnType?.ToString() ?? "NULL"} {name}({string.Join(",", def.Parameters.Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
 
             var dm = new DynamicMethod(
                 name,

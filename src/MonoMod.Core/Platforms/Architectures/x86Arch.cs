@@ -96,7 +96,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                 return rel32Info;
 
             if (maxSizeHint < Abs32Kind.Instance.Size) {
-                MMDbgLog.Log($"Size too small for all known detour kinds; defaulting to Abs32. provided size: {maxSizeHint}");
+                MMDbgLog.Warning($"Size too small for all known detour kinds; defaulting to Abs32. provided size: {maxSizeHint}");
             }
 
             return new(from, to, Abs32Kind.Instance, null);

@@ -22,7 +22,7 @@ namespace MonoMod.Core.Platforms {
             Helpers.ThrowIfArgumentNull(request.Target);
 
             if (!triple.TryDisableInlining(request.Source))
-                MMDbgLog.Log($"Could not disable inlining of method {request.Source.GetID()}; detours may not be reliable");
+                MMDbgLog.Warning($"Could not disable inlining of method {request.Source.GetID()}; detours may not be reliable");
 
             var detour = new Detour(triple, request.Source, request.Target);
             if (request.ApplyByDefault) {
@@ -184,7 +184,7 @@ namespace MonoMod.Core.Platforms {
                         goto Retry;
                     related.RelatedDetours.Add(cmh);
                     if (related.RelatedDetours.Count > 2) {
-                        MMDbgLog.Log($"WARNING: More than 2 related detours for method {m}! This means that the method has been detoured twice. Detour cleanup will fail.");
+                        MMDbgLog.Warning($"More than 2 related detours for method {m}! This means that the method has been detoured twice. Detour cleanup will fail.");
                     }
                 }
             }
@@ -200,7 +200,7 @@ namespace MonoMod.Core.Platforms {
                         }
                     }
                 } else {
-                    MMDbgLog.Log($"WARNING: Attempted to remove a related detour from a method which has no RelatedDetourBag");
+                    MMDbgLog.Warning($"Attempted to remove a related detour from method {m} which has no RelatedDetourBag");
                 }
             }
 

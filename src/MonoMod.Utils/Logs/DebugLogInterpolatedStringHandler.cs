@@ -4,7 +4,7 @@ using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod {
+namespace MonoMod.Logs {
     [InterpolatedStringHandler]
     public ref struct DebugLogInterpolatedStringHandler {
 
@@ -26,7 +26,7 @@ namespace MonoMod {
 
         private int holePos;
 
-        private Memory<DebugLog.MessageHole> holes;
+        private Memory<MessageHole> holes;
 
         internal readonly bool enabled;
 
@@ -39,7 +39,7 @@ namespace MonoMod {
                 _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
                 _pos = 0;
                 if (log.recordHoles) {
-                    holes = new DebugLog.MessageHole[formattedCount];
+                    holes = new MessageHole[formattedCount];
                 } else {
                     holes = default;
                 }
@@ -65,7 +65,7 @@ namespace MonoMod {
             return result;
         }
 
-        internal string ToStringAndClear(out ReadOnlyMemory<DebugLog.MessageHole> holes) {
+        internal string ToStringAndClear(out ReadOnlyMemory<MessageHole> holes) {
             holes = this.holes;
             return ToStringAndClear();
         }
@@ -131,7 +131,7 @@ namespace MonoMod {
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void EndHole<T>(in T obj, bool reprd) {
             if (!holes.IsEmpty) {
-                holes.Span[holePos++] = reprd ? new DebugLog.MessageHole(holeBegin, _pos, obj) : new(holeBegin, _pos);
+                holes.Span[holePos++] = reprd ? new MessageHole(holeBegin, _pos, obj) : new(holeBegin, _pos);
             }
         }
 

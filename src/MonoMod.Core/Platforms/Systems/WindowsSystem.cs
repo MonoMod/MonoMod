@@ -120,8 +120,8 @@ namespace MonoMod.Core.Platforms.Systems {
             if (!MMDbgLog.IsWritingLog)
                 return ex;
 
-            MMDbgLog.Log($"{from} failed for 0x{src:X16} + {size} - logging all memory sections");
-            MMDbgLog.Log($"reason: {ex.Message}");
+            MMDbgLog.Error($"{from} failed for 0x{src:X16} + {size} - logging all memory sections");
+            MMDbgLog.Error($"reason: {ex.Message}");
 
             try {
                 var addr = (IntPtr) 0x00000000000010000;
@@ -136,22 +136,22 @@ namespace MonoMod.Core.Platforms.Systems {
                     var infoR = infoL + infoBasic.RegionSize;
                     var overlap = infoL <= srcR && srcL <= infoR;
 
-                    MMDbgLog.Log($"{(overlap ? "*" : "-")} #{i++}");
-                    MMDbgLog.Log($"addr: 0x{infoBasic.BaseAddress:X16}");
-                    MMDbgLog.Log($"size: 0x{infoBasic.RegionSize:X16}");
-                    MMDbgLog.Log($"aaddr: 0x{infoBasic.AllocationBase:X16}");
-                    MMDbgLog.Log($"state: {infoBasic.State}");
-                    MMDbgLog.Log($"type: {infoBasic.Type}");
-                    MMDbgLog.Log($"protect: {infoBasic.Protect}");
-                    MMDbgLog.Log($"aprotect: {infoBasic.AllocationProtect}");
+                    MMDbgLog.Trace($"{(overlap ? "*" : "-")} #{i++}");
+                    MMDbgLog.Trace($"addr: 0x{infoBasic.BaseAddress:X16}");
+                    MMDbgLog.Trace($"size: 0x{infoBasic.RegionSize:X16}");
+                    MMDbgLog.Trace($"aaddr: 0x{infoBasic.AllocationBase:X16}");
+                    MMDbgLog.Trace($"state: {infoBasic.State}");
+                    MMDbgLog.Trace($"type: {infoBasic.Type}");
+                    MMDbgLog.Trace($"protect: {infoBasic.Protect}");
+                    MMDbgLog.Trace($"aprotect: {infoBasic.AllocationProtect}");
 
                     try {
                         IntPtr addrPrev = addr;
                         addr = unchecked((IntPtr) ((ulong) infoBasic.BaseAddress + (ulong) infoBasic.RegionSize));
                         if ((ulong) addr <= (ulong) addrPrev)
                             break;
-                    } catch (OverflowException) {
-                        MMDbgLog.Log("overflow");
+                    } catch (OverflowException oe) {
+                        MMDbgLog.Error($"overflow {oe}");
                         break;
                     }
                 }

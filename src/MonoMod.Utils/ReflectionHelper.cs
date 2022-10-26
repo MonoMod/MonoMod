@@ -27,7 +27,7 @@ namespace MonoMod.Utils {
 
         private static MemberInfo _Cache(string cacheKey, MemberInfo value) {
             if (cacheKey != null && value == null) {
-                MMDbgLog.Log($"ResolveRefl failure: {cacheKey}");
+                MMDbgLog.Error($"ResolveRefl failure: {cacheKey}");
             }
             if (cacheKey != null && value != null) {
                 lock (ResolveReflectionCache) {

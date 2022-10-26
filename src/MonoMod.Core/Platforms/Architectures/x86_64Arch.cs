@@ -249,7 +249,7 @@ namespace MonoMod.Core.Platforms.Architectures {
             // TODO: more, smaller detours
 
             if (sizeHint < Abs64Kind.Instance.Size) {
-                MMDbgLog.Log($"Size too small for all known detour kinds; defaulting to Abs64. provided size: {sizeHint}");
+                MMDbgLog.Warning($"Size too small for all known detour kinds; defaulting to Abs64. provided size: {sizeHint}");
             }
             return new(from, to, Abs64Kind.Instance, null);
         }
