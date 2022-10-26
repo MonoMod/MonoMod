@@ -1,6 +1,7 @@
 ﻿using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
@@ -230,9 +231,11 @@ namespace MonoMod.Logs {
             if (diskLogFile is not null) {
                 TryInitializeLogToFile(diskLogFile, diskSourceFilter);
             }
+
+            if (Debugger.IsAttached) {
+                AttachDebuggerLogSink();
+            }
         }
-
-
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "They need to stay alive for the life of the application.")]
@@ -269,6 +272,13 @@ namespace MonoMod.Logs {
             } catch (Exception e) {
                 Instance.LogCore("DebugLog", LogLevel.Error, $"Exception while trying to initialize writing logs to a file: {e}");
             }
+        }
+
+        private static void AttachDebuggerLogSink() {
+            OnLog += static (source, time, level, msg) => {
+                var realTime = time.ToLocalTime();
+                Debugger.Log((int) level, source, $"[{source}] {level.FastToString()}: {msg}\n"); // the VS output window doesn't automatically add a newline
+            };
         }
 
         #region Message Events
