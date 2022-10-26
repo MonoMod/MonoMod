@@ -98,6 +98,8 @@ namespace MonoMod.Core.Platforms {
                         if (IsApplying)
                             return;
 
+                        MMDbgLog.Trace($"Updating detour from {src} to {target} (recompiled {method} to {codeStart:x16})");
+
                         try {
                             IsApplying = true;
 
@@ -247,6 +249,8 @@ namespace MonoMod.Core.Platforms {
                         detourBox.IsApplying = true;
                         detourBox.IsApplied = true;
 
+                        MMDbgLog.Trace($"Applying managed detour from {Source} to {realTarget}");
+
                         srcPin = triple.PinMethodIfNeeded(Source);
                         dstPin = triple.PinMethodIfNeeded(realTarget);
 
@@ -270,6 +274,9 @@ namespace MonoMod.Core.Platforms {
                         throw new InvalidOperationException("Cannot undo a detour which is not applied");
                     try {
                         detourBox.IsApplying = true;
+
+                        MMDbgLog.Trace($"Undoing managed detour from {Source} to {realTarget}");
+
                         UndoCore(out SimpleNativeDetour? oldDetour);
                         // we want to do this in-lock to make sure that it gets cleaned up properly
                         oldDetour?.Dispose();

@@ -74,6 +74,8 @@ namespace MonoMod.RuntimeDetour {
             Config = config;
             this.factory = factory;
 
+            MMDbgLog.Trace($"Creating ILHook for {Method}");
+
             state = DetourManager.GetDetourState(method);
             hook = new(this);
 
@@ -100,6 +102,7 @@ namespace MonoMod.RuntimeDetour {
                 state.detourLock.Enter(ref lockTaken);
                 if (IsApplied)
                     return;
+                MMDbgLog.Trace($"Applying ILHook for {Method}");
                 state.AddILHook(hook, !lockTaken);
             } finally {
                 if (lockTaken)
@@ -115,6 +118,7 @@ namespace MonoMod.RuntimeDetour {
                 state.detourLock.Enter(ref lockTaken);
                 if (!IsApplied)
                     return;
+                MMDbgLog.Trace($"Undoing ILHook for {Method}");
                 state.RemoveILHook(hook, !lockTaken);
             } finally {
                 if (lockTaken)

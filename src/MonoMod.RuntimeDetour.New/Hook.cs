@@ -182,8 +182,9 @@ namespace MonoMod.RuntimeDetour {
             Source = PlatformTriple.Current.GetIdentifiable(source);
             Target = target;
 
-
             realTarget = PrepareRealTarget(targetObject, out trampoline, out delegateObjectScope);
+
+            MMDbgLog.Trace($"Creating Hook from {Source} to {Target}");
 
             state = DetourManager.GetDetourState(source);
             detour = new(this);
@@ -318,6 +319,7 @@ namespace MonoMod.RuntimeDetour {
                 state.detourLock.Enter(ref lockTaken);
                 if (IsApplied)
                     return;
+                MMDbgLog.Trace($"Applying Hook from {Source} to {Target}");
                 state.AddDetour(detour, !lockTaken);
             } finally {
                 if (lockTaken)
@@ -333,6 +335,7 @@ namespace MonoMod.RuntimeDetour {
                 state.detourLock.Enter(ref lockTaken);
                 if (!IsApplied)
                     return;
+                MMDbgLog.Trace($"Undoing Hook from {Source} to {Target}");
                 state.RemoveDetour(detour, !lockTaken);
             } finally {
                 if (lockTaken)
