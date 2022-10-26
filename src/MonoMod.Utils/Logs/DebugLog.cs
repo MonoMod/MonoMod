@@ -247,7 +247,7 @@ namespace MonoMod.Logs {
                 if (file == "-") {
                     writer = Console.Out;
                 } else {
-                    var fs = new FileStream(file, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
+                    var fs = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Write);
                     writer = new StreamWriter(fs, Encoding.UTF8) {
                         AutoFlush = true
                     };
