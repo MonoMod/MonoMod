@@ -14,9 +14,10 @@ using System.Diagnostics;
 using System.Linq;
 using Mono.Cecil;
 using MonoMod.Core.Platforms;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public class DynamicMethodDefinitionTest {
+    public class DynamicMethodDefinitionTest : TestBase {
         [Fact]
         public void TestDMD() {
             Counter = 0;
@@ -140,6 +141,9 @@ namespace MonoMod.UnitTest {
         public const string StringPatched = "Hello from DynamicMethodDefinition!";
 
         public static volatile int Counter;
+
+        public DynamicMethodDefinitionTest(ITestOutputHelper helper) : base(helper) {
+        }
 
         public static Tuple<string, int> ExampleMethod(int i) {
             if (i == 1337)

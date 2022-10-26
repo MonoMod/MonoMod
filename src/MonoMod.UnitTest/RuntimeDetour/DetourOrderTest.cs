@@ -9,10 +9,14 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DetourOrderTest {
+    public class DetourOrderTest : TestBase {
+        public DetourOrderTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestDetoursOrder() {
             // The following use cases are not meant to be usage examples.

@@ -13,6 +13,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Globalization;
 using System.Collections.Generic;
+using Xunit.Abstractions;
 #if NETFRAMEWORK
 using System.Data.SqlClient;
 using MonoMod.Utils;
@@ -20,7 +21,10 @@ using MonoMod.Utils;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public unsafe class DetourExtTest {
+    public unsafe class DetourExtTest : TestBase {
+        public DetourExtTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestDetoursExt() {
             lock (TestObject.Lock) {

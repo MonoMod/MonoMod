@@ -7,11 +7,15 @@ using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DetourEmptyTest {
+    public class DetourEmptyTest : TestBase {
         private bool DidNothing = true;
+
+        public DetourEmptyTest(ITestOutputHelper helper) : base(helper) {
+        }
 
         [Fact]
         public void TestDetoursEmpty() {

@@ -1,9 +1,13 @@
 ﻿using Xunit;
 using MonoMod.ModInterop;
 using System;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public class ModInteropTest {
+    public class ModInteropTest : TestBase {
+        public ModInteropTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestModInterop() {
             typeof(UtilsC).ModInterop();

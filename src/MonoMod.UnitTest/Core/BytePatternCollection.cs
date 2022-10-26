@@ -2,9 +2,13 @@
 using MonoMod.Core.Utils;
 using System;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest.Core {
-    public class BytePatternCollectionTests {
+    public class BytePatternCollectionTests : TestBase {
+        public BytePatternCollectionTests(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestBytePattern() {
 

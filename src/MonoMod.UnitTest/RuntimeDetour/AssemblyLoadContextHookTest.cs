@@ -10,15 +10,19 @@ using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.Loader;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class AssemblyLoadContextHookTest {
+    public class AssemblyLoadContextHookTest : TestBase {
 
         public static bool IsNonALC;
         public static object LastLoader;
         public static int LastID1 = -1;
         public static int LastID2 = -1;
+
+        public AssemblyLoadContextHookTest(ITestOutputHelper helper) : base(helper) {
+        }
 
         [Fact]
         public void TestAssemblyLoadContextHook() {

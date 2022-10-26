@@ -11,9 +11,13 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public class MultiHookUnitTestAutomaticRegistration {
+    public class MultiHookUnitTestAutomaticRegistration : TestBase {
+        public MultiHookUnitTestAutomaticRegistration(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Collection("RuntimeDetour")]
         public class OnIL {
             Hook h1;

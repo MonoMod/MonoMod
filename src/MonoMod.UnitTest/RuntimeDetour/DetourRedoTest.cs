@@ -13,10 +13,14 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DetourRedoTest {
+    public class DetourRedoTest : TestBase {
+        public DetourRedoTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact(Skip = "Not reimplemented for new RuntimeDetour")]
         public void TestDetoursRedo() {
             lock (TestObject.Lock) {

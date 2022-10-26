@@ -11,11 +11,15 @@ using System.Runtime.CompilerServices;
 using MonoMod.Utils;
 using System.Reflection.Emit;
 using System.Text;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DisableInliningTest {
+    public class DisableInliningTest : TestBase {
         private bool DidNothing = true;
+
+        public DisableInliningTest(ITestOutputHelper helper) : base(helper) {
+        }
 
 #if DEBUG
 #pragma warning disable xUnit1004 // Test methods should not be skipped

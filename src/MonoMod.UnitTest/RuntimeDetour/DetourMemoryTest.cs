@@ -8,10 +8,14 @@ using New::MonoMod.RuntimeDetour;
 using System;
 using MonoMod.Utils;
 using System.Collections.Generic;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DetourMemoryTest {
+    public class DetourMemoryTest : TestBase {
+        public DetourMemoryTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestDetourMemory() {
             if (PlatformDetection.Runtime is RuntimeKind.Mono) {

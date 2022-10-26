@@ -9,9 +9,10 @@ using System.Runtime.CompilerServices;
 using MonoMod.Cil;
 using Xunit;
 using Mono.Cecil.Cil;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public class ManualMultiHookTest {
+    public class ManualMultiHookTest : TestBase {
         Hook h1;
         Hook h2;
         ILHook hIL;
@@ -19,6 +20,9 @@ namespace MonoMod.UnitTest {
         private bool h1Run;
         private bool h2Run;
         private bool hILRun;
+
+        public ManualMultiHookTest(ITestOutputHelper helper) : base(helper) {
+        }
 
         private void Setup() {
             h1 = new Hook(

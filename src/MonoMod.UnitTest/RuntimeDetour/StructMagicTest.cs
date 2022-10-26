@@ -7,14 +7,18 @@ using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public unsafe class StructMagicTest {
+    public unsafe class StructMagicTest : TestBase {
 
         public static bool IsHook;
 
         public static StructMagicTest GetStructInstance;
         public int GetStructCounter;
+
+        public StructMagicTest(ITestOutputHelper helper) : base(helper) {
+        }
 
         [Fact]
         public void TestPtrRefMagic() {

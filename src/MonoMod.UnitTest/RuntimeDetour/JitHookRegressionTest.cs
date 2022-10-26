@@ -9,12 +9,16 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MC = Mono.Cecil;
 using MonoMod.Core.Platforms;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class JitHookRegressionTest {
+    public class JitHookRegressionTest : TestBase {
 
         static int ID;
+
+        public JitHookRegressionTest(ITestOutputHelper helper) : base(helper) {
+        }
 
         // At the time of writing, this should only affect .NET Core, but let's test almost all runtimes.
         [Fact]

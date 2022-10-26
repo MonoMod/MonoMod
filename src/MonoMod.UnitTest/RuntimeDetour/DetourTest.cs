@@ -8,10 +8,14 @@ using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class DetourTest {
+    public class DetourTest : TestBase {
+        public DetourTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestDetours() {
             lock (TestObject.Lock) {

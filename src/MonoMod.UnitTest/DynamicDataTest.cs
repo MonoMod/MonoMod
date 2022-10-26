@@ -6,9 +6,13 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public class DynamicDataTest {
+    public class DynamicDataTest : TestBase {
+        public DynamicDataTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestDynamicData() {
             Dummy dummy = new Dummy();

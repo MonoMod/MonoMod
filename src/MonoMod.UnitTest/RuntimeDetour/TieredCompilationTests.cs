@@ -13,9 +13,12 @@ using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public class TieredCompilationTests {
+    public class TieredCompilationTests : TestBase {
 
         private static bool TargetHit = false;
+
+        public TieredCompilationTests(ITestOutputHelper helper) : base(helper) {
+        }
 
         //
         // So, it turns out that methods are only eligible for recompilation if they are not in an assembly

@@ -3,9 +3,13 @@ using MonoMod.Utils;
 using System;
 using System.Reflection;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
-    public class FieldOrderTest {
+    public class FieldOrderTest : TestBase {
+        public FieldOrderTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         [Fact]
         public void TestFieldOrder() {
             // We could hardcode the field metadata tokens but ehhh, compilers.

@@ -9,11 +9,15 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
-    public class ILHookTest {
+    public class ILHookTest : TestBase {
         private bool DidNothing = true;
+
+        public ILHookTest(ITestOutputHelper helper) : base(helper) {
+        }
 
         [Fact]
         public void TestILHooks() {

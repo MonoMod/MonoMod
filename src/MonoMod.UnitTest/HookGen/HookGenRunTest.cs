@@ -10,10 +10,14 @@ using Mono.Cecil;
 using System.IO;
 using MonoMod.RuntimeDetour.HookGen;
 using System.Collections.Generic;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("HookGen")]
-    public class HookGenRunTest {
+    public class HookGenRunTest : TestBase {
+        public HookGenRunTest(ITestOutputHelper helper) : base(helper) {
+        }
+
         // TODO: re-enable when HookGen uses new RuntimeDetour
         [Fact(Skip = "HookGen still uses old RuntimeDetour")]
         public void TestHookGenRun() {
