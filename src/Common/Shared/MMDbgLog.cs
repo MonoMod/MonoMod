@@ -1,12 +1,17 @@
 ﻿#nullable enable
 using MonoMod.Logs;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 // This class is included in every MonoMod assembly.
 namespace MonoMod {
     internal static class MMDbgLog {
         public static bool IsWritingLog => DebugLog.IsWritingLog;
 
-        static MMDbgLog() {
+        [ModuleInitializer]
+        [SuppressMessage("Usage", "CA2255:The 'ModuleInitializer' attribute should not be used in libraries",
+            Justification = "We want to send a log message as early as possible to keep the log messages together")]
+        internal static void LogVersion() {
             Info($"Version {AssemblyInfo.AssemblyVersion}");
         }
 
