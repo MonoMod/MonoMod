@@ -128,10 +128,14 @@ namespace MonoMod.Logs {
         internal void LogCore(string source, LogLevel level, string message) {
             if (!ShouldLog)
                 return;
+            if ((globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
+                return;
             Write(source, DateTime.UtcNow, level, message);
         }
         internal void LogCore(string source, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
             if (!message.enabled || !ShouldLog)
+                return;
+            if ((globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
                 return;
             Write(source, DateTime.UtcNow, level, ref message);
         }
@@ -141,11 +145,15 @@ namespace MonoMod.Logs {
             var instance = Instance;
             if (!instance.ShouldLog)
                 return;
+            if ((instance.globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
+                return;
             instance.Write(source, DateTime.UtcNow, level, message);
         }
         public static void Log(string source, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
             var instance = Instance;
             if (!message.enabled || !instance.ShouldLog)
+                return;
+            if ((instance.globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
                 return;
             instance.Write(source, DateTime.UtcNow, level, ref message);
         }
@@ -199,6 +207,8 @@ namespace MonoMod.Logs {
 
         private readonly ConcurrentQueue<LogMessage>? replayQueue;
 
+        private LogLevelFilter globalFilter = LogLevelFilter.DefaultFilter;
+
         private void PostMessage(LogMessage message) {
             if (onLogSimple is { } simple)
                 message.ReportTo(simple);
@@ -217,6 +227,9 @@ namespace MonoMod.Logs {
         private DebugLog() {
             recordHoles = GetBoolEnvVar("MMLOG_RECORD_HOLES") ?? false;
             replayQueueLength = GetNumericEnvVar("MMLOG_REPLAY_QUEUE_LENGTH") ?? 0;
+            var showSpamLogs = GetBoolEnvVar("MMLOG_SPAM") ?? false;
+            if (showSpamLogs)
+                globalFilter |= LogLevelFilter.Spam;
 
             if (replayQueueLength > 0) {
                 replayQueue = new();

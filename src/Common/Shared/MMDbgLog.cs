@@ -22,6 +22,9 @@ namespace MonoMod {
             DebugLog.Log(AssemblyInfo.AssemblyName, level, ref message);
         }
 
+        public static void Spam(string message) => Log(LogLevel.Spam, message);
+        public static void Spam(ref DebugLogInterpolatedStringHandler message) => Log(LogLevel.Spam, ref message);
+
         public static void Trace(string message) => Log(LogLevel.Trace, message);
         public static void Trace(ref DebugLogInterpolatedStringHandler message) => Log(LogLevel.Trace, ref message);
 
