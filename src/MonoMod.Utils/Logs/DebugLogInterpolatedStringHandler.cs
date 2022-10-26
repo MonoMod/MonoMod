@@ -33,11 +33,10 @@ namespace MonoMod.Logs {
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount) {
             var log = DebugLog.Instance;
-            holeBegin = holePos = 0;
+            _pos = holeBegin = holePos = 0;
             if (log.ShouldLog) {
                 enabled = true;
                 _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
-                _pos = 0;
                 if (log.recordHoles) {
                     holes = new MessageHole[formattedCount];
                 } else {
@@ -46,7 +45,6 @@ namespace MonoMod.Logs {
             } else {
                 enabled = false;
                 _chars = _arrayToReturnToPool = null;
-                _pos = 0;
                 holes = default;
             }
         }

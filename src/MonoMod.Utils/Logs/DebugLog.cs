@@ -178,7 +178,7 @@ namespace MonoMod.Logs {
             if (str.Equals("yes", StringComparison.OrdinalIgnoreCase) || str.Equals("y", StringComparison.OrdinalIgnoreCase))
                 return true;
             if (str.Equals("no", StringComparison.OrdinalIgnoreCase) || str.Equals("n", StringComparison.OrdinalIgnoreCase))
-                return true;
+                return false;
             return null;
         }
 
@@ -242,13 +242,13 @@ namespace MonoMod.Logs {
                 if (sourceFilter is not null)
                     Array.Sort(sourceFilter, comparer);
 
+                object sync = new();
                 TextWriter writer;
                 if (file == "-") {
                     writer = Console.Out;
                 } else {
                     var fs = new FileStream(file, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write);
-                    var sync = Stream.Synchronized(fs);
-                    writer = new StreamWriter(sync, Encoding.UTF8) {
+                    writer = new StreamWriter(fs, Encoding.UTF8) {
                         AutoFlush = true
                     };
                 }
@@ -260,8 +260,11 @@ namespace MonoMod.Logs {
                     }
 
                     var realTime = time.ToLocalTime();
-                    writer.WriteLine($"[{source}]({realTime}) {level.FastToString()} {msg}");
-                    writer.Flush();
+                    var outMsg = $"[{source}]({realTime}) {level.FastToString()}: {msg}";
+                    // if we don't do this, on .NET 6, we'll sometimes get a corrupt buffer out
+                    lock (sync) {
+                        writer.WriteLine(outMsg);
+                    }
                 };
             } catch (Exception e) {
                 Instance.LogCore("DebugLog", LogLevel.Error, $"Exception while trying to initialize writing logs to a file: {e}");
