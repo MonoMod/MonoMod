@@ -135,6 +135,40 @@ namespace MonoMod.Core.Platforms.Architectures {
                         // int 3
                         0xcc),
 
+                    // .NET 7 FixupPrecode main entry point (0x1000 page size)
+                    new(new(AddressKind.Rel32 | AddressKind.Indirect, 6), mustMatchAtStart: true,
+                        new byte[] { // mask
+                            0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                        },
+                        new byte[] { // pattern
+                            // we know the address will always be 0xfa, 0x0f, 0x00, 0x00, but it's not easy to make the matcher enforce that, so we just won't
+                            0xff, 0x25, Bd, Bd, Bd, Bd, // jmp [rip + 0xffa] -> real method body (or if the method hasn't been compiled yet, the next instruction)
+                            0x4c, 0x8b, 0x15, 0xfb, 0x0f, 0x00, 0x00, // mov r10, [rip + 0xffb] -> MethodDesc*
+                            0xff, 0x25, 0xfd, 0x0f, 0x00, 0x00, // jmp [rip + 0xffd] ; -> PrecodeFixupThunk
+                            // padding to fit 24 bytes
+                            //0x90, 0x66, 0x66, 0x66, 0x66 // I'm not actually sure if it's safe to match this padding, so I'm not going to
+                        }),
+                    
+                    // These two patterns represent the same CLR datastructure, just at different entry points.
+
+                    // .NET 7 FixupPrecode ThePreStub entry point (0x1000 page size)
+                    new(new(AddressKind.PrecodeFixupThunkRel32 | AddressKind.Indirect, 13), mustMatchAtStart: true,
+                        new byte[] { // mask
+                            //0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                            0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                        },
+                        new byte[] { // pattern
+                            // jmp [rip + 0xffa] -> real method body (or if the method hasn't been compiled yet, the next instruction)
+                            0x4c, 0x8b, 0x15, 0xfb, 0x0f, 0x00, 0x00, // mov r10, [rip + 0xffb] -> MethodDesc*
+                            // we know the address will always be 0xfd, 0x0f, 0x00, 0x00, but it's not easy to make the matcher enforce that, so we just won't
+                            0xff, 0x25, Bd, Bd, Bd, Bd, // jmp [rip + 0xffd] ; -> PrecodeFixupThunk
+                            // padding to fit 24 bytes
+                            //0x90, 0x66, 0x66, 0x66, 0x66 // I'm not actually sure if it's safe to match this padding, so I'm not going to
+                        }),
+
                     null
                 );
             } else {

@@ -145,13 +145,13 @@ namespace MonoMod.Core.Utils {
                     segmentLength++;
                 }
 
-                if (thisSegmentKind == SegmentKind.Address)
+                if (thisSegmentKind is SegmentKind.Address)
                     addrLength++;
 
                 lastKind = thisSegmentKind;
             }
 
-            if (segmentCount > 0 && lastKind == SegmentKind.AnyRepeating) {
+            if (segmentCount > 0 && lastKind is SegmentKind.AnyRepeating) {
                 // if we ended with an AnyRepeating, we want to decrement segmentCount, as we want to ignore trailing AnyRepeating
                 segmentCount--;
             }
@@ -241,6 +241,7 @@ namespace MonoMod.Core.Utils {
                             
                             if (!pattern.SequenceEqual(data.Slice(pos, pattern.Length)))
                                 goto NoMatch; // the literal didn't match here, oopsie
+
                             // we successfully matched the literal, lets advance our position, and we're done here
                             pos += segment.Length;
                             break;
@@ -271,7 +272,7 @@ namespace MonoMod.Core.Utils {
                             if (data.Length - pos < segment.Length)
                                 goto NoMatch;
 
-                            ReadOnlySpan<byte> pattern = data.Slice(pos, Math.Min(segment.Length, addrBuf.Length));
+                            var pattern = data.Slice(pos, Math.Min(segment.Length, addrBuf.Length));
                             pattern.CopyTo(addrBuf);
                             addrBuf = addrBuf.Slice(Math.Min(addrBuf.Length, pattern.Length));
 
