@@ -71,13 +71,17 @@ namespace MonoMod.Logs {
             public void ReportTo(OnLogMessage del) {
                 try {
                     del(Source, Time, Level, FormattedMessage);
-                } catch { }
+                } catch {
+                    
+                }
             }
 
             public void ReportTo(OnLogMessageDetailed del) {
                 try {
                     del(Source, Time, Level, FormattedMessage, FormatHoles);
-                } catch { }
+                } catch {
+                    // TODO: Debugger.Log exception
+                }
             }
         }
 
@@ -110,6 +114,39 @@ namespace MonoMod.Logs {
             }
         }
 
+        public static bool IsWritingLog => Instance.ShouldLog;
+        internal bool ShouldLog
+            => replayQueue is not null
+            || Volatile.Read(ref onLogSimple) is not null
+            || Volatile.Read(ref onLogDetailed) is not null
+            || Debugger.IsAttached;
+
+        private void PostMessage(LogMessage message) {
+            // we do this log here because we want to always log to the debugger when its attached, instead of just if its attached at startup
+            if (Debugger.IsAttached) {
+                // Even though Debugger.Log won't do anything when no debugger is attached, it's still worth guarding it with a check of Debugger.IsAttached for a few reasons:
+                //  1. It avoids the allocation of the message string when it wouldn't be used
+                //  2. Debugger.Log is implemented as a QCall (on CoreCLR, and probably Framework) which pulls in all of the P/Invoke machinery, and necessitates a GC transition.
+                //     Debugger.IsAttached, on the other hand, is an FCall (MethodImplOptions.InternalCall) and likely elides the helper frames entirely, making it much faster.
+                Debugger.Log((int) message.Level, message.Source,
+                    $"[{message.Source}] {message.Level.FastToString()}: {message.FormattedMessage}\n"); // the VS output window doesn't automatically add a newline
+            }
+
+            if (onLogSimple is { } simple)
+                message.ReportTo(simple);
+            if (onLogDetailed is { } detailed)
+                message.ReportTo(detailed);
+
+            if (replayQueue is { } queue) {
+                // enqueue the message, then dequeue old messages until we're back below the replay length
+                queue.Enqueue(message);
+                while (queue.Count > replayQueueLength && queue.TryDequeue(out _)) { }
+            } else {
+                // we only reuse message objects if we're not recording a replay queue to avoid race conditions
+                ReturnMessage(message);
+            }
+        }
+
         #region Log functions
         public void Write(string source, DateTime time, LogLevel level, string message) {
             if (!ShouldLog) return;
@@ -124,7 +161,6 @@ namespace MonoMod.Logs {
             PostMessage(MakeMessage(source, time, level, formatted, holes));
         }
 
-        
         internal void LogCore(string source, LogLevel level, string message) {
             if (!ShouldLog)
                 return;
@@ -209,21 +245,6 @@ namespace MonoMod.Logs {
 
         private LogLevelFilter globalFilter = LogLevelFilter.DefaultFilter;
 
-        private void PostMessage(LogMessage message) {
-            if (onLogSimple is { } simple)
-                message.ReportTo(simple);
-            if (onLogDetailed is { } detailed)
-                message.ReportTo(detailed);
-            if (replayQueue is { } queue) {
-                // enqueue the message, then dequeue old messages until we're back below the replay length
-                queue.Enqueue(message);
-                while (queue.Count > replayQueueLength && queue.TryDequeue(out _)) { }
-            } else {
-                // we only reuse message objects if we're not recording a replay queue to avoid race conditions
-                ReturnMessage(message);
-            }
-        }
-
         private DebugLog() {
             recordHoles = GetBoolEnvVar("MMLOG_RECORD_HOLES") ?? false;
             replayQueueLength = GetNumericEnvVar("MMLOG_REPLAY_QUEUE_LENGTH") ?? 0;
@@ -243,10 +264,6 @@ namespace MonoMod.Logs {
 
             if (diskLogFile is not null) {
                 TryInitializeLogToFile(diskLogFile, diskSourceFilter);
-            }
-
-            if (Debugger.IsAttached) {
-                AttachDebuggerLogSink();
             }
         }
 
@@ -287,13 +304,6 @@ namespace MonoMod.Logs {
             }
         }
 
-        private static void AttachDebuggerLogSink() {
-            OnLog += static (source, time, level, msg) => {
-                var realTime = time.ToLocalTime();
-                Debugger.Log((int) level, source, $"[{source}] {level.FastToString()}: {msg}\n"); // the VS output window doesn't automatically add a newline
-            };
-        }
-
         #region Message Events
         private void MaybeReplayTo(OnLogMessage del) {
             if (replayQueue is null) {
@@ -317,9 +327,6 @@ namespace MonoMod.Logs {
                 msg.ReportTo(del);
             }
         }
-
-        internal bool ShouldLog => replayQueue is not null || Volatile.Read(ref onLogSimple) is not null || Volatile.Read(ref onLogDetailed) is not null;
-        public static bool IsWritingLog => Instance.ShouldLog;
 
         private OnLogMessage? onLogSimple;
         private OnLogMessageDetailed? onLogDetailed;
