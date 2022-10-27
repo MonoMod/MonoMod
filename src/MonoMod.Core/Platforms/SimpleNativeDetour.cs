@@ -24,6 +24,8 @@ namespace MonoMod.Core.Platforms {
         public void ChangeTarget(IntPtr newTarget) {
             CheckDisposed();
 
+            MMDbgLog.Trace($"Retargeting simple detour 0x{Source:x16} => 0x{Destination:x16} to target 0x{newTarget:x16}");
+
             // This is effectively the same as PlatformTriple.CreateSimpleDetour, only using the underlying retargeting API
 
             var retarget = triple.Architecture.ComputeRetargetInfo(detourInfo, newTarget, detourInfo.Size);
@@ -77,6 +79,7 @@ namespace MonoMod.Core.Platforms {
         }
 
         private void UndoCore(bool disposing) {
+            MMDbgLog.Trace($"Undoing simple detour 0x{Source:x16} => 0x{Destination:x16}");
             // literally just patch again, but the other direction
             triple.System.PatchData(PatchTargetKind.Executable, Source, DetourBackup.Span, default);
             if (disposing) {

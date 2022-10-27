@@ -27,9 +27,15 @@ namespace MonoMod.UnitTest {
             EnsureSubscribedToDebugLog();
             currentOutputHelper.Value = helper;
             attachedSingleOutputHelper = Interlocked.CompareExchange(ref singleOutputHelper, helper, null) == null;
+
+            if (attachedSingleOutputHelper)
+                MMDbgLog.Info("------------- TEST BEGIN -------------");
         }
 
         public static void Shutdown(bool attachedSingleOutputHelper) {
+            if (attachedSingleOutputHelper)
+                MMDbgLog.Info("-------------- TEST END --------------");
+
             currentOutputHelper.Value = null;
             if (attachedSingleOutputHelper)
                 singleOutputHelper = null;

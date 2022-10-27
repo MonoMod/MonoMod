@@ -181,6 +181,8 @@ namespace MonoMod.Core.Platforms {
         public SimpleNativeDetour CreateSimpleDetour(IntPtr from, IntPtr to, int detourMaxSize = -1) {
             Helpers.Assert(from != to, $"Cannot detour a method to itself! (from: {from}, to: {to})");
 
+            MMDbgLog.Trace($"Creating simple detour 0x{from:x16} => 0x{to:x16}");
+
             var detourInfo = Architecture.ComputeDetourInfo(from, to, detourMaxSize);
 
             // detours are usually fairly small, so we'll stackalloc it
@@ -216,10 +218,13 @@ namespace MonoMod.Core.Platforms {
 
             var archMatchCollection = Architecture.KnownMethodThunks;
 
+            MMDbgLog.Trace($"Performing method body walk for {method}");
+
             nint prevEntry = -1;
 
             ReloadFuncPtr:
             var entry = (nint) Runtime.GetMethodEntryPoint(method);
+            MMDbgLog.Trace($"Starting entry point = 0x{entry:x16}");
             do {
                 if (!didPrepareLastIter && prevEntry == entry) {
                     // we're in a loop, break out
@@ -228,6 +233,9 @@ namespace MonoMod.Core.Platforms {
                 prevEntry = entry;
 
                 var readableLen = System.GetSizeOfReadableMemory(entry, archMatchCollection.MaxMinLength);
+                if (readableLen <= 0) {
+                    MMDbgLog.Warning($"Got zero or negative readable length {readableLen} at 0x{entry:x16}");
+                }
 
                 // we still have to limit it like this because otherwise it'll scan and find *other* stubs
                 // if we want to, we could scan for an arch-specific padding pattern and use that to limit instead
@@ -242,6 +250,7 @@ namespace MonoMod.Core.Platforms {
                 didPrepareLastIter = false;
 
                 var meaning = match.AddressMeaning;
+                MMDbgLog.Trace($"Matched thunk with {meaning} at 0x{entry:x16} (addr: 0x{addr:x8}, offset: {offset})");
                 if (meaning.Kind.IsPrecodeFixup() && !regenerated) {
                     var precode = meaning.ProcessAddress(entry, offset, addr);
                     if (reloadPtr) {
@@ -256,9 +265,11 @@ namespace MonoMod.Core.Platforms {
                 } else {
                     entry = meaning.ProcessAddress(entry, offset, addr);
                 }
+                MMDbgLog.Trace($"Got next entry point 0x{entry:x16}");
 
                 entry = NotThePreStub(lastEntry, entry, out var wasPreStub);
                 if (wasPreStub && reloadPtr) {
+                    MMDbgLog.Trace("Matched ThePreStub");
                     Prepare(method);
                     //regenerated = true;
                     goto ReloadFuncPtr;

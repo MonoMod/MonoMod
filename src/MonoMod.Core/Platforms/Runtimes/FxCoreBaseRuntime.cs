@@ -264,7 +264,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     }
                 }
 
-                MMDbgLog.Spam($"JIT compiled {method} to {methodBodyStart:x16}");
+                MMDbgLog.Spam($"JIT compiled {method} to 0x{methodBodyStart:x16}");
 
                 try {
                     OnMethodCompiled?.Invoke(methodHandle, method, methodBodyStart, methodBodySize);
