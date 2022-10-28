@@ -45,6 +45,26 @@ namespace MonoMod.Utils {
             throw new ArgumentNullException(argName);
         }
 
+        public static T EventAdd<T>(ref T? evt, T del) where T : Delegate {
+            T? orig;
+            T newDel;
+            do {
+                orig = evt;
+                newDel = (T) Delegate.Combine(orig, del);
+            } while (Interlocked.CompareExchange(ref evt, newDel, orig) != orig);
+            return newDel;
+        }
+
+        public static T? EventRemove<T>(ref T? evt, T del) where T : Delegate {
+            T? orig;
+            T? newDel;
+            do {
+                orig = evt;
+                newDel = (T?) Delegate.Remove(orig, del);
+            } while (Interlocked.CompareExchange(ref evt, newDel, orig) != orig);
+            return newDel;
+        }
+
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static void Assert([DoesNotReturnIf(false)] bool value,
             string? message = null,
@@ -213,15 +233,13 @@ namespace MonoMod.Utils {
     [InterpolatedStringHandler]
     public ref struct AssertionInterpolatedStringHandler {
         private DefaultInterpolatedStringHandler handler;
-        private readonly bool enabled;
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public AssertionInterpolatedStringHandler(int literalLen, int formattedCount, bool assertValue) {
-            if (!assertValue) {
-                enabled = true;
+        public AssertionInterpolatedStringHandler(int literalLen, int formattedCount, bool assertValue, out bool isEnabled) {
+            isEnabled = !assertValue;
+            if (isEnabled) {
                 handler = new(literalLen, formattedCount);
             } else {
-                enabled = false;
                 handler = default;
             }
         }
@@ -231,56 +249,38 @@ namespace MonoMod.Utils {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendLiteral(string s) {
-            if (!enabled)
-                return;
             handler.AppendLiteral(s);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(string? s) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(s);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(string? s, int alignment = 0, string? format = default) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(s, alignment, format);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(ReadOnlySpan<char> s) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(s);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(ReadOnlySpan<char> s, int alignment = 0, string? format = default) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(s, alignment, format);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(value);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value, int alignment) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(value, alignment);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value, string? format) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(value, format);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value, int alignment, string? format) {
-            if (!enabled)
-                return;
             handler.AppendFormatted(value, alignment, format);
         }
     }

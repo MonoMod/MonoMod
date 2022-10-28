@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
@@ -115,11 +116,9 @@ namespace MonoMod.Logs {
         }
 
         public static bool IsWritingLog => Instance.ShouldLog;
-        internal bool ShouldLog
-            => replayQueue is not null
-            || Volatile.Read(ref onLogSimple) is not null
-            || Volatile.Read(ref onLogDetailed) is not null
-            || Debugger.IsAttached;
+        internal bool AlwaysLog => replayQueue is not null || Debugger.IsAttached;
+        internal bool ShouldLog => subscriptions.ActiveLevels is not LogLevelFilter.None || AlwaysLog;
+        internal bool RecordHoles => recordHoles || subscriptions.DetailLevels is not LogLevelFilter.None;
 
         private void PostMessage(LogMessage message) {
             // we do this log here because we want to always log to the debugger when its attached, instead of just if its attached at startup
@@ -132,9 +131,10 @@ namespace MonoMod.Logs {
                     $"[{message.Source}] {message.Level.FastToString()}: {message.FormattedMessage}\n"); // the VS output window doesn't automatically add a newline
             }
 
-            if (onLogSimple is { } simple)
+            var idx = (int) message.Level;
+            if (subscriptions.SimpleRegs[idx] is { } simple)
                 message.ReportTo(simple);
-            if (onLogDetailed is { } detailed)
+            if (subscriptions.DetailedRegs[idx] is { } detailed)
                 message.ReportTo(detailed);
 
             if (replayQueue is { } queue) {
@@ -148,49 +148,64 @@ namespace MonoMod.Logs {
         }
 
         #region Log functions
+        internal bool ShouldLogLevel(LogLevel level) // check AlwaysLog last because it's more complex
+            => ((1 << (int) level) & (int) subscriptions.ActiveLevels) is not 0
+            // if we're falling through to AlwaysLog, we only want to always log stuff in the global filter
+            || (((1 << (int) level) & (int) globalFilter) is not 0 && AlwaysLog);
+        internal bool ShouldLevelRecordHoles(LogLevel level)
+            => recordHoles || ((1 << (int) level) & (int) subscriptions.DetailLevels) is not 0;
+
         public void Write(string source, DateTime time, LogLevel level, string message) {
-            if (!ShouldLog) return;
+            if (!ShouldLogLevel(level)) {
+                return;
+            }
             PostMessage(MakeMessage(source, time, level, message, default));
         }
 
-        public void Write(string source, DateTime time, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
+        public void Write(string source, DateTime time, LogLevel level, 
+            [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message) {
             // we check the handler's enabled field instead of our own HasHandlers because the handler may not have been recording anything in the first place
-            if (!message.enabled || !ShouldLog)
+            if (!message.enabled)
                 return;
+            if (!ShouldLogLevel(level)) {
+                return;
+            }
             var formatted = message.ToStringAndClear(out var holes);
             PostMessage(MakeMessage(source, time, level, formatted, holes));
         }
 
         internal void LogCore(string source, LogLevel level, string message) {
-            if (!ShouldLog)
+            if (!ShouldLogLevel(level)) {
                 return;
-            if ((globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
-                return;
+            }
             Write(source, DateTime.UtcNow, level, message);
         }
-        internal void LogCore(string source, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
-            if (!message.enabled || !ShouldLog)
+        internal void LogCore(string source, LogLevel level,
+            [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message) {
+            if (!message.enabled)
                 return;
-            if ((globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
+            if (!ShouldLogLevel(level)) {
                 return;
+            }
             Write(source, DateTime.UtcNow, level, ref message);
         }
         
-
         public static void Log(string source, LogLevel level, string message) {
             var instance = Instance;
-            if (!instance.ShouldLog)
+            if (!instance.ShouldLogLevel(level)) {
                 return;
-            if ((instance.globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
-                return;
+            }
             instance.Write(source, DateTime.UtcNow, level, message);
-        }
-        public static void Log(string source, LogLevel level, ref DebugLogInterpolatedStringHandler message) {
+        
+            }
+        public static void Log(string source, LogLevel level,
+            [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message) {
             var instance = Instance;
-            if (!message.enabled || !instance.ShouldLog)
+            if (!message.enabled)
                 return;
-            if ((instance.globalFilter & (LogLevelFilter) (1 << (int) level)) == 0)
+            if (!instance.ShouldLogLevel(level)) {
                 return;
+            }
             instance.Write(source, DateTime.UtcNow, level, ref message);
         }
         #endregion
@@ -238,7 +253,7 @@ namespace MonoMod.Logs {
             return list;
         }
 
-        internal volatile bool recordHoles;
+        private readonly bool recordHoles;
         private readonly int replayQueueLength;
 
         private readonly ConcurrentQueue<LogMessage>? replayQueue;
@@ -256,20 +271,17 @@ namespace MonoMod.Logs {
                 replayQueue = new();
             }
 
-        }
-
-        static DebugLog() {
             var diskLogFile = GetStringEnvVar("MMLOG_OUT_FILE");
             var diskSourceFilter = GetListEnvVar("MMLOG_FILE_SOURCE_FILTER");
 
             if (diskLogFile is not null) {
-                TryInitializeLogToFile(diskLogFile, diskSourceFilter);
+                TryInitializeLogToFile(diskLogFile, diskSourceFilter, globalFilter);
             }
         }
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
-            Justification = "They need to stay alive for the life of the application.")]
-        private static void TryInitializeLogToFile(string file, string[]? sourceFilter) {
+            Justification = "The subscription should live forever, so we don't want to dispose the subscription registration.")]
+        private void TryInitializeLogToFile(string file, string[]? sourceFilter, LogLevelFilter filter) {
             try {
                 var comparer = StringComparerEx.FromComparison(StringComparison.OrdinalIgnoreCase);
                 if (sourceFilter is not null)
@@ -285,7 +297,7 @@ namespace MonoMod.Logs {
                         AutoFlush = true
                     };
                 }
-                OnLog += (source, time, level, msg) => {
+                _ = SubscribeCore(filter, (source, time, level, msg) => {
                     if (sourceFilter is not null) {
                         var idx = sourceFilter.AsSpan().BinarySearch(source, comparer);
                         if (idx < 0) // we didn't find the source in the filter list
@@ -298,85 +310,218 @@ namespace MonoMod.Logs {
                     lock (sync) {
                         writer.WriteLine(outMsg);
                     }
-                };
+                });
             } catch (Exception e) {
                 Instance.LogCore("DebugLog", LogLevel.Error, $"Exception while trying to initialize writing logs to a file: {e}");
             }
         }
 
+        private sealed class LevelSubscriptions {
+            public LogLevelFilter ActiveLevels;
+            public LogLevelFilter DetailLevels;
+            public readonly OnLogMessage?[] SimpleRegs;
+            public readonly OnLogMessageDetailed?[] DetailedRegs;
+
+            private const LogLevelFilter ValidFilter = (LogLevelFilter) ((1 << ((int) LogLevelExtensions.MaxLevel + 1)) - 1);
+
+            private LevelSubscriptions(LogLevelFilter active, LogLevelFilter detail, OnLogMessage?[] simple, OnLogMessageDetailed?[] detailed) {
+                ActiveLevels = active | detail; // detail is by definition a subset of active
+                DetailLevels = detail;
+                SimpleRegs = simple;
+                DetailedRegs = detailed;
+            }
+
+            private LevelSubscriptions() {
+                ActiveLevels = LogLevelFilter.None;
+                DetailLevels = LogLevelFilter.None;
+                SimpleRegs = new OnLogMessage?[(int) LogLevelExtensions.MaxLevel + 1];
+                DetailedRegs = new OnLogMessageDetailed?[SimpleRegs.Length];
+            }
+
+            public static readonly LevelSubscriptions None = new();
+
+            private LevelSubscriptions Clone(bool changingDetail) {
+                OnLogMessage?[] simple = SimpleRegs;
+                OnLogMessageDetailed?[] detailed = DetailedRegs;
+
+                if (!changingDetail) {
+                    simple = new OnLogMessage?[SimpleRegs.Length];
+                    Array.Copy(SimpleRegs, simple, simple.Length);
+                } else {
+                    detailed = new OnLogMessageDetailed?[DetailedRegs.Length];
+                    Array.Copy(DetailedRegs, detailed, detailed.Length);
+                }
+                return new(ActiveLevels, DetailLevels, simple, detailed);
+            }
+
+            private void FixFilters() {
+                ActiveLevels &= ValidFilter;
+                DetailLevels &= ValidFilter;
+            }
+
+            public LevelSubscriptions AddSimple(LogLevelFilter filter, OnLogMessage del) {
+                var clone = Clone(false);
+                clone.ActiveLevels |= filter;
+                var ifilter = (int) filter;
+                for (var i = 0; i < clone.SimpleRegs.Length; i++) {
+                    if ((ifilter & (1 << i)) == 0)
+                        continue;
+                    _ = Helpers.EventAdd(ref clone.SimpleRegs[i], del);
+                }
+                clone.FixFilters();
+                return clone;
+            }
+
+            public LevelSubscriptions RemoveSimple(LogLevelFilter filter, OnLogMessage del) {
+                var clone = Clone(false);
+                var ifilter = (int) filter;
+                for (var i = 0; i < clone.SimpleRegs.Length; i++) {
+                    if ((ifilter & (1 << i)) == 0)
+                        continue;
+                    var result = Helpers.EventRemove(ref clone.SimpleRegs[i], del);
+                    if (result is null)
+                        clone.ActiveLevels &= (LogLevelFilter) ~(1 << i);
+                }
+                clone.ActiveLevels |= clone.DetailLevels;
+                clone.FixFilters();
+                return clone;
+            }
+
+            public LevelSubscriptions AddDetailed(LogLevelFilter filter, OnLogMessageDetailed del) {
+                var clone = Clone(true);
+                clone.DetailLevels |= filter;
+                var ifilter = (int) filter;
+                for (var i = 0; i < clone.DetailedRegs.Length; i++) {
+                    if ((ifilter & (1 << i)) == 0)
+                        continue;
+                    _ = Helpers.EventAdd(ref clone.DetailedRegs[i], del);
+                }
+                clone.ActiveLevels |= clone.DetailLevels;
+                clone.FixFilters();
+                return clone;
+            }
+
+            public LevelSubscriptions RemoveDetailed(LogLevelFilter filter, OnLogMessageDetailed del) {
+                var clone = Clone(true);
+                var ifilter = (int) filter;
+                for (var i = 0; i < clone.DetailedRegs.Length; i++) {
+                    if ((ifilter & (1 << i)) == 0)
+                        continue;
+                    var result = Helpers.EventRemove(ref clone.DetailedRegs[i], del);
+                    if (result is null)
+                        clone.DetailLevels &= (LogLevelFilter) ~(1 << i);
+                }
+                clone.ActiveLevels |= clone.DetailLevels;
+                clone.FixFilters();
+                return clone;
+            }
+        }
+
+        private LevelSubscriptions subscriptions = LevelSubscriptions.None;
+
         #region Message Events
-        private void MaybeReplayTo(OnLogMessage del) {
-            if (replayQueue is null) {
+        private void MaybeReplayTo(LogLevelFilter filter, OnLogMessage del) {
+            if (replayQueue is null || filter is LogLevelFilter.None) {
                 return;
             }
 
             var msgs = replayQueue.ToArray();
             // if we're recording message replays, we don't bother reusing message objects, so this is safe
             foreach (var msg in msgs) {
+                if (((1 << (int) msg.Level) & (int) filter) is 0)
+                    continue;
                 msg.ReportTo(del);
             }
         }
-        private void MaybeReplayTo(OnLogMessageDetailed del) {
-            if (replayQueue is null) {
+        private void MaybeReplayTo(LogLevelFilter filter, OnLogMessageDetailed del) {
+            if (replayQueue is null || filter is LogLevelFilter.None) {
                 return;
             }
 
             var msgs = replayQueue.ToArray();
             // if we're recording message replays, we don't bother reusing message objects, so this is safe
             foreach (var msg in msgs) {
+                if (((1 << (int) msg.Level) & (int) filter) is 0)
+                    continue;
                 msg.ReportTo(del);
             }
         }
 
-        private OnLogMessage? onLogSimple;
-        private OnLogMessageDetailed? onLogDetailed;
+        public static IDisposable Subscribe(LogLevelFilter filter, OnLogMessage value)
+            => Instance.SubscribeCore(filter, value);
+        private IDisposable SubscribeCore(LogLevelFilter filter, OnLogMessage value) {
+            LevelSubscriptions o, n;
+            do {
+                o = subscriptions;
+                n = o.AddSimple(filter, value);
+            } while (Interlocked.CompareExchange(ref subscriptions, n, o) != o);
+            MaybeReplayTo(filter, value);
+            return new LogSubscriptionSimple(this, value, filter);
+        }
 
-        private event OnLogMessage OnLogSimple {
-            add {
-                var orig = onLogSimple;
-                var del = orig;
-                do {
-                    del = (OnLogMessage) Delegate.Combine(del, value);
-                } while (Interlocked.CompareExchange(ref onLogSimple, del, orig) != orig);
-                MaybeReplayTo(value);
+        private sealed class LogSubscriptionSimple : IDisposable {
+            private readonly DebugLog log;
+            private readonly OnLogMessage del;
+            private readonly LogLevelFilter filter;
+
+            public LogSubscriptionSimple(DebugLog log, OnLogMessage del, LogLevelFilter filter) {
+                this.log = log;
+                this.del = del;
+                this.filter = filter;
             }
-            remove {
-                var orig = onLogSimple;
-                var del = orig;
+
+            public void Dispose() {
+                LevelSubscriptions o, n;
                 do {
-                    del = (OnLogMessage?) Delegate.Remove(del, value);
-                } while (Interlocked.CompareExchange(ref onLogSimple, del, orig) != orig);
+                    o = log.subscriptions;
+                    n = o.RemoveSimple(filter, del);
+                } while (Interlocked.CompareExchange(ref log.subscriptions, n, o) != o);
             }
         }
 
+        public static IDisposable Subscribe(LogLevelFilter filter, OnLogMessageDetailed value)
+            => Instance.SubscribeCore(filter, value);
+        private IDisposable SubscribeCore(LogLevelFilter filter, OnLogMessageDetailed value) {
+            LevelSubscriptions o, n;
+            do {
+                o = subscriptions;
+                n = o.AddDetailed(filter, value);
+            } while (Interlocked.CompareExchange(ref subscriptions, n, o) != o);
+            MaybeReplayTo(filter, value);
+            return new LogSubscriptionDetailed(this, value, filter);
+        }
+
+        private sealed class LogSubscriptionDetailed: IDisposable {
+            private readonly DebugLog log;
+            private readonly OnLogMessageDetailed del;
+            private readonly LogLevelFilter filter;
+
+            public LogSubscriptionDetailed(DebugLog log, OnLogMessageDetailed del, LogLevelFilter filter) {
+                this.log = log;
+                this.del = del;
+                this.filter = filter;
+            }
+
+            public void Dispose() {
+                LevelSubscriptions o, n;
+                do {
+                    o = log.subscriptions;
+                    n = o.RemoveDetailed(filter, del);
+                } while (Interlocked.CompareExchange(ref log.subscriptions, n, o) != o);
+            }
+        }
+
+        private static readonly ConcurrentDictionary<OnLogMessage, IDisposable> simpleRegDict = new();
         public static event OnLogMessage OnLog {
-            add => Instance.OnLogSimple += value;
-            remove => Instance.OnLogSimple -= value;
-        }
-
-        private event OnLogMessageDetailed OnLogDetailed {
             add {
-                // if a detailed handler is ever subscribed, we need to start recording holes
-                recordHoles = true;
-                var orig = onLogDetailed;
-                var del = orig;
-                do {
-                    del = (OnLogMessageDetailed) Delegate.Combine(del, value);
-                } while (Interlocked.CompareExchange(ref onLogDetailed, del, orig) != orig);
-                MaybeReplayTo(value);
+                var res = Subscribe(Instance.globalFilter, value);
+                simpleRegDict.AddOrUpdate(value, res, (_, d) => { d.Dispose(); return res; });
             }
             remove {
-                var orig = onLogDetailed;
-                var del = orig;
-                do {
-                    del = (OnLogMessageDetailed?) Delegate.Remove(del, value);
-                } while (Interlocked.CompareExchange(ref onLogDetailed, del, orig) != orig);
+                if (simpleRegDict.TryRemove(value, out var d)) {
+                    d.Dispose();
+                }
             }
-        }
-
-        public static event OnLogMessageDetailed OnDetailedLog {
-            add => Instance.OnLogDetailed += value;
-            remove => Instance.OnLogDetailed -= value;
         }
         #endregion
     }

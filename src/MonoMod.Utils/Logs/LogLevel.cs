@@ -24,6 +24,7 @@ namespace MonoMod.Logs {
     }
 
     public static class LogLevelExtensions {
+        public const LogLevel MaxLevel = LogLevel.Assert;
         public static string FastToString(this LogLevel level, IFormatProvider? provider = null)
             => level switch {
                 LogLevel.Spam => nameof(LogLevel.Spam),

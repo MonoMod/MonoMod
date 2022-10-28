@@ -31,19 +31,38 @@ namespace MonoMod.Logs {
         internal readonly bool enabled;
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount) {
+        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, out bool isEnabled) {
             var log = DebugLog.Instance;
             _pos = holeBegin = holePos = 0;
             if (log.ShouldLog) {
-                enabled = true;
+                enabled = isEnabled = true;
                 _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
-                if (log.recordHoles) {
+                if (log.RecordHoles) {
                     holes = new MessageHole[formattedCount];
                 } else {
                     holes = default;
                 }
             } else {
-                enabled = false;
+                enabled = isEnabled = false;
+                _chars = _arrayToReturnToPool = null;
+                holes = default;
+            }
+        }
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, LogLevel level, out bool isEnabled) {
+            var log = DebugLog.Instance;
+            _pos = holeBegin = holePos = 0;
+            if (log.ShouldLogLevel(level)) {
+                enabled = isEnabled = true;
+                _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
+                if (log.ShouldLevelRecordHoles(level)) {
+                    holes = new MessageHole[formattedCount];
+                } else {
+                    holes = default;
+                }
+            } else {
+                enabled = isEnabled = false;
                 _chars = _arrayToReturnToPool = null;
                 holes = default;
             }
@@ -80,8 +99,6 @@ namespace MonoMod.Logs {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendLiteral(string value) {
-            if (!enabled)
-                return;
             if (value.Length == 1) {
                 Span<char> chars = _chars;
                 var pos = _pos;
@@ -135,8 +152,6 @@ namespace MonoMod.Logs {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted(string? value) {
-            if (!enabled)
-                return;
             BeginHole();
             if (value is not null &&
                 value.AsSpan().TryCopyTo(_chars.Slice(_pos))) {
@@ -161,8 +176,6 @@ namespace MonoMod.Logs {
             => AppendFormatted<string?>(value, alignment, format);
 
         public void AppendFormatted(ReadOnlySpan<char> value) {
-            if (!enabled)
-                return;
             BeginHole();
             // Fast path for when the value fits in the current buffer
             if (value.TryCopyTo(_chars.Slice(_pos))) {
@@ -174,9 +187,6 @@ namespace MonoMod.Logs {
         }
 
         public void AppendFormatted(ReadOnlySpan<char> value, int alignment = 0, string? format = default) {
-            if (!enabled)
-                return;
-
             var leftAlign = false;
             if (alignment < 0) {
                 leftAlign = true;
@@ -209,9 +219,6 @@ namespace MonoMod.Logs {
         }
 
         public void AppendFormatted<T>(T value) {
-            if (!enabled)
-                return;
-
             if (typeof(T) == typeof(IntPtr)) {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value));
                 return;
@@ -272,8 +279,6 @@ namespace MonoMod.Logs {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value, int alignment) {
-            if (!enabled)
-                return;
             var startingPos = _pos;
             AppendFormatted(value);
             if (alignment != 0) {
@@ -283,9 +288,6 @@ namespace MonoMod.Logs {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value, string? format) {
-            if (!enabled)
-                return;
-
             if (typeof(T) == typeof(IntPtr)) {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value), format);
                 return;
@@ -322,9 +324,6 @@ namespace MonoMod.Logs {
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value, int alignment, string? format) {
-            if (!enabled)
-                return;
-
             var startingPos = _pos;
             AppendFormatted(value, format);
             if (alignment != 0) {
