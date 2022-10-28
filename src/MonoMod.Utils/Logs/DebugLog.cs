@@ -86,32 +86,50 @@ namespace MonoMod.Logs {
             }
         }
 
+        public static bool IsFinalizing => Environment.HasShutdownStarted || AppDomain.CurrentDomain.IsFinalizingForUnload();
+
         // this is a cache for our WeakReference objects
         private static readonly ConcurrentBag<WeakReference<LogMessage>> weakRefCache = new();
         // and this is a cache for our LogMessage objects
         private static readonly ConcurrentBag<WeakReference<LogMessage>> messageObjectCache = new();
 
-        private static LogMessage MakeMessage(string source, DateTime time, LogLevel level, string formatted, ReadOnlyMemory<MessageHole> holes) {
-            while (messageObjectCache.TryTake(out var weakRef)) {
-                if (weakRef.TryGetTarget(out var message)) {
-                    message.Init(source, time, level, formatted, holes);
-                    weakRefCache.Add(weakRef);
-                    return message;
+        private LogMessage MakeMessage(string source, DateTime time, LogLevel level, string formatted, ReadOnlyMemory<MessageHole> holes) {
+            try {
+                if (replayQueue is null && !IsFinalizing) {
+                    while (messageObjectCache.TryTake(out var weakRef)) {
+                        if (weakRef.TryGetTarget(out var message)) {
+                            message.Init(source, time, level, formatted, holes);
+                            weakRefCache.Add(weakRef);
+                            return message;
+                        } else {
+                            weakRefCache.Add(weakRef);
+                        }
+                    }
                 }
+            } catch {
+                // Message creation should be mostly infalliable. If something fails in here, it shouldn't bring down the caller of the logger.
+                // TODO: somehow, somewhere, record this exception
             }
 
             // we weren't able to get an existing LogMessage object
             return new(source, time, level, formatted, holes);
         }
 
-        private static void ReturnMessage(LogMessage message) {
+        private void ReturnMessage(LogMessage message) {
             message.Clear();
 
-            if (weakRefCache.TryTake(out var weakRef)) {
-                weakRef.SetTarget(message);
-                messageObjectCache.Add(weakRef);
-            } else {
-                messageObjectCache.Add(new(message));
+            try {
+                if (replayQueue is null && !IsFinalizing) {
+                    if (weakRefCache.TryTake(out var weakRef)) {
+                        weakRef.SetTarget(message);
+                        messageObjectCache.Add(weakRef);
+                    } else {
+                        messageObjectCache.Add(new(message));
+                    }
+                }
+            } catch {
+                // Message creation should be mostly infalliable. If something fails in here, it shouldn't bring down the caller of the logger.
+                // TODO: somehow, somewhere, record this exception
             }
         }
 
@@ -131,19 +149,22 @@ namespace MonoMod.Logs {
                     $"[{message.Source}] {message.Level.FastToString()}: {message.FormattedMessage}\n"); // the VS output window doesn't automatically add a newline
             }
 
+            var sub = subscriptions;
             var idx = (int) message.Level;
-            if (subscriptions.SimpleRegs[idx] is { } simple)
+            if (sub.SimpleRegs[idx] is { } simple)
                 message.ReportTo(simple);
-            if (subscriptions.DetailedRegs[idx] is { } detailed)
+            if (sub.DetailedRegs[idx] is { } detailed)
                 message.ReportTo(detailed);
 
-            if (replayQueue is { } queue) {
-                // enqueue the message, then dequeue old messages until we're back below the replay length
-                queue.Enqueue(message);
-                while (queue.Count > replayQueueLength && queue.TryDequeue(out _)) { }
-            } else {
-                // we only reuse message objects if we're not recording a replay queue to avoid race conditions
-                ReturnMessage(message);
+            if (!IsFinalizing) {
+                if (replayQueue is { } queue) {
+                    // enqueue the message, then dequeue old messages until we're back below the replay length
+                    queue.Enqueue(message);
+                    while (queue.Count > replayQueueLength && queue.TryDequeue(out _)) { }
+                } else {
+                    // we only reuse message objects if we're not recording a replay queue to avoid race conditions
+                    ReturnMessage(message);
+                }
             }
         }
 
