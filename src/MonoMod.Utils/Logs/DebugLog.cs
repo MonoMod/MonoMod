@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
@@ -201,6 +202,7 @@ namespace MonoMod.Logs {
             }
             Write(source, DateTime.UtcNow, level, message);
         }
+
         internal void LogCore(string source, LogLevel level,
             [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message) {
             if (!message.enabled)
@@ -217,8 +219,8 @@ namespace MonoMod.Logs {
                 return;
             }
             instance.Write(source, DateTime.UtcNow, level, message);
-        
-            }
+        }
+
         public static void Log(string source, LogLevel level,
             [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message) {
             var instance = Instance;
@@ -298,6 +300,11 @@ namespace MonoMod.Logs {
             if (diskLogFile is not null) {
                 TryInitializeLogToFile(diskLogFile, diskSourceFilter, globalFilter);
             }
+
+            var useMemlog = GetBoolEnvVar("MMLOG_MEMORY_LOG") ?? false;
+            if (useMemlog) {
+                TryInitializeMemoryLog(globalFilter);
+            }
         }
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
@@ -334,6 +341,62 @@ namespace MonoMod.Logs {
                 });
             } catch (Exception e) {
                 Instance.LogCore("DebugLog", LogLevel.Error, $"Exception while trying to initialize writing logs to a file: {e}");
+            }
+        }
+
+        // TODO: thread-local memlog?
+        private static byte[]? memlog;
+        private static int memlogPos;
+
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+            Justification = "The subscription should live forever, so we don't want to dispose the subscription registration.")]
+        private void TryInitializeMemoryLog(LogLevelFilter filter) {
+            try { // maxSize is in kb
+                memlogPos = 0;
+                memlog = new byte[0x1000]; // start with a fairly large buffer, because we log quite a bit
+
+                var sync = new object();
+
+                var encoding = Encoding.UTF8;
+                _ = SubscribeCore(filter, (source, time, level, msg) => {
+                    var blevel = (byte) (int) level;
+                    var ticks = time.Ticks;
+
+                    if (source.Length > 255) // if your source is this long, you're doing something wrong
+                        source = source.Substring(0, 255);
+                    var bSourceLen = (byte) source.Length;
+                    var msgLen = msg.Length;
+
+                    var totalMsgLen = sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(int) + (bSourceLen * 2) + (msgLen * 2);
+
+                    lock (sync) {
+                        if (memlog.Length - memlogPos < totalMsgLen) {
+                            // our message wouldn't fit at the end of the memlog, so resize it so it will
+                            var newSize = memlog.Length * 4;
+                            while (newSize - memlogPos < totalMsgLen)
+                                newSize *= 4;
+                            Array.Resize(ref memlog, newSize);
+                        }
+                        var span = memlog.AsSpan().Slice(memlogPos);
+                        ref var msgBase = ref MemoryMarshal.GetReference(span);
+                        var pos = 0;
+                        Unsafe.WriteUnaligned(ref Unsafe.Add(ref msgBase, pos), blevel);
+                        pos += sizeof(byte);
+                        Unsafe.WriteUnaligned(ref Unsafe.Add(ref msgBase, pos), ticks);
+                        pos += sizeof(long);
+                        Unsafe.WriteUnaligned(ref Unsafe.Add(ref msgBase, pos), bSourceLen);
+                        pos += sizeof(byte);
+                        Unsafe.CopyBlock(ref Unsafe.Add(ref msgBase, pos), ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(source.AsSpan())), bSourceLen * 2u);
+                        pos += bSourceLen * 2;
+                        Unsafe.WriteUnaligned(ref Unsafe.Add(ref msgBase, pos), msgLen);
+                        pos += sizeof(int);
+                        Unsafe.CopyBlock(ref Unsafe.Add(ref msgBase, pos), ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(msg.AsSpan())), (uint) msgLen * 2u);
+                        pos += msgLen * 2;
+                        memlogPos += pos;
+                    }
+                });
+            } catch (Exception e) {
+                Instance.LogCore("DebugLog", LogLevel.Error, $"Exception while initializing the memory log: {e}");
             }
         }
 
