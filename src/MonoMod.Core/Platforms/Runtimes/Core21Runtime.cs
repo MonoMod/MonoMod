@@ -1,5 +1,4 @@
 ﻿using Mono.Cecil;
-using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
 using System.Linq;
@@ -99,15 +98,15 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             System.PatchData(PatchTargetKind.ReadOnly, (IntPtr) compileMethodSlot, ptrData, default);
         }
+        protected unsafe virtual void InvokeCompileMethodToPrepare(IntPtr method) {
+            InvokeCompileMethodPtr.InvokeCompileMethod(method, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _);
+        }
+
 
         // runtimes should override this if they need to significantly change the shape of CompileMethod
         protected unsafe virtual Delegate CreateCompileMethodDelegate(IntPtr compileMethod) {
             var del = new JitHookDelegateHolder(this, InvokeCompileMethodPtr, compileMethod).CompileMethodHook;
             return del;
-        }
-
-        protected unsafe virtual void InvokeCompileMethodToPrepare(IntPtr method) {
-            InvokeCompileMethodPtr.InvokeCompileMethod(method, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _);
         }
 
         private sealed class JitHookDelegateHolder {

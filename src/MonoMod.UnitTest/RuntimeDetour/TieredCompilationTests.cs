@@ -42,7 +42,7 @@ namespace MonoMod.UnitTest {
 
         private static void TestFrom() {
             var sw = new Stopwatch();
-            for (var loop = 0; loop < 50; loop++) {
+            for (var loop = 0; loop < 500; loop++) {
                 // first we make sure From qualifies for recomp
                 for (var i = 0; i < 1000; i++) {
                     TargetHit = false;
@@ -58,7 +58,7 @@ namespace MonoMod.UnitTest {
                 sw.Reset();
                 // and then try again
 
-                // make sure that To qualifies for recpom too
+                // make sure that To qualifies for recomp too
                 for (var i = 0; i < 1000; i++) {
                     TargetHit = false;
                     To();

@@ -3,16 +3,13 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 17.4.0 And $(NETCoreAppMaximumVersion) &gt;= 7.0">$(TargetFrameworks);net7.0</TargetFrameworks>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- for some god-forsaken reason, Harmony exposes Cecil types publicly -->
-    <PackageReference Include="Lib.Harmony" Version="2.2.2" Aliases="harmony" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.Core\MonoMod.Core.csproj" />
     <ProjectReference Include="..\MonoMod.RuntimeDetour.New\MonoMod.RuntimeDetour.New.csproj" />
+    <ProjectReference Include="..\MonoMod.UnitTest\MonoMod.UnitTest.csproj" Condition="'$(TargetFramework)' != 'net35' and '$(TargetFramework)' != 'net452'" />
   </ItemGroup>
 
 </Project>
