@@ -1,6 +1,7 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Platforms.Architectures {
@@ -306,6 +307,93 @@ namespace MonoMod.Core.Platforms.Architectures {
         public int GetRetargetBytes(NativeDetourInfo original, NativeDetourInfo retarget, Span<byte> buffer,
             out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc) {
             return DetourKindBase.DoRetarget(original, retarget, buffer, out allocationHandle, out needsRepatch, out disposeOldAlloc);
+        }
+
+        private const int VtblProxyStubWinIdxOffs = 0x11;
+        private static ReadOnlySpan<byte> VtblProxyStubWin => new byte[] {
+            0x48, 0x8B, 0x49, 0x08, 0x8B, 0x05, 0x07, 0x00, 0x00, 0x00, 0x4C, 0x8B, 0x11, 0x41, 0xFF, 0x24,
+            0xC2, 0x00, 0x00, 0x00, 0x00, 0xCC, 0xCC, 0xCC
+        };
+
+        public unsafe ReadOnlyMemory<IAllocatedMemory> CreateNativeVtableProxyStubs(IntPtr vtableBase, int vtableSize) {
+            var os = PlatformDetection.OS;
+
+            ReadOnlySpan<byte> stubData;
+            int indexOffs;
+
+            if (os.Is(OSKind.Windows)) {
+                stubData = VtblProxyStubWin;
+                indexOffs = VtblProxyStubWinIdxOffs;
+            } else {
+                throw new PlatformNotSupportedException();
+            }
+
+            var maxAllocSize = system.MemoryAllocator.MaxSize;
+            var allStubsSize = stubData.Length * vtableSize;
+            var numMainAllocs = allStubsSize / maxAllocSize;
+
+            var numPerAlloc = maxAllocSize / stubData.Length;
+            var mainAllocSize = numPerAlloc * stubData.Length;
+            var lastAllocSize = allStubsSize % mainAllocSize;
+            Helpers.DAssert(mainAllocSize > lastAllocSize);
+
+            var allocs = new IAllocatedMemory[numMainAllocs + (lastAllocSize != 0 ? 1 : 0)];
+
+            var mainAllocArr = ArrayPool<byte>.Shared.Rent(mainAllocSize);
+            var mainAllocBuf = mainAllocArr.AsSpan().Slice(0, mainAllocSize);
+
+            // we want to fill the buffer once, then for each alloc, only set the indicies
+            for (var i = 0; i < numPerAlloc; i++) {
+                stubData.CopyTo(mainAllocBuf.Slice(i * stubData.Length));
+            }
+
+            ref var vtblBase = ref Unsafe.AsRef<IntPtr>((void*) vtableBase);
+
+            // now we want to start making our allocations and filling the input vtable pointer
+            // we will be using the same alloc request for all of them
+            var allocReq = new AllocationRequest(vtableBase, IntPtr.Zero, (((nint) 1) << (IntPtr.Size * 8 - 1)) - 1, mainAllocSize) {
+                Alignment = IntPtr.Size,
+                Executable = true
+            };
+
+            for (var i = 0; i < numMainAllocs; i++) {
+                Helpers.Assert(system.MemoryAllocator.TryAllocateInRange(allocReq, out var alloc));
+                allocs[i] = alloc;
+
+                // fill the indicies appropriately
+                FillBufferIndicies(stubData, indexOffs, numPerAlloc, mainAllocBuf, ref vtblBase, i, alloc);
+
+                // patch the alloc to contain our data
+                system.PatchData(PatchTargetKind.Executable, alloc.BaseAddress, mainAllocBuf, default);
+            }
+
+            // now, if we need one final alloc, do that
+            if (lastAllocSize > 0) {
+                allocReq = allocReq with { Size = lastAllocSize };
+
+                Helpers.Assert(system.MemoryAllocator.TryAllocateInRange(allocReq, out var alloc));
+                allocs[allocs.Length - 1] = alloc;
+
+                // fill the indicies appropriately
+                FillBufferIndicies(stubData, indexOffs, numPerAlloc, mainAllocBuf, ref vtblBase, numMainAllocs, alloc);
+
+                // patch the alloc to contain our data
+                system.PatchData(PatchTargetKind.Executable, alloc.BaseAddress, mainAllocBuf.Slice(0, lastAllocSize), default);
+            }
+
+            ArrayPool<byte>.Shared.Return(mainAllocArr);
+
+            return allocs;
+
+            static void FillBufferIndicies(ReadOnlySpan<byte> stubData, int indexOffs, int numPerAlloc, Span<byte> mainAllocBuf, ref IntPtr vtblBase, int i, IAllocatedMemory alloc) {
+                for (var j = 0; j < numPerAlloc; j++) {
+                    ref var indexBase = ref mainAllocBuf[j * stubData.Length + indexOffs];
+                    var index = i * numPerAlloc + j;
+                    Unsafe.WriteUnaligned(ref indexBase, index);
+                    // write the output vtable
+                    Unsafe.Add(ref vtblBase, index) = (nint) alloc.BaseAddress + j * stubData.Length;
+                }
+            }
         }
     }
 }

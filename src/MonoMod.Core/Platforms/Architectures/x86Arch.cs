@@ -121,5 +121,10 @@ namespace MonoMod.Core.Platforms.Architectures {
             out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc) {
             return DetourKindBase.DoRetarget(original, retarget, buffer, out allocationHandle, out needsRepatch, out disposeOldAlloc);
         }
+
+
+        public ReadOnlyMemory<IAllocatedMemory> CreateNativeVtableProxyStubs(IntPtr vtableBase, int vtableSize) {
+            throw new NotImplementedException();
+        }
     }
 }

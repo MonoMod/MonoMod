@@ -2,11 +2,17 @@ using MonoMod.Utils;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Threading;
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core70Runtime : Core60Runtime {
-        public Core70Runtime(ISystem system) : base(system) {}
+
+        private readonly IArchitecture arch;
+
+        public Core70Runtime(ISystem system, IArchitecture arch) : base(system) {
+            this.arch = arch;
+        }
 
         // src/coreclr/inc/jiteeversionguid.h line 46
         // 6be47e5d-a92b-4d16-9280-f63df646ada4
@@ -47,9 +53,6 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     return ref Unsafe.Add(ref Unsafe.As<ulong, IntPtr>(ref data[0]), index);
                 }
             }
-
-            public IntPtr FirstVtblEntry;
-            // after FirstDtblEntry comes as many vtable entries as we need
 
             // we need to copy the full vtable, and these are the slots:
 
@@ -252,11 +255,18 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public readonly InvokeCompileMethodPtr InvokeCompileMethodPtr;
             public readonly IntPtr CompileMethodPtr;
 
+            public readonly ThreadLocal<IAllocatedMemory> iCorJitInfoWrapper = new();
+            public readonly ReadOnlyMemory<IAllocatedMemory> iCorJitInfoWrapperAllocs;
+            public readonly IntPtr iCorJitInfoWrapperVtbl;
+
             public JitHookDelegateHolder(Core70Runtime runtime, InvokeCompileMethodPtr icmp, IntPtr compileMethod) {
                 Runtime = runtime;
                 JitHookHelpers = runtime.JitHookHelpers;
                 InvokeCompileMethodPtr = icmp;
                 CompileMethodPtr = compileMethod;
+
+                iCorJitInfoWrapperVtbl = Marshal.AllocHGlobal(IntPtr.Size * ICorJitInfoWrapper.TotalVtableCount);
+                iCorJitInfoWrapperAllocs = Runtime.arch.CreateNativeVtableProxyStubs(iCorJitInfoWrapperVtbl, ICorJitInfoWrapper.TotalVtableCount);
 
                 // eagerly call ICMP to ensure that it's JITted before installing the hook
                 unsafe { icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _); }
@@ -291,16 +301,50 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 hookEntrancy++;
                 try {
 
-                    /* We've silenced any exceptions thrown by this in the past but it turns out this can throw?!
-                     * Let's hope that all runtimes we're hooking the JIT of know how to deal with this - oh wait, not all do!
-                     * FIXME: Linux .NET Core pre-5.0 (and sometimes even 5.0) can die in real_compileMethod on invalid IL?!
-                     * -ade
-                     */
+                    if (hookEntrancy == 1) {
+                        try {
+                            var corJitWrapper = iCorJitInfoWrapper.Value;
+                            if (corJitWrapper is null) {
+                                // we need to create corJitWrapper
+                                var allocReq = new AllocationRequest(corJitInfo, IntPtr.Zero, (((nint) 1) << (IntPtr.Size * 8 - 1)) - 1, sizeof(ICorJitInfoWrapper)) {
+                                    Alignment = IntPtr.Size,
+                                    Executable = false
+                                };
+                                if (Runtime.System.MemoryAllocator.TryAllocateInRange(allocReq, out var alloc)) {
+                                    iCorJitInfoWrapper.Value = corJitWrapper = alloc;
+                                }
+                            }
+                            // we still need to check if we were able to create it, because not creating it should not be a hard error
+                            if (corJitWrapper is not null) {
+                                var wrapper = (ICorJitInfoWrapper*) corJitWrapper.BaseAddress;
+                                wrapper->Vtbl = iCorJitInfoWrapperVtbl;
+                                wrapper->Wrapped = corJitInfo;
+                                (*wrapper)[ICorJitInfoWrapper.HotCodeRW] = IntPtr.Zero;
+                                (*wrapper)[ICorJitInfoWrapper.ColdCodeRW] = IntPtr.Zero;
+                                corJitInfo = (IntPtr) wrapper;
+                            }
+                        } catch (Exception e) {
+                            try {
+                                MMDbgLog.Error($"Error while setting up the ICorJitInfo wrapper: {e}");
+                            } catch {
+
+                            }
+                        }
+                    }
+
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
                         jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
 
                     if (hookEntrancy == 1) {
                         try {
+                            // we need to make sure that we set up the wrapper to continue
+                            var corJitWrapper = iCorJitInfoWrapper.Value;
+                            if (corJitWrapper is null)
+                                return result;
+
+                            ref var wrapper = ref *(ICorJitInfoWrapper*) corJitWrapper.BaseAddress;
+                            var realEntry = wrapper[ICorJitInfoWrapper.HotCodeRW];
+
                             // This is the top level JIT entry point, do our custom stuff
                             RuntimeTypeHandle[]? genericClassArgs = null;
                             RuntimeTypeHandle[]? genericMethodArgs = null;
@@ -320,6 +364,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                             RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
                             RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo.ftn);
+
+                            // TODO: pass down realEntry and given nativeEntry
 
                             Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) nativeEntry, nativeSizeOfCode);
                         } catch {

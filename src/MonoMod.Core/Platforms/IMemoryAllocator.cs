@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Platforms {
     public interface IMemoryAllocator {
+        int MaxSize { get; }
         bool TryAllocateInRange(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
     }
 

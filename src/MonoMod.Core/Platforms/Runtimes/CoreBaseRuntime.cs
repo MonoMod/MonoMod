@@ -8,7 +8,7 @@ using System.Linq;
 namespace MonoMod.Core.Platforms.Runtimes {
     internal abstract class CoreBaseRuntime : FxCoreBaseRuntime, IInitialize {
 
-        public static CoreBaseRuntime CreateForVersion(Version version, ISystem system) {
+        public static CoreBaseRuntime CreateForVersion(Version version, ISystem system, IArchitecture arch) {
 
             switch (version.Major) {
                 case 2:
@@ -38,7 +38,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 #if NO_NET7_RUNTIME
                     throw new PlatformNotSupportedException(".NET 7 Support is not enabled");
 #else
-                    return new Core70Runtime(system);
+                    return new Core70Runtime(system, arch);
 #endif
 
                 // currently, we need to manually add support for new versions.

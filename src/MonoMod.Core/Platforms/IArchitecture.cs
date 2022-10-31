@@ -1,6 +1,7 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace MonoMod.Core.Platforms {
     public interface IArchitecture {
@@ -22,6 +23,19 @@ namespace MonoMod.Core.Platforms {
 
         int GetRetargetBytes(NativeDetourInfo original, NativeDetourInfo retarget, Span<byte> buffer,
             out IDisposable? allocationHandle, out bool needsRepatch, out bool disposeOldAlloc);
+
+        /// <summary>
+        /// Populates a native vtable with proxy stubs to an object with the same vtable shape.
+        /// </summary>
+        /// <remarks>
+        /// The expected layout for the proxy object is this:
+        ///     0*IntPtr.Size pVtbl
+        ///     1*IntPtr.Size pWrapped
+        /// </remarks>
+        /// <param name="vtableBase">The base pointer for the vtable to fill. This must be large enough to hold <paramref name="vtableSize"/> entries.</param>
+        /// <param name="vtableSize">The number of vtable entries to fill.</param>
+        /// <returns>A collection of <see cref="IAllocatedMemory"/> which contain the stubs referenced by the generated vtable.</returns>
+        ReadOnlyMemory<IAllocatedMemory> CreateNativeVtableProxyStubs(IntPtr vtableBase, int vtableSize);
     }
 
     public interface INativeDetourKind {

@@ -331,6 +331,8 @@ namespace MonoMod.Core.Platforms.Memory {
 
         private readonly object sync = new();
 
+        public int MaxSize => (int) pageSize;
+
         public bool TryAllocateInRange(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
             if ((ulong)request.LowBound.ToInt64() > (ulong)request.HighBound.ToInt64())
                 throw new ArgumentException("Low and High are reversed", nameof(request));

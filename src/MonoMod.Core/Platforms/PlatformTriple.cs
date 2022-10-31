@@ -11,10 +11,10 @@ using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core.Platforms {
     public sealed class PlatformTriple {
-        public static IRuntime CreateCurrentRuntime(ISystem system)
+        public static IRuntime CreateCurrentRuntime(ISystem system, IArchitecture arch)
             => PlatformDetection.Runtime switch {
                 RuntimeKind.Framework => Runtimes.FxBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
-                RuntimeKind.CoreCLR => Runtimes.CoreBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
+                RuntimeKind.CoreCLR => Runtimes.CoreBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system, arch),
                 RuntimeKind.Mono => new Runtimes.MonoRuntime(system),
                 var kind => throw new PlatformNotSupportedException($"Runtime kind {kind} not supported"),
             };
@@ -51,7 +51,7 @@ namespace MonoMod.Core.Platforms {
         private static PlatformTriple CreateCurrent() {
             var sys = CreateCurrentSystem();
             var arch = CreateCurrentArchitecture(sys);
-            var runtime = CreateCurrentRuntime(sys);
+            var runtime = CreateCurrentRuntime(sys, arch);
             return new(arch, sys, runtime);
         }
 
