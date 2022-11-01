@@ -1,0 +1,84 @@
+
+- NASM Map file ---------------------------------------------------------------
+
+Source file:  stubs_x86.asm
+Output file:  stubs_x86.bin
+
+-- Program origin -------------------------------------------------------------
+
+00000000
+
+-- Sections (summary) ---------------------------------------------------------
+
+Vstart            Start             Stop              Length    Class     Name
+               0                 0                 0  00000000  progbits  .text
+               0                 0                 C  0000000C  progbits  .win
+             100               100               114  00000014  progbits  .gcc
+
+-- Sections (detailed) --------------------------------------------------------
+
+---- Section .text ------------------------------------------------------------
+
+class:     progbits
+length:                   0
+start:                    0
+align:     not defined
+follows:   not defined
+vstart:                   0
+valign:    not defined
+vfollows:  not defined
+
+---- Section .win -------------------------------------------------------------
+
+class:     progbits
+length:                   C
+start:                    0
+align:                  100
+follows:   not defined
+vstart:                   0
+valign:    not defined
+vfollows:  not defined
+
+---- Section .gcc -------------------------------------------------------------
+
+class:     progbits
+length:                  14
+start:                  100
+align:                  100
+follows:   not defined
+vstart:                 100
+valign:    not defined
+vfollows:  not defined
+
+-- Symbols --------------------------------------------------------------------
+
+---- No Section ---------------------------------------------------------------
+
+Value     Name
+0000000C  WinThis_VtblProxyStubSize
+00000007  WinThis_VtblProxyStubIndex
+00000014  GccThis_VtblProxyStubSize
+0000000F  GccThis_VtblProxyStubIndex
+
+
+---- Section .text ------------------------------------------------------------
+
+Real              Virtual           Name
+               0                 0  ﻿
+
+---- Section .win -------------------------------------------------------------
+
+Real              Virtual           Name
+               0                 0  win_this_vtbl_proxy_stub
+               0                 0  win_this_vtbl_proxy_stub.start
+               B                 B  win_this_vtbl_proxy_stub.after_index
+               C                 C  win_this_vtbl_proxy_stub.end
+
+---- Section .gcc -------------------------------------------------------------
+
+Real              Virtual           Name
+             100               100  gcc_this_vtbl_proxy_stub
+             100               100  gcc_this_vtbl_proxy_stub.start
+             113               113  gcc_this_vtbl_proxy_stub.after_index
+             114               114  gcc_this_vtbl_proxy_stub.end
+
