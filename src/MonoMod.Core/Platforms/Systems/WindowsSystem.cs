@@ -172,6 +172,13 @@ namespace MonoMod.Core.Platforms.Systems {
                 PageSize = sysInfo.dwPageSize;
             }
 
+            public override unsafe bool TryAllocatePage(nint size, bool executable, out IntPtr allocated) {
+                var pageProt = executable ? PAGE_PROTECTION_FLAGS.PAGE_EXECUTE_READWRITE : PAGE_PROTECTION_FLAGS.PAGE_READWRITE;
+
+                allocated = (IntPtr) Windows.Win32.Interop.VirtualAlloc(null, (nuint) size, VIRTUAL_ALLOCATION_TYPE.MEM_RESERVE | VIRTUAL_ALLOCATION_TYPE.MEM_COMMIT, pageProt);
+                return allocated != IntPtr.Zero;
+            }
+
             public unsafe override bool TryAllocatePage(IntPtr pageAddr, nint size, bool executable, out IntPtr allocated) {
                 var pageProt = executable ? PAGE_PROTECTION_FLAGS.PAGE_EXECUTE_READWRITE : PAGE_PROTECTION_FLAGS.PAGE_READWRITE;
 

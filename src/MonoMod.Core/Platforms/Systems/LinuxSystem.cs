@@ -127,8 +127,37 @@ namespace MonoMod.Core.Platforms.Systems {
 
             private bool canTestPageAllocation = true;
 
+            protected override bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+                var prot = request.Executable ? Unix.Protection.Execute : Unix.Protection.None;
+                prot |= Unix.Protection.Read | Unix.Protection.Write;
+
+                // mmap the page we found
+                nint mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint) request.Size, prot, Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
+                if (mmapPtr == 0) {
+                    // fuck
+                    allocated = null;
+                    return false;
+                }
+
+                // create a Page object for the newly mapped memory, even before deciding whether we succeeded or not
+                var page = new Page(this, mmapPtr, (uint) PageSize, request.Executable);
+                InsertAllocatedPage(page);
+
+                // for simplicity, we'll try to allocate out of the page before checking bounds
+                if (!page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var pageAlloc)) {
+                    // huh???
+                    RegisterForCleanup(page);
+                    allocated = null;
+                    return false;
+                }
+
+                // we got an allocation!
+                allocated = pageAlloc;
+                return true;
+            }
+
             protected override bool TryAllocateNewPage(
-                AllocationRequest request,
+                PositionedAllocationRequest request,
                 nint targetPage, nint lowPageBound, nint highPageBound,
                 [MaybeNullWhen(false)] out IAllocatedMemory allocated
             ) {
@@ -137,11 +166,11 @@ namespace MonoMod.Core.Platforms.Systems {
                     return false;
                 }
 
-                var prot = request.Executable ? Unix.Protection.Execute : Unix.Protection.None;
+                var prot = request.Base.Executable ? Unix.Protection.Execute : Unix.Protection.None;
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
                 
                 // number of pages needed to satisfy length requirements
-                nint numPages = request.Size / PageSize + 1;
+                nint numPages = request.Base.Size / PageSize + 1;
                 
                 // find the nearest unallocated page within our bounds
                 nint low = targetPage - PageSize;
@@ -191,7 +220,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
                 
                 // mmap the page we found
-                nint mmapPtr = Unix.Mmap(ptr, (nuint)request.Size, prot, Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
+                nint mmapPtr = Unix.Mmap(ptr, (nuint)request.Base.Size, prot, Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
                 if (mmapPtr == 0) {
                     // fuck
                     allocated = null;
@@ -199,11 +228,11 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
 
                 // create a Page object for the newly mapped memory, even before deciding whether we succeeded or not
-                var page = new Page(this, mmapPtr, (uint) PageSize, request.Executable);
+                var page = new Page(this, mmapPtr, (uint) PageSize, request.Base.Executable);
                 InsertAllocatedPage(page);
 
                 // for simplicity, we'll try to allocate out of the page before checking bounds
-                if (!page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var pageAlloc)) {
+                if (!page.TryAllocate((uint) request.Base.Size, (uint) request.Base.Alignment, out var pageAlloc)) {
                     // huh???
                     RegisterForCleanup(page);
                     allocated = null;

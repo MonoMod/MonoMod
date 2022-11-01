@@ -333,18 +333,18 @@ namespace MonoMod.Core.Platforms.Memory {
 
         public int MaxSize => (int) pageSize;
 
-        public bool TryAllocateInRange(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+        public bool TryAllocateInRange(PositionedAllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
             if ((ulong)request.LowBound.ToInt64() > (ulong)request.HighBound.ToInt64())
                 throw new ArgumentException("Low and High are reversed", nameof(request));
             if ((nint) request.Target < request.LowBound || (nint) request.Target > request.HighBound)
                 throw new ArgumentException("Target not between low and high", nameof(request));
 
-            if (request.Size < 0)
+            if (request.Base.Size < 0)
                 throw new ArgumentException("Size is negative", nameof(request));
-            if (request.Alignment <= 0)
+            if (request.Base.Alignment <= 0)
                 throw new ArgumentException("Alignment is zero or negative", nameof(request));
 
-            if (request.Size > pageSize)                 // TODO: large allocations
+            if (request.Base.Size > pageSize)                 // TODO: large allocations
                 throw new NotSupportedException("Single allocations cannot be larger than a page");
 
             // we want to round the low value up
@@ -401,9 +401,9 @@ namespace MonoMod.Core.Platforms.Memory {
             }
         }
 
-        private static bool TryAllocWithPage(Page page, AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
-            if (page.IsExecutable == request.Executable && page.BaseAddr >= (nint) request.LowBound && page.BaseAddr < (nint) request.HighBound) {
-                if (page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var pageAlloc)) {
+        private static bool TryAllocWithPage(Page page, PositionedAllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+            if (page.IsExecutable == request.Base.Executable && page.BaseAddr >= (nint) request.LowBound && page.BaseAddr < (nint) request.HighBound) {
+                if (page.TryAllocate((uint) request.Base.Size, (uint) request.Base.Alignment, out var pageAlloc)) {
                     if ((nint) pageAlloc.BaseAddress >= request.LowBound && (nint) pageAlloc.BaseAddress < request.HighBound) {
                         // we've found a valid allocation, we're done
                         allocated = pageAlloc;
@@ -420,6 +420,29 @@ namespace MonoMod.Core.Platforms.Memory {
             return false;
         }
 
-        protected abstract bool TryAllocateNewPage(AllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
+        public bool TryAllocate(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+            if (request.Size < 0)
+                throw new ArgumentException("Size is negative", nameof(request));
+            if (request.Alignment <= 0)
+                throw new ArgumentException("Alignment is zero or negative", nameof(request));
+
+            if (request.Size > pageSize) // TODO: large allocations
+                throw new NotSupportedException("Single allocations cannot be larger than a page");
+
+            lock (sync) {
+                foreach (var page in AllocList) {
+                    if (page.IsExecutable == request.Executable && page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var alloc)) {
+                        allocated = alloc;
+                        return true;
+                    }
+                }
+
+                return TryAllocateNewPage(request, out allocated);
+            }
+        }
+
+        protected abstract bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
+        protected abstract bool TryAllocateNewPage(PositionedAllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
+
     }
 }

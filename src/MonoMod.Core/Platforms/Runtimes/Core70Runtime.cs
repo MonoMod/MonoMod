@@ -267,6 +267,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 iCorJitInfoWrapperVtbl = Marshal.AllocHGlobal(IntPtr.Size * ICorJitInfoWrapper.TotalVtableCount);
                 iCorJitInfoWrapperAllocs = Runtime.arch.CreateNativeVtableProxyStubs(iCorJitInfoWrapperVtbl, ICorJitInfoWrapper.TotalVtableCount);
+                MMDbgLog.Trace($"Allocated ICorJitInfo wrapper vtable at 0x{iCorJitInfoWrapperVtbl:x16}");
 
                 // eagerly call ICMP to ensure that it's JITted before installing the hook
                 unsafe { icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _); }
@@ -306,11 +307,11 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             var corJitWrapper = iCorJitInfoWrapper.Value;
                             if (corJitWrapper is null) {
                                 // we need to create corJitWrapper
-                                var allocReq = new AllocationRequest(corJitInfo, IntPtr.Zero, (((nint) 1) << (IntPtr.Size * 8 - 1)) - 1, sizeof(ICorJitInfoWrapper)) {
+                                var allocReq = new AllocationRequest(sizeof(ICorJitInfoWrapper)) {
                                     Alignment = IntPtr.Size,
                                     Executable = false
                                 };
-                                if (Runtime.System.MemoryAllocator.TryAllocateInRange(allocReq, out var alloc)) {
+                                if (Runtime.System.MemoryAllocator.TryAllocate(allocReq, out var alloc)) {
                                     iCorJitInfoWrapper.Value = corJitWrapper = alloc;
                                 }
                             }

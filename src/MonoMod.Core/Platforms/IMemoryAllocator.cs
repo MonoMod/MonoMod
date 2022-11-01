@@ -4,11 +4,14 @@ using System.Diagnostics.CodeAnalysis;
 namespace MonoMod.Core.Platforms {
     public interface IMemoryAllocator {
         int MaxSize { get; }
-        bool TryAllocateInRange(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
+
+        bool TryAllocate(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
+        bool TryAllocateInRange(PositionedAllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
     }
 
-    // TODO: should some of these non-default values be given defaults?
-    public readonly record struct AllocationRequest(IntPtr Target, IntPtr LowBound, IntPtr HighBound, int Size) {
+    public readonly record struct PositionedAllocationRequest(IntPtr Target, IntPtr LowBound, IntPtr HighBound, AllocationRequest Base);
+
+    public readonly record struct AllocationRequest(int Size) {
         public int Alignment { get; init; } = 8;
 
         [SuppressMessage("Performance", "CA1805:Do not initialize unnecessarily",

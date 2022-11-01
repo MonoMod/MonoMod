@@ -6,6 +6,7 @@ namespace MonoMod.Core.Platforms.Memory {
     public abstract class QueryingMemoryPageAllocatorBase {
         public abstract uint PageSize { get; }
         public abstract bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize);
+        public abstract bool TryAllocatePage(nint size, bool executable, out IntPtr allocated);
         public abstract bool TryAllocatePage(IntPtr pageAddr, nint size, bool executable, out IntPtr allocated);
         public abstract bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg);
     }
@@ -17,7 +18,29 @@ namespace MonoMod.Core.Platforms.Memory {
             pageAlloc = alloc;
         }
 
-        protected override bool TryAllocateNewPage(AllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+        protected override bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+            if (!pageAlloc.TryAllocatePage(PageSize, request.Executable, out var allocBase)) {
+                allocated = null;
+                return false;
+            }
+
+            var pageObj = new Page(this, allocBase, (uint) PageSize, request.Executable);
+            InsertAllocatedPage(pageObj);
+
+            // now that we have a page, we'll try to allocate out of it
+            // if that fails, immediately register for cleanup
+            if (!pageObj.TryAllocate((uint) request.Size, (uint) request.Alignment, out var alloc)) {
+                RegisterForCleanup(pageObj);
+                allocated = null;
+                return false;
+            }
+
+            // we successfully allocated, return the page allocation
+            allocated = alloc;
+            return true;
+        }
+
+        protected override bool TryAllocateNewPage(PositionedAllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
             // we'll do the same approach for trying to find an existing page, but querying the OS for free pages to allocate
             var target = request.Target;
 
@@ -29,15 +52,19 @@ namespace MonoMod.Core.Platforms.Memory {
                 while (
                     highPage < highPageBound &&
                     (lowPage < lowPageBound || target - lowPage > highPage - target)
-                )                     if (TryAllocNewPage(request, ref highPage, true, out allocated))
+                ) {
+                    if (TryAllocNewPage(request, ref highPage, true, out allocated))
                         return true;
+                }
 
                 // then try low pages, while they're closer than high pages
                 while (
                     lowPage >= lowPageBound &&
                     (highPage >= highPageBound || target - lowPage < highPage - target)
-                )                     if (TryAllocNewPage(request, ref lowPage, false, out allocated))
+                ) {
+                    if (TryAllocNewPage(request, ref lowPage, false, out allocated))
                         return true;
+                }
             }
 
             // if we fall out to here, we just couldn't allocate, so sucks
@@ -45,20 +72,20 @@ namespace MonoMod.Core.Platforms.Memory {
             return false;
         }
 
-        private unsafe bool TryAllocNewPage(AllocationRequest request, ref nint page, bool goingUp, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+        private unsafe bool TryAllocNewPage(PositionedAllocationRequest request, ref nint page, bool goingUp, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
             if (pageAlloc.TryQueryPage(page, out var isFree, out IntPtr baseAddr, out var allocSize)) {
                 if (!isFree) // this is not a free block, so we don't care
                     goto Fail;
 
-                if (!pageAlloc.TryAllocatePage(page, PageSize, request.Executable, out var allocBase)) // allocation failed
+                if (!pageAlloc.TryAllocatePage(page, PageSize, request.Base.Executable, out var allocBase)) // allocation failed
                     goto Fail;
 
-                var pageObj = new Page(this, allocBase, (uint) PageSize, request.Executable);
+                var pageObj = new Page(this, allocBase, (uint) PageSize, request.Base.Executable);
                 InsertAllocatedPage(pageObj);
 
                 // now that we have a page, we'll try to allocate out of it
                 // if that fails, immediately register for cleanup
-                if (!pageObj.TryAllocate((uint) request.Size, (uint) request.Alignment, out var alloc)) {
+                if (!pageObj.TryAllocate((uint) request.Base.Size, (uint) request.Base.Alignment, out var alloc)) {
                     RegisterForCleanup(pageObj);
                     goto Fail;
                 }

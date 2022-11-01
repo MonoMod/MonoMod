@@ -276,7 +276,7 @@ namespace MonoMod.Core.Platforms.Architectures {
             if ((nuint) lowBound > (nuint) target) lowBound = 0;
             var highBound = target + int.MaxValue;
             if ((nuint) highBound < (nuint) target) highBound = -1;
-            var memRequest = new AllocationRequest((nint)target, (nint)lowBound, (nint)highBound, IntPtr.Size);
+            var memRequest = new PositionedAllocationRequest((nint)target, (nint)lowBound, (nint)highBound, new(IntPtr.Size));
             if (sizeHint >= Rel32Ind64Kind.Instance.Size && system.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
                 return new(from, to, Rel32Ind64Kind.Instance, allocated);
             }
@@ -351,17 +351,18 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             // now we want to start making our allocations and filling the input vtable pointer
             // we will be using the same alloc request for all of them
-            var allocReq = new AllocationRequest(vtableBase, IntPtr.Zero, (((nint) 1) << (IntPtr.Size * 8 - 1)) - 1, mainAllocSize) {
+            var allocReq = new AllocationRequest(mainAllocSize) {
                 Alignment = IntPtr.Size,
                 Executable = true
             };
 
             for (var i = 0; i < numMainAllocs; i++) {
-                Helpers.Assert(system.MemoryAllocator.TryAllocateInRange(allocReq, out var alloc));
+                Helpers.Assert(system.MemoryAllocator.TryAllocate(allocReq, out var alloc));
                 allocs[i] = alloc;
 
                 // fill the indicies appropriately
-                FillBufferIndicies(stubData, indexOffs, numPerAlloc, mainAllocBuf, ref vtblBase, i, alloc);
+                FillBufferIndicies(stubData.Length, indexOffs, numPerAlloc, i, mainAllocBuf);
+                FillVtbl(stubData.Length, numPerAlloc * i, ref vtblBase, numPerAlloc, alloc.BaseAddress);
 
                 // patch the alloc to contain our data
                 system.PatchData(PatchTargetKind.Executable, alloc.BaseAddress, mainAllocBuf, default);
@@ -371,11 +372,12 @@ namespace MonoMod.Core.Platforms.Architectures {
             if (lastAllocSize > 0) {
                 allocReq = allocReq with { Size = lastAllocSize };
 
-                Helpers.Assert(system.MemoryAllocator.TryAllocateInRange(allocReq, out var alloc));
+                Helpers.Assert(system.MemoryAllocator.TryAllocate(allocReq, out var alloc));
                 allocs[allocs.Length - 1] = alloc;
 
                 // fill the indicies appropriately
-                FillBufferIndicies(stubData, indexOffs, numPerAlloc, mainAllocBuf, ref vtblBase, numMainAllocs, alloc);
+                FillBufferIndicies(stubData.Length, indexOffs, numPerAlloc, numMainAllocs, mainAllocBuf);
+                FillVtbl(stubData.Length, numPerAlloc * numMainAllocs, ref vtblBase, lastAllocSize / stubData.Length, alloc.BaseAddress);
 
                 // patch the alloc to contain our data
                 system.PatchData(PatchTargetKind.Executable, alloc.BaseAddress, mainAllocBuf.Slice(0, lastAllocSize), default);
@@ -385,13 +387,17 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             return allocs;
 
-            static void FillBufferIndicies(ReadOnlySpan<byte> stubData, int indexOffs, int numPerAlloc, Span<byte> mainAllocBuf, ref IntPtr vtblBase, int i, IAllocatedMemory alloc) {
+            static void FillBufferIndicies(int stubSize, int indexOffs, int numPerAlloc, int i, Span<byte> mainAllocBuf) {
                 for (var j = 0; j < numPerAlloc; j++) {
-                    ref var indexBase = ref mainAllocBuf[j * stubData.Length + indexOffs];
-                    var index = i * numPerAlloc + j;
+                    ref var indexBase = ref mainAllocBuf[j * stubSize + indexOffs];
+                    var index = numPerAlloc * i + j;
                     Unsafe.WriteUnaligned(ref indexBase, index);
-                    // write the output vtable
-                    Unsafe.Add(ref vtblBase, index) = (nint) alloc.BaseAddress + j * stubData.Length;
+                }
+            }
+
+            static void FillVtbl(int stubSize, int baseIndex, ref IntPtr vtblBase, int numEntries, nint baseAddr) {
+                for (var i = 0; i < numEntries; i++) {
+                    Unsafe.Add(ref vtblBase, baseIndex + i) = baseAddr + stubSize * i;
                 }
             }
         }
