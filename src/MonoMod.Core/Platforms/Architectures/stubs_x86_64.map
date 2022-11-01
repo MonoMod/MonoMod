@@ -1,0 +1,84 @@
+
+- NASM Map file ---------------------------------------------------------------
+
+Source file:  stubs_x86_64.asm
+Output file:  stubs_x86_64.bin
+
+-- Program origin -------------------------------------------------------------
+
+00000000
+
+-- Sections (summary) ---------------------------------------------------------
+
+Vstart            Start             Stop              Length    Class     Name
+               0                 0                 0  00000000  progbits  .text
+               0                 0                10  00000010  progbits  .win
+             100               100               110  00000010  progbits  .sysv
+
+-- Sections (detailed) --------------------------------------------------------
+
+---- Section .text ------------------------------------------------------------
+
+class:     progbits
+length:                   0
+start:                    0
+align:     not defined
+follows:   not defined
+vstart:                   0
+valign:    not defined
+vfollows:  not defined
+
+---- Section .win -------------------------------------------------------------
+
+class:     progbits
+length:                  10
+start:                    0
+align:                  100
+follows:   not defined
+vstart:                   0
+valign:    not defined
+vfollows:  not defined
+
+---- Section .sysv ------------------------------------------------------------
+
+class:     progbits
+length:                  10
+start:                  100
+align:                  100
+follows:   not defined
+vstart:                 100
+valign:    not defined
+vfollows:  not defined
+
+-- Symbols --------------------------------------------------------------------
+
+---- No Section ---------------------------------------------------------------
+
+Value     Name
+00000010  Win_VtblProxyStubSize
+00000009  Win_VtblProxyStubIndex
+00000010  SysV_VtblProxyStubSize
+00000009  SysV_VtblProxyStubIndex
+
+
+---- Section .text ------------------------------------------------------------
+
+Real              Virtual           Name
+               0                 0  ﻿
+
+---- Section .win -------------------------------------------------------------
+
+Real              Virtual           Name
+               0                 0  win_vtbl_proxy_stub
+               0                 0  win_vtbl_proxy_stub.start
+               D                 D  win_vtbl_proxy_stub.after_index
+              10                10  win_vtbl_proxy_stub.end
+
+---- Section .sysv ------------------------------------------------------------
+
+Real              Virtual           Name
+             100               100  sysv_vtbl_proxy_stub
+             100               100  sysv_vtbl_proxy_stub.start
+             10D               10D  sysv_vtbl_proxy_stub.after_index
+             110               110  sysv_vtbl_proxy_stub.end
+
