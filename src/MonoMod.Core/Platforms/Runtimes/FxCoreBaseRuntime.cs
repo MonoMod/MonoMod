@@ -235,6 +235,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             ReadOnlyMemory<RuntimeTypeHandle>? genericTypeArguments,
             ReadOnlyMemory<RuntimeTypeHandle>? genericMethodArguments,
             IntPtr methodBodyStart,
+            IntPtr methodBodyRw,
             ulong methodBodySize
         ) {
             try {
@@ -264,10 +265,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     }
                 }
 
-                MMDbgLog.Spam($"JIT compiled {method} to 0x{methodBodyStart:x16}");
+                MMDbgLog.Spam($"JIT compiled {method} to 0x{methodBodyStart:x16} (rw: 0x{methodBodyRw:x16})");
 
                 try {
-                    OnMethodCompiled?.Invoke(methodHandle, method, methodBodyStart, methodBodySize);
+                    OnMethodCompiled?.Invoke(methodHandle, method, methodBodyStart, methodBodyRw, methodBodySize);
                 } catch (Exception e) {
                     MMDbgLog.Error($"Error executing OnMethodCompiled event: {e}");
                 }

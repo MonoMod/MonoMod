@@ -178,7 +178,10 @@ namespace MonoMod.Core.Platforms {
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public SimpleNativeDetour CreateSimpleDetour(IntPtr from, IntPtr to, int detourMaxSize = -1) {
+        public SimpleNativeDetour CreateSimpleDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default) {
+            if (fromRw == default) {
+                fromRw = from;
+            }
             Helpers.Assert(from != to, $"Cannot detour a method to itself! (from: {from}, to: {to})");
 
             MMDbgLog.Trace($"Creating simple detour 0x{from:x16} => 0x{to:x16}");
@@ -198,7 +201,7 @@ namespace MonoMod.Core.Platforms {
             var backup = new byte[detourInfo.Size];
 
             // now we can apply the detour through the system
-            System.PatchData(PatchTargetKind.Executable, from, detourData, backup);
+            System.PatchData(PatchTargetKind.Executable, fromRw, detourData, backup);
 
             // and now we just create the NativeDetour object
             return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);

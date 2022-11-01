@@ -80,7 +80,7 @@ namespace MonoMod.Core.Platforms {
                 }
 
                 // TODO: figure out the goddamn locking here, what is even going on right now?
-                public void OnMethodCompiled(MethodBase method, IntPtr codeStart, ulong codeSize) {
+                public void OnMethodCompiled(MethodBase method, IntPtr codeStart, IntPtr codeStartRw, ulong codeSize) {
                     if (!IsApplied)
                         return;
 
@@ -103,14 +103,16 @@ namespace MonoMod.Core.Platforms {
                         try {
                             IsApplying = true;
 
-                            IntPtr from, to;
+                            IntPtr from, to, fromRw;
 
                             var detour = Detour;
 
+                            // TODO: we should really *really* be using normal thunks for to
                             if (detour is not null) {
                                 (from, to) = (detour.Source, detour.Destination);
                                 if (isFrom) {
                                     from = codeStart;
+                                    fromRw = codeStartRw;
                                 } else {
                                     to = codeStart;
                                     // we already have a detour, and are just changing the target, retarget
@@ -120,14 +122,15 @@ namespace MonoMod.Core.Platforms {
                             } else {
                                 if (isFrom) {
                                     from = codeStart;
+                                    fromRw = codeStartRw;
                                     to = triple.GetNativeMethodBody(target);
                                 } else {
-                                    from = triple.GetNativeMethodBody(src);
+                                    fromRw = from = triple.GetNativeMethodBody(src);
                                     to = codeStart;
                                 }
                             }
 
-                            var newDetour = triple.CreateSimpleDetour(from, to, detourMaxSize: (int) codeSize);
+                            var newDetour = triple.CreateSimpleDetour(from, to, detourMaxSize: (int) codeSize, fromRw: fromRw);
                             ReplaceDetourInLock(this, newDetour, out oldDetour);
                         } finally {
                             IsApplying = false;
@@ -206,7 +209,7 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            private static void OnMethodCompiled(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, ulong codeSize) {
+            private static void OnMethodCompiled(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, IntPtr codeStartRw, ulong codeSize) {
                 if (method is null) {
                     return;
                 }
@@ -216,7 +219,7 @@ namespace MonoMod.Core.Platforms {
                 if (relatedDetours.TryGetValue(method, out var related)) {
                     lock (related) {
                         foreach (var cmh in related.RelatedDetours) {
-                            cmh.OnMethodCompiled(method, codeStart, codeSize);
+                            cmh.OnMethodCompiled(method, codeStart, codeStartRw, codeSize);
                         }
                     }
                 }

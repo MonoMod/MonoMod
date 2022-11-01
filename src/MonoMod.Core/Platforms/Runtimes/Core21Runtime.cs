@@ -184,7 +184,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
                             RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo.ftn);
 
-                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) nativeEntry, nativeSizeOfCode);
+                            // codeStart and codeStartRw are the same because this runtime doesn't distinguish them at this point in the JIT
+                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) nativeEntry, (IntPtr) nativeEntry, nativeSizeOfCode);
                         } catch {
                             // eat the exception so we don't accidentally bubble up to native code
                         }

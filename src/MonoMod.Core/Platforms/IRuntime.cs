@@ -22,5 +22,5 @@ namespace MonoMod.Core.Platforms {
         IntPtr GetMethodEntryPoint(MethodBase method);
     }
 
-    public delegate void OnMethodCompiledCallback(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, ulong codeSize);
+    public delegate void OnMethodCompiledCallback(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, IntPtr codeRw, ulong codeSize);
 }
