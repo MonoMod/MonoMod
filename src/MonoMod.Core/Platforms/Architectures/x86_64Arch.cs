@@ -309,10 +309,10 @@ namespace MonoMod.Core.Platforms.Architectures {
             return DetourKindBase.DoRetarget(original, retarget, buffer, out allocationHandle, out needsRepatch, out disposeOldAlloc);
         }
 
-        private const int VtblProxyStubWinIdxOffs = 0x11;
+        private const int VtblProxyStubWinIdxOffs = 0x9;
+        private const bool VtblProxyStubWinIdxPremul = true;
         private static ReadOnlySpan<byte> VtblProxyStubWin => new byte[] {
-            0x48, 0x8B, 0x49, 0x08, 0x8B, 0x05, 0x07, 0x00, 0x00, 0x00, 0x4C, 0x8B, 0x11, 0x41, 0xFF, 0x24,
-            0xC2, 0x00, 0x00, 0x00, 0x00, 0xCC, 0xCC, 0xCC
+            0x48, 0x8B, 0x49, 0x08, 0x48, 0x8B, 0x01, 0xFF, 0xA0, 0x55, 0x55, 0x55, 0x55, 0xCC, 0xCC, 0xCC
         };
 
         public unsafe ReadOnlyMemory<IAllocatedMemory> CreateNativeVtableProxyStubs(IntPtr vtableBase, int vtableSize) {
@@ -320,10 +320,12 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             ReadOnlySpan<byte> stubData;
             int indexOffs;
+            bool premulOffset;
 
             if (os.Is(OSKind.Windows)) {
                 stubData = VtblProxyStubWin;
                 indexOffs = VtblProxyStubWinIdxOffs;
+                premulOffset = VtblProxyStubWinIdxPremul;
             } else {
                 throw new PlatformNotSupportedException();
             }
@@ -361,7 +363,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                 allocs[i] = alloc;
 
                 // fill the indicies appropriately
-                FillBufferIndicies(stubData.Length, indexOffs, numPerAlloc, i, mainAllocBuf);
+                FillBufferIndicies(stubData.Length, indexOffs, numPerAlloc, i, mainAllocBuf, premulOffset);
                 FillVtbl(stubData.Length, numPerAlloc * i, ref vtblBase, numPerAlloc, alloc.BaseAddress);
 
                 // patch the alloc to contain our data
@@ -376,7 +378,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                 allocs[allocs.Length - 1] = alloc;
 
                 // fill the indicies appropriately
-                FillBufferIndicies(stubData.Length, indexOffs, numPerAlloc, numMainAllocs, mainAllocBuf);
+                FillBufferIndicies(stubData.Length, indexOffs, numPerAlloc, numMainAllocs, mainAllocBuf, premulOffset);
                 FillVtbl(stubData.Length, numPerAlloc * numMainAllocs, ref vtblBase, lastAllocSize / stubData.Length, alloc.BaseAddress);
 
                 // patch the alloc to contain our data
@@ -387,10 +389,13 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             return allocs;
 
-            static void FillBufferIndicies(int stubSize, int indexOffs, int numPerAlloc, int i, Span<byte> mainAllocBuf) {
+            static void FillBufferIndicies(int stubSize, int indexOffs, int numPerAlloc, int i, Span<byte> mainAllocBuf, bool premul) {
                 for (var j = 0; j < numPerAlloc; j++) {
                     ref var indexBase = ref mainAllocBuf[j * stubSize + indexOffs];
-                    var index = numPerAlloc * i + j;
+                    var index = (uint) (numPerAlloc * i + j);
+                    if (premul) {
+                        index *= (uint) IntPtr.Size;
+                    }
                     Unsafe.WriteUnaligned(ref indexBase, index);
                 }
             }

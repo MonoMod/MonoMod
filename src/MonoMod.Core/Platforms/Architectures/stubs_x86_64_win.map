@@ -12,7 +12,7 @@ Output file:  stubs_x86_64_win.bin
 
 Vstart            Start             Stop              Length    Class     Name
                0                 0                 0  00000000  progbits  .text
-               0                 0                18  00000018  progbits  .vtbl_proxy_stub
+               0                 0                10  00000010  progbits  .vtbl_proxy_stub
 
 -- Sections (detailed) --------------------------------------------------------
 
@@ -30,7 +30,7 @@ vfollows:  not defined
 ---- Section .vtbl_proxy_stub -------------------------------------------------
 
 class:     progbits
-length:                  18
+length:                  10
 start:                    0
 align:                  100
 follows:   not defined
@@ -43,8 +43,8 @@ vfollows:  not defined
 ---- No Section ---------------------------------------------------------------
 
 Value     Name
-00000018  VtblProxyStubSize
-00000011  VtblProxyStubIndex
+00000010  VtblProxyStubSize
+00000009  VtblProxyStubIndex
 
 
 ---- Section .text ------------------------------------------------------------
@@ -56,6 +56,6 @@ Real              Virtual           Name
 
 Real              Virtual           Name
                0                 0  vtbl_proxy_stub
-              11                11  vtbl_proxy_stub.index
-              18                18  vtbl_proxy_stub.end
+               D                 D  vtbl_proxy_stub.after_index
+              10                10  vtbl_proxy_stub.end
 
