@@ -5,7 +5,6 @@ using System;
 namespace MonoMod.Core.Platforms.Architectures {
     internal sealed class x86Arch : IArchitecture {
         public ArchitectureKind Target => ArchitectureKind.x86;
-
         public ArchitectureFeature Features => ArchitectureFeature.None;
 
         private BytePatternCollection? lazyKnownMethodThunks;
@@ -122,9 +121,32 @@ namespace MonoMod.Core.Platforms.Architectures {
             return DetourKindBase.DoRetarget(original, retarget, buffer, out allocationHandle, out needsRepatch, out disposeOldAlloc);
         }
 
+        private readonly ISystem system;
+        public x86Arch(ISystem system) {
+            this.system = system;
+        }
+
+        private const int WinThisVtableThunkIndexOffs = 0x7;
+        private static ReadOnlySpan<byte> WinThisVtableProxyThunk => new byte[] {
+            0x8B, 0x49, 0x04, 0x8B, 0x01, 0xFF, 0xA0, 0x55, 0x55, 0x55, 0x55, 0xCC
+        };
 
         public ReadOnlyMemory<IAllocatedMemory> CreateNativeVtableProxyStubs(IntPtr vtableBase, int vtableSize) {
-            throw new NotImplementedException();
+            var os = PlatformDetection.OS.GetKernel();
+
+            ReadOnlySpan<byte> stubData;
+            int indexOffs;
+            var premulOffset = true;
+
+            if (os.Is(OSKind.Windows)) {
+                stubData = WinThisVtableProxyThunk;
+                indexOffs = WinThisVtableThunkIndexOffs;
+            } else {
+                // x86 is only supported on windows
+                throw new PlatformNotSupportedException();
+            }
+
+            return Shared.CreateVtableStubs(system, vtableBase, vtableSize, stubData, indexOffs, premulOffset);
         }
     }
 }

@@ -21,7 +21,7 @@ namespace MonoMod.Core.Platforms {
 
         public static IArchitecture CreateCurrentArchitecture(ISystem system)
             => PlatformDetection.Architecture switch {
-                ArchitectureKind.x86 => new Architectures.x86Arch(),
+                ArchitectureKind.x86 => new Architectures.x86Arch(system),
                 ArchitectureKind.x86_64 => new Architectures.x86_64Arch(system),
                 ArchitectureKind.Arm => throw new NotImplementedException(),
                 ArchitectureKind.Arm64 => throw new NotImplementedException(),
