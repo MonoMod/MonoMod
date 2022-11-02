@@ -50,6 +50,24 @@ namespace MonoMod.Core.Platforms.Architectures {
                         // int 3
                         0xcc),
 
+                    // .NET 7 FixupPrecode (main entry point)
+                    new(new(AddressKind.Abs32 | AddressKind.Indirect), mustMatchAtStart: true,
+                        // jmp dword [pTarget]
+                        0xff, 0x25, Ad, Ad, Ad, Ad,
+                        // mov eax, dword [pMethodDesc]
+                        0xa1, An, An, An, An,
+                        // jmp dword [pPrecodeFixupThunk]
+                        0xff, 0x25, An, An, An, An
+                    ),
+
+                    // .NET 7 FixupPrecode (precode entry point)
+                    new(new(AddressKind.PrecodeFixupThunkAbs32 | AddressKind.Indirect), mustMatchAtStart: true,
+                        // mov eax, dword [pMethodDesc]
+                        0xa1, An, An, An, An,
+                        // jmp dword [pPrecodeFixupThunk]
+                        0xff, 0x25, Ad, Ad, Ad, Ad
+                    ),
+
                     null
                 );
             } else {

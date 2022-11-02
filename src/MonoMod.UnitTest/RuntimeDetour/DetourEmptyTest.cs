@@ -22,8 +22,8 @@ namespace MonoMod.UnitTest {
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.
 
-            System.Threading.Thread.Sleep(10000);
-            System.Diagnostics.Debugger.Break();
+            //System.Threading.Thread.Sleep(10000);
+            //System.Diagnostics.Debugger.Break();
 
             DidNothing = true;
             DoNothing();
