@@ -37,6 +37,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             var typeCode = Type.GetTypeCode(type);
             if (typeCode is
+                TypeCode.Boolean or
                 TypeCode.Byte or TypeCode.SByte or
                 TypeCode.Int16 or TypeCode.UInt16 or
                 TypeCode.Int32 or TypeCode.UInt32 ||
