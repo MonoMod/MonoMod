@@ -59,6 +59,7 @@ namespace MonoMod.Core.Platforms {
                 private readonly PlatformTriple triple;
                 private readonly MethodBase src;
                 private readonly MethodBase target;
+                private readonly object sync = new();
 
                 public DetourBox(PlatformTriple triple, MethodBase src, MethodBase target) {
                     this.triple = triple;
@@ -71,12 +72,12 @@ namespace MonoMod.Core.Platforms {
 
                 public void SubscribeCompileMethod() {
                     AddRelatedDetour(src, this);
-                    AddRelatedDetour(target, this);
+                    //AddRelatedDetour(target, this);
                 }
 
                 public void UnsubscribeCompileMethod() {
                     RemoveRelatedDetour(src, this);
-                    RemoveRelatedDetour(target, this);
+                    //RemoveRelatedDetour(target, this);
                 }
 
                 // TODO: figure out the goddamn locking here, what is even going on right now?
@@ -85,14 +86,10 @@ namespace MonoMod.Core.Platforms {
                         return;
 
                     method = triple.GetIdentifiable(method);
-                    var isFrom = method.Equals(src);
-                    var isTo = method.Equals(target);
-                    if (!isFrom && !isTo)
-                        return;
-                    Helpers.DAssert(!(isFrom && isTo));
+                    Helpers.DAssert(method.Equals(src));
 
                     SimpleNativeDetour? oldDetour;
-                    lock (this) {
+                    lock (sync) {
                         if (!IsApplied)
                             return;
                         if (IsApplying)
@@ -107,27 +104,15 @@ namespace MonoMod.Core.Platforms {
 
                             var detour = Detour;
 
-                            // TODO: we should really *really* be using normal thunks for to
                             if (detour is not null) {
-                                (from, to) = (detour.Source, detour.Destination);
-                                if (isFrom) {
-                                    from = codeStart;
-                                    fromRw = codeStartRw;
-                                } else {
-                                    to = codeStart;
-                                    // we already have a detour, and are just changing the target, retarget
-                                    detour.ChangeTarget(to);
-                                    return;
-                                }
+                                (_, to) = (detour.Source, detour.Destination);
+
+                                from = codeStart;
+                                fromRw = codeStartRw;
                             } else {
-                                if (isFrom) {
-                                    from = codeStart;
-                                    fromRw = codeStartRw;
-                                    to = triple.GetNativeMethodBody(target);
-                                } else {
-                                    fromRw = from = triple.GetNativeMethodBody(src);
-                                    to = codeStart;
-                                }
+                                from = codeStart;
+                                fromRw = codeStartRw;
+                                to = triple.Runtime.GetMethodHandle(target).GetFunctionPointer();
                             }
 
                             var newDetour = triple.CreateSimpleDetour(from, to, detourMaxSize: (int) codeSize, fromRw: fromRw);
@@ -188,8 +173,8 @@ namespace MonoMod.Core.Platforms {
                     if (!related.IsValid)
                         goto Retry;
                     related.RelatedDetours.Add(cmh);
-                    if (related.RelatedDetours.Count > 2) {
-                        MMDbgLog.Warning($"More than 2 related detours for method {m}! This means that the method has been detoured twice. Detour cleanup will fail.");
+                    if (related.RelatedDetours.Count > 1) {
+                        MMDbgLog.Warning($"Multiple related detours for method {m}! This means that the method has been detoured twice. Detour cleanup will fail.");
                     }
                 }
             }
@@ -225,6 +210,7 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
+            // TODO: instead of letting go of the old detour, keep it around, because it seems like the runtime doesn't free old code versions
             private static void ReplaceDetourInLock(DetourBox nativeDetour, SimpleNativeDetour? newDetour, out SimpleNativeDetour? oldDetour) {
                 Thread.MemoryBarrier();
                 oldDetour = Interlocked.Exchange(ref nativeDetour.Detour, newDetour);
@@ -257,8 +243,10 @@ namespace MonoMod.Core.Platforms {
                         srcPin = triple.PinMethodIfNeeded(Source);
                         dstPin = triple.PinMethodIfNeeded(realTarget);
 
+                        triple.Prepare(Source);
                         var from = triple.GetNativeMethodBody(Source);
-                        var to = triple.GetNativeMethodBody(realTarget);
+                        triple.Prepare(realTarget);
+                        var to = triple.Runtime.GetMethodHandle(realTarget).GetFunctionPointer();
 
                         ReplaceDetourInLock(detourBox, triple.CreateSimpleDetour(from, to), out SimpleNativeDetour? oldDetour);
                         Helpers.DAssert(oldDetour is null);

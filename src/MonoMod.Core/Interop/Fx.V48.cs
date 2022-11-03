@@ -161,6 +161,7 @@ namespace MonoMod.Core.Interop {
                     return size;
                 }
 
+                // TODO: figure out why Process.Start on x86 specifically
                 public void* GetNativeCode() {
                     if (HasNativeCodeSlot) {
                         // PCODE pCode = PCODE(NativeCodeSlot::GetValueMaybeNullAtPtr(GetAddrOfNativeCodeSlot()) & ~FIXUP_LIST_MASK);
@@ -172,7 +173,8 @@ namespace MonoMod.Core.Interop {
                         #endif
                         */
                         var pCode = (nuint) ((RelativePointer*) GetAddrOfNativeCodeSlot())->Value & ~(nuint) 1u;
-                        return (void*)pCode;
+                        if (pCode is not 0)
+                            return (void*)pCode;
                     }
 
                     if (!HasStableEntryPoint || HasPrecode)
