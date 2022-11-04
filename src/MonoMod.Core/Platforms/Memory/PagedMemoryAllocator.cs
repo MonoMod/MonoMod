@@ -178,7 +178,7 @@ namespace MonoMod.Core.Platforms.Memory {
                     ref var node = ref freeList;
 
                     while (node is not null) {
-                        if (node.BaseOffset > offset)                             // we found the first node with greater offset, break out
+                        if (node.BaseOffset > offset) // we found the first node with greater offset, break out
                             break;
                         node = ref node.NextFree;
                     }
@@ -294,6 +294,9 @@ namespace MonoMod.Core.Platforms.Memory {
         private readonly ConcurrentBag<Page> pagesToClean = new();
         private int registeredForCleanup;
         protected void RegisterForCleanup(Page page) {
+            if (Environment.HasShutdownStarted || AppDomain.CurrentDomain.IsFinalizingForUnload())
+                return;
+
             pagesToClean.Add(page);
 
             if (Interlocked.CompareExchange(ref registeredForCleanup, 1, 0) == 0)
@@ -301,7 +304,7 @@ namespace MonoMod.Core.Platforms.Memory {
         }
 
         private bool DoCleanup() {
-            if (Environment.HasShutdownStarted)
+            if (Environment.HasShutdownStarted || AppDomain.CurrentDomain.IsFinalizingForUnload())
                 return false;
 
             Volatile.Write(ref registeredForCleanup, 0);
