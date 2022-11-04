@@ -230,7 +230,13 @@ namespace MonoMod.Logs {
 
             BeginHole();
             string? s;
-            if (value is IFormattable) {
+            if (DebugFormatter.CanDebugFormat(value)) {
+                int wrote;
+                while (!DebugFormatter.TryFormatInto(value, _chars.Slice(_pos), out wrote))
+                    Grow();
+                _pos += wrote;
+                return;
+            } else if (value is IFormattable) {
                 s = ((IFormattable) value).ToString(format: null, null); // constrained call avoiding boxing for value types (though it might box later anyway
             } else {
                 s = value?.ToString();
@@ -299,7 +305,13 @@ namespace MonoMod.Logs {
 
             BeginHole();
             string? s;
-            if (value is IFormattable) {
+            if (DebugFormatter.CanDebugFormat(value)) {
+                int wrote;
+                while (!DebugFormatter.TryFormatInto(value, _chars.Slice(_pos), out wrote))
+                    Grow();
+                _pos += wrote;
+                return;
+            } else if (value is IFormattable) {
                 // If the value can format itself directly into our buffer, do so.
                 /*if (value is ISpanFormattable) {
                     int charsWritten;
@@ -322,6 +334,7 @@ namespace MonoMod.Logs {
             }
             EndHole(value, true);
         }
+
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public void AppendFormatted<T>(T value, int alignment, string? format) {
             var startingPos = _pos;
@@ -396,6 +409,15 @@ namespace MonoMod.Logs {
             // than that if possible.
             Helpers.DAssert(additionalChars > _chars.Length - _pos);
             GrowCore((uint) _pos + (uint) additionalChars);
+        }
+        
+        /// <summary>Grows the size of <see cref="_chars"/>.</summary>
+        [MethodImpl(MethodImplOptions.NoInlining)] // keep consumers as streamlined as possible
+        private void Grow() {
+            // This method is called when the remaining space in _chars isn't sufficient to continue
+            // the operation.  Thus, we need at least one character beyond _chars.Length.  GrowCore
+            // will handle growing by more than that if possible.
+            GrowCore((uint) _chars.Length + 1);
         }
 
         /// <summary>Grow the size of <see cref="_chars"/> to at least the specified <paramref name="requiredMinCapacity"/>.</summary>

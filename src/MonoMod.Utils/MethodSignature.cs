@@ -4,9 +4,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using MonoMod.Logs;
 
 namespace MonoMod.Utils {
-    public class MethodSignature : IEquatable<MethodSignature> {
+    public class MethodSignature : IEquatable<MethodSignature>, IDebugFormattable {
         public Type ReturnType { get; }
 
         private readonly Type[] parameters;
@@ -93,6 +94,28 @@ namespace MonoMod.Utils {
             }
             sh.AppendLiteral(")");
             return sh.ToStringAndClear();
+        }
+
+        bool IDebugFormattable.TryFormatInto(Span<char> span, out int wrote) {
+            wrote = 0;
+            if (!DebugFormatter.Into(span, out var w, $"{ReturnType} ("))
+                return false;
+            wrote += w;
+            for (var i = 0; i < parameters.Length; i++) {
+                if (i != 0) {
+                    if (!", ".AsSpan().TryCopyTo(span.Slice(wrote)))
+                        return false;
+                    wrote += 2;
+                }
+
+                if (!DebugFormatter.Into(span, out w, $"{parameters[i]}"))
+                    return false;
+                wrote += w;
+            }
+            if (span.Slice(wrote).Length < 1)
+                return false;
+            span[wrote++] = ')';
+            return true;
         }
 
         public bool Equals(MethodSignature? other) {
