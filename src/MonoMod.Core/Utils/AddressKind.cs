@@ -1,4 +1,5 @@
 ﻿using MonoMod.Backports;
+using MonoMod.Logs;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -53,6 +54,10 @@ namespace MonoMod.Core.Utils {
         }
 
         public static string FastToString(this AddressKind value)
-            => $"{(value.IsPrecodeFixup() ? "PrecodeFixupThunk" : "")}{(value.IsRelative() ? "Rel" : "Abs")}{(value.Is32Bit() ? "32" : "64")}{(value.IsIndirect() ? "Indirect" : "")}";
+            => DebugFormatter.Format( // Use DebugFormatter to force the use of an InterpolatedStringHandler instead of String.Concat
+                $"{(value.IsPrecodeFixup() ? "PrecodeFixupThunk" : "")}{(value.IsRelative() ? "Rel" : "Abs")}" +
+                $"{(value.Is32Bit() ? "32" : "64")}{(value.IsIndirect() ? "Indirect" : "")}"
+            );
+        // We need to avoid String.Concat where possible to avoid deadlocks when MonoMod is used to detour String.Concat
     }
 }

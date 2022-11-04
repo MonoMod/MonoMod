@@ -108,7 +108,7 @@ namespace MonoMod.Logs {
                     }
                 }
             } catch {
-                // Message creation should be mostly infalliable. If something fails in here, it shouldn't bring down the caller of the logger.
+                // Message creation should be mostly infallible. If something fails in here, it shouldn't bring down the caller of the logger.
                 // TODO: somehow, somewhere, record this exception
             }
 
@@ -129,7 +129,7 @@ namespace MonoMod.Logs {
                     }
                 }
             } catch {
-                // Message creation should be mostly infalliable. If something fails in here, it shouldn't bring down the caller of the logger.
+                // Message creation should be mostly infallible. If something fails in here, it shouldn't bring down the caller of the logger.
                 // TODO: somehow, somewhere, record this exception
             }
         }
@@ -142,30 +142,38 @@ namespace MonoMod.Logs {
         private void PostMessage(LogMessage message) {
             // we do this log here because we want to always log to the debugger when its attached, instead of just if its attached at startup
             if (Debugger.IsAttached) {
-                // Even though Debugger.Log won't do anything when no debugger is attached, it's still worth guarding it with a check of Debugger.IsAttached for a few reasons:
-                //  1. It avoids the allocation of the message string when it wouldn't be used
-                //  2. Debugger.Log is implemented as a QCall (on CoreCLR, and probably Framework) which pulls in all of the P/Invoke machinery, and necessitates a GC transition.
-                //     Debugger.IsAttached, on the other hand, is an FCall (MethodImplOptions.InternalCall) and likely elides the helper frames entirely, making it much faster.
-                Debugger.Log((int) message.Level, message.Source,
-                    $"[{message.Source}] {message.Level.FastToString()}: {message.FormattedMessage}\n"); // the VS output window doesn't automatically add a newline
+                try {
+                    // Even though Debugger.Log won't do anything when no debugger is attached, it's still worth guarding it with a check of Debugger.IsAttached for a few reasons:
+                    //  1. It avoids the allocation of the message string when it wouldn't be used
+                    //  2. Debugger.Log is implemented as a QCall (on CoreCLR, and probably Framework) which pulls in all of the P/Invoke machinery, and necessitates a GC transition.
+                    //     Debugger.IsAttached, on the other hand, is an FCall (MethodImplOptions.InternalCall) and likely elides the helper frames entirely, making it much faster.
+                    Debugger.Log((int) message.Level, message.Source,
+                        DebugFormatter.Format($"[{message.Source}] {message.Level.FastToString()}: {message.FormattedMessage}\n")); // the VS output window doesn't automatically add a newline
+                } catch {
+                    // We want to completely swallow exceptions that happen here, because logging errors shouldn't cause problems for the callers.
+                }
             }
 
-            var sub = subscriptions;
-            var idx = (int) message.Level;
-            if (sub.SimpleRegs[idx] is { } simple)
-                message.ReportTo(simple);
-            if (sub.DetailedRegs[idx] is { } detailed)
-                message.ReportTo(detailed);
+            try {
+                var sub = subscriptions;
+                var idx = (int) message.Level;
+                if (sub.SimpleRegs[idx] is { } simple)
+                    message.ReportTo(simple);
+                if (sub.DetailedRegs[idx] is { } detailed)
+                    message.ReportTo(detailed);
 
-            if (!IsFinalizing) {
-                if (replayQueue is { } queue) {
-                    // enqueue the message, then dequeue old messages until we're back below the replay length
-                    queue.Enqueue(message);
-                    while (queue.Count > replayQueueLength && queue.TryDequeue(out _)) { }
-                } else {
-                    // we only reuse message objects if we're not recording a replay queue to avoid race conditions
-                    ReturnMessage(message);
+                if (!IsFinalizing) {
+                    if (replayQueue is { } queue) {
+                        // enqueue the message, then dequeue old messages until we're back below the replay length
+                        queue.Enqueue(message);
+                        while (queue.Count > replayQueueLength && queue.TryDequeue(out _)) { }
+                    } else {
+                        // we only reuse message objects if we're not recording a replay queue to avoid race conditions
+                        ReturnMessage(message);
+                    }
                 }
+            } catch {
+                // Same deal here as above. Exceptions in the logger shouldn't bubble up to callers.
             }
         }
 

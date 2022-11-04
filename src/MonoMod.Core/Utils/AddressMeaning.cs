@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.Logs;
+using System;
 
 namespace MonoMod.Core.Utils {
     public readonly struct AddressMeaning : IEquatable<AddressMeaning> {
@@ -52,7 +53,8 @@ namespace MonoMod.Core.Utils {
                    RelativeToOffset == other.RelativeToOffset;
         }
 
-        public override string ToString() => $"AddressMeaning({Kind.FastToString()}, offset: {RelativeToOffset})";
+        // Force the use of DebugFormatter, because we might be patching DefaultInterpolatedStringHandler
+        public override string ToString() => DebugFormatter.Format($"AddressMeaning({Kind.FastToString()}, offset: {RelativeToOffset})");
 
         public override int GetHashCode() {
             return HashCode.Combine(Kind, RelativeToOffset);
