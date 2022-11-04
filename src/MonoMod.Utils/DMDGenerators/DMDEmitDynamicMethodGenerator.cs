@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Linq;
+using MonoMod.Logs;
 
 namespace MonoMod.Utils {
     public sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
@@ -46,12 +47,13 @@ namespace MonoMod.Utils {
                     argTypes[i + offs] = def.Parameters[i].ParameterType.ResolveReflection();
             }
 
-            var name = dmd.Name ?? $"DMD<{orig?.GetID(simple: true) ?? def.GetID(simple: true)}>";
+            // we do the (object?) dance using DebugFormatter to avoid internal StringBuilders in the ToString (and GetID) implementations which may cause problems
+            var name = dmd.Name ?? DebugFormatter.Format($"DMD<{(object?) orig ?? def.GetID(simple: true)}>");
             Type retType = (orig as MethodInfo)?.ReturnType ?? def.ReturnType.ResolveReflection();
 
             MMDbgLog.Trace($"new DynamicMethod: {retType} {name}({string.Join(",", argTypes.Select(type => type?.ToString()).ToArray())})");
             if (orig != null)
-                MMDbgLog.Trace($"orig: {(orig as MethodInfo)?.ReturnType?.ToString() ?? "NULL"} {orig.Name}({string.Join(",", orig.GetParameters().Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
+                MMDbgLog.Trace($"orig: {orig}");
             MMDbgLog.Trace($"mdef: {def.ReturnType?.ToString() ?? "NULL"} {name}({string.Join(",", def.Parameters.Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
 
             var dm = new DynamicMethod(

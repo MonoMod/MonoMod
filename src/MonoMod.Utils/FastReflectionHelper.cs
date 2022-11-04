@@ -1,5 +1,6 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoMod.Logs;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -11,7 +12,7 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new();
 
         private static FastReflectionDelegate CreateFastDelegate(MethodBase method, bool directBoxValueAccess = true) {
-            using var dmd = new DynamicMethodDefinition($"FastReflection<{method.GetID(simple: true)}>", typeof(object), _DynamicMethodDelegateArgs);
+            using var dmd = new DynamicMethodDefinition(DebugFormatter.Format($"FastReflection<{method}>"), typeof(object), _DynamicMethodDelegateArgs);
             ILProcessor il = dmd.GetILProcessor();
 
             ParameterInfo[] args = method.GetParameters();

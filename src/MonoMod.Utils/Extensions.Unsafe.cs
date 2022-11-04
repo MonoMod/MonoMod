@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using Mono.Cecil.Cil;
 using System.Collections.Concurrent;
+using MonoMod.Logs;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -63,7 +64,7 @@ namespace MonoMod.Utils {
                 return func();
 
             using var dmd = new DynamicMethodDefinition(
-                $"GetLdftnPointer<{m.GetID(simple: true)}>",
+                DebugFormatter.Format($"GetLdftnPointer<{m}>"),
                 typeof(IntPtr), Type.EmptyTypes
             );
 

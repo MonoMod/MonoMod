@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Mono.Cecil;
 using System.Diagnostics;
 using System.IO;
+using MonoMod.Logs;
 
 namespace MonoMod.Utils {
     public sealed class DMDEmitMethodBuilderGenerator : DMDGenerator<DMDEmitMethodBuilderGenerator> {
@@ -64,7 +65,7 @@ namespace MonoMod.Utils {
                 // https://github.com/mono/mono/blob/f879e35e3ed7496d819bd766deb8be6992d068ed/mcs/class/corlib/System.Reflection.Emit/ModuleBuilder.cs#L146
                 ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", dmd.Debug);
                 typeBuilder = module.DefineType(
-                    $"DMD<{orig?.GetID(simple: true)?.Replace('.', '_')}>?{dmd.GetHashCode()}",
+                    DebugFormatter.Format($"DMD<{orig}>?{dmd.GetHashCode()}"),
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
                 );
             }

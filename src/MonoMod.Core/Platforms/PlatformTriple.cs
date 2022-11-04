@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil.Cil;
 using MonoMod.Backports;
 using MonoMod.Core.Utils;
+using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
@@ -367,7 +368,7 @@ namespace MonoMod.Core.Platforms {
                     Helpers.DAssert(argOffset >= 0);
 
                     using (var dmd = new DynamicMethodDefinition(
-                        $"Glue:AbiFixup<{from.GetID(simple: true)},{to.GetID(simple: true)}>",
+                        DebugFormatter.Format($"Glue:AbiFixup<{from},{to}>"),
                         newRetType, argTypes.ToArray()
                     )) {
                         // TODO: make DMD apply atributes to the generated DynamicMethod, when possible

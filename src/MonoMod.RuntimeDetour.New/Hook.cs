@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Platforms;
+using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Linq;
@@ -260,7 +261,7 @@ namespace MonoMod.RuntimeDetour {
                 ? trampoline.CreateDelegate(nextDelegateType)
                 : null);
 
-            using (var dmd = srcSig.CreateDmd($"Hook<{Target.GetID()}>")) {
+            using (var dmd = srcSig.CreateDmd(DebugFormatter.Format($"Hook<{Target.GetID()}>"))) {
                 var il = dmd.GetILProcessor();
                 var module = dmd.Module!;
                 var method = dmd.Definition!;

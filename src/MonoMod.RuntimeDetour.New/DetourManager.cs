@@ -3,6 +3,7 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Core;
 using MonoMod.Core.Platforms;
+using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections;
@@ -134,7 +135,7 @@ namespace MonoMod.RuntimeDetour {
                 = typeof(Interlocked).GetMethod(nameof(Interlocked.Decrement), BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int).MakeByRefType() }, null)!;
 
             private MethodBase GenerateSyncProxy(out DataScope<DynamicReferenceManager.CellRef> scope) {
-                using var dmd = Sig.CreateDmd($"SyncProxy<{Entry.GetID()}>");
+                using var dmd = Sig.CreateDmd(DebugFormatter.Format($"SyncProxy<{Entry}>"));
 
                 var il = dmd.GetILProcessor();
                 var method = dmd.Definition;
