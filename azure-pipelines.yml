@@ -5,7 +5,7 @@ strategy:
       imageName: 'windows-latest'
       artifactPrefix: ''
       artifactSuffix: ''
-      testers: ';fx;core2.1;core3;core3.1;core5;core6;'
+      testers: ';fx;core2.1;core3;core3.1;core5;core6;core7;'
       testx86: 'true'
       generateDocFX: 'false'
       pushNuGet: 'true'
@@ -14,7 +14,7 @@ strategy:
       imageName: 'ubuntu-latest'
       artifactPrefix: '~dbg.linux.'
       artifactSuffix: ''
-      testers: ';mono;core2.1;core3;core3.1;core5;core6;'
+      testers: ';mono;core2.1;core3;core3.1;core5;core6;core7;'
       testx86: 'false'
       generateDocFX: 'false'
       pushNuGet: 'false'
@@ -76,6 +76,12 @@ steps:
   inputs:
     packageType: sdk
     version: '6.0.x'
+- task: UseDotNet@2
+  condition: contains(variables.testers, ';core7;')
+  displayName: 'Install .NET SDK 7.0.x'
+  inputs:
+    packageType: sdk
+    version: '7.0.x'
 - task: NuGetToolInstaller@1
   displayName: 'Update NuGet'
   inputs:
@@ -243,6 +249,17 @@ steps:
   parameters:
     condition: and(contains(variables.testers, ';core6;'), eq(variables.testx86, 'true'))
     targetFramework: 'net6.0'
+    arch: 'x86'
+
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(true, contains(variables.testers, ';core7;'))
+    targetFramework: 'net7.0'
+    arch: 'x64'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(contains(variables.testers, ';core7;'), eq(variables.testx86, 'true'))
+    targetFramework: 'net7.0'
     arch: 'x86'
 
 # Rebuild and publish the DocFX page.
