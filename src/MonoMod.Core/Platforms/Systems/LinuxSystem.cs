@@ -132,7 +132,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
 
                 // mmap the page we found
-                nint mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint) request.Size, prot, Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
+                nint mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint) request.Size, prot, Unix.MmapFlags.Anonymous, -1, 0);
                 if (mmapPtr == 0) {
                     // fuck
                     allocated = null;
