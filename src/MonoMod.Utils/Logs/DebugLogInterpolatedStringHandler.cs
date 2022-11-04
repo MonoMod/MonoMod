@@ -30,7 +30,22 @@ namespace MonoMod.Logs {
 
         internal readonly bool enabled;
 
-        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, bool enabled, bool recordHoles, out bool isEnabled) {
+            _pos = holeBegin = holePos = 0;
+            this.enabled = isEnabled = enabled;
+            if (enabled) {
+                _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
+                if (recordHoles) {
+                    holes = new MessageHole[formattedCount];
+                } else {
+                    holes = default;
+                }
+            } else {
+                _chars = _arrayToReturnToPool = null;
+                holes = default;
+            }
+        }
+
         public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, out bool isEnabled) {
             var log = DebugLog.Instance;
             _pos = holeBegin = holePos = 0;
@@ -49,7 +64,6 @@ namespace MonoMod.Logs {
             }
         }
 
-        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, LogLevel level, out bool isEnabled) {
             var log = DebugLog.Instance;
             _pos = holeBegin = holePos = 0;

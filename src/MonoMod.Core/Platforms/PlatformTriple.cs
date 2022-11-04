@@ -138,17 +138,17 @@ namespace MonoMod.Core.Platforms {
                 if (method.DeclaringType is null) {
                     // the method lives on the module, get it from there
                     var got = method.Module.GetMethod(method.Name, (BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
-                    Helpers.Assert(got is not null, $"orig: {method.GetID()}, module: {method.Module}");
+                    Helpers.Assert(got is not null, $"orig: {method}, module: {method.Module}");
                     method = got;
                 } else {
                     // the method has a declaring type, get it there
                     if (method.IsConstructor) {
                         var got = method.DeclaringType.GetConstructor((BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
-                        Helpers.Assert(got is not null, $"orig: {method.GetID()}");
+                        Helpers.Assert(got is not null, $"orig: {method}");
                         method = got;
                     } else {
                         var got = method.DeclaringType.GetMethod(method.Name, (BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
-                        Helpers.Assert(got is not null, $"orig: {method.GetID()}");
+                        Helpers.Assert(got is not null, $"orig: {method}");
                         method = got;
                     }
                 }

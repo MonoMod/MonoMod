@@ -86,7 +86,7 @@ namespace MonoMod.Utils {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static void Assert([DoesNotReturnIf(false)] bool value,
-            [InterpolatedStringHandlerArgument("value")] AssertionInterpolatedStringHandler message,
+            [InterpolatedStringHandlerArgument("value")] ref AssertionInterpolatedStringHandler message,
             [CallerArgumentExpression("value")] string expr = ""
         ) {
             if (!value)
@@ -96,7 +96,7 @@ namespace MonoMod.Utils {
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         [Conditional("DEBUG")]
         public static void DAssert([DoesNotReturnIf(false)] bool value,
-            [InterpolatedStringHandlerArgument("value")] AssertionInterpolatedStringHandler message,
+            [InterpolatedStringHandlerArgument("value")] ref AssertionInterpolatedStringHandler message,
             [CallerArgumentExpression("value")] string expr = ""
         ) {
             if (!value)
@@ -232,16 +232,11 @@ namespace MonoMod.Utils {
 
     [InterpolatedStringHandler]
     public ref struct AssertionInterpolatedStringHandler {
-        private DefaultInterpolatedStringHandler handler;
+        private DebugLogInterpolatedStringHandler handler;
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public AssertionInterpolatedStringHandler(int literalLen, int formattedCount, bool assertValue, out bool isEnabled) {
-            isEnabled = !assertValue;
-            if (isEnabled) {
-                handler = new(literalLen, formattedCount);
-            } else {
-                handler = default;
-            }
+            handler = new(literalLen, formattedCount, enabled: !assertValue, recordHoles: false, out isEnabled);
         }
 
         public override string ToString() => handler.ToString();

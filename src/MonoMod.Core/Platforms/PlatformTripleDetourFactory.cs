@@ -22,7 +22,7 @@ namespace MonoMod.Core.Platforms {
             Helpers.ThrowIfArgumentNull(request.Target);
 
             if (!triple.TryDisableInlining(request.Source))
-                MMDbgLog.Warning($"Could not disable inlining of method {request.Source.GetID()}; detours may not be reliable");
+                MMDbgLog.Warning($"Could not disable inlining of method {request.Source}; detours may not be reliable");
 
             var detour = new Detour(triple, request.Source, request.Target);
             if (request.ApplyByDefault) {

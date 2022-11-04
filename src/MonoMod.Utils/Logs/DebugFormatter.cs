@@ -6,7 +6,9 @@ using MonoMod.Utils;
 
 namespace MonoMod.Logs {
     public static class DebugFormatter {
-        // We have explicit checks for types which may prove problematic using default formatting        
+        // We have explicit checks for types which may prove problematic using default formatting
+
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static bool CanDebugFormat<T>(in T value) {
             // first check for exact type matches
             if (typeof(T) == typeof(Type))
@@ -40,6 +42,7 @@ namespace MonoMod.Logs {
             return false;
         }
 
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static bool TryFormatInto<T>(in T value, Span<char> into, out int wrote) {
             [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
             static ref TOut Transmute<TOut>(in T val)
@@ -246,7 +249,7 @@ namespace MonoMod.Logs {
             internal bool incomplete;
 
             public FormatIntoInterpolatedStringHandler(int literalLen, int numHoles, Span<char> into, out bool enabled) {
-                this._chars = into;
+                _chars = into;
                 pos = 0;
                 if (into.Length < literalLen) {
                     incomplete = true;
@@ -318,7 +321,6 @@ namespace MonoMod.Logs {
                 => AppendFormatted<string?>(value, alignment, format);
 
             public bool AppendFormatted(ReadOnlySpan<char> value) {
-                // Fast path for when the value fits in the current buffer
                 if (value.TryCopyTo(_chars.Slice(pos))) {
                     pos += value.Length;
                     return true;

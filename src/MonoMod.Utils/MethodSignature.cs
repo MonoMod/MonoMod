@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using MonoMod.Logs;
 
 namespace MonoMod.Utils {
-    public class MethodSignature : IEquatable<MethodSignature>, IDebugFormattable {
+    public sealed class MethodSignature : IEquatable<MethodSignature>, IDebugFormattable {
         public Type ReturnType { get; }
 
         private readonly Type[] parameters;
