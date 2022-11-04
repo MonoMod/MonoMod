@@ -85,17 +85,24 @@ namespace MonoMod.RuntimeDetour {
 
         internal sealed class DetourSyncInfo {
             public int ActiveCalls;
-            public bool UpdatingChain;
+            public int UpdatingThread;
 
             public void WaitForChainUpdate() {
                 _ = Interlocked.Decrement(ref ActiveCalls);
+
+                if (UpdatingThread == Thread.CurrentThread.ManagedThreadId) {
+                    throw new InvalidOperationException("Method's detour chain is being updated by the current thread!");
+                }
+
                 var spin = new SpinWait();
-                while (Volatile.Read(ref UpdatingChain)) {
+                while (Volatile.Read(ref UpdatingThread) != -1) {
                     spin.SpinOnce();
                 }
             }
 
             public void WaitForNoActiveCalls() {
+                // TODO: find a decent way to prevent deadlocks here
+
                 var spin = new SpinWait();
                 while (Volatile.Read(ref ActiveCalls) > 0) {
                     spin.SpinOnce();
@@ -126,7 +133,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             private static readonly FieldInfo DetourSyncInfo_ActiveCalls = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.ActiveCalls))!;
-            private static readonly FieldInfo DetourSyncInfo_UpdatingChain = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.UpdatingChain))!;
+            private static readonly FieldInfo DetourSyncInfo_UpdatingThread = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.UpdatingThread))!;
             private static readonly MethodInfo DetourSyncInfo_WaitForChainUpdate = typeof(DetourSyncInfo).GetMethod(nameof(DetourSyncInfo.WaitForChainUpdate))!;
 
             private static readonly MethodInfo Interlocked_Increment
@@ -160,10 +167,11 @@ namespace MonoMod.RuntimeDetour {
                 // then check UpdatingChain
                 il.Emit(OpCodes.Ldloc, syncInfoVar);
                 il.Emit(OpCodes.Volatile);
-                il.Emit(OpCodes.Ldfld, module.ImportReference(DetourSyncInfo_UpdatingChain));
+                il.Emit(OpCodes.Ldfld, module.ImportReference(DetourSyncInfo_UpdatingThread));
+                il.Emit(OpCodes.Ldc_I4_M1);
 
                 var noWait = il.Create(OpCodes.Nop);
-                il.Emit(OpCodes.Brfalse_S, noWait);
+                il.Emit(OpCodes.Beq_S, noWait);
 
                 // if UpdatingChain was true, wait for that to finish, then jump back up to the top, because WaitForChainUpdate decrements
                 il.Emit(OpCodes.Ldloc, syncInfoVar);
@@ -708,7 +716,7 @@ namespace MonoMod.RuntimeDetour {
                 // our chain is now fully built, with the head in chain
                 detourList.Next = chain; // detourList is the head of the real chain, and represents the original method
 
-                Volatile.Write(ref detourList.SyncInfo.UpdatingChain, true);
+                Volatile.Write(ref detourList.SyncInfo.UpdatingThread, Thread.CurrentThread.ManagedThreadId);
                 detourList.SyncInfo.WaitForNoActiveCalls();
                 try {
                     chain = detourList;
@@ -724,7 +732,7 @@ namespace MonoMod.RuntimeDetour {
                         chain = chain.Next;
                     }
                 } finally {
-                    Volatile.Write(ref detourList.SyncInfo.UpdatingChain, false);
+                    Volatile.Write(ref detourList.SyncInfo.UpdatingThread, -1);
                 }
             }
 
