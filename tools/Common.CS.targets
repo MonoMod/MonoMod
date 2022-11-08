@@ -33,6 +33,9 @@
     <Compile Include="$(MMCommonPath)Shared\**\*.cs" Condition="'$(MMSharedSourceFiles)' == 'true'">
       <Link>Shared/%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Compile>
+    <Compile Include="$(MMCommonPath)MethodImplOptionBackportsAlias.cs" Condition="'$(MMMethodImplAlias)' == 'true'">
+      <Link>Shared/%(Filename)%(Extension)</Link>
+    </Compile>
     <!-- Source Generator reference -->
     <!-- This is dependent on ReferenceBackports because the source generator will assume the presence of Backports -->
     <ProjectReference Include="$(MMSourcePath)MonoMod.SourceGen.Internal\MonoMod.SourceGen.Internal.csproj" Condition="'$(MMUseSourceGen)' != 'false'">
