@@ -23,7 +23,7 @@ strategy:
       imageName: 'macOS-latest'
       artifactPrefix: '~dbg.macos.'
       artifactSuffix: ''
-      testers: ';mono;core2.1;core3;core3.1;core5;core6;'
+      testers: ';mono;core2.1;core3;core3.1;core5;core6;core7;'
       testx86: 'false'
       generateDocFX: 'false'
       pushNuGet: 'false'
@@ -82,7 +82,6 @@ steps:
   inputs:
     packageType: sdk
     version: '7.0.x'
-    includePreviewVersions: true
 - task: NuGetToolInstaller@1
   displayName: 'Update NuGet'
   inputs:
