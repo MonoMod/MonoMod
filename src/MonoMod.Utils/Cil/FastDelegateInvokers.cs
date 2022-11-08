@@ -91,7 +91,7 @@ namespace MonoMod.Cil {
                 var argTypes = new Type[sig.ParameterCount + 1];
                 var i = 0;
                 foreach (var param in sig.Parameters) {
-                    argTypes[i] = param;
+                    argTypes[i++] = param;
                 }
                 argTypes[sig.ParameterCount] = delegateType;
 
