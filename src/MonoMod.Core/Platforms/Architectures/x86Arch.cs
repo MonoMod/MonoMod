@@ -6,12 +6,12 @@ using System;
 namespace MonoMod.Core.Platforms.Architectures {
     internal sealed class x86Arch : IArchitecture {
         public ArchitectureKind Target => ArchitectureKind.x86;
-        public ArchitectureFeature Features => ArchitectureFeature.None;
+        public ArchitectureFeature Features => ArchitectureFeature.CreateAltEntryPoint;
 
         private BytePatternCollection? lazyKnownMethodThunks;
         public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, &CreateKnownMethodThunks);
 
-        public IAltEntryFactory? NativeDetourFactory { get; }
+        public IAltEntryFactory NativeDetourFactory { get; }
 
         private static BytePatternCollection CreateKnownMethodThunks() {
             const ushort An = BytePattern.SAnyValue;

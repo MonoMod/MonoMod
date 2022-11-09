@@ -8,12 +8,12 @@ namespace MonoMod.Core.Platforms.Architectures {
     internal class x86_64Arch : IArchitecture {
         public ArchitectureKind Target => ArchitectureKind.x86_64;
 
-        public ArchitectureFeature Features => ArchitectureFeature.Immediate64;
+        public ArchitectureFeature Features => ArchitectureFeature.Immediate64 | ArchitectureFeature.CreateAltEntryPoint;
 
         private BytePatternCollection? lazyKnownMethodThunks;
         public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, &CreateKnownMethodThunks);
 
-        public IAltEntryFactory? NativeDetourFactory { get; }
+        public IAltEntryFactory NativeDetourFactory { get; }
 
         private static BytePatternCollection CreateKnownMethodThunks()
         {
