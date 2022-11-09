@@ -3,15 +3,14 @@ using MonoMod.Utils;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace MonoMod.Core.Platforms.NativeDetours {
-    internal class IcedNativeDetourFactory : INativeDetourFactory {
+    internal class IcedAltEntryFactory : IAltEntryFactory {
         private readonly ISystem system;
         private readonly IMemoryAllocator alloc;
         private readonly int bitness;
 
-        public IcedNativeDetourFactory(ISystem system, int bitness) {
+        public IcedAltEntryFactory(ISystem system, int bitness) {
             this.system = system;
             this.bitness = bitness;
 

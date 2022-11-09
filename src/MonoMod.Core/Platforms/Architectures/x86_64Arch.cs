@@ -13,7 +13,7 @@ namespace MonoMod.Core.Platforms.Architectures {
         private BytePatternCollection? lazyKnownMethodThunks;
         public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, &CreateKnownMethodThunks);
 
-        public INativeDetourFactory? NativeDetourFactory { get; }
+        public IAltEntryFactory? NativeDetourFactory { get; }
 
         private static BytePatternCollection CreateKnownMethodThunks()
         {
@@ -263,7 +263,7 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         public x86_64Arch(ISystem system) {
             this.system = system;
-            NativeDetourFactory = new IcedNativeDetourFactory(system, 64);
+            NativeDetourFactory = new IcedAltEntryFactory(system, 64);
         }
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
