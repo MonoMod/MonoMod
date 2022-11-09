@@ -9,7 +9,7 @@ namespace MonoMod.Core.Platforms {
 
         BytePatternCollection KnownMethodThunks { get; }
 
-        IAltEntryFactory NativeDetourFactory { get; }
+        IAltEntryFactory AltEntryFactory { get; }
 
         NativeDetourInfo ComputeDetourInfo(IntPtr from, IntPtr to, int maxSizeHint = -1);
         /// <summary>

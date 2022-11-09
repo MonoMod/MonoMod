@@ -2,7 +2,7 @@
 using MonoMod.Utils;
 
 namespace MonoMod.Core.Platforms {
-    public sealed class SimpleNativeDetour : IDisposable {
+    public class SimpleNativeDetour : IDisposable {
         private bool disposedValue;
         private readonly PlatformTriple triple;
         private NativeDetourInfo detourInfo;
@@ -83,11 +83,14 @@ namespace MonoMod.Core.Platforms {
             // literally just patch again, but the other direction
             triple.System.PatchData(PatchTargetKind.Executable, Source, DetourBackup.Span, default);
             if (disposing) {
-                AllocHandle?.Dispose();
+                Cleanup();
             }
             disposedValue = true;
         }
 
+        protected virtual void Cleanup() {
+            AllocHandle?.Dispose();
+        }
         private void Dispose(bool disposing) {
             if (!disposedValue) {
                 UndoCore(disposing);

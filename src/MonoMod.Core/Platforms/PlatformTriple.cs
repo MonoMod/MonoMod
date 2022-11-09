@@ -208,6 +208,46 @@ namespace MonoMod.Core.Platforms {
             return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
         }
 
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+            Justification = "allocHandle is correctly transferred around, as needed")]
+        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default) {
+            if (fromRw == default) {
+                fromRw = from;
+            }
+            Helpers.Assert(from != to, $"Cannot detour a method to itself! (from: {from}, to: {to})");
+
+            MMDbgLog.Trace($"Creating simple detour 0x{from:x16} => 0x{to:x16}");
+
+            var detourInfo = Architecture.ComputeDetourInfo(from, to, detourMaxSize);
+
+            // detours are usually fairly small, so we'll stackalloc it
+            Span<byte> detourData = stackalloc byte[detourInfo.Size];
+
+            // get the detour bytes from the architecture
+            var size = Architecture.GetDetourBytes(detourInfo, detourData, out var allocHandle);
+
+            // these should be the same
+            Helpers.DAssert(size == detourInfo.Size);
+            
+            // now that we have the detour size, we'll try to allocate an alternate entry point
+            IntPtr altEntry = IntPtr.Zero;
+            IDisposable? altHandle = null;
+            if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)) {
+                altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, size, out altHandle);
+            } else {
+                MMDbgLog.Warning($"Cannot create alternate entry point for native detour");
+            }
+
+            // allocate a backup
+            var backup = new byte[detourInfo.Size];
+
+            // now we can apply the detour through the system
+            System.PatchData(PatchTargetKind.Executable, fromRw, detourData, backup);
+
+            // and now we just create the NativeDetour object
+            return new NativeDetour(this, detourInfo, backup, allocHandle, altEntry, altHandle);
+        }
+        
         public IntPtr GetNativeMethodBody(MethodBase method) {
             if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking)) {
                 return GetNativeMethodBodyWalk(method, reloadPtr: true);

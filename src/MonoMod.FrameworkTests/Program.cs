@@ -37,7 +37,7 @@ unsafe {
     var rand1 = msvcrand();
     var get1a = get1ptr();
 
-    var altrand1 = (delegate* unmanaged[Cdecl]<int>) triple.Architecture.NativeDetourFactory!.CreateAlternateEntrypoint((IntPtr) msvcrand, 5, out var altrandh);
+    var altrand1 = (delegate* unmanaged[Cdecl]<int>) triple.Architecture.AltEntryFactory!.CreateAlternateEntrypoint((IntPtr) msvcrand, 5, out var altrandh);
     var rand2 = altrand1();
 
 
