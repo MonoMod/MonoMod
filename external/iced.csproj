@@ -2,8 +2,11 @@
 
   <PropertyGroup>
     <MMImportAfterProps>$(MSBuildThisFileDirectory)iced.props</MMImportAfterProps>
+    <BeforeTargetFrameworkInferenceTargets>$(MSBuildThisFileDirectory)iced.targets</BeforeTargetFrameworkInferenceTargets>
   </PropertyGroup>
 
+  <!-- NOTE: We set the assembly name in iced.targets, which is imported BeforeTargetFrameworkInferenceTargets. -->
+  
   <Import Project="$(MSBuildThisFileDirectory)iced\src\csharp\Intel\Iced\Iced.csproj" />
 
   <ItemGroup>
@@ -14,6 +17,7 @@
   <ItemGroup>
     <PackageFile Remove="$(MMRootPath)icon.png" />
     <None Include="iced.props" />
+    <None Include="iced.targets" />
     <PackageFile Include="$(MSBuildThisFileDirectory)iced\logo.png" PackagePath="%(Filename)%(Extension)" />
     <PackageFile Include="$(MSBuildThisFileDirectory)iced\LICENSE.txt" PackagePath="%(Filename)%(Extension)" />
   </ItemGroup>
@@ -24,7 +28,7 @@
     <TargetFrameworks>$(_MMTargetFrameworks)</TargetFrameworks>
     <IcedFeatureFlags>DECODER;ENCODER;BLOCK_ENCODER</IcedFeatureFlags>
     <DefineConstants>$(_MMDefineConsts);$(IcedFeatureFlags);HAS_SPAN</DefineConstants>
-  
+
     <NoWarn>$(NoWarn);NU1504</NoWarn>
   </PropertyGroup>
 

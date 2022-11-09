@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableDefaultNoneItems)' == 'true' ">
-    <None Include="$(RealProjDir)**/*" Exclude="$(RealProjDir)$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+    <None Include="$(RealProjDir)**/*" Exclude="$(DefaultExcludesInProjectFolder)" />
     <None Remove="$(RealProjDir)**/*$(DefaultLanguageSourceExtension)" />
     <None Remove="$(RealProjDir)**/*.resx" />
   </ItemGroup>

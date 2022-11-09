@@ -15,7 +15,7 @@
 
   <!-- Dependencies -->
   <ItemGroup>
-    <ProjectReference Include="$(MMExternalPath)iced.csproj" />
+    <ProjectReference Include="$(MMExternalPath)iced.csproj" PrivateAssets="all" />
     <PackageReference Include="Mono.Cecil" />
   </ItemGroup>
 
