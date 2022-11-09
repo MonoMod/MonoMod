@@ -11,6 +11,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using MonoMod.Utils;
+using System.Runtime.InteropServices;
 
 #if NETCOREAPP1_0_OR_GREATER
 using Xunit;
@@ -23,19 +24,31 @@ if (Debugger.IsAttached) {
     Debugger.Break();
 }
 
-#if NETCOREAPP1_0_OR_GREATER
+var triple = PlatformTriple.Current;
 
-{
-    using var tcTest = new MonoMod.UnitTest.TieredCompilationTests(new DummyOutputHelper());
-    tcTest.WithTieredCompilation();
+unsafe {
+
+    var msvcrt = DynDll.OpenLibrary("msvcrt");
+    var msvcrand = (delegate* unmanaged[Cdecl]<int>) DynDll.GetFunction(msvcrt, "rand");
+
+    var get1del = (Get1Delegate) Get1;
+    var get1ptr = (delegate* unmanaged[Cdecl]<int>) Marshal.GetFunctionPointerForDelegate(get1del);
+
+    var rand1 = msvcrand();
+    var get1a = get1ptr();
+
+    var altrand1 = (delegate* unmanaged[Cdecl]<int>) triple.Architecture.NativeDetourFactory!.CreateAlternateEntrypoint((IntPtr) msvcrand, 12, out var altrandh);
+    var rand2 = altrand1();
+
+
+    GC.KeepAlive(get1del);
+    GC.KeepAlive(altrandh);
+    altrandh?.Dispose();
 }
 
-internal class DummyOutputHelper : ITestOutputHelper {
-    public void WriteLine(string message) {
-    }
-
-    public void WriteLine(string format, params object[] args) {
-    }
+static int Get1() {
+    return 1;
 }
 
-#endif
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+delegate int Get1Delegate();

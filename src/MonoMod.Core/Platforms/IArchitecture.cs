@@ -10,6 +10,8 @@ namespace MonoMod.Core.Platforms {
 
         BytePatternCollection KnownMethodThunks { get; }
 
+        INativeDetourFactory? NativeDetourFactory { get; }
+
         NativeDetourInfo ComputeDetourInfo(IntPtr from, IntPtr to, int maxSizeHint = -1);
         /// <summary>
         /// Gets the actual bytes making up the specified detour.

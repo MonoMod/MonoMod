@@ -1,4 +1,5 @@
-﻿using MonoMod.Core.Utils;
+﻿using MonoMod.Core.Platforms.NativeDetours;
+using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
 
@@ -9,6 +10,8 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         private BytePatternCollection? lazyKnownMethodThunks;
         public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, &CreateKnownMethodThunks);
+
+        public INativeDetourFactory? NativeDetourFactory { get; }
 
         private static BytePatternCollection CreateKnownMethodThunks() {
             const ushort An = BytePattern.SAnyValue;
@@ -142,6 +145,7 @@ namespace MonoMod.Core.Platforms.Architectures {
         private readonly ISystem system;
         public x86Arch(ISystem system) {
             this.system = system;
+            NativeDetourFactory = new IcedNativeDetourFactory(system, 32);
         }
 
         private const int WinThisVtableThunkIndexOffs = 0x7;
