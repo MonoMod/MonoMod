@@ -32,6 +32,10 @@ namespace MonoMod.Core.Platforms.NativeDetours {
             }
         }
 
+        private sealed class NullCodeWriter : CodeWriter {
+            public override void WriteByte(byte value) { }
+        }
+
         private sealed class BufferCodeWriter : CodeWriter, IDisposable {
             private readonly ArrayPool<byte> pool;
             private byte[]? buffer;
@@ -78,7 +82,64 @@ namespace MonoMod.Core.Platforms.NativeDetours {
                 decoder.Decode(out var insn);
                 insns.Add(insn);
             }
-            insns.Add(Instruction.CreateBranch(bitness == 64 ? Code.Jmp_rel32_64 : Code.Jmp_rel32_32, decoder.IP));
+
+            var lastInsn = insns[insns.Count - 1];
+            if (lastInsn.Mnemonic is Mnemonic.Call) {
+                // we want to replace trailing calls with a push <ret addr> ; jmp pair, and not add an extra trailing jump
+
+                var enc = Encoder.Create(bitness, new NullCodeWriter());
+
+                var jmpInsn = lastInsn;
+                jmpInsn.Code = lastInsn.Code switch {
+                    Code.Call_rel16 => Code.Jmp_rel16,
+                    Code.Call_rel32_32 => Code.Jmp_rel32_32,
+                    Code.Call_rel32_64 => Code.Jmp_rel32_64,
+                    Code.Jmp_rm16 => Code.Jmp_rm16,
+                    Code.Jmp_rm32 => Code.Jmp_rm32,
+                    Code.Jmp_rm64 => Code.Jmp_rm64,
+                    Code.Call_m1616 => Code.Jmp_m1616,
+                    Code.Call_m1632 => Code.Jmp_m1632,
+                    Code.Call_m1664 => Code.Jmp_m1664,
+                    Code.Call_ptr1616 => Code.Jmp_ptr1616,
+                    Code.Call_ptr1632 => Code.Jmp_ptr1632,
+                    _ => throw new InvalidOperationException($"Unrecognized call opcode {lastInsn.Code}")
+                };
+                jmpInsn.Length = (int) enc.Encode(jmpInsn, jmpInsn.IP);
+
+                var retAddr = lastInsn.NextIP;
+
+                bool useQword;
+                Instruction pushInsn, qword;
+                if (bitness == 32) {
+                    pushInsn = Instruction.Create(Code.Pushd_imm32, (uint) retAddr);
+                    pushInsn.Length = (int) enc.Encode(pushInsn, jmpInsn.IP);
+                    pushInsn.IP = jmpInsn.IP;
+                    jmpInsn.IP += (ulong) pushInsn.Length;
+                    useQword = false;
+                    qword = default;
+                } else {
+                    // we have to also use the qword slot to hold the addr
+                    useQword = true;
+                    qword = Instruction.CreateDeclareQword(retAddr);
+
+                    pushInsn = Instruction.Create(Code.Push_rm64, new MemoryOperand(Register.RIP, (long)jmpInsn.NextIP));
+                    pushInsn.Length = (int) enc.Encode(pushInsn, jmpInsn.IP);
+                    pushInsn.IP = jmpInsn.IP;
+                    jmpInsn.IP += (ulong) pushInsn.Length;
+                    qword.IP = jmpInsn.NextIP;
+                    pushInsn.MemoryDisplacement64 = qword.IP;
+                }
+
+                insns.RemoveAt(insns.Count - 1);
+                insns.Add(pushInsn);
+                insns.Add(jmpInsn);
+                if (useQword) {
+                    insns.Add(qword);
+                }
+
+            } else {
+                insns.Add(Instruction.CreateBranch(bitness == 64 ? Code.Jmp_rel32_64 : Code.Jmp_rel32_32, decoder.IP));
+            }
 
             var readSize = codeReader.Position;
             var estTotalSize = readSize + 5;
