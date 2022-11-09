@@ -76,4 +76,6 @@
   
   <Import Project="$(MMLanguageProps)" Condition="Exists('$(MMLanguageProps)')" />
 
+  <Import Project="$(MMImportAfterProps)" Condition="'$(MMImportAfterProps)' != '' and Exists('$(MMImportAfterProps)')" />
+  
 </Project>

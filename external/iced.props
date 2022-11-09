@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <PropertyGroup>
+    <EnableDefaultItems>false</EnableDefaultItems>
+
+    <MMReferenceBackports>true</MMReferenceBackports>
+    <MMSharedSourceFiles>false</MMSharedSourceFiles>
+    <MMReferenceILHelpers>true</MMReferenceILHelpers>
+    <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
+    <MMReferenceUtils>false</MMReferenceUtils>
+    <MMMethodImplAlias>true</MMMethodImplAlias>
+    <MMUseSourceGen>false</MMUseSourceGen>
+
+    <_MMTargetFrameworks>$(TargetFrameworks)</_MMTargetFrameworks>
+    <_MMDefineConsts>$(DefineConstants)</_MMDefineConsts>
+    <RealProjDir>$(MSBuildThisFileDirectory)iced\src\csharp\Intel\Iced\</RealProjDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(RealProjDir)**/*$(DefaultLanguageSourceExtension)" Exclude="$(RealProjDir)$(DefaultItemExcludes);$(RealProjDir)$(DefaultExcludesInProjectFolder)" Condition=" '$(EnableDefaultCompileItems)' == 'true' " />
+    <EmbeddedResource Include="$(RealProjDir)**/*.resx" Exclude="$(RealProjDir)$(DefaultItemExcludes);$(RealProjDir)$(DefaultExcludesInProjectFolder)" Condition=" '$(EnableDefaultEmbeddedResourceItems)' == 'true' " />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(EnableDefaultNoneItems)' == 'true' ">
+    <None Include="$(RealProjDir)**/*" Exclude="$(RealProjDir)$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+    <None Remove="$(RealProjDir)**/*$(DefaultLanguageSourceExtension)" />
+    <None Remove="$(RealProjDir)**/*.resx" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)iced\src\csharp\Directory.Build.props" />
+  
+</Project>
