@@ -11,8 +11,6 @@
       WARNING: THIS IS A LOW-LEVEL LIBRARY THAT IS DIFFICULT TO USE ON ITS OWN. If possible, use MonoMod.RuntimeDetour instead.]]>
     </Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
-
-    <DefineConstants Condition="'$(NoNet7RuntimeDetection)' == 'true'">$(DefineConstants);NO_NET7_RUNTIME</DefineConstants>
   </PropertyGroup>
 
   <!-- Dependencies -->
