@@ -4,7 +4,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 
-namespace MonoMod.Core.Platforms.NativeDetours {
+namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
     internal class IcedAltEntryFactory : IAltEntryFactory {
         private readonly ISystem system;
         private readonly IMemoryAllocator alloc;

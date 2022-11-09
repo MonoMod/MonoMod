@@ -1,4 +1,4 @@
-﻿using MonoMod.Core.Platforms.NativeDetours;
+﻿using MonoMod.Core.Platforms.Architectures.AltEntryFactories;
 using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
