@@ -102,10 +102,10 @@ namespace MonoMod.Cil {
                     ILProcessor il = dmdInvoke.GetILProcessor();
 
                     // Load the delegate reference first.
-                    il.Emit(OpCodes.Ldarg, argTypes.Length);
+                    il.Emit(OpCodes.Ldarg, sig.ParameterCount);
 
                     // Load the rest of the args
-                    for (i = 0; i < argTypes.Length; i++)
+                    for (i = 0; i < sig.ParameterCount; i++)
                         il.Emit(OpCodes.Ldarg, i);
 
                     // Invoke the delegate and return its result.
