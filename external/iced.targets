@@ -5,6 +5,8 @@
     <AssemblyName>MonoMod.Iced</AssemblyName>
     <AssemblyTitle>MonoMod.Iced</AssemblyTitle>
     <PackageId>MonoMod.Iced</PackageId>
+
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
 </Project>

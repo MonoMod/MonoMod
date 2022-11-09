@@ -3,6 +3,8 @@
   <PropertyGroup>
     <MMImportAfterProps>$(MSBuildThisFileDirectory)iced.props</MMImportAfterProps>
     <BeforeTargetFrameworkInferenceTargets>$(MSBuildThisFileDirectory)iced.targets</BeforeTargetFrameworkInferenceTargets>
+
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <!-- NOTE: We set the assembly name in iced.targets, which is imported BeforeTargetFrameworkInferenceTargets. -->

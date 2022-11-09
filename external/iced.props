@@ -15,6 +15,8 @@
     <_MMTargetFrameworks>$(TargetFrameworks)</_MMTargetFrameworks>
     <_MMDefineConsts>$(DefineConstants)</_MMDefineConsts>
     <RealProjDir>$(MSBuildThisFileDirectory)iced\src\csharp\Intel\Iced\</RealProjDir>
+
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
