@@ -8,6 +8,7 @@ namespace MonoMod.Core {
         bool HasOrigEntrypoint { get; }
         IntPtr OrigEntrypoint { get; }
 
+        void ChangeTarget(IntPtr newTarget);
         void Undo();
     }
 }

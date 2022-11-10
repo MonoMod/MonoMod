@@ -24,7 +24,5 @@ namespace MonoMod.Core.Platforms {
         IntPtr ICoreNativeDetour.To => Destination;
         bool ICoreNativeDetour.HasOrigEntrypoint => HasOrigEntry;
         IntPtr ICoreNativeDetour.OrigEntrypoint => OrigEntry;
-
-        void ICoreNativeDetour.Undo() => Undo();
     }
 }

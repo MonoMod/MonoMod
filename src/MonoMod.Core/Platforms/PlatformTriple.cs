@@ -235,7 +235,7 @@ namespace MonoMod.Core.Platforms {
             if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)) {
                 altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, size, out altHandle);
             } else {
-                MMDbgLog.Warning($"Cannot create alternate entry point for native detour");
+                MMDbgLog.Warning($"Cannot create alternate entry point for native detour (from: {from:x16}, to: {to:x16}");
             }
 
             // allocate a backup
