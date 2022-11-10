@@ -3,9 +3,9 @@ using System.Reflection;
 
 namespace MonoMod.RuntimeDetour {
     public sealed class DetourInfo : DetourBase {
-        private readonly DetourManager.SingleDetourState detour;
+        private readonly DetourManager.SingleManagedDetourState detour;
 
-        internal DetourInfo(MethodDetourInfo method, DetourManager.SingleDetourState detour) : base(method) {
+        internal DetourInfo(MethodDetourInfo method, DetourManager.SingleManagedDetourState detour) : base(method) {
             this.detour = detour;
         }
 
@@ -34,14 +34,14 @@ namespace MonoMod.RuntimeDetour {
 
         public MethodBase Entry => detour.PublicTarget;
 
-        internal DetourManager.DetourChainNode? ChainNode
+        internal DetourManager.ManagedDetourChainNode? ChainNode
             => detour.ManagerData switch {
-                DetourManager.DetourChainNode cn => cn,
-                DetourManager.DepGraphNode<DetourManager.ChainNode> gn => (DetourManager.DetourChainNode) gn.ListNode.ChainNode,
+                DetourManager.ManagedDetourChainNode cn => cn,
+                DetourManager.DepGraphNode<DetourManager.ManagedChainNode> gn => (DetourManager.ManagedDetourChainNode) gn.ListNode.ChainNode,
                 _ => null,
             };
 
         public DetourInfo? Next
-            => ChainNode?.Next is DetourManager.DetourChainNode cn ? Method.GetDetourInfo(cn.Detour) : null;
+            => ChainNode?.Next is DetourManager.ManagedDetourChainNode cn ? Method.GetDetourInfo(cn.Detour) : null;
     }
 }

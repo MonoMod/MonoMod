@@ -169,7 +169,7 @@ namespace MonoMod.RuntimeDetour {
         MethodBase IDetour.NextTrampoline => trampoline;
 
         private readonly DetourManager.DetourState state;
-        private readonly DetourManager.SingleDetourState detour;
+        private readonly DetourManager.SingleManagedDetourState detour;
 
         private readonly DataScope<DynamicReferenceManager.CellRef> delegateObjectScope;
 

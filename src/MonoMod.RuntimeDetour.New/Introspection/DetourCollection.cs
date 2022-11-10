@@ -17,7 +17,7 @@ namespace MonoMod.RuntimeDetour {
 
         public struct Enumerator : IEnumerator<DetourInfo> {
             private readonly MethodDetourInfo mdi;
-            private DetourManager.ChainNode? curNode;
+            private DetourManager.ManagedChainNode? curNode;
             private int version;
 
             internal Enumerator(MethodDetourInfo mdi) {
@@ -26,7 +26,7 @@ namespace MonoMod.RuntimeDetour {
                 curNode = mdi.state.detourList;
             }
 
-            public DetourInfo Current => mdi.GetDetourInfo(((DetourManager.DetourChainNode) curNode!).Detour);
+            public DetourInfo Current => mdi.GetDetourInfo(((DetourManager.ManagedDetourChainNode) curNode!).Detour);
 
             object IEnumerator.Current => Current;
 

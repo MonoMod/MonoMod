@@ -20,7 +20,7 @@ namespace MonoMod.RuntimeDetour {
         public ILHookCollection ILHooks => lazyILHooks ??= new(this);
 
         public DetourInfo? FirstDetour
-            => state.detourList.Next is DetourManager.DetourChainNode cn ? GetDetourInfo(cn.Detour) : null;
+            => state.detourList.Next is DetourManager.ManagedDetourChainNode cn ? GetDetourInfo(cn.Detour) : null;
 
         public bool IsDetoured => state.detourList.Next is not null || state.detourList.HasILHook;
 
@@ -41,7 +41,7 @@ namespace MonoMod.RuntimeDetour {
             remove => state.ILHookUndone -= value;
         }
 
-        internal DetourInfo GetDetourInfo(DetourManager.SingleDetourState node) {
+        internal DetourInfo GetDetourInfo(DetourManager.SingleManagedDetourState node) {
             var existingInfo = node.DetourInfo;
             if (existingInfo is null || existingInfo.Method!= this) {
                 return node.DetourInfo = new(this, node);

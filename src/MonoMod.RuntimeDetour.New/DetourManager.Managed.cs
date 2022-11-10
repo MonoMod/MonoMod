@@ -6,20 +6,17 @@ using MonoMod.Core.Platforms;
 using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     public static partial class DetourManager {
         #region Detour chain
-        internal abstract class ChainNode {
+        internal abstract class ManagedChainNode {
 
-            public ChainNode? Next;
+            public ManagedChainNode? Next;
 
             public abstract MethodBase Entry { get; }
             public abstract MethodBase NextTrampoline { get; }
@@ -70,12 +67,12 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        internal sealed class DetourChainNode : ChainNode {
-            public DetourChainNode(SingleDetourState detour) {
+        internal sealed class ManagedDetourChainNode : ManagedChainNode {
+            public ManagedDetourChainNode(SingleManagedDetourState detour) {
                 Detour = detour;
             }
 
-            public readonly SingleDetourState Detour;
+            public readonly SingleManagedDetourState Detour;
 
             public override MethodBase Entry => Detour.InvokeTarget;
             public override MethodBase NextTrampoline => Detour.NextTrampoline;
@@ -83,7 +80,7 @@ namespace MonoMod.RuntimeDetour {
             public IDetourFactory Factory => Detour.Factory;
         }
 
-        internal sealed class DetourSyncInfo {
+        internal class DetourSyncInfo {
             public int ActiveCalls;
             public int UpdatingThread;
 
@@ -112,7 +109,7 @@ namespace MonoMod.RuntimeDetour {
 
         // The root node is the existing method. It's NextTrampoline is the method, which is the same
         // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
-        internal sealed class RootChainNode : ChainNode {
+        internal sealed class RootManagedChainNode : ManagedChainNode {
             public override MethodBase Entry { get; }
             public override MethodBase NextTrampoline { get; }
             public override DetourConfig? Config => null;
@@ -125,7 +122,7 @@ namespace MonoMod.RuntimeDetour {
 
             public bool HasILHook;
 
-            public RootChainNode(MethodBase method) {
+            public RootManagedChainNode(MethodBase method) {
                 Sig = MethodSignature.ForMethod(method);
                 Entry = method;
                 NextTrampoline = TrampolinePool.Rent(Sig);
@@ -278,15 +275,15 @@ namespace MonoMod.RuntimeDetour {
             private MethodDetourInfo? info;
             public MethodDetourInfo Info => info ??= new(this);
 
-            private readonly DepGraph<ChainNode> detourGraph = new();
-            internal readonly RootChainNode detourList;
-            private ChainNode? noConfigChain;
+            private readonly DepGraph<ManagedChainNode> detourGraph = new();
+            internal readonly RootManagedChainNode detourList;
+            private ManagedChainNode? noConfigChain;
 
             internal SpinLock detourLock = new(true);
             internal int detourChainVersion;
 
-            public void AddDetour(SingleDetourState detour, bool takeLock = true) {
-                DetourChainNode cnode;
+            public void AddDetour(SingleManagedDetourState detour, bool takeLock = true) {
+                ManagedDetourChainNode cnode;
                 var lockTaken = false;
                 try {
                     if (takeLock)
@@ -294,11 +291,11 @@ namespace MonoMod.RuntimeDetour {
                     if (detour.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add a detour which was already added");
 
-                    cnode = new DetourChainNode(detour);
+                    cnode = new ManagedDetourChainNode(detour);
                     detourChainVersion++;
                     if (cnode.Config is { } cfg) {
-                        var listNode = new DepListNode<ChainNode>(cfg, cnode);
-                        var graphNode = new DepGraphNode<ChainNode>(listNode);
+                        var listNode = new DepListNode<ManagedChainNode>(cfg, cnode);
+                        var graphNode = new DepGraphNode<ManagedChainNode>(listNode);
 
                         detourGraph.Insert(graphNode);
 
@@ -320,8 +317,8 @@ namespace MonoMod.RuntimeDetour {
                 InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, detour);
             }
 
-            public void RemoveDetour(SingleDetourState detour, bool takeLock = true) {
-                DetourChainNode cnode;
+            public void RemoveDetour(SingleManagedDetourState detour, bool takeLock = true) {
+                ManagedDetourChainNode cnode;
                 var lockTaken = false;
                 try {
                     if (takeLock)
@@ -331,12 +328,12 @@ namespace MonoMod.RuntimeDetour {
                         case null:
                             throw new InvalidOperationException("Trying to remove detour which wasn't added");
 
-                        case DepGraphNode<ChainNode> gn:
+                        case DepGraphNode<ManagedChainNode> gn:
                             RemoveGraphDetour(detour, gn);
-                            cnode = (DetourChainNode) gn.ListNode.ChainNode;
+                            cnode = (ManagedDetourChainNode) gn.ListNode.ChainNode;
                             break;
 
-                        case DetourChainNode cn:
+                        case ManagedDetourChainNode cn:
                             RemoveNoConfigDetour(detour, cn);
                             cnode = cn;
                             break;
@@ -353,13 +350,13 @@ namespace MonoMod.RuntimeDetour {
                 InvokeDetourEvent(DetourManager.DetourUndone, DetourUndone, detour);
             }
 
-            private void RemoveGraphDetour(SingleDetourState detour, DepGraphNode<ChainNode> node) {
+            private void RemoveGraphDetour(SingleManagedDetourState detour, DepGraphNode<ManagedChainNode> node) {
                 detourGraph.Remove(node);
                 UpdateChain(detour.Factory);
                 node.ListNode.ChainNode.Remove();
             }
 
-            private void RemoveNoConfigDetour(SingleDetourState detour, DetourChainNode node) {
+            private void RemoveNoConfigDetour(SingleManagedDetourState detour, ManagedDetourChainNode node) {
                 ref var chain = ref noConfigChain;
                 while (chain is not null) {
                     if (ReferenceEquals(chain, node)) {
@@ -528,7 +525,7 @@ namespace MonoMod.RuntimeDetour {
             private void UpdateChain(IDetourFactory updatingFactory) {
                 var graphNode = detourGraph.ListHead;
 
-                ChainNode? chain = null;
+                ManagedChainNode? chain = null;
                 ref var next = ref chain;
                 while (graphNode is not null) {
                     next = graphNode.ChainNode;
@@ -549,9 +546,9 @@ namespace MonoMod.RuntimeDetour {
                     chain = detourList;
                     while (chain is not null) {
                         // we want to use the factory for the next node first
-                        var fac = (chain.Next as DetourChainNode)?.Factory;
+                        var fac = (chain.Next as ManagedDetourChainNode)?.Factory;
                         // then, if that doesn't exist, the current factory
-                        fac ??= (chain as DetourChainNode)?.Factory;
+                        fac ??= (chain as ManagedDetourChainNode)?.Factory;
                         // and if that doesn't exist, then the updating factory
                         fac ??= updatingFactory;
                         chain.UpdateDetour(fac, EndOfChain);
@@ -568,7 +565,7 @@ namespace MonoMod.RuntimeDetour {
             public event Action<ILHookInfo>? ILHookApplied;
             public event Action<ILHookInfo>? ILHookUndone;
 
-            private void InvokeDetourEvent(Action<DetourInfo>? evt1, Action<DetourInfo>? evt2, SingleDetourState node) {
+            private void InvokeDetourEvent(Action<DetourInfo>? evt1, Action<DetourInfo>? evt2, SingleManagedDetourState node) {
                 if (evt1 is not null || evt2 is not null) {
                     var info = Info.GetDetourInfo(node);
                     evt1?.Invoke(info);
@@ -585,7 +582,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        internal sealed class SingleDetourState {
+        internal sealed class SingleManagedDetourState {
 
             public readonly IDetourFactory Factory;
             public readonly DetourConfig? Config;
@@ -601,7 +598,7 @@ namespace MonoMod.RuntimeDetour {
             public bool IsValid;
             public bool IsApplied => Volatile.Read(ref ManagerData) is not null;
 
-            public SingleDetourState(IDetour dt) {
+            public SingleManagedDetourState(IDetour dt) {
                 Factory = dt.Factory;
                 Config = dt.Config;
                 PublicTarget = dt.PublicTarget;
