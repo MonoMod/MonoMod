@@ -31,6 +31,10 @@ namespace MonoMod.Core.Platforms {
             return detour;
         }
 
+        public ICoreNativeDetour CreateNativeDetour(CreateNativeDetourRequest request) {
+            return triple.CreateNativeDetour(request.Source, request.Target);
+        }
+
         private sealed class Detour : ICoreDetour {
             private readonly PlatformTriple triple;
             private readonly MethodBase realTarget;

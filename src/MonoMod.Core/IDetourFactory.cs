@@ -12,12 +12,18 @@ namespace MonoMod.Core {
         FeatureFlags SupportedFeatures { get; }
 
         ICoreDetour CreateDetour(CreateDetourRequest request);
+
+        ICoreNativeDetour CreateNativeDetour(CreateNativeDetourRequest request);
+
     }
 
     [CLSCompliant(true)]
     public readonly record struct CreateDetourRequest(MethodBase Source, MethodBase Target) {
         public bool ApplyByDefault { get; init; } = true;
     }
+
+    [CLSCompliant(true)]
+    public readonly record struct CreateNativeDetourRequest(IntPtr Source, IntPtr Target);
 
     [CLSCompliant(true)]
     public static class DetourFactory {
@@ -33,7 +39,12 @@ namespace MonoMod.Core {
 
         public static ICoreDetour CreateDetour(this IDetourFactory factory, MethodBase source, MethodBase target, bool applyByDefault = true) {
             Helpers.ThrowIfArgumentNull(factory);
-            return factory.CreateDetour(new CreateDetourRequest(source, target) { ApplyByDefault = applyByDefault });
+            return factory.CreateDetour(new(source, target) { ApplyByDefault = applyByDefault });
+        }
+
+        public static ICoreNativeDetour CreateNativeDetour(this IDetourFactory factory, IntPtr source, IntPtr target) {
+            Helpers.ThrowIfArgumentNull(factory);
+            return factory.CreateNativeDetour(new(source, target));
         }
     }
 }
