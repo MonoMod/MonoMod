@@ -7,6 +7,6 @@ namespace MonoMod.Core {
 
         FixedInstructionSize = 0x01,
         Immediate64 = 0x02,
-
+        CreateAltEntryPoint = 0x04,
     }
 }

@@ -1,4 +1,4 @@
-﻿using MonoMod.Core.Platforms.NativeDetours;
+﻿using MonoMod.Core.Platforms.Architectures.AltEntryFactories;
 using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
@@ -8,12 +8,12 @@ namespace MonoMod.Core.Platforms.Architectures {
     internal class x86_64Arch : IArchitecture {
         public ArchitectureKind Target => ArchitectureKind.x86_64;
 
-        public ArchitectureFeature Features => ArchitectureFeature.Immediate64;
+        public ArchitectureFeature Features => ArchitectureFeature.Immediate64 | ArchitectureFeature.CreateAltEntryPoint;
 
         private BytePatternCollection? lazyKnownMethodThunks;
         public unsafe BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, &CreateKnownMethodThunks);
 
-        public INativeDetourFactory? NativeDetourFactory { get; }
+        public IAltEntryFactory AltEntryFactory { get; }
 
         private static BytePatternCollection CreateKnownMethodThunks()
         {
@@ -263,7 +263,7 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         public x86_64Arch(ISystem system) {
             this.system = system;
-            NativeDetourFactory = new IcedNativeDetourFactory(system, 64);
+            AltEntryFactory = new IcedAltEntryFactory(system, 64);
         }
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",

@@ -1,7 +1,6 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
 
 namespace MonoMod.Core.Platforms {
     public interface IArchitecture {
@@ -10,7 +9,7 @@ namespace MonoMod.Core.Platforms {
 
         BytePatternCollection KnownMethodThunks { get; }
 
-        INativeDetourFactory? NativeDetourFactory { get; }
+        IAltEntryFactory AltEntryFactory { get; }
 
         NativeDetourInfo ComputeDetourInfo(IntPtr from, IntPtr to, int maxSizeHint = -1);
         /// <summary>
