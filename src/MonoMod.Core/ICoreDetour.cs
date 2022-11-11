@@ -3,13 +3,8 @@ using System.Reflection;
 
 namespace MonoMod.Core {
     [CLSCompliant(true)]
-    public interface ICoreDetour : IDisposable {
+    public interface ICoreDetour : ICoreDetourBase {
         MethodBase Source { get; }
         MethodBase Target { get; }
-
-        bool IsApplied { get; }
-
-        void Apply();
-        void Undo();
     }
 }

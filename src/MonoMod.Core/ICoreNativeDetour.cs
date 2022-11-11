@@ -1,14 +1,11 @@
 ﻿using System;
 
 namespace MonoMod.Core {
-    public interface ICoreNativeDetour {
-        IntPtr From { get; }
-        IntPtr To { get; }
+    public interface ICoreNativeDetour : ICoreDetourBase {
+        IntPtr Source { get; }
+        IntPtr Target { get; }
 
         bool HasOrigEntrypoint { get; }
         IntPtr OrigEntrypoint { get; }
-
-        void ChangeTarget(IntPtr newTarget);
-        void Undo();
     }
 }

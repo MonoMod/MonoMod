@@ -23,7 +23,9 @@ namespace MonoMod.Core {
     }
 
     [CLSCompliant(true)]
-    public readonly record struct CreateNativeDetourRequest(IntPtr Source, IntPtr Target);
+    public readonly record struct CreateNativeDetourRequest(IntPtr Source, IntPtr Target) {
+        public bool ApplyByDefault { get; init; } = true;
+    }
 
     [CLSCompliant(true)]
     public static class DetourFactory {
@@ -42,9 +44,9 @@ namespace MonoMod.Core {
             return factory.CreateDetour(new(source, target) { ApplyByDefault = applyByDefault });
         }
 
-        public static ICoreNativeDetour CreateNativeDetour(this IDetourFactory factory, IntPtr source, IntPtr target) {
+        public static ICoreNativeDetour CreateNativeDetour(this IDetourFactory factory, IntPtr source, IntPtr target, bool applyByDefault = true) {
             Helpers.ThrowIfArgumentNull(factory);
-            return factory.CreateNativeDetour(new(source, target));
+            return factory.CreateNativeDetour(new(source, target) { ApplyByDefault = applyByDefault });
         }
     }
 }

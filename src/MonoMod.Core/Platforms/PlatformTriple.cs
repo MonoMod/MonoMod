@@ -208,6 +208,10 @@ namespace MonoMod.Core.Platforms {
             return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
         }
 
+        public record struct NativeDetour(SimpleNativeDetour Simple, IntPtr AltEntry, IDisposable? AltHandle) {
+            public bool HasAltEntry => AltEntry != IntPtr.Zero;
+        }
+
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
         public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default) {
@@ -245,7 +249,7 @@ namespace MonoMod.Core.Platforms {
             System.PatchData(PatchTargetKind.Executable, fromRw, detourData, backup);
 
             // and now we just create the NativeDetour object
-            return new NativeDetour(this, detourInfo, backup, allocHandle, altEntry, altHandle);
+            return new NativeDetour(new(this, detourInfo, backup, allocHandle), altEntry, altHandle);
         }
         
         public IntPtr GetNativeMethodBody(MethodBase method) {

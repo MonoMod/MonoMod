@@ -39,7 +39,7 @@ unsafe {
     var get1a = get1ptr();
     Console.WriteLine(get1a);
 
-    using var nativeDetour = triple.CreateNativeDetour((IntPtr) msvcrand, (IntPtr) get1ptr);
+    /*using var nativeDetour = triple.CreateNativeDetour((IntPtr) msvcrand, (IntPtr) get1ptr);
     Helpers.Assert(nativeDetour.HasOrigEntry);
     var altrand1 = (delegate* unmanaged[Cdecl]<int>) nativeDetour.OrigEntry;
 
@@ -48,7 +48,7 @@ unsafe {
         Console.WriteLine(rand2);
         var galtrand1 = altrand1();
         Console.WriteLine(galtrand1);
-    }
+    }*/
 
 GC.KeepAlive(get1del);
 }

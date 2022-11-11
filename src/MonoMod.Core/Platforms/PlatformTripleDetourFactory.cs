@@ -31,16 +31,15 @@ namespace MonoMod.Core.Platforms {
             return detour;
         }
 
-        public ICoreNativeDetour CreateNativeDetour(CreateNativeDetourRequest request) {
-            return triple.CreateNativeDetour(request.Source, request.Target);
-        }
+        private abstract class DetourBase : ICoreDetourBase {
+            protected readonly PlatformTriple Triple;
 
-        private sealed class Detour : ICoreDetour {
-            private readonly PlatformTriple triple;
-            private readonly MethodBase realTarget;
+            protected DetourBase(PlatformTriple triple) {
+                Triple = triple;
+                DetourBox = null!;
+            }
 
-            private sealed class DetourBox {
-                private bool applyDetours;
+            protected abstract class DetourBoxBase {
                 public bool IsApplied {
                     get => Volatile.Read(ref applyDetours);
                     set {
@@ -49,7 +48,6 @@ namespace MonoMod.Core.Platforms {
                     }
                 }
 
-                private bool isApplying;
                 public bool IsApplying {
                     get => Volatile.Read(ref isApplying);
                     set {
@@ -59,18 +57,120 @@ namespace MonoMod.Core.Platforms {
                 }
 
                 public SimpleNativeDetour? Detour;
-                
-                private readonly PlatformTriple triple;
-                private readonly MethodBase src;
-                private readonly MethodBase target;
-                private readonly object sync = new();
 
-                public DetourBox(PlatformTriple triple, MethodBase src, MethodBase target) {
-                    this.triple = triple;
-                    this.src = src;
-                    this.target = target;
+                protected readonly PlatformTriple Triple;
+                protected readonly object Sync = new();
+                private bool applyDetours;
+                private bool isApplying;
+
+
+                protected DetourBoxBase(PlatformTriple triple) {
+                    Triple = triple;
                     applyDetours = false;
                     isApplying = false;
+                }
+            }
+
+            protected DetourBoxBase DetourBox;
+            protected TBox GetDetourBox<TBox>() where TBox : DetourBoxBase => Unsafe.As<TBox>(DetourBox);
+
+            public bool IsApplied => DetourBox.IsApplied;
+
+            // TODO: instead of letting go of the old detour, keep it around, because it seems like the runtime doesn't free old code versions
+            protected static void ReplaceDetourInLock(DetourBoxBase nativeDetour, SimpleNativeDetour? newDetour, out SimpleNativeDetour? oldDetour) {
+                Thread.MemoryBarrier();
+                oldDetour = Interlocked.Exchange(ref nativeDetour.Detour, newDetour);
+            }
+
+            protected abstract SimpleNativeDetour CreateDetour();
+
+            public void Apply() {
+                lock (DetourBox) {
+                    if (IsApplied)
+                        throw new InvalidOperationException("Cannot apply a detour which is already applied");
+
+                    try {
+                        DetourBox.IsApplying = true;
+                        DetourBox.IsApplied = true;
+
+                        ReplaceDetourInLock(DetourBox, CreateDetour(), out SimpleNativeDetour? oldDetour);
+                        Helpers.DAssert(oldDetour is null);
+                    } catch {
+                        DetourBox.IsApplied = false;
+                        throw;
+                    } finally {
+                        DetourBox.IsApplying = false;
+                    }
+                }
+            }
+
+            protected abstract void BeforeUndo();
+            protected abstract void AfterUndo();
+
+            public void Undo() {
+                lock (DetourBox) {
+                    if (!IsApplied)
+                        throw new InvalidOperationException("Cannot undo a detour which is not applied");
+                    try {
+                        DetourBox.IsApplying = true;
+
+                        UndoCore(out var oldDetour);
+                        // we want to do this in-lock to make sure that it gets cleaned up properly
+                        oldDetour?.Dispose();
+                    } finally {
+                        DetourBox.IsApplying = false;
+                    }
+                }
+            }
+
+            private void UndoCore(out SimpleNativeDetour? oldDetour) {
+                BeforeUndo();
+                DetourBox.IsApplied = false;
+                ReplaceDetourInLock(DetourBox, null, out oldDetour);
+                AfterUndo();
+            }
+
+            protected abstract void BeforeDispose();
+
+            #region IDisposable implementation
+            private bool disposedValue;
+
+            private void Dispose(bool disposing) {
+                if (!disposedValue) {
+                    BeforeDispose();
+
+                    lock (DetourBox) {
+                        UndoCore(out var oldDetour);
+                        oldDetour?.Dispose();
+                    }
+
+                    disposedValue = true;
+                }
+            }
+
+            ~DetourBase() {
+                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                Dispose(disposing: false);
+            }
+
+            public void Dispose() {
+                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+                Dispose(disposing: true);
+                GC.SuppressFinalize(this);
+            }
+            #endregion
+        }
+
+        private sealed class Detour : DetourBase, ICoreDetour {
+            private readonly MethodBase realTarget;
+
+            private sealed class ManagedDetourBox : DetourBoxBase {
+                private readonly MethodBase src;
+                private readonly MethodBase target;
+
+                public ManagedDetourBox(PlatformTriple triple, MethodBase src, MethodBase target) : base(triple) {
+                    this.src = src;
+                    this.target = target;
                     Detour = null;
                 }
 
@@ -89,11 +189,10 @@ namespace MonoMod.Core.Platforms {
                     if (!IsApplied)
                         return;
 
-                    method = triple.GetIdentifiable(method);
+                    method = Triple.GetIdentifiable(method);
                     Helpers.DAssert(method.Equals(src));
 
-                    SimpleNativeDetour? oldDetour;
-                    lock (sync) {
+                    lock (Sync) {
                         if (!IsApplied)
                             return;
                         if (IsApplying)
@@ -116,11 +215,11 @@ namespace MonoMod.Core.Platforms {
                             } else {
                                 from = codeStart;
                                 fromRw = codeStartRw;
-                                to = triple.Runtime.GetMethodHandle(target).GetFunctionPointer();
+                                to = Triple.Runtime.GetMethodHandle(target).GetFunctionPointer();
                             }
 
-                            var newDetour = triple.CreateSimpleDetour(from, to, detourMaxSize: (int) codeSize, fromRw: fromRw);
-                            ReplaceDetourInLock(this, newDetour, out oldDetour);
+                            var newDetour = Triple.CreateSimpleDetour(from, to, detourMaxSize: (int) codeSize, fromRw: fromRw);
+                            ReplaceDetourInLock(this, newDetour, out var oldDetour);
                         } finally {
                             IsApplying = false;
                         }
@@ -129,18 +228,19 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            public Detour(PlatformTriple triple, MethodBase src, MethodBase dst) {
-                this.triple = triple;
+            private new ManagedDetourBox DetourBox => GetDetourBox<ManagedDetourBox>();
+
+            public Detour(PlatformTriple triple, MethodBase src, MethodBase dst) : base(triple) {
                 Source = triple.GetIdentifiable(src);
                 Target = dst;
 
                 realTarget = triple.GetRealDetourTarget(src, dst);
 
-                detourBox = new(triple, Source, realTarget);
+                base.DetourBox = new ManagedDetourBox(triple, Source, realTarget);
 
                 if (triple.SupportedFeatures.Has(RuntimeFeature.CompileMethodHook)) {
                     EnsureSubscribed(triple);
-                    detourBox.SubscribeCompileMethod();
+                    DetourBox.SubscribeCompileMethod();
                 }
             }
 
@@ -162,7 +262,7 @@ namespace MonoMod.Core.Platforms {
 
             private class RelatedDetourBag {
                 public readonly MethodBase Method;
-                public readonly List<DetourBox> RelatedDetours = new();
+                public readonly List<ManagedDetourBox> RelatedDetours = new();
                 public bool IsValid = true;
 
                 public RelatedDetourBag(MethodBase method)
@@ -170,7 +270,7 @@ namespace MonoMod.Core.Platforms {
             }
 
             private static readonly ConcurrentDictionary<MethodBase, RelatedDetourBag> relatedDetours = new();
-            private static void AddRelatedDetour(MethodBase m, DetourBox cmh) {
+            private static void AddRelatedDetour(MethodBase m, ManagedDetourBox cmh) {
             Retry:
                 var related = relatedDetours.GetOrAdd(m, static m => new(m));
                 lock (related) {
@@ -183,7 +283,7 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            private static void RemoveRelatedDetour(MethodBase m, DetourBox cmh) {
+            private static void RemoveRelatedDetour(MethodBase m, ManagedDetourBox cmh) {
                 if (relatedDetours.TryGetValue(m, out var related)) {
                     lock (related) {
                         related.RelatedDetours.Remove(cmh);
@@ -214,12 +314,6 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            // TODO: instead of letting go of the old detour, keep it around, because it seems like the runtime doesn't free old code versions
-            private static void ReplaceDetourInLock(DetourBox nativeDetour, SimpleNativeDetour? newDetour, out SimpleNativeDetour? oldDetour) {
-                Thread.MemoryBarrier();
-                oldDetour = Interlocked.Exchange(ref nativeDetour.Detour, newDetour);
-            }
-
             public MethodBase Source { get; }
 
             public MethodBase Target { get; }
@@ -229,94 +323,94 @@ namespace MonoMod.Core.Platforms {
             private IDisposable? srcPin;
             private IDisposable? dstPin;
 #pragma warning restore CA2213 // Disposable fields should be disposed
-            private readonly DetourBox detourBox;
 
-            public bool IsApplied => detourBox.IsApplied;
+            protected override SimpleNativeDetour CreateDetour() {
+                MMDbgLog.Trace($"Applying managed detour from {Source} to {realTarget}");
 
-            public void Apply() {
-                lock (detourBox) {
-                    if (IsApplied)
-                        throw new InvalidOperationException("Cannot apply a detour which is already applied");
+                srcPin = Triple.PinMethodIfNeeded(Source);
+                dstPin = Triple.PinMethodIfNeeded(realTarget);
 
-                    try {
-                        detourBox.IsApplying = true;
-                        detourBox.IsApplied = true;
+                Triple.Prepare(Source);
+                var from = Triple.GetNativeMethodBody(Source);
+                Triple.Prepare(realTarget);
+                var to = Triple.Runtime.GetMethodHandle(realTarget).GetFunctionPointer();
 
-                        MMDbgLog.Trace($"Applying managed detour from {Source} to {realTarget}");
-
-                        srcPin = triple.PinMethodIfNeeded(Source);
-                        dstPin = triple.PinMethodIfNeeded(realTarget);
-
-                        triple.Prepare(Source);
-                        var from = triple.GetNativeMethodBody(Source);
-                        triple.Prepare(realTarget);
-                        var to = triple.Runtime.GetMethodHandle(realTarget).GetFunctionPointer();
-
-                        ReplaceDetourInLock(detourBox, triple.CreateSimpleDetour(from, to), out SimpleNativeDetour? oldDetour);
-                        Helpers.DAssert(oldDetour is null);
-                    } catch {
-                        detourBox.IsApplied = false;
-                        throw;
-                    } finally {
-                        detourBox.IsApplying = false;
-                    }
-                }
+                return Triple.CreateSimpleDetour(from, to);
             }
 
-            public void Undo() {
-                lock (detourBox) {
-                    if (!IsApplied)
-                        throw new InvalidOperationException("Cannot undo a detour which is not applied");
-                    try {
-                        detourBox.IsApplying = true;
-
-                        MMDbgLog.Trace($"Undoing managed detour from {Source} to {realTarget}");
-
-                        UndoCore(out SimpleNativeDetour? oldDetour);
-                        // we want to do this in-lock to make sure that it gets cleaned up properly
-                        oldDetour?.Dispose();
-                    } finally {
-                        detourBox.IsApplying = false;
-                    }
-                }
+            protected override void BeforeUndo() {
+                MMDbgLog.Trace($"Undoing managed detour from {Source} to {realTarget}");
             }
 
-            private void UndoCore(out SimpleNativeDetour? oldDetour) {
-                detourBox.IsApplied = false;
-                ReplaceDetourInLock(detourBox, null, out oldDetour);
+            protected override void AfterUndo() {
                 Interlocked.Exchange(ref srcPin, null)?.Dispose();
                 Interlocked.Exchange(ref dstPin, null)?.Dispose();
             }
 
-            #region IDisposable implementation
-            private bool disposedValue;
+            protected override void BeforeDispose() {
+                if (Triple.SupportedFeatures.Has(RuntimeFeature.CompileMethodHook)) {
+                    DetourBox.UnsubscribeCompileMethod();
+                }
+            }
+        }
 
-            private void Dispose(bool disposing) {
-                if (!disposedValue) {
-                    if (triple.SupportedFeatures.Has(RuntimeFeature.CompileMethodHook)) {
-                        detourBox.UnsubscribeCompileMethod();
-                    }
-                    SimpleNativeDetour? oldDetour;
-                    lock (detourBox) {
-                        UndoCore(out oldDetour);
-                        oldDetour?.Dispose();
-                    }
+        private sealed class NativeDetour : DetourBase, ICoreNativeDetour {
+            public IntPtr Source => DetourBox.From;
 
-                    disposedValue = true;
+            public IntPtr Target => DetourBox.To;
+
+            public bool HasOrigEntrypoint => OrigEntrypoint != IntPtr.Zero;
+
+            public IntPtr OrigEntrypoint { get; private set; }
+            private IDisposable? origHandle;
+
+            private sealed class NativeDetourBox : DetourBoxBase {
+                public readonly IntPtr From;
+                public readonly IntPtr To;
+
+                public NativeDetourBox(PlatformTriple triple, IntPtr from, IntPtr to) : base(triple) {
+                    From = from;
+                    To = to;
                 }
             }
 
-            ~Detour() {
-                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-                Dispose(disposing: false);
+            private new NativeDetourBox DetourBox => GetDetourBox<NativeDetourBox>();
+
+            public NativeDetour(PlatformTriple triple, IntPtr from, IntPtr to) : base(triple) {
+                base.DetourBox = new NativeDetourBox(triple, from, to);
             }
 
-            public void Dispose() {
-                // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
+            // NOTE: When we eventually add retargeting, we'll need to change the origEntrypoint. We'll want to tie the lifetime 
+            // of origHandle to any delegates that use origEntrypoint, and so may need to expose it publicly. Alternately, we can
+            // have only 
+
+            protected override SimpleNativeDetour CreateDetour() {
+                MMDbgLog.Trace($"Applying native detour from {Source:x16} to {Target:x16}");
+
+                var (simple, altEntry, altHandle) = Triple.CreateNativeDetour(Source, Target);
+                (altHandle, origHandle) = (origHandle, altHandle);
+                Helpers.DAssert(altHandle is null);
+                OrigEntrypoint = altEntry;
+                return simple;
             }
-            #endregion
+
+            protected override void BeforeUndo() {
+                MMDbgLog.Trace($"Undoing native detour from {Source:x16} to {Target:x16}");
+            }
+
+            protected override void AfterUndo() {
+                origHandle?.Dispose();
+            }
+
+            protected override void BeforeDispose() { }
+        }
+
+        public ICoreNativeDetour CreateNativeDetour(CreateNativeDetourRequest request) {
+            var detour = new NativeDetour(triple, request.Source, request.Target);
+            if (request.ApplyByDefault) {
+                detour.Apply();
+            }
+            return detour;
         }
     }
 }
