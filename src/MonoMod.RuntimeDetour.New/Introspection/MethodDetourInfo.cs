@@ -4,8 +4,8 @@ using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     public sealed class MethodDetourInfo {
-        internal readonly DetourManager.DetourState state;
-        internal MethodDetourInfo(DetourManager.DetourState state) {
+        internal readonly DetourManager.ManagedDetourState state;
+        internal MethodDetourInfo(DetourManager.ManagedDetourState state) {
             this.state = state;
         }
 

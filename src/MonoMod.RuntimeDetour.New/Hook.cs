@@ -153,7 +153,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private readonly IDetourFactory factory;
-        IDetourFactory IDetour.Factory => factory;
+        IDetourFactory IDetourBase.Factory => factory;
 
         public DetourConfig? Config { get; }
 
@@ -168,7 +168,7 @@ namespace MonoMod.RuntimeDetour {
         private readonly MethodInfo trampoline;
         MethodBase IDetour.NextTrampoline => trampoline;
 
-        private readonly DetourManager.DetourState state;
+        private readonly DetourManager.ManagedDetourState state;
         private readonly DetourManager.SingleManagedDetourState detour;
 
         private readonly DataScope<DynamicReferenceManager.CellRef> delegateObjectScope;

@@ -260,12 +260,12 @@ namespace MonoMod.RuntimeDetour {
         }
         #endregion
 
-        internal sealed class DetourState {
+        internal sealed class ManagedDetourState {
             public readonly MethodBase Source;
             public readonly MethodBase ILCopy;
             public MethodBase EndOfChain;
 
-            public DetourState(MethodBase src) {
+            public ManagedDetourState(MethodBase src) {
                 Source = src;
                 ILCopy = src.CreateILCopy();
                 EndOfChain = ILCopy;
@@ -582,55 +582,32 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        internal sealed class SingleManagedDetourState {
-
-            public readonly IDetourFactory Factory;
-            public readonly DetourConfig? Config;
-
+        internal sealed class SingleManagedDetourState : SingleDetourStateBase {
             public readonly MethodInfo PublicTarget;
             public readonly MethodInfo InvokeTarget;
             public readonly MethodBase NextTrampoline;
 
-            public object? ManagerData;
-
             public DetourInfo? DetourInfo;
 
-            public bool IsValid;
-            public bool IsApplied => Volatile.Read(ref ManagerData) is not null;
-
-            public SingleManagedDetourState(IDetour dt) {
-                Factory = dt.Factory;
-                Config = dt.Config;
+            public SingleManagedDetourState(IDetour dt) : base(dt) {
                 PublicTarget = dt.PublicTarget;
                 InvokeTarget = dt.InvokeTarget;
                 NextTrampoline = dt.NextTrampoline;
-                IsValid = true;
             }
         }
 
-        internal sealed class SingleILHookState {
-            public readonly IDetourFactory Factory;
-            public readonly DetourConfig? Config;
+        internal sealed class SingleILHookState : SingleDetourStateBase {
             public readonly ILContext.Manipulator Manip;
-
-            public object? ManagerData;
-
             public ILHookInfo? HookInfo;
 
-            public bool IsValid;
-            public bool IsApplied => Volatile.Read(ref ManagerData) is not null;
-
-            public SingleILHookState(IILHook hk) {
-                Factory = hk.Factory;
-                Config = hk.Config;
+            public SingleILHookState(IILHook hk) : base(hk) {
                 Manip = hk.Manip;
-                IsValid = true;
             }
         }
 
-        private static readonly ConcurrentDictionary<MethodBase, DetourState> detourStates = new();
+        private static readonly ConcurrentDictionary<MethodBase, ManagedDetourState> detourStates = new();
 
-        internal static DetourState GetDetourState(MethodBase method) {
+        internal static ManagedDetourState GetDetourState(MethodBase method) {
             method = PlatformTriple.Current.GetIdentifiable(method);
             return detourStates.GetOrAdd(method, static m => new(m));
         }

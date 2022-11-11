@@ -21,6 +21,7 @@ namespace MonoMod.Core.Platforms {
             AllocHandle = allocHandle;
         }
 
+        // TODO: when this is a NativeDetour, we need to fix up the alt entry point too, if the new patch is bigger
         public void ChangeTarget(IntPtr newTarget) {
             CheckDisposed();
 

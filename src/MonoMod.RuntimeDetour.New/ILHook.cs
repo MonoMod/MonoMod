@@ -53,7 +53,7 @@ namespace MonoMod.RuntimeDetour {
         #endregion
 
         private readonly IDetourFactory factory;
-        IDetourFactory IILHook.Factory => factory;
+        IDetourFactory IDetourBase.Factory => factory;
 
         public MethodBase Method { get; }
         public ILContext.Manipulator Manipulator { get; }
@@ -61,7 +61,7 @@ namespace MonoMod.RuntimeDetour {
 
         ILContext.Manipulator IILHook.Manip => Manipulator;
 
-        private readonly DetourManager.DetourState state;
+        private readonly DetourManager.ManagedDetourState state;
         private readonly DetourManager.SingleILHookState hook;
 
         public ILHook(MethodBase method, ILContext.Manipulator manipulator, IDetourFactory factory, DetourConfig? config, bool applyByDefault) {

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using MonoMod.Core;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     public static partial class DetourManager {
@@ -177,5 +179,22 @@ namespace MonoMod.RuntimeDetour {
             }
         }
         #endregion
+
+        internal abstract class SingleDetourStateBase {
+            public readonly IDetourFactory Factory;
+            public readonly DetourConfig? Config;
+
+            public object? ManagerData;
+
+            public bool IsValid;
+            public bool IsApplied => Volatile.Read(ref ManagerData) is not null;
+
+            protected SingleDetourStateBase(IDetourBase detour) {
+                Factory = detour.Factory;
+                Config = detour.Config;
+                ManagerData = null;
+                IsValid = true;
+            }
+        }
     }
 }
