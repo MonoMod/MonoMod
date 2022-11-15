@@ -80,33 +80,6 @@ namespace MonoMod.RuntimeDetour {
             public IDetourFactory Factory => Detour.Factory;
         }
 
-        internal class DetourSyncInfo {
-            public int ActiveCalls;
-            public int UpdatingThread;
-
-            public void WaitForChainUpdate() {
-                _ = Interlocked.Decrement(ref ActiveCalls);
-
-                if (UpdatingThread == Thread.CurrentThread.ManagedThreadId) {
-                    throw new InvalidOperationException("Method's detour chain is being updated by the current thread!");
-                }
-
-                var spin = new SpinWait();
-                while (Volatile.Read(ref UpdatingThread) != -1) {
-                    spin.SpinOnce();
-                }
-            }
-
-            public void WaitForNoActiveCalls() {
-                // TODO: find a decent way to prevent deadlocks here
-
-                var spin = new SpinWait();
-                while (Volatile.Read(ref ActiveCalls) > 0) {
-                    spin.SpinOnce();
-                }
-            }
-        }
-
         // The root node is the existing method. It's NextTrampoline is the method, which is the same
         // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
         internal sealed class RootManagedChainNode : ManagedChainNode {
@@ -126,100 +99,16 @@ namespace MonoMod.RuntimeDetour {
                 Sig = MethodSignature.ForMethod(method);
                 Entry = method;
                 NextTrampoline = TrampolinePool.Rent(Sig);
-                SyncProxy = GenerateSyncProxy(out syncProxyRefScope);
-            }
-
-            private static readonly FieldInfo DetourSyncInfo_ActiveCalls = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.ActiveCalls))!;
-            private static readonly FieldInfo DetourSyncInfo_UpdatingThread = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.UpdatingThread))!;
-            private static readonly MethodInfo DetourSyncInfo_WaitForChainUpdate = typeof(DetourSyncInfo).GetMethod(nameof(DetourSyncInfo.WaitForChainUpdate))!;
-
-            private static readonly MethodInfo Interlocked_Increment
-                = typeof(Interlocked).GetMethod(nameof(Interlocked.Increment), BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int).MakeByRefType() }, null)!;
-            private static readonly MethodInfo Interlocked_Decrement
-                = typeof(Interlocked).GetMethod(nameof(Interlocked.Decrement), BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int).MakeByRefType() }, null)!;
-
-            private MethodBase GenerateSyncProxy(out DataScope<DynamicReferenceManager.CellRef> scope) {
-                using var dmd = Sig.CreateDmd(DebugFormatter.Format($"SyncProxy<{Entry}>"));
-
-                var il = dmd.GetILProcessor();
-                var method = dmd.Definition;
-                var module = dmd.Module!;
-
-                var syncInfoTypeRef = module.ImportReference(typeof(DetourSyncInfo));
-                var syncInfoVar = new VariableDefinition(syncInfoTypeRef);
-                il.Body.Variables.Add(syncInfoVar);
-
-                scope = il.EmitNewTypedReference(SyncInfo, out _);
-                il.Emit(OpCodes.Stloc, syncInfoVar);
-
-                var checkWait = il.Create(OpCodes.Nop);
-                il.Append(checkWait);
-
-                // first increment ActiveCalls
-                il.Emit(OpCodes.Ldloc, syncInfoVar);
-                il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
-                il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Increment));
-                il.Emit(OpCodes.Pop);
-
-                // then check UpdatingChain
-                il.Emit(OpCodes.Ldloc, syncInfoVar);
-                il.Emit(OpCodes.Volatile);
-                il.Emit(OpCodes.Ldfld, module.ImportReference(DetourSyncInfo_UpdatingThread));
-                il.Emit(OpCodes.Ldc_I4_M1);
-
-                var noWait = il.Create(OpCodes.Nop);
-                il.Emit(OpCodes.Beq_S, noWait);
-
-                // if UpdatingChain was true, wait for that to finish, then jump back up to the top, because WaitForChainUpdate decrements
-                il.Emit(OpCodes.Ldloc, syncInfoVar);
-                il.Emit(OpCodes.Call, module.ImportReference(DetourSyncInfo_WaitForChainUpdate));
-                il.Emit(OpCodes.Br_S, checkWait);
-
-                // if UpdatingChain was false, we're good to continue
-                il.Append(noWait);
-
-                VariableDefinition? returnVar = null;
-                if (Sig.ReturnType != typeof(void)) {
-                    returnVar = new(method.ReturnType);
-                    il.Body.Variables.Add(returnVar);
-                }
-
-                var eh = new ExceptionHandler(ExceptionHandlerType.Finally);
-                il.Body.ExceptionHandlers.Add(eh);
-
-                {
-                    var i = il.Create(OpCodes.Nop);
-                    il.Append(i);
-                    eh.TryStart = i;
-                }
-
-                foreach (var p in method.Parameters) {
-                    il.Emit(OpCodes.Ldarg, p);
-                }
-                il.Emit(OpCodes.Call, module.ImportReference(NextTrampoline));
-                if (returnVar is not null) {
-                    il.Emit(OpCodes.Stloc, returnVar);
-                }
-
-                var beforeReturnIns = il.Create(OpCodes.Nop);
-                il.Emit(OpCodes.Leave_S, beforeReturnIns);
-
-                var finallyStartIns = il.Create(OpCodes.Ldloc, syncInfoVar);
-                eh.TryEnd = eh.HandlerStart = finallyStartIns;
-                il.Append(finallyStartIns);
-                il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
-                il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Decrement));
-                il.Emit(OpCodes.Pop);
-                il.Emit(OpCodes.Endfinally);
-                eh.HandlerEnd = beforeReturnIns;
-
-                il.Append(beforeReturnIns);
-                if (returnVar is not null) {
-                    il.Emit(OpCodes.Ldloc, returnVar);
-                }
-                il.Emit(OpCodes.Ret);
-
-                return dmd.Generate();
+                DataScope<DynamicReferenceManager.CellRef> refScope = default;
+                SyncProxy = GenerateSyncProxy(DebugFormatter.Format($"{Entry}"), Sig,
+                    (method, il) => refScope = il.EmitNewTypedReference(SyncInfo, out _),
+                    (method, il) => {
+                        foreach (var p in method.Parameters) {
+                            il.Emit(OpCodes.Ldarg, p);
+                        }
+                        il.Emit(OpCodes.Call, method.Module.ImportReference(NextTrampoline));
+                    });
+                syncProxyRefScope = refScope;
             }
 
             private ICoreDetour? syncDetour;

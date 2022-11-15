@@ -1,7 +1,12 @@
-﻿using MonoMod.Core;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using MonoMod.Core;
+using MonoMod.Logs;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
@@ -177,6 +182,131 @@ namespace MonoMod.RuntimeDetour {
                     node.Visiting = false;
                 }
             }
+        }
+        #endregion
+
+        #region SyncInfo
+        internal class DetourSyncInfo {
+            public int ActiveCalls;
+            public int UpdatingThread;
+
+            public void WaitForChainUpdate() {
+                _ = Interlocked.Decrement(ref ActiveCalls);
+
+                if (UpdatingThread == Thread.CurrentThread.ManagedThreadId) {
+                    throw new InvalidOperationException("Method's detour chain is being updated by the current thread!");
+                }
+
+                var spin = new SpinWait();
+                while (Volatile.Read(ref UpdatingThread) != -1) {
+                    spin.SpinOnce();
+                }
+            }
+
+            public void WaitForNoActiveCalls() {
+                // TODO: find a decent way to prevent deadlocks here
+
+                var spin = new SpinWait();
+                while (Volatile.Read(ref ActiveCalls) > 0) {
+                    spin.SpinOnce();
+                }
+            }
+        }
+
+        private static readonly FieldInfo DetourSyncInfo_ActiveCalls = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.ActiveCalls))!;
+        private static readonly FieldInfo DetourSyncInfo_UpdatingThread = typeof(DetourSyncInfo).GetField(nameof(DetourSyncInfo.UpdatingThread))!;
+        private static readonly MethodInfo DetourSyncInfo_WaitForChainUpdate = typeof(DetourSyncInfo).GetMethod(nameof(DetourSyncInfo.WaitForChainUpdate))!;
+
+        private static readonly MethodInfo Interlocked_Increment
+            = typeof(Interlocked).GetMethod(nameof(Interlocked.Increment), BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int).MakeByRefType() }, null)!;
+        private static readonly MethodInfo Interlocked_Decrement
+            = typeof(Interlocked).GetMethod(nameof(Interlocked.Decrement), BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int).MakeByRefType() }, null)!;
+
+
+        private static MethodInfo GenerateSyncProxy(
+            string innerName, MethodSignature Sig,
+            Action<MethodDefinition, ILProcessor> emitLoadSyncInfo,
+            Action<MethodDefinition, ILProcessor> emitInvoke
+        ) {
+            using var dmd = Sig.CreateDmd(DebugFormatter.Format($"SyncProxy<{innerName}>"));
+
+            var il = dmd.GetILProcessor();
+            var method = dmd.Definition;
+            var module = dmd.Module!;
+
+            var syncInfoTypeRef = module.ImportReference(typeof(DetourSyncInfo));
+            var syncInfoVar = new VariableDefinition(syncInfoTypeRef);
+            il.Body.Variables.Add(syncInfoVar);
+
+            //scope = il.EmitNewTypedReference(SyncInfo, out _);
+            emitLoadSyncInfo(method, il);
+            il.Emit(OpCodes.Stloc, syncInfoVar);
+
+            var checkWait = il.Create(OpCodes.Nop);
+            il.Append(checkWait);
+
+            // first increment ActiveCalls
+            il.Emit(OpCodes.Ldloc, syncInfoVar);
+            il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
+            il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Increment));
+            il.Emit(OpCodes.Pop);
+
+            // then check UpdatingChain
+            il.Emit(OpCodes.Ldloc, syncInfoVar);
+            il.Emit(OpCodes.Volatile);
+            il.Emit(OpCodes.Ldfld, module.ImportReference(DetourSyncInfo_UpdatingThread));
+            il.Emit(OpCodes.Ldc_I4_M1);
+
+            var noWait = il.Create(OpCodes.Nop);
+            il.Emit(OpCodes.Beq_S, noWait);
+
+            // if UpdatingChain was true, wait for that to finish, then jump back up to the top, because WaitForChainUpdate decrements
+            il.Emit(OpCodes.Ldloc, syncInfoVar);
+            il.Emit(OpCodes.Call, module.ImportReference(DetourSyncInfo_WaitForChainUpdate));
+            il.Emit(OpCodes.Br_S, checkWait);
+
+            // if UpdatingChain was false, we're good to continue
+            il.Append(noWait);
+
+            VariableDefinition? returnVar = null;
+            if (Sig.ReturnType != typeof(void)) {
+                returnVar = new(method.ReturnType);
+                il.Body.Variables.Add(returnVar);
+            }
+
+            var eh = new ExceptionHandler(ExceptionHandlerType.Finally);
+            il.Body.ExceptionHandlers.Add(eh);
+
+            {
+                var i = il.Create(OpCodes.Nop);
+                il.Append(i);
+                eh.TryStart = i;
+            }
+
+            emitInvoke(method, il);
+            if (returnVar is not null) {
+                il.Emit(OpCodes.Stloc, returnVar);
+            }
+
+            var beforeReturnIns = il.Create(OpCodes.Nop);
+            il.Emit(OpCodes.Leave_S, beforeReturnIns);
+
+            var finallyStartIns = il.Create(OpCodes.Ldloc, syncInfoVar);
+            eh.TryEnd = eh.HandlerStart = finallyStartIns;
+            il.Append(finallyStartIns);
+            il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
+            il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Decrement));
+            il.Emit(OpCodes.Pop);
+            il.Emit(OpCodes.Endfinally);
+            eh.HandlerEnd = beforeReturnIns;
+
+            il.Append(beforeReturnIns);
+            if (returnVar is not null) {
+                il.Emit(OpCodes.Ldloc, returnVar);
+            }
+            il.Emit(OpCodes.Ret);
+
+            return dmd.Generate();
         }
         #endregion
 

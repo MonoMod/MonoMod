@@ -23,5 +23,6 @@ namespace MonoMod.RuntimeDetour {
         IntPtr Function { get; }
         Type NativeDelegateType { get; }
         Delegate Invoker { get; }
+        bool HasOrigParam { get; }
     }
 }
