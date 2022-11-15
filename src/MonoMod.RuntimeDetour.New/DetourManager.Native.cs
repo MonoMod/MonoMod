@@ -151,8 +151,8 @@ namespace MonoMod.RuntimeDetour {
                 NextType = nextType;
             }
 
-            private static readonly FieldInfo ChainDelegateState_Orig = typeof(ChainDelegateState).GetField(nameof(Orig));
-            private static readonly FieldInfo ChainDelegateState_Next = typeof(ChainDelegateState).GetField(nameof(Next));
+            private static readonly FieldInfo ChainDelegateState_Orig = typeof(ChainDelegateState).GetField(nameof(Orig))!;
+            private static readonly FieldInfo ChainDelegateState_Next = typeof(ChainDelegateState).GetField(nameof(Next))!;
 
             private static MethodInfo GenerateChainMethod(Type origDelType, Type nextDelType) {
                 var origInvoke = origDelType.GetMethod("Invoke")!;
@@ -241,7 +241,7 @@ namespace MonoMod.RuntimeDetour {
                 }
 
                 // TODO: make sure this ACTUALLY called outside of the lock
-                //InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, detour);
+                InvokeDetourEvent(DetourManager.NativeDetourApplied, NativeDetourApplied, detour);
             }
 
             public void RemoveDetour(SingleNativeDetourState detour, bool takeLock = true) {
@@ -274,7 +274,7 @@ namespace MonoMod.RuntimeDetour {
                 }
 
                 // TODO: make sure this ACTUALLY called outside of the lock
-                //InvokeDetourEvent(DetourManager.DetourUndone, DetourUndone, detour);
+                InvokeDetourEvent(DetourManager.NativeDetourUndone, NativeDetourUndone, detour);
             }
 
             private void RemoveGraphDetour(SingleNativeDetourState detour, DepGraphNode<NativeChainNode> node) {
@@ -337,6 +337,20 @@ namespace MonoMod.RuntimeDetour {
                     Volatile.Write(ref detourList.SyncInfo.UpdatingThread, -1);
                 }
             }
+
+            private FunctionDetourInfo? info;
+            public FunctionDetourInfo Info => info ??= new(this);
+
+            public event Action<NativeDetourInfo>? NativeDetourApplied;
+            public event Action<NativeDetourInfo>? NativeDetourUndone;
+
+            private void InvokeDetourEvent(Action<NativeDetourInfo>? evt1, Action<NativeDetourInfo>? evt2, SingleNativeDetourState node) {
+                if (evt1 is not null || evt2 is not null) {
+                    var info = Info.GetDetourInfo(node);
+                    evt1?.Invoke(info);
+                    evt2?.Invoke(info);
+                }
+            }
         }
 
         internal sealed class SingleNativeDetourState : SingleDetourStateBase {
@@ -344,6 +358,8 @@ namespace MonoMod.RuntimeDetour {
             public readonly Type NativeDelegateType;
             public readonly Delegate Invoker;
             public readonly bool HasOrigParam;
+
+            public NativeDetourInfo? DetourInfo;
 
             public SingleNativeDetourState(INativeDetour detour) : base(detour) {
                 Function = detour.Function;
@@ -357,5 +373,11 @@ namespace MonoMod.RuntimeDetour {
 
         internal static NativeDetourState GetNativeDetourState(IntPtr function)
             => nativeDetourStates.GetOrAdd(function, static f => new(f));
+
+        public static FunctionDetourInfo GetNativeDetourInfo(IntPtr function)
+            => GetNativeDetourState(function).Info;
+
+        public static event Action<NativeDetourInfo>? NativeDetourApplied;
+        public static event Action<NativeDetourInfo>? NativeDetourUndone;
     }
 }

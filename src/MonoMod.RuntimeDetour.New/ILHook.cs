@@ -9,7 +9,7 @@ using System.Reflection;
 namespace MonoMod.RuntimeDetour {
 
     [CLSCompliant(false)] // TODO: remove when MM.Utils gets CLS compliance annotations
-    public class ILHook : IILHook, IDisposable {
+    public sealed class ILHook : IILHook, IDisposable {
         private const bool ApplyByDefault = true;
 
         // Note: We don't provide all variants with IDetourFactory because providing IDetourFactory is expected to be fairly rare
@@ -126,7 +126,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        protected virtual void Dispose(bool disposing) {
+        private void Dispose(bool disposing) {
             if (!disposedValue && hook is not null) {
                 hook.IsValid = false;
                 if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))

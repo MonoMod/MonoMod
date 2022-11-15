@@ -9,7 +9,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 namespace MonoMod.RuntimeDetour {
-    public class Hook : IDetour, IDisposable {
+    public sealed class Hook : IDetour, IDisposable {
 
         private const bool ApplyByDefault = true;
 
@@ -349,7 +349,7 @@ namespace MonoMod.RuntimeDetour {
         public bool IsApplied => detour.IsApplied;
         public DetourInfo DetourInfo => state.Info.GetDetourInfo(detour);
 
-        protected virtual void Dispose(bool disposing) {
+        private void Dispose(bool disposing) {
             if (!disposedValue && detour is not null) {
                 detour.IsValid = false;
                 if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))
