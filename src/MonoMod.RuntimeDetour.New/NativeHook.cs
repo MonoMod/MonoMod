@@ -1,11 +1,7 @@
-﻿using Mono.Cecil;
-using MonoMod.Core;
+﻿using MonoMod.Core;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 
 namespace MonoMod.RuntimeDetour {
     public sealed class NativeHook : INativeDetour, IDisposable {
@@ -60,11 +56,11 @@ namespace MonoMod.RuntimeDetour {
         bool INativeDetour.HasOrigParam => hasOrigParam;
 
         private static Type GetNativeDelegateType(Type inDelType, out bool hasOrigParam) {
-            var sig = MethodSignature.ForMethod(inDelType.GetMethod("Invoke")!);
+            var sig = MethodSignature.ForMethod(inDelType.GetMethod("Invoke")!, ignoreThis: true);
 
             // we are kinda guessing here, because we don't know the sig of the method
             if (sig.FirstParameter is { } fst && typeof(Delegate).IsAssignableFrom(fst)) {
-                var fsig = MethodSignature.ForMethod(fst.GetMethod("Invoke")!);
+                var fsig = MethodSignature.ForMethod(fst.GetMethod("Invoke")!, ignoreThis: true);
                 if (sig.Parameters.Skip(1).SequenceEqual(fsig.Parameters)) {
                     hasOrigParam = true;
                     return fst;

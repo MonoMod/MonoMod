@@ -37,6 +37,7 @@ unsafe {
     var get1a = get1ptr();
     Console.WriteLine(get1a);
 
+    /*
     using var detour = DetourFactory.Current.CreateNativeDetour((IntPtr)msvcrand, (IntPtr)get1ptr);
     var altrand1 = (delegate* unmanaged[Cdecl]<int>) detour.OrigEntrypoint;
 
@@ -46,7 +47,21 @@ unsafe {
         var galtrand1 = altrand1();
         Console.WriteLine(galtrand1);
     }
+    */
 
+    using (new NativeHook((IntPtr) msvcrand, get1del)) {
+        Helpers.Assert(msvcrand() == 1);
+    }
+
+    for (var i = 0; i < 10; i++) {
+        Console.WriteLine(msvcrand());
+    }
+
+    using (new NativeHook((IntPtr) msvcrand, (RandHook) MixRand)) {
+        for (var i = 0; i < 10; i++) {
+            Console.WriteLine(msvcrand());
+        }
+    }
 
     GC.KeepAlive(get1del);
 }
@@ -55,5 +70,12 @@ static int Get1() {
     return 1;
 }
 
+static int MixRand(Get1Delegate orig) {
+    return (orig() << 4) ^ (orig() >> 4) ^ orig();
+}
+
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 delegate int Get1Delegate();
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+delegate int RandHook(Get1Delegate orig);

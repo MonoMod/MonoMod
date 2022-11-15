@@ -5,6 +5,7 @@ using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -70,7 +71,7 @@ namespace MonoMod.RuntimeDetour {
                     return;
 
                 var delInvoke = type.GetMethod("Invoke")!;
-                var syncMeth = GenerateSyncProxy(DebugFormatter.Format($"native->managed {type}"), MethodSignature.ForMethod(delInvoke),
+                var syncMeth = GenerateSyncProxy(DebugFormatter.Format($"native->managed {type}"), MethodSignature.ForMethod(delInvoke, ignoreThis: true),
                     (method, il) => { // load the sync info
                         // add a first parameter of type NativeDetourSyncInfo
                         method.Parameters.Insert(0, new(method.Module.ImportReference(typeof(NativeDetourSyncInfo))));
@@ -91,7 +92,7 @@ namespace MonoMod.RuntimeDetour {
                 );
 
                 // now we want to use syncMeth to generate our delegate
-                var del = Delegate.CreateDelegate(type, SyncInfo, syncMeth);
+                var del = syncMeth.CreateDelegate(type, SyncInfo);
                 // and go ahead and proactively generate the native entry point
                 SyncProxyNativeEntry = Marshal.GetFunctionPointerForDelegate(del);
                 // note: we defer writing to any fields until *after* GetFunctionPointerForDelegate because we want it to throw if no marshaling info is set up
@@ -184,9 +185,16 @@ namespace MonoMod.RuntimeDetour {
                 return dmd.Generate();
             }
 
+            private static readonly ConditionalWeakTable<Type, MethodInfo> chainMethodCache = new();
+
+            private static MethodInfo GetChainMethod(Type origDelType, Type nextDelType) {
+                // we can cache on only origDelType because technically, nextDelType is derived from origDelType
+                return chainMethodCache.GetValue(origDelType, orig => GenerateChainMethod(orig, nextDelType));
+            }
+
             private Delegate? selfDelegate;
             public Delegate GetDelegate() {
-                return selfDelegate ??= Delegate.CreateDelegate(NextType, this, GenerateChainMethod(Orig.GetType(), NextType));
+                return selfDelegate ??= GetChainMethod(Orig.GetType(), NextType).CreateDelegate(NextType, this);
             }
         }
         #endregion
@@ -233,6 +241,8 @@ namespace MonoMod.RuntimeDetour {
 
                         detour.ManagerData = cnode;
                     }
+
+                    detourList.MaybeSetEntryType(detour.NativeDelegateType);
 
                     UpdateChain(detour.Factory);
                 } finally {

@@ -399,7 +399,9 @@ namespace MonoMod.Core.Platforms {
             }
 
             protected override void AfterUndo() {
+                OrigEntrypoint = IntPtr.Zero;
                 origHandle?.Dispose();
+                origHandle = null;
             }
 
             protected override void BeforeDispose() { }

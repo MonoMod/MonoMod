@@ -158,9 +158,13 @@ namespace MonoMod.Utils {
 
             Helpers.ThrowIfArgumentNull(type);
 
+            if (type.IsAssignableFrom(source.GetType()))
+                return source;
+
+            // TODO: this actually needs *method identification* to be completely correct, but that's up in Core
             var delegates = source.GetInvocationList();
             if (delegates.Length == 1)
-                return delegates[0].Method.CreateDelegate(type, delegates[0].Target);
+                return Extensions.CreateDelegate(delegates[0].Method, type, delegates[0].Target);
 
             var delegatesDest = new Delegate?[delegates.Length];
             for (int i = 0; i < delegates.Length; i++)

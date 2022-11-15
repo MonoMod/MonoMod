@@ -50,7 +50,7 @@ namespace MonoMod.Utils {
 
             RuntimeMethodHandle handle = method.MethodHandle;
             RuntimeHelpers.PrepareMethod(handle);
-            IntPtr ptr = handle.GetFunctionPointer();
+            var ptr = handle.GetFunctionPointer();
             return (Delegate) Activator.CreateInstance(delegateType, target, ptr)!;
         }
 
