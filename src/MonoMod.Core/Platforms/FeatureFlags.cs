@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MonoMod.Core {
+namespace MonoMod.Core.Platforms {
     public readonly struct FeatureFlags : IEquatable<FeatureFlags> {
 
         public ArchitectureFeature Architecture { get; }

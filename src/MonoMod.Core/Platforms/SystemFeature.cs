@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MonoMod.Core {
+namespace MonoMod.Core.Platforms {
     [Flags]
     public enum SystemFeature {
         None,
