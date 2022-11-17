@@ -1,4 +1,4 @@
-;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.so
+;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared -fPIC -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
 
 BITS 64
 DEFAULT REL
@@ -50,7 +50,9 @@ DEFAULT REL
 
 section .text
 
-GLOBAL _eh_managed_to_native
+extern _GLOBAL_OFFSET_TABLE
+
+GLOBAL _eh_managed_to_native:function
 _eh_managed_to_native:
     FRAME_PROLOG
 
@@ -132,7 +134,7 @@ _personality:
     ; set our IP
     mov rdi, context
     lea rsi, [_eh_managed_to_native.landingpad]
-    call __Unwind_SetIP
+    call __Unwind_SetIP WRT ..plt
 
     ; TODO: what kinds of register fixups do we need to do to call into the landingpad?
 
@@ -162,12 +164,13 @@ section .eh_frame progbits alloc noexec nowrite
 %define DW_EH_PE_datarel 0x30
 %define DW_EH_PE_funcrel 0x40
 %define DW_EH_PE_aligned 0x50
+%define DW_EH_PE_indirect 0x80
 
 %define DW_EH_PE_omit 0xff
 
 ALIGN 8, db 0
 
-; https://refspecs.linuxbase.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+; https://refspecs.linuxfoundation.org/LSB_5.0.0/LSB-Core-generic/LSB-Core-generic.html#DWARFEXT
 CIE:
 .Length: dd .end - .ID
 
@@ -181,10 +184,10 @@ CIE:
 .CodeAlignmentFactor: db 0x01 ; set it to 1 because I'm not sure what its purpose is
 .DataAlignmentFactor: db 0x01 ; same as above
 .ReturnAddressColumn: db 0x01 ; ???
-.AugmentationLength: db 6 ; MAKE SURE THIS STAYS CORRECT, uleb128
+.AugmentationLength: LEB128 6 ; MAKE SURE THIS STAYS CORRECT, uleb128
 .AugmentationData:
-    .PointerEncoding: db DW_EH_PE_textrel | DW_EH_PE_udata4
-    .PersonalityEncoding: db DW_EH_PE_textrel | DW_EH_PE_udata4
+    .PointerEncoding: db DW_EH_PE_textrel | DW_EH_PE_sdata4
+    .PersonalityEncoding: db DW_EH_PE_textrel | DW_EH_PE_sdata4
     .PersonalityRoutine: dd _personality - $$
 .AugEnd:
 .InitialInstructions:
@@ -196,21 +199,21 @@ CIE:
 
 .end:
 
-ALIGN 8, db 0
+ALIGN 16, db 0
 
 FDE0:
 .Length: dd .end - .pCIE
 .pCIE: dd $ - CIE
 .PCBegin: dd _eh_managed_to_native - $$
 .PCEnd: dd _eh_managed_to_native.end - $$
-.AugmentationLength: db 5 ; MAKE SURE THIS STAYS CORRECT, uleb128
+.AugmentationLength: LEB128 0 ; MAKE SURE THIS STAYS CORRECT, uleb128
 .AugmentationData:
-    .PersonalityEncoding: db DW_EH_PE_textrel | DW_EH_PE_udata4
-    .PersonalityRoutine: dd _personality - $$
+    ;.PersonalityEncoding: db DW_EH_PE_textrel | DW_EH_PE_sdata4
+    ;.PersonalityRoutine: dd _personality - $$
 .AugEnd:
 .CallFrameInstructions:
     ; TODO: CFIs
     db 0 ; DW_CFA_nop
 .end:
 
-ALIGN 8, db 0
+ALIGN 16, db 0
