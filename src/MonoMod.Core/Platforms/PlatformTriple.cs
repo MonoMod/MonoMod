@@ -56,6 +56,24 @@ namespace MonoMod.Core.Platforms {
             return new(arch, sys, runtime);
         }
 
+        public static void SetPlatformTriple(PlatformTriple triple) {
+            Helpers.ThrowIfArgumentNull(triple);
+            if (lazyCurrent is null)
+                ThrowTripleAlreadyExists();
+
+            lock (lazyCurrentLock) {
+                if (lazyCurrent is null)
+                    ThrowTripleAlreadyExists();
+
+                lazyCurrent = triple;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowTripleAlreadyExists() {
+            throw new InvalidOperationException("The platform triple has already been initialized; cannot set a new one");
+        }
+
         public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime) {
             Helpers.ThrowIfArgumentNull(architecture);
             Helpers.ThrowIfArgumentNull(system);
