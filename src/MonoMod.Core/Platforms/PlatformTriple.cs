@@ -94,7 +94,7 @@ namespace MonoMod.Core.Platforms {
         /// for the same method, if possible.
         /// </remarks>
         /// <param name="method">The method to prepare.</param>
-        public void Prepare(MethodBase method) {
+        public void Compile(MethodBase method) {
             Helpers.ThrowIfArgumentNull(method);
 
             if (method.IsGenericMethodDefinition) {
@@ -102,19 +102,25 @@ namespace MonoMod.Core.Platforms {
             }
 
             method = GetIdentifiable(method);
-            var handle = Runtime.GetMethodHandle(method);
 
-            if (method.IsGenericMethod) {
-                // we need to get the handles of the type args too
-                var typeArgs = method.GetGenericArguments();
-                var argHandles = new RuntimeTypeHandle[typeArgs.Length];
-                for (var i = 0; i < typeArgs.Length; i++)
-                    argHandles[i] = typeArgs[i].TypeHandle;
-
-                RuntimeHelpers.PrepareMethod(handle, argHandles);
+            // if this flag is set, then the runtime implementation is solely responsible for ensuring that the method gets compiled
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresCustomMethodCompile)) {
+                Runtime.Compile(method);
             } else {
-                // or we can just call the normal PrepareMethod
-                RuntimeHelpers.PrepareMethod(handle);
+                var handle = Runtime.GetMethodHandle(method);
+
+                if (method.IsGenericMethod) {
+                    // we need to get the handles of the type args too
+                    var typeArgs = method.GetGenericArguments();
+                    var argHandles = new RuntimeTypeHandle[typeArgs.Length];
+                    for (var i = 0; i < typeArgs.Length; i++)
+                        argHandles[i] = typeArgs[i].TypeHandle;
+
+                    RuntimeHelpers.PrepareMethod(handle, argHandles);
+                } else {
+                    // or we can just call the normal PrepareMethod
+                    RuntimeHelpers.PrepareMethod(handle);
+                }
             }
         }
 
@@ -303,7 +309,7 @@ namespace MonoMod.Core.Platforms {
                     var precode = meaning.ProcessAddress(entry, offset, addr);
                     if (reloadPtr) {
                         MMDbgLog.Trace($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
-                        Prepare(method);
+                        Compile(method);
                         didPrepareLastIter = true;
                         //regenerated = true;
                         goto ReloadFuncPtr;
@@ -318,7 +324,7 @@ namespace MonoMod.Core.Platforms {
                 entry = NotThePreStub(lastEntry, entry, out var wasPreStub);
                 if (wasPreStub && reloadPtr) {
                     MMDbgLog.Trace("Matched ThePreStub");
-                    Prepare(method);
+                    Compile(method);
                     //regenerated = true;
                     goto ReloadFuncPtr;
                 }

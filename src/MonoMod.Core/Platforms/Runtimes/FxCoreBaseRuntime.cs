@@ -1,9 +1,10 @@
-﻿using MonoMod.Utils;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Utils;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using DynamicMethod = System.Reflection.Emit.DynamicMethod;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal abstract class FxCoreBaseRuntime : IRuntime {
@@ -16,7 +17,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             RuntimeFeature.PreciseGC |
             RuntimeFeature.RequiresBodyThunkWalking |
             RuntimeFeature.GenericSharing |
-            RuntimeFeature.HasKnownABI;
+            RuntimeFeature.HasKnownABI |
+            RuntimeFeature.RequiresCustomMethodCompile;
 
         protected Abi? AbiCore;
 
@@ -87,6 +89,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         private static readonly MethodInfo? _DynamicMethod_GetMethodDescriptor =
             typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo? _RuntimeMethodHandle_get_Value =
+            typeof(RuntimeMethodHandle).GetMethod("get_Value", BindingFlags.Public | BindingFlags.Instance);
         private static readonly FieldInfo? _RuntimeMethodHandle_m_value =
             typeof(RuntimeMethodHandle).GetField("m_value", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -113,7 +117,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         public virtual RuntimeMethodHandle GetMethodHandle(MethodBase method) {
             // Compile the method handle before getting our hands on the final method handle.
             if (method is DynamicMethod dm) {
-                if (TryInvokeBclCompileMethod(dm, out var handle)) {
+                if (TryGetDMHandle(dm, out var handle) && TryInvokeBclCompileMethod(handle)) {
                     return handle;
                 } else {
                     // This should work just fine.
@@ -125,21 +129,107 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     }
                 }
 
-                if (_DynamicMethod_m_method != null)
+                if (TryGetDMHandle(dm, out handle))
+                    return handle;
+                if (_DynamicMethod_m_method != null) // TODO: is this for Mono? Is there *any* .NET Framework/Core where this is the case?
                     return (RuntimeMethodHandle) _DynamicMethod_m_method.GetValue(method)!;
-                if (_DynamicMethod_GetMethodDescriptor != null)
-                    return (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(method, null)!;
             }
 
             return method.MethodHandle;
         }
 
-        // TODO: maybe create helpers to make this not rediculously slow
-        private static bool TryInvokeBclCompileMethod(DynamicMethod dm, out RuntimeMethodHandle handle) {
+        private Func<DynamicMethod, RuntimeMethodHandle>? lazyGetDmHandleHelper;
+        private Func<DynamicMethod, RuntimeMethodHandle> GetDMHandleHelper => lazyGetDmHandleHelper ??= CreateGetDMHandleHelper();
+        private static bool CanCreateGetDMHandleHelper => _DynamicMethod_GetMethodDescriptor is not null;
+
+        private static Func<DynamicMethod, RuntimeMethodHandle> CreateGetDMHandleHelper() {
+            Helpers.Assert(CanCreateGetDMHandleHelper);
+
+            using var dmd = new DynamicMethodDefinition("get DynamicMethod RuntimeMethodHandle", typeof(RuntimeMethodHandle), new[] { typeof(DynamicMethod) });
+            var module = dmd.Module!;
+            var il = dmd.GetILProcessor();
+
+            Helpers.Assert(_DynamicMethod_GetMethodDescriptor is not null);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, _DynamicMethod_GetMethodDescriptor);
+            il.Emit(OpCodes.Ret);
+
+            return dmd.Generate().CreateDelegate<Func<DynamicMethod, RuntimeMethodHandle>>();
+        }
+
+        private Action<RuntimeMethodHandle>? lazyBclCompileMethod;
+        private Action<RuntimeMethodHandle> BclCompileMethodHelper => lazyBclCompileMethod ??= CreateBclCompileMethodHelper();
+        private static bool CanCreateBclCompileMethodHelper
+            => _RuntimeHelpers__CompileMethod is not null
+            && (_RuntimeHelpers__CompileMethod_TakesIntPtr
+            || (_RuntimeMethodHandle_m_value is not null
+            && (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo
+            || (_IRuntimeMethodInfo_get_Value is not null
+            && _RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal
+                ))));
+
+        private static Action<RuntimeMethodHandle> CreateBclCompileMethodHelper() {
+            Helpers.Assert(CanCreateBclCompileMethodHelper);
+
+            using var dmd = new DynamicMethodDefinition("invoke RuntimeHelpers.CompileMethod", null, new[] { typeof(RuntimeMethodHandle) });
+            var module = dmd.Module!;
+            var il = dmd.GetILProcessor();
+
+            il.Emit(OpCodes.Ldarg_0);
+            if (_RuntimeHelpers__CompileMethod_TakesIntPtr) {
+                il.Emit(OpCodes.Call, module.ImportReference(_RuntimeMethodHandle_get_Value));
+                il.Emit(OpCodes.Call, module.ImportReference(_RuntimeHelpers__CompileMethod));
+                il.Emit(OpCodes.Ret);
+                return dmd.Generate().CreateDelegate<Action<RuntimeMethodHandle>>();
+            }
+
+            Helpers.Assert(_RuntimeMethodHandle_m_value is not null);
+            il.Emit(OpCodes.Ldfld, module.ImportReference(_RuntimeMethodHandle_m_value));
+            if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
+                il.Emit(OpCodes.Call, module.ImportReference(_RuntimeHelpers__CompileMethod));
+                il.Emit(OpCodes.Ret);
+                return dmd.Generate().CreateDelegate<Action<RuntimeMethodHandle>>();
+            }
+
+            Helpers.Assert(_IRuntimeMethodInfo_get_Value is not null);
+            il.Emit(OpCodes.Callvirt, module.ImportReference(_IRuntimeMethodInfo_get_Value));
+            if (_RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal) {
+                il.Emit(OpCodes.Call, module.ImportReference(_RuntimeHelpers__CompileMethod));
+                il.Emit(OpCodes.Ret);
+                return dmd.Generate().CreateDelegate<Action<RuntimeMethodHandle>>();
+            }
+
+            Helpers.Assert(false, "Tried to generate BCL CompileMethod helper when it's not possible? (This should never happen if CanCreateBclCompileMethodHelper is correct)");
+            throw new InvalidOperationException("UNREACHABLE");
+        }
+
+        private bool TryGetDMHandle(DynamicMethod dm, out RuntimeMethodHandle handle) {
+            if (CanCreateGetDMHandleHelper) {
+                handle = GetDMHandleHelper(dm);
+                return true;
+            }
+            return TryGetDMHandleRefl(dm, out handle);
+        }
+
+        protected bool TryInvokeBclCompileMethod(RuntimeMethodHandle handle) {
+            if (CanCreateBclCompileMethodHelper) {
+                BclCompileMethodHelper(handle);
+                return true;
+            }
+            return TryInvokeBclCompileMethodRefl(handle);
+        }
+
+        private static bool TryGetDMHandleRefl(DynamicMethod dm, out RuntimeMethodHandle handle) {
             handle = default;
-            if (_RuntimeHelpers__CompileMethod is null || _DynamicMethod_GetMethodDescriptor is null)
+            if (_DynamicMethod_GetMethodDescriptor is null)
                 return false;
             handle = (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, null)!;
+            return true;
+        }
+
+        private static bool TryInvokeBclCompileMethodRefl(RuntimeMethodHandle handle) {
+            if (_RuntimeHelpers__CompileMethod is null)
+                return false;
             if (_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                 // mscorlib 2.0.0.0
                 _RuntimeHelpers__CompileMethod.Invoke(null, new object?[] { handle.Value });
@@ -166,13 +256,15 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return false;
         }
 
-        // pinning isn't usually in fx/core
+        public virtual void Compile(MethodBase method) {
+            var handle = GetMethodHandle(method);
+            Helpers.Assert(TryInvokeBclCompileMethod(handle));
+        }
+
+        // pinning isn't usually needed in fx/core
         public virtual IDisposable? PinMethodIfNeeded(MethodBase method) {
             return null;
         }
-
-        // inlining disabling is up to each individual runtime
-        //public abstract void DisableInlining(MethodBase method);
 
         // It seems that across all versions of Framework and Core, the layout of the start of a MethodDesc is quite consistent
         public unsafe virtual void DisableInlining(MethodBase method) {

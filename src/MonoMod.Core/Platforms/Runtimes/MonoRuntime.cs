@@ -167,5 +167,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
             var handle = GetMethodHandle(method);
             return handle.GetFunctionPointer();
         }
+
+        // we don't provide the flag which would cause this to be used
+        public void Compile(MethodBase method) {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -330,9 +330,9 @@ namespace MonoMod.Core.Platforms {
                 srcPin = Triple.PinMethodIfNeeded(Source);
                 dstPin = Triple.PinMethodIfNeeded(realTarget);
 
-                Triple.Prepare(Source);
+                Triple.Compile(Source);
                 var from = Triple.GetNativeMethodBody(Source);
-                Triple.Prepare(realTarget);
+                Triple.Compile(realTarget);
                 var to = Triple.Runtime.GetMethodHandle(realTarget).GetFunctionPointer();
 
                 return Triple.CreateSimpleDetour(from, to);

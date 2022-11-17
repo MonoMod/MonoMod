@@ -24,6 +24,8 @@ namespace MonoMod.Core {
 
         HasKnownABI = 0x400,
 
+        RequiresCustomMethodCompile = 0x800,
+
         // TODO: what other runtime feature flags would be useful to have?
     }
 }

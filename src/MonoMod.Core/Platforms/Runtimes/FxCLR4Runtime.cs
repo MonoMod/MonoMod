@@ -43,15 +43,16 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             var didPrepare = false;
             GetPtr:
+            // we want to invoke _CompileMethod, not _PrepareMethod because _CompileMethod calls directly into DoPrestub, while _PrepareMethod
+            // seems to skip prestub-intercepted remoting methods
+            Helpers.Assert(TryInvokeBclCompileMethod(handle));
             // get then throw away the function pointer to try to ensure that the pointer is restored
-            RuntimeHelpers.PrepareMethod(handle);
             _ = handle.GetFunctionPointer();
             var ptr = GetMethodBodyPtr(method, handle);
 
             if (ptr == IntPtr.Zero) { // the method hasn't been JITted yet
                 if (!didPrepare) {
-                    // TODO: call PlatformTriple.Prepare instead to handle generic methods
-                    RuntimeHelpers.PrepareMethod(handle);
+                    Helpers.Assert(TryInvokeBclCompileMethod(handle));
                     didPrepare = true;
                     goto GetPtr;
                 } else {

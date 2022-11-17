@@ -20,6 +20,8 @@ namespace MonoMod.Core.Platforms {
         IDisposable? PinMethodIfNeeded(MethodBase method);
 
         IntPtr GetMethodEntryPoint(MethodBase method);
+
+        void Compile(MethodBase method);
     }
 
     public delegate void OnMethodCompiledCallback(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, IntPtr codeRw, ulong codeSize);
