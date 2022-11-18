@@ -52,19 +52,21 @@ section .text
 
 extern _GLOBAL_OFFSET_TABLE
 
-GLOBAL _eh_managed_to_native:function
-_eh_managed_to_native:
+GLOBAL eh_managed_to_native:function
+eh_managed_to_native:
     FRAME_PROLOG
 
+.begin_eh:
     ; managed->native sets up an exception handler to catch unmanaged exceptions for an arbitrary entrypoint
     ; that entrypoint will be passed in rax, using a dynamically generated stub
     call rax ; we have to call because we have a stack frame for EH
     nop ; nop to give us some buffer
     ; then just clean up our frame and return
 
+.end_eh: nop
+
     FRAME_EPILOG
     ret
-.end:
 
 .landingpad:
     ; TODO: what all do we need to do to propagate the exception back up?
@@ -72,12 +74,12 @@ _eh_managed_to_native:
     FRAME_EPILOG
     ret
 
-extern __Unwind_RaiseException
-extern __Unwind_Resume
-extern __Unwind_GetGR
-extern __Unwind_SetGR
-extern __Unwind_GetIP ; _Unwind_Context* context
-extern __Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
+extern _Unwind_RaiseException
+extern _Unwind_Resume
+extern _Unwind_GetGR
+extern _Unwind_SetGR
+extern _Unwind_GetIP ; _Unwind_Context* context
+extern _Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
 
 ; argument passing:
 ; rdi, rsi, rdx, rcx, r8, r9
@@ -133,8 +135,8 @@ _personality:
 
     ; set our IP
     mov rdi, context
-    lea rsi, [_eh_managed_to_native.landingpad]
-    call __Unwind_SetIP WRT ..plt
+    lea rsi, [eh_managed_to_native.landingpad]
+    call _Unwind_SetIP WRT ..plt
 
     ; TODO: what kinds of register fixups do we need to do to call into the landingpad?
 
@@ -160,9 +162,9 @@ section .eh_frame progbits alloc noexec nowrite
 %define DW_EH_PE_sdata8 0x0C
 
 %define DW_EH_PE_pcrel 0x10
-%define DW_EH_PE_textrel 0x20
-%define DW_EH_PE_datarel 0x30
-%define DW_EH_PE_funcrel 0x40
+%define DW_EH_PE_textrel 0x20 ; DON'T USE, NOT SUPPORTED
+%define DW_EH_PE_datarel 0x30 ; DON'T USE, NOT SUPPORTED
+%define DW_EH_PE_funcrel 0x40 ; DON'T USE, NOT SUPPORTED
 %define DW_EH_PE_aligned 0x50
 %define DW_EH_PE_indirect 0x80
 
@@ -182,13 +184,13 @@ CIE:
     db 'P' ; the above contains a pointer to a personality routine
     db 0
 .CodeAlignmentFactor: db 0x01 ; set it to 1 because I'm not sure what its purpose is
-.DataAlignmentFactor: db 0x01 ; same as above
-.ReturnAddressColumn: db 0x01 ; ???
-.AugmentationLength: LEB128 6 ; MAKE SURE THIS STAYS CORRECT, uleb128
+.DataAlignmentFactor: db 0x78 ; -8, encoded SLEB128
+.ReturnAddressColumn: db 16 ; ??? (not sure what this means
+.AugmentationLength: LEB128 2+4 ; MAKE SURE THIS STAYS CORRECT, uleb128
 .AugmentationData:
-    .PointerEncoding: db DW_EH_PE_textrel | DW_EH_PE_sdata4
-    .PersonalityEncoding: db DW_EH_PE_textrel | DW_EH_PE_sdata4
-    .PersonalityRoutine: dd _personality - $$
+    .PointerEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
+    .PersonalityEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
+    .PersonalityRoutine: dd _personality - $
 .AugEnd:
 .InitialInstructions:
     ; a sequence of Call Frame Instructions (6.4.2 of the DWARF spec)
@@ -196,16 +198,18 @@ CIE:
 
     ; TODO: CFIs
     db 0 ; DW_CFA_nop
+    ; DW_CFA_def_cfa: r7 (rsp) ofs 8
+    ; DW_CFA_offset: r16 (rip) at cfa-8
 
 .end:
 
-ALIGN 16, db 0
+ALIGN 8, db 0
 
 FDE0:
 .Length: dd .end - .pCIE
 .pCIE: dd $ - CIE
-.PCBegin: dd _eh_managed_to_native - $$
-.PCEnd: dd _eh_managed_to_native.end - $$
+.PCBegin: dd eh_managed_to_native.begin_eh - $
+.PCRange: dd eh_managed_to_native.end_eh - eh_managed_to_native.begin_eh
 .AugmentationLength: LEB128 0 ; MAKE SURE THIS STAYS CORRECT, uleb128
 .AugmentationData:
     ;.PersonalityEncoding: db DW_EH_PE_textrel | DW_EH_PE_sdata4
@@ -216,4 +220,7 @@ FDE0:
     db 0 ; DW_CFA_nop
 .end:
 
-ALIGN 16, db 0
+ALIGN 8, db 0
+
+; null terminator
+dd 0
