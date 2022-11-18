@@ -115,6 +115,11 @@ GLOBAL eh_native_to_managed:function
 eh_native_to_managed:
     FRAME_PROLOG
 
+    ; zero cur_ex_ptr
+    mov r11, 0
+    mov r10, [rel cur_ex_ptr wrt ..gottpoff]
+    mov [fs:r10], r11
+
     ; native->managed calls into managed, then checks if an exception was caught by this helper on the other side, and rethrows if so
     call rax
     ; return value in rax now
