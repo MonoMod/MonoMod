@@ -14,7 +14,7 @@ section .data
 
 LSDA_mton:
     dd eh_managed_to_native.landingpad - $
-LSDA_ntom:
+LSDA_none:
     dd 0
 
 section .text
@@ -23,12 +23,14 @@ CFI_INIT _personality
 
 GLOBAL eh_has_exception:function
 eh_has_exception:
+    CFI_STARTPROC LSDA_none
     mov rax, [rel cur_ex_ptr wrt ..gottpoff]
     mov r10, [fs:rax]
     xor eax, eax
     test r10, r10
     setnz al
     ret
+    CFI_ENDPROC
 
 GLOBAL eh_managed_to_native:function
 eh_managed_to_native:
@@ -73,7 +75,7 @@ eh_managed_to_native:
 
 GLOBAL eh_native_to_managed:function
 eh_native_to_managed:
-    CFI_STARTPROC LSDA_ntom
+    CFI_STARTPROC LSDA_none
     FRAME_PROLOG
 
     ; zero cur_ex_ptr
