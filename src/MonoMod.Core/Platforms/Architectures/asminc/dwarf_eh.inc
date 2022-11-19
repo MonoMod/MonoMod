@@ -219,6 +219,9 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
     ; pop the context
     %pop cfi_proc
 
+    ; throw in a bit of alignment
+    ALIGN DWARF_WORDSIZE, int3
+
 %endmacro
 
 %macro CFI_IN_PROC 0
