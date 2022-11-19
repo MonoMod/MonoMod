@@ -1,4 +1,5 @@
-
+%ifndef _MACROS
+%define _MACROS
 
 %macro FRAME_PROLOG 0
     push rbp
@@ -26,3 +27,5 @@
         CFI_def_cfa_offset 8
     %endif
 %endmacro
+
+%endif
