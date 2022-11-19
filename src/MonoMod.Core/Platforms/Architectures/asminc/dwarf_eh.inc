@@ -94,3 +94,22 @@ extern _Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
     %endrep
 %pop
 %endmacro
+
+%macro LEB128_fixed 2 ; fixed number of bytes, value
+%push
+    
+    ; ensure that the number fits in the number of bits needed
+    %assign %$maxbits 7 * %1
+    %if (%2 >> %$maxbits) != 0
+    %error %2 will not fit in %1-byte LEB128
+    %endif
+    
+    %assign %$val %2
+    %rep %1 - 1
+        db (%$val & 0x7f) | 0x80
+        %assign %$val %$val >> 7
+    %endrep
+    db %$val
+
+%pop
+%endmacro

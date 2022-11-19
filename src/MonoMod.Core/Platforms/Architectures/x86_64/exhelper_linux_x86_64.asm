@@ -1,4 +1,4 @@
-;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared -fPIC -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
+;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --strip-debug --eh-frame-hdr -x -z now -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
 
 BITS 64
 DEFAULT REL
@@ -12,7 +12,7 @@ cur_ex_ptr: resq 1
 
 section .text
 
-extern _GLOBAL_OFFSET_TABLE_
+CFI_INIT _personality
 
 GLOBAL eh_has_exception:function
 eh_has_exception:
@@ -25,19 +25,17 @@ eh_has_exception:
 
 GLOBAL eh_managed_to_native:function
 eh_managed_to_native:
+    CFI_STARTPROC
     FRAME_PROLOG
 
-.begin_eh:
     ; managed->native sets up an exception handler to catch unmanaged exceptions for an arbitrary entrypoint
     ; that entrypoint will be passed in rax, using a dynamically generated stub
     call rax ; we have to call because we have a stack frame for EH
-    nop ; nop to give us some buffer
     ; then just clean up our frame and return
-
-.end_eh: nop
 
     FRAME_EPILOG
     ret
+    CFI_ENDPROC
 
 .landingpad:
     ; r10 *should* contain the exception object pointer
@@ -144,85 +142,4 @@ _personality:
     ret
 %pop
 
-
-section .eh_frame progbits alloc noexec nowrite align=8
-
-StartEHFrame:
-
-ALIGN 8, db 0
-
-; https://refspecs.linuxfoundation.org/LSB_5.0.0/LSB-Core-generic/LSB-Core-generic.html#DWARFEXT
-CIE:
-.Length: dd .end - .ID
-
-.ID: dd 0
-.Version: db 1
-.AugString:
-    db 'z' ; include AugmentationData
-    db 'R' ; include encoding for pointers
-    db 'P' ; the above contains a pointer to a personality routine
-    db 0
-.CodeAlignmentFactor: LEB128 0x01 ; set it to 1 because I'm not sure what its purpose is
-.DataAlignmentFactor: db 0x78 ; -8, encoded SLEB128
-.ReturnAddressColumn: LEB128 DW_REG_RA
-.AugmentationLength: LEB128 2+4 ; MAKE SURE THIS STAYS CORRECT, uleb128
-.AugmentationData:
-    .PointerEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
-    .PersonalityEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
-    .PersonalityRoutine: dd _personality - $
-.AugEnd:
-.InitialInstructions:
-    ; a sequence of Call Frame Instructions (6.4.2 of the DWARF spec)
-    ; holy shit FUCK DWARF
-
-    ; define the CFA to be at rsp+8
-    ; the CFA points at the high end of the return addr
-    db DW_CFA_def_cfa
-        LEB128 DW_REG_rsp, 8
-    ; set the return addr to be cfa-8 (we encode 1 because the data alignment factor is -8)
-    db DW_CFA_offset | DW_REG_RA
-        LEB128 1
-
-.end:
-
-ALIGN 8, db 0
-
-; TODO: extend range of this to cover entire EH function
-; TODO: create macros to help generate this
-
-FDE0:
-.Length: dd .end - .pCIE
-.pCIE: dd $ - CIE
-.PCBegin: dd eh_managed_to_native.begin_eh - $
-.PCRange: dd eh_managed_to_native.end_eh - eh_managed_to_native.begin_eh
-.AugmentationLength: LEB128 0 ; MAKE SURE THIS STAYS CORRECT, uleb128
-.AugmentationData:
-
-.AugEnd:
-.CallFrameInstructions:
-    ; this frame info refers exclusively to the region within the prolog/epilog
-    ; as such we don't need to do anything particularly fancy other than set the CFA info correctly
-
-    ; CFA is defined as above, but it's relative to the base pointer, which currently points 16 below
-    db DW_CFA_def_cfa
-        LEB128 DW_REG_rbp, 16
-    ; we also need to say that the previous value of rbp is stored atr cfa-16
-    db DW_CFA_offset | DW_REG_rbp
-        LEB128 2 ; data alignment is -8, so -16 is encoded as 2
-
-    ; it will for the entirety of the EH region, so that's all we need
-.end:
-
-ALIGN 8, db 0
-
-; null terminator
-dd 0
-
-section .eh_frame_hdr progbits alloc noexec nowrite
-
-EhFrameHdr:
-.Version: db 1
-.EhFramePtrEnc: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
-.FdeCountEnc: db DW_EH_PE_omit
-.TableEnc: db DW_EH_PE_omit
-.EhFramePtr: dd StartEHFrame - $
+CFI_UNINIT
