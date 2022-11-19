@@ -24,6 +24,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BCABFBF3-BB48-4C21-9A52-E140015570A9}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		.gitignore = .gitignore
 		azure-pipelines-coretest.yml = azure-pipelines-coretest.yml
 		azure-pipelines-docfx.ps1 = azure-pipelines-docfx.ps1
 		azure-pipelines-postbuild.yml = azure-pipelines-postbuild.yml
