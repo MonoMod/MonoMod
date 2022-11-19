@@ -1,4 +1,4 @@
-;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --strip-debug --eh-frame-hdr -x -z now -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
+;:; nasm -g -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --eh-frame-hdr -z now -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
 
 BITS 64
 DEFAULT REL
@@ -28,28 +28,45 @@ eh_managed_to_native:
     CFI_STARTPROC
     FRAME_PROLOG
 
+    ; note that for SetGR to behave, we need to have a stack slot for the reg we set
+    ; reserve 2 stack slots, and make sure CFI knows that's where to put the info
+    sub rsp, 8
+    ; we'll actually save rax, so we can recover that if needed
+    mov [rbp - 3*8], rax
+    CFI_offset DW_REG_rax, -3*8 ; TODO: helper macros for register saving + CFI
+    ; then we'll also shadow-save r10, but actually write a zero
+    mov qword [rbp - 4*8], 0
+    CFI_offset DW_REG_r+15, -4*8 ; we have to use r15, because that's what libunwind gives us for this purpose
+
     ; managed->native sets up an exception handler to catch unmanaged exceptions for an arbitrary entrypoint
     ; that entrypoint will be passed in rax, using a dynamically generated stub
     call rax ; we have to call because we have a stack frame for EH
     ; then just clean up our frame and return
 
+    CFI_push
+
     FRAME_EPILOG
     ret
-    CFI_ENDPROC
+
+    CFI_pop
 
 .landingpad:
-    ; r10 *should* contain the exception object pointer
+    ; make sure to load r15 out of the stack frame
+    mov r15, [rbp - 4*8]
     mov rax, [rel cur_ex_ptr wrt ..gottpoff]
-    mov [fs:rax], r10
+    mov [fs:rax], r15
     
     ; clear rax for safety
     xor eax, eax
     FRAME_EPILOG
     ret
     
+    CFI_ENDPROC
+    
 
 GLOBAL eh_native_to_managed:function
 eh_native_to_managed:
+    CFI_STARTPROC
     FRAME_PROLOG
 
     ; zero cur_ex_ptr
@@ -68,14 +85,19 @@ eh_native_to_managed:
     test r10, r10
     jnz .do_rethrow
 
+    CFI_push
+
     ; otherwise, exit normally
     FRAME_EPILOG
     ret
+    
+    CFI_pop
 
 .do_rethrow:
     mov rdi, r10
     call _Unwind_RaiseException wrt ..plt
     int3 ; deliberately don't handle failures at this point. This will have been a crash anyway.
+    CFI_ENDPROC
     
 
 ; argument passing:
@@ -106,7 +128,7 @@ _personality:
 
     ; rdi = version = 1
 
-    test actions, _UA_FORCE_UNWIND | _UA_CLEANUP_PHASE
+    test actions, _UA_FORCE_UNWIND
     jz .should_process
     mov rax, _URC_CONTINUE_UNWIND
     jmp .ret
@@ -126,9 +148,9 @@ _personality:
     lea rsi, [eh_managed_to_native.landingpad]
     call _Unwind_SetIP WRT ..plt
 
-    ; set r10 to contain our exception pointer
+    ; set r15 to contain our exception pointer
     mov rdi, Scontext
-    mov rsi, DW_REG_r+10
+    mov rsi, DW_REG_r+15
     mov rdx, SexceptionObject
     call _Unwind_SetGR WRT ..plt
 

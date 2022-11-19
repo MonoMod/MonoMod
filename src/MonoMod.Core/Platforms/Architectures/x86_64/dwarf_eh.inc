@@ -54,9 +54,9 @@ section .eh_frame progbits alloc noexec nowrite align=8
         db DW_CFA_offset | DW_REG_RA
             LEB128 1
 
-    %%CIE.end:
+    ALIGN 8, db 0
 
-    ALIGN 4, db 0
+    %%CIE.end:
 
     __?SECT?__ ; then return back to the original section
 
@@ -67,7 +67,7 @@ section .eh_frame progbits alloc noexec nowrite align=8
 
     [section .eh_frame]
     dd 0
-    ALIGN 4, db 0
+    ALIGN 8, db 0
     __?SECT?__
 %endmacro
 
@@ -82,9 +82,9 @@ section .eh_frame progbits alloc noexec nowrite align=8
 
     %%FDE:
     %define %$__CFI_LastFDE %%FDE
-    %define %$__CFI_FDE_end %%FDE_end
+    %define %$__CFI_FDE_end %%FDE.end
 
-    %%FDE.Length: dd %%FDE_end - %%FDE.pCIE
+    %%FDE.Length: dd %%FDE.end - %%FDE.pCIE
     %%FDE.pCIE: dd $ - __CFI_LastCIE
     %%FDE.PCBegin: dd %%proc_start - $
     %%FDE.PCRange: dd %%proc_end - %%proc_start
@@ -107,11 +107,11 @@ section .eh_frame progbits alloc noexec nowrite align=8
     %$__CFI_FDEProcEndTok:
 
     [section .eh_frame] ; put our data in the .eh_frame section
-
+    
+    ; align
+    ALIGN 8, db 0
     ; mark the end of the FDE
     %$__CFI_FDE_end:
-    ; align
-    ALIGN 4, db 0
 
     ; return to our orignal section
     CFI_EXIT_DATA
@@ -183,5 +183,21 @@ section .eh_frame progbits alloc noexec nowrite align=8
     db DW_CFA_offset | %1
     LEB128 %2 // (-8)
     
+    CFI_EXIT_DATA
+%endmacro
+
+%macro CFI_push 0
+    CFI_ENTER_DATA
+
+    db DW_CFA_remember_state
+
+    CFI_EXIT_DATA
+%endmacro
+
+%macro CFI_pop 0
+    CFI_ENTER_DATA
+
+    db DW_CFA_restore_state
+
     CFI_EXIT_DATA
 %endmacro
