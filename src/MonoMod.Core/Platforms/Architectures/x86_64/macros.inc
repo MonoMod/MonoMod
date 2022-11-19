@@ -83,7 +83,7 @@
 
         %ifndef %[__ASAVED_%+%1]
             %ifdef __CFI_InProc
-                CFI_offset DW_REG_%+%%reg, %%offs
+                CFI_offset DW_REG_%+%%reg, (%%offs) - 16
             %endif
         %endif
 
@@ -113,7 +113,7 @@
             mov [rbp + %%offs], %1
 
             %ifdef __CFI_InProc
-                CFI_offset DW_REG_%+%1, %%offs
+                CFI_offset DW_REG_%+%1, (%%offs) - 16 ; ret -> bp -> offs base
             %endif
 
             %xdefine %[__ROFF_%+%1] %%offs

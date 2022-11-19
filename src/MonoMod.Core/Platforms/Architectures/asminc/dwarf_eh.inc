@@ -68,7 +68,6 @@ extern _Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
     ; takes a number, encodes it as LEB128
 
     %rep %0
-
         ; first we compute the number of bytes we'll emit (minus 1)
         ; we do this by taking the argument and right-shift-and-masking it, then comparing that with zero
         %assign val %1
@@ -80,6 +79,40 @@ extern _Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
             %if val != 0
                 %assign n n+1
             %endif
+        %endrep
+
+        ; n now holds the number of continuation bytes we need, we can get to encoding
+        %assign val %1
+        %rep n
+            ; each iter, we want to output a byte with the high bit set, but otherwise the low bits of the input
+            db 0x80 | (val & 0x7f)
+            %assign val val>>7
+        %endrep
+        ; then we always want to write val out at the end
+        db val
+
+        ; and we're done!
+        %rotate 1
+    %endrep
+%pop
+%endmacro
+
+%macro SLEB128 1-*
+%push ; TODO: actually support negative inputs
+    %rep %0
+        ; first we compute the number of bytes we'll emit (minus 1)
+        ; we do this by taking the argument and right-shift-and-masking it, then comparing that with zero
+        %assign val %1
+        %assign n 0
+        %rep 8 ; I sure hope we never need to encode anything that'll be longer than 8 bytes
+            ; because we want the number of bytes minus 1, we start with a right shift
+            ; we use 6, because if the high bit is set, its considered negative
+            %assign val val>>6
+            ; then test against zero
+            %if val != 0
+                %assign n n+1
+            %endif
+            %assign val val>>1 ; correct here
         %endrep
 
         ; n now holds the number of continuation bytes we need, we can get to encoding
@@ -257,7 +290,8 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
     CFI_ENTER_DATA
 
     db DW_CFA_def_cfa
-    LEB128 %1, %2
+    LEB128 %1
+    SLEB128 (%2)
 
     CFI_EXIT_DATA
 %endmacro
@@ -275,7 +309,7 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
     CFI_ENTER_DATA
 
     db DW_CFA_def_cfa_offset
-    LEB128 %1
+    SLEB128 %1
 
     CFI_EXIT_DATA
 %endmacro
@@ -284,7 +318,7 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
     CFI_ENTER_DATA
 
     db DW_CFA_offset | %1
-    LEB128 %2 // (-DWARF_WORDSIZE)
+    SLEB128 ((%2) // (-DWARF_WORDSIZE))
     
     CFI_EXIT_DATA
 %endmacro

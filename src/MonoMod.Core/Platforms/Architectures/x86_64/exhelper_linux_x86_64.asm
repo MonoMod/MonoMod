@@ -56,6 +56,7 @@ eh_managed_to_native:
     CFI_pop
 
 .landingpad:
+    ; TODO: for some reason, the personality is writing into the rax slot, why?
     ; make sure to load r15 out of the stack frame
     ldreg r15
     mov rax, [rel cur_ex_ptr wrt ..gottpoff]
