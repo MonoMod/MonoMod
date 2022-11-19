@@ -13,6 +13,14 @@
 %define DW_REG_rbp 6
 %define DW_REG_rsp 7
 %define DW_REG_r 0
+%define DW_REG_r8 8
+%define DW_REG_r9 9
+%define DW_REG_r10 10
+%define DW_REG_r11 11
+%define DW_REG_r12 12
+%define DW_REG_r13 13
+%define DW_REG_r14 14
+%define DW_REG_r15 15
 %define DW_REG_RA 16
 %define DW_REG_xmm 17
 %define DW_REG_st 33

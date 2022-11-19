@@ -34,18 +34,12 @@ eh_has_exception:
 
 GLOBAL eh_managed_to_native:function
 eh_managed_to_native:
+%push
     CFI_STARTPROC LSDA_mton
-    FRAME_PROLOG
+    DECL_REG_SLOTS 2
+    FUNCTION_PROLOG
 
-    ; note that for SetGR to behave, we need to have a stack slot for the reg we set
-    ; reserve 2 stack slots, and make sure CFI knows that's where to put the info
-    sub rsp, 8
-    ; we'll actually save rax, so we can recover that if needed
-    mov [rbp - 3*8], rax
-    CFI_offset DW_REG_rax, -3*8 ; TODO: helper macros for register saving + CFI
-    ; then we'll also shadow-save r10, but actually write a zero
-    mov qword [rbp - 4*8], 0
-    CFI_offset DW_REG_r+15, -4*8 ; we have to use r15, because that's what libunwind gives us for this purpose
+    svreg rax, r15
 
     ; managed->native sets up an exception handler to catch unmanaged exceptions for an arbitrary entrypoint
     ; that entrypoint will be passed in rax, using a dynamically generated stub
@@ -54,14 +48,16 @@ eh_managed_to_native:
 
     CFI_push
 
-    FRAME_EPILOG
+    ldreg r15
+
+    FUNCTION_EPILOG
     ret
 
     CFI_pop
 
 .landingpad:
     ; make sure to load r15 out of the stack frame
-    mov r15, [rbp - 4*8]
+    ldreg r15
     mov rax, [rel cur_ex_ptr wrt ..gottpoff]
     mov [fs:rax], r15
     
@@ -71,6 +67,7 @@ eh_managed_to_native:
     ret
     
     CFI_ENDPROC
+%pop
     
 
 GLOBAL eh_native_to_managed:function
@@ -116,43 +113,29 @@ eh_native_to_managed:
 ; int version, _Unwind_Actions actions, uint64 exceptionClass, _Unwind_Exception* exceptionObject, _Unwind_Context* context
 _personality:
 %push
-    FRAME_PROLOG
-    sub rsp, 6 * 8
+    CFI_STARTPROC LSDA_none
+    DECL_REG_SLOTS 1
+    FUNCTION_PROLOG version, actions, exceptionClass, exceptionObject, context
 
-    %define version rdi
-    %define actions rsi
-    %define exceptionClass rdx
-    %define exceptionObject rcx
-    %define context r8
-
-    %define Sversion qword [rsp + 5*8]
-    %define Sactions qword [rsp + 4*8]
-    %define SexceptionClass qword [rsp + 3*8]
-    %define SexceptionObject qword [rsp + 2*8]
-    %define Scontext qword [rsp + 1*8]
-    %define Srbx qword [rsp + 0*8]
-
-    mov Sversion, version
-    mov Sactions, actions
-    mov SexceptionClass, exceptionClass
-    mov SexceptionObject, exceptionObject
-    mov Scontext, context
-    mov Srbx, rbx
+    svreg rbx
 
     ; rdi = version = 1
 
-    test actions, _UA_FORCE_UNWIND
+    test reg(actions), _UA_FORCE_UNWIND
     jz .should_process
     mov rax, _URC_CONTINUE_UNWIND
     jmp .ret
 
 .should_process:
+    svarg context, actions, exceptionObject
+
     ; load the LSDA value into rbx, because we'll always need it after this point
-    mov rdi, context
+    mov rdi, reg(context)
     call _Unwind_GetLanguageSpecificData wrt ..plt
     movsxd rbx, dword [rax]
 
-    test Sactions, _UA_SEARCH_PHASE
+    ldarg actions
+    test reg(actions), _UA_SEARCH_PHASE
     jz .handler_phase
     ; this is the search phase, do we have a handler?
 
@@ -168,7 +151,7 @@ _personality:
 
 .handler_phase:
     ; check that Sactions contains _UA_HANDLER_FRAME
-    test Sactions, _UA_HANDLER_FRAME
+    test reg(actions), _UA_HANDLER_FRAME
     jz .no_handler
 
     ; rax contains pLSDA, and rbx contains LSDA
@@ -176,23 +159,24 @@ _personality:
     add rax, rbx
 
     ; set our IP
-    mov rdi, Scontext
+    ldarg rdi, context
     mov rsi, rax
     call _Unwind_SetIP WRT ..plt
 
     ; set r15 to contain our exception pointer
-    mov rdi, Scontext
-    mov rsi, DW_REG_r+15
-    mov rdx, SexceptionObject
+    ldarg rdi, context
+    mov rsi, DW_REG_r15
+    ldarg rdx, exceptionObject
     call _Unwind_SetGR WRT ..plt
 
     mov rax, _URC_INSTALL_CONTEXT
     ;jmp .ret
 
 .ret:
-    mov rbx, Srbx
-    FRAME_EPILOG
+    ldreg rbx
+    FUNCTION_EPILOG
     ret
+    CFI_ENDPROC
 %pop
 
 CFI_UNINIT
