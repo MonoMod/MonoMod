@@ -31,16 +31,18 @@ section .eh_frame progbits alloc noexec nowrite align=8
     %%CIE.AugString:
         db 'z' ; include AugmentationData
         db 'R' ; include encoding for pointers
-        db 'P' ; the above contains a pointer to a personality routine
+        db 'P' ; AugData contains a pointer to a personality routine
+        db 'L' ; include an encoding for LSDA, and LSDA in FDE
         db 0
     %%CIE.CodeAlignmentFactor: LEB128 0x01 ; set it to 1 because I'm not sure what its purpose is
     %%CIE.DataAlignmentFactor: db 0x78 ; -8, encoded SLEB128
     %%CIE.ReturnAddressColumn: LEB128 DW_REG_RA
-    %%CIE.AugmentationLength: LEB128 6 ; MAKE SURE THIS STAYS UP-TO-DATE
+    %%CIE.AugmentationLength: LEB128 7 ; MAKE SURE THIS STAYS UP-TO-DATE
     %%CIE.AugmentationData:
         %%CIE.PointerEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
         %%CIE.PersonalityEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
         %%CIE.PersonalityRoutine: dd %1 - $
+        %%CIE.LSDAEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
     %%CIE.AugEnd:
     %%CIE.InitialInstructions:
         ; a sequence of Call Frame Instructions (6.4.2 of the DWARF spec)
@@ -71,7 +73,7 @@ section .eh_frame progbits alloc noexec nowrite align=8
     __?SECT?__
 %endmacro
 
-%macro CFI_STARTPROC 0
+%macro CFI_STARTPROC 1 ; takes LSDA label
 
     %push cfi_proc
 
@@ -88,7 +90,8 @@ section .eh_frame progbits alloc noexec nowrite align=8
     %%FDE.pCIE: dd $ - __CFI_LastCIE
     %%FDE.PCBegin: dd %%proc_start - $
     %%FDE.PCRange: dd %%proc_end - %%proc_start
-    %%FDE.AugmentationLength: LEB128_fixed 1, 0
+    %%FDE.AugmentationLength: LEB128_fixed 1, 4
+        %%FDE.LSDA: dd %1 - $
     %%FDE.AugmentationData:
     %%FDE.AugEnd:
     %%FDE.CallFrameInstructions:

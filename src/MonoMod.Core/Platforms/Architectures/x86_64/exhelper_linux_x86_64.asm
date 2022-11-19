@@ -10,6 +10,13 @@ section .tbss ; TLS section
 global cur_ex_ptr
 cur_ex_ptr: resq 1
 
+section .data
+
+LSDA_mton:
+    dd eh_managed_to_native.landingpad - $
+LSDA_ntom:
+    dd 0
+
 section .text
 
 CFI_INIT _personality
@@ -25,7 +32,7 @@ eh_has_exception:
 
 GLOBAL eh_managed_to_native:function
 eh_managed_to_native:
-    CFI_STARTPROC
+    CFI_STARTPROC LSDA_mton
     FRAME_PROLOG
 
     ; note that for SetGR to behave, we need to have a stack slot for the reg we set
@@ -66,7 +73,7 @@ eh_managed_to_native:
 
 GLOBAL eh_native_to_managed:function
 eh_native_to_managed:
-    CFI_STARTPROC
+    CFI_STARTPROC LSDA_ntom
     FRAME_PROLOG
 
     ; zero cur_ex_ptr
@@ -99,6 +106,8 @@ eh_native_to_managed:
     int3 ; deliberately don't handle failures at this point. This will have been a crash anyway.
     CFI_ENDPROC
     
+; TODO: for some reason, when our personality is called in phase 2, it doesn't point to the same exception object it does in phase 1
+; the pointer seems to be outright invalid in phase 2, while correct in phase 1
 
 ; argument passing:
 ; rdi, rsi, rdx, rcx, r8, r9
@@ -114,17 +123,19 @@ _personality:
     %define exceptionObject rcx
     %define context r8
 
-    %define Sversion [rsp + 5*8]
-    %define Sactions [rsp + 4*8]
-    %define SexceptionClass [rsp + 3*8]
-    %define SexceptionObject [rsp + 2*8]
-    %define Scontext [rsp + 1*8]
+    %define Sversion qword [rsp + 5*8]
+    %define Sactions qword [rsp + 4*8]
+    %define SexceptionClass qword [rsp + 3*8]
+    %define SexceptionObject qword [rsp + 2*8]
+    %define Scontext qword [rsp + 1*8]
+    %define Srbx qword [rsp + 0*8]
 
     mov Sversion, version
     mov Sactions, actions
     mov SexceptionClass, exceptionClass
     mov SexceptionObject, exceptionObject
     mov Scontext, context
+    mov Srbx, rbx
 
     ; rdi = version = 1
 
@@ -134,18 +145,37 @@ _personality:
     jmp .ret
 
 .should_process:
-    test actions, _UA_SEARCH_PHASE
+    ; load the LSDA value into rbx, because we'll always need it after this point
+    mov rdi, context
+    call _Unwind_GetLanguageSpecificData wrt ..plt
+    movsxd rbx, dword [rax]
+
+    test Sactions, _UA_SEARCH_PHASE
     jz .handler_phase
     ; this is the search phase, do we have a handler?
-    mov rax, _URC_HANDLER_FOUND ; yes, we have a handler, if our personality is called here, we want to use our handler
+
+    ; we want to check that the LSDA's pointer is non-null
+    test ebx, ebx
+    jz .no_handler
+
+    mov rax, _URC_HANDLER_FOUND ; yes, we have a handler
+    jmp .ret
+.no_handler:
+    mov rax, _URC_CONTINUE_UNWIND ; no, we don't have a handler
     jmp .ret
 
 .handler_phase:
-    ; actions contains _UA_HANDLER_FRAME
+    ; check that Sactions contains _UA_HANDLER_FRAME
+    test Sactions, _UA_HANDLER_FRAME
+    jz .no_handler
+
+    ; rax contains pLSDA, and rbx contains LSDA
+    ; their sum is the landingpad
+    add rax, rbx
 
     ; set our IP
-    mov rdi, context
-    lea rsi, [eh_managed_to_native.landingpad]
+    mov rdi, Scontext
+    mov rsi, rax
     call _Unwind_SetIP WRT ..plt
 
     ; set r15 to contain our exception pointer
@@ -154,12 +184,11 @@ _personality:
     mov rdx, SexceptionObject
     call _Unwind_SetGR WRT ..plt
 
-    ; TODO: what kinds of register fixups do we need to do to call into the landingpad?
-
     mov rax, _URC_INSTALL_CONTEXT
     ;jmp .ret
 
 .ret:
+    mov rbx, Srbx
     FRAME_EPILOG
     ret
 %pop

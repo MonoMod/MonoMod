@@ -54,9 +54,10 @@
 %define _URC_INSTALL_CONTEXT 7
 %define _URC_CONTINUE_UNWIND 8
 
-extern _Unwind_RaiseException
-extern _Unwind_GetGR
-extern _Unwind_SetGR
+extern _Unwind_RaiseException ; _Unwind_Exception* exception
+extern _Unwind_GetLanguageSpecificData ; _Unwind_Context* context
+extern _Unwind_GetGR ; _Unwind_Context* context, int reg
+extern _Unwind_SetGR ; _Unwind_Context* context, int reg, uint64 new_value
 extern _Unwind_GetIP ; _Unwind_Context* context
 extern _Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
 
