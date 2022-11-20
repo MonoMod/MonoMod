@@ -33,3 +33,18 @@ SECTION .sysv align=256
 
 sysv_vtbl_proxy_stub:
     vtbl_proxy_stub SysV, rdi
+
+SECTION .shared align=256
+
+rax_jmp_stub:
+.start:
+    mov rax, strict qword 0
+    .after_target:
+    mov r10, strict qword 0
+    .after_helper:
+    jmp r10
+.end:
+
+RaxJmpStubSize equ .end - .start
+RaxJmpStubTgt equ .after_target - .start - 8
+RaxJmpStubHlp equ .after_helper - .start - 8

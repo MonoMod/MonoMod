@@ -47,6 +47,14 @@ namespace MonoMod.Core.Platforms {
         /// <param name="vtableSize">The number of vtable entries to fill.</param>
         /// <returns>A collection of <see cref="IAllocatedMemory"/> which contain the stubs referenced by the generated vtable.</returns>
         ReadOnlyMemory<IAllocatedMemory> CreateNativeVtableProxyStubs(IntPtr vtableBase, int vtableSize);
+
+        /// <summary>
+        /// Creates an architecture-specific special entry stub, that passes an extra argument not in the normal calling convention.
+        /// </summary>
+        /// <param name="target">The target to call.</param>
+        /// <param name="argument">The extra argument for that target.</param>
+        /// <returns>An <see cref="IAllocatedMemory"/> containing the generated stub.</returns>
+        IAllocatedMemory CreateSpecialEntryStub(IntPtr target, IntPtr argument);
     }
 
     public interface INativeDetourKind {

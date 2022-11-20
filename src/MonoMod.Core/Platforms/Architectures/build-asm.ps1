@@ -6,10 +6,12 @@ pushd $PSScriptRoot
 $asm = Get-ChildItem -Recurse -Filter *.asm
 
 foreach ($file in $asm) {
+    pushd $file.Directory
     $fst = Get-Content $file -First 1
     $colidx = $fst.IndexOf(":;")
     $cmd = $fst.Substring($colidx + 2).Trim()
     Invoke-Expression $cmd
+    popd
 }
 
 popd

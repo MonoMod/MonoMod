@@ -44,3 +44,20 @@ ALIGN 4, int3
 
 GccThis_VtblProxyStubSize equ .end - .start
 GccThis_VtblProxyStubIndex equ .after_index - .start - 4
+
+SECTION .shared align=256
+
+eax_jmp_stub:
+.start:
+    mov eax, strict dword 0
+    .after_target:
+    ; cdecl has caller-saved ecx
+    mov ecx, strict dword 0
+    .after_helper:
+    jmp ecx
+ALIGN 4, int3
+.end:
+
+EaxJmpStubSize equ .end - .start
+EaxJmpStubTgt equ .after_target - .start - 4
+EaxJmpStubHlp equ .after_helper - .start - 4

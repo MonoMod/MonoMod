@@ -12,6 +12,10 @@
     </Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Platforms\Architectures\x86_64\exhelper_linux_x86_64.so" LogicalName="exhelper_linux_x86_64" />
+  </ItemGroup>
 
   <!-- Dependencies -->
   <ItemGroup>

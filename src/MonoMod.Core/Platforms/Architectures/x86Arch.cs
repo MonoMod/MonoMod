@@ -164,11 +164,27 @@ namespace MonoMod.Core.Platforms.Architectures {
                 stubData = WinThisVtableProxyThunk;
                 indexOffs = WinThisVtableThunkIndexOffs;
             } else {
-                // x86 is only supported on windows
+                // x86 is only supported on windows, but we might want this for something on x86 sometime in the future
                 throw new PlatformNotSupportedException();
             }
 
             return Shared.CreateVtableStubs(system, vtableBase, vtableSize, stubData, indexOffs, premulOffset);
+        }
+
+
+        private const int SpecEntryStubTargetOffs = 1;
+        private const int SpecEntryStubArgOffs = 6;
+        private static ReadOnlySpan<byte> SpecEntryStub => new byte[] {
+            0xB8, 0x00, 0x00, 0x00, 0x00, 0xB9, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xE1
+        };
+
+        public IAllocatedMemory CreateSpecialEntryStub(IntPtr target, IntPtr argument) {
+            Span<byte> stub = stackalloc byte[SpecEntryStub.Length];
+            Unsafe.WriteUnaligned(ref stub[SpecEntryStubTargetOffs], target);
+            Unsafe.WriteUnaligned(ref stub[SpecEntryStubArgOffs], argument);
+            Helpers.Assert(system.MemoryAllocator.TryAllocate(new(stub.Length) { Executable = true, Alignment = 1 }, out var alloc));
+            system.PatchData(PatchTargetKind.Executable, alloc.BaseAddress, stub, default);
+            return alloc;
         }
     }
 }
