@@ -1,4 +1,4 @@
-;:; nasm -g -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --eh-frame-hdr -z now -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
+;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --eh-frame-hdr -z now -x -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
 
 BITS 64
 DEFAULT REL
