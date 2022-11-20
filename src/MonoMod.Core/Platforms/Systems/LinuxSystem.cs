@@ -1,13 +1,19 @@
-﻿using MonoMod.Core.Interop;
+﻿using Microsoft.Win32.SafeHandles;
+using MonoMod.Core.Interop;
 using MonoMod.Core.Platforms.Memory;
+using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Buffers;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace MonoMod.Core.Platforms.Systems {
-    internal class LinuxSystem : ISystem {
+    internal class LinuxSystem : ISystem, IInitialize<IArchitecture> {
         public OSKind Target => OSKind.Linux;
 
         public SystemFeature Features => SystemFeature.RWXPages | SystemFeature.RXPages;
@@ -261,6 +267,99 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
                 errorMsg = null;
                 return true;
+            }
+        }
+
+        private IArchitecture? arch;
+        void IInitialize<IArchitecture>.Initialize(IArchitecture value) {
+            arch = value;
+        }
+
+        private ExceptionHelper? lazyNativeExceptionHelper;
+        public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= CreateNativeExceptionHelper();
+
+        private static ReadOnlySpan<byte> NEHTempl => "/tmp/mm-exhelper.so.XXXXXX"u8;
+
+        private unsafe ExceptionHelper CreateNativeExceptionHelper() {
+            Helpers.Assert(arch is not null);
+
+            var soname = arch.Target switch {
+                ArchitectureKind.x86_64 => "exhelper_linux_x86_64.so",
+                _ => throw new NotImplementedException($"No exception helper for current arch")
+            };
+
+            using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname);
+            Helpers.Assert(embedded is not null);
+
+            // we want to get a temp file, write our helper to it, and load it
+            var templ = ArrayPool<byte>.Shared.Rent(NEHTempl.Length + 1);
+            int fd;
+            string fname;
+            try {
+                templ.AsSpan().Fill(0);
+                NEHTempl.CopyTo(templ);
+
+                fixed (byte* pTmpl = templ)
+                    fd = Unix.MkSTemp(pTmpl);
+
+                if (fd == -1) {
+                    var lastError = Marshal.GetLastWin32Error();
+                    var ex = new Win32Exception(lastError);
+                    MMDbgLog.Error($"Could not create temp file for NativeExceptionHelper: {lastError} {ex}");
+                    throw ex;
+                }
+
+                fname = Encoding.UTF8.GetString(templ, 0, NEHTempl.Length);
+            } finally {
+                ArrayPool<byte>.Shared.Return(templ);
+            }
+
+            using (var fh = new SafeFileHandle((IntPtr) fd, true))
+            using (var fs = new FileStream(fh, FileAccess.Write)) {
+                embedded.CopyTo(fs);
+            }
+
+            // we've now got the file on disk, and we know its name
+            // lets load it
+            var handle = DynDll.OpenLibrary(fname, skipMapping: true);
+            IntPtr eh_has_exception, eh_managed_to_native, eh_native_to_managed;
+            try {
+                eh_has_exception = DynDll.GetFunction(handle, nameof(eh_has_exception));
+                eh_managed_to_native = DynDll.GetFunction(handle, nameof(eh_managed_to_native));
+                eh_native_to_managed = DynDll.GetFunction(handle, nameof(eh_native_to_managed));
+            } catch {
+                _ = DynDll.CloseLibrary(handle);
+                throw;
+            }
+
+            return new ExceptionHelper(arch, eh_has_exception, eh_managed_to_native, eh_native_to_managed);
+        }
+
+        private sealed class ExceptionHelper : INativeExceptionHelper {
+            private readonly IArchitecture arch;
+            private readonly IntPtr eh_has_exception;
+            private readonly IntPtr eh_managed_to_native;
+            private readonly IntPtr eh_native_to_managed;
+
+            public ExceptionHelper(IArchitecture arch, IntPtr hasEx, IntPtr m2n, IntPtr n2m) {
+                this.arch = arch;
+                eh_has_exception = hasEx;
+                eh_managed_to_native = m2n;
+                eh_native_to_managed = n2m;
+            }
+
+            public unsafe bool HasNativeException => ((delegate* unmanaged[Cdecl]<bool>)eh_has_exception)();
+
+            public IntPtr CreateManagedToNativeHelper(IntPtr target, out IDisposable? handle) {
+                var alloc = arch.CreateSpecialEntryStub(eh_managed_to_native, target);
+                handle = alloc;
+                return alloc.BaseAddress;
+            }
+
+            public IntPtr CreateNativeToManagedHelper(IntPtr target, out IDisposable? handle) {
+                var alloc = arch.CreateSpecialEntryStub(eh_native_to_managed, target);
+                handle = alloc;
+                return alloc.BaseAddress;
             }
         }
     }

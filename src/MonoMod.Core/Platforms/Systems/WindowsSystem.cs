@@ -13,6 +13,9 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public SystemFeature Features => SystemFeature.RWXPages;
 
+        // Windows doesn't need an exception helper
+        public INativeExceptionHelper? NativeExceptionHelper => null;
+
         public Abi? DefaultAbi { get; }
 
         // the classifiers are only called for value types

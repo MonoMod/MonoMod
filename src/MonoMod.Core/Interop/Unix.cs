@@ -22,6 +22,9 @@ namespace MonoMod.Core.Interop {
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mincore", SetLastError = true)]
         public static extern unsafe int Mincore(IntPtr addr, nuint len, byte* vec);
 
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mkstemp", SetLastError = true)]
+        public static extern unsafe int MkSTemp(byte* template);
+
         [Flags]
         public enum Protection : int {
             None = 0x00,

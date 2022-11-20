@@ -10,6 +10,8 @@ namespace MonoMod.Core.Platforms {
         Abi? DefaultAbi { get; }
 
         IMemoryAllocator MemoryAllocator { get; }
+        
+        INativeExceptionHelper? NativeExceptionHelper { get; }
 
         nint GetSizeOfReadableMemory(IntPtr start, nint guess);
 
