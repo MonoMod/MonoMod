@@ -180,6 +180,7 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         public IAllocatedMemory CreateSpecialEntryStub(IntPtr target, IntPtr argument) {
             Span<byte> stub = stackalloc byte[SpecEntryStub.Length];
+            SpecEntryStub.CopyTo(stub);
             Unsafe.WriteUnaligned(ref stub[SpecEntryStubTargetOffs], target);
             Unsafe.WriteUnaligned(ref stub[SpecEntryStubArgOffs], argument);
             Helpers.Assert(system.MemoryAllocator.TryAllocate(new(stub.Length) { Executable = true, Alignment = 1 }, out var alloc));

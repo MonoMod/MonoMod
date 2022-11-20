@@ -87,6 +87,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 unsafe { icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _); }
                 // and the same with MarshalEx.(Get/Set)LastPInvokeError
                 MarshalEx.SetLastPInvokeError(MarshalEx.GetLastPInvokeError());
+                // and the same for HasNativeException
+                _ = NativeExceptionHelper?.HasNativeException;
 
                 // ensure the static constructor has been called
                 _ = hookEntrancy;

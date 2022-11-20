@@ -26,7 +26,12 @@ if (Debugger.IsAttached) {
 
 unsafe {
 
-    var msvcrt = DynDll.OpenLibrary("msvcrt");
+    var clib = PlatformDetection.OS switch {
+        OSKind.Windows => "msvcrt",
+        _ => "c"
+    };
+
+    var msvcrt = DynDll.OpenLibrary(clib);
     var msvcrand = (delegate* unmanaged[Cdecl]<int>) DynDll.GetFunction(msvcrt, "rand");
 
     var get1del = (Get1Delegate) Get1;
