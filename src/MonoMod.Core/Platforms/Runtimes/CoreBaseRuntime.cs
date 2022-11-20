@@ -96,5 +96,22 @@ namespace MonoMod.Core.Platforms.Runtimes {
         }
 
         protected abstract void InstallJitHook(IntPtr jit);
+
+        private INativeExceptionHelper? lazyNativeExceptionHelper;
+        protected INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= System.NativeExceptionHelper;
+        protected IntPtr EHNativeToManaged(IntPtr target, out IDisposable? handle) {
+            if (NativeExceptionHelper is not null) {
+                return NativeExceptionHelper.CreateNativeToManagedHelper(target, out handle);
+            }
+            handle = null;
+            return target;
+        }
+        protected IntPtr EHManagedToNative(IntPtr target, out IDisposable? handle) {
+            if (NativeExceptionHelper is not null) {
+                return NativeExceptionHelper.CreateManagedToNativeHelper(target, out handle);
+            }
+            handle = null;
+            return target;
+        }
     }
 }

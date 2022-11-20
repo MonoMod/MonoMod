@@ -1,5 +1,6 @@
 using MonoMod.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -61,6 +62,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         private sealed class JitHookDelegateHolder {
             public readonly Core70Runtime Runtime;
+            public readonly INativeExceptionHelper? NativeExceptionHelper;
             public readonly JitHookHelpersHolder JitHookHelpers;
             public readonly InvokeCompileMethodPtr InvokeCompileMethodPtr;
             public readonly IntPtr CompileMethodPtr;
@@ -71,6 +73,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             public JitHookDelegateHolder(Core70Runtime runtime, InvokeCompileMethodPtr icmp, IntPtr compileMethod) {
                 Runtime = runtime;
+                NativeExceptionHelper = runtime.NativeExceptionHelper;
                 JitHookHelpers = runtime.JitHookHelpers;
                 InvokeCompileMethodPtr = icmp;
                 CompileMethodPtr = compileMethod;
@@ -146,6 +149,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
                         jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                    // if a native exception was caught, return immediately and skip all of our normal processing
+                    if (NativeExceptionHelper?.HasNativeException ?? false) {
+                        return result;
+                    }
 
                     if (hookEntrancy == 1) {
                         try {
@@ -192,10 +199,11 @@ namespace MonoMod.Core.Platforms.Runtimes {
         }
 
         private Delegate? allocMemDelegate;
+        private IDisposable? n2mAllocMemHelper;
 
         protected unsafe virtual void PatchWrapperVtable(IntPtr* vtbl) {
             allocMemDelegate = CastAllocMemToRealType(CreateAllocMemDelegate());
-            vtbl[VtableIndexICorJitInfoAllocMem] = Marshal.GetFunctionPointerForDelegate(allocMemDelegate);
+            vtbl[VtableIndexICorJitInfoAllocMem] = EHNativeToManaged(Marshal.GetFunctionPointerForDelegate(allocMemDelegate), out n2mAllocMemHelper);
         }
 
         protected virtual int VtableIndexICorJitInfoAllocMem => V70.ICorJitInfoVtable.AllocMemIndex;
@@ -212,11 +220,14 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         private sealed class AllocMemDelegateHolder {
             public readonly Core70Runtime Runtime;
+            public readonly INativeExceptionHelper? NativeExceptionHelper;
             public readonly InvokeAllocMemPtr InvokeAllocMemPtr;
             public readonly int ICorJitInfoAllocMemIdx;
+            public readonly ConcurrentDictionary<IntPtr, (IntPtr M2N, IDisposable?)> AllocMemExceptionHelperCache = new();
 
             public AllocMemDelegateHolder(Core70Runtime runtime, InvokeAllocMemPtr iamp) {
                 Runtime = runtime;
+                NativeExceptionHelper = runtime.NativeExceptionHelper;
                 InvokeAllocMemPtr = iamp;
                 ICorJitInfoAllocMemIdx = Runtime.VtableIndexICorJitInfoAllocMem;
 
@@ -224,10 +235,19 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 unsafe { iamp.InvokeAllocMem(IntPtr.Zero, IntPtr.Zero, null); }
             }
 
+            private IntPtr GetRealInvokePtr(IntPtr ptr) {
+                if (NativeExceptionHelper is null)
+                    return ptr;
+                return AllocMemExceptionHelperCache.GetOrAdd(ptr, p => (Runtime.EHManagedToNative(p, out var h), h)).M2N;
+            }
+
             public unsafe void AllocMemHook(IntPtr thisPtr, V70.AllocMemArgs* args) {
                 var wrap = (ICorJitInfoWrapper*) thisPtr;
                 var wrapped = wrap->Wrapped;
-                InvokeAllocMemPtr.InvokeAllocMem((*wrapped)[ICorJitInfoAllocMemIdx], (IntPtr) wrapped, args);
+                InvokeAllocMemPtr.InvokeAllocMem(GetRealInvokePtr((*wrapped)[ICorJitInfoAllocMemIdx]), (IntPtr) wrapped, args);
+                if (NativeExceptionHelper?.HasNativeException ?? false) {
+                    return;
+                }
                 (*wrap)[ICorJitInfoWrapper.HotCodeRW] = args->hotCodeBlockRW;
                 (*wrap)[ICorJitInfoWrapper.ColdCodeRW] = args->coldCodeBlockRW;
             }

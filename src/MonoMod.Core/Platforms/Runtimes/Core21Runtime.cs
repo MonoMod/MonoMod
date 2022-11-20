@@ -76,18 +76,21 @@ namespace MonoMod.Core.Platforms.Runtimes {
         }
 
         private Delegate? ourCompileMethod;
+        private IDisposable? n2mHookHelper;
+        private IDisposable? m2nHookHelper;
 
         protected unsafe override void InstallJitHook(IntPtr jit) {
             CheckVersionGuid(jit);
 
             // Get the real compile method vtable slot
             var compileMethodSlot = GetVTableEntry(jit, VtableIndexICorJitCompilerCompileMethod);
+            var compileMethod = EHManagedToNative(*compileMethodSlot, out m2nHookHelper);
 
             // create our compileMethod delegate
-            var ourCompileMethodDelegate = CastCompileHookToRealType(CreateCompileMethodDelegate(*compileMethodSlot));
+            var ourCompileMethodDelegate = CastCompileHookToRealType(CreateCompileMethodDelegate(compileMethod));
             ourCompileMethod = ourCompileMethodDelegate; // stash it away so that it stays alive forever
 
-            var ourCompileMethodPtr = Marshal.GetFunctionPointerForDelegate(ourCompileMethodDelegate);
+            var ourCompileMethodPtr = EHNativeToManaged(Marshal.GetFunctionPointerForDelegate(ourCompileMethodDelegate), out n2mHookHelper);
 
             // invoke our CompileMethodPtr through ICMP to ensure that the JIT has compiled any needed thunks
             InvokeCompileMethodToPrepare(ourCompileMethodPtr);
@@ -111,12 +114,14 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         private sealed class JitHookDelegateHolder {
             public readonly Core21Runtime Runtime;
+            public readonly INativeExceptionHelper? NativeExceptionHelper;
             public readonly JitHookHelpersHolder JitHookHelpers;
             public readonly InvokeCompileMethodPtr InvokeCompileMethodPtr;
             public readonly IntPtr CompileMethodPtr;
 
             public JitHookDelegateHolder(Core21Runtime runtime, InvokeCompileMethodPtr icmp, IntPtr compileMethod) {
                 Runtime = runtime;
+                NativeExceptionHelper = runtime.NativeExceptionHelper;
                 JitHookHelpers = runtime.JitHookHelpers;
                 InvokeCompileMethodPtr = icmp;
                 CompileMethodPtr = compileMethod;
@@ -161,6 +166,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
                      */
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
                         jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                    // if a native exception was caught, return immediately and skip all of our normal processing
+                    if (NativeExceptionHelper?.HasNativeException ?? false) {
+                        return result;
+                    }
 
                     if (hookEntrancy == 1) {
                         try {
