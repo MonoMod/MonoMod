@@ -153,6 +153,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                         jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
                     // if a native exception was caught, return immediately and skip all of our normal processing
                     if (NativeExceptionHelper?.HasNativeException ?? false) {
+                        MMDbgLog.Warning("Native exception caught in JIT by exception helper");
                         return result;
                     }
 

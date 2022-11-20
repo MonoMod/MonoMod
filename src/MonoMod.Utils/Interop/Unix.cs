@@ -47,9 +47,10 @@ namespace MonoMod.Utils.Interop {
                 return (null, default);
 
             var len = Encoding.UTF8.GetByteCount(str);
-            var arr = ArrayPool<byte>.Shared.Rent(len);
+            var arr = ArrayPool<byte>.Shared.Rent(len + 1);
+            arr.AsSpan().Fill(0);
             var encoded = Encoding.UTF8.GetBytes(str, 0, str.Length, arr, 0);
-            return (arr, arr.AsMemory().Slice(0, encoded));
+            return (arr, arr.AsMemory().Slice(0, encoded + 1));
         }
 
         private static void FreeMarshalledArray(byte[]? arr) {

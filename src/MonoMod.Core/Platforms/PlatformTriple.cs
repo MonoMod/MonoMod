@@ -94,11 +94,11 @@ namespace MonoMod.Core.Platforms {
         }
 
         private void InitIfNeeded(object obj) {
-            (obj as IInitialize)?.Initialize();
             (obj as IInitialize<ISystem>)?.Initialize(System);
             (obj as IInitialize<IArchitecture>)?.Initialize(Architecture);
             (obj as IInitialize<IRuntime>)?.Initialize(Runtime);
             (obj as IInitialize<PlatformTriple>)?.Initialize(this);
+            (obj as IInitialize)?.Initialize();
         }
 
         public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);

@@ -64,6 +64,7 @@ namespace MonoMod.Utils {
         }
 
         private static bool InternalTryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping) {
+            Helpers.ThrowIfArgumentNull(name);
             if (name != null && !skipMapping && Mappings.TryGetValue(name, out List<DynDllMapping> mappingList)) {
                 foreach (var mapping in mappingList) {
                     if (InternalTryOpenLibrary(mapping.LibraryName, out libraryPtr, true))
@@ -74,19 +75,84 @@ namespace MonoMod.Utils {
                 return true;
             }
 
+            libraryPtr = IntPtr.Zero;
+            if (name is not null) {
+                foreach (var n in GetLibrarySearchOrder(name)) {
+                    libraryPtr = OpenLibraryCore(n);
+                    if (libraryPtr != IntPtr.Zero)
+                        break;
+                }
+            } else {
+                libraryPtr = OpenLibraryCore(null);
+            }
+
+            return libraryPtr != IntPtr.Zero;
+        }
+
+        private static IntPtr OpenLibraryCore(string? name) {
             if (PlatformDetection.OS.Is(OSKind.Windows)) {
-                libraryPtr = name == null
+                return name is null
                     ? Windows.Win32.Interop.GetModuleHandle(name)
                     : Windows.Win32.Interop.LoadLibrary(name);
             } else {
                 var flags = Interop.Unix.DlopenFlags.RTLD_NOW | Interop.Unix.DlopenFlags.RTLD_GLOBAL;
-                libraryPtr = Interop.Unix.DlOpen(name, flags);
+                return Interop.Unix.DlOpen(name, flags);
 
-                if (libraryPtr == IntPtr.Zero && File.Exists(name))
-                    libraryPtr = Interop.Unix.DlOpen(Path.GetFullPath(name), flags);
+                /*if (libraryPtr == IntPtr.Zero && File.Exists(name))
+                    libraryPtr = Interop.Unix.DlOpen(Path.GetFullPath(name), flags);*/
             }
+        }
 
-            return libraryPtr != IntPtr.Zero;
+        // This replicates the .NET Core P/Invoke resolution order
+        // https://learn.microsoft.com/en-us/dotnet/standard/native-interop/cross-platform
+        private static IEnumerable<string> GetLibrarySearchOrder(string name) {
+            var os = PlatformDetection.OS;
+            if (os.Is(OSKind.Windows)) {
+                yield return name;
+                if (!name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) {
+                    yield return name + ".dll";
+                }
+            } else if (os.Is(OSKind.Linux) || os.Is(OSKind.OSX)) {
+                var hasSlash = name.Contains("/", StringComparison.Ordinal);
+                var suffix = ".dylib"; // we set the Linux suffix in the below linux block
+                if (os.Is(OSKind.Linux)) {
+                    if (name.EndsWith(".so", StringComparison.Ordinal) || name.Contains(".so.", StringComparison.Ordinal)) {
+                        yield return name;
+                        if (!hasSlash)
+                            yield return "lib" + name;
+                        yield return name + ".so";
+                        if (!hasSlash)
+                            yield return "lib" + name + ".so";
+                        yield break;
+                    }
+
+                    suffix = ".so";
+                }
+
+                yield return name + suffix;
+                if (!hasSlash)
+                    yield return "lib" + name + suffix;
+                yield return name;
+                if (!hasSlash)
+                    yield return "lib" + name;
+
+                if (os.Is(OSKind.Linux) && name is "c" or "libc") {
+                    // try .so.6 as well (this will include libc.so.6)
+                    foreach (var n in GetLibrarySearchOrder("c.so.6")) {
+                        yield return n;
+                    }
+                    // also try glibc if trying to load libc
+                    foreach (var n in GetLibrarySearchOrder("glibc")) {
+                        yield return n;
+                    }
+                    foreach (var n in GetLibrarySearchOrder("glibc.so.6")) {
+                        yield return n;
+                    }
+                }
+            } else {
+                MMDbgLog.Warning($"Unknown OS {os} when trying to find resolution order for {name}");
+                yield return name;
+            }
         }
 
         /// <summary>

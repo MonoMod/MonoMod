@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <TargetFrameworks>$(TargetFrameworks);netcoreapp3.1</TargetFrameworks>
     <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 17.4.0 And $(NETCoreAppMaximumVersion) &gt;= 7.0">$(TargetFrameworks);net7.0</TargetFrameworks>
   </PropertyGroup>
 
