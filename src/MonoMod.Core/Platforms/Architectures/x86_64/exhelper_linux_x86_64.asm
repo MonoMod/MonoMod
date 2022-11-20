@@ -49,7 +49,6 @@ eh_managed_to_native:
     CFI_push
 
     ldreg r15
-
     FUNCTION_EPILOG
     ret
 
@@ -61,6 +60,7 @@ eh_managed_to_native:
     
     ; clear rax for safety
     xor eax, eax
+    ldreg r15
     FRAME_EPILOG
     ret
     
