@@ -172,8 +172,8 @@ namespace MonoMod.Core.Platforms.Architectures {
         }
 
 
-        private const int SpecEntryStubTargetOffs = 1;
-        private const int SpecEntryStubArgOffs = 6;
+        private const int SpecEntryStubArgOffs = 1;
+        private const int SpecEntryStubTargetOffs = 6;
         private static ReadOnlySpan<byte> SpecEntryStub => new byte[] {
             0xB8, 0x00, 0x00, 0x00, 0x00, 0xB9, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xE1
         };
