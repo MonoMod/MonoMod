@@ -130,8 +130,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 unsafe { icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _); }
                 // and the same with MarshalEx.(Get/Set)LastPInvokeError
                 MarshalEx.SetLastPInvokeError(MarshalEx.GetLastPInvokeError());
-                // and the same for HasNativeException
-                _ = NativeExceptionHelper?.HasNativeException;
+                // and the same for NativeExceptionHelper.NativeException { get; set; }
+                if (NativeExceptionHelper is { } neh) {
+                    neh.NativeException = neh.NativeException;
+                }
 
                 // ensure the static constructor has been called
                 _ = hookEntrancy;
@@ -158,6 +160,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     return CorJitResult.CORJIT_OK;
 
                 var lastError = MarshalEx.GetLastPInvokeError();
+                nint nativeException = default;
                 hookEntrancy++;
                 try {
 
@@ -169,8 +172,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
                         jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
                     // if a native exception was caught, return immediately and skip all of our normal processing
-                    if (NativeExceptionHelper?.HasNativeException ?? false) {
-                        MMDbgLog.Warning("Native exception caught in JIT by exception helper");
+                    if (NativeExceptionHelper is { } neh && (nativeException = neh.NativeException) is not 0) {
+                        MMDbgLog.Warning($"Native exception caught in JIT by exception helper (ex: {nativeException})");
                         return result;
                     }
 
@@ -206,6 +209,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     return result;
                 } finally {
                     hookEntrancy--;
+                    if (NativeExceptionHelper is { } neh)
+                        neh.NativeException = nativeException;
                     MarshalEx.SetLastPInvokeError(lastError);
                 }
             }

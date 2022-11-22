@@ -322,9 +322,10 @@ namespace MonoMod.Core.Platforms.Systems {
             // we've now got the file on disk, and we know its name
             // lets load it
             var handle = DynDll.OpenLibrary(fname, skipMapping: true);
-            IntPtr eh_has_exception, eh_managed_to_native, eh_native_to_managed;
+            IntPtr eh_get_exception, eh_set_exception, eh_managed_to_native, eh_native_to_managed;
             try {
-                eh_has_exception = DynDll.GetFunction(handle, nameof(eh_has_exception));
+                eh_get_exception = DynDll.GetFunction(handle, nameof(eh_get_exception));
+                eh_set_exception = DynDll.GetFunction(handle, nameof(eh_set_exception));
                 eh_managed_to_native = DynDll.GetFunction(handle, nameof(eh_managed_to_native));
                 eh_native_to_managed = DynDll.GetFunction(handle, nameof(eh_native_to_managed));
             } catch {
@@ -332,23 +333,28 @@ namespace MonoMod.Core.Platforms.Systems {
                 throw;
             }
 
-            return new ExceptionHelper(arch, eh_has_exception, eh_managed_to_native, eh_native_to_managed);
+            return new ExceptionHelper(arch, eh_get_exception, eh_set_exception, eh_managed_to_native, eh_native_to_managed);
         }
 
         private sealed class ExceptionHelper : INativeExceptionHelper {
             private readonly IArchitecture arch;
-            private readonly IntPtr eh_has_exception;
+            private readonly IntPtr eh_get_exception;
+            private readonly IntPtr eh_set_exception;
             private readonly IntPtr eh_managed_to_native;
             private readonly IntPtr eh_native_to_managed;
 
-            public ExceptionHelper(IArchitecture arch, IntPtr hasEx, IntPtr m2n, IntPtr n2m) {
+            public ExceptionHelper(IArchitecture arch, IntPtr getEx, IntPtr setEx, IntPtr m2n, IntPtr n2m) {
                 this.arch = arch;
-                eh_has_exception = hasEx;
+                eh_get_exception = getEx;
+                eh_set_exception = setEx;
                 eh_managed_to_native = m2n;
                 eh_native_to_managed = n2m;
             }
 
-            public unsafe bool HasNativeException => ((delegate* unmanaged[Cdecl]<bool>)eh_has_exception)();
+            public unsafe IntPtr NativeException {
+                get => ((delegate* unmanaged[Cdecl]<IntPtr>)eh_get_exception)();
+                set => ((delegate* unmanaged[Cdecl]<IntPtr, void>) eh_set_exception)(value);
+            }
 
             public IntPtr CreateManagedToNativeHelper(IntPtr target, out IDisposable? handle) {
                 var alloc = arch.CreateSpecialEntryStub(eh_managed_to_native, target);

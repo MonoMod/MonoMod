@@ -21,14 +21,22 @@ section .text
 
 CFI_INIT _personality
 
-GLOBAL eh_has_exception:function
-eh_has_exception:
+GLOBAL eh_get_exception:function
+eh_get_exception:
     CFI_STARTPROC LSDA_none
     mov rax, [rel cur_ex_ptr wrt ..gottpoff]
-    mov r10, [fs:rax]
+    mov rax, [fs:rax]
+    ret
+    CFI_ENDPROC
+
+global eh_set_exception:function
+eh_set_exception:
+    CFI_STARTPROC LSDA_none
+    FUNCTION_PROLOG exception
+    mov rax, [rel cur_ex_ptr wrt ..gottpoff]
+    mov [fs:rax], reg(exception)
     xor eax, eax
-    test r10, r10
-    setnz al
+    FUNCTION_EPILOG
     ret
     CFI_ENDPROC
 
