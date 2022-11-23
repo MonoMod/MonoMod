@@ -31,6 +31,23 @@ clobber the last P/Invoke error that the runtime stores. This is especially trou
 JIT immediately after a P/Invoke, and that JITted method will check the result. This happens in the .NET 6 new
 `FileStream` implementation (See [#93](https://github.com/MonoMod/MonoMod/issues/93)).
 
+Another major aspect which must be handled is that of native exceptions. On all non-Windows platforms that CoreCLR
+supports, exceptions are not allowed to propagate across P/Invoke boundaries, due to the underlying exception handling
+framework on those platforms. As it happens, however, the JIT (and EE that the JIT calls back into) can throw
+exceptions in certain circumstances (see [dotnet/runtime#78271](https://github.com/dotnet/runtime/issues/78271)).
+To prevent `abort()`s in this case, we need to call from the JIT hook into the JIT via a native method with exception
+handling information present, which will ultimately catch any exceptions that reach that point and manually propagate
+them back through managed code, before rethrowing at the native-to-managed boundary. This is done via the
+`INativeExceptionHelper` interface, optionally provided by `ISystem`. It provides `CreateNativeToManagedHelper`,
+`CreateManagedToNativeHelper`, and a property for getting the current saved native exception. The two
+`Create...Helper` methods create stubs which call a particular function through the OS's exception helper. The
+native-to-managed helper clears the current native exception, calls the target, then checks for a native exception,
+rethrowing if present. The managed-to-native helper simply catches exceptions that throw into it, saving it into
+the current exception slot. When setting up the JIT hook, we pass the original JIT function pointer through
+`CreateManagedToNativeHelper` to catch exceptions thrown by the JIT, and we pass the generated function pointer
+for our hook through `CreateNativeToManangedHelper` to allow it to rethrow when necessary. Take a look at
+[NativeExceptionHelper](./NativeExceptionHandler.md) for more details.
+
 As it happens, the JIT interface is quite stable over time (at least, with respect to the parts we care about). The
 JIT Interface Version GUID does change quite regularly, however, meaning that our checks do not pass when running on
 preview builds of any given major version.
