@@ -84,7 +84,7 @@ namespace System.Buffers {
         }
 
         /// <summary>
-        /// Creates an instance of <see cref="ReadOnlySequence{T}"/> from the <see cref="T:T[]"/>.
+        /// Creates an instance of <see cref="ReadOnlySequence{T}"/> from the <see cref="T[]"/>.
         /// </summary>
         public ReadOnlySequence(T[] array) {
             if (array == null)
@@ -95,7 +95,7 @@ namespace System.Buffers {
         }
 
         /// <summary>
-        /// Creates an instance of <see cref="ReadOnlySequence{T}"/> from the <see cref="T:T[]"/>, start and index.
+        /// Creates an instance of <see cref="ReadOnlySequence{T}"/> from the <see cref="T[]"/>, start and index.
         /// </summary>
         public ReadOnlySequence(T[] array, int start, int length) {
             if (array == null ||
@@ -407,7 +407,7 @@ namespace System.Buffers {
                 }
             }
 
-            return string.Format("System.Buffers.ReadOnlySequence<{0}>[{1}]", typeof(T).Name, Length);
+            return $"System.Buffers.ReadOnlySequence<{typeof(T).Name}>[{Length}]";
         }
 
         /// <summary>

@@ -106,10 +106,7 @@ namespace System.Buffers {
             // rare, given a max size of 1B elements.
             ThreadLocalArray[] tlsBuckets = t_tlsBuckets ?? InitializeTlsBucketsAndTrimming();
 
-            bool haveBucket = false;
-            bool returned = true;
             if ((uint) bucketIndex < (uint) tlsBuckets.Length) {
-                haveBucket = true;
 
                 // Clear the array if the user requested it.
                 if (clearArray) {
@@ -129,7 +126,7 @@ namespace System.Buffers {
                 tla = new ThreadLocalArray(array);
                 if (prev is not null) {
                     PerCoreLockedStacks stackBucket = _buckets[bucketIndex] ?? CreatePerCoreLockedStacks(bucketIndex);
-                    returned = stackBucket.TryPush(prev);
+                    _ = stackBucket.TryPush(prev);
                 }
             }
         }

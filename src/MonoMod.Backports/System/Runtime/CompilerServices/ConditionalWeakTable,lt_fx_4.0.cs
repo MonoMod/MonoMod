@@ -672,7 +672,9 @@ namespace System.Runtime.CompilerServices {
                     // the same entries with -1 hash codes, which the finalizer will clean up even if the container
                     // is not the active container for the table.  To prevent that, we want to stop the old container
                     // from being finalized, as it no longer has any responsibility for any cleanup.
+#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
                     GC.SuppressFinalize(this);
+#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
                 }
                 _oldKeepAlive = newContainer; // once this is set, the old container's finalizer will not free transferred dependent handles
 

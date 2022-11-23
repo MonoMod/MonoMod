@@ -15,13 +15,16 @@ namespace System.Reflection {
             return IsAssignableFrom(typeInfo.AsType());
         }
 
+        // this is what's done by the BCL
+#pragma warning disable CA1051 // Do not declare visible instance fields
         protected Type typeImpl = null!;
+#pragma warning restore CA1051 // Do not declare visible instance fields
 
         protected TypeDelegator() { }
 
         public TypeDelegator(Type delegatingType) {
             if (delegatingType == null)
-                throw new ArgumentNullException(nameof(delegatingType));
+                ThrowHelper.ThrowArgumentNullException(nameof(delegatingType));
 
             typeImpl = delegatingType;
         }

@@ -127,7 +127,7 @@ namespace System.Buffers {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private SequencePosition Seek(in SequencePosition start, in SequencePosition end, long offset, ExceptionArgument argument) {
+        private static SequencePosition Seek(in SequencePosition start, in SequencePosition end, long offset, ExceptionArgument argument) {
             int startIndex = GetIndex(start);
             int endIndex = GetIndex(end);
 

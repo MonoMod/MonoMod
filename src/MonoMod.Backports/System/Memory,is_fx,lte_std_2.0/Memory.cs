@@ -337,8 +337,8 @@ namespace System {
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
         public override bool Equals(object? obj) {
-            if (obj is ReadOnlyMemory<T>) {
-                return ((ReadOnlyMemory<T>) obj).Equals(this);
+            if (obj is ReadOnlyMemory<T> romem) {
+                return romem.Equals(this);
             } else if (obj is Memory<T> memory) {
                 return Equals(memory);
             } else {

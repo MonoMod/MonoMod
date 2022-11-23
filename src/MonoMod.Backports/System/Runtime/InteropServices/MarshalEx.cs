@@ -1,6 +1,9 @@
 ﻿using MonoMod.Backports;
-using System.Reflection;
 using System.Runtime.CompilerServices;
+
+#if !NET6_0_OR_GREATER
+using System.Reflection;
+#endif
 
 namespace System.Runtime.InteropServices {
     public static class MarshalEx {

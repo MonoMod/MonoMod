@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
@@ -16,7 +15,6 @@ namespace System.Collections.Concurrent {
     /// <remarks>
     /// All public and protected members of <see cref="ConcurrentQueue{T}"/> are thread-safe and may be used
     /// concurrently from multiple threads.
-    /// </remarks>
     [DebuggerDisplay("Count = {Count}")]
     [DebuggerTypeProxy(typeof(IProducerConsumerCollectionDebugView<>))]
     public class ConcurrentQueue<T> : IProducerConsumerCollection<T>, /*IReadOnlyCollection<T>*/ IEnumerable<T> {

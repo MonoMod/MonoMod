@@ -183,15 +183,15 @@ namespace System {
 
             nint i = 0;
             while (i.LessThanEqual(byteLength - (nuint) sizeof(Reg64))) {
-                Unsafe.As<byte, Reg64>(ref Unsafe.Add<byte>(ref b, i)) = default(Reg64);
+                Unsafe.As<byte, Reg64>(ref Unsafe.Add<byte>(ref b, i)) = default;
                 i += sizeof(Reg64);
             }
             if (i.LessThanEqual(byteLength - (nuint) sizeof(Reg32))) {
-                Unsafe.As<byte, Reg32>(ref Unsafe.Add<byte>(ref b, i)) = default(Reg32);
+                Unsafe.As<byte, Reg32>(ref Unsafe.Add<byte>(ref b, i)) = default;
                 i += sizeof(Reg32);
             }
             if (i.LessThanEqual(byteLength - (nuint) sizeof(Reg16))) {
-                Unsafe.As<byte, Reg16>(ref Unsafe.Add<byte>(ref b, i)) = default(Reg16);
+                Unsafe.As<byte, Reg16>(ref Unsafe.Add<byte>(ref b, i)) = default;
                 i += sizeof(Reg16);
             }
             if (i.LessThanEqual(byteLength - (nuint) sizeof(long))) {
@@ -202,7 +202,7 @@ namespace System {
             if (sizeof(IntPtr) == sizeof(int)) {
                 if (i.LessThanEqual(byteLength - sizeof(int))) {
                     Unsafe.As<byte, int>(ref Unsafe.Add<byte>(ref b, i)) = 0;
-                    i += sizeof(int);
+                    //i += sizeof(int);
                 }
             }
         }
@@ -211,32 +211,32 @@ namespace System {
             // TODO: Perhaps do switch casing to improve small size perf
 
             nint i = 0;
-            nint n = 0;
+            nint n;
             while ((n = i + 8).LessThanEqual(pointerSizeLength)) {
-                Unsafe.Add<IntPtr>(ref ip, i + 0) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 1) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 2) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 3) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 4) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 5) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 6) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 7) = default(IntPtr);
+                Unsafe.Add<IntPtr>(ref ip, i + 0) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 1) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 2) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 3) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 4) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 5) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 6) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 7) = default;
                 i = n;
             }
             if ((n = i + 4).LessThanEqual(pointerSizeLength)) {
-                Unsafe.Add<IntPtr>(ref ip, i + 0) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 1) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 2) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 3) = default(IntPtr);
+                Unsafe.Add<IntPtr>(ref ip, i + 0) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 1) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 2) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 3) = default;
                 i = n;
             }
             if ((n = i + 2).LessThanEqual(pointerSizeLength)) {
-                Unsafe.Add<IntPtr>(ref ip, i + 0) = default(IntPtr);
-                Unsafe.Add<IntPtr>(ref ip, i + 1) = default(IntPtr);
+                Unsafe.Add<IntPtr>(ref ip, i + 0) = default;
+                Unsafe.Add<IntPtr>(ref ip, i + 1) = default;
                 i = n;
             }
             if ((i + 1).LessThanEqual(pointerSizeLength)) {
-                Unsafe.Add<IntPtr>(ref ip, i) = default(IntPtr);
+                Unsafe.Add<IntPtr>(ref ip, i) = default;
             }
         }
 

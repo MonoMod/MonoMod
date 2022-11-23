@@ -2,7 +2,9 @@
 #define HAS_FROM_COMPARISON
 #endif
 
+#if HAS_FROM_COMPARISON
 using System.Runtime.CompilerServices;
+#endif
 
 namespace System {
     /// <summary>

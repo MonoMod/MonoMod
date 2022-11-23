@@ -2,7 +2,9 @@
 #define HAS_MONITOR_ENTER_BYREF
 #endif
 
+#if HAS_MONITOR_ENTER_BYREF
 using System.Runtime.CompilerServices;
+#endif
 
 namespace System.Threading {
     /// <summary>

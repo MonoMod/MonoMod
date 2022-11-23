@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace System.Collections.Concurrent {
@@ -219,7 +217,7 @@ namespace System.Collections.Concurrent {
                 }
             }
 
-            result = default(T);
+            result = default;
             return false;
         }
 
@@ -317,8 +315,7 @@ namespace System.Collections.Concurrent {
         void ICollection.CopyTo(Array array, int index) {
             // If the destination is actually a T[], use the strongly-typed
             // overload that doesn't allocate/copy an extra array.
-            T[]? szArray = array as T[];
-            if (szArray != null) {
+            if (array is T[] szArray) {
                 CopyTo(szArray, index);
                 return;
             }
@@ -385,8 +382,7 @@ namespace System.Collections.Concurrent {
             try {
                 FreezeBag(ref lockTaken);
                 for (WorkStealingQueue? queue = _workStealingQueues; queue != null; queue = queue._nextQueue) {
-                    T? ignored;
-                    while (queue.TrySteal(out ignored, take: true))
+                    while (queue.TrySteal(out T? ignored, take: true))
                         ;
                 }
             } finally {
@@ -757,7 +753,7 @@ namespace System.Collections.Concurrent {
 
                 int tail = _tailIndex;
                 if (_headIndex - tail >= 0) {
-                    result = default(T);
+                    result = default;
                     return false;
                 }
 
@@ -778,7 +774,7 @@ namespace System.Collections.Concurrent {
                         int idx = tail & _mask;
                         result = _array[idx];
                         //if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
-                            _array[idx] = default(T)!;
+                            _array[idx] = default!;
                         //}
                         _addTakeCount--;
                         return true;
@@ -791,14 +787,14 @@ namespace System.Collections.Concurrent {
                             int idx = tail & _mask;
                             result = _array[idx];
                             //if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
-                                _array[idx] = default(T)!;
+                                _array[idx] = default!;
                             //}
                             _addTakeCount--;
                             return true;
                         } else {
                             // We encountered a race condition and the element was stolen, restore the tail.
                             _tailIndex = tail + 1;
-                            result = default(T);
+                            result = default;
                             return false;
                         }
                     }
@@ -835,7 +831,7 @@ namespace System.Collections.Concurrent {
                     }
                 }
 
-                result = default(T);
+                result = default;
                 return false;
             }
 
@@ -868,7 +864,7 @@ namespace System.Collections.Concurrent {
                             int idx = head & _mask;
                             result = _array[idx];
                             //if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
-                                _array[idx] = default(T)!;
+                                _array[idx] = default!;
                             //}
                             _stealCount++;
                             return true;
@@ -884,7 +880,7 @@ namespace System.Collections.Concurrent {
                 }
 
                 // The queue was empty.
-                result = default(T);
+                result = default;
                 return false;
             }
 

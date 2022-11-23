@@ -21,6 +21,8 @@ namespace System {
             _integer = integer;
         }
 
+        // This is the BCL API, so this is what we need to provide
+#pragma warning disable CA1024 // Use properties where appropriate
         /// <summary>
         /// Returns object part of this <see cref="SequencePosition"/>
         /// </summary>
@@ -32,6 +34,7 @@ namespace System {
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
         public int GetInteger() => _integer;
+#pragma warning restore CA1024 // Use properties where appropriate
 
         /// <summary>
         /// Indicates whether the current <see cref="SequencePosition"/> is equal to another <see cref="SequencePosition"/>.

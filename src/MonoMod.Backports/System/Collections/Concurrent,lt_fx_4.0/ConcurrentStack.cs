@@ -403,7 +403,7 @@ namespace System.Collections.Concurrent {
 
             // If the stack is empty, return false; else return the element and true.
             if (head == null) {
-                result = default(T)!;
+                result = default!;
                 return false;
             } else {
                 result = head._value;
@@ -425,7 +425,7 @@ namespace System.Collections.Concurrent {
             Node? head = _head;
             //stack is empty
             if (head == null) {
-                result = default(T)!;
+                result = default!;
                 return false;
             }
             if (Interlocked.CompareExchange(ref _head, head._next, head) == head) {
@@ -498,8 +498,7 @@ namespace System.Collections.Concurrent {
             if (count == 0)
                 return 0;
 
-            Node? poppedHead;
-            int nodesCount = TryPopCore(count, out poppedHead);
+            int nodesCount = TryPopCore(count, out ConcurrentStack<T>.Node? poppedHead);
             if (nodesCount > 0) {
                 CopyRemovedItems(poppedHead!, items, startIndex, nodesCount);
             }
@@ -512,14 +511,13 @@ namespace System.Collections.Concurrent {
         /// <param name="result">The popped item</param>
         /// <returns>True if succeeded, false otherwise</returns>
         private bool TryPopCore([MaybeNullWhen(false)] out T result) {
-            Node? poppedNode;
 
-            if (TryPopCore(1, out poppedNode) == 1) {
+            if (TryPopCore(1, out ConcurrentStack<T>.Node? poppedNode) == 1) {
                 result = poppedNode!._value;
                 return true;
             }
 
-            result = default(T)!;
+            result = default!;
             return false;
         }
 

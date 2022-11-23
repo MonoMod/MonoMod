@@ -2,12 +2,10 @@
 #define HAS_CLAMP
 #endif
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
+#if !HAS_CLAMP
+using System.Diagnostics.CodeAnalysis;
+#endif
 
 namespace System {
     /// <summary>

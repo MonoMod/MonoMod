@@ -52,7 +52,7 @@ namespace System.Runtime.InteropServices {
             where TManager : MemoryManager<T> {
             TManager? localManager; // Use register for null comparison rather than byref
             manager = localManager = memory.GetObjectStartLength(out _, out _) as TManager;
-            return manager != null;
+            return localManager != null;
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace System.Runtime.InteropServices {
 
             Debug.Assert(length >= 0);
 
-            if (manager == null) {
+            if (localManager == null) {
                 start = default;
                 length = default;
                 return false;

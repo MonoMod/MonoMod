@@ -2,7 +2,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
 
 namespace System.Runtime {
     [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types",

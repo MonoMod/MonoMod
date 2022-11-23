@@ -11,7 +11,10 @@ namespace System.Reflection {
         TypeInfo IReflectableType.GetTypeInfo() => this;
         public virtual Type AsType() => this;
 
+        // this is what's done by the BCL
+#pragma warning disable CA1819 // Properties should not return arrays
         public virtual Type[] GenericTypeParameters => IsGenericTypeDefinition ? GetGenericArguments() : Type.EmptyTypes;
+#pragma warning restore CA1819 // Properties should not return arrays
 
         public virtual EventInfo? GetDeclaredEvent(string name) => GetEvent(name, TypeInfo.DeclaredOnlyLookup);
         public virtual FieldInfo? GetDeclaredField(string name) => GetField(name, TypeInfo.DeclaredOnlyLookup);
@@ -56,7 +59,7 @@ namespace System.Reflection {
             if (typeInfo.IsSubclassOf(this))
                 return true;
 
-            if (this.IsInterface) {
+            if (IsInterface) {
                 return ImplementsInterface(typeInfo, this);
             } else if (IsGenericParameter) {
                 Type[] constraints = GetGenericParameterConstraints();

@@ -184,7 +184,7 @@ namespace System {
 
         /// <summary>
         /// For <see cref="Span{Char}"/>, returns a new instance of string that represents the characters pointed to by the span.
-        /// Otherwise, returns a <see cref="String"/> with the name of the type and the number of elements.
+        /// Otherwise, returns a <see cref="string"/> with the name of the type and the number of elements.
         /// </summary>
         public override string ToString() {
             if (typeof(T) == typeof(char)) {
@@ -202,7 +202,7 @@ namespace System {
                         return new string(src, 0, _length);
                 }
             }
-            return string.Format("System.ReadOnlySpan<{0}>[{1}]", typeof(T).Name, _length);
+            return $"System.ReadOnlySpan<{typeof(T).Name}>[{_length}]";
         }
 
         /// <summary>

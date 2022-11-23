@@ -216,8 +216,7 @@ namespace System.Collections.Concurrent {
                 return ((EnumerableDropIndices) this).GetEnumerator();
             }
             public void Dispose() {
-                IDisposable? d = _source as IDisposable;
-                if (d != null) {
+                if (_source is IDisposable d) {
                     d.Dispose();
                 }
             }
