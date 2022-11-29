@@ -8,10 +8,10 @@ namespace MonoMod.Utils {
     /// <summary>
     /// A DynamicMethodDefinition "generator", responsible for generating a runtime MethodInfo from a DMD MethodDefinition.
     /// </summary>
-    /// <typeparam name="TSelf"></typeparam>
+    /// <typeparam name="TSelf">The derived type.</typeparam>
     public abstract class DMDGenerator<TSelf> : IDMDGenerator where TSelf : DMDGenerator<TSelf>, new() {
 
-        private static TSelf? _Instance;
+        private static TSelf? Instance;
 
         protected abstract MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context);
 
@@ -20,7 +20,7 @@ namespace MonoMod.Utils {
         }
 
         public static MethodInfo Generate(DynamicMethodDefinition dmd, object? context = null)
-            => Postbuild((_Instance ??= new TSelf()).GenerateCore(dmd, context));
+            => Postbuild((Instance ??= new TSelf()).GenerateCore(dmd, context));
 
         internal static unsafe MethodInfo Postbuild(MethodInfo mi) {
 
@@ -37,6 +37,7 @@ namespace MonoMod.Utils {
                     if (asmType is null)
                         return mi;
 
+                    // TODO: is it possible to do this elsewhere?
                     asm.SetMonoCorlibInternal(true);
                 }
             }
