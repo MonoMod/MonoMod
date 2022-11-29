@@ -244,9 +244,9 @@ namespace MonoMod.Logs {
 
             BeginHole();
             string? s;
-            if (DebugFormatter.CanDebugFormat(value)) {
+            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
                 int wrote;
-                while (!DebugFormatter.TryFormatInto(value, _chars.Slice(_pos), out wrote))
+                while (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(_pos), out wrote))
                     Grow();
                 _pos += wrote;
                 return;
@@ -319,9 +319,9 @@ namespace MonoMod.Logs {
 
             BeginHole();
             string? s;
-            if (DebugFormatter.CanDebugFormat(value)) {
+            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
                 int wrote;
-                while (!DebugFormatter.TryFormatInto(value, _chars.Slice(_pos), out wrote))
+                while (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(_pos), out wrote))
                     Grow();
                 _pos += wrote;
                 return;

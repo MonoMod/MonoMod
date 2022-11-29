@@ -9,7 +9,9 @@ namespace MonoMod.Logs {
         // We have explicit checks for types which may prove problematic using default formatting
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static bool CanDebugFormat<T>(in T value) {
+        public static bool CanDebugFormat<T>(in T value, out object? extraData) {
+            extraData = null;
+
             // first check for exact type matches
             if (typeof(T) == typeof(Type))
                 return true;
@@ -23,6 +25,8 @@ namespace MonoMod.Logs {
                 return true;
             if (typeof(T) == typeof(PropertyInfo))
                 return true;
+            if (typeof(T) == typeof(Exception))
+                return true;
 
             if (typeof(T) == typeof(IDebugFormattable))
                 return true;
@@ -34,6 +38,11 @@ namespace MonoMod.Logs {
                 or FieldInfo
                 or PropertyInfo)
                 return true;
+            if (value is Exception ex) {
+                // we want to stringify the exception once, and reuse that where possible
+                extraData = ex.ToString();
+                return true;
+            }
 
             // then for IDebugFormattable
             if (value is IDebugFormattable)
@@ -43,7 +52,7 @@ namespace MonoMod.Logs {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static bool TryFormatInto<T>(in T value, Span<char> into, out int wrote) {
+        public static bool TryFormatInto<T>(in T value, object? extraData, Span<char> into, out int wrote) {
             [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
             static ref TOut Transmute<TOut>(in T val)
                 => ref Unsafe.As<T, TOut>(ref Unsafe.AsRef(in val));
@@ -64,6 +73,8 @@ namespace MonoMod.Logs {
             if (typeof(T) == typeof(PropertyInfo))
                 return TryFormatPropertyInfo(Transmute<PropertyInfo>(in value), into, out wrote);
             // don't dispatch for typeof(T) == typeof(MethodBase), because we want to dispatch to the correct derived formatter
+            if (typeof(T) == typeof(Exception))
+                return TryFormatException(Transmute<Exception>(in value), Unsafe.As<string?>(extraData), into, out wrote);
 
             if (typeof(T) == typeof(IDebugFormattable))
                 return Transmute<IDebugFormattable>(in value).TryFormatInto(into, out wrote);
@@ -80,6 +91,8 @@ namespace MonoMod.Logs {
                 return TryFormatFieldInfo(fi, into, out wrote);
             if (value is PropertyInfo pi)
                 return TryFormatPropertyInfo(pi, into, out wrote);
+            if (value is Exception ex)
+                return TryFormatException(ex, Unsafe.As<string?>(extraData), into, out wrote);
             
             if (value is IDebugFormattable)
                 return ((IDebugFormattable) value).TryFormatInto(into, out wrote);
@@ -87,6 +100,82 @@ namespace MonoMod.Logs {
             Helpers.Assert(false, $"Called TryFormatInto with value of unknown type {value.GetType()}");
             wrote = 0;
             return false;
+        }
+
+        private static bool TryFormatException(Exception e, string? eStr, Span<char> into, out int wrote) {
+            wrote = 0;
+
+            // if eStr is null, then we have to alloc here, oh well
+            eStr ??= e.ToString();
+
+            var nl = Environment.NewLine;
+
+            if (into.Slice(wrote).Length < eStr.Length)
+                return false;
+            eStr.AsSpan().CopyTo(into.Slice(wrote));
+            wrote += eStr.Length;
+
+            int w;
+
+            // extra information for specific exception types
+
+            if (e is ReflectionTypeLoadException rtle) {
+                for (var i = 0; i < 4 && i < rtle.Types.Length; i++) {
+                    if (!Into(into.Slice(wrote), out w, $"{nl}System.Reflection.ReflectionTypeLoadException.Types[{i}] = {rtle.Types[i]}"))
+                        return false;
+                    wrote += w;
+                }
+                if (rtle.Types.Length >= 4) {
+                    if (!Into(into.Slice(wrote), out w, $"{nl}System.Reflection.ReflectionTypeLoadException.Types[...] = ..."))
+                        return false;
+                    wrote += w;
+                }
+
+                if (rtle.LoaderExceptions.Length > 0) {
+                    const string Sep = "System.Reflection.ReflectionTypeLoadException.LoaderExceptions = [";
+                    if (into.Slice(wrote).Length < nl.Length + Sep.Length)
+                        return false;
+                    nl.AsSpan().CopyTo(into.Slice(wrote));
+                    wrote += nl.Length;
+                    Sep.AsSpan().CopyTo(into.Slice(wrote));
+                    wrote += Sep.Length;
+
+                    for (var i = 0; i < rtle.LoaderExceptions.Length; i++) {
+                        var ex = rtle.LoaderExceptions[i];
+                        if (ex is null)
+                            continue;
+                        if (into.Slice(wrote).Length < nl.Length)
+                            return false;
+                        nl.AsSpan().CopyTo(into.Slice(wrote));
+                        wrote += nl.Length;
+                        // this'll necessarily call ToString on ex each time we call in here, but oh well, there's not a good place to stash the stringified value
+                        if (!TryFormatException(ex, null, into.Slice(wrote), out w))
+                            return false;
+                        wrote += w;
+                    }
+
+                    if (into.Slice(wrote).Length < nl.Length + 1)
+                        return false;
+                    nl.AsSpan().CopyTo(into.Slice(wrote));
+                    wrote += nl.Length;
+
+                    into[wrote++] = ']';
+                }
+            }
+
+            if (e is TypeLoadException tle) {
+                if (!Into(into.Slice(wrote), out w, $"{nl}System.TypeLoadException.TypeName = {tle.TypeName}"))
+                    return false;
+                wrote += w;
+            }
+
+            if (e is BadImageFormatException bife) {
+                if (!Into(into.Slice(wrote), out w, $"{nl}System.BadImageFormatException.FileName = {bife.FileName}"))
+                    return false;
+                wrote += w;
+            }
+
+            return true;
         }
 
         private static bool TryFormatType(Type type, Span<char> into, out int wrote) {
@@ -242,6 +331,7 @@ namespace MonoMod.Logs {
 
         public static bool Into(Span<char> into, out int wrote,
             [InterpolatedStringHandlerArgument("into")] ref FormatIntoInterpolatedStringHandler handler) {
+            _ = into;
             wrote = handler.pos;
             return !handler.incomplete;
         }

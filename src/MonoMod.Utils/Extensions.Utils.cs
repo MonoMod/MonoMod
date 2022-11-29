@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 
 namespace MonoMod.Utils {
@@ -209,38 +210,10 @@ namespace MonoMod.Utils {
 
             try {
                 result = CastDelegate(source, type);
-                    return true;
+                return true;
             } catch (Exception e) {
                 MMDbgLog.Warning($"Exception thrown in TryCastDelegate({source.GetType()} -> {type}): {e}");
                 return false;
-            }
-        }
-
-        /// <summary>
-        /// Print the exception to the console, including extended loading / reflection data useful for mods.
-        /// </summary>
-        public static void LogDetailed(this Exception? e, string? tag = null) {
-            if (tag == null) {
-                Console.WriteLine("--------------------------------");
-                Console.WriteLine("Detailed exception log:");
-            }
-            for (Exception? e_ = e; e_ != null; e_ = e_.InnerException) {
-                Console.WriteLine("--------------------------------");
-                Console.WriteLine(e_.GetType().FullName + ": " + e_.Message + "\n" + e_.StackTrace);
-                if (e_ is ReflectionTypeLoadException rtle) {
-                    for (int i = 0; i < rtle.Types.Length; i++) {
-                        Console.WriteLine("ReflectionTypeLoadException.Types[" + i + "]: " + rtle.Types[i]);
-                    }
-                    for (int i = 0; i < rtle.LoaderExceptions.Length; i++) {
-                        LogDetailed(rtle.LoaderExceptions[i], tag + (tag == null ? "" : ", ") + "rtle:" + i);
-                    }
-                }
-                if (e_ is TypeLoadException tlex) {
-                    Console.WriteLine("TypeLoadException.TypeName: " + tlex.TypeName);
-                }
-                if (e_ is BadImageFormatException formatex) {
-                    Console.WriteLine("BadImageFormatException.FileName: " + formatex.FileName);
-                }
             }
         }
 

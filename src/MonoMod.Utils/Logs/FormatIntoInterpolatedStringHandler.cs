@@ -136,9 +136,9 @@ namespace MonoMod.Logs {
             }
 
             string? s;
-            if (DebugFormatter.CanDebugFormat(value)) {
+            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
                 int wrote;
-                if (!DebugFormatter.TryFormatInto(value, _chars.Slice(pos), out wrote)) {
+                if (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(pos), out wrote)) {
                     incomplete = true;
                     return false;
                 }
@@ -213,9 +213,9 @@ namespace MonoMod.Logs {
             }
 
             string? s;
-            if (DebugFormatter.CanDebugFormat(value)) {
+            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
                 int wrote;
-                if (!DebugFormatter.TryFormatInto(value, _chars.Slice(pos), out wrote)) {
+                if (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(pos), out wrote)) {
                     incomplete = true;
                     return false;
                 }
