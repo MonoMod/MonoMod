@@ -7,6 +7,8 @@ using Mono.Cecil.Cil;
 using System.Diagnostics;
 using System.Security;
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Concurrent;
+using System.Linq;
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition : IDisposable {
@@ -45,7 +47,7 @@ namespace MonoMod.Utils {
         internal static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[] { typeof(string) })!;
 
         internal static readonly Type t__IDMDGenerator = typeof(IDMDGenerator);
-        internal static readonly Dictionary<string, IDMDGenerator> _DMDGeneratorCache = new Dictionary<string, IDMDGenerator>();
+        internal static readonly ConcurrentDictionary<string, IDMDGenerator> _DMDGeneratorCache = new();
 
         public MethodBase? OriginalMethod { get; }
         public MethodDefinition Definition { get; }
@@ -61,13 +63,15 @@ namespace MonoMod.Utils {
 
         private bool isDisposed;
 
-        /*internal DynamicMethodDefinition() {
-            Debug = Environment.GetEnvironmentVariable("MONOMOD_DMD_DEBUG") == "1";
-        }*/
+        private static bool GetDefaultDebugValue() {
+            return Switches.TryGetSwitchEnabled("DMDDebug", out var value) && value;
+        }
 
         public DynamicMethodDefinition(MethodBase method) {
             Helpers.ThrowIfArgumentNull(method);
+
             OriginalMethod = method;
+            Debug = GetDefaultDebugValue();
 
             LoadFromMethod(method, out var module, out var definition);
             Module = module;
@@ -80,6 +84,7 @@ namespace MonoMod.Utils {
 
             Name = name;
             OriginalMethod = null;
+            Debug = GetDefaultDebugValue();
 
             _CreateDynModule(name, returnType, parameterTypes, out var module, out var definition);
             Module = module;
@@ -151,58 +156,57 @@ namespace MonoMod.Utils {
         public MethodInfo Generate()
             => Generate(null);
         public MethodInfo Generate(object? context) {
-            var typeName = Environment.GetEnvironmentVariable("MONOMOD_DMD_TYPE");
+            var dmdType = Switches.TryGetSwitchValue("DMDType", out var swValue) ? swValue as string : null;
 
-            switch (typeName?.ToLowerInvariant()) {
-                case "dynamicmethod":
-                case "dm":
+            if (dmdType is not null) {
+                if (dmdType.Equals("dynamicmethod", StringComparison.OrdinalIgnoreCase)
+                    || dmdType.Equals("dm", StringComparison.OrdinalIgnoreCase)) {
                     return DMDEmitDynamicMethodGenerator.Generate(this, context);
-
-#if NETFRAMEWORK
-                case "methodbuilder":
-                case "mb":
-                    return DMDEmitMethodBuilderGenerator.Generate(this, context);
-#endif
-
-                case "cecil":
-                case "md":
+                }
+                if (dmdType.Equals("cecil", StringComparison.OrdinalIgnoreCase)
+                    || dmdType.Equals("md", StringComparison.OrdinalIgnoreCase)) {
                     return DMDCecilGenerator.Generate(this, context);
-
-                default:
-                    if (typeName is not null) {
-                        var type = ReflectionHelper.GetType(typeName);
-                        if (type != null) {
-                            if (!t__IDMDGenerator.IsCompatible(type))
-                                throw new ArgumentException($"Invalid DMDGenerator type: {typeName}");
-                            if (!_DMDGeneratorCache.TryGetValue(typeName, out var gen))
-                                _DMDGeneratorCache[typeName] = gen = (IDMDGenerator) Activator.CreateInstance(type)!;
-                            return gen.Generate(this, context);
-                        }
-                    }
-
-                    if (_PreferCecil)
-                        return DMDCecilGenerator.Generate(this, context);
-
-                    if (Debug)
-#if !NETFRAMEWORK
-                        return DMDCecilGenerator.Generate(this, context);
-#else
-                        return DMDEmitMethodBuilderGenerator.Generate(this, context);
-#endif
-
-                    // In .NET Framework, DynamicILGenerator doesn't support fault and filter blocks.
-                    // This is a non-issue in .NET Core, yet it could still be an issue in mono.
-                    // https://github.com/dotnet/coreclr/issues/1764
+                }
 #if NETFRAMEWORK
-                    if (Definition!.Body.ExceptionHandlers.Any(eh =>
-                        eh.HandlerType == ExceptionHandlerType.Fault ||
-                        eh.HandlerType == ExceptionHandlerType.Filter
-                    ))
-                        return DMDEmitMethodBuilderGenerator.Generate(this, context);
+                if (dmdType.Equals("methodbuilder", StringComparison.OrdinalIgnoreCase)
+                    || dmdType.Equals("mb", StringComparison.OrdinalIgnoreCase)) {
+                    return DMDEmitMethodBuilderGenerator.Generate(this, context);
+                }
+#endif
+            }
+
+            if (dmdType is not null) {
+                var type = ReflectionHelper.GetType(dmdType);
+                if (type != null) {
+                    if (!t__IDMDGenerator.IsCompatible(type))
+                        throw new ArgumentException($"Invalid DMDGenerator type: {dmdType}");
+                    var gen = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator) Activator.CreateInstance(type)!);
+                    return gen.Generate(this, context);
+                }
+            }
+
+            if (_PreferCecil)
+                return DMDCecilGenerator.Generate(this, context);
+
+            if (Debug)
+#if !NETFRAMEWORK
+                return DMDCecilGenerator.Generate(this, context);
+#else
+                return DMDEmitMethodBuilderGenerator.Generate(this, context);
 #endif
 
-                    return DMDEmitDynamicMethodGenerator.Generate(this, context);
-            }
+            // In .NET Framework, DynamicILGenerator doesn't support fault and filter blocks.
+            // This is a non-issue in .NET Core, yet it could still be an issue in mono.
+            // https://github.com/dotnet/coreclr/issues/1764
+#if NETFRAMEWORK
+            if (Definition!.Body.ExceptionHandlers.Any(eh =>
+                eh.HandlerType == ExceptionHandlerType.Fault ||
+                eh.HandlerType == ExceptionHandlerType.Filter
+            ))
+                return DMDEmitMethodBuilderGenerator.Generate(this, context);
+#endif
+
+            return DMDEmitDynamicMethodGenerator.Generate(this, context);
         }
 
         public void Dispose() {

@@ -241,15 +241,8 @@ namespace MonoMod.Logs {
         }
         #endregion
 
-        private static string? GetStringEnvVar(string varName) {
-            var str = Environment.GetEnvironmentVariable(varName)?.Trim();
-            if (string.IsNullOrEmpty(str))
-                return null;
-            return str;
-        }
-
-        private static int? GetNumericEnvVar(string varName) {
-            var str = Environment.GetEnvironmentVariable(varName)?.Trim();
+        private static int? GetNumericEnvVar(string text) {
+            var str = text?.Trim();
             if (string.IsNullOrEmpty(str))
                 return null;
             if (int.TryParse(str, out var result))
@@ -257,8 +250,8 @@ namespace MonoMod.Logs {
             return null;
         }
 
-        private static bool? GetBoolEnvVar(string varName) {
-            var str = Environment.GetEnvironmentVariable(varName)?.Trim();
+        private static bool? GetBoolEnvVar(string text) {
+            var str = text?.Trim();
             if (string.IsNullOrEmpty(str))
                 return null;
             Helpers.DAssert(str is not null);
@@ -273,8 +266,8 @@ namespace MonoMod.Logs {
             return null;
         }
 
-        private static string[]? GetListEnvVar(string varName) {
-            var str = Environment.GetEnvironmentVariable(varName)?.Trim();
+        private static string[]? GetListEnvVar(string text) {
+            var str = text?.Trim();
             if (string.IsNullOrEmpty(str))
                 return null;
             Helpers.DAssert(str is not null);
@@ -292,9 +285,18 @@ namespace MonoMod.Logs {
         private LogLevelFilter globalFilter = LogLevelFilter.DefaultFilter;
 
         private DebugLog() {
-            recordHoles = GetBoolEnvVar("MMLOG_RECORD_HOLES") ?? false;
-            replayQueueLength = GetNumericEnvVar("MMLOG_REPLAY_QUEUE_LENGTH") ?? 0;
-            var showSpamLogs = GetBoolEnvVar("MMLOG_SPAM") ?? false;
+            // TODO: improve switches ergonomics
+            recordHoles = Switches.TryGetSwitchEnabled("LogRecordHoles", out var switchEnabled) && switchEnabled;
+            replayQueueLength = 0;
+            if (Switches.TryGetSwitchValue("LogReplayQueueLength", out var switchValue)) {
+                replayQueueLength = switchValue switch {
+                    int i => i,
+                    string s => GetNumericEnvVar(s) ?? 0,
+                    _ => 0
+                };
+            }
+
+            var showSpamLogs = Switches.TryGetSwitchEnabled("LogSpam", out switchEnabled) && switchEnabled;
             if (showSpamLogs)
                 globalFilter |= LogLevelFilter.Spam;
 
@@ -302,14 +304,21 @@ namespace MonoMod.Logs {
                 replayQueue = new();
             }
 
-            var diskLogFile = GetStringEnvVar("MMLOG_OUT_FILE");
-            var diskSourceFilter = GetListEnvVar("MMLOG_FILE_SOURCE_FILTER");
+            var diskLogFile = Switches.TryGetSwitchValue("LogToFile", out switchValue) ? switchValue as string : null;
+            string[]? diskSourceFilter = null;
+            if (Switches.TryGetSwitchValue("LogToFileFilter", out switchValue)) {
+                diskSourceFilter = switchValue switch {
+                    string[] sa => sa,
+                    string s => GetListEnvVar(s),
+                    _ => null
+                };
+            }
 
             if (diskLogFile is not null) {
                 TryInitializeLogToFile(diskLogFile, diskSourceFilter, globalFilter);
             }
 
-            var useMemlog = GetBoolEnvVar("MMLOG_MEMORY_LOG") ?? false;
+            var useMemlog = Switches.TryGetSwitchEnabled("LogInMemory", out switchEnabled) && switchEnabled;
             if (useMemlog) {
                 TryInitializeMemoryLog(globalFilter);
             }
