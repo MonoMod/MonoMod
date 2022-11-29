@@ -64,7 +64,7 @@ namespace MonoMod.Utils {
         private bool isDisposed;
 
         private static bool GetDefaultDebugValue() {
-            return Switches.TryGetSwitchEnabled("DMDDebug", out var value) && value;
+            return Switches.TryGetSwitchEnabled(Switches.DMDDebug, out var value) && value;
         }
 
         public DynamicMethodDefinition(MethodBase method) {
@@ -156,7 +156,7 @@ namespace MonoMod.Utils {
         public MethodInfo Generate()
             => Generate(null);
         public MethodInfo Generate(object? context) {
-            var dmdType = Switches.TryGetSwitchValue("DMDType", out var swValue) ? swValue as string : null;
+            var dmdType = Switches.TryGetSwitchValue(Switches.DMDType, out var swValue) ? swValue as string : null;
 
             if (dmdType is not null) {
                 if (dmdType.Equals("dynamicmethod", StringComparison.OrdinalIgnoreCase)

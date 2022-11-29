@@ -148,7 +148,7 @@ namespace MonoMod.Utils {
                     clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, type.Relink(relinker, clone)));
                 }
 
-                var envDmdDump = Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP");
+                var envDmdDump = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
                 if (!string.IsNullOrEmpty(envDmdDump)) {
                     var dir = Path.GetFullPath(envDmdDump);
                     var name = module.Name + ".dll";

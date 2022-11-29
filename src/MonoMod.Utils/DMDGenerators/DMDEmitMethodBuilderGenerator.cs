@@ -18,7 +18,8 @@ namespace MonoMod.Utils {
             MethodBuilder method = GenerateMethodBuilder(dmd, typeBuilder);
             typeBuilder = (TypeBuilder) method.DeclaringType;
             Type type = typeBuilder.CreateType();
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP"))) {
+            var dumpPath = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
+            if (!string.IsNullOrEmpty(dumpPath)) {
                 var path = method.Module.FullyQualifiedName;
                 var name = Path.GetFileName(path);
                 var dir = Path.GetDirectoryName(path);
@@ -32,11 +33,11 @@ namespace MonoMod.Utils {
         }
 
         public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder) {
-            MethodBase orig = dmd.OriginalMethod ?? throw new InvalidOperationException();
-            MethodDefinition def = dmd.Definition ?? throw new InvalidOperationException();
+            MethodBase? orig = dmd.OriginalMethod;
+            MethodDefinition def = dmd.Definition;
 
             if (typeBuilder == null) {
-                var dumpDir = Environment.GetEnvironmentVariable("MONOMOD_DMD_DUMP");
+                var dumpDir = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
                 if (string.IsNullOrEmpty(dumpDir)) {
                     dumpDir = null;
                 } else {

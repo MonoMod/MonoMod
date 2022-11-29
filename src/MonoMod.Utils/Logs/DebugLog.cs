@@ -286,9 +286,9 @@ namespace MonoMod.Logs {
 
         private DebugLog() {
             // TODO: improve switches ergonomics
-            recordHoles = Switches.TryGetSwitchEnabled("LogRecordHoles", out var switchEnabled) && switchEnabled;
+            recordHoles = Switches.TryGetSwitchEnabled(Switches.LogRecordHoles, out var switchEnabled) && switchEnabled;
             replayQueueLength = 0;
-            if (Switches.TryGetSwitchValue("LogReplayQueueLength", out var switchValue)) {
+            if (Switches.TryGetSwitchValue(Switches.LogReplayQueueLength, out var switchValue)) {
                 replayQueueLength = switchValue switch {
                     int i => i,
                     string s => GetNumericEnvVar(s) ?? 0,
@@ -296,7 +296,7 @@ namespace MonoMod.Logs {
                 };
             }
 
-            var showSpamLogs = Switches.TryGetSwitchEnabled("LogSpam", out switchEnabled) && switchEnabled;
+            var showSpamLogs = Switches.TryGetSwitchEnabled(Switches.LogSpam, out switchEnabled) && switchEnabled;
             if (showSpamLogs)
                 globalFilter |= LogLevelFilter.Spam;
 
@@ -304,9 +304,9 @@ namespace MonoMod.Logs {
                 replayQueue = new();
             }
 
-            var diskLogFile = Switches.TryGetSwitchValue("LogToFile", out switchValue) ? switchValue as string : null;
+            var diskLogFile = Switches.TryGetSwitchValue(Switches.LogToFile, out switchValue) ? switchValue as string : null;
             string[]? diskSourceFilter = null;
-            if (Switches.TryGetSwitchValue("LogToFileFilter", out switchValue)) {
+            if (Switches.TryGetSwitchValue(Switches.LogToFileFilter, out switchValue)) {
                 diskSourceFilter = switchValue switch {
                     string[] sa => sa,
                     string s => GetListEnvVar(s),
@@ -318,7 +318,7 @@ namespace MonoMod.Logs {
                 TryInitializeLogToFile(diskLogFile, diskSourceFilter, globalFilter);
             }
 
-            var useMemlog = Switches.TryGetSwitchEnabled("LogInMemory", out switchEnabled) && switchEnabled;
+            var useMemlog = Switches.TryGetSwitchEnabled(Switches.LogInMemory, out switchEnabled) && switchEnabled;
             if (useMemlog) {
                 TryInitializeMemoryLog(globalFilter);
             }

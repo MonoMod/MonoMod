@@ -34,6 +34,19 @@ namespace MonoMod {
             }
         }
 
+        #region MonoMod Switches
+        public const string LogRecordHoles = "LogRecordHoles";
+        public const string LogInMemory = "LogInMemory";
+        public const string LogSpam = "LogSpam";
+        public const string LogReplayQueueLength = "LogReplayQueueLength";
+        public const string LogToFile = "LogToFile";
+        public const string LogToFileFilter = "LogToFileFilter";
+
+        public const string DMDType = "DMDType";
+        public const string DMDDebug = "DMDDebug";
+        public const string DMDDumpTo = "DMDDumpTo";
+        #endregion
+
         private static bool TryParseEnvBool(string value,  out bool result) {
             var str = value?.Trim();
             if (string.IsNullOrEmpty(str)) {
