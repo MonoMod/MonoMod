@@ -138,6 +138,19 @@ namespace MonoMod.Utils {
             stream.Write('\0');
         }
 
+        // This is effectively just method identification, as performed fore FX/CoreCLR runtimes. Unfortunately, that only exists
+        // in Core, and is not available down here in Utils. TODO: figure out hot to use that
+        private static readonly Type? RTDynamicMethod =
+            typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic);
+        private static readonly FieldInfo? RTDynamicMethod_m_owner =
+            RTDynamicMethod?.GetField("m_owner", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+        private static MethodBase GetRealMethod(MethodBase method) {
+            if (RTDynamicMethod_m_owner is not null && method.GetType() == RTDynamicMethod)
+                return (MethodBase) RTDynamicMethod_m_owner.GetValue(method)!;
+            return method;
+        }
+
         /// <summary>
         /// Cast a delegate from one type to another. Compatible with delegates holding an invocation list (combined delegates).
         /// </summary>
@@ -161,14 +174,14 @@ namespace MonoMod.Utils {
             if (type.IsAssignableFrom(source.GetType()))
                 return source;
 
-            // TODO: this actually needs *method identification* to be completely correct, but that's up in Core
+            // We *must* use GetRealMethod, which performs masic method identification, as is present in Core
             var delegates = source.GetInvocationList();
             if (delegates.Length == 1)
-                return Extensions.CreateDelegate(delegates[0].Method, type, delegates[0].Target);
+                return CreateDelegate(GetRealMethod(delegates[0].Method), type, delegates[0].Target);
 
             var delegatesDest = new Delegate?[delegates.Length];
-            for (int i = 0; i < delegates.Length; i++)
-                delegatesDest[i] = delegates[i].CastDelegate(type);
+            for (var i = 0; i < delegates.Length; i++)
+                delegatesDest[i] = CreateDelegate(GetRealMethod(delegates[i].Method), type, delegates[i].Target);
             return Delegate.Combine(delegatesDest)!;
         }
 
@@ -195,19 +208,10 @@ namespace MonoMod.Utils {
                 return false;
 
             try {
-                Delegate[] delegates = source.GetInvocationList();
-                if (delegates.Length == 1) {
-                    result = delegates[0].Method.CreateDelegate(type, delegates[0].Target);
+                result = CastDelegate(source, type);
                     return true;
-                }
-
-                var delegatesDest = new Delegate[delegates.Length];
-                for (int i = 0; i < delegates.Length; i++)
-                    delegatesDest[i] = delegates[i].CastDelegate(type);
-                result = Delegate.Combine(delegatesDest);
-                return true;
-
-            } catch {
+            } catch (Exception e) {
+                MMDbgLog.Warning($"Exception thrown in TryCastDelegate({source.GetType()} -> {type}): {e}");
                 return false;
             }
         }
