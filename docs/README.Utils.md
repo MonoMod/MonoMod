@@ -1,12 +1,12 @@
 ## Notable APIs
 
+- `MonoMod.Cil.ILContext`
+- `MonoMod.Cil.ILCursor`
+- `MonoMod.Logs.DebugLog`
 - `MonoMod.Utils.DynamicMethodDefinition`
 - `MonoMod.Utils.DynDll`
 - `MonoMod.Utils.Helpers`
 - `MonoMod.Utils.PlatformDetection`
-- `MonoMod.Logs.DebugLog`
-- `MonoMod.Cil.ILContext`
-- `MonoMod.Cil.ILCursor`
 
 # `MonoMod.Utils`
 
