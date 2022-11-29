@@ -2,13 +2,8 @@
 
 using New::MonoMod.RuntimeDetour;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,8 +21,6 @@ namespace MonoMod.UnitTest {
         //   in release mode. In debug mode, it will never fail.
         //
 
-        // TODO: it seems like this fails on Linux x64, but only Core 3.1 and 5
-
         [Fact]
         public void WithTieredCompilation() {
             if (Environment.GetEnvironmentVariable("MM_TEST_DEBUG_TIERED_COMP") != null) {
@@ -42,7 +35,7 @@ namespace MonoMod.UnitTest {
 
         private static void TestFrom() {
             var sw = new Stopwatch();
-            for (var loop = 0; loop < 500; loop++) {
+            for (var loop = 0; loop < 50; loop++) {
                 // first we make sure From qualifies for recomp
                 for (var i = 0; i < 1000; i++) {
                     TargetHit = false;
