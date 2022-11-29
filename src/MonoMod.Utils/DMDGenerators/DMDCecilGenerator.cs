@@ -62,6 +62,12 @@ namespace MonoMod.Utils {
                 Relinker relinker = (mtp, ctx) => {
                     if (mtp == def)
                         return clone!;
+                    if (mtp is MethodReference mr) {
+                        if (mr.FullName == def.FullName
+                         && mr.DeclaringType.FullName == def.DeclaringType.FullName
+                         && mr.DeclaringType.Scope.Name == def.DeclaringType.Scope.Name)
+                            return clone!;
+                    }
                     return module.ImportReference(mtp);
                 };
 #pragma warning restore IDE0039 // Use local function

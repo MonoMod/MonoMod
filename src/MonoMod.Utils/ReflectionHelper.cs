@@ -54,18 +54,7 @@ namespace MonoMod.Utils {
                 asm = Assembly.Load(ms.GetBuffer());
             } else {
                 using (var copy = new MemoryStream()) {
-
-                    // TODO: add stream extension to Backports to do a full copy
-#if NETFRAMEWORK
-                    byte[] buffer = new byte[4096];
-                    int read;
-                    while (0 < (read = stream.Read(buffer, 0, buffer.Length))) {
-                        copy.Write(buffer, 0, read);
-                    }
-#else
                     stream.CopyTo(copy);
-#endif
-
                     copy.Seek(0, SeekOrigin.Begin);
                     asm = Assembly.Load(copy.GetBuffer());
                 }
