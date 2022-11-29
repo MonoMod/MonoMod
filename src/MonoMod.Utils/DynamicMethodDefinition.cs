@@ -6,7 +6,6 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Diagnostics;
 using System.Security;
-using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Utils {
@@ -48,9 +47,9 @@ namespace MonoMod.Utils {
         internal static readonly Type t__IDMDGenerator = typeof(IDMDGenerator);
         internal static readonly Dictionary<string, IDMDGenerator> _DMDGeneratorCache = new Dictionary<string, IDMDGenerator>();
 
-        public MethodBase? OriginalMethod { get; private set; }
-        public MethodDefinition? Definition { get; private set; }
-        public ModuleDefinition? Module { get; private set; }
+        public MethodBase? OriginalMethod { get; }
+        public MethodDefinition Definition { get; }
+        public ModuleDefinition Module { get; }
 
         public string? Name { get; }
 
@@ -62,25 +61,29 @@ namespace MonoMod.Utils {
 
         private bool isDisposed;
 
-        internal DynamicMethodDefinition() {
+        /*internal DynamicMethodDefinition() {
             Debug = Environment.GetEnvironmentVariable("MONOMOD_DMD_DEBUG") == "1";
+        }*/
+
+        public DynamicMethodDefinition(MethodBase method) {
+            Helpers.ThrowIfArgumentNull(method);
+            OriginalMethod = method;
+
+            LoadFromMethod(method, out var module, out var definition);
+            Module = module;
+            Definition = definition;
         }
 
-        public DynamicMethodDefinition(MethodBase method)
-            : this() {
-            OriginalMethod = method ?? throw new ArgumentNullException(nameof(method));
-            Reload();
-        }
-
-        public DynamicMethodDefinition(string name, Type? returnType, Type[] parameterTypes)
-            : this() {
+        public DynamicMethodDefinition(string name, Type? returnType, Type[] parameterTypes) {
             Helpers.ThrowIfArgumentNull(name);
             Helpers.ThrowIfArgumentNull(parameterTypes);
 
             Name = name;
             OriginalMethod = null;
 
-            _CreateDynModule(name, returnType, parameterTypes);
+            _CreateDynModule(name, returnType, parameterTypes, out var module, out var definition);
+            Module = module;
+            Definition = definition;
         }
 
         [MemberNotNull(nameof(Definition))]
@@ -97,12 +100,10 @@ namespace MonoMod.Utils {
             return new Cil.CecilILGenerator(Definition.Body.GetILProcessor()).GetProxy();
         }
 
-        private ModuleDefinition _CreateDynModule(string name, Type? returnType, Type[] parameterTypes) {
+        private void _CreateDynModule(string name, Type? returnType, Type[] parameterTypes, out ModuleDefinition Module, out MethodDefinition Definition) {
             var module = Module = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
                 Kind = ModuleKind.Dll,
-#if !CECIL0_9
                 ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
-#endif
             });
 
             var type = new TypeDefinition(
@@ -120,57 +121,31 @@ namespace MonoMod.Utils {
             foreach (Type paramType in parameterTypes)
                 def.Parameters.Add(new ParameterDefinition(module.ImportReference(paramType)));
             type.Methods.Add(def);
-
-            return module;
         }
 
-        public void Reload() {
-            var orig = OriginalMethod;
-            if (orig == null)
-                throw new InvalidOperationException();
-
-            ModuleDefinition? module = null;
-
-            try {
-                Definition = null;
-
-#if !CECIL0_9
-                Module?.Dispose();
-#endif
-                Module = null;
-
-                Type[] argTypes;
-                ParameterInfo[] args = orig.GetParameters();
-                int offs = 0;
-                if (!orig.IsStatic) {
-                    offs++;
-                    argTypes = new Type[args.Length + 1];
-                    argTypes[0] = orig.GetThisParamType();
-                } else {
-                    argTypes = new Type[args.Length];
-                }
-                for (int i = 0; i < args.Length; i++)
-                    argTypes[i + offs] = args[i].ParameterType;
-
-                module = _CreateDynModule(orig.GetID(simple: true), (orig as MethodInfo)?.ReturnType, argTypes);
-
-                _CopyMethodToDefinition();
-
-                var def = Definition ?? throw new InvalidOperationException();
-                if (!orig.IsStatic) {
-                    def.Parameters[0].Name = "this";
-                }
-                for (int i = 0; i < args.Length; i++)
-                    def.Parameters[i + offs].Name = args[i].Name;
-
-                Module = module;
-                module = null;
-            } catch {
-#if !CECIL0_9
-                module?.Dispose();
-#endif
-                throw;
+        private void LoadFromMethod(MethodBase orig, out ModuleDefinition Module, out MethodDefinition def) {
+            Type[] argTypes;
+            ParameterInfo[] args = orig.GetParameters();
+            var offs = 0;
+            if (!orig.IsStatic) {
+                offs++;
+                argTypes = new Type[args.Length + 1];
+                argTypes[0] = orig.GetThisParamType();
+            } else {
+                argTypes = new Type[args.Length];
             }
+            for (var i = 0; i < args.Length; i++)
+                argTypes[i + offs] = args[i].ParameterType;
+
+            _CreateDynModule(orig.GetID(simple: true), (orig as MethodInfo)?.ReturnType, argTypes, out Module, out def);
+
+            _CopyMethodToDefinition(orig, def);
+
+            if (!orig.IsStatic) {
+                def.Parameters[0].Name = "this";
+            }
+            for (var i = 0; i < args.Length; i++)
+                def.Parameters[i + offs].Name = args[i].Name;
         }
 
         public MethodInfo Generate()

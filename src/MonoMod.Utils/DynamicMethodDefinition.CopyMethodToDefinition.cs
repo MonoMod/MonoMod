@@ -28,24 +28,22 @@ namespace MonoMod.Utils {
             }
         }
 
-        private void _CopyMethodToDefinition() {
-            MethodBase method = OriginalMethod ?? throw new InvalidOperationException();
-            Module moduleFrom = method.Module;
-            System.Reflection.MethodBody bodyFrom = method.GetMethodBody() ?? throw new NotSupportedException("Body-less method");
+        private static void _CopyMethodToDefinition(MethodBase from, MethodDefinition into) {
+            Module moduleFrom = from.Module;
+            System.Reflection.MethodBody bodyFrom = from.GetMethodBody() ?? throw new NotSupportedException("Body-less method");
             var data = bodyFrom.GetILAsByteArray() ?? throw new InvalidOperationException();
 
-            MethodDefinition def = Definition ?? throw new InvalidOperationException();
-            ModuleDefinition moduleTo = def.Module;
-            Mono.Cecil.Cil.MethodBody bodyTo = def.Body;
+            ModuleDefinition moduleTo = into.Module;
+            Mono.Cecil.Cil.MethodBody bodyTo = into.Body;
             ILProcessor processor = bodyTo.GetILProcessor();
 
             Type[]? typeArguments = null;
-            if (method.DeclaringType?.IsGenericType ?? false)
-                typeArguments = method.DeclaringType.GetGenericArguments();
+            if (from.DeclaringType?.IsGenericType ?? false)
+                typeArguments = from.DeclaringType.GetGenericArguments();
 
             Type[]? methodArguments = null;
-            if (method.IsGenericMethod)
-                methodArguments = method.GetGenericArguments();
+            if (from.IsGenericMethod)
+                methodArguments = from.GetGenericArguments();
 
             foreach (LocalVariableInfo info in bodyFrom.LocalVariables) {
                 TypeReference type = moduleTo.ImportReference(info.LocalType);
@@ -179,7 +177,7 @@ namespace MonoMod.Utils {
                     case OperandType.InlineArg:
                     case OperandType.ShortInlineArg:
                         index = instr.OpCode.OperandType == OperandType.ShortInlineArg ? reader.ReadByte() : reader.ReadInt16();
-                        instr.Operand = def.Parameters[index];
+                        instr.Operand = into.Parameters[index];
                         break;
 
                     case OperandType.InlinePhi: // No opcode seems to use this
