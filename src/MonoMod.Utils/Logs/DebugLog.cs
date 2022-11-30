@@ -240,32 +240,7 @@ namespace MonoMod.Logs {
             instance.Write(source, DateTime.UtcNow, level, ref message);
         }
         #endregion
-
-        private static int? GetNumericEnvVar(string text) {
-            var str = text?.Trim();
-            if (string.IsNullOrEmpty(str))
-                return null;
-            if (int.TryParse(str, out var result))
-                return result;
-            return null;
-        }
-
-        private static bool? GetBoolEnvVar(string text) {
-            var str = text?.Trim();
-            if (string.IsNullOrEmpty(str))
-                return null;
-            Helpers.DAssert(str is not null);
-            if (bool.TryParse(str, out var result))
-                return result;
-            if (int.TryParse(str, out var iresult))
-                return iresult != 0;
-            if (str.Equals("yes", StringComparison.OrdinalIgnoreCase) || str.Equals("y", StringComparison.OrdinalIgnoreCase))
-                return true;
-            if (str.Equals("no", StringComparison.OrdinalIgnoreCase) || str.Equals("n", StringComparison.OrdinalIgnoreCase))
-                return false;
-            return null;
-        }
-
+        
         private static string[]? GetListEnvVar(string text) {
             var str = text?.Trim();
             if (string.IsNullOrEmpty(str))
@@ -289,11 +264,7 @@ namespace MonoMod.Logs {
             recordHoles = Switches.TryGetSwitchEnabled(Switches.LogRecordHoles, out var switchEnabled) && switchEnabled;
             replayQueueLength = 0;
             if (Switches.TryGetSwitchValue(Switches.LogReplayQueueLength, out var switchValue)) {
-                replayQueueLength = switchValue switch {
-                    int i => i,
-                    string s => GetNumericEnvVar(s) ?? 0,
-                    _ => 0
-                };
+                replayQueueLength = switchValue as int? ?? 0;
             }
 
             var showSpamLogs = Switches.TryGetSwitchEnabled(Switches.LogSpam, out switchEnabled) && switchEnabled;

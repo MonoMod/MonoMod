@@ -11,16 +11,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections;
-using System.Linq;
-using System.Text;
-using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Threading;
-using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 namespace MonoMod {
     public static class Switches {
-        private static readonly ConcurrentDictionary<string, StrongBox<object>> envSwitches = new();
+        private static readonly ConcurrentDictionary<string, object?> envSwitches = new();
 
         private const string Prefix = "MONOMOD_";
 
@@ -29,9 +24,38 @@ namespace MonoMod {
                 var key = (string)envVar.Key;
                 if (key.StartsWith(Prefix, StringComparison.Ordinal) && envVar.Value is not null) {
                     var sw = key.Substring(Prefix.Length);
-                    _ = envSwitches.TryAdd(sw, new(envVar.Value));
+                    _ = envSwitches.TryAdd(sw, BestEffortParseEnvVar((string) envVar.Value));
                 }
             }
+        }
+
+        private static object? BestEffortParseEnvVar(string value) {
+            if (value.Length is 0)
+                return null;
+
+            // try to parse as a number
+            if (int.TryParse(value, NumberStyles.AllowHexSpecifier | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var ires)) {
+                return ires;
+            }
+
+            if (long.TryParse(value, NumberStyles.AllowHexSpecifier | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var lres)) {
+                return lres;
+            }
+
+            // next, check for a possible boolean
+            if (value[0] is 't' or 'T' or 'f' or 'F' or 'y' or 'Y' or 'n' or 'N') {
+                if (bool.TryParse(value, out var bresult))
+                    return bresult;
+                if (value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value.Equals("y", StringComparison.OrdinalIgnoreCase)) {
+                    return true;
+                }
+                if (value.Equals("no", StringComparison.OrdinalIgnoreCase) || value.Equals("n", StringComparison.OrdinalIgnoreCase)) {
+                    return false;
+                }
+            }
+
+            // otherwise unknown, just return the string
+            return value;
         }
 
         #region MonoMod Switches
@@ -47,32 +71,12 @@ namespace MonoMod {
         public const string DMDDumpTo = "DMDDumpTo";
         #endregion
 
-        private static bool TryParseEnvBool(string value,  out bool result) {
-            var str = value?.Trim();
-            if (string.IsNullOrEmpty(str)) {
-                result = false;
-                return false;
-            }
-            Helpers.DAssert(str is not null);
-            if (bool.TryParse(str, out result))
-                return true;
-            if (int.TryParse(str, out var iresult)) {
-                result = iresult != 0;
+        public static bool TryGetSwitchValue(string @switch, out object? value) {
+            // always check our stuff first
+            if (envSwitches.TryGetValue(@switch, out value)) {
                 return true;
             }
-            if (str.Equals("yes", StringComparison.OrdinalIgnoreCase) || str.Equals("y", StringComparison.OrdinalIgnoreCase)) {
-                result = true;
-                return true;
-            }
-            if (str.Equals("no", StringComparison.OrdinalIgnoreCase) || str.Equals("n", StringComparison.OrdinalIgnoreCase)) {
-                result = false;
-                return true;
-            }
-            result = false;
-            return false;
-        }
 
-        public static bool TryGetSwitchValue(string @switch, [NotNullWhen(true)] out object? value) {
 #if HAS_APPCONTEXT
             var appCtxSwitchName = "MonoMod." + @switch;
 #endif
@@ -90,11 +94,6 @@ namespace MonoMod {
             }
 #endif
 
-            if (envSwitches.TryGetValue(@switch, out var boxValue)) {
-                value = boxValue.Value!;
-                return true;
-            }
-
             value = null;
             return false;
         }
@@ -102,29 +101,58 @@ namespace MonoMod {
         // TODO: how do I want to handle setting and caching of this stuff?
 
         public static bool TryGetSwitchEnabled(string @switch, out bool isEnabled) {
-#if HAS_APPCONTEXT_GETSWITCH
-            if (AppContext.TryGetSwitch("MonoMod." + @switch, out isEnabled)) {
-                return true;
-            }
-#endif
-
-            if (envSwitches.TryGetValue(@switch, out var box)) {
-                var orig = box.Value!;
-                if (orig is bool bval) {
-                    isEnabled = bval;
+            // always check our stuff first
+            if (envSwitches.TryGetValue(@switch, out var orig)) {
+                if (orig is not null && TryProcessBoolData(orig, out isEnabled)) {
                     return true;
-                }
-                if (orig is string sval) {
-                    if (TryParseEnvBool(sval, out var res)) {
-                        isEnabled = res;
-                        return true;
-                    }
                 }
                 // don't konw what to do with the value, so simply fall out
             }
 
+#if HAS_APPCONTEXT
+            var appCtxSwitchName = "MonoMod." + @switch;
+#endif
+#if HAS_APPCONTEXT_GETSWITCH
+            if (AppContext.TryGetSwitch(appCtxSwitchName, out isEnabled)) {
+                return true;
+            }
+#endif
+#if HAS_APPCONTEXT_GETDATA
+            var res = AppContext.GetData(appCtxSwitchName);
+            if (res is not null && TryProcessBoolData(res, out isEnabled)) {
+                return true;
+            }
+#endif
+
             isEnabled = false;
             return false;
+        }
+
+        private static bool TryProcessBoolData(object data, out bool boolVal) {
+            switch (data) {
+                case bool b:
+                    boolVal = b;
+                    return true;
+
+                case int i:
+                    boolVal = i != 0;
+                    return true;
+
+                case long i:
+                    boolVal = i != 0;
+                    return true;
+
+                case string s when bool.TryParse(s, out boolVal):
+                    return true;
+
+                case IConvertible conv:
+                    boolVal = conv.ToBoolean(CultureInfo.CurrentCulture);
+                    return true;
+
+                default:
+                    boolVal = false;
+                    return false;
+            }
         }
     }
 }

@@ -42,24 +42,24 @@ TODO: fill with tips/tricks for debugging
 
 ### CoreCLR (and some .NET Framework)
 
-Note that for recent versions of CoreCLR, the `COMPLUS_` prefix can be replaced with `DOTNET_`.
+Note that for recent versions of CoreCLR, the `COMPlus_` prefix can be replaced with `DOTNET_`.
 
 #### Crash Dumps
 
-- `COMPLUS_DbgEnableMiniDump` - Set to 1 to enable mini crash dumps on crash, whether due to managed exception bubbling to the
+- `COMPlus_DbgEnableMiniDump` - Set to 1 to enable mini crash dumps on crash, whether due to managed exception bubbling to the
   top of the stack, or due to some internal runtime failure.
-- `COMPLUS_DbgMiniDumpName` - Sets the name of the crash dump file.
-- `COMPLUS_DbgMiniDumpType` - Sets the kind of dump to create. A value of 4 indicates a full dump. Refer to the config definition
+- `COMPlus_DbgMiniDumpName` - Sets the name of the crash dump file.
+- `COMPlus_DbgMiniDumpType` - Sets the kind of dump to create. A value of 4 indicates a full dump. Refer to the config definition
   in the CLR source for other values.
-- `COMPLUS_CreateDumpDiagnostics=1`
-- `COMPLUS_EnableDumpOnSigTerm` - Set to 1 to enable crash dumps on SIGTERM.
+- `COMPlus_CreateDumpDiagnostics=1`
+- `COMPlus_EnableDumpOnSigTerm` - Set to 1 to enable crash dumps on SIGTERM.
 
 #### Stress Log
 
-- `COMPLUS_LogEnable` - Set to 1 to enable the stress log.
-- `COMPLUS_LogFacility`
-- `COMPLUS_LogFacility2`
-- `COMPLUS_LogLevel`
+- `COMPlus_LogEnable` - Set to 1 to enable the stress log.
+- `COMPlus_LogFacility`
+- `COMPlus_LogFacility2`
+- `COMPlus_LogLevel`
 
 #### PGO Data
 
