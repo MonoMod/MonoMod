@@ -102,3 +102,7 @@ dotnet_diagnostic.IDE0045.severity = suggestion
 
 # Configure null check validation functions so the compiler does not complain
 dotnet_code_quality.CA1062.null_check_validation_methods = ThrowIfNull|ThrowIfArgumentNull
+
+# CA1416: Validate platform compatibility
+# We have our own platform checks, and it's rather difficult to get the analyzer to recognize them.
+dotnet_diagnostic.CA1416.severity = none
