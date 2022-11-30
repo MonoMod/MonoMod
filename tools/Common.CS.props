@@ -11,7 +11,7 @@
     <WarningLevel>4</WarningLevel>
     
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <GenerateDocumentation>true</GenerateDocumentation>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     
     <ImplicitUsings>false</ImplicitUsings>
     
