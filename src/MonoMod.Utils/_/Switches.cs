@@ -12,6 +12,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections;
 using System.Globalization;
+#if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH
+using System.Reflection;
+using MonoMod.Utils;
+#endif
 
 namespace MonoMod {
     public static class Switches {
@@ -71,13 +75,59 @@ namespace MonoMod {
         public const string DMDDumpTo = "DMDDumpTo";
         #endregion
 
+        /// <summary>
+        /// Sets the value associated with a switch.
+        /// </summary>
+        /// <param name="switch">The switch to set the value of.</param>
+        /// <param name="value">The value of the switch.</param>
         public static void SetSwitchValue(string @switch, object? value) {
             switchValues[@switch] = value;
         }
 
+        /// <summary>
+        /// Clears the specified switch.
+        /// </summary>
+        /// <remarks>
+        /// The primary use of this method is to enable switch lookups to fall back to reading <see cref="AppContext"/>, if
+        /// that is available on the current platform.
+        /// </remarks>
+        /// <param name="switch">The switch to clear.</param>
         public static void ClearSwitchValue(string @switch) {
             _ = switchValues.TryRemove(@switch, out _);
         }
+
+#if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH
+        private static readonly Type? tAppContext =
+#if HAS_APPCONTEXT
+            typeof(AppContext);
+#else
+            typeof(AppDomain).Assembly.GetType("System.AppContext");
+#endif
+
+        private static T? TryCreateDelegate<T>(MethodInfo? mi) where T : Delegate
+        {
+            try
+            {
+                return mi?.CreateDelegate<T>();
+            }
+            catch
+            {
+                // ignore
+                return null;
+            }
+        }
+#endif
+#if !HAS_APPCONTEXT_GETDATA
+        private static readonly MethodInfo? miGetData = tAppContext?.GetMethod("GetData",
+            BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { typeof(string) }, null);
+        private static readonly Func<string, object?>? dGetData = TryCreateDelegate<Func<string, object?>>(miGetData);
+#endif
+#if !HAS_APPCONTEXT_GETSWITCH
+        private delegate bool TryGetSwitchFunc(string @switch, out bool isEnabled);
+        private static readonly MethodInfo? miTryGetSwitch = tAppContext?.GetMethod("TryGetSwitch",
+            BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { typeof(string), typeof(bool).MakeByRefType() }, null);
+        private static readonly TryGetSwitchFunc? dTryGetSwitch = TryCreateDelegate<TryGetSwitchFunc>(miTryGetSwitch);
+#endif
 
         public static bool TryGetSwitchValue(string @switch, out object? value) {
             // always check our stuff first
@@ -85,22 +135,33 @@ namespace MonoMod {
                 return true;
             }
 
-#if HAS_APPCONTEXT
-            var appCtxSwitchName = "MonoMod." + @switch;
+#if !HAS_APPCONTEXT
+            if (dGetData is not null || dTryGetSwitch is not null)
 #endif
+            {
+                var appCtxSwitchName = "MonoMod." + @switch;
+
+                object? res;
 #if HAS_APPCONTEXT_GETDATA
-            var res = AppContext.GetData(appCtxSwitchName);
-            if (res is not null) {
-                value = res;
-                return true;
-            }
+                res = AppContext.GetData(appCtxSwitchName);
+#else
+                res = dGetData?.Invoke(appCtxSwitchName);
 #endif
+                if (res is not null) {
+                    value = res;
+                    return true;
+                }
+
 #if HAS_APPCONTEXT_GETSWITCH
-            if (AppContext.TryGetSwitch(appCtxSwitchName, out var switchEnabled)) {
-                value = switchEnabled;
-                return true;
-            }
+                if (AppContext.TryGetSwitch(appCtxSwitchName, out var switchEnabled))
+#else
+                if (dTryGetSwitch is { } tryGetSwitch && tryGetSwitch(appCtxSwitchName, out var switchEnabled))
 #endif
+                {
+                    value = switchEnabled;
+                    return true;
+                }
+            }
 
             value = null;
             return false;
@@ -117,20 +178,31 @@ namespace MonoMod {
                 // don't konw what to do with the value, so simply fall out
             }
 
-#if HAS_APPCONTEXT
-            var appCtxSwitchName = "MonoMod." + @switch;
+#if !HAS_APPCONTEXT
+            if (dGetData is not null || dTryGetSwitch is not null)
 #endif
+            {
+                var appCtxSwitchName = "MonoMod." + @switch;
+
 #if HAS_APPCONTEXT_GETSWITCH
-            if (AppContext.TryGetSwitch(appCtxSwitchName, out isEnabled)) {
-                return true;
-            }
+                if (AppContext.TryGetSwitch(appCtxSwitchName, out isEnabled))
+#else
+                if (dTryGetSwitch is { } tryGetSwitch && tryGetSwitch(appCtxSwitchName, out isEnabled))
 #endif
+                {
+                    return true;
+                }
+
+                object? res;
 #if HAS_APPCONTEXT_GETDATA
-            var res = AppContext.GetData(appCtxSwitchName);
-            if (res is not null && TryProcessBoolData(res, out isEnabled)) {
-                return true;
-            }
+                res = AppContext.GetData(appCtxSwitchName);
+#else
+                res = dGetData?.Invoke(appCtxSwitchName);
 #endif
+                if (res is not null && TryProcessBoolData(res, out isEnabled)) {
+                    return true;
+                }
+            }
 
             isEnabled = false;
             return false;
