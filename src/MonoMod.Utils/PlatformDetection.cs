@@ -222,7 +222,7 @@ namespace MonoMod.Utils {
         private static bool CheckWine() {
             // wine_get_version can be missing because of course it can.
             // Read a configuration switch.
-            if (Switches.TryGetSwitchEnabled("Wine", out var runningWine))
+            if (Switches.TryGetSwitchEnabled(Switches.RunningOnWine, out var runningWine))
                 return runningWine;
 
             // The "Dalamud" plugin loader for FFXIV uses Harmony, coreclr and wine. What a nice combo!

@@ -63,6 +63,8 @@ namespace MonoMod {
         }
 
         #region MonoMod Switches
+        public const string RunningOnWine = "RunningOnWine";
+
         public const string LogRecordHoles = "LogRecordHoles";
         public const string LogInMemory = "LogInMemory";
         public const string LogSpam = "LogSpam";
