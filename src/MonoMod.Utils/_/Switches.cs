@@ -15,7 +15,7 @@ using System.Globalization;
 
 namespace MonoMod {
     public static class Switches {
-        private static readonly ConcurrentDictionary<string, object?> envSwitches = new();
+        private static readonly ConcurrentDictionary<string, object?> switchValues = new();
 
         private const string Prefix = "MONOMOD_";
 
@@ -24,7 +24,7 @@ namespace MonoMod {
                 var key = (string)envVar.Key;
                 if (key.StartsWith(Prefix, StringComparison.Ordinal) && envVar.Value is not null) {
                     var sw = key.Substring(Prefix.Length);
-                    _ = envSwitches.TryAdd(sw, BestEffortParseEnvVar((string) envVar.Value));
+                    _ = switchValues.TryAdd(sw, BestEffortParseEnvVar((string) envVar.Value));
                 }
             }
         }
@@ -71,9 +71,17 @@ namespace MonoMod {
         public const string DMDDumpTo = "DMDDumpTo";
         #endregion
 
+        public static void SetSwitchValue(string @switch, object? value) {
+            switchValues[@switch] = value;
+        }
+
+        public static void ClearSwitchValue(string @switch) {
+            _ = switchValues.TryRemove(@switch, out _);
+        }
+
         public static bool TryGetSwitchValue(string @switch, out object? value) {
             // always check our stuff first
-            if (envSwitches.TryGetValue(@switch, out value)) {
+            if (switchValues.TryGetValue(@switch, out value)) {
                 return true;
             }
 
@@ -102,7 +110,7 @@ namespace MonoMod {
 
         public static bool TryGetSwitchEnabled(string @switch, out bool isEnabled) {
             // always check our stuff first
-            if (envSwitches.TryGetValue(@switch, out var orig)) {
+            if (switchValues.TryGetValue(@switch, out var orig)) {
                 if (orig is not null && TryProcessBoolData(orig, out isEnabled)) {
                     return true;
                 }
