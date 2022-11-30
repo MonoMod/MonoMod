@@ -221,17 +221,14 @@ namespace MonoMod.Utils {
         // Separated method so that this P/Invoke mess doesn't error out on non-Windows.
         private static bool CheckWine() {
             // wine_get_version can be missing because of course it can.
-            // General purpose env var.
-            var env = Environment.GetEnvironmentVariable("MONOMOD_WINE");
-            if (env == "1")
-                return true;
-            if (env == "0")
-                return false;
+            // Read a configuration switch.
+            if (Switches.TryGetSwitchEnabled("Wine", out var runningWine))
+                return runningWine;
 
             // The "Dalamud" plugin loader for FFXIV uses Harmony, coreclr and wine. What a nice combo!
             // At least they went ahead and provide an environment variable for everyone to check.
             // See https://github.com/goatcorp/FFXIVQuickLauncher/blob/8685db4a0e8ec53235fb08cd88aded7c7061d9fb/src/XIVLauncher/Settings/EnvironmentSettings.cs
-            env = Environment.GetEnvironmentVariable("XL_WINEONLINUX")?.ToUpperInvariant();
+            var env = Environment.GetEnvironmentVariable("XL_WINEONLINUX")?.ToUpperInvariant();
             if (env == "TRUE")
                 return true;
             if (env == "FALSE")
