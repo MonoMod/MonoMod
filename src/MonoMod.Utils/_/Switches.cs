@@ -63,17 +63,53 @@ namespace MonoMod {
         }
 
         #region MonoMod Switches
+        /// <summary>
+        /// Boolean. Forces <see cref="PlatformDetection"/> to detect that Windows is Wine.
+        /// </summary>
         public const string RunningOnWine = "RunningOnWine";
 
+        /// <summary>
+        /// Boolean. Forces the logger to always record the value of message holes.
+        /// </summary>
         public const string LogRecordHoles = "LogRecordHoles";
+        /// <summary>
+        /// Boolean. Enables the in-memory logger.
+        /// </summary>
         public const string LogInMemory = "LogInMemory";
+        /// <summary>
+        /// Boolean. Enables the logging of <see cref="Logs.LogLevel.Spam"/> messages to default sinks (file and memory).
+        /// </summary>
         public const string LogSpam = "LogSpam";
+        /// <summary>
+        /// Integer. Sets the length of the logger's replay queue, in log messages. If the value is zero (the default), the
+        /// replay queue is disabled.
+        /// </summary>
         public const string LogReplayQueueLength = "LogReplayQueueLength";
+        /// <summary>
+        /// String. Enables the file sink of the logger. Contains the name of the log file to write. <c>-</c> indicates
+        /// standard out.
+        /// </summary>
         public const string LogToFile = "LogToFile";
+        /// <summary>
+        /// String. Provides a comma or semicolon separated list of sources to write to disk. If empty, all soruces are
+        /// written. Sources are typically the MonoMod assembly name (e.g. <c>MonoMod.Utils</c> or <c>MonoMod.RuntimeDetour</c>).
+        /// </summary>
         public const string LogToFileFilter = "LogToFileFilter";
 
+        /// <summary>
+        /// String. Specifies the backend to use for <see cref="DynamicMethodDefinition"/>s. Refer to <c>docs/Switches.md</c> for
+        /// details.
+        /// </summary>
         public const string DMDType = "DMDType";
+        /// <summary>
+        /// Boolean. Specifies the default value for <see cref="DynamicMethodDefinition.Debug"/>. Refer to <c>docs/Switches.md</c>
+        /// for details.
+        /// </summary>
         public const string DMDDebug = "DMDDebug";
+        /// <summary>
+        /// String. Specifies the directory to dump <see cref="DynamicMethodDefinition"/>s to for debugging. Refer to
+        /// <c>docs/Switches.md</c> for details.
+        /// </summary>
         public const string DMDDumpTo = "DMDDumpTo";
         #endregion
 
