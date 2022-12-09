@@ -8,7 +8,7 @@ namespace MonoMod.Core.Interop {
 
 
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mmap", SetLastError = true)]
-        public static extern unsafe IntPtr Mmap(IntPtr addr, nuint length, Protection prot, MmapFlags flags, int fd, int offset);
+        public static extern unsafe nint Mmap(IntPtr addr, nuint length, Protection prot, MmapFlags flags, int fd, int offset);
 
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "munmap", SetLastError = true)]
         public static extern unsafe int Munmap(IntPtr addr, nuint length);

@@ -138,7 +138,7 @@ static int GenerateMSBuildFile(string[] args) {
     <ItemGroup Condition=""!{grp.Key}"">");
         foreach (var (f, _) in grp) {
             var escaped = SecurityElement.Escape(f);
-            _ = sb.Append($@"
+            _ = sb.Append(CultureInfo.InvariantCulture, $@"
         <Compile Remove=""{escaped}"" />");
         }
         _ = sb.Append($@"
@@ -208,7 +208,7 @@ static TfmExpr? GetExprFor(string filename) {
         var orBuilder = ImmutableArray.CreateBuilder<TfmExpr>();
 
         foreach (var part in parts.Skip(1)) {
-            var usIdx = part.IndexOf('_');
+            var usIdx = part.IndexOf('_', StringComparison.Ordinal);
             if (usIdx < 0) {
                 // if there's no underscore, we can safely ignore it
                 continue;
@@ -261,7 +261,7 @@ static TfmExpr? GetExprFor(string filename) {
                 var ver = rest.Slice(usIdx + 1);
 
                 // remote any possible extensions
-                int dotIdx = ver.Length;
+                var dotIdx = ver.Length;
                 while ((dotIdx = ver.Slice(0, dotIdx).LastIndexOf('.')) >= 0) {
                     var vpart = ver.Slice(dotIdx + 1);
                     if (!int.TryParse(vpart, out _)) {

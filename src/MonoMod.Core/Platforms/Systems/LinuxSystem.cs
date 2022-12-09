@@ -138,7 +138,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
 
                 // mmap the page we found
-                nint mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint) PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous, -1, 0);
+                var mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint) PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous, -1, 0);
                 if (mmapPtr is 0 or -1) {
                     // fuck
                     int errno;
@@ -228,7 +228,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
                 
                 // mmap the page we found
-                nint mmapPtr = Unix.Mmap(ptr, (nuint) PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
+                var mmapPtr = Unix.Mmap(ptr, (nuint) PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
                 if (mmapPtr is 0 or -1) {
                     // fuck
                     allocated = null;

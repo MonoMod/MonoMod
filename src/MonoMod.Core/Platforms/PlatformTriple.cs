@@ -269,7 +269,7 @@ namespace MonoMod.Core.Platforms {
             Helpers.DAssert(size == detourInfo.Size);
             
             // now that we have the detour size, we'll try to allocate an alternate entry point
-            IntPtr altEntry = IntPtr.Zero;
+            var altEntry = IntPtr.Zero;
             IDisposable? altHandle = null;
             if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)) {
                 altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, size, out altHandle);

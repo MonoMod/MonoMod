@@ -43,8 +43,6 @@ namespace MonoMod.RuntimeDetour {
             return TryGetCurrentFactory(out var fac) ? fac : DetourFactory.Current;
         }
 
-
-
         public DetourConfig? Config => TryGetConfig(out var cfg) ? cfg : null;
         protected abstract bool TryGetConfig(out DetourConfig? config);
 

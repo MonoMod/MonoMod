@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -38,13 +37,13 @@ namespace MonoMod.SourceGen.Internal.Interop
                     if (type.ToDisplayString() == AttributeName) {
                         if (attr.ArgumentList is not { } attrArgs) {
                             // what?
-                            Console.WriteLine("[SRC] Arg list doesn't exist");
+                            //Console.WriteLine("[SRC] Arg list doesn't exist");
                             continue;
                         }
 
                         if (attrArgs.Arguments.Count < 2) {
                             // what?
-                            Console.WriteLine("[SRC] Arg list too short");
+                            //Console.WriteLine("[SRC] Arg list too short");
                             continue;
                         }
 
@@ -65,13 +64,13 @@ namespace MonoMod.SourceGen.Internal.Interop
                         }
 
                         if (ctx.SemanticModel.GetDeclaredSymbol(methodSyntax, cancellationToken) is not IMethodSymbol methSym) {
-                            Console.WriteLine($"[SRC] No method ({methodSyntax} ({methodSyntax.GetType()}))");
+                            //Console.WriteLine($"[SRC] No method ({methodSyntax} ({methodSyntax.GetType()}))");
                             // we couldn't get the model for the field, for some reason
                             continue;
                         }
 
                         if (ctx.SemanticModel.GetSymbolInfo(typeOf.Type, cancellationToken).Symbol is not INamedTypeSymbol helperType) {
-                            Console.WriteLine($"[SRC] No helper type");
+                            //Console.WriteLine($"[SRC] No helper type");
                             continue;
                         }
 
