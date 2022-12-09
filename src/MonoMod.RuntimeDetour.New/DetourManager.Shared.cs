@@ -193,7 +193,7 @@ namespace MonoMod.RuntimeDetour {
             public void WaitForChainUpdate() {
                 _ = Interlocked.Decrement(ref ActiveCalls);
 
-                if (UpdatingThread == Thread.CurrentThread.ManagedThreadId) {
+                if (UpdatingThread == EnvironmentEx.CurrentManagedThreadId) {
                     throw new InvalidOperationException("Method's detour chain is being updated by the current thread!");
                 }
 

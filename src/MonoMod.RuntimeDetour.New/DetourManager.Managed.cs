@@ -429,7 +429,7 @@ namespace MonoMod.RuntimeDetour {
                 // our chain is now fully built, with the head in chain
                 detourList.Next = chain; // detourList is the head of the real chain, and represents the original method
 
-                Volatile.Write(ref detourList.SyncInfo.UpdatingThread, Thread.CurrentThread.ManagedThreadId);
+                Volatile.Write(ref detourList.SyncInfo.UpdatingThread, EnvironmentEx.CurrentManagedThreadId);
                 detourList.SyncInfo.WaitForNoActiveCalls();
                 try {
                     chain = detourList;

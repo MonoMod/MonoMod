@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.RuntimeDetour {
     public sealed class MethodDetourInfo {
@@ -69,6 +70,9 @@ namespace MonoMod.RuntimeDetour {
 
         public Lock WithLock() => new(this);
 
+        [SuppressMessage("Design", "CA1034:Nested types should not be visible",
+            Justification = "This being a nested type makes sense, as its basically only expected to be a temporary on-stack to " +
+            "hold and automatically release a lock.")]
         public ref struct Lock {
             private readonly MethodDetourInfo mdi;
             private readonly bool lockTaken;
