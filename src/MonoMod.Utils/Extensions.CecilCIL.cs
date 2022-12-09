@@ -49,11 +49,12 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="method">The method to recalculate the IL instruction offsets for.</param>
         public static void RecalculateILOffsets(this MethodDefinition method) {
+            Helpers.ThrowIfArgumentNull(method);
             if (!method.HasBody)
                 return;
 
-            int offs = 0;
-            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+            var offs = 0;
+            for (var i = 0; i < method.Body.Instructions.Count; i++) {
                 Instruction instr = method.Body.Instructions[i];
                 instr.Offset = offs;
                 offs += instr.GetSize();
@@ -65,11 +66,12 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="method">The method to apply the fixes to.</param>
         public static void FixShortLongOps(this MethodDefinition method) {
+            Helpers.ThrowIfArgumentNull(method);
             if (!method.HasBody)
                 return;
 
             // Convert short to long ops.
-            for (int i = 0; i < method.Body.Instructions.Count; i++) {
+            for (var i = 0; i < method.Body.Instructions.Count; i++) {
                 Instruction instr = method.Body.Instructions[i];
                 if (instr.Operand is Instruction) {
                     instr.OpCode = instr.OpCode.ToLongOp();
@@ -82,12 +84,12 @@ namespace MonoMod.Utils {
             bool optimized;
             do {
                 optimized = false;
-                for (int i = 0; i < method.Body.Instructions.Count; i++) {
+                for (var i = 0; i < method.Body.Instructions.Count; i++) {
                     Instruction instr = method.Body.Instructions[i];
                     // Change short <-> long operations as the method grows / shrinks.
                     if (instr.Operand is Instruction target) {
                         // Thanks to Chicken Bones for helping out with this!
-                        int distance = target.Offset - (instr.Offset + instr.GetSize());
+                        var distance = target.Offset - (instr.Offset + instr.GetSize());
                         if (distance == (sbyte) distance) {
                             OpCode prev = instr.OpCode;
                             instr.OpCode = instr.OpCode.ToShortOp();

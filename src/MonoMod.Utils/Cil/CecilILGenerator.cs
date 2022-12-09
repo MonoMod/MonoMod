@@ -36,14 +36,16 @@ namespace MonoMod.Utils.Cil {
 
         private static Label NullLabel;
 
-        static unsafe CecilILGenerator() {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1810:Initialize reference type static fields inline",
+            Justification = "The performance penalty for cctor checks is not worth caring about here. We already do some high-level shenanigans to get calls here.")]
+        static CecilILGenerator() {
             foreach (FieldInfo field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 var cecilOpCode = (OpCode) field.GetValue(null)!;
                 _MCCOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
 
             Label l = default;
-            *(int*) &l = -1;
+            Unsafe.As<Label, int>(ref l) = -1;
             NullLabel = l;
         }
 

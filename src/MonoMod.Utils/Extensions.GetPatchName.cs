@@ -60,7 +60,7 @@ namespace MonoMod.Utils {
 
                 if (name.StartsWith("global::", StringComparison.Ordinal))
                     name = name.Substring(8); // Patch name is refering to a global type.
-                else if (name.Contains(".", StringComparison.Ordinal) || name.Contains('/', StringComparison.Ordinal)) { } // Patch name is already a full name.
+                else if (name.Contains('.', StringComparison.Ordinal) || name.Contains('/', StringComparison.Ordinal)) { } // Patch name is already a full name.
                 else if (!string.IsNullOrEmpty(type.Namespace))
                     name = type.Namespace + "." + name;
                 else if (type.IsNested)

@@ -93,9 +93,12 @@ namespace MonoMod.Logs {
                 return TryFormatPropertyInfo(pi, into, out wrote);
             if (value is Exception ex)
                 return TryFormatException(ex, Unsafe.As<string?>(extraData), into, out wrote);
-            
+
+#pragma warning disable IDE0038 // Use pattern matching
+            // This is to coerce either Roslyn or the JIT into doing a constrained call if T is a value type
             if (value is IDebugFormattable)
                 return ((IDebugFormattable) value).TryFormatInto(into, out wrote);
+#pragma warning restore IDE0038 // Use pattern matching
 
             Helpers.Assert(false, $"Called TryFormatInto with value of unknown type {value.GetType()}");
             wrote = 0;
@@ -208,10 +211,9 @@ namespace MonoMod.Logs {
 
         private static bool TryFormatMemberInfoName(MemberInfo member, Span<char> into, out int wrote) {
             wrote = 0;
-            int w;
             var declType = member.DeclaringType;
             if (declType is not null) {
-                if (!TryFormatType(declType, into.Slice(wrote), out w))
+                if (!TryFormatType(declType, into.Slice(wrote), out var w))
                     return false;
                 wrote += w;
                 if (into.Slice(wrote).Length < 1)

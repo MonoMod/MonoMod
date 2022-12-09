@@ -215,7 +215,10 @@ namespace MonoMod.Cil {
 
             var builder = new StringBuilder();
 
+#pragma warning disable CA1305 // Specify IFormatProvider
+            // Some of our targets don't have IFormatProvider-taking overloads.
             _ = builder.AppendLine($"// ILContext: {Method}");
+#pragma warning restore CA1305 // Specify IFormatProvider
             foreach (Instruction instr in Instrs)
                 ToString(builder, instr);
 

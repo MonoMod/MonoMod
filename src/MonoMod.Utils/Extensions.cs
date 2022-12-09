@@ -14,7 +14,9 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<Type, FieldInfo> fmap_mono_assembly = new Dictionary<Type, FieldInfo>();
         // Old versions of Mono which lack the arch field in MonoAssemblyName don't parse ProcessorArchitecture.
         private static readonly bool _MonoAssemblyNameHasArch =
+#pragma warning disable SYSLIB0037 // Type or member is obsolete
             new AssemblyName("Dummy, ProcessorArchitecture=MSIL").ProcessorArchitecture == ProcessorArchitecture.MSIL;
+#pragma warning restore SYSLIB0037 // Type or member is obsolete
 
         private static readonly Type? _RTDynamicMethod =
             typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic | BindingFlags.Public);

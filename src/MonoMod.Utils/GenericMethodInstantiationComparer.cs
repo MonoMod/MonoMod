@@ -77,29 +77,29 @@ namespace MonoMod.Utils {
             return true;
         }
 
-        public int GetHashCode(MethodBase method) {
-            Helpers.ThrowIfArgumentNull(method);
-            if ((!method.IsGenericMethod || method.ContainsGenericParameters) && !(method.DeclaringType?.IsGenericType ?? false))
-                return method.GetHashCode();
+        public int GetHashCode(MethodBase obj) {
+            Helpers.ThrowIfArgumentNull(obj);
+            if ((!obj.IsGenericMethod || obj.ContainsGenericParameters) && !(obj.DeclaringType?.IsGenericType ?? false))
+                return obj.GetHashCode();
 
             unchecked {
                 var code = unchecked((int) 0xdeadbeef);
                 // ok lets do some magic
-                if (method.DeclaringType != null) { // yes, DeclaringType can be null
-                    code ^= method.DeclaringType.Assembly.GetHashCode();
-                    code ^= genericTypeComparer.GetHashCode(method.DeclaringType);
+                if (obj.DeclaringType != null) { // yes, DeclaringType can be null
+                    code ^= obj.DeclaringType.Assembly.GetHashCode();
+                    code ^= genericTypeComparer.GetHashCode(obj.DeclaringType);
                 }
-                code ^= method.Name.GetHashCode(StringComparison.Ordinal);
-                ParameterInfo[] parameters = method.GetParameters();
+                code ^= obj.Name.GetHashCode(StringComparison.Ordinal);
+                ParameterInfo[] parameters = obj.GetParameters();
                 var paramCount = parameters.Length;
                 paramCount ^= paramCount << 4;
                 paramCount ^= paramCount << 8;
                 paramCount ^= paramCount << 16;
                 code ^= paramCount;
 
-                if (method.IsGenericMethod) { // we can get here if only the type is generic
+                if (obj.IsGenericMethod) { // we can get here if only the type is generic
                     // type arguments, and here is where we do special treatment
-                    Type[] typeArgs = method.GetGenericArguments();
+                    Type[] typeArgs = obj.GetGenericArguments();
                     for (var i = 0; i < typeArgs.Length; i++) {
                         var offs = i % 32;
                         Type type = typeArgs[i];
@@ -113,11 +113,11 @@ namespace MonoMod.Utils {
 
                 // parameter types
                 MethodBase definition;
-                if (method is MethodInfo info) {
+                if (obj is MethodInfo info) {
                     definition = info.GetActualGenericMethodDefinition();
                 } else {
                     // its probably a constructorinfo or something, so lets use a different method here
-                    definition = method.GetUnfilledMethodOnGenericType();
+                    definition = obj.GetUnfilledMethodOnGenericType();
                 }
 
                 ParameterInfo[] definitionParams = definition.GetParameters();

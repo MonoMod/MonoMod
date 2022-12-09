@@ -106,3 +106,9 @@ dotnet_code_quality.CA1062.null_check_validation_methods = ThrowIfNull|ThrowIfAr
 # CA1416: Validate platform compatibility
 # We have our own platform checks, and it's rather difficult to get the analyzer to recognize them.
 dotnet_diagnostic.CA1416.severity = none
+
+# CA1032: Implement standard exception constructors
+dotnet_diagnostic.CA1032.severity = suggestion
+
+# CA2237: Mark ISerializable types with serializable
+dotnet_diagnostic.CA2237.severity = suggestion

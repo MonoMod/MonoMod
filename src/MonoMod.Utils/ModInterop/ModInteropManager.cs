@@ -59,9 +59,10 @@ namespace MonoMod.ModInterop {
         }
 
         public static void RegisterModExport(this MethodInfo method, string? prefix = null) {
+            Helpers.ThrowIfArgumentNull(method);
             if (!method.IsPublic || !method.IsStatic)
                 throw new MemberAccessException("Utility must be public static");
-            string name = method.Name;
+            var name = method.Name;
             if (!string.IsNullOrEmpty(prefix))
                 name = prefix + "." + name;
 

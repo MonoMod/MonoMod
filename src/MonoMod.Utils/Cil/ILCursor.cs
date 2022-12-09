@@ -184,7 +184,10 @@ namespace MonoMod.Cil {
         public override string ToString() {
             var builder = new StringBuilder();
 
+#pragma warning disable CA1305 // Specify IFormatProvider
+            // Some of our targets don't have IFormatProvider-taking overloads.
             builder.AppendLine($"// ILCursor: {Method}, {Index}, {SearchTarget}");
+#pragma warning restore CA1305 // Specify IFormatProvider
             ILContext.ToString(builder, Prev);
             ILContext.ToString(builder, Next);
 
