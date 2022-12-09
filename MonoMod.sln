@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod", "src\MonoMod\Mono
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.DebugIL", "src\MonoMod.DebugIL\MonoMod.DebugIL.csproj", "{68E38462-2DB9-4692-AD91-077A8FBE8AE9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.RuntimeDetour", "src\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj", "{D0C584C0-81D7-486E-B70E-D7F9256E0909}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "src\Common\Common.csproj", "{D08C41CC-6121-47FB-AEBF-57A1D94DD09E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Utils", "src\MonoMod.Utils\MonoMod.Utils.csproj", "{1839CFE2-3DB0-45A8-B03D-9AA797479A3A}"
@@ -76,14 +74,6 @@ Global
 		{68E38462-2DB9-4692-AD91-077A8FBE8AE9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{68E38462-2DB9-4692-AD91-077A8FBE8AE9}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
 		{68E38462-2DB9-4692-AD91-077A8FBE8AE9}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.DebugTrace|Any CPU.ActiveCfg = DebugTrace|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.DebugTrace|Any CPU.Build.0 = DebugTrace|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
-		{D0C584C0-81D7-486E-B70E-D7F9256E0909}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
 		{D08C41CC-6121-47FB-AEBF-57A1D94DD09E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D08C41CC-6121-47FB-AEBF-57A1D94DD09E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D08C41CC-6121-47FB-AEBF-57A1D94DD09E}.DebugTrace|Any CPU.ActiveCfg = DebugTrace|Any CPU
