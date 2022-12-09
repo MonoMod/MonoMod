@@ -16,6 +16,9 @@
     <_MMDefineConsts>$(DefineConstants)</_MMDefineConsts>
     <RealProjDir>$(MSBuildThisFileDirectory)iced\src\csharp\Intel\Iced\</RealProjDir>
 
+    <MMAssemblyOriginatorFile>$(AssemblyOriginatorKeyFile)</MMAssemblyOriginatorFile>
+    <MMSignAssembly>$(SignAssembly)</MMSignAssembly>
+    
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -31,5 +34,10 @@
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)iced\src\csharp\Directory.Build.props" />
+
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>$(MMAssemblyOriginatorFile)</AssemblyOriginatorKeyFile>
+    <SignAssembly>$(MMSignAssembly)</SignAssembly>
+  </PropertyGroup>
   
 </Project>

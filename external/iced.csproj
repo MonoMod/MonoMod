@@ -20,6 +20,8 @@
     <PackageFile Remove="$(MMRootPath)icon.png" />
     <None Include="iced.props" />
     <None Include="iced.targets" />
+    <None Include="$(MSBuildThisFileDirectory)iced\src\csharp\Directory.Build.props" />
+    <None Include="$(MSBuildThisFileDirectory)iced\src\csharp\Iced.snk" />
     <PackageFile Include="$(MSBuildThisFileDirectory)iced\logo.png" PackagePath="%(Filename)%(Extension)" />
     <PackageFile Include="$(MSBuildThisFileDirectory)iced\LICENSE.txt" PackagePath="%(Filename)%(Extension)" />
   </ItemGroup>
