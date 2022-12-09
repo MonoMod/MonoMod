@@ -54,5 +54,15 @@ namespace MonoMod.Utils {
             return (Delegate) Activator.CreateInstance(delegateType, target, ptr)!;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "If an expection is thrown here, we want to return null as our failure case.")]
+        public static T? TryCreateDelegate<T>(this MethodInfo? mi) where T : Delegate {
+            try {
+                return mi?.CreateDelegate<T>();
+            } catch {
+                // ignore
+                return null;
+            }
+        }
     }
 }

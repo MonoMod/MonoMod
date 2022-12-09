@@ -146,31 +146,17 @@ namespace MonoMod {
             typeof(AppDomain).Assembly.GetType("System.AppContext");
 #endif
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
-            Justification = "If an expection is thrown here, we want to return null as our failure case.")]
-        private static T? TryCreateDelegate<T>(MethodInfo? mi) where T : Delegate
-        {
-            try
-            {
-                return mi?.CreateDelegate<T>();
-            }
-            catch
-            {
-                // ignore
-                return null;
-            }
-        }
 #endif
 #if !HAS_APPCONTEXT_GETDATA
         private static readonly MethodInfo? miGetData = tAppContext?.GetMethod("GetData",
             BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { typeof(string) }, null);
-        private static readonly Func<string, object?>? dGetData = TryCreateDelegate<Func<string, object?>>(miGetData);
+        private static readonly Func<string, object?>? dGetData = miGetData?.TryCreateDelegate<Func<string, object?>>();
 #endif
 #if !HAS_APPCONTEXT_GETSWITCH
         private delegate bool TryGetSwitchFunc(string @switch, out bool isEnabled);
         private static readonly MethodInfo? miTryGetSwitch = tAppContext?.GetMethod("TryGetSwitch",
             BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { typeof(string), typeof(bool).MakeByRefType() }, null);
-        private static readonly TryGetSwitchFunc? dTryGetSwitch = TryCreateDelegate<TryGetSwitchFunc>(miTryGetSwitch);
+        private static readonly TryGetSwitchFunc? dTryGetSwitch = miTryGetSwitch?.TryCreateDelegate<TryGetSwitchFunc>();
 #endif
 
         public static bool TryGetSwitchValue(string @switch, out object? value) {

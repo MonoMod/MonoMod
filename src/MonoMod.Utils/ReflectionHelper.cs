@@ -1,4 +1,4 @@
-﻿#if NETFRAMEWORK || NET6_0_OR_GREATER
+﻿#if NETFRAMEWORK
 #define HAS_UNMANAGED_METHODSIGHELPER
 #endif
 
@@ -13,9 +13,7 @@ using System.Text;
 using AssemblyHashAlgorithm = Mono.Cecil.AssemblyHashAlgorithm;
 using System.Diagnostics.CodeAnalysis;
 using ManagedCC = System.Reflection.CallingConventions;
-#if HAS_UNMANAGED_METHODSIGHELPER
 using UnmanagedCC = System.Runtime.InteropServices.CallingConvention;
-#endif
 
 namespace MonoMod.Utils {
     public static partial class ReflectionHelper {
@@ -393,6 +391,19 @@ namespace MonoMod.Utils {
             return _Cache(cacheKey, member!);
         }
 
+        private delegate SignatureHelper GetUnmanagedSigHelperDelegate(Module? module, UnmanagedCC callConv, Type? returnType);
+#if HAS_UNMANAGED_METHODSIGHELPER
+        private static readonly GetUnmanagedSigHelperDelegate GetUnmanagedSigHelper = SignatureHelper.GetMethodSigHelper;
+#else
+        // on CoreCLR, the method is present, but not public
+        private static readonly MethodInfo? GetUnmanagedSigHelperMethod
+            = typeof(SignatureHelper).GetMethod(nameof(SignatureHelper.GetMethodSigHelper), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                null, new[] { typeof(Module), typeof(UnmanagedCC), typeof(Type) }, null);
+        private static readonly GetUnmanagedSigHelperDelegate GetUnmanagedSigHelper
+            = GetUnmanagedSigHelperMethod?.TryCreateDelegate<GetUnmanagedSigHelperDelegate>()
+            ?? ((_, _, _) => throw new NotImplementedException("Unmanaged calling conventions are not supported"));
+#endif
+
         public static SignatureHelper ResolveReflection(this CallSite csite, Module context)
             => ResolveReflectionSignature(csite, context);
         public static SignatureHelper ResolveReflectionSignature(this IMethodSignature csite, Module context) {
@@ -400,29 +411,21 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(context);
             SignatureHelper shelper;
             switch (csite.CallingConvention) {
-#if HAS_UNMANAGED_METHODSIGHELPER
                 case MethodCallingConvention.C:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.Cdecl, csite.ReturnType.ResolveReflection());
+                    shelper = GetUnmanagedSigHelper(context, UnmanagedCC.Cdecl, csite.ReturnType.ResolveReflection());
                     break;
 
                 case MethodCallingConvention.StdCall:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.StdCall, csite.ReturnType.ResolveReflection());
+                    shelper = GetUnmanagedSigHelper(context, UnmanagedCC.StdCall, csite.ReturnType.ResolveReflection());
                     break;
 
                 case MethodCallingConvention.ThisCall:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.ThisCall, csite.ReturnType.ResolveReflection());
+                    shelper = GetUnmanagedSigHelper(context, UnmanagedCC.ThisCall, csite.ReturnType.ResolveReflection());
                     break;
 
                 case MethodCallingConvention.FastCall:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.FastCall, csite.ReturnType.ResolveReflection());
+                    shelper = GetUnmanagedSigHelper(context, UnmanagedCC.FastCall, csite.ReturnType.ResolveReflection());
                     break;
-#else
-                case MethodCallingConvention.C:
-                case MethodCallingConvention.StdCall:
-                case MethodCallingConvention.ThisCall:
-                case MethodCallingConvention.FastCall:
-                    throw new NotSupportedException("Unmanaged calling conventions for callsites not supported on .NET Standard");
-#endif
 
                 case MethodCallingConvention.VarArg:
                     shelper = SignatureHelper.GetMethodSigHelper(context, ManagedCC.VarArgs, csite.ReturnType.ResolveReflection());
