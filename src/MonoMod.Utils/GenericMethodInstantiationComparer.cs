@@ -57,9 +57,9 @@ namespace MonoMod.Utils {
 
             // these should be identical
             ParameterInfo[] xDefParams = xDef.GetParameters();
-            ParameterInfo[] yDefParams = yDef.GetParameters();
+            //ParameterInfo[] yDefParams = yDef.GetParameters();
 
-            for (int i = 0; i < xParams.Length; i++) {
+            for (var i = 0; i < xParams.Length; i++) {
                 Type xType = xParams[i].ParameterType;
                 Type yType = yParams[i].ParameterType;
                 if (xDefParams[i].ParameterType.IsGenericParameter) {
@@ -78,11 +78,12 @@ namespace MonoMod.Utils {
         }
 
         public int GetHashCode(MethodBase method) {
+            Helpers.ThrowIfArgumentNull(method);
             if ((!method.IsGenericMethod || method.ContainsGenericParameters) && !(method.DeclaringType?.IsGenericType ?? false))
                 return method.GetHashCode();
 
             unchecked {
-                int code = unchecked((int) 0xdeadbeef);
+                var code = unchecked((int) 0xdeadbeef);
                 // ok lets do some magic
                 if (method.DeclaringType != null) { // yes, DeclaringType can be null
                     code ^= method.DeclaringType.Assembly.GetHashCode();
@@ -90,7 +91,7 @@ namespace MonoMod.Utils {
                 }
                 code ^= method.Name.GetHashCode(StringComparison.Ordinal);
                 ParameterInfo[] parameters = method.GetParameters();
-                int paramCount = parameters.Length;
+                var paramCount = parameters.Length;
                 paramCount ^= paramCount << 4;
                 paramCount ^= paramCount << 8;
                 paramCount ^= paramCount << 16;
@@ -99,11 +100,11 @@ namespace MonoMod.Utils {
                 if (method.IsGenericMethod) { // we can get here if only the type is generic
                     // type arguments, and here is where we do special treatment
                     Type[] typeArgs = method.GetGenericArguments();
-                    for (int i = 0; i < typeArgs.Length; i++) {
-                        int offs = i % 32;
+                    for (var i = 0; i < typeArgs.Length; i++) {
+                        var offs = i % 32;
                         Type type = typeArgs[i];
                         // this magic is to treat all reference types like System.__Canon, because that's what we care about
-                        int typeCode = type.IsValueType ? genericTypeComparer.GetHashCode(type)
+                        var typeCode = type.IsValueType ? genericTypeComparer.GetHashCode(type)
                                                         : CannonicalFillType?.GetHashCode() ?? 0x55555555;
                         typeCode = (typeCode << offs) | (typeCode >> (32 - offs)); // this is a rol i believe
                         code ^= typeCode;
@@ -121,10 +122,10 @@ namespace MonoMod.Utils {
 
                 ParameterInfo[] definitionParams = definition.GetParameters();
                 // amusingly, this requires the actual definition to behave
-                for (int i = 0; i < parameters.Length; i++) {
-                    int offs = i % 32;
+                for (var i = 0; i < parameters.Length; i++) {
+                    var offs = i % 32;
                     Type type = parameters[i].ParameterType;
-                    int typeCode = genericTypeComparer.GetHashCode(type);
+                    var typeCode = genericTypeComparer.GetHashCode(type);
                     // we only normalize when the parameter in question is a generic parameter
                     if (definitionParams[i].ParameterType.IsGenericParameter && !type.IsValueType) {
                         typeCode = CannonicalFillType?.GetHashCode() ?? 0x55555555;

@@ -162,7 +162,7 @@ namespace MonoMod.Cil {
         public int IndexOf(Instruction? instr) {
             if (instr is null)
                 return Instrs.Count;
-            int index = Instrs.IndexOf(instr);
+            var index = Instrs.IndexOf(instr);
             return index == -1 ? Instrs.Count : index;
         }
 
@@ -226,7 +226,7 @@ namespace MonoMod.Cil {
             if (instr == null)
                 return builder;
 
-            object operand = instr.Operand;
+            var operand = instr.Operand;
             if (operand is ILLabel label)
                 instr.Operand = label.Target;
             else if (operand is ILLabel[] labels)

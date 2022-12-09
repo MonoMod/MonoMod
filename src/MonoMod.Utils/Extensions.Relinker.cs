@@ -74,6 +74,8 @@ namespace MonoMod.Utils {
         /// <returns>A clone of the original method body.</returns>
         [return: NotNullIfNotNull("bo")]
         public static MethodBody? Clone(this MethodBody? bo, MethodDefinition m) {
+            Helpers.ThrowIfArgumentNull(m);
+
             if (bo == null)
                 return null;
 
@@ -114,7 +116,6 @@ namespace MonoMod.Utils {
                 return c;
             }));
 
-#if !CECIL0_9
             m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations); // Abstract. TODO: Implement deep CustomDebugInformations copy.
             m.DebugInformation.SequencePoints.AddRange(bo.Method.DebugInformation.SequencePoints.Select(o => {
                 var c = new SequencePoint(bc.Instructions.FirstOrDefault(i => i.Offset == o.Offset), o.Document);
@@ -124,7 +125,6 @@ namespace MonoMod.Utils {
                 c.EndColumn = o.EndColumn;
                 return c;
             }));
-#endif
 
             return bc;
         }
@@ -165,7 +165,7 @@ namespace MonoMod.Utils {
                 if (param.Name == orig.Name)
                     return param;
 
-            int index = orig.Position;
+            var index = orig.Position;
             if (provider is MethodReference && orig.DeclaringMethod != null) {
                 if (index < provider.GenericParameters.Count)
                     return provider.GenericParameters[index];
@@ -271,7 +271,7 @@ namespace MonoMod.Utils {
                 var genParam = context.ResolveGenericParameter((GenericParameter) type);
                 if (genParam == null)
                     throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
-                for (int i = 0; i < genParam.Constraints.Count; i++)
+                for (var i = 0; i < genParam.Constraints.Count; i++)
                     if (!genParam.Constraints[i].GetConstraintType().IsGenericInstance) // That is somehow possible and causes a stack overflow.
                         genParam.Constraints[i] = genParam.Constraints[i].Relink(relinker, context);
                 return genParam;
@@ -311,6 +311,8 @@ namespace MonoMod.Utils {
         /// <returns>A relinked reference.</returns>
         public static IMetadataTokenProvider Relink(this MethodReference method, Relinker relinker, IGenericParameterProvider context) {
             Helpers.ThrowIfArgumentNull(method);
+            Helpers.ThrowIfArgumentNull(relinker);
+
             if (method.IsGenericInstance) {
                 var methodg = (GenericInstanceMethod) method;
                 var gim = new GenericInstanceMethod((MethodReference) methodg.ElementMethod.Relink(relinker, context));

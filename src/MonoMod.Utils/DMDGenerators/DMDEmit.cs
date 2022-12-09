@@ -7,7 +7,9 @@ using Mono.Cecil.Cil;
 using System.Linq;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 using MonoMod.Utils.Cil;
+#if NETFRAMEWORK
 using System.Diagnostics.SymbolStore;
+#endif
 
 namespace MonoMod.Utils {
     internal static partial class _DMDEmit {
@@ -62,7 +64,7 @@ namespace MonoMod.Utils {
                 var => {
                     LocalBuilder local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
 #if NETFRAMEWORK && !CECIL0_9
-                    if (mb != null && defInfo != null && defInfo.TryGetName(var, out string name)) {
+                    if (mb != null && defInfo != null && defInfo.TryGetName(var, out var name)) {
                         local.SetLocalSymInfo(name);
                     }
 #endif
@@ -155,7 +157,7 @@ namespace MonoMod.Utils {
                 if (instr.OpCode.OperandType == Mono.Cecil.Cil.OperandType.InlineNone)
                     il.Emit(_ReflOpCodes[instr.OpCode.Value]);
                 else {
-                    object operand = instr.Operand;
+                    var operand = instr.Operand;
 
                     if (operand is Instruction[] targets) {
                         operand = targets.Select(target => labelMap[target]).ToArray();
@@ -235,7 +237,7 @@ namespace MonoMod.Utils {
 #endif
 
                     if (operand == null)
-                        throw new NullReferenceException($"Unexpected null in {def} @ {instr}");
+                        throw new InvalidOperationException($"Unexpected null in {def} @ {instr}");
 
                     il.DynEmit(_ReflOpCodes[instr.OpCode.Value], operand);
                 }

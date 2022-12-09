@@ -4,14 +4,15 @@ using Mono.Cecil;
 namespace MonoMod.Utils { 
     public static partial class Extensions {
 
+#pragma warning disable CA1031 // Do not catch general exception types
         /// <summary>
         /// Safely resolve a reference, silently discarding any exceptions.
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static TypeDefinition? SafeResolve(this TypeReference r) {
+        public static TypeDefinition? SafeResolve(this TypeReference? r) {
             try {
-                return r.Resolve();
+                return r?.Resolve();
             } catch {
                 return null;
             }
@@ -22,9 +23,9 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static FieldDefinition? SafeResolve(this FieldReference r) {
+        public static FieldDefinition? SafeResolve(this FieldReference? r) {
             try {
-                return r.Resolve();
+                return r?.Resolve();
             } catch {
                 return null;
             }
@@ -35,9 +36,9 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static MethodDefinition? SafeResolve(this MethodReference r) {
+        public static MethodDefinition? SafeResolve(this MethodReference? r) {
             try {
-                return r.Resolve();
+                return r?.Resolve();
             } catch {
                 return null;
             }
@@ -48,9 +49,9 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="r">The reference to resolve.</param>
         /// <returns>The resolved definition or null.</returns>
-        public static PropertyDefinition? SafeResolve(this PropertyReference r) {
+        public static PropertyDefinition? SafeResolve(this PropertyReference? r) {
             try {
-                return r.Resolve();
+                return r?.Resolve();
             } catch {
                 return null;
             }
@@ -86,6 +87,7 @@ namespace MonoMod.Utils {
         /// <param name="instr">The instruction to get the pushed integer value for.</param>
         /// <returns>The pushed integer value.</returns>
         public static int GetInt(this Instruction instr) {
+            Helpers.ThrowIfArgumentNull(instr);
             OpCode op = instr.OpCode;
             if (op == OpCodes.Ldc_I4_M1)
                 return -1;
@@ -117,6 +119,7 @@ namespace MonoMod.Utils {
         /// <param name="instr">The instruction to get the pushed integer value for.</param>
         /// <returns>The pushed integer value or null.</returns>
         public static int? GetIntOrNull(this Instruction instr) {
+            Helpers.ThrowIfArgumentNull(instr);
             OpCode op = instr.OpCode;
             if (op == OpCodes.Ldc_I4_M1)
                 return -1;
@@ -151,23 +154,25 @@ namespace MonoMod.Utils {
         /// <param name="body">The caller method body.</param>
         /// <param name="called">The called method.</param>
         /// <returns>True if the called method is a base method of the caller method, false otherwise.</returns>
-        public static bool IsBaseMethodCall(this MethodBody body, MethodReference called) {
+        public static bool IsBaseMethodCall(this MethodBody body, MethodReference? called) {
+            Helpers.ThrowIfArgumentNull(body);
             MethodDefinition caller = body.Method;
-            if (called == null)
+            if (called is null)
                 return false;
             TypeReference calledType = called.DeclaringType;
-            while (calledType is TypeSpecification)
-                calledType = ((TypeSpecification) calledType).ElementType;
-            string calledTypeName = calledType.GetPatchFullName();
+            while (calledType is TypeSpecification typeSpec)
+                calledType = typeSpec.ElementType;
+            var calledTypeName = calledType.GetPatchFullName();
 
-            bool callingBaseType = false;
+            var callingBaseType = false;
             try {
                 TypeDefinition? baseType = caller.DeclaringType;
-                while ((baseType = baseType.BaseType?.SafeResolve()) != null)
+                while ((baseType = baseType.BaseType?.SafeResolve()) != null) {
                     if (baseType.GetPatchFullName() == calledTypeName) {
                         callingBaseType = true;
                         break;
                     }
+                }
             } catch {
                 callingBaseType = caller.DeclaringType.GetPatchFullName() == calledTypeName;
             }
@@ -184,6 +189,7 @@ namespace MonoMod.Utils {
         /// <param name="method">The called method.</param>
         /// <returns>True if the called method can be called using callvirt, false otherwise.</returns>
         public static bool IsCallvirt(this MethodReference method) {
+            Helpers.ThrowIfArgumentNull(method);
             if (!method.HasThis)
                 return false;
             if (method.DeclaringType.IsValueType)
@@ -197,6 +203,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type to check.</param>
         /// <returns>True if the type is a struct, primitive or similar, false otherwise.</returns>
         public static bool IsStruct(this TypeReference type) {
+            Helpers.ThrowIfArgumentNull(type);
             if (!type.IsValueType)
                 return false;
             if (type.IsPrimitive)

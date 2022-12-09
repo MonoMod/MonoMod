@@ -19,6 +19,8 @@ namespace MonoMod.Utils {
             return Postbuild(GenerateCore(dmd, context));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1000:Do not declare static members on generic types",
+            Justification = "This method is meant to be caleld using a subclass as the reciever.")]
         public static MethodInfo Generate(DynamicMethodDefinition dmd, object? context = null)
             => Postbuild((Instance ??= new TSelf()).GenerateCore(dmd, context));
 

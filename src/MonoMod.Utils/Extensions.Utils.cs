@@ -203,6 +203,8 @@ namespace MonoMod.Utils {
             return rv;
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "The whole point of this method is to swallow an exception and return false")]
         public static bool TryCastDelegate(this Delegate source, Type type, [MaybeNullWhen(false)] out Delegate? result) {
             result = null;
             if (source is null)

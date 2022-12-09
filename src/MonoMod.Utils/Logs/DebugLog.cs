@@ -9,6 +9,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+#pragma warning disable CA1031 // Do not catch general exception types
+// Whenever this is done, it is done to prevent logger exceptions from killing the caller
+
 namespace MonoMod.Logs {
     public readonly struct MessageHole {
         public int Start { get; }
@@ -69,20 +72,23 @@ namespace MonoMod.Logs {
                 FormatHoles = holes;
             }
 
-            // TODO: what can we do about exceptions thrown in log handlers?
             public void ReportTo(OnLogMessage del) {
                 try {
                     del(Source, Time, Level, FormattedMessage);
-                } catch {
-                    
+                } catch (Exception e) {
+                    // this is done in two separate calls to avoid calling string.Concat, because that may cause issues
+                    Debugger.Log(int.MaxValue, "MonoMod.DebugLog", "Exception caught while reporting to message handler");
+                    Debugger.Log(int.MaxValue, "MonoMod.DebugLog", e.ToString());
                 }
             }
 
             public void ReportTo(OnLogMessageDetailed del) {
                 try {
                     del(Source, Time, Level, FormattedMessage, FormatHoles);
-                } catch {
-                    // TODO: Debugger.Log exception
+                } catch (Exception e) {
+                    // this is done in two separate calls to avoid calling string.Concat, because that may cause issues
+                    Debugger.Log(int.MaxValue, "MonoMod.DebugLog", "Exception caught while reporting to message handler");
+                    Debugger.Log(int.MaxValue, "MonoMod.DebugLog", e.ToString());
                 }
             }
         }
@@ -242,10 +248,9 @@ namespace MonoMod.Logs {
         #endregion
         
         private static string[]? GetListEnvVar(string text) {
-            var str = text?.Trim();
+            var str = text.Trim();
             if (string.IsNullOrEmpty(str))
                 return null;
-            Helpers.DAssert(str is not null);
             var list = str.Split(new[] { ' ', ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < list.Length; i++)
                 list[i] = list[i].Trim();
@@ -584,6 +589,7 @@ namespace MonoMod.Logs {
         }
 
         private static readonly ConcurrentDictionary<OnLogMessage, IDisposable> simpleRegDict = new();
+        [SuppressMessage("Design", "CA1030:Use events where appropriate", Justification = "I am. I'm not sure why this warning is being issued.")]
         public static event OnLogMessage OnLog {
             add {
                 var res = Subscribe(Instance.globalFilter, value);

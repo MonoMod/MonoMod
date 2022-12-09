@@ -6,18 +6,18 @@ using System.Collections.Generic;
 using System.Reflection;
 
 namespace MonoMod.Utils {
-    public delegate object? FastReflectionDelegate(object? target, params object?[]? args);
+    public delegate object? FastReflectionInvoker(object? target, params object?[]? args);
     public static class FastReflectionHelper {
         private static readonly Type[] _DynamicMethodDelegateArgs = { typeof(object), typeof(object[]) };
-        private static readonly Dictionary<MethodInfo, FastReflectionDelegate> _MethodCache = new();
+        private static readonly Dictionary<MethodInfo, FastReflectionInvoker> _MethodCache = new();
 
-        private static FastReflectionDelegate CreateFastDelegate(MethodBase method, bool directBoxValueAccess = true) {
+        private static FastReflectionInvoker CreateFastDelegate(MethodBase method, bool directBoxValueAccess = true) {
             using var dmd = new DynamicMethodDefinition(DebugFormatter.Format($"FastReflection<{method}>"), typeof(object), _DynamicMethodDelegateArgs);
             ILProcessor il = dmd.GetILProcessor();
 
             ParameterInfo[] args = method.GetParameters();
 
-            bool generateLocalBoxValuePtr = true;
+            var generateLocalBoxValuePtr = true;
 
             if (!method.IsStatic) {
                 il.Emit(OpCodes.Ldarg_0);
@@ -26,7 +26,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            for (int i = 0; i < args.Length; i++) {
+            for (var i = 0; i < args.Length; i++) {
                 var argType = args[i].ParameterType;
                 var argIsByRef = argType.IsByRef;
                 if (argIsByRef)
@@ -96,12 +96,13 @@ namespace MonoMod.Utils {
 
             il.Emit(OpCodes.Ret);
 
-            return (FastReflectionDelegate) dmd.Generate().CreateDelegate(typeof(FastReflectionDelegate));
+            return (FastReflectionInvoker) dmd.Generate().CreateDelegate(typeof(FastReflectionInvoker));
         }
 
-        public static FastReflectionDelegate CreateFastDelegate(this MethodInfo method, bool directBoxValueAccess = true)
+        public static FastReflectionInvoker CreateFastDelegate(this MethodInfo method, bool directBoxValueAccess = true)
             => GetFastDelegate(method, directBoxValueAccess);
-        public static FastReflectionDelegate GetFastDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
+        public static FastReflectionInvoker GetFastDelegate(this MethodInfo method, bool directBoxValueAccess = true) {
+            Helpers.ThrowIfArgumentNull(method);
             if (_MethodCache.TryGetValue(method, out var dmd))
                 return dmd;
 

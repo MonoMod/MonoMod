@@ -20,39 +20,43 @@ namespace MonoMod.Utils {
             var moduleIsTemporary = false;
             var module = typeDef?.Module;
             HashSet<string>? accessChecksIgnored = null;
-            if (typeDef is null || module is null) {
-                moduleIsTemporary = true;
-                accessChecksIgnored = new HashSet<string>();
-
-                var name = dmd.GetDumpName("Cecil");
-                module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
-                    Kind = ModuleKind.Dll,
-                    ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
-                });
-
-                module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_UnverifiableCodeAttribute)));
-
-                if (dmd.Debug) {
-                    var caDebug = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_DebuggableAttribute));
-                    caDebug.ConstructorArguments.Add(new CustomAttributeArgument(
-                        module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
-                        DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
-                    ));
-                    module.Assembly.CustomAttributes.Add(caDebug);
-                }
-
-                typeDef = new TypeDefinition(
-                    "",
-                    $"DMD<{dmd.OriginalMethod?.Name?.Replace('.', '_')}>?{GetHashCode()}",
-                    Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Abstract | Mono.Cecil.TypeAttributes.Sealed | Mono.Cecil.TypeAttributes.Class
-                ) {
-                    BaseType = module.TypeSystem.Object
-                };
-
-                module.Types.Add(typeDef);
-            }
 
             try {
+                if (typeDef is null || module is null) {
+                    moduleIsTemporary = true;
+
+                    var name = dmd.GetDumpName("Cecil");
+#pragma warning disable CA2000 // Dispose objects before losing scope
+                    // This is disposed correctly, just not in a way the analyzer recognizes.
+                    module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
+                        Kind = ModuleKind.Dll,
+                        ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
+                    });
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
+                    accessChecksIgnored = new HashSet<string>();
+
+                    module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_UnverifiableCodeAttribute)));
+
+                    if (dmd.Debug) {
+                        var caDebug = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_DebuggableAttribute));
+                        caDebug.ConstructorArguments.Add(new CustomAttributeArgument(
+                            module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
+                            DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
+                        ));
+                        module.Assembly.CustomAttributes.Add(caDebug);
+                    }
+
+                    typeDef = new TypeDefinition(
+                        "",
+                        $"DMD<{dmd.OriginalMethod?.Name?.Replace('.', '_')}>?{GetHashCode()}",
+                        Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Abstract | Mono.Cecil.TypeAttributes.Sealed | Mono.Cecil.TypeAttributes.Class
+                    ) {
+                        BaseType = module.TypeSystem.Object
+                    };
+
+                    module.Types.Add(typeDef);
+                }
 
                 MethodDefinition? clone = null;
 
@@ -97,9 +101,9 @@ namespace MonoMod.Utils {
                     if (handler.CatchType != null)
                         handler.CatchType = handler.CatchType.Relink(relinker, clone);
 
-                for (int instri = 0; instri < body.Instructions.Count; instri++) {
+                for (var instri = 0; instri < body.Instructions.Count; instri++) {
                     Instruction instr = body.Instructions[instri];
-                    object operand = instr.Operand;
+                    var operand = instr.Operand;
 
                     // Import references.
                     if (operand is ParameterDefinition param) {
@@ -132,7 +136,7 @@ namespace MonoMod.Utils {
                     if (accessChecksIgnored != null && operand is MemberReference mref) {
                         IMetadataScope asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
                         if (!accessChecksIgnored.Contains(asmRef.Name)) {
-                            CustomAttribute caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                            var caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
                             caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
                                 module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
                                 asmRef.Name
@@ -176,7 +180,7 @@ namespace MonoMod.Utils {
 
             } finally {
                 if (moduleIsTemporary)
-                    module.Dispose();
+                    module!.Dispose();
                 module = null;
             }
         }

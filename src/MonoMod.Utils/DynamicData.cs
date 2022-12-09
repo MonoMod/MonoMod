@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
-    public sealed class DynamicData : DynamicObject, IEnumerable<KeyValuePair<string, object?>> {
+    public sealed class DynamicData : DynamicObject, IDisposable, IEnumerable<KeyValuePair<string, object?>> {
 
         private static readonly object?[] _NoArgs = ArrayEx.Empty<object?>();
 
@@ -74,7 +74,7 @@ namespace MonoMod.Utils {
                         if (kvp.Value.IsGenericMethod)
                             continue;
 
-                        FastReflectionDelegate cb = kvp.Value.GetFastDelegate();
+                        FastReflectionInvoker cb = kvp.Value.GetFastDelegate();
                         Methods[kvp.Key] = (target, args) => cb(target, args);
                     }
 
@@ -110,7 +110,7 @@ namespace MonoMod.Utils {
         }
 
         public DynamicData(object obj)
-            : this(obj.GetType(), obj, true) {
+            : this(Helpers.ThrowIfNull(obj).GetType(), obj, true) {
         }
 
         public DynamicData(Type type, object? obj)
@@ -195,7 +195,7 @@ namespace MonoMod.Utils {
         }
 
         public static object? Set(object target, object? other = null) {
-            var data = new DynamicData(target);
+            using var data = new DynamicData(target);
             data.CopyFrom(other);
             return data.Target;
         }
@@ -346,6 +346,7 @@ namespace MonoMod.Utils {
         }
 
         public override bool TryConvert(ConvertBinder binder, out object? result) {
+            Helpers.ThrowIfArgumentNull(binder);
             if (TargetType.IsCompatible(binder.Type) ||
                 TargetType.IsCompatible(binder.ReturnType) ||
                 binder.Type == typeof(object) ||
@@ -365,6 +366,7 @@ namespace MonoMod.Utils {
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object? result) {
+            Helpers.ThrowIfArgumentNull(binder);
             if (Methods.ContainsKey(binder.Name)) {
                 result = null;
                 return false;
@@ -375,11 +377,13 @@ namespace MonoMod.Utils {
         }
 
         public override bool TrySetMember(SetMemberBinder binder, object? value) {
+            Helpers.ThrowIfArgumentNull(binder);
             Set(binder.Name, value);
             return true;
         }
 
         public override bool TryInvokeMember(InvokeMemberBinder binder, object?[]? args, out object? result) {
+            Helpers.ThrowIfArgumentNull(binder);
             return TryInvoke(binder.Name, args, out result);
         }
 

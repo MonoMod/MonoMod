@@ -15,7 +15,7 @@ namespace MonoMod.Utils {
         public static MethodDefinition? FindMethod(this TypeDefinition type, string id, bool simple = true) {
             Helpers.ThrowIfArgumentNull(type);
             Helpers.ThrowIfArgumentNull(id);
-            if (simple && !id.Contains(" ", StringComparison.Ordinal)) {
+            if (simple && !id.Contains(' ', StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
                 foreach (MethodDefinition method in type.Methods)
                     if (method.GetID(simple: true) == id)
@@ -45,7 +45,7 @@ namespace MonoMod.Utils {
         /// <param name="simple">Whether to perform a simple search pass as well or not.</param>
         /// <returns>The first matching method or null.</returns>
         public static MethodDefinition? FindMethodDeep(this TypeDefinition type, string id, bool simple = true) {
-            return type.FindMethod(id, simple) ?? type.BaseType?.Resolve()?.FindMethodDeep(id, simple);
+            return Helpers.ThrowIfNull(type).FindMethod(id, simple) ?? type.BaseType?.Resolve()?.FindMethodDeep(id, simple);
         }
 
         /// <summary>
@@ -57,12 +57,14 @@ namespace MonoMod.Utils {
         /// <returns>The first matching method or null.</returns>
         public static MethodInfo? FindMethod(this Type type, string id, bool simple = true) {
             Helpers.ThrowIfArgumentNull(type);
+            Helpers.ThrowIfArgumentNull(id);
+
             MethodInfo[] methods = type.GetMethods(
                 BindingFlags.Instance | BindingFlags.Static |
                 BindingFlags.Public | BindingFlags.NonPublic
             );
 
-            if (simple && !id.Contains(" ", StringComparison.Ordinal)) {
+            if (simple && !id.Contains(' ', StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
                 foreach (MethodInfo method in methods)
                     if (method.GetID(simple: true) == id)

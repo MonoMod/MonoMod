@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.Utils;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -10,7 +11,11 @@ namespace MonoMod.ModInterop {
         private static Dictionary<string, List<MethodInfo>> Methods = new Dictionary<string, List<MethodInfo>>();
         private static List<FieldInfo> Fields = new List<FieldInfo>();
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "The exception is swallowed so taht it can try the next.")]
         public static void ModInterop(this Type type) {
+            Helpers.ThrowIfArgumentNull(type);
+
             if (Registered.Contains(type))
                 return;
             Registered.Add(type);
@@ -38,7 +43,7 @@ namespace MonoMod.ModInterop {
                     continue;
                 }
                 // Set the field to the first matching method, or null.
-                bool matched = false;
+                var matched = false;
                 foreach (MethodInfo method in methods) {
                     try {
                         field.SetValue(null, Delegate.CreateDelegate(field.FieldType, null, method));

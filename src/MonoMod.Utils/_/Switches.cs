@@ -12,9 +12,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections;
 using System.Globalization;
+using MonoMod.Utils;
 #if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH
 using System.Reflection;
-using MonoMod.Utils;
 #endif
 
 namespace MonoMod {
@@ -122,17 +122,21 @@ namespace MonoMod {
             switchValues[@switch] = value;
         }
 
+
+        // We use the prefix in the cref so that it still points to the correct place when compiled for targets where AppContext is not available.
+#pragma warning disable CA1200 // Avoid using cref tags with a prefix
         /// <summary>
         /// Clears the specified switch.
         /// </summary>
         /// <remarks>
-        /// The primary use of this method is to enable switch lookups to fall back to reading <see cref="AppContext"/>, if
+        /// The primary use of this method is to enable switch lookups to fall back to reading <see cref="T:System.AppContext"/>, if
         /// that is available on the current platform.
         /// </remarks>
         /// <param name="switch">The switch to clear.</param>
         public static void ClearSwitchValue(string @switch) {
             _ = switchValues.TryRemove(@switch, out _);
         }
+#pragma warning restore CA1200 // Avoid using cref tags with a prefix
 
 #if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH
         private static readonly Type? tAppContext =
@@ -142,6 +146,8 @@ namespace MonoMod {
             typeof(AppDomain).Assembly.GetType("System.AppContext");
 #endif
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "If an expection is thrown here, we want to return null as our failure case.")]
         private static T? TryCreateDelegate<T>(MethodInfo? mi) where T : Delegate
         {
             try

@@ -24,6 +24,8 @@ namespace MonoMod.Logs {
 
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods",
+            Justification = "The value.Length cases are expected to be JIT-time constants due to inlining, and doing argument verification may interfere with that.")]
         public bool AppendLiteral(string value) {
             if (value.Length == 1) {
                 Span<char> chars = _chars;
@@ -127,6 +129,9 @@ namespace MonoMod.Logs {
             return true;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0038:Use pattern matching",
+            Justification = "We want to avoid boxing here as much as possible, and the JIT doesn't recognize pattern matching to prevent that." +
+                            "Not that the compiler emits a constrained call here anyway, but...")]
         public bool AppendFormatted<T>(T value) {
             if (typeof(T) == typeof(IntPtr)) {
                 return AppendFormatted(Unsafe.As<T, IntPtr>(ref value));
@@ -137,8 +142,7 @@ namespace MonoMod.Logs {
 
             string? s;
             if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
-                int wrote;
-                if (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(pos), out wrote)) {
+                if (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(pos), out var wrote)) {
                     incomplete = true;
                     return false;
                 }
@@ -204,6 +208,9 @@ namespace MonoMod.Logs {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0038:Use pattern matching",
+            Justification = "We want to avoid boxing here as much as possible, and the JIT doesn't recognize pattern matching to prevent that." +
+                            "Not that the compiler emits a constrained call here anyway, but...")]
         public bool AppendFormatted<T>(T value, string? format) {
             if (typeof(T) == typeof(IntPtr)) {
                 return AppendFormatted(Unsafe.As<T, IntPtr>(ref value), format);
@@ -214,8 +221,7 @@ namespace MonoMod.Logs {
 
             string? s;
             if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
-                int wrote;
-                if (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(pos), out wrote)) {
+                if (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(pos), out var wrote)) {
                     incomplete = true;
                     return false;
                 }

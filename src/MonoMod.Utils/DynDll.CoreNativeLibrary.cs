@@ -2,10 +2,6 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.ComponentModel;
-using System.Linq;
 
 namespace MonoMod.Utils {
     public static partial class DynDll {
@@ -15,10 +11,9 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="name">The library name.</param>
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
-        /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>The library handle.</returns>
         public static IntPtr OpenLibrary(string name, bool skipMapping = false) {
-            if (InternalTryOpenLibraryMapping(name, out IntPtr libraryPtr, skipMapping))
+            if (InternalTryOpenLibraryMapping(name, out var libraryPtr, skipMapping))
                 return libraryPtr;
             return NativeLibrary.Load(name, Assembly.GetCallingAssembly(), null);
         }
@@ -29,7 +24,6 @@ namespace MonoMod.Utils {
         /// <param name="name">The library name.</param>
 		/// <param name="libraryPtr">The library handle, or null if it failed loading.</param>
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
-        /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>True if the handle was obtained, false otherwise.</returns>
         public static bool TryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping = false) {
             if (InternalTryOpenLibraryMapping(name, out libraryPtr, skipMapping))

@@ -44,7 +44,18 @@ namespace System {
 #if HAS_STRING_COMPARISON
             return self.Contains(value, comparison);
 #else
-            return self.AsSpan().Contains(value.AsSpan(), comparison);
+            return self.IndexOf(value, comparison) >= 0;
+#endif
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Contains(this string self, char value, StringComparison comparison) {
+            if (self is null)
+                ThrowHelper.ThrowArgumentNullException(nameof(self));
+#if HAS_STRING_COMPARISON
+            return self.Contains(value, comparison);
+#else
+            return self.IndexOf(value, comparison) >= 0;
 #endif
         }
 
@@ -67,9 +78,7 @@ namespace System {
 #if HAS_STRING_COMPARISON
             return self.IndexOf(value, comparison);
 #else
-            Span<char> chr = stackalloc char[1];
-            chr[0] = value;
-            return self.AsSpan().IndexOf(chr, comparison);
+            return self.IndexOf(new string(value, 1), comparison);
 #endif
         }
     }

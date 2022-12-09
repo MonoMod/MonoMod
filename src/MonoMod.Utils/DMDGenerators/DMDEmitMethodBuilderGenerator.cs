@@ -33,6 +33,7 @@ namespace MonoMod.Utils {
         }
 
         public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder) {
+            Helpers.ThrowIfArgumentNull(dmd);
             MethodBase? orig = dmd.OriginalMethod;
             MethodDefinition def = dmd.Definition;
 
@@ -77,7 +78,7 @@ namespace MonoMod.Utils {
 
             if (orig != null) {
                 ParameterInfo[] args = orig.GetParameters();
-                int offs = 0;
+                var offs = 0;
                 if (!orig.IsStatic) {
                     offs++;
                     argTypes = new Type[args.Length + 1];
@@ -92,14 +93,14 @@ namespace MonoMod.Utils {
                     argTypesModOpt = new Type[args.Length][];
                 }
 
-                for (int i = 0; i < args.Length; i++) {
+                for (var i = 0; i < args.Length; i++) {
                     argTypes[i + offs] = args[i].ParameterType;
                     argTypesModReq[i + offs] = args[i].GetRequiredCustomModifiers();
                     argTypesModOpt[i + offs] = args[i].GetOptionalCustomModifiers();
                 }
 
             } else {
-                int offs = 0;
+                var offs = 0;
                 if (def.HasThis) {
                     offs++;
                     argTypes = new Type[def.Parameters.Count + 1];
@@ -117,10 +118,10 @@ namespace MonoMod.Utils {
                     argTypesModOpt = new Type[def.Parameters.Count][];
                 }
 
-                List<Type> modReq = new List<Type>();
-                List<Type> modOpt = new List<Type>();
+                var modReq = new List<Type>();
+                var modOpt = new List<Type>();
 
-                for (int i = 0; i < def.Parameters.Count; i++) {
+                for (var i = 0; i < def.Parameters.Count; i++) {
                     _DMDEmit.ResolveWithModifiers(def.Parameters[i].ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
                     argTypes[i + offs] = paramType;
                     argTypesModReq[i + offs] = paramTypeModReq;

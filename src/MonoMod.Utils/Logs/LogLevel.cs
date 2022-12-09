@@ -11,14 +11,16 @@ namespace MonoMod.Logs {
     }
 
     [Flags]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2217:Do not mark enums with FlagsAttribute",
+        Justification = "This is a flags, just with one value which is all of them.")]
     public enum LogLevelFilter {
         None = 0,
-        Spam = 1 << (int)LogLevel.Spam,
-        Trace = 1 << (int)LogLevel.Trace,
-        Info = 1 << (int)LogLevel.Info,
-        Warning = 1 << (int)LogLevel.Warning,
-        Error = 1 << (int)LogLevel.Error,
-        Assert = 1 << (int)LogLevel.Assert,
+        Spam = 1 << LogLevel.Spam,
+        Trace = 1 << LogLevel.Trace,
+        Info = 1 << LogLevel.Info,
+        Warning = 1 << LogLevel.Warning,
+        Error = 1 << LogLevel.Error,
+        Assert = 1 << LogLevel.Assert,
 
         DefaultFilter = (-1) & ~Spam,
     }

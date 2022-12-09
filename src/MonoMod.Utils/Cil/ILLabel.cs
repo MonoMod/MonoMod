@@ -12,7 +12,7 @@ namespace MonoMod.Cil {
         /// <summary>
         /// The target instruction this label points at.
         /// </summary>
-        public Instruction? Target;
+        public Instruction? Target { get; set; }
         
         /// <summary>
         /// All instructions using this label.

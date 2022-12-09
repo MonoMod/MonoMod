@@ -2,16 +2,14 @@
 
 using System;
 using System.Reflection;
-using System.Linq.Expressions;
 using MonoMod.Utils;
-using System.Collections.Generic;
 using Mono.Cecil;
 using System.ComponentModel;
 using Mono.Cecil.Cil;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Linq;
-using MonoMod.Cil;
 using System.Diagnostics.CodeAnalysis;
+
+#pragma warning disable CA1062 // Validate arguments of public methods
 
 namespace MonoMod.Cil {
     public static class ILPatternMatchingExt {

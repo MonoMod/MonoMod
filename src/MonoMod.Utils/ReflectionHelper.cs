@@ -1,4 +1,8 @@
-﻿using System;
+﻿#if NETFRAMEWORK || NET6_0_OR_GREATER
+#define HAS_UNMANAGED_METHODSIGHELPER
+#endif
+
+using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Collections.Generic;
@@ -8,7 +12,10 @@ using System.IO;
 using System.Text;
 using AssemblyHashAlgorithm = Mono.Cecil.AssemblyHashAlgorithm;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
+using ManagedCC = System.Reflection.CallingConventions;
+#if HAS_UNMANAGED_METHODSIGHELPER
+using UnmanagedCC = System.Runtime.InteropServices.CallingConvention;
+#endif
 
 namespace MonoMod.Utils {
     public static partial class ReflectionHelper {
@@ -104,11 +111,11 @@ namespace MonoMod.Utils {
             if (asm.HashAlgorithm != unchecked((AssemblyHashAlgorithm) (-1)))
                 return asm.FullName;
 
-            byte[] hash = asm.Hash;
+            var hash = asm.Hash;
             if (hash.Length != AssemblyHashPrefix.Length + 4)
                 return asm.FullName;
 
-            for (int i = 0; i < AssemblyHashPrefix.Length; i++)
+            for (var i = 0; i < AssemblyHashPrefix.Length; i++)
                 if (hash[i] != AssemblyHashPrefix[i])
                     return asm.FullName;
 
@@ -130,6 +137,8 @@ namespace MonoMod.Utils {
             => _ResolveReflection(mref, null);
 
         [return: NotNullIfNotNull("mref")]
+        [SuppressMessage("Performance", "CA1846:Prefer 'AsSpan' over 'Substring'",
+            Justification = "Span overloads are not available on some targets this must compile for.")]
         private static MemberInfo? _ResolveReflection(MemberReference? mref, Module[]? modules) {
             if (mref == null)
                 return null;
@@ -137,7 +146,7 @@ namespace MonoMod.Utils {
             if (mref is DynamicMethodReference dmref)
                 return dmref.DynamicMethod;
 
-            string cacheKey = (mref as MethodReference)?.GetID() ?? mref.FullName;
+            var cacheKey = (mref as MethodReference)?.GetID() ?? mref.FullName;
 
             /* Even though member references are not supposed to exist more
              * than once, some environments (f.e. tModLoader) reload updated
@@ -220,9 +229,9 @@ namespace MonoMod.Utils {
             if (asmName == null && moduleName == null)
                 throw new NotSupportedException($"Unsupported scope type {tscope.Scope!.GetType().FullName}");
 
-            bool tryAssemblyCache = true;
-            bool refetchingModules = false;
-            bool nullifyModules = false;
+            var tryAssemblyCache = true;
+            var refetchingModules = false;
+            var nullifyModules = false;
 
             goto FetchModules;
 
@@ -275,8 +284,8 @@ namespace MonoMod.Utils {
                      * - ade
                      */
 
-                    int split = asmName!.IndexOf(AssemblyHashNameTag, StringComparison.Ordinal);
-                    if (split != -1 && int.TryParse(asmName.Substring(split + 2), out int hash)) {
+                    var split = asmName!.IndexOf(AssemblyHashNameTag, StringComparison.Ordinal);
+                    if (split != -1 && int.TryParse(asmName.Substring(split + 2), out var hash)) {
                         asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetHashCode() == hash).ToArray();
                         if (asms.Length == 0)
                             asms = null;
@@ -304,7 +313,7 @@ namespace MonoMod.Utils {
                     ).Where(mod => mod != null).ToArray()!;
 
                 if (modules.Length == 0)
-                    throw new Exception($"Cannot resolve assembly / module {asmName} / {moduleName}");
+                    throw new MissingMemberException($"Cannot resolve assembly / module {asmName} / {moduleName}");
             }
 
             if (mref is TypeReference tref) {
@@ -341,7 +350,7 @@ namespace MonoMod.Utils {
                 return _Cache(cacheKey, type!);
             }
 
-            bool typeless = mref.DeclaringType?.FullName == "<Module>";
+            var typeless = mref.DeclaringType?.FullName == "<Module>";
 
             MemberInfo? member;
 
@@ -391,47 +400,46 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(context);
             SignatureHelper shelper;
             switch (csite.CallingConvention) {
-#if NETFRAMEWORK
+#if HAS_UNMANAGED_METHODSIGHELPER
                 case MethodCallingConvention.C:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.Cdecl, csite.ReturnType.ResolveReflection());
+                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.Cdecl, csite.ReturnType.ResolveReflection());
                     break;
 
                 case MethodCallingConvention.StdCall:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.StdCall, csite.ReturnType.ResolveReflection());
+                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.StdCall, csite.ReturnType.ResolveReflection());
                     break;
 
                 case MethodCallingConvention.ThisCall:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.ThisCall, csite.ReturnType.ResolveReflection());
+                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.ThisCall, csite.ReturnType.ResolveReflection());
                     break;
 
                 case MethodCallingConvention.FastCall:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConvention.FastCall, csite.ReturnType.ResolveReflection());
-                    break;
-
-                case MethodCallingConvention.VarArg:
-                    shelper = SignatureHelper.GetMethodSigHelper(context, CallingConventions.VarArgs, csite.ReturnType.ResolveReflection());
+                    shelper = SignatureHelper.GetMethodSigHelper(context, UnmanagedCC.FastCall, csite.ReturnType.ResolveReflection());
                     break;
 #else
                 case MethodCallingConvention.C:
                 case MethodCallingConvention.StdCall:
                 case MethodCallingConvention.ThisCall:
                 case MethodCallingConvention.FastCall:
-                case MethodCallingConvention.VarArg:
                     throw new NotSupportedException("Unmanaged calling conventions for callsites not supported on .NET Standard");
 #endif
 
+                case MethodCallingConvention.VarArg:
+                    shelper = SignatureHelper.GetMethodSigHelper(context, ManagedCC.VarArgs, csite.ReturnType.ResolveReflection());
+                    break;
+
                 default:
                     if (csite.ExplicitThis) {
-                        shelper = SignatureHelper.GetMethodSigHelper(context, CallingConventions.ExplicitThis, csite.ReturnType.ResolveReflection());
+                        shelper = SignatureHelper.GetMethodSigHelper(context, ManagedCC.ExplicitThis, csite.ReturnType.ResolveReflection());
                     } else {
-                        shelper = SignatureHelper.GetMethodSigHelper(context, CallingConventions.Standard, csite.ReturnType.ResolveReflection());
+                        shelper = SignatureHelper.GetMethodSigHelper(context, ManagedCC.Standard, csite.ReturnType.ResolveReflection());
                     }
                     break;
             }
 
             if (context != null) {
-                List<Type> modReq = new List<Type>();
-                List<Type> modOpt = new List<Type>();
+                var modReq = new List<Type>();
+                var modOpt = new List<Type>();
 
                 foreach (ParameterDefinition param in csite.Parameters) {
                     if (param.ParameterType.IsSentinel)

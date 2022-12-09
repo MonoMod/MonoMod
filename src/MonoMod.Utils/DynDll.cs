@@ -10,15 +10,13 @@ namespace MonoMod.Utils {
         /// <summary>
         /// Allows you to remap library paths / names and specify loading flags. Useful for cross-platform compatibility. Applies only to DynDll.
         /// </summary>
-        public static Dictionary<string, List<DynDllMapping>> Mappings = new Dictionary<string, List<DynDllMapping>>();
+        public static readonly Dictionary<string, List<DynDllMapping>> Mappings = new Dictionary<string, List<DynDllMapping>>();
 
         /// <summary>
         /// Extension method wrapping Marshal.GetDelegateForFunctionPointer
         /// </summary>
         public static T AsDelegate<T>(this IntPtr s) where T : Delegate {
-#pragma warning disable CS0618 // Type or member is obsolete
             return (T)Marshal.GetDelegateForFunctionPointer(s, typeof(T));
-#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>
@@ -28,7 +26,7 @@ namespace MonoMod.Utils {
         /// <param name="type">The type containing the DynDllImport delegate fields.</param>
         /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
         public static void ResolveDynDllImports(this Type type, Dictionary<string, List<DynDllMapping>>? mappings = null)
-            => InternalResolveDynDllImports(type, null, mappings);
+            => InternalResolveDynDllImports(Helpers.ThrowIfNull(type), null, mappings);
 
         /// <summary>
         /// Fill all instance delegate fields with the DynDllImport attribute.
@@ -37,7 +35,7 @@ namespace MonoMod.Utils {
         /// <param name="instance">An instance of a type containing the DynDllImport delegate fields.</param>
         /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
         public static void ResolveDynDllImports(object instance, Dictionary<string, List<DynDllMapping>>? mappings = null)
-            => InternalResolveDynDllImports(instance.GetType(), instance, mappings);
+            => InternalResolveDynDllImports(Helpers.ThrowIfNull(instance).GetType(), instance, mappings);
 
         private static void InternalResolveDynDllImports(Type type, object? instance, Dictionary<string, List<DynDllMapping>>? mappings) {
             BindingFlags fieldFlags = BindingFlags.Public | BindingFlags.NonPublic;
@@ -47,7 +45,7 @@ namespace MonoMod.Utils {
                 fieldFlags |= BindingFlags.Instance;
 
             foreach (FieldInfo field in type.GetFields(fieldFlags)) {
-                bool found = true;
+                var found = true;
 
                 foreach (DynDllImportAttribute attrib in field.GetCustomAttributes(typeof(DynDllImportAttribute), true)) {
                     found = false;
@@ -55,7 +53,7 @@ namespace MonoMod.Utils {
                     IntPtr libraryPtr = IntPtr.Zero;
 
                     if (mappings != null && mappings.TryGetValue(attrib.LibraryName, out var mappingList)) {
-                        bool mappingFound = false;
+                        var mappingFound = false;
 
                         foreach (var mapping in mappingList) {
                             if (TryOpenLibrary(mapping.LibraryName, out libraryPtr, true)) {
@@ -72,7 +70,7 @@ namespace MonoMod.Utils {
                     }
 
 
-                    foreach (string entryPoint in attrib.EntryPoints.Concat(new[] { field.Name, field.FieldType.Name })) {
+                    foreach (var entryPoint in attrib.EntryPoints.Concat(new[] { field.Name, field.FieldType.Name })) {
                         if (!libraryPtr.TryGetFunction(entryPoint, out IntPtr functionPtr))
                             continue;
 
@@ -98,16 +96,16 @@ namespace MonoMod.Utils {
     /// Similar to DllImport, but requires you to run typeof(DeclaringType).ResolveDynDllImports();
     /// </summary>
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-    public class DynDllImportAttribute : Attribute {
+    public sealed class DynDllImportAttribute : Attribute {
         /// <summary>
         /// The library or library alias to use.
         /// </summary>
-        public string LibraryName { get; set; }
+        public string LibraryName { get; }
 
         /// <summary>
         /// A list of possible entrypoints that the function can be resolved to. Implicitly includes the field name and delegate name.
         /// </summary>
-        public string[] EntryPoints { get; set; }
+        public string[] EntryPoints { get; }
 
         /// <param name="libraryName">The library or library alias to use.</param>
         /// <param name="entryPoints">A list of possible entrypoints that the function can be resolved to. Implicitly includes the field name and delegate name.</param>
@@ -124,14 +122,15 @@ namespace MonoMod.Utils {
         /// <summary>
         /// The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.
         /// </summary>
-        public string LibraryName { get; set; }
+        public string LibraryName { get; }
 
         /// <param name="libraryName">The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.</param>
-        /// <param name="flags">Platform-dependent loading flags.</param>
         public DynDllMapping(string libraryName) {
             LibraryName = libraryName ?? throw new ArgumentNullException(nameof(libraryName));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2225:Operator overloads have named alternates",
+            Justification = "Alternative is constructor.")]
         public static implicit operator DynDllMapping(string libraryName) {
             return new DynDllMapping(libraryName);
         }

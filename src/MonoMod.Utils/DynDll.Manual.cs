@@ -2,7 +2,6 @@
 using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
@@ -39,7 +38,6 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="name">The library name.</param>
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
-        /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>The library handle.</returns>
         public static IntPtr OpenLibrary(string name, bool skipMapping = false) {
             if (!InternalTryOpenLibrary(name, out var libraryPtr, skipMapping))
@@ -57,7 +55,6 @@ namespace MonoMod.Utils {
         /// <param name="name">The library name.</param>
 		/// <param name="libraryPtr">The library handle, or null if it failed loading.</param>
         /// <param name="skipMapping">Whether to skip using the mapping or not.</param>
-        /// <param name="flags">Any optional platform-specific flags.</param>
         /// <returns>True if the handle was obtained, false otherwise.</returns>
         public static bool TryOpenLibrary(string name, out IntPtr libraryPtr, bool skipMapping = false) {
             return InternalTryOpenLibrary(name, out libraryPtr, skipMapping) || CheckError(out _);

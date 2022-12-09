@@ -299,7 +299,7 @@ namespace MonoMod.RuntimeDetour {
                     il.Emit(OpCodes.Ldarg, p.Index);
                 }
 
-                // then call our taret method
+                // then call our target method
                 il.Emit(OpCodes.Call, Target);
                 il.Emit(OpCodes.Ret);
 

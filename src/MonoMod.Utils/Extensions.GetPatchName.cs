@@ -32,7 +32,7 @@ namespace MonoMod.Utils {
             var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
             if (patchAttrib != null) {
                 name = (string) patchAttrib.ConstructorArguments[0].Value;
-                int dotIndex = name.LastIndexOf('.');
+                var dotIndex = name.LastIndexOf('.');
                 if (dotIndex != -1 && dotIndex != name.Length - 1) {
                     name = name.Substring(dotIndex + 1);
                 }
@@ -60,7 +60,7 @@ namespace MonoMod.Utils {
 
                 if (name.StartsWith("global::", StringComparison.Ordinal))
                     name = name.Substring(8); // Patch name is refering to a global type.
-                else if (name.Contains(".", StringComparison.Ordinal) || name.Contains("/", StringComparison.Ordinal)) { } // Patch name is already a full name.
+                else if (name.Contains(".", StringComparison.Ordinal) || name.Contains('/', StringComparison.Ordinal)) { } // Patch name is already a full name.
                 else if (!string.IsNullOrEmpty(type.Namespace))
                     name = type.Namespace + "." + name;
                 else if (type.IsNested)
@@ -76,56 +76,56 @@ namespace MonoMod.Utils {
 
                     var builder = new StringBuilder(name.Length + formats.Count * 4);
                     builder.Append(name);
-                    for (int formati = formats.Count - 1; formati > -1; --formati) {
+                    for (var formati = formats.Count - 1; formati > -1; --formati) {
                         ts = formats[formati];
 
                         if (ts.IsByReference)
-                            builder.Append("&");
+                            builder.Append('&');
                         else if (ts.IsPointer)
-                            builder.Append("*");
+                            builder.Append('*');
                         else if (ts.IsPinned) { } // FullName not overriden.
                         else if (ts.IsSentinel) { } // FullName not overriden.
                         else if (ts.IsArray) {
-                            ArrayType array = (ArrayType) ts;
+                            var array = (ArrayType) ts;
                             if (array.IsVector)
                                 builder.Append("[]");
                             else {
-                                builder.Append("[");
-                                for (int i = 0; i < array.Dimensions.Count; i++) {
+                                builder.Append('[');
+                                for (var i = 0; i < array.Dimensions.Count; i++) {
                                     if (i > 0)
-                                        builder.Append(",");
+                                        builder.Append(',');
                                     builder.Append(array.Dimensions[i].ToString());
                                 }
-                                builder.Append("]");
+                                builder.Append(']');
                             }
                         } else if (ts.IsRequiredModifier)
-                            builder.Append("modreq(").Append(((RequiredModifierType) ts).ModifierType).Append(")");
+                            builder.Append("modreq(").Append(((RequiredModifierType) ts).ModifierType).Append(')');
                         else if (ts.IsOptionalModifier)
-                            builder.Append("modopt(").Append(((OptionalModifierType) ts).ModifierType).Append(")");
+                            builder.Append("modopt(").Append(((OptionalModifierType) ts).ModifierType).Append(')');
                         else if (ts.IsGenericInstance) {
-                            GenericInstanceType gen = (GenericInstanceType) ts;
-                            builder.Append("<");
-                            for (int i = 0; i < gen.GenericArguments.Count; i++) {
+                            var gen = (GenericInstanceType) ts;
+                            builder.Append('<');
+                            for (var i = 0; i < gen.GenericArguments.Count; i++) {
                                 if (i > 0)
-                                    builder.Append(",");
+                                    builder.Append(',');
                                 builder.Append(gen.GenericArguments[i].GetPatchFullName());
                             }
-                            builder.Append(">");
+                            builder.Append('>');
                         } else if (ts.IsFunctionPointer) {
-                            FunctionPointerType fpt = (FunctionPointerType) ts;
-                            builder.Append(" ").Append(fpt.ReturnType.GetPatchFullName()).Append(" *(");
+                            var fpt = (FunctionPointerType) ts;
+                            builder.Append(' ').Append(fpt.ReturnType.GetPatchFullName()).Append(" *(");
                             if (fpt.HasParameters)
-                                for (int i = 0; i < fpt.Parameters.Count; i++) {
+                                for (var i = 0; i < fpt.Parameters.Count; i++) {
                                     ParameterDefinition parameter = fpt.Parameters[i];
                                     if (i > 0)
-                                        builder.Append(",");
+                                        builder.Append(',');
 
                                     if (parameter.ParameterType.IsSentinel)
                                         builder.Append("...,");
 
                                     builder.Append(parameter.ParameterType.FullName);
                                 }
-                            builder.Append(")");
+                            builder.Append(')');
                         } else
                             throw new NotSupportedException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
                     }

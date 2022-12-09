@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace MonoMod.Utils {
     public static class DynamicReferenceManager {
-        public struct CellRef {
+        public record struct CellRef {
             public int Index { get; internal set; }
             public int Hash { get; internal set; }
 

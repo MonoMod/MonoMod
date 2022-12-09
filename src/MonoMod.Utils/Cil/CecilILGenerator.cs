@@ -50,7 +50,7 @@ namespace MonoMod.Utils.Cil {
         /// <summary>
         /// The underlying Mono.Cecil.Cil.ILProcessor.
         /// </summary>
-        public readonly ILProcessor IL;
+        public ILProcessor IL { get; }
 
         private readonly Dictionary<Label, LabelInfo> _LabelInfos = new Dictionary<Label, LabelInfo>();
         private readonly List<LabelInfo> _LabelsToMark = new List<LabelInfo>();
@@ -67,7 +67,7 @@ namespace MonoMod.Utils.Cil {
             IL = il;
         }
 
-        private OpCode _(SRE.OpCode opcode) => _MCCOpCodes[opcode.Value];
+        private static OpCode _(SRE.OpCode opcode) => _MCCOpCodes[opcode.Value];
 
         private LabelInfo? _(Label handle) =>
             _LabelInfos.TryGetValue(handle, out var labelInfo) ? labelInfo : null;
@@ -86,11 +86,11 @@ namespace MonoMod.Utils.Cil {
                 foreach (LabelInfo labelInfo in _LabelsToMark) {
                     foreach (Instruction insToFix in labelInfo.Branches) {
                         switch (insToFix.Operand) {
-                            case Instruction insOperand:
+                            case Instruction:
                                 insToFix.Operand = ins;
                                 break;
                             case Instruction[] instrsOperand:
-                                for (int i = 0; i < instrsOperand.Length; i++) {
+                                for (var i = 0; i < instrsOperand.Length; i++) {
                                     if (instrsOperand[i] == labelInfo.Instruction) {
                                         instrsOperand[i] = ins;
                                         break;
@@ -138,15 +138,15 @@ namespace MonoMod.Utils.Cil {
             _LabelsToMark.Add(labelInfo);
         }
 
-        public override LocalBuilder DeclareLocal(Type type) => DeclareLocal(type, false);
+        public override LocalBuilder DeclareLocal(Type localType) => DeclareLocal(localType, false);
 
-        public override LocalBuilder DeclareLocal(Type type, bool pinned) {
+        public override LocalBuilder DeclareLocal(Type localType, bool pinned) {
             // The handle itself is out of sync with the "backing" VariableDefinition.
-            int index = IL.Body.Variables.Count;
+            var index = IL.Body.Variables.Count;
             var handle = (LocalBuilder) (
-                c_LocalBuilder_params == 4 ? c_LocalBuilder.Invoke(new object?[] { index, type, null, pinned }) :
-                c_LocalBuilder_params == 3 ? c_LocalBuilder.Invoke(new object?[] { index, type, null }) :
-                c_LocalBuilder_params == 2 ? c_LocalBuilder.Invoke(new object?[] { type, null }) :
+                c_LocalBuilder_params == 4 ? c_LocalBuilder.Invoke(new object?[] { index, localType, null, pinned }) :
+                c_LocalBuilder_params == 3 ? c_LocalBuilder.Invoke(new object?[] { index, localType, null }) :
+                c_LocalBuilder_params == 2 ? c_LocalBuilder.Invoke(new object?[] { localType, null }) :
                 c_LocalBuilder_params == 0 ? c_LocalBuilder.Invoke(ArrayEx.Empty<object?>()) :
                 throw new NotSupportedException()
             );
@@ -154,7 +154,7 @@ namespace MonoMod.Utils.Cil {
             f_LocalBuilder_position?.SetValue(handle, (ushort) index);
             f_LocalBuilder_is_pinned?.SetValue(handle, pinned);
 
-            TypeReference typeRef = _(type);
+            TypeReference typeRef = _(localType);
             if (pinned)
                 typeRef = new PinnedType(typeRef);
             var def = new VariableDefinition(typeRef);
@@ -170,69 +170,69 @@ namespace MonoMod.Utils.Cil {
             IL.Append(ProcessLabels(ins));
         }
 
-        public override void Emit(SRE.OpCode opcode) => Emit(IL.Create(_(opcode)));
+        public override void Emit(SRE.OpCode opcode) => Emit(IL.Create(CecilILGenerator._(opcode)));
 
         public override void Emit(SRE.OpCode opcode, byte arg) {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
-                _EmitInlineVar(_(opcode), arg);
+                _EmitInlineVar(CecilILGenerator._(opcode), arg);
             else
-                Emit(IL.Create(_(opcode), arg));
+                Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
 
         public override void Emit(SRE.OpCode opcode, sbyte arg) {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
-                _EmitInlineVar(_(opcode), arg);
+                _EmitInlineVar(CecilILGenerator._(opcode), arg);
             else
-                Emit(IL.Create(_(opcode), arg));
+                Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
 
         public override void Emit(SRE.OpCode opcode, short arg) {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
-                _EmitInlineVar(_(opcode), arg);
+                _EmitInlineVar(CecilILGenerator._(opcode), arg);
             else
-                Emit(IL.Create(_(opcode), arg));
+                Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
 
         public override void Emit(SRE.OpCode opcode, int arg) {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
-                _EmitInlineVar(_(opcode), arg);
+                _EmitInlineVar(CecilILGenerator._(opcode), arg);
             else if (opcode.Name?.EndsWith(".s", StringComparison.Ordinal) ?? false)
-                Emit(IL.Create(_(opcode), (sbyte) arg));
+                Emit(IL.Create(CecilILGenerator._(opcode), (sbyte) arg));
             else
-                Emit(IL.Create(_(opcode), arg));
+                Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
 
-        public override void Emit(SRE.OpCode opcode, long arg) => Emit(IL.Create(_(opcode), arg));
-        public override void Emit(SRE.OpCode opcode, float arg) => Emit(IL.Create(_(opcode), arg));
-        public override void Emit(SRE.OpCode opcode, double arg) => Emit(IL.Create(_(opcode), arg));
-        public override void Emit(SRE.OpCode opcode, string arg) => Emit(IL.Create(_(opcode), arg));
-        public override void Emit(SRE.OpCode opcode, Type arg) => Emit(IL.Create(_(opcode), _(arg)));
-        public override void Emit(SRE.OpCode opcode, FieldInfo arg) => Emit(IL.Create(_(opcode), _(arg)));
-        public override void Emit(SRE.OpCode opcode, ConstructorInfo arg) => Emit(IL.Create(_(opcode), _(arg)));
-        public override void Emit(SRE.OpCode opcode, MethodInfo arg) => Emit(IL.Create(_(opcode), _(arg)));
+        public override void Emit(SRE.OpCode opcode, long arg) => Emit(IL.Create(CecilILGenerator._(opcode), arg));
+        public override void Emit(SRE.OpCode opcode, float arg) => Emit(IL.Create(CecilILGenerator._(opcode), arg));
+        public override void Emit(SRE.OpCode opcode, double arg) => Emit(IL.Create(CecilILGenerator._(opcode), arg));
+        public override void Emit(SRE.OpCode opcode, string str) => Emit(IL.Create(CecilILGenerator._(opcode), str));
+        public override void Emit(SRE.OpCode opcode, Type cls) => Emit(IL.Create(CecilILGenerator._(opcode), _(cls)));
+        public override void Emit(SRE.OpCode opcode, FieldInfo field) => Emit(IL.Create(CecilILGenerator._(opcode), _(field)));
+        public override void Emit(SRE.OpCode opcode, ConstructorInfo con) => Emit(IL.Create(CecilILGenerator._(opcode), _(con)));
+        public override void Emit(SRE.OpCode opcode, MethodInfo meth) => Emit(IL.Create(CecilILGenerator._(opcode), _(meth)));
 
         public override void Emit(SRE.OpCode opcode, Label label) {
             var info = _(label)!;
-            Instruction ins = IL.Create(_(opcode), _(label)!.Instruction);
+            Instruction ins = IL.Create(CecilILGenerator._(opcode), _(label)!.Instruction);
             info.Branches.Add(ins);
             Emit(ProcessLabels(ins));
         }
 
         public override void Emit(SRE.OpCode opcode, Label[] labels) {
             IEnumerable<LabelInfo> labelInfos = labels.Distinct().Select(_)!;
-            Instruction ins = IL.Create(_(opcode), labelInfos.Select(labelInfo => labelInfo.Instruction).ToArray());
+            Instruction ins = IL.Create(CecilILGenerator._(opcode), labelInfos.Select(labelInfo => labelInfo.Instruction).ToArray());
             foreach (LabelInfo labelInfo in labelInfos)
                 labelInfo.Branches.Add(ins);
             Emit(ProcessLabels(ins));
         }
 
-        public override void Emit(SRE.OpCode opcode, LocalBuilder local) => Emit(IL.Create(_(opcode), _(local)));
-        public override void Emit(SRE.OpCode opcode, SignatureHelper signature) => Emit(IL.Create(_(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
-        public void Emit(SRE.OpCode opcode, ICallSiteGenerator signature) => Emit(IL.Create(_(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
+        public override void Emit(SRE.OpCode opcode, LocalBuilder local) => Emit(IL.Create(CecilILGenerator._(opcode), _(local)));
+        public override void Emit(SRE.OpCode opcode, SignatureHelper signature) => Emit(IL.Create(CecilILGenerator._(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
+        public void Emit(SRE.OpCode opcode, ICallSiteGenerator signature) => Emit(IL.Create(CecilILGenerator._(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
 
         private void _EmitInlineVar(OpCode opcode, int index) {
             // System.Reflection.Emit has only got (Short)InlineVar and allows index refs.
@@ -255,7 +255,7 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override void EmitCall(SRE.OpCode opcode, MethodInfo methodInfo, Type[]? optionalParameterTypes) =>
-            Emit(IL.Create(_(opcode), _(methodInfo)));
+            Emit(IL.Create(CecilILGenerator._(opcode), _(methodInfo)));
 
         public override void EmitCalli(SRE.OpCode opcode, CallingConventions callingConvention, Type? returnType,
             Type[]? parameterTypes, Type[]? optionalParameterTypes) => throw new NotSupportedException();
@@ -263,15 +263,15 @@ namespace MonoMod.Utils.Cil {
         public override void EmitCalli(SRE.OpCode opcode, CallingConvention unmanagedCallConv, Type? returnType,
             Type[]? parameterTypes) => throw new NotSupportedException();
 
-        public override void EmitWriteLine(FieldInfo field) {
-            if (field.IsStatic)
-                Emit(IL.Create(OpCodes.Ldsfld, _(field)));
+        public override void EmitWriteLine(FieldInfo fld) {
+            if (fld.IsStatic)
+                Emit(IL.Create(OpCodes.Ldsfld, _(fld)));
             else {
                 Emit(IL.Create(OpCodes.Ldarg_0));
-                Emit(IL.Create(OpCodes.Ldfld, _(field)));
+                Emit(IL.Create(OpCodes.Ldfld, _(fld)));
             }
 
-            Emit(IL.Create(OpCodes.Call, _(typeof(Console).GetMethod("WriteLine", new[] { field.FieldType })!)));
+            Emit(IL.Create(OpCodes.Call, _(typeof(Console).GetMethod("WriteLine", new[] { fld.FieldType })!)));
         }
 
         public override void EmitWriteLine(LocalBuilder localBuilder) {
@@ -285,8 +285,8 @@ namespace MonoMod.Utils.Cil {
             Emit(IL.Create(OpCodes.Call, _(typeof(Console).GetMethod("WriteLine", new[] { typeof(string) })!)));
         }
 
-        public override void ThrowException(Type type) {
-            Emit(IL.Create(OpCodes.Newobj, _(type.GetConstructor(Type.EmptyTypes) ?? throw new InvalidOperationException("No default constructor"))));
+        public override void ThrowException(Type excType) {
+            Emit(IL.Create(OpCodes.Newobj, _(excType.GetConstructor(Type.EmptyTypes) ?? throw new InvalidOperationException("No default constructor"))));
             Emit(IL.Create(OpCodes.Throw));
         }
 

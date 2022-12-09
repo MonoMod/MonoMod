@@ -30,7 +30,7 @@ namespace MonoMod.Utils {
 
             builder
                 .Append(method.ReturnType.GetPatchFullName())
-                .Append(" ");
+                .Append(' ');
 
             if (withType && (type != null || method.DeclaringType != null))
                 builder.Append(type ?? method.DeclaringType.GetPatchFullName()).Append("::");
@@ -39,34 +39,34 @@ namespace MonoMod.Utils {
                 .Append(name ?? method.Name);
 
             if (method is GenericInstanceMethod gim && gim.GenericArguments.Count != 0) {
-                builder.Append("<");
+                builder.Append('<');
                 Collection<TypeReference> arguments = gim.GenericArguments;
-                for (int i = 0; i < arguments.Count; i++) {
+                for (var i = 0; i < arguments.Count; i++) {
                     if (i > 0)
-                        builder.Append(",");
+                        builder.Append(',');
                     builder.Append(arguments[i].GetPatchFullName());
                 }
-                builder.Append(">");
+                builder.Append('>');
 
             } else if (method.GenericParameters.Count != 0) {
-                builder.Append("<");
+                builder.Append('<');
                 Collection<GenericParameter> arguments = method.GenericParameters;
-                for (int i = 0; i < arguments.Count; i++) {
+                for (var i = 0; i < arguments.Count; i++) {
                     if (i > 0)
-                        builder.Append(",");
+                        builder.Append(',');
                     builder.Append(arguments[i].Name);
                 }
-                builder.Append(">");
+                builder.Append('>');
             }
 
-            builder.Append("(");
+            builder.Append('(');
 
             if (method.HasParameters) {
                 Collection<ParameterDefinition> parameters = method.Parameters;
-                for (int i = 0; i < parameters.Count; i++) {
+                for (var i = 0; i < parameters.Count; i++) {
                     ParameterDefinition parameter = parameters[i];
                     if (i > 0)
-                        builder.Append(",");
+                        builder.Append(',');
 
                     if (parameter.ParameterType.IsSentinel)
                         builder.Append("...,");
@@ -75,7 +75,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            builder.Append(")");
+            builder.Append(')');
 
             return builder.ToString();
         }
@@ -91,16 +91,16 @@ namespace MonoMod.Utils {
 
             builder
                 .Append(method.ReturnType.GetPatchFullName())
-                .Append(" ");
+                .Append(' ');
 
-            builder.Append("(");
+            builder.Append('(');
 
             if (method.HasParameters) {
                 Collection<ParameterDefinition> parameters = method.Parameters;
-                for (int i = 0; i < parameters.Count; i++) {
+                for (var i = 0; i < parameters.Count; i++) {
                     ParameterDefinition parameter = parameters[i];
                     if (i > 0)
-                        builder.Append(",");
+                        builder.Append(',');
 
                     if (parameter.ParameterType.IsSentinel)
                         builder.Append("...,");
@@ -109,7 +109,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            builder.Append(")");
+            builder.Append(')');
 
             return builder.ToString();
         }
@@ -150,23 +150,23 @@ namespace MonoMod.Utils {
                 .Append(name ?? method.Name);
 
             if (method.ContainsGenericParameters) {
-                builder.Append("<");
+                builder.Append('<');
                 Type[] arguments = method.GetGenericArguments();
-                for (int i = 0; i < arguments.Length; i++) {
+                for (var i = 0; i < arguments.Length; i++) {
                     if (i > 0)
-                        builder.Append(",");
+                        builder.Append(',');
                     builder.Append(arguments[i].Name);
                 }
-                builder.Append(">");
+                builder.Append('>');
             }
 
-            builder.Append("(");
+            builder.Append('(');
 
             ParameterInfo[] parameters = method.GetParameters();
-            for (int i = proxyMethod ? 1 : 0; i < parameters.Length; i++) {
+            for (var i = proxyMethod ? 1 : 0; i < parameters.Length; i++) {
                 ParameterInfo parameter = parameters[i];
                 if (i > (proxyMethod ? 1 : 0))
-                    builder.Append(",");
+                    builder.Append(',');
 
                 bool defined;
                 try {
@@ -181,7 +181,7 @@ namespace MonoMod.Utils {
                 builder.Append(parameter.ParameterType.FullName);
             }
 
-            builder.Append(")");
+            builder.Append(')');
 
             return builder.ToString();
         }

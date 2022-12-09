@@ -149,6 +149,7 @@ namespace MonoMod.Cil {
         }
 
         public ILCursor(ILCursor c) {
+            Helpers.ThrowIfArgumentNull(c);
             Context = c.Context;
             _next = c._next;
             _searchTarget = c._searchTarget;
@@ -181,7 +182,7 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <returns>A string representation of this cursor.</returns>
         public override string ToString() {
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
 
             builder.AppendLine($"// ILCursor: {Method}, {Index}, {SearchTarget}");
             ILContext.ToString(builder, Prev);
@@ -252,8 +253,8 @@ namespace MonoMod.Cil {
         /// Overload for <c>Goto(label.Target)</c>. <paramref name="moveType"/> defaults to MoveType.AfterLabel
         /// </summary>
         /// <returns>this</returns>
-        public ILCursor GotoLabel(ILLabel label, MoveType moveType = MoveType.AfterLabel, bool setTarget = false) =>
-        Goto(label.Target, moveType, setTarget);
+        public ILCursor GotoLabel(ILLabel label, MoveType moveType = MoveType.AfterLabel, bool setTarget = false)
+            => Goto(Helpers.ThrowIfNull(label).Target, moveType, setTarget);
 
         /// <summary>
         /// Search forward and moves the cursor to the next sequence of instructions matching the corresponding predicates. See also <seealso cref="ILCursor.TryGotoNext(MoveType, Func{Instruction, bool}[])"/>
@@ -272,15 +273,19 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <returns>True if a match was found</returns>
         public bool TryGotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+            Helpers.ThrowIfArgumentNull(predicates);
+
             InstrList instrs = Instrs;
-            int i = Index;
+            var i = Index;
             if (SearchTarget == SearchTarget.Next)
                 i++;
 
             for (; i + predicates.Length <= instrs.Count; i++) {
-                for (int j = 0; j < predicates.Length; j++)
-                    if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
+                for (var j = 0; j < predicates.Length; j++) {
+                    if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true)) {
                         goto Next;
+                    }
+                }
 
                 Goto(moveType == MoveType.After ? i + predicates.Length - 1 : i, moveType, true);
                 return true;
@@ -308,14 +313,15 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <returns>True if a match was found</returns>
         public bool TryGotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+            Helpers.ThrowIfArgumentNull(predicates);
             InstrList instrs = Instrs;
-            int i = Index - 1;
+            var i = Index - 1;
             if (SearchTarget == SearchTarget.Prev)
                 i--;
             i = Math.Min(i, instrs.Count - predicates.Length);
 
             for (; i >= 0; i--) {
-                for (int j = 0; j < predicates.Length; j++)
+                for (var j = 0; j < predicates.Length; j++)
                     if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
                         goto Next;
 
@@ -354,9 +360,10 @@ namespace MonoMod.Cil {
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <returns>True if a match was found</returns>
         public bool TryFindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            Helpers.ThrowIfArgumentNull(predicates);
             cursors = new ILCursor[predicates.Length];
             ILCursor c = this;
-            for (int i = 0; i < predicates.Length; i++) {
+            for (var i = 0; i < predicates.Length; i++) {
                 c = c.Clone();
                 if (!c.TryGotoNext(predicates[i]))
                     return false;
@@ -382,9 +389,10 @@ namespace MonoMod.Cil {
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <returns>True if a match was found</returns>
         public bool TryFindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+            Helpers.ThrowIfArgumentNull(predicates);
             cursors = new ILCursor[predicates.Length];
             ILCursor c = this;
-            for (int i = predicates.Length - 1; i >= 0; i--) {
+            for (var i = predicates.Length - 1; i >= 0; i--) {
                 c = c.Clone();
                 if (!c.TryGotoPrev(predicates[i]))
                     return false;
@@ -442,7 +450,7 @@ namespace MonoMod.Cil {
         /// Remove the Next instruction
         /// </summary>
         public ILCursor Remove() {
-            int index = Index;
+            var index = Index;
             _Retarget(Next?.Next, MoveType.Before);
             Instrs.RemoveAt(index);
             return this;
@@ -452,8 +460,8 @@ namespace MonoMod.Cil {
         /// Remove several instructions
         /// </summary>
         public ILCursor RemoveRange(int num) {
-            int index = Index;
-            _Retarget(Instrs[index+num], MoveType.Before);
+            var index = Index;
+            _Retarget(Instrs[index + num], MoveType.Before);
             while (num-- > 0) // TODO: currently requires O(n) removals, shifting the backing array each time
                 Instrs.RemoveAt(index);
             return this;
@@ -644,7 +652,7 @@ namespace MonoMod.Cil {
         #region Reference-oriented Emit Helpers
 
         /// <summary>
-        /// Bind an arbitary object to an ILContext for static retrieval. See <see cref="ILContext.AddReference{T}(T)"/>
+        /// Bind an arbitary object to an ILContext for static retrieval. See <see cref="ILContext.AddReference{T}(in T)"/>
         /// </summary>
         public int AddReference<T>(in T t) => Context.AddReference(in t);
 

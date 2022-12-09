@@ -24,17 +24,17 @@ namespace MonoMod.Utils {
         /// <summary>
         /// See <see cref="List{T}.AddRange(IEnumerable{T})"/>
         /// </summary>
-        public static void AddRange<K, V>(this IDictionary<K, V> dict, IDictionary<K, V> other) {
+        public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> dict, IDictionary<TKey, TValue> other) {
             Helpers.ThrowIfArgumentNull(dict);
-            foreach (KeyValuePair<K, V> entry in Helpers.ThrowIfNull(other))
+            foreach (KeyValuePair<TKey, TValue> entry in Helpers.ThrowIfNull(other))
                 dict.Add(entry.Key, entry.Value);
         }
         /// <summary>
         /// See <see cref="List{T}.AddRange(IEnumerable{T})"/>
         /// </summary>
-        public static void AddRange<K, V>(this Dictionary<K, V> dict, Dictionary<K, V> other) where K : notnull {
+        public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> dict, Dictionary<TKey, TValue> other) where TKey : notnull {
             Helpers.ThrowIfArgumentNull(dict);
-            foreach (KeyValuePair<K, V> entry in Helpers.ThrowIfNull(other))
+            foreach (KeyValuePair<TKey, TValue> entry in Helpers.ThrowIfNull(other))
                 dict.Add(entry.Key, entry.Value);
         }
 

@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Diagnostics;
 using System.Security;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Concurrent;
+#if NETFRAMEWORK
 using System.Linq;
+#endif
 
 namespace MonoMod.Utils {
     public sealed partial class DynamicMethodDefinition : IDisposable {

@@ -34,16 +34,16 @@ namespace MonoMod.Utils {
                 return message;
 
             var builder = new StringBuilder(message);
-            builder.Append(" ");
+            builder.Append(' ');
 
             if (mtp != null)
                 builder.Append(mtp.ToString());
 
             if (context != null)
-                builder.Append(" ");
+                builder.Append(' ');
 
             if (context != null)
-                builder.Append("(context: ").Append(context.ToString()).Append(")");
+                builder.Append("(context: ").Append(context.ToString()).Append(')');
 
             return builder.ToString();
         }

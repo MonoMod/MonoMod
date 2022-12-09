@@ -112,6 +112,8 @@ namespace MonoMod.Logs {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods",
+            Justification = "The value.Length cases are expected to be JIT-time constants due to inlining, and doing argument verification may interfere with that.")]
         public void AppendLiteral(string value) {
             if (value.Length == 1) {
                 Span<char> chars = _chars;
@@ -232,6 +234,9 @@ namespace MonoMod.Logs {
             EndHole(null, false);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0038:Use pattern matching",
+            Justification = "We want to avoid boxing here as much as possible, and the JIT doesn't recognize pattern matching to prevent that." +
+                            "Not that the compiler emits a constrained call here anyway, but...")]
         public void AppendFormatted<T>(T value) {
             if (typeof(T) == typeof(IntPtr)) {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value));
@@ -307,6 +312,9 @@ namespace MonoMod.Logs {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0038:Use pattern matching",
+            Justification = "We want to avoid boxing here as much as possible, and the JIT doesn't recognize pattern matching to prevent that." +
+                            "Not that the compiler emits a constrained call here anyway, but...")]
         public void AppendFormatted<T>(T value, string? format) {
             if (typeof(T) == typeof(IntPtr)) {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value), format);
