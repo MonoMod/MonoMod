@@ -15,8 +15,8 @@ namespace MonoMod.Utils {
         )!;
 
         private static MethodBuilder _CreateMethodProxy(MethodBuilder context, MethodInfo target) {
-            TypeBuilder tb = (TypeBuilder) context.DeclaringType!;
-            string name = $".dmdproxy<{target.Name.Replace('.', '_')}>?{target.GetHashCode()}";
+            var tb = (TypeBuilder) context.DeclaringType!;
+            var name = $".dmdproxy<{target.Name.Replace('.', '_')}>?{target.GetHashCode()}";
             MethodBuilder mb;
 
             // System.NotSupportedException: The invoked member is not supported before the type is created.
@@ -29,7 +29,7 @@ namespace MonoMod.Utils {
             Type[] args = target.GetParameters().Select(param => param.ParameterType).ToArray();
             mb = tb.DefineMethod(
                 name,
-                System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Private | System.Reflection.MethodAttributes.Static,
+                MethodAttributes.HideBySig | MethodAttributes.Private | MethodAttributes.Static,
                 CallingConventions.Standard,
                 target.ReturnType,
                 args
@@ -37,24 +37,25 @@ namespace MonoMod.Utils {
             ILGenerator il = mb.GetILGenerator();
 
             // Load the DynamicMethod reference first.
-            il.EmitReference(target);
+            _ = il.EmitNewTypedReference(target, out _);
+            // Note: we throw away the scope holder because this method will live for the entire lifetime of the program.
 
             // Load any other arguments on top of that.
             il.Emit(OpCodes.Ldnull);
             il.Emit(OpCodes.Ldc_I4, args.Length);
             il.Emit(OpCodes.Newarr, typeof(object));
 
-            for (int i = 0; i < args.Length; i++) {
+            for (var i = 0; i < args.Length; i++) {
                 il.Emit(OpCodes.Dup);
                 il.Emit(OpCodes.Ldc_I4, i);
 
                 il.Emit(OpCodes.Ldarg, i);
 
                 Type argType = args[i];
-                bool argIsByRef = argType.IsByRef;
+                var argIsByRef = argType.IsByRef;
                 if (argIsByRef)
                     argType = argType.GetElementType() ?? argType;
-                bool argIsValueType = argType.IsValueType;
+                var argIsValueType = argType.IsValueType;
                 if (argIsValueType) {
                     il.Emit(OpCodes.Box, argType);
                 }

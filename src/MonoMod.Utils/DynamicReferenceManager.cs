@@ -3,8 +3,11 @@ using MonoMod.Backports;
 using MonoMod.Cil;
 using System;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using COpCodes = Mono.Cecil.Cil.OpCodes;
+using ROpCodes = System.Reflection.Emit.OpCodes;
 
 namespace MonoMod.Utils {
     public static class DynamicReferenceManager {
@@ -215,49 +218,73 @@ namespace MonoMod.Utils {
         public static void EmitLoadReference(this ILProcessor il, CellRef cellRef) {
             Helpers.ThrowIfArgumentNull(il);
 
-            il.Emit(OpCodes.Ldc_I4, cellRef.Index);
-            il.Emit(OpCodes.Ldc_I4, cellRef.Hash);
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValue_ii));
+            il.Emit(COpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(COpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValue_ii));
         }
 
         public static void EmitLoadReference(this ILCursor il, CellRef cellRef) {
             Helpers.ThrowIfArgumentNull(il);
 
-            il.Emit(OpCodes.Ldc_I4, cellRef.Index);
-            il.Emit(OpCodes.Ldc_I4, cellRef.Hash);
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValue_ii));
+            il.Emit(COpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(COpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValue_ii));
+        }
+
+        public static void EmitLoadReference(this ILGenerator il, CellRef cellRef) {
+            Helpers.ThrowIfArgumentNull(il);
+
+            il.Emit(ROpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(ROpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(ROpCodes.Call, Self_GetValue_ii);
         }
 
         public static void EmitLoadTypedReference(this ILProcessor il, CellRef cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
-            il.Emit(OpCodes.Ldc_I4, cellRef.Index);
-            il.Emit(OpCodes.Ldc_I4, cellRef.Hash);
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type)));
+            il.Emit(COpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(COpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type)));
         }
 
         public static void EmitLoadTypedReference(this ILCursor il, CellRef cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
-            il.Emit(OpCodes.Ldc_I4, cellRef.Index);
-            il.Emit(OpCodes.Ldc_I4, cellRef.Hash);
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type)));
+            il.Emit(COpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(COpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type)));
+        }
+
+        public static void EmitLoadTypedReference(this ILGenerator il, CellRef cellRef, Type type) {
+            Helpers.ThrowIfArgumentNull(il);
+
+            il.Emit(ROpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(ROpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(ROpCodes.Call, Self_GetValueT_ii.MakeGenericMethod(type));
         }
 
         internal static void EmitLoadTypedReferenceUnsafe(this ILProcessor il, CellRef cellRef, Type type){
             Helpers.ThrowIfArgumentNull(il);
 
-            il.Emit(OpCodes.Ldc_I4, cellRef.Index);
-            il.Emit(OpCodes.Ldc_I4, cellRef.Hash);
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueTUnsafe_ii.MakeGenericMethod(type)));
+            il.Emit(COpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(COpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueTUnsafe_ii.MakeGenericMethod(type)));
         }
 
         internal static void EmitLoadTypedReferenceUnsafe(this ILCursor il, CellRef cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
-            il.Emit(OpCodes.Ldc_I4, cellRef.Index);
-            il.Emit(OpCodes.Ldc_I4, cellRef.Hash);
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueTUnsafe_ii.MakeGenericMethod(type)));
+            il.Emit(COpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(COpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueTUnsafe_ii.MakeGenericMethod(type)));
+        }
+
+        internal static void EmitLoadTypedReferenceUnsafe(this ILGenerator il, CellRef cellRef, Type type) {
+            Helpers.ThrowIfArgumentNull(il);
+
+            il.Emit(ROpCodes.Ldc_I4, cellRef.Index);
+            il.Emit(ROpCodes.Ldc_I4, cellRef.Hash);
+            il.Emit(ROpCodes.Call, Self_GetValueTUnsafe_ii.MakeGenericMethod(type));
         }
 
         public static DataScope<CellRef> EmitNewReference(this ILProcessor il, object? value, out CellRef cellRef) {
@@ -272,6 +299,12 @@ namespace MonoMod.Utils {
             return scope;
         }
 
+        public static DataScope<CellRef> EmitNewReference(this ILGenerator il, object? value, out CellRef cellRef) {
+            var scope = AllocReference(value, out cellRef);
+            EmitLoadReference(il, cellRef);
+            return scope;
+        }
+
         public static DataScope<CellRef> EmitNewTypedReference<T>(this ILProcessor il, T? value, out CellRef cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadTypedReferenceUnsafe(il, cellRef, typeof(T));
@@ -279,6 +312,12 @@ namespace MonoMod.Utils {
         }
 
         public static DataScope<CellRef> EmitNewTypedReference<T>(this ILCursor il, T? value, out CellRef cellRef) {
+            var scope = AllocReference(value, out cellRef);
+            EmitLoadTypedReferenceUnsafe(il, cellRef, typeof(T));
+            return scope;
+        }
+
+        public static DataScope<CellRef> EmitNewTypedReference<T>(this ILGenerator il, T? value, out CellRef cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadTypedReferenceUnsafe(il, cellRef, typeof(T));
             return scope;

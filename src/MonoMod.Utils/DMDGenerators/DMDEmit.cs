@@ -219,7 +219,7 @@ namespace MonoMod.Utils {
                             if (called is MethodInfo target && target.IsDynamicMethod()) {
                                 // This should be heavily optimizable.
                                 operand = _CreateMethodProxy(mb, target);
-
+                                // TODO: replace this with allocation of a reference and FastDelegateInvokers call, or similar invocation sequence
                             } else {
                                 IntPtr ptr = called.GetLdftnPointer();
                                 if (IntPtr.Size == 4)
