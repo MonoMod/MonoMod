@@ -41,7 +41,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
             }
         }
 
+#pragma warning disable CS0067 // The event 'MonoRuntime.OnMethodCompiled' is never used
+        // The Mono runtime doesn't implement a JIT hook at the moment.
         public event OnMethodCompiledCallback? OnMethodCompiled;
+#pragma warning restore CS0067 // The event 'MonoRuntime.OnMethodCompiled' is never used
 
         public unsafe void DisableInlining(MethodBase method) {
             var handle = GetMethodHandle(method);

@@ -23,6 +23,7 @@ namespace MonoMod.Core.Platforms {
         /// </summary>
         /// <param name="info">The <see cref="NativeDetourInfo"/> representing the detour.</param>
         /// <param name="buffer">A buffer which will hold the byte sequence. It must be at least <see cref="NativeDetourInfo.Size"/> bytes in length.</param>
+        /// <param name="allocationHandle">A handle to any allocation which must stay alive with the detour.</param>
         /// <returns>The number of bytes written to the buffer.</returns>
         int GetDetourBytes(NativeDetourInfo info, Span<byte> buffer, out IDisposable? allocationHandle);
 

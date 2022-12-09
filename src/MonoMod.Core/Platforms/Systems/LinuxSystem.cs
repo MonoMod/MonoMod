@@ -48,16 +48,16 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         public nint GetSizeOfReadableMemory(IntPtr start, nint guess) {
-            nint currentPage = allocator.RoundDownToPageBoundary(start);
-            if (!allocator.PageAllocated(currentPage)) {
+            var currentPage = allocator.RoundDownToPageBoundary(start);
+            if (!MmapPagedMemoryAllocator.PageAllocated(currentPage)) {
                 return 0;
             }
             currentPage += PageSize;
             
-            nint known = currentPage - start;
+            var known = currentPage - start;
 
             while (known < guess) {
-                if (!allocator.PageAllocated(currentPage)) {
+                if (!MmapPagedMemoryAllocator.PageAllocated(currentPage)) {
                     return known;
                 }
                 known += PageSize;
@@ -114,7 +114,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 Justification = "This is used exclusively internally as jank control flow because I'm lazy")]
             private sealed class SyscallNotImplementedException : Exception { }
 
-            public unsafe bool PageAllocated(nint page) {
+            public static unsafe bool PageAllocated(nint page) {
                 byte garbage;
                 // TODO: Mincore isn't implemented in WSL, and always gives ENOSYS
                 if (Unix.Mincore(page, 1, &garbage) == -1) {
@@ -178,11 +178,11 @@ namespace MonoMod.Core.Platforms.Systems {
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
                 
                 // number of pages needed to satisfy length requirements
-                nint numPages = request.Base.Size / PageSize + 1;
+                var numPages = request.Base.Size / PageSize + 1;
                 
                 // find the nearest unallocated page within our bounds
-                nint low = targetPage - PageSize;
-                nint high = targetPage;
+                var low = targetPage - PageSize;
+                var high = targetPage;
                 nint ptr = -1;
 
                 try {

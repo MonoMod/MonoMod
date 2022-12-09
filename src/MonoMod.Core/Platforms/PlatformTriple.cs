@@ -12,22 +12,27 @@ using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core.Platforms {
     public sealed class PlatformTriple {
-        public static IRuntime CreateCurrentRuntime(ISystem system, IArchitecture arch)
-            => PlatformDetection.Runtime switch {
+        public static IRuntime CreateCurrentRuntime(ISystem system, IArchitecture arch) {
+            Helpers.ThrowIfArgumentNull(system);
+            Helpers.ThrowIfArgumentNull(arch);
+            return PlatformDetection.Runtime switch {
                 RuntimeKind.Framework => Runtimes.FxBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
                 RuntimeKind.CoreCLR => Runtimes.CoreBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system, arch),
                 RuntimeKind.Mono => new Runtimes.MonoRuntime(system),
                 var kind => throw new PlatformNotSupportedException($"Runtime kind {kind} not supported"),
             };
+        }
 
-        public static IArchitecture CreateCurrentArchitecture(ISystem system)
-            => PlatformDetection.Architecture switch {
+        public static IArchitecture CreateCurrentArchitecture(ISystem system) {
+            Helpers.ThrowIfArgumentNull(system);
+            return PlatformDetection.Architecture switch {
                 ArchitectureKind.x86 => new Architectures.x86Arch(system),
                 ArchitectureKind.x86_64 => new Architectures.x86_64Arch(system),
                 ArchitectureKind.Arm => throw new NotImplementedException(),
                 ArchitectureKind.Arm64 => throw new NotImplementedException(),
                 var kind => throw new PlatformNotSupportedException($"Architecture kind {kind} not supported"),
             };
+        }
 
         public static ISystem CreateCurrentSystem()
             => PlatformDetection.OS switch {
@@ -236,6 +241,8 @@ namespace MonoMod.Core.Platforms {
             return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
         }
 
+        [SuppressMessage("Design", "CA1034:Nested types should not be visible",
+            Justification = "This type should rarely be used, and should not exist in the above namespace to avoid people trying to use it when they shouldn't.")]
         public record struct NativeDetour(SimpleNativeDetour Simple, IntPtr AltEntry, IDisposable? AltHandle) {
             public bool HasAltEntry => AltEntry != IntPtr.Zero;
         }

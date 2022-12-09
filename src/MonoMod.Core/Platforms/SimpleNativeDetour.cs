@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using MonoMod.Utils;
 
 namespace MonoMod.Core.Platforms {
-    public class SimpleNativeDetour : IDisposable {
+    public sealed class SimpleNativeDetour : IDisposable {
         private bool disposedValue;
         private readonly PlatformTriple triple;
         private NativeDetourInfo detourInfo;
@@ -22,6 +23,9 @@ namespace MonoMod.Core.Platforms {
         }
 
         // TODO: when this is a NativeDetour, we need to fix up the alt entry point too, if the new patch is bigger
+
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+            Justification = "allocHandle is correctly transferred around, as needed")]
         public void ChangeTarget(IntPtr newTarget) {
             CheckDisposed();
 
@@ -89,9 +93,10 @@ namespace MonoMod.Core.Platforms {
             disposedValue = true;
         }
 
-        protected virtual void Cleanup() {
+        private void Cleanup() {
             AllocHandle?.Dispose();
         }
+
         private void Dispose(bool disposing) {
             if (!disposedValue) {
                 UndoCore(disposing);

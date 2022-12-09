@@ -1,7 +1,9 @@
 ﻿using MonoMod.Utils;
 using System;
+#if NET6_USE_RUNTIME_INTROSPECTION
 using System.Reflection;
 using System.Runtime.CompilerServices;
+#endif
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes {

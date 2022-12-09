@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
     internal static unsafe partial class CoreCLR {
 
-        public struct InvokeAllocMemPtr {
-            private IntPtr methodPtr;
+        public readonly struct InvokeAllocMemPtr {
+            private readonly IntPtr methodPtr;
             public InvokeAllocMemPtr(
                 delegate*<
                     IntPtr, // method
@@ -31,6 +32,10 @@ namespace MonoMod.Core.Interop {
                 >) methodPtr;
         }
 
+        [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
+            Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
+            "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
+            "needing duplicates.")]
         public class V70 : V60 {
             public static class ICorJitInfoVtable {
 
@@ -222,6 +227,7 @@ namespace MonoMod.Core.Interop {
                 public const int TotalVtableCount = 0xAF;
             }
 
+            [StructLayout(LayoutKind.Sequential)]
             public struct AllocMemArgs {
                 // Input arguments
                 public uint hotCodeSize;

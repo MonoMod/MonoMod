@@ -1,7 +1,6 @@
 ﻿using MonoMod.Utils;
 using System;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using static MonoMod.Core.Interop.Fx;
 
 namespace MonoMod.Core.Platforms.Runtimes {
@@ -65,10 +64,5 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             return ptr;
         }
-
-        /*public override void DisableInlining(MethodBase method) {
-            // the base classes don't specify RuntimeFeature.DisableInlining, so this should never be called
-            throw new PlatformNotSupportedException();
-        }*/
     }
 }

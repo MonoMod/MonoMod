@@ -2,6 +2,9 @@ using MonoMod.Utils;
 using System;
 using System.Runtime.InteropServices;
 
+#pragma warning disable CA1069 // Enums values should not be duplicated
+// Any time we do so is to replicate the name of the flags in the runtime itself.
+
 namespace MonoMod.Core.Interop {
     internal static partial class Fx {
         public unsafe partial class V48 {
@@ -673,6 +676,7 @@ namespace MonoMod.Core.Interop {
                 }
             }
 
+            [StructLayout(LayoutKind.Sequential)]
             public struct RelativeFixupPointer
             {
                 private readonly nint value;
@@ -936,7 +940,7 @@ namespace MonoMod.Core.Interop {
                 public bool IsInterface => (m_dwFlags & 0x000F0000) == 0x000C0000;
 
                 public MethodDesc* GetMethodDescForSlot(uint slotNumber) {
-                    var pCode = GetRestoredSlot(slotNumber);
+                    //var pCode = GetRestoredSlot(slotNumber);
 
                     if (IsInterface && slotNumber < GetNumVirtuals()) {
                         // TODO: MethodDesc::GetMethodDescFromStubAddr

@@ -19,10 +19,8 @@ namespace MonoMod.Core.Platforms.Architectures {
         {
             const ushort An = BytePattern.SAnyValue;
             const ushort Ad = BytePattern.SAddressValue;
-            const ushort Ar = BytePattern.SAnyRepeatingValue;
             const byte Bn = BytePattern.BAnyValue;
             const byte Bd = BytePattern.BAddressValue;
-            const byte Br = BytePattern.BAnyRepeatingValue;
 
             if (PlatformDetection.Runtime is RuntimeKind.Framework or RuntimeKind.CoreCLR) {
                 return new BytePatternCollection(

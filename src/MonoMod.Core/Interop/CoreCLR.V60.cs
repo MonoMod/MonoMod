@@ -3,6 +3,9 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
+#pragma warning disable CA1069 // Enums values should not be duplicated
+// Any time we do so is to replicate the name of the flags in the runtime itself.
+
 namespace MonoMod.Core.Interop {
     internal static unsafe partial class CoreCLR {
         [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
@@ -828,7 +831,7 @@ namespace MonoMod.Core.Interop {
                 public bool IsInterface => (m_dwFlags & 0x000F0000) == 0x000C0000;
 
                 public MethodDesc* GetMethodDescForSlot(uint slotNumber) {
-                    var pCode = GetRestoredSlot(slotNumber);
+                    //var pCode = GetRestoredSlot(slotNumber);
 
                     if (IsInterface && slotNumber < GetNumVirtuals()) {
                         // TODO: MethodDesc::GetMethodDescFromStubAddr

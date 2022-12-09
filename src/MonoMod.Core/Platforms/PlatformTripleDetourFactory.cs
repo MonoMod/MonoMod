@@ -219,7 +219,7 @@ namespace MonoMod.Core.Platforms {
                             }
 
                             var newDetour = Triple.CreateSimpleDetour(from, to, detourMaxSize: (int) codeSize, fromRw: fromRw);
-                            ReplaceDetourInLock(this, newDetour, out var oldDetour);
+                            ReplaceDetourInLock(this, newDetour, out _);
                         } finally {
                             IsApplying = false;
                         }
@@ -245,7 +245,7 @@ namespace MonoMod.Core.Platforms {
             }
 
             private static readonly object subLock = new();
-            private static bool hasSubscribed = false;
+            private static bool hasSubscribed;
 
             // TODO: this currently assumes a singleton PlatformTriple. That isn't necessarily *always* the case, though it should be.
             private static void EnsureSubscribed(PlatformTriple triple) {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
@@ -8,8 +9,8 @@ namespace MonoMod.Core.Interop {
             // There are more, but I don't particularly care about them
         }
 
-        public struct InvokeCompileMethodPtr {
-            private IntPtr methodPtr;
+        public readonly struct InvokeCompileMethodPtr {
+            private readonly IntPtr methodPtr;
             public InvokeCompileMethodPtr(
                 delegate*<
                     IntPtr, // method
@@ -125,6 +126,10 @@ namespace MonoMod.Core.Interop {
             }
         }
 
+        [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
+            Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
+            "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
+            "needing duplicates.")]
         public class V30 : V21 { }
 
         public class V31 : V21 { }
