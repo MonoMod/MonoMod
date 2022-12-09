@@ -45,7 +45,7 @@ namespace MonoMod.Cil {
 
         internal List<ILLabel> _Labels = new List<ILLabel>();
         private bool disposedValue;
-        private readonly List<DataScope<DynamicReferenceManager.CellRef>> managedObjectRefs = new();
+        private readonly List<DataScope<DynamicReferenceCell>> managedObjectRefs = new();
         /// <summary>
         /// A readonly list of all defined labels.
         /// </summary>
@@ -199,7 +199,7 @@ namespace MonoMod.Cil {
             DynamicReferenceManager.SetValue(managedObjectRefs[id].Data, in value);
         }
 
-        public DynamicReferenceManager.CellRef GetReferenceCell(int id) {
+        public DynamicReferenceCell GetReferenceCell(int id) {
             if (id < 0 || id >= managedObjectRefs.Count)
                 throw new ArgumentOutOfRangeException(nameof(id));
             return managedObjectRefs[id].Data;

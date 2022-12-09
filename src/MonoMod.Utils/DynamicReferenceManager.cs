@@ -10,16 +10,17 @@ using COpCodes = Mono.Cecil.Cil.OpCodes;
 using ROpCodes = System.Reflection.Emit.OpCodes;
 
 namespace MonoMod.Utils {
-    public static class DynamicReferenceManager {
-        public record struct CellRef {
-            public int Index { get; internal set; }
-            public int Hash { get; internal set; }
+    public record struct DynamicReferenceCell {
+        public int Index { get; internal set; }
+        public int Hash { get; internal set; }
 
-            public CellRef(int idx, int hash) {
-                Index = idx;
-                Hash = hash;
-            }
+        public DynamicReferenceCell(int idx, int hash) {
+            Index = idx;
+            Hash = hash;
         }
+    }
+
+    public static class DynamicReferenceManager {
 
         private const nuint RefValueCell = 0;
         private const nuint ValueTypeCell = 1;
@@ -49,7 +50,7 @@ namespace MonoMod.Utils {
         private static volatile Cell?[] cells = new Cell?[16];
         private static volatile int firstEmptyCell;
 
-        private static unsafe DataScope<CellRef> AllocReferenceCore(Cell cell, out CellRef cellRef) {
+        private static unsafe DataScope<DynamicReferenceCell> AllocReferenceCore(Cell cell, out DynamicReferenceCell cellRef) {
             cellRef = default;
 
             var lockTaken = false;
@@ -87,16 +88,16 @@ namespace MonoMod.Utils {
             return new(ScopeHandler.Instance, cellRef);
         }
 
-        private static unsafe DataScope<CellRef> AllocReferenceClass(object? value, out CellRef cellRef) {
+        private static unsafe DataScope<DynamicReferenceCell> AllocReferenceClass(object? value, out DynamicReferenceCell cellRef) {
             return AllocReferenceCore(new RefCell { Value = value }, out cellRef);
         }
 
-        private static unsafe DataScope<CellRef> AllocReferenceStruct<T>(in T value, out CellRef cellRef) {
+        private static unsafe DataScope<DynamicReferenceCell> AllocReferenceStruct<T>(in T value, out DynamicReferenceCell cellRef) {
             return AllocReferenceCore(new ValueCell<T> { Value = value }, out cellRef);
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
-        public static DataScope<CellRef> AllocReference<T>(in T? value, out CellRef cellRef) {
+        public static DataScope<DynamicReferenceCell> AllocReference<T>(in T? value, out DynamicReferenceCell cellRef) {
             if (default(T) == null) {
                 return AllocReferenceClass(Unsafe.As<T?, object?>(ref Unsafe.AsRef(in value)), out cellRef);
             } else {
@@ -104,9 +105,9 @@ namespace MonoMod.Utils {
             }
         }
 
-        private sealed class ScopeHandler : ScopeHandlerBase<CellRef> {
+        private sealed class ScopeHandler : ScopeHandlerBase<DynamicReferenceCell> {
             public static readonly ScopeHandler Instance = new();
-            public override unsafe void EndScope(CellRef data) {
+            public override unsafe void EndScope(DynamicReferenceCell data) {
 
                 var lockTaken = false;
                 try {
@@ -133,7 +134,7 @@ namespace MonoMod.Utils {
             }
         }
 
-        private static Cell GetCell(CellRef cellRef) {
+        private static Cell GetCell(DynamicReferenceCell cellRef) {
             var cell = Volatile.Read(ref cells[cellRef.Index]);
             if (cell is null || cell.GetHashCode() != cellRef.Hash) {
                 throw new ArgumentException("Referenced cell no longer exists", nameof(cellRef));
@@ -141,7 +142,7 @@ namespace MonoMod.Utils {
             return cell;
         }
 
-        public static object? GetValue(CellRef cellRef) {
+        public static object? GetValue(DynamicReferenceCell cellRef) {
             var cell = GetCell(cellRef);
             switch (cell.Type) {
                 case RefValueCell: {
@@ -158,7 +159,7 @@ namespace MonoMod.Utils {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
-        private static ref T? GetValueRef<T>(CellRef cellRef) {
+        private static ref T? GetValueRef<T>(DynamicReferenceCell cellRef) {
             var cell = GetCell(cellRef);
             switch (cell.Type) {
                 case RefValueCell: {
@@ -178,7 +179,7 @@ namespace MonoMod.Utils {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveOptimization)]
-        private static ref T? GetValueRefUnsafe<T>(CellRef cellRef) {
+        private static ref T? GetValueRefUnsafe<T>(DynamicReferenceCell cellRef) {
             var cell = GetCell(cellRef);
             // here, we're assuming that our T is correct, hence Unsafe
             if (default(T) == null) {
@@ -194,7 +195,7 @@ namespace MonoMod.Utils {
             }
         }
 
-        public static T? GetValue<T>(CellRef cellRef) => GetValueRef<T>(cellRef);
+        public static T? GetValue<T>(DynamicReferenceCell cellRef) => GetValueRef<T>(cellRef);
 
         private static readonly MethodInfo Self_GetValue_ii
             = typeof(DynamicReferenceManager).GetMethod(nameof(GetValue), BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(int), typeof(int) }, null)
@@ -210,12 +211,12 @@ namespace MonoMod.Utils {
         internal static T? GetValueT<T>(int index, int hash) => GetValue<T>(new(index, hash));
         internal static T? GetValueTUnsafe<T>(int index, int hash) => GetValueRefUnsafe<T>(new(index, hash));
 
-        public static void SetValue<T>(CellRef cellRef, in T? value) {
+        public static void SetValue<T>(DynamicReferenceCell cellRef, in T? value) {
             ref var cell = ref GetValueRef<T>(cellRef);
             cell = value;
         }
 
-        public static void EmitLoadReference(this ILProcessor il, CellRef cellRef) {
+        public static void EmitLoadReference(this ILProcessor il, DynamicReferenceCell cellRef) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(COpCodes.Ldc_I4, cellRef.Index);
@@ -223,7 +224,7 @@ namespace MonoMod.Utils {
             il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValue_ii));
         }
 
-        public static void EmitLoadReference(this ILCursor il, CellRef cellRef) {
+        public static void EmitLoadReference(this ILCursor il, DynamicReferenceCell cellRef) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(COpCodes.Ldc_I4, cellRef.Index);
@@ -231,7 +232,7 @@ namespace MonoMod.Utils {
             il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValue_ii));
         }
 
-        public static void EmitLoadReference(this ILGenerator il, CellRef cellRef) {
+        public static void EmitLoadReference(this ILGenerator il, DynamicReferenceCell cellRef) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(ROpCodes.Ldc_I4, cellRef.Index);
@@ -239,7 +240,7 @@ namespace MonoMod.Utils {
             il.Emit(ROpCodes.Call, Self_GetValue_ii);
         }
 
-        public static void EmitLoadTypedReference(this ILProcessor il, CellRef cellRef, Type type) {
+        public static void EmitLoadTypedReference(this ILProcessor il, DynamicReferenceCell cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(COpCodes.Ldc_I4, cellRef.Index);
@@ -247,7 +248,7 @@ namespace MonoMod.Utils {
             il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type)));
         }
 
-        public static void EmitLoadTypedReference(this ILCursor il, CellRef cellRef, Type type) {
+        public static void EmitLoadTypedReference(this ILCursor il, DynamicReferenceCell cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(COpCodes.Ldc_I4, cellRef.Index);
@@ -255,7 +256,7 @@ namespace MonoMod.Utils {
             il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type)));
         }
 
-        public static void EmitLoadTypedReference(this ILGenerator il, CellRef cellRef, Type type) {
+        public static void EmitLoadTypedReference(this ILGenerator il, DynamicReferenceCell cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(ROpCodes.Ldc_I4, cellRef.Index);
@@ -263,7 +264,7 @@ namespace MonoMod.Utils {
             il.Emit(ROpCodes.Call, Self_GetValueT_ii.MakeGenericMethod(type));
         }
 
-        internal static void EmitLoadTypedReferenceUnsafe(this ILProcessor il, CellRef cellRef, Type type){
+        internal static void EmitLoadTypedReferenceUnsafe(this ILProcessor il, DynamicReferenceCell cellRef, Type type){
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(COpCodes.Ldc_I4, cellRef.Index);
@@ -271,7 +272,7 @@ namespace MonoMod.Utils {
             il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueTUnsafe_ii.MakeGenericMethod(type)));
         }
 
-        internal static void EmitLoadTypedReferenceUnsafe(this ILCursor il, CellRef cellRef, Type type) {
+        internal static void EmitLoadTypedReferenceUnsafe(this ILCursor il, DynamicReferenceCell cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(COpCodes.Ldc_I4, cellRef.Index);
@@ -279,7 +280,7 @@ namespace MonoMod.Utils {
             il.Emit(COpCodes.Call, il.Body.Method.Module.ImportReference(Self_GetValueTUnsafe_ii.MakeGenericMethod(type)));
         }
 
-        internal static void EmitLoadTypedReferenceUnsafe(this ILGenerator il, CellRef cellRef, Type type) {
+        internal static void EmitLoadTypedReferenceUnsafe(this ILGenerator il, DynamicReferenceCell cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(ROpCodes.Ldc_I4, cellRef.Index);
@@ -287,37 +288,37 @@ namespace MonoMod.Utils {
             il.Emit(ROpCodes.Call, Self_GetValueTUnsafe_ii.MakeGenericMethod(type));
         }
 
-        public static DataScope<CellRef> EmitNewReference(this ILProcessor il, object? value, out CellRef cellRef) {
+        public static DataScope<DynamicReferenceCell> EmitNewReference(this ILProcessor il, object? value, out DynamicReferenceCell cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadReference(il, cellRef);
             return scope;
         }
 
-        public static DataScope<CellRef> EmitNewReference(this ILCursor il, object? value, out CellRef cellRef) {
+        public static DataScope<DynamicReferenceCell> EmitNewReference(this ILCursor il, object? value, out DynamicReferenceCell cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadReference(il, cellRef);
             return scope;
         }
 
-        public static DataScope<CellRef> EmitNewReference(this ILGenerator il, object? value, out CellRef cellRef) {
+        public static DataScope<DynamicReferenceCell> EmitNewReference(this ILGenerator il, object? value, out DynamicReferenceCell cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadReference(il, cellRef);
             return scope;
         }
 
-        public static DataScope<CellRef> EmitNewTypedReference<T>(this ILProcessor il, T? value, out CellRef cellRef) {
+        public static DataScope<DynamicReferenceCell> EmitNewTypedReference<T>(this ILProcessor il, T? value, out DynamicReferenceCell cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadTypedReferenceUnsafe(il, cellRef, typeof(T));
             return scope;
         }
 
-        public static DataScope<CellRef> EmitNewTypedReference<T>(this ILCursor il, T? value, out CellRef cellRef) {
+        public static DataScope<DynamicReferenceCell> EmitNewTypedReference<T>(this ILCursor il, T? value, out DynamicReferenceCell cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadTypedReferenceUnsafe(il, cellRef, typeof(T));
             return scope;
         }
 
-        public static DataScope<CellRef> EmitNewTypedReference<T>(this ILGenerator il, T? value, out CellRef cellRef) {
+        public static DataScope<DynamicReferenceCell> EmitNewTypedReference<T>(this ILGenerator il, T? value, out DynamicReferenceCell cellRef) {
             var scope = AllocReference(value, out cellRef);
             EmitLoadTypedReferenceUnsafe(il, cellRef, typeof(T));
             return scope;

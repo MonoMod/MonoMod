@@ -171,7 +171,7 @@ namespace MonoMod.RuntimeDetour {
         private readonly DetourManager.ManagedDetourState state;
         private readonly DetourManager.SingleManagedDetourState detour;
 
-        private readonly DataScope<DynamicReferenceManager.CellRef> delegateObjectScope;
+        private readonly DataScope<DynamicReferenceCell> delegateObjectScope;
 
         public Hook(MethodBase source, MethodInfo target, object? targetObject, IDetourFactory factory, DetourConfig? config, bool applyByDefault) {
             Helpers.ThrowIfArgumentNull(source);
@@ -207,7 +207,7 @@ namespace MonoMod.RuntimeDetour {
         private static readonly FieldInfo HookData_Target = typeof(HookData).GetField(nameof(HookData.Target))!;
         private static readonly FieldInfo HookData_InvokeNext = typeof(HookData).GetField(nameof(HookData.InvokeNext))!;
 
-        private MethodInfo PrepareRealTarget(object? target, out MethodInfo trampoline, out DataScope<DynamicReferenceManager.CellRef> scope) {
+        private MethodInfo PrepareRealTarget(object? target, out MethodInfo trampoline, out DataScope<DynamicReferenceCell> scope) {
             var srcSig = MethodSignature.ForMethod(Source);
             var dstSig = MethodSignature.ForMethod(Target, ignoreThis: true); // the dest sig we don't want to consider its this param
 

@@ -91,7 +91,7 @@ namespace MonoMod.RuntimeDetour {
             public readonly MethodSignature Sig;
             public readonly MethodBase SyncProxy;
             public readonly DetourSyncInfo SyncInfo = new();
-            private readonly DataScope<DynamicReferenceManager.CellRef> syncProxyRefScope;
+            private readonly DataScope<DynamicReferenceCell> syncProxyRefScope;
 
             public bool HasILHook;
 
@@ -99,7 +99,7 @@ namespace MonoMod.RuntimeDetour {
                 Sig = MethodSignature.ForMethod(method);
                 Entry = method;
                 NextTrampoline = TrampolinePool.Rent(Sig);
-                DataScope<DynamicReferenceManager.CellRef> refScope = default;
+                DataScope<DynamicReferenceCell> refScope = default;
                 SyncProxy = GenerateSyncProxy(DebugFormatter.Format($"{Entry}"), Sig,
                     (method, il) => refScope = il.EmitNewTypedReference(SyncInfo, out _),
                     (method, il) => {
