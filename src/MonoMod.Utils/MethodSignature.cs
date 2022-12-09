@@ -75,7 +75,6 @@ namespace MonoMod.Utils {
                 && parameters.SequenceEqual(other.Parameters, CompatableComparer.Instance);
         }
 
-        [CLSCompliant(false)]
         public DynamicMethodDefinition CreateDmd(string name) {
             return new(name, ReturnType, parameters);
         }

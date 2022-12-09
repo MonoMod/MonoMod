@@ -1795,14 +1795,14 @@ namespace MonoMod.Cil {
             return false;
         } // OperandType.InlineNone
 
-        public static bool MatchConv_OvfI(this Instruction instr) {
+        public static bool MatchConvOvfI(this Instruction instr) {
             if (instr.OpCode == OpCodes.Conv_Ovf_I) {
                 return true;
             }
             return false;
         } // OperandType.InlineNone
 
-        public static bool MatchConv_OvfU(this Instruction instr) {
+        public static bool MatchConvOvfU(this Instruction instr) {
             if (instr.OpCode == OpCodes.Conv_Ovf_U) {
                 return true;
             }
@@ -1816,7 +1816,7 @@ namespace MonoMod.Cil {
             return false;
         } // OperandType.InlineNone
 
-        public static bool MatchAdd_OvfUn(this Instruction instr) {
+        public static bool MatchAddOvfUn(this Instruction instr) {
             if (instr.OpCode == OpCodes.Add_Ovf_Un) {
                 return true;
             }

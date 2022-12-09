@@ -1,6 +1,7 @@
 ﻿using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -13,7 +14,7 @@ using System.Threading;
 // Whenever this is done, it is done to prevent logger exceptions from killing the caller
 
 namespace MonoMod.Logs {
-    public readonly struct MessageHole {
+    public readonly struct MessageHole : IEquatable<MessageHole> {
         public int Start { get; }
         public int End { get; }
         public object? Value { get; }
@@ -32,6 +33,24 @@ namespace MonoMod.Logs {
             Start = start;
             End = end;
         }
+
+        public override bool Equals(object? obj) {
+            return obj is MessageHole hole && Equals(hole);
+        }
+
+        public bool Equals(MessageHole other) {
+            return Start == other.Start &&
+                   End == other.End &&
+                   EqualityComparer<object?>.Default.Equals(Value, other.Value) &&
+                   IsValueUnrepresentable == other.IsValueUnrepresentable;
+        }
+
+        public override int GetHashCode() {
+            return HashCode.Combine(Start, End, Value, IsValueUnrepresentable);
+        }
+
+        public static bool operator ==(MessageHole left, MessageHole right) => left.Equals(right);
+        public static bool operator !=(MessageHole left, MessageHole right) => !(left == right);
     }
 
     public sealed class DebugLog {
