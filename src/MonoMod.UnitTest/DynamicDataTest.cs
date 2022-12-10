@@ -1,10 +1,6 @@
 ﻿using Xunit;
-using MonoMod.ModInterop;
-using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using Xunit.Abstractions;
 
@@ -15,8 +11,8 @@ namespace MonoMod.UnitTest {
 
         [Fact]
         public void TestDynamicData() {
-            Dummy dummy = new Dummy();
-            dynamic data = new DynamicData(dummy);
+            var dummy = new Dummy();
+            using dynamic data = new DynamicData(dummy);
 
             Assert.Equal(dummy, (Dummy) data);
 
@@ -43,9 +39,9 @@ namespace MonoMod.UnitTest {
             Assert.Equal("ABC", new DynamicData(dummy).Get<string>("New"));
             Assert.Equal(8, new DynamicData(dummy).Invoke<int>("NewMethod", 4, 2));
 
-            new DynamicData(dummy) {
+            using (new DynamicData(dummy) {
                 { "Hello", "World!" }
-            };
+            }) { }
             Assert.Equal("World!", new DynamicData(dummy).Get<string>("Hello"));
 
             Assert.Equal(dummy, DynamicData.Set(dummy, new {
@@ -73,12 +69,12 @@ namespace MonoMod.UnitTest {
             Assert.Equal("90", dummy._C);
             Assert.Equal("Newest", new DynamicData(dummy).Get<string>("Other"));
 
-            Dummy dummyTo = new Dummy();
+            var dummyTo = new Dummy();
             Assert.Equal(69, dummyTo.A);
             Assert.Equal(420L, dummyTo._B);
             Assert.Equal("XYZ", dummyTo._C);
 
-            DynamicData dataTo = DynamicData.For(dummyTo);
+            using var dataTo = DynamicData.For(dummyTo);
             Assert.Equal(dataTo, DynamicData.For(dummyTo));
             foreach (KeyValuePair<string, object> kvp in new DynamicData(dummy))
                 dataTo.Set(kvp.Key, kvp.Value);

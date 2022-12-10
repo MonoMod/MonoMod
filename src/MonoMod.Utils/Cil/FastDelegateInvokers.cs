@@ -39,10 +39,14 @@ namespace MonoMod.Cil {
 
             Helpers.DAssert(sig.FirstParameter is not null);
 
-            // make sure that no parameters besides the first is byref
-            if (sig.ReturnType.IsByRef)
+            // make sure that the return type is not byref or byreflike
+            if (sig.ReturnType.IsByRef || sig.ReturnType.IsByRefLike())
                 return null;
-            if (sig.Parameters.Skip(1).Any(t => t.IsByRef))
+            // make sure that the first parameter is not byreflike
+            if (sig.FirstParameter.IsByRefLike())
+                return null;
+            // make sure that the other parameters are not byref or byreflike
+            if (sig.Parameters.Skip(1).Any(t => t.IsByRef || t.IsByRefLike()))
                 return null;
 
             var index = 0;

@@ -234,6 +234,7 @@ namespace System {
         manager,
         key,
         collection,
-        index
+        index,
+        type
     }
 }

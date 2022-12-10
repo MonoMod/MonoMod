@@ -36,8 +36,9 @@ namespace MonoMod.Utils {
                     foreach (FieldInfo field in targetType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                         var name = field.Name;
                         if (!Getters.ContainsKey(name) && !Setters.ContainsKey(name)) {
-                            Getters[name] = (obj) => field.GetValue(obj);
-                            Setters[name] = (obj, value) => field.SetValue(obj, value);
+                            var fastInvoker = field.GetFastInvoker();
+                            Getters[name] = (obj) => fastInvoker(obj);
+                            Setters[name] = (obj, value) => fastInvoker(obj, value);
                         }
                     }
 
@@ -74,7 +75,7 @@ namespace MonoMod.Utils {
                         if (kvp.Value.IsGenericMethod)
                             continue;
 
-                        FastReflectionInvoker cb = kvp.Value.GetFastDelegate();
+                        var cb = kvp.Value.GetFastInvoker();
                         Methods[kvp.Key] = (target, args) => cb(target, args);
                     }
 
