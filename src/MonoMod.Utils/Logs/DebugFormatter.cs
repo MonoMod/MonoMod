@@ -289,6 +289,9 @@ namespace MonoMod.Logs {
             if (!TryFormatType(field.FieldType, into.Slice(wrote), out var w))
                 return false;
             wrote += w;
+            if (into.Slice(wrote).Length < 1)
+                return false;
+            into[wrote++] = ' ';
             if (!TryFormatMemberInfoName(field, into.Slice(wrote), out w))
                 return false;
             wrote += w;
@@ -300,6 +303,9 @@ namespace MonoMod.Logs {
             if (!TryFormatType(prop.PropertyType, into.Slice(wrote), out var w))
                 return false;
             wrote += w;
+            if (into.Slice(wrote).Length < 1)
+                return false;
+            into[wrote++] = ' ';
             if (!TryFormatMemberInfoName(prop, into.Slice(wrote), out w))
                 return false;
             wrote += w;
