@@ -38,11 +38,19 @@ namespace MonoMod {
                 return null;
 
             // try to parse as a number
-            if (int.TryParse(value, NumberStyles.AllowHexSpecifier | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var ires)) {
+            if (int.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var ires)) {
                 return ires;
             }
 
-            if (long.TryParse(value, NumberStyles.AllowHexSpecifier | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var lres)) {
+            if (long.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var lres)) {
+                return lres;
+            }
+
+            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out ires)) {
+                return ires;
+            }
+
+            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out lres)) {
                 return lres;
             }
 
