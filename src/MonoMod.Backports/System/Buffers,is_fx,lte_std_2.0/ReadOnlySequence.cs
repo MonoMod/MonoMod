@@ -87,8 +87,7 @@ namespace System.Buffers {
         /// Creates an instance of <see cref="ReadOnlySequence{T}"/> from the <see cref="T[]"/>.
         /// </summary>
         public ReadOnlySequence(T[] array) {
-            if (array == null)
-                ThrowHelper.ThrowArgumentNullException(ExceptionArgument.array);
+            ThrowHelper.ThrowIfArgumentNull(array, ExceptionArgument.array);
 
             _sequenceStart = new SequencePosition(array, ReadOnlySequence.ArrayToSequenceStart(0));
             _sequenceEnd = new SequencePosition(array, ReadOnlySequence.ArrayToSequenceEnd(array!.Length));

@@ -5,6 +5,9 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 
+#pragma warning disable CA1062 // Validate arguments of public methods
+// This implementation is copied (basically) verbatim from the real BCL
+
 namespace System.Runtime.CompilerServices {
     /// <summary>Provides a handler used by the language compiler to process interpolated strings into <see cref="string"/> instances.</summary>
     [InterpolatedStringHandler]

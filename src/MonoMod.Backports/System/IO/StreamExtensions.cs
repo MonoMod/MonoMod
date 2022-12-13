@@ -9,8 +9,7 @@ using System.Buffers;
 namespace System.IO {
     public static class StreamExtensions {
         public static void CopyTo(this Stream src, Stream destination) {
-            if (src is null)
-                ThrowHelper.ThrowArgumentNullException(nameof(src));
+            ThrowHelper.ThrowIfArgumentNull(src, nameof(src));
 
 #if HAS_COPYTO
             src.CopyTo(destination);
@@ -19,16 +18,14 @@ namespace System.IO {
 #endif
         }
         public static void CopyTo(this Stream src, Stream destination, int bufferSize) {
-            if (src is null)
-                ThrowHelper.ThrowArgumentNullException(nameof(src));
+            ThrowHelper.ThrowIfArgumentNull(src, nameof(src));
 
 #if HAS_COPYTO
             src.CopyTo(destination, bufferSize);
 #else
-            if (destination is null)
-                ThrowHelper.ThrowArgumentNullException(nameof(destination));
+            ThrowHelper.ThrowIfArgumentNull(destination, nameof(destination));
             if (bufferSize < 0)
-                throw new ArgumentOutOfRangeException(nameof(bufferSize));
+                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.bufferSize);
 
             var buf = ArrayPool<byte>.Shared.Rent(bufferSize);
 

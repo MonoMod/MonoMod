@@ -1,8 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#pragma warning disable SA1141 // explicitly not using tuple syntax in tuple implementation
-
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,13 +8,17 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
+#pragma warning disable CA1141 // explicitly not using tuple syntax in tuple implementation
+
 #pragma warning disable CA1036 // Override methods on comparable types
 #pragma warning disable CA1815 // Override equals and operator equals on value types
 #pragma warning disable CA2231 // Overload operator equals on overriding value type Equals
+#pragma warning disable CA2201 // Do not raise reserved exception types
 // For some reason, the BCL implementation doesn't do any of the above either.
 
 #pragma warning disable IDE0008 // Use explicit type
 #pragma warning disable IDE0046
+#pragma warning disable IDE0038 // Use pattern matching
 // Most of this code is copied directly from the BCL.
 
 #pragma warning disable CA1051 // Do not declare visible instance fields

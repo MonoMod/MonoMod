@@ -79,9 +79,11 @@ namespace System
                 rng.GetBytes(array);
                 array.AsSpan().CopyTo(result);
             } finally {
+#pragma warning disable CA1508 // Avoid dead conditional code
                 // We do this because in .NET 3.5, RandomNumberGenerator doesn't implement IDisposable.
                 // We check dynamically to take advantage of it, if possible.
                 (rng as IDisposable)?.Dispose();
+#pragma warning restore CA1508 // Avoid dead conditional code
             }
 
             return Unsafe.ReadUnaligned<uint>(ref result[0]);

@@ -5,7 +5,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+#if CWT_NOT_ENUMERABLE
 using System.Reflection;
+#endif
 
 namespace System.Runtime.CompilerServices {
 
@@ -34,6 +36,8 @@ namespace System.Runtime.CompilerServices {
 
             public delegate IEnumerable<TKey> GetKeys(ConditionalWeakTable<TKey, TValue> cwt);
 
+            [SuppressMessage("Performance", "CA1810:Initialize reference type static fields inline",
+                Justification = "There are no methods which would get any performance impact.")]
             static CWTInfoHolder() {
                 get_KeysMethod = typeof(ConditionalWeakTable<TKey, TValue>).GetProperty("Keys", BindingFlags.NonPublic | BindingFlags.Instance)?.GetGetMethod(nonPublic: true);
                 if (get_KeysMethod is not null) {
@@ -46,11 +50,8 @@ namespace System.Runtime.CompilerServices {
         [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
             Justification = "This check is expected to be always true for some targets.")]
         public static IEnumerable<KeyValuePair<TKey, TValue>> AsEnumerable<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class? {
-            if (self is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(self));
-                // dum dum compiler
-                return null!;
-            } else if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
+            ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
+            if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
                 return enumerable;
             } else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwt) {
                 return cwt.SelfEnumerable;
@@ -62,11 +63,8 @@ namespace System.Runtime.CompilerServices {
         [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
             Justification = "This check is expected to be always true for some targets.")]
         public static IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class? {
-            if (self is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(self));
-                // dum dum compiler
-                return null!;
-            } else if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
+            ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
+            if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
                 return enumerable.GetEnumerator();
             } else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwtEnum) {
                 return cwtEnum.GetEnumerator();

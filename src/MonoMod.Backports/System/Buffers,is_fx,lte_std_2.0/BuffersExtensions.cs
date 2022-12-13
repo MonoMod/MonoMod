@@ -87,6 +87,7 @@ namespace System.Buffers {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Write<T>(this IBufferWriter<T> writer, ReadOnlySpan<T> value) {
+            ThrowHelper.ThrowIfArgumentNull(writer, nameof(writer));
             Span<T> destination = writer.GetSpan();
 
             // Fast path, try copying to the available memory directly

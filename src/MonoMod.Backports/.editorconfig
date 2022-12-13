@@ -1,6 +1,6 @@
 [*.cs]
 # Configure null check validation functions so the compiler does not complain
-dotnet_code_quality.CA1062.null_check_validation_methods = ThrowArgumentNullException
+dotnet_code_quality.CA1062.null_check_validation_methods = ThrowIfArgumentNull
 
 # CA2201: Do not raise reserved exception types
 dotnet_code_quality.CA2201.severity = none
@@ -49,3 +49,21 @@ dotnet_diagnostic.CA1019.severity = none
 
 # CA1008: Enums should have zero value
 dotnet_diagnostic.CA1008.severity = none
+
+# CA1815: Override equals and operator equals on value types
+dotnet_diagnostic.CA1815.severity = none
+
+# CA1034: Nested types should not be visible
+dotnet_diagnostic.CA1034.severity = none
+
+# CA2201: Do not raise reserved exception types
+dotnet_diagnostic.CA2201.severity = none
+
+# CA1063: Implement IDisposable Correctly
+dotnet_diagnostic.CA1063.severity = none
+
+# CA2231: Overload operator equals on overriding value type Equals
+dotnet_diagnostic.CA2231.severity = none
+
+# CA1066: Implement IEquatable when overriding Object.Equals
+dotnet_diagnostic.CA1066.severity = none

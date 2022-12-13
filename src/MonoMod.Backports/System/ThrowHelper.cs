@@ -22,6 +22,18 @@ namespace System {
     //     factory methods - still maintaining advantages 1 & 2
     //
     internal static partial class ThrowHelper {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void ThrowIfArgumentNull([NotNull] object? obj, ExceptionArgument argument) {
+            if (obj is null)
+                ThrowArgumentNullException(argument);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void ThrowIfArgumentNull([NotNull] object? obj, string argument, string? message = null) {
+            if (obj is null)
+                ThrowArgumentNullException(argument, message);
+        }
+
         [DoesNotReturn]
         internal static void ThrowArgumentNullException(ExceptionArgument argument) { throw CreateArgumentNullException(argument); }
         [DoesNotReturn]
@@ -194,8 +206,8 @@ namespace System {
         }
 
         [DoesNotReturn]
-        internal static void ThrowArgumentException_TupleIncorrectType(object obj) {
-            throw new ArgumentException($"Value tuple of incorrect type (found {obj.GetType()})", "other");
+        internal static void ThrowArgumentException_TupleIncorrectType(object other) {
+            throw new ArgumentException($"Value tuple of incorrect type (found {other.GetType()})", nameof(other));
         }
 
         //
@@ -219,6 +231,7 @@ namespace System {
     internal enum ExceptionArgument {
         length,
         start,
+        bufferSize,
         minimumBufferSize,
         elementIndex,
         comparable,

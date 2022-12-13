@@ -143,7 +143,6 @@ namespace System {
         /// <exception cref="System.ArgumentException">
         /// Thrown when the destination Span is shorter than the source Span.
         /// </exception>
-        /// </summary>
         public void CopyTo(Span<T> destination) {
             if (!TryCopyTo(destination))
                 ThrowHelper.ThrowArgumentException_DestinationTooShort();
@@ -156,7 +155,6 @@ namespace System {
         /// </summary>
         /// <returns>If the destination span is shorter than the source span, this method
         /// return false and no data is written to the destination.</returns>
-        /// </summary>
         /// <param name="destination">The span to copy items into.</param>
         public bool TryCopyTo(Span<T> destination) {
             int length = _length;

@@ -216,7 +216,7 @@ namespace System.Buffers {
                 _perCoreStacks = stacks;
             }
 
-            // TODO: polyfill Thread.GetCurrentProcessorId() sanely and replace these 2 Thread.CurrentThread.ManagedThreadId calls with it
+            // TODO: polyfill Thread.GetCurrentProcessorId() sanely and replace these 2 EnvironmentEx.CurrentManagedThreadId calls with it
 
             /// <summary>Try to push the array into the stacks. If each is full when it's tested, the array will be dropped.</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -224,7 +224,7 @@ namespace System.Buffers {
                 // Try to push on to the associated stack first.  If that fails,
                 // round-robin through the other stacks.
                 LockedStack[] stacks = _perCoreStacks;
-                int index = (int) ((uint) Thread.CurrentThread.ManagedThreadId % (uint) s_lockedStackCount); // mod by constant in tier 1
+                int index = (int) ((uint) EnvironmentEx.CurrentManagedThreadId % (uint) s_lockedStackCount); // mod by constant in tier 1
                 for (int i = 0; i < stacks.Length; i++) {
                     if (stacks[index].TryPush(array))
                         return true;
@@ -241,7 +241,7 @@ namespace System.Buffers {
                 // Try to pop from the associated stack first.  If that fails, round-robin through the other stacks.
                 T[]? arr;
                 LockedStack[] stacks = _perCoreStacks;
-                int index = (int) ((uint) Thread.CurrentThread.ManagedThreadId % (uint) s_lockedStackCount); // mod by constant in tier 1
+                int index = (int) ((uint) EnvironmentEx.CurrentManagedThreadId % (uint) s_lockedStackCount); // mod by constant in tier 1
                 for (int i = 0; i < stacks.Length; i++) {
                     if ((arr = stacks[index].TryPop()) is not null)
                         return arr;

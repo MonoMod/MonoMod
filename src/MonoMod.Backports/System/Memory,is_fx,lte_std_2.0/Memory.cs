@@ -196,7 +196,7 @@ namespace System {
             if (typeof(T) == typeof(char)) {
                 return (_object is string str) ? str.Substring(_index, _length & RemoveFlagsBitMask) : Span.ToString();
             }
-            return string.Format("System.Memory<{0}>[{1}]", typeof(T).Name, _length & RemoveFlagsBitMask);
+            return $"System.Memory<{typeof(T).Name}>[{_length & RemoveFlagsBitMask}]";
         }
 
         /// <summary>

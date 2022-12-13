@@ -143,15 +143,14 @@ namespace System {
         /// Thrown when <paramref name="culture"/> is null.
         /// </exception>
         public static int ToLower(this ReadOnlySpan<char> source, Span<char> destination, CultureInfo culture) {
-            if (culture == null)
-                ThrowHelper.ThrowArgumentNullException(ExceptionArgument.culture);
+            ThrowHelper.ThrowIfArgumentNull(culture, ExceptionArgument.culture);
 
             // Assuming that changing case does not affect length
             if (destination.Length < source.Length)
                 return -1;
 
             string sourceString = source.ToString();
-            string resultString = culture!.TextInfo.ToLower(sourceString);
+            string resultString = culture.TextInfo.ToLower(sourceString);
             Debug.Assert(sourceString.Length == resultString.Length);
             resultString.AsSpan().CopyTo(destination);
             return source.Length;
@@ -181,15 +180,14 @@ namespace System {
         /// Thrown when <paramref name="culture"/> is null.
         /// </exception>
         public static int ToUpper(this ReadOnlySpan<char> source, Span<char> destination, CultureInfo culture) {
-            if (culture == null)
-                ThrowHelper.ThrowArgumentNullException(ExceptionArgument.culture);
+            ThrowHelper.ThrowIfArgumentNull(culture, ExceptionArgument.culture);
 
             // Assuming that changing case does not affect length
             if (destination.Length < source.Length)
                 return -1;
 
             string sourceString = source.ToString();
-            string resultString = culture!.TextInfo.ToUpper(sourceString);
+            string resultString = culture.TextInfo.ToUpper(sourceString);
             Debug.Assert(sourceString.Length == resultString.Length);
             resultString.AsSpan().CopyTo(destination);
             return source.Length;

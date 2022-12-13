@@ -15,6 +15,7 @@ namespace System.Collections.Concurrent {
     /// <remarks>
     /// All public and protected members of <see cref="ConcurrentQueue{T}"/> are thread-safe and may be used
     /// concurrently from multiple threads.
+    /// </remarks>
     [DebuggerDisplay("Count = {Count}")]
     [DebuggerTypeProxy(typeof(IProducerConsumerCollectionDebugView<>))]
     public class ConcurrentQueue<T> : IProducerConsumerCollection<T>, /*IReadOnlyCollection<T>*/ IEnumerable<T> {
@@ -72,6 +73,7 @@ namespace System.Collections.Concurrent {
         /// </param>
         /// <exception cref="System.ArgumentNullException">The <paramref name="collection"/> argument is null.</exception>
         public ConcurrentQueue(IEnumerable<T> collection) {
+            ThrowHelper.ThrowIfArgumentNull(collection, ExceptionArgument.collection);
             if (collection == null) {
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.collection);
             }
@@ -401,9 +403,7 @@ namespace System.Collections.Concurrent {
         /// name="array"/>.
         /// </exception>
         public void CopyTo(T[] array, int index) {
-            if (array == null) {
-                ThrowHelper.ThrowArgumentNullException(ExceptionArgument.array);
-            }
+            ThrowHelper.ThrowIfArgumentNull(array, ExceptionArgument.array);
             if (index < 0) {
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.index);
             }
