@@ -216,7 +216,7 @@ namespace MonoMod.Utils {
 
         private static readonly FieldInfo WeakBoxValueField = typeof(WeakBox).GetField(nameof(WeakBox.Value))!;
 
-        private static ReturnTypeClass ClassifyReturn(Type returnType) {
+        private static ReturnTypeClass ClassifyType(Type returnType) {
             if (returnType == typeof(void)) {
                 return ReturnTypeClass.Void;
             } else if (returnType.IsValueType) {
@@ -243,8 +243,32 @@ namespace MonoMod.Utils {
         }
 
         private static void EmitCheckType(ILCursor il, int argId, Type expectType, ILLabel badArgLbl) {
-            il.Emit(OpCodes.Isinst, expectType);
             var nextLbl = il.DefineLabel();
+            var isByref = expectType.IsByRef;
+
+            if (isByref) {
+                expectType = expectType.GetElementType() ?? expectType;
+
+                var cls = ClassifyType(expectType);
+                if (!expectType.IsValueType) {
+                    il.Emit(OpCodes.Dup);
+                }
+
+                EmitCheckByref(il, cls, expectType, badArgLbl, argId);
+
+                // if it's a reference type, we want to load the current, and check it
+                if (!expectType.IsValueType) {
+                    EmitLoadByref(il, cls, expectType);
+                    il.Emit(OpCodes.Ldind_Ref);
+                } else {
+                    // otherweise, by checking the byref, we know it's the right type
+                    return;
+                }
+            }
+
+            if (expectType != typeof(object)) {
+                il.Emit(OpCodes.Isinst, expectType);
+            }
             il.Emit(OpCodes.Brtrue, nextLbl);
             // check failed, bad argument
             il.Emit(OpCodes.Ldc_I4, argId);
@@ -255,6 +279,33 @@ namespace MonoMod.Utils {
 
         private static void EmitCheckAllowNull(ILCursor il, int argId, Type expectType, ILLabel badArgLbl) {
             var nextLbl = il.DefineLabel();
+            var isByref = expectType.IsByRef;
+
+            if (isByref) {
+                expectType = expectType.GetElementType() ?? expectType;
+
+                var cls = ClassifyType(expectType);
+                if (!expectType.IsValueType) {
+                    il.Emit(OpCodes.Dup);
+                }
+
+                EmitCheckByref(il, cls, expectType, badArgLbl, argId);
+
+                // if it's a reference type, we want to load the current, and check it
+                if (!expectType.IsValueType) {
+                    EmitLoadByref(il, cls, expectType);
+                    il.Emit(OpCodes.Ldind_Ref);
+                } else {
+                    // otherweise, by checking the byref, we know it's the right type
+                    return;
+                }
+            }
+
+            if (expectType == typeof(object)) {
+                il.Emit(OpCodes.Pop);
+                return;
+            }
+
             if (!expectType.IsValueType) {
                 // we explicitly allow null for reference types
                 var doCheck = il.DefineLabel();
@@ -265,7 +316,10 @@ namespace MonoMod.Utils {
                 il.MarkLabel(doCheck);
             }
 
-            EmitCheckType(il, argId, expectType, badArgLbl);
+            // referencetype, or valuetype but not byref
+            if (!expectType.IsValueType || (!isByref && expectType.IsValueType)) {
+                EmitCheckType(il, argId, expectType, badArgLbl);
+            }
             il.MarkLabel(nextLbl);
         }
 
@@ -279,7 +333,7 @@ namespace MonoMod.Utils {
             il.Emit(OpCodes.Throw);
         }
 
-        private static void EmitCheckRet(ILCursor il, ReturnTypeClass rtc, Type returnType, ILLabel badArgLbl) {
+        private static void EmitCheckByref(ILCursor il, ReturnTypeClass rtc, Type returnType, ILLabel badArgLbl, int argId = ResultArgId) {
             // then, we want to check our result type
             switch (rtc) {
                 case ReturnTypeClass.Void:
@@ -297,14 +351,13 @@ namespace MonoMod.Utils {
                     // for reference types, we expect a WeakBox
                     expectType = typeof(WeakBox);
                     goto EmitTypeCheck;
-                    EmitTypeCheck:
-                    il.Emit(OpCodes.Ldarg_1);
-                    EmitCheckType(il, ResultArgId, expectType, badArgLbl);
+                EmitTypeCheck:
+                    EmitCheckType(il, argId, expectType, badArgLbl);
                     break;
             }
         }
 
-        private static void EmitLoadRetAddr(ILCursor il, ReturnTypeClass rtc, Type returnType) {
+        private static void EmitLoadByref(ILCursor il, ReturnTypeClass rtc, Type returnType) {
 
             // then we actually want to load the reference to it
             switch (rtc) {
@@ -313,19 +366,16 @@ namespace MonoMod.Utils {
                     break;
                 case ReturnTypeClass.ValueType:
                     // unbox insn
-                    il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Unbox, returnType);
                     break;
                 case ReturnTypeClass.Nullable:
                     // get strong box field
                     var strongBoxResult = typeof(StrongBox<>).MakeGenericType(returnType);
                     var strongBoxField = strongBoxResult.GetField(nameof(StrongBox<int>.Value))!;
-                    il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Ldflda, strongBoxField);
                     break;
                 case ReturnTypeClass.ReferenceType:
                     // get weak box field
-                    il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Ldflda, WeakBoxValueField);
                     break;
             }
@@ -337,7 +387,7 @@ namespace MonoMod.Utils {
             il.Emit(OpCodes.Ldelem_Ref);
         }
 
-        private static void EmitStoreRet(ILCursor il, ReturnTypeClass rtc, Type returnType) {
+        private static void EmitStoreByref(ILCursor il, ReturnTypeClass rtc, Type returnType) {
             // the only thing left on the stack is the result reference and result, so save the result
             if (rtc is not ReturnTypeClass.Void) {
                 if (returnType.IsValueType) {
@@ -358,7 +408,7 @@ namespace MonoMod.Utils {
             if (returnType.IsByRef || returnType.IsByRefLike())
                 throw new ArgumentException("Cannot create reflection invoker for method with byref or byref-like return type", nameof(method));
 
-            retTypeClass = ClassifyReturn(returnType);
+            retTypeClass = ClassifyType(returnType);
             var typeClass = retTypeClass;
 
             var methParams = method.GetParameters();
@@ -384,16 +434,16 @@ namespace MonoMod.Utils {
                     EmitCheckType(il, TargetArgId, expectType, badArgLbl);
                 }
 
-                EmitCheckRet(il, typeClass, returnType, badArgLbl);
+                if (typeClass != ReturnTypeClass.Void) {
+                    il.Emit(OpCodes.Ldarg_1);
+                    EmitCheckByref(il, typeClass, returnType, badArgLbl);
+                }
 
                 // then, we want to go through and check all our arguments
                 for (var arg = 0; arg < methParams.Length; arg++) {
                     var ptype = methParams[arg].ParameterType;
                     if (ptype.IsByRef) { // we support byrefs (of value types) via unbox, so need to handle that here
                         ptype = ptype.GetElementType() ?? ptype;
-                        if (!ptype.IsValueType) {
-                            throw new ArgumentException("Cannot create reflection invoker for method that takes a byref to a non-value type", nameof(method));
-                        }
                     }
                     if (ptype.IsByRefLike()) // we *can't*, however, support byreflikes, so check for that and throw
                         throw new ArgumentException("Cannot create reflection invoker for method with byref-like argument types", nameof(method));
@@ -402,7 +452,8 @@ namespace MonoMod.Utils {
                     EmitCheckAllowNull(il, arg, ptype, badArgLbl);
                 }
 
-                EmitLoadRetAddr(il, typeClass, returnType);
+                il.Emit(OpCodes.Ldarg_1);
+                EmitLoadByref(il, typeClass, returnType);
 
                 // now we can load our target ref if needed
                 if (!method.IsStatic && method is not ConstructorInfo) {
@@ -424,7 +475,7 @@ namespace MonoMod.Utils {
 
                     EmitLoadArgO(il, arg);
                     if (ptype.IsByRef) {
-                        il.Emit(OpCodes.Unbox, realType);
+                        EmitLoadByref(il, ClassifyType(realType), realType);
                     } else if (ptype.IsValueType) {
                         il.Emit(OpCodes.Unbox_Any, realType);
                     }
@@ -441,7 +492,7 @@ namespace MonoMod.Utils {
                     }
                 }
 
-                EmitStoreRet(il, typeClass, returnType);
+                EmitStoreByref(il, typeClass, returnType);
 
                 // and finally return
                 il.Emit(OpCodes.Ret);
@@ -461,7 +512,7 @@ namespace MonoMod.Utils {
             var returnType = field.FieldType;
             retType = returnType;
             // if the containing type is not a byref or byreflike, then the field type cannot be either
-            retTypeClass = ClassifyReturn(returnType);
+            retTypeClass = ClassifyType(returnType);
             var typeClass = retTypeClass;
 
             using var dmd = new DynamicMethodDefinition(DebugFormatter.Format($"MM:FastStructInvoker<{field}>"), null, FastStructInvokerArgs);
@@ -479,7 +530,8 @@ namespace MonoMod.Utils {
                     EmitCheckType(il, TargetArgId, expect, badArgLbl);
                 }
 
-                EmitCheckRet(il, typeClass, returnType, badArgLbl);
+                il.Emit(OpCodes.Ldarg_1);
+                EmitCheckByref(il, typeClass, returnType, badArgLbl);
 
                 // at this point, we must decide whether to get or set
                 var getLbl = il.DefineLabel();
@@ -498,7 +550,8 @@ namespace MonoMod.Utils {
                 EmitCheckAllowNull(il, 0, field.FieldType, badArgLbl);
 
                 // load ret
-                EmitLoadRetAddr(il, typeClass, returnType);
+                il.Emit(OpCodes.Ldarg_1);
+                EmitLoadByref(il, typeClass, returnType);
 
                 // load target ref
                 if (!field.IsStatic) {
@@ -526,7 +579,7 @@ namespace MonoMod.Utils {
                 // reload our argument and copy it to ret
                 EmitLoadArgO(il, 0);
                 il.Emit(OpCodes.Unbox_Any, field.FieldType);
-                EmitStoreRet(il, typeClass, returnType);
+                EmitStoreByref(il, typeClass, returnType);
 
                 // and finally return
                 il.Emit(OpCodes.Ret);
@@ -536,7 +589,8 @@ namespace MonoMod.Utils {
                 // get block
 
                 // load ret
-                EmitLoadRetAddr(il, typeClass, returnType);
+                il.Emit(OpCodes.Ldarg_1);
+                EmitLoadByref(il, typeClass, returnType);
 
                 // load target ref
                 if (!field.IsStatic) {
@@ -558,7 +612,7 @@ namespace MonoMod.Utils {
                 }
 
                 // our value is on stack, save it
-                EmitStoreRet(il, typeClass, returnType);
+                EmitStoreByref(il, typeClass, returnType);
 
                 // and finally return
                 il.Emit(OpCodes.Ret);
