@@ -432,7 +432,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 IntPtr.Size + // PTR_Module            m_pManifest;
                 0; // here is out PEAssembly* (manifestFile)
 
-            IntPtr peAssembly = *(IntPtr*) (((byte*) pAssembly) + pAssemOffset);
+            var peAssembly = *(IntPtr*) (((byte*) pAssembly) + pAssemOffset);
 
             // PEAssembly in src/coreclr/src/vm/pefile.h
             var peAssemOffset =

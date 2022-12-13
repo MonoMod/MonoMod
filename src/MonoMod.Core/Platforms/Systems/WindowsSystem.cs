@@ -149,8 +149,8 @@ namespace MonoMod.Core.Platforms.Systems {
                     MMDbgLog.Trace($"aprotect: {infoBasic.AllocationProtect}");
 
                     try {
-                        IntPtr addrPrev = addr;
-                        addr = unchecked((IntPtr) ((ulong) infoBasic.BaseAddress + (ulong) infoBasic.RegionSize));
+                        var addrPrev = addr;
+                        addr = unchecked((IntPtr) (infoBasic.BaseAddress + (ulong) infoBasic.RegionSize));
                         if ((ulong) addr <= (ulong) addrPrev)
                             break;
                     } catch (OverflowException oe) {
