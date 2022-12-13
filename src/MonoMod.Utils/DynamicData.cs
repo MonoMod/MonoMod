@@ -30,15 +30,23 @@ namespace MonoMod.Utils {
             public readonly Dictionary<string, Action<object, object?>> Setters = new();
             public readonly Dictionary<string, Func<object?, object?[]?, object?>> Methods = new();
 
+            [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+                Justification = "If a failure occurs within the try block, we fall back to using raw reflection instead of fast invokers.")]
             public _Cache_(Type? targetType) {
                 var first = true;
                 for (; targetType != null && targetType != targetType.BaseType; targetType = targetType.BaseType) {
                     foreach (FieldInfo field in targetType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                         var name = field.Name;
                         if (!Getters.ContainsKey(name) && !Setters.ContainsKey(name)) {
-                            var fastInvoker = field.GetFastInvoker();
-                            Getters[name] = (obj) => fastInvoker(obj);
-                            Setters[name] = (obj, value) => fastInvoker(obj, value);
+                            try {
+                                var fastInvoker = field.GetFastInvoker();
+                                Getters[name] = (obj) => fastInvoker(obj);
+                                Setters[name] = (obj, value) => fastInvoker(obj, value);
+                            } catch {
+                                // eat the exception and fall back to pure reflection
+                                Getters[name] = field.GetValue;
+                                Setters[name] = field.SetValue;
+                            }
                         }
                     }
 
@@ -47,12 +55,24 @@ namespace MonoMod.Utils {
 
                         var get = prop.GetGetMethod(true);
                         if (get != null && !Getters.ContainsKey(name)) {
-                            Getters[name] = (obj) => get.Invoke(obj, _NoArgs);
+                            try {
+                                var fastInvoker = get.GetFastInvoker();
+                                Getters[name] = (obj) => fastInvoker(obj);
+                            } catch {
+                                // eat the exception and fall back to pure reflection
+                                Getters[name] = (obj) => get.Invoke(obj, _NoArgs);
+                            }
                         }
 
                         var set = prop.GetSetMethod(true);
                         if (set != null && !Setters.ContainsKey(name)) {
-                            Setters[name] = (obj, value) => set.Invoke(obj, new[] { value });
+                            try {
+                                var fastInvoker = set.GetFastInvoker();
+                                Setters[name] = (obj, value) => fastInvoker(obj, value);
+                            } catch {
+                                // eat the exception and fall back to pure reflection
+                                Setters[name] = (obj, value) => set.Invoke(obj, new[] { value });
+                            }
                         }
                     }
 
@@ -75,8 +95,13 @@ namespace MonoMod.Utils {
                         if (kvp.Value.IsGenericMethod)
                             continue;
 
-                        var cb = kvp.Value.GetFastInvoker();
-                        Methods[kvp.Key] = (target, args) => cb(target, args);
+                        try {
+                            var cb = kvp.Value.GetFastInvoker();
+                            Methods[kvp.Key] = (target, args) => cb(target, args);
+                        } catch {
+                            // eat the exception and fall back to pure reflection
+                            Methods[kvp.Key] = kvp.Value.Invoke;
+                        }
                     }
 
                     first = false;

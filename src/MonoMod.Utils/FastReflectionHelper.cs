@@ -246,18 +246,26 @@ namespace MonoMod.Utils {
             var nextLbl = il.DefineLabel();
             var isByref = expectType.IsByRef;
 
+            VariableDefinition? valueVar = null;
+
             if (isByref) {
                 expectType = expectType.GetElementType() ?? expectType;
 
                 var cls = ClassifyType(expectType);
                 if (!expectType.IsValueType) {
-                    il.Emit(OpCodes.Dup);
+                    valueVar = new VariableDefinition(il.Module.TypeSystem.Object);
+                    il.Context.Body.Variables.Add(valueVar);
+                    il.Emit(OpCodes.Stloc, valueVar);
+                    il.Emit(OpCodes.Ldloc, valueVar);
                 }
 
                 EmitCheckByref(il, cls, expectType, badArgLbl, argId);
 
                 // if it's a reference type, we want to load the current, and check it
                 if (!expectType.IsValueType) {
+                    if (valueVar is not null) {
+                        il.Emit(OpCodes.Ldloc, valueVar);
+                    }
                     EmitLoadByref(il, cls, expectType);
                     il.Emit(OpCodes.Ldind_Ref);
                 } else {
@@ -281,18 +289,26 @@ namespace MonoMod.Utils {
             var nextLbl = il.DefineLabel();
             var isByref = expectType.IsByRef;
 
+            VariableDefinition? valueVar = null;
+
             if (isByref) {
                 expectType = expectType.GetElementType() ?? expectType;
 
                 var cls = ClassifyType(expectType);
                 if (!expectType.IsValueType) {
-                    il.Emit(OpCodes.Dup);
+                    valueVar = new VariableDefinition(il.Module.TypeSystem.Object);
+                    il.Context.Body.Variables.Add(valueVar);
+                    il.Emit(OpCodes.Stloc, valueVar);
+                    il.Emit(OpCodes.Ldloc, valueVar);
                 }
 
                 EmitCheckByref(il, cls, expectType, badArgLbl, argId);
 
                 // if it's a reference type, we want to load the current, and check it
                 if (!expectType.IsValueType) {
+                    if (valueVar is not null) {
+                        il.Emit(OpCodes.Ldloc, valueVar);
+                    }
                     EmitLoadByref(il, cls, expectType);
                     il.Emit(OpCodes.Ldind_Ref);
                 } else {
@@ -309,11 +325,14 @@ namespace MonoMod.Utils {
             if (!expectType.IsValueType) {
                 // we explicitly allow null for reference types
                 var doCheck = il.DefineLabel();
-                il.Emit(OpCodes.Dup);
+                var val = new VariableDefinition(il.Module.TypeSystem.Object);
+                il.Context.Body.Variables.Add(val);
+                il.Emit(OpCodes.Stloc, val);
+                il.Emit(OpCodes.Ldloc, val);
                 il.Emit(OpCodes.Brtrue, doCheck);
-                il.Emit(OpCodes.Pop);
                 il.Emit(OpCodes.Br, nextLbl);
                 il.MarkLabel(doCheck);
+                il.Emit(OpCodes.Ldloc, val);
             }
 
             // referencetype, or valuetype but not byref
@@ -442,9 +461,6 @@ namespace MonoMod.Utils {
                 // then, we want to go through and check all our arguments
                 for (var arg = 0; arg < methParams.Length; arg++) {
                     var ptype = methParams[arg].ParameterType;
-                    if (ptype.IsByRef) { // we support byrefs (of value types) via unbox, so need to handle that here
-                        ptype = ptype.GetElementType() ?? ptype;
-                    }
                     if (ptype.IsByRefLike()) // we *can't*, however, support byreflikes, so check for that and throw
                         throw new ArgumentException("Cannot create reflection invoker for method with byref-like argument types", nameof(method));
 
@@ -452,8 +468,10 @@ namespace MonoMod.Utils {
                     EmitCheckAllowNull(il, arg, ptype, badArgLbl);
                 }
 
-                il.Emit(OpCodes.Ldarg_1);
-                EmitLoadByref(il, typeClass, returnType);
+                if (typeClass != ReturnTypeClass.Void) {
+                    il.Emit(OpCodes.Ldarg_1);
+                    EmitLoadByref(il, typeClass, returnType);
+                }
 
                 // now we can load our target ref if needed
                 if (!method.IsStatic && method is not ConstructorInfo) {

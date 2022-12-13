@@ -3,10 +3,66 @@ using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using Xunit.Abstractions;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod.UnitTest {
     public class DynamicDataTest : TestBase {
         public DynamicDataTest(ITestOutputHelper helper) : base(helper) {
+        }
+
+        [Fact]
+        public void TestDynamicDataByrefsVt() {
+            var dict = new Dictionary<string, int>();
+            using dynamic data = new DynamicData(dict);
+
+            Assert.Equal(dict, (Dictionary<string, int>) data);
+
+            dict.Add("s", 5);
+            Assert.True(dict.TryGetValue("s", out var addedVal1));
+            Assert.Equal(5, addedVal1);
+
+            data.TryGetValue("s", out int s2);
+
+            object result = default(int);
+            Assert.True(data.TryGetValue("s", result));
+            Assert.Equal(5, result);
+        }
+
+        [Fact]
+        public void TestDynamicDataByrefsNullVt() {
+            var dict = new Dictionary<string, int?>();
+            using dynamic data = new DynamicData(dict);
+
+            Assert.Equal(dict, (Dictionary<string, int?>) data);
+
+            dict.Add("s", 5);
+            Assert.True(dict.TryGetValue("s", out var addedVal1));
+            Assert.Equal(5, addedVal1);
+
+            //data.TryGetValue("s", out int? s2);
+
+            var result = new StrongBox<int?>(null);
+            Assert.True(data.TryGetValue("s", result));
+            Assert.Equal(5, result.Value);
+        }
+
+
+        [Fact]
+        public void TestDynamicDataByrefsRef() {
+            var dict = new Dictionary<string, string>();
+            using dynamic data = new DynamicData(dict);
+
+            Assert.Equal(dict, (Dictionary<string, string>) data);
+
+            dict.Add("s", "5");
+            Assert.True(dict.TryGetValue("s", out var addedVal1));
+            Assert.Equal("5", addedVal1);
+
+            //data.TryGetValue("s", out string? s2);
+
+            var result = new WeakBox();
+            Assert.True(data.TryGetValue("s", result));
+            Assert.Equal("5", result.Value);
         }
 
         [Fact]
