@@ -2,11 +2,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Metadata -->
   <PropertyGroup>
-    <AssemblyName>MonoMod</AssemblyName>
-    <PackageId>MonoMod</PackageId>
+    <AssemblyName>MonoMod.Patcher</AssemblyName>
+    <PackageId>MonoMod.Patcher</PackageId>
     <Description>General purpose .NET assembly modding "basework". This package contains the core IL patcher and relinker.</Description>
     <PackageTags>$(PackageTags)</PackageTags>
     <Nullable>annotations</Nullable>
+    <TargetFrameworks>net452;netstandard2.0;net6.0</TargetFrameworks>
     
     <OutputType>Exe</OutputType>
   </PropertyGroup>

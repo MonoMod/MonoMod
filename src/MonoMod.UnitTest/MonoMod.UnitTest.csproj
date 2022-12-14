@@ -41,7 +41,7 @@
       <Aliases>New</Aliases>
     </ProjectReference>
     <!--<ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />-->
-    <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
+    <ProjectReference Include="..\MonoMod.Patcher\MonoMod.Patcher.csproj" />
   </ItemGroup>
 
   <!-- xUnit -->

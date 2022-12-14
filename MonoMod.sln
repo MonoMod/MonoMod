@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31717.71
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod", "src\MonoMod\MonoMod.csproj", "{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Patcher", "src\MonoMod.Patcher\MonoMod.Patcher.csproj", "{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.DebugIL", "src\MonoMod.DebugIL\MonoMod.DebugIL.csproj", "{68E38462-2DB9-4692-AD91-077A8FBE8AE9}"
 EndProject

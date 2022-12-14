@@ -1,11 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+  
   <!-- Metadata -->
   <PropertyGroup>
     <AssemblyName>MonoMod.RuntimeDetour.HookGen</AssemblyName>
     <PackageId>MonoMod.RuntimeDetour.HookGen</PackageId>
     <Description>Auto-generate hook helper .dlls, hook arbitrary methods via events: On.Namespace.Type.Method += YourHandlerHere;</Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
+    <TargetFrameworks>net452;netstandard2.0;net6.0</TargetFrameworks>
     <Nullable>annotations</Nullable>
 
     <OutputType>Exe</OutputType>
@@ -22,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" />
-    <ProjectReference Include="..\MonoMod\MonoMod.csproj" />
+    <ProjectReference Include="..\MonoMod.Patcher\MonoMod.Patcher.csproj" />
   </ItemGroup>
+  
 </Project>
