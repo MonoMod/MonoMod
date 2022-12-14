@@ -6,11 +6,7 @@ extern alias New;
 using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Utils;
-using System.Reflection.Emit;
-using System.Text;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {

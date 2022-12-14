@@ -23,16 +23,16 @@ namespace MonoMod.UnitTest {
             Assert.True(Source(0, 0, 0, 0) is { f1: 4, f2: 5, f3: 6 });
         }
 
-        public struct TestStruct {
+        internal struct TestStruct {
             public ulong f1, f2, f3; // 24 bytes
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public TestStruct Source(int a, int b, int c, int d) {
+        internal TestStruct Source(int a, int b, int c, int d) {
             return new TestStruct() { f1 = 1, f2 = 2, f3 = 3 };
         }
 
-        public static TestStruct Target(Func<ReturnBufferSysVTest, int, int, int, int, TestStruct> orig, ReturnBufferSysVTest self, int a, int b, int c, int d) {
+        internal static TestStruct Target(Func<ReturnBufferSysVTest, int, int, int, int, TestStruct> orig, ReturnBufferSysVTest self, int a, int b, int c, int d) {
             var s = orig(self, a, b, c, d);
             s.f1 += 3;
             s.f2 += 3;

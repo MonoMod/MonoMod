@@ -1,5 +1,7 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
+#pragma warning disable CA2201 // Do not raise reserved exception types
+#pragma warning disable CA1031 // Do not catch general exception types
 
 extern alias New;
 
@@ -155,7 +157,8 @@ namespace MonoMod.UnitTest {
 #endif
 
 #if NETFRAMEWORK && true
-                Assert.Equal("A", new SqlCommand("A").CommandText);
+                using (var cmd = new SqlCommand("A"))
+                    Assert.Equal("A", cmd.CommandText);
 
                 using (var h = new Hook(
                     typeof(SqlCommand).GetConstructor(new Type[] { typeof(string) }),
@@ -163,10 +166,12 @@ namespace MonoMod.UnitTest {
                         orig(self, "-");
                     })
                 )) {
-                    Assert.Equal("-", new SqlCommand("B").CommandText);
+                    using (var cmd = new SqlCommand("B"))
+                        Assert.Equal("-", cmd.CommandText);
                 }
 
-                Assert.Equal("C", new SqlCommand("C").CommandText);
+                using (var cmd = new SqlCommand("C"))
+                    Assert.Equal("C", cmd.CommandText);
 #endif
 
 
@@ -193,7 +198,7 @@ namespace MonoMod.UnitTest {
                         new Action<Action<StackTrace, Exception, bool>, StackTrace, Exception, bool>((orig, self, e, fNeedFileInfo) => {
                             orig(self, e, fNeedFileInfo);
                             DynamicData.Set(self, new {
-                                frames = new StackFrame[0],
+                                frames = Array.Empty<StackFrame>(),
                                 m_iNumOfFrames = 0,
                                 m_iMethodsToSkip = 0
                             });
@@ -346,7 +351,7 @@ namespace MonoMod.UnitTest {
                 using (var h = new Hook(
                     typeof(TwoInts).GetMethod("get_Magic", BindingFlags.Public | BindingFlags.Instance),
                     new Func<Func<IntPtr, int>, IntPtr, int>((orig, self) => {
-                        int rv = orig(self);
+                        var rv = orig(self);
                         rv = rv * 2 + ((TwoInts*) self)->B;
                         return rv;
                     })
@@ -379,28 +384,28 @@ namespace MonoMod.UnitTest {
             // nop
         }
 
-        public static int TestStaticMethod_A(int a, int b) {
+        internal static int TestStaticMethod_A(int a, int b) {
             return a * b * 2;
         }
 
-        public class Thrower {
-            int b;
+        internal class Thrower {
+            public int b;
             public Thrower(int a) {
                 throw new Exception(a.ToString(CultureInfo.InvariantCulture));
             }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
-        public static int DummyA(int a, int b) {
+        internal static int DummyA(int a, int b) {
             return a * b * 2;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
-        public static int DummyB(int a, int b) {
+        internal static int DummyB(int a, int b) {
             return a * b * 2;
         }
 
-        public struct TwoInts {
+        internal struct TwoInts {
             public int A;
             public int B;
             public int Magic {

@@ -26,7 +26,7 @@ namespace MonoMod.UnitTest {
         }
 
         [ModExportName("ModA")]
-        public static class UtilsA {
+        internal static class UtilsA {
 
             public static int Something(int a, int b) {
                 return a + b;
@@ -39,7 +39,7 @@ namespace MonoMod.UnitTest {
         }
 
         [ModExportName("ModB")]
-        public static class UtilsB {
+        internal static class UtilsB {
 
             public static int Something(int a, int b) {
                 return a * b;
@@ -52,7 +52,7 @@ namespace MonoMod.UnitTest {
         }
 
         [ModExportName("ModC")]
-        public static class UtilsC {
+        internal static class UtilsC {
 
             // Simple use case: Get the first registered "Something".
             public static Func<int, int, int> Something;
@@ -80,7 +80,7 @@ namespace MonoMod.UnitTest {
 
         [ModExportName("ModD")]
         [ModImportName("ModB")] // We want to only import things from ModB.
-        public static class UtilsD {
+        internal static class UtilsD {
             public static Func<int, int, int> Something;
             public static Func<int, int, int> AnotherThing;
         }

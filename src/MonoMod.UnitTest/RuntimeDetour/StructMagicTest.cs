@@ -12,10 +12,10 @@ using Xunit.Abstractions;
 namespace MonoMod.UnitTest {
     public unsafe class StructMagicTest : TestBase {
 
-        public static bool IsHook;
+        internal static bool IsHook;
 
-        public static StructMagicTest GetStructInstance;
-        public int GetStructCounter;
+        internal static StructMagicTest GetStructInstance;
+        internal int GetStructCounter;
 
         public StructMagicTest(ITestOutputHelper helper) : base(helper) {
         }
@@ -100,7 +100,7 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        public static void CheckColor(Color c, byte r, byte g, byte b, byte a) {
+        internal static void CheckColor(Color c, byte r, byte g, byte b, byte a) {
             Assert.Equal(r, c.R);
             Assert.Equal(g, c.G);
             Assert.Equal(b, c.B);
@@ -108,12 +108,12 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public SomeOtherStruct GetStruct(IntPtr x) {
+        internal SomeOtherStruct GetStruct(IntPtr x) {
             GetStructCounter += (int) x;
             return new SomeOtherStruct();
         }
 
-        public static SomeOtherStruct GetStructHook(Func<StructMagicTest, IntPtr, SomeOtherStruct> orig, StructMagicTest self, IntPtr x) {
+        internal static SomeOtherStruct GetStructHook(Func<StructMagicTest, IntPtr, SomeOtherStruct> orig, StructMagicTest self, IntPtr x) {
             Assert.True(IsHook);
             IsHook = false;
             SomeOtherStruct s = orig(self, x);
@@ -124,7 +124,7 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void ManipColor(ref Color c, byte r, byte g, byte b, byte a) {
+        internal static void ManipColor(ref Color c, byte r, byte g, byte b, byte a) {
             Assert.False(IsHook);
             c.R = r;
             c.G = g;
@@ -133,7 +133,7 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void ManipColorHook(ColorRGBA* cRGBA, byte r, byte g, byte b, byte a) {
+        internal static void ManipColorHook(ColorRGBA* cRGBA, byte r, byte g, byte b, byte a) {
             Assert.True(IsHook);
             cRGBA->R = r;
             cRGBA->G = g;
@@ -141,28 +141,28 @@ namespace MonoMod.UnitTest {
             cRGBA->A = a;
         }
 
-        public delegate bool d_GetIsTransparent(ref ColorRGBA self);
-        public static bool GetIsTransparentHook(d_GetIsTransparent orig, ref ColorRGBA self) {
+        internal delegate bool d_GetIsTransparent(ref ColorRGBA self);
+        internal static bool GetIsTransparentHook(d_GetIsTransparent orig, ref ColorRGBA self) {
             Assert.True(IsHook);
             IsHook = false;
-            bool rv = orig(ref self);
+            var rv = orig(ref self);
             IsHook = true;
 
             self.G = self.A;
             return !rv;
         }
 
-        public delegate string d_ToString(ref ColorRGBA self);
-        public static string ToStringHook(d_ToString orig, ref ColorRGBA self) {
+        internal delegate string d_ToString(ref ColorRGBA self);
+        internal static string ToStringHook(d_ToString orig, ref ColorRGBA self) {
             Assert.True(IsHook);
             IsHook = false;
-            string rv = orig(ref self);
+            var rv = orig(ref self);
             IsHook = true;
 
             return rv + " hooked";
         }
 
-        public struct Color {
+        internal struct Color {
             private uint packedValue;
 
             public byte B {
@@ -191,7 +191,7 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        public struct ColorRGBA {
+        internal struct ColorRGBA {
             public byte R, G, B, A;
 
             public bool IsTransparent {
@@ -210,7 +210,7 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        public struct SomeOtherStruct {
+        internal struct SomeOtherStruct {
             public byte A;
             public byte B;
             public byte C;

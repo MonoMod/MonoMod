@@ -2,10 +2,7 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 using Xunit;
-using MonoMod.RuntimeDetour;
 using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using System.IO;
 using MonoMod.RuntimeDetour.HookGen;
@@ -21,9 +18,9 @@ namespace MonoMod.UnitTest {
         // TODO: re-enable when HookGen uses new RuntimeDetour
         [Fact(Skip = "HookGen still uses old RuntimeDetour")]
         public void TestHookGenRun() {
-            string outputPath = Path.Combine(Environment.CurrentDirectory, "testdump", "MonoMod.UnitTest.Hooks.dll");
+            var outputPath = Path.Combine(Environment.CurrentDirectory, "testdump", "MonoMod.UnitTest.Hooks.dll");
             try {
-                string dir = Path.GetDirectoryName(outputPath);
+                var dir = Path.GetDirectoryName(outputPath);
                 if (!Directory.Exists(dir)) {
                     Directory.CreateDirectory(dir);
                 }
@@ -36,7 +33,7 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine(e);
             }
 
-            using (MonoModder mm = new MonoModder {
+            using (var mm = new MonoModder {
                 InputPath = typeof(HookGenRunTest).Assembly.Location,
                 ReadingMode = ReadingMode.Deferred,
 
@@ -45,16 +42,16 @@ namespace MonoMod.UnitTest {
                 mm.Read();
                 mm.MapDependencies();
 
-                HookGenerator gen = new HookGenerator(mm, "MonoMod.UnitTest.Hooks") {
+                var gen = new HookGenerator(mm, "MonoMod.UnitTest.Hooks") {
                     HookPrivate = true,
                 };
-                using (ModuleDefinition mOut = gen.OutputModule) {
+                using (var mOut = gen.OutputModule) {
                     gen.Generate();
 
                     if (outputPath != null) {
                         mOut.Write(outputPath);
                     } else {
-                        using (MemoryStream ms = new MemoryStream())
+                        using (var ms = new MemoryStream())
                             mOut.Write(ms);
                     }
                 }

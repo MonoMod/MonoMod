@@ -1,15 +1,12 @@
 ﻿#pragma warning disable xUnit1013 // Public method should be marked as test
+#pragma warning disable CA1825 // Avoid zero-length array allocations
 
 extern alias New;
 
 using MonoMod.Cil;
 using New::MonoMod.RuntimeDetour;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,6 +16,10 @@ namespace MonoMod.UnitTest {
         }
 
         [Collection("RuntimeDetour")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable",
+            Justification = "Sucks.")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible",
+            Justification = "Sucks.")]
         public class OnIL {
             Hook h1;
             ILHook hIL;
@@ -39,7 +40,7 @@ namespace MonoMod.UnitTest {
                 hIL = new ILHook(
                     typeof(OnIL).GetMethod("DoNothing"),
                     il => {
-                        ILCursor c = new ILCursor(il);
+                        var c = new ILCursor(il);
                         c.EmitDelegate<Action>(() => {
                             hILRun = true;
                         });
@@ -60,7 +61,7 @@ namespace MonoMod.UnitTest {
                 hIL = new ILHook(
                     typeof(OnIL).GetMethod("DoNothing"),
                     il => {
-                        ILCursor c = new ILCursor(il);
+                        var c = new ILCursor(il);
                         c.EmitDelegate<Action>(() => {
                             hILRun = true;
                         });
@@ -87,7 +88,12 @@ namespace MonoMod.UnitTest {
             public void DoNothing() {
             }
         }
+
         [Collection("RuntimeDetour")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable",
+            Justification = "Sucks.")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible",
+            Justification = "Sucks.")]
         public class OnOnIL {
             Hook h1;
             Hook h2;
@@ -118,7 +124,7 @@ namespace MonoMod.UnitTest {
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
                     il => {
-                        ILCursor c = new ILCursor(il);
+                        var c = new ILCursor(il);
                         c.EmitDelegate<Action>(() => {
                             hILRun = true;
                         });
@@ -150,7 +156,7 @@ namespace MonoMod.UnitTest {
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
                     il => {
-                        ILCursor c = new ILCursor(il);
+                        var c = new ILCursor(il);
                         c.EmitDelegate<Action>(() => {
                             hILRun = true;
                         });
@@ -182,7 +188,7 @@ namespace MonoMod.UnitTest {
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
                     il => {
-                        ILCursor c = new ILCursor(il);
+                        var c = new ILCursor(il);
                         c.EmitDelegate<Action>(() => {
                             hILRun = true;
                         });

@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 namespace MonoMod.UnitTest {
     public class TieredCompilationTests : TestBase {
 
-        private static bool TargetHit = false;
+        private static bool TargetHit;
 
         public TieredCompilationTests(ITestOutputHelper helper) : base(helper) {
         }

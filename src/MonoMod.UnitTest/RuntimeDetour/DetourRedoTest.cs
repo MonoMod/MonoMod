@@ -92,7 +92,7 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        public static int TestStaticMethod_A(int a, int b) {
+        internal static int TestStaticMethod_A(int a, int b) {
             return a * b * 2;
         }
 

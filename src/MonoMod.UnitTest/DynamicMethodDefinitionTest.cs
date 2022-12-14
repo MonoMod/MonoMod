@@ -12,7 +12,6 @@ using MonoMod.Cil;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 using System.Diagnostics;
 using System.Linq;
-using Mono.Cecil;
 using MonoMod.Core.Platforms;
 using Xunit.Abstractions;
 
@@ -25,9 +24,9 @@ namespace MonoMod.UnitTest {
             // Run the original method.
             Assert.Equal(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
-            MethodInfo original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
+            var original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
             MethodInfo patched;
-            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(original)) {
+            using (var dmd = new DynamicMethodDefinition(original)) {
                 Assert.Equal("i", dmd.Definition.Parameters[0].Name);
 
                 // Modify the MethodDefinition.
@@ -44,21 +43,21 @@ namespace MonoMod.UnitTest {
 
             // Generate an entirely new method that just returns a stack trace for further testing.
             DynamicMethod stacker;
-            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition("Stacker", typeof(StackTrace), new Type[0])) {
-                using (ILContext il = new ILContext(dmd.Definition))
+            using (var dmd = new DynamicMethodDefinition("Stacker", typeof(StackTrace), Array.Empty<Type>())) {
+                using (var il = new ILContext(dmd.Definition))
                     il.Invoke(_ => {
-                        ILCursor c = new ILCursor(il);
-                        for (int i = 0; i < 32; i++)
+                        var c = new ILCursor(il);
+                        for (var i = 0; i < 32; i++)
                             c.Emit(OpCodes.Nop);
-                        c.Emit(OpCodes.Newobj, typeof(StackTrace).GetConstructor(new Type[0]));
-                        for (int i = 0; i < 32; i++)
+                        c.Emit(OpCodes.Newobj, typeof(StackTrace).GetConstructor(Array.Empty<Type>()));
+                        for (var i = 0; i < 32; i++)
                             c.Emit(OpCodes.Nop);
                         c.Emit(OpCodes.Ret);
                     });
                 stacker = (DynamicMethod) DMDEmitDynamicMethodGenerator.Generate(dmd, null);
             }
 
-            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
+            using (var dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
                 Assert.Equal(0, ((Func<int>) dmd.Generate().CreateDelegate(typeof(Func<int>)))());
                 Assert.Equal(0, ((Func<int>) DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
                 // no
@@ -98,8 +97,8 @@ namespace MonoMod.UnitTest {
                 Assert.Equal(tDupeA.Assembly.FullName, tDupeB.Assembly.FullName);
                 Assert.NotEqual(tDupeA.Assembly, tDupeB.Assembly);
 
-                TypeReference trDupeA = dmd.Module.ImportReference(tDupeA);
-                TypeReference trDupeB = dmd.Module.ImportReference(tDupeB);
+                var trDupeA = dmd.Module.ImportReference(tDupeA);
+                var trDupeB = dmd.Module.ImportReference(tDupeB);
                 Assert.Equal(trDupeA.Scope.Name, trDupeB.Scope.Name);
                 // "Fun" fact: both share matching AssemblyNames, so the first scope gets reused!
                 // Assert.NotEqual(trDupeA.Scope, trDupeB.Scope);
@@ -137,19 +136,23 @@ namespace MonoMod.UnitTest {
             Assert.IsAssignableFrom<DynamicMethod>(triple.GetIdentifiable(stacked));
         }
 
-        public const string StringOriginal = "Hello from ExampleMethod!";
-        public const string StringPatched = "Hello from DynamicMethodDefinition!";
+        private const string StringOriginal = "Hello from ExampleMethod!";
+        private const string StringPatched = "Hello from DynamicMethodDefinition!";
 
-        public static volatile int Counter;
+        private static volatile int Counter;
 
         public DynamicMethodDefinitionTest(ITestOutputHelper helper) : base(helper) {
         }
 
-        public static Tuple<string, int> ExampleMethod(int i) {
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+#pragma warning disable CA1508 // Avoid dead conditional code
+#pragma warning disable CA1031 // Do not catch general exception types
+
+        private static Tuple<string, int> ExampleMethod(int i) {
             if (i == 1337)
                 return ExampleMethod(0);
 
-            TestObjectGeneric<string> test = new TestObjectGeneric<string>();
+            _ = new TestObjectGeneric<string>();
             try {
                 Console.WriteLine(StringOriginal);
 
@@ -158,12 +161,12 @@ namespace MonoMod.UnitTest {
 
                 Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
 
-                List<string> list = new List<string>();
+                var list = new List<string>();
                 list.AddRange(new string[] { "A", "B", "C" });
 
-                string[][] array2d1 = new string[][] { new string[] { "A" } };
-                string[,] array2d2 = new string[,] { { "B" } };
-                foreach (string str in list) {
+                var array2d1 = new string[][] { new string[] { "A" } };
+                var array2d2 = new string[,] { { "B" } };
+                foreach (var str in list) {
                     TargetTest(array2d1[0][0], array2d2[0, 0], str);
                     TargetTest(array2d1[0][0], array2d2[0, 0]);
                     TargetTest(array2d1[0][0], ref array2d2[0, 0]);
@@ -180,7 +183,7 @@ namespace MonoMod.UnitTest {
                         break;
                 }
 
-            } catch (Exception e) when (e == null) {
+            } catch (Exception e) when (e is null) {
                 return Tuple.Create("", -2);
             } catch (Exception) {
                 return Tuple.Create("", -1);
@@ -188,34 +191,34 @@ namespace MonoMod.UnitTest {
             return Tuple.Create(StringOriginal, Counter);
         }
 
-        public class ExampleGenericClass<T> {
+        private class ExampleGenericClass<T> {
             public static T ExampleMethod() {
                 Counter++;
                 return default;
             }
         }
 
-        public static int TargetTest<T>(string a, string b, string c) {
+        private static int TargetTest<T>(string a, string b, string c) {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        public static int TargetTest(string a, string b, string c) {
+        private static int TargetTest(string a, string b, string c) {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        public static int TargetTest<T>(string a, T b) {
+        private static int TargetTest<T>(string a, T b) {
             return (a + b).GetHashCode(StringComparison.Ordinal);
         }
 
-        public static int TargetTest<T>(string a, ref T b) {
+        private static int TargetTest<T>(string a, ref T b) {
             return (a + b).GetHashCode(StringComparison.Ordinal);
         }
 
-        public static int TargetTest<TA>() {
+        private static int TargetTest<TA>() {
             return 1;
         }
 
-        public static int TargetTest<TA, TB>() {
+        private static int TargetTest<TA, TB>() {
             return 2;
         }
 

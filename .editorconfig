@@ -109,6 +109,3 @@ dotnet_diagnostic.CA1416.severity = none
 
 # CA1032: Implement standard exception constructors
 dotnet_diagnostic.CA1032.severity = suggestion
-
-# CA2237: Mark ISerializable types with serializable
-dotnet_diagnostic.CA2237.severity = suggestion

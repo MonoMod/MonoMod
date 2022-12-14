@@ -8,7 +8,7 @@ namespace MonoMod.UnitTest {
     public class TestObject {
         public static readonly object Lock = new object();
 
-        public static int VoidResult;
+        internal static int VoidResult;
 
         // Prevent JIT from inlining the method call.
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -31,12 +31,12 @@ namespace MonoMod.UnitTest {
         }
 
         public static void TestStep(int instanceExpected, int staticExpected, int voidExpected) {
-            TestObject instance = new TestObject();
-            int instanceResult = instance.TestMethod(2, 3);
+            var instance = new TestObject();
+            var instanceResult = instance.TestMethod(2, 3);
             Console.WriteLine($"instance.TestMethod(2, 3): {instanceResult}");
             Assert.Equal(instanceExpected, instanceResult);
 
-            int staticResult = TestStaticMethod(2, 3);
+            var staticResult = TestStaticMethod(2, 3);
             Console.WriteLine($"TestStaticMethod(2, 3): {staticResult}");
             Assert.Equal(staticExpected, staticResult);
 
@@ -47,10 +47,10 @@ namespace MonoMod.UnitTest {
         }
     }
 
-    public class TestObjectGeneric<T> {
+    internal class TestObjectGeneric<T> {
     }
 
-    public abstract class TestObjectGeneric<T, TSelf> where TSelf : TestObjectGeneric<T, TSelf> {
+    internal abstract class TestObjectGeneric<T, TSelf> where TSelf : TestObjectGeneric<T, TSelf> {
         public T Data;
         public static implicit operator T(TestObjectGeneric<T, TSelf> obj) {
             if (obj == default)
@@ -58,6 +58,7 @@ namespace MonoMod.UnitTest {
             return obj.Data;
         }
     }
-    public class TestObjectInheritsGeneric : TestObjectGeneric<int, TestObjectInheritsGeneric> {
+
+    internal class TestObjectInheritsGeneric : TestObjectGeneric<int, TestObjectInheritsGeneric> {
     }
 }

@@ -1,5 +1,6 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
+#pragma warning disable CA1825 // Avoid zero-length array allocations
 
 extern alias New;
 
@@ -226,7 +227,7 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public void DoNothing() {
+        private void DoNothing() {
         }
     }
 }

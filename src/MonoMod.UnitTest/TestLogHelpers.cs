@@ -44,11 +44,26 @@ namespace MonoMod.UnitTest {
 
     public class TestBase : IDisposable {
         private readonly bool attachedSingleOutputHelper;
+
         public TestBase(ITestOutputHelper helper) {
             TestLogHelpers.Startup(helper, ref attachedSingleOutputHelper);
         }
+
+        protected virtual void Dispose(bool disposing) {
+            if (!disposedValue) {
+                if (disposing) {
+                    TestLogHelpers.Shutdown(attachedSingleOutputHelper);
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        private bool disposedValue;
         public void Dispose() {
-            TestLogHelpers.Shutdown(attachedSingleOutputHelper);
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

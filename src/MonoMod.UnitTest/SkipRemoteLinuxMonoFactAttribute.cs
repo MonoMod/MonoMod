@@ -3,8 +3,10 @@ using System;
 using Xunit;
 
 namespace MonoMod.UnitTest {
-    public class SkipRemoteLinuxMonoFactAttribute : FactAttribute {
+    public sealed class SkipRemoteLinuxMonoFactAttribute : FactAttribute {
         public SkipRemoteLinuxMonoFactAttribute(params string[] names) {
+            Names = names;
+
             // FIXME: Some tests like to go horribly wrong on Azure Linux mono.
 
             if (Environment.GetEnvironmentVariable("AGENT_OS") == "Linux" &&
@@ -14,6 +16,8 @@ namespace MonoMod.UnitTest {
                 return;
             }
         }
+
+        public string[] Names { get; }
     }
 }
 

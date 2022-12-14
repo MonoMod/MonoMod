@@ -29,19 +29,19 @@ namespace MonoMod.UnitTest {
             // Please take a look at DetourTest and HookTest instead.
             var hooks = new HashSet<Hook>();
 
-            long memPre = GC.GetTotalMemory(true);
+            var memPre = GC.GetTotalMemory(true);
             long memPost;
 
             try {
 
                 Console.WriteLine($"GC.GetTotalMemory before detour memory test: {memPre}");
-                for (int i = 0; i < 256; i++) {
-                    Hook h = new Hook(
+                for (var i = 0; i < 256; i++) {
+                    var h = new Hook(
                         typeof(DetourMemoryTest).GetMethod("TestStaticMethod"),
                         typeof(DetourMemoryTest).GetMethod("TestStaticMethodHook")
                     );
                     hooks.Add(h);
-                    int staticResult = TestStaticMethod(2, 3).Count;
+                    var staticResult = TestStaticMethod(2, 3).Count;
                     Assert.Equal(6 + 1 + i, staticResult);
                 }
 
@@ -56,52 +56,57 @@ namespace MonoMod.UnitTest {
             }
 
             GC.Collect();
-            long memClear = GC.GetTotalMemory(true);
+            var memClear = GC.GetTotalMemory(true);
 
             Console.WriteLine($"GC.GetTotalMemory after detour memory test clear: {memClear}");
             Console.WriteLine($"Clear - Before: {memClear - memPre}");
         }
 
-
-        public static Counter<int> TestStaticMethod(int a, int b) {
-            TestObjectGeneric<string> test = new TestObjectGeneric<string>();
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+#pragma warning disable CA1508 // Avoid dead conditional code
+#pragma warning disable CA1031 // Do not catch general exception types
+        internal static Counter<int> TestStaticMethod(int a, int b) {
+            _ = new TestObjectGeneric<string>();
             try {
                 a *= new int?(b).Value;
 
                 b += new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current?.GetHashCode() ?? 0;
 
-                List<string> list = new List<string>();
+                var list = new List<string>();
                 list.AddRange(new string[] { "A", "B", "C" });
 
-                string[][] array2d1 = new string[][] { new string[] { "A" } };
-                string[,] array2d2 = new string[,] { { "B" } };
-                foreach (string str in list) {
+                var array2d1 = new string[][] { new string[] { "A" } };
+                var array2d2 = new string[,] { { "B" } };
+                foreach (var str in list) {
                     TargetTest(array2d1[0][0], array2d2[0, 0], str);
                 }
 
-            } catch (Exception e) when (e == null) {
+            } catch (Exception e) when (e is null) {
                 return new Counter<int> { Count = -2 };
             } catch (Exception) {
                 return new Counter<int> { Count = -1 };
             }
             return new Counter<int> { Count = a };
         }
+#pragma warning restore CA1031 // Do not catch general exception types
+#pragma warning restore CA1508 // Avoid dead conditional code
+#pragma warning restore CA1814 // Prefer jagged arrays over multidimensional
 
-        public static Counter<int> TestStaticMethodHook(Func<int, int, Counter<int>> orig, int a, int b) {
+        internal static Counter<int> TestStaticMethodHook(Func<int, int, Counter<int>> orig, int a, int b) {
             Counter<int> c = orig(a, b);
             c.Count++;
             return c;
         }
 
-        public static int TargetTest<T>(string a, string b, string c) {
+        internal static int TargetTest<T>(string a, string b, string c) {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        public static int TargetTest(string a, string b, string c) {
+        internal static int TargetTest(string a, string b, string c) {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        public struct Counter<T> where T : struct {
+        internal struct Counter<T> where T : struct {
             public T Count;
         }
 
