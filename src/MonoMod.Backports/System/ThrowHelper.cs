@@ -248,6 +248,10 @@ namespace System {
         key,
         collection,
         index,
-        type
+        type,
+        self,
+        value,
+        oldValue,
+        newValue,
     }
 }

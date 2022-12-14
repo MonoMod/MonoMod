@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 
 #pragma warning disable CA1062 // Validate arguments of public methods
+#pragma warning disable IDE0038 // Use pattern matching
 // This implementation is copied (basically) verbatim from the real BCL
 
 namespace System.Runtime.CompilerServices {

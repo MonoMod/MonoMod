@@ -83,6 +83,8 @@ namespace System.Buffers {
             _sequenceEnd = new SequencePosition(endSegment, ReadOnlySequence.SegmentToSequenceEnd(endIndex));
         }
 
+
+#pragma warning disable CS1584 // XML comment has syntactically incorrect cref attribute
         /// <summary>
         /// Creates an instance of <see cref="ReadOnlySequence{T}"/> from the <see cref="T[]"/>.
         /// </summary>
@@ -105,6 +107,7 @@ namespace System.Buffers {
             _sequenceStart = new SequencePosition(array, ReadOnlySequence.ArrayToSequenceStart(start));
             _sequenceEnd = new SequencePosition(array, ReadOnlySequence.ArrayToSequenceEnd(start + length));
         }
+#pragma warning restore CS1584 // XML comment has syntactically incorrect cref attribute
 
         /// <summary>
         /// Creates an instance of <see cref="ReadOnlySequence{T}"/> from the <see cref="ReadOnlyMemory{T}"/>.

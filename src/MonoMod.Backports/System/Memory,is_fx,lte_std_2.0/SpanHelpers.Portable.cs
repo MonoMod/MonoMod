@@ -261,7 +261,7 @@ namespace System {
             //
             public static readonly bool IsReferenceOrContainsReferences = IsReferenceOrContainsReferencesCore(typeof(T));
 
-            public static readonly T[] EmptyArray = new T[0];
+            public static readonly T[] EmptyArray = ArrayEx.Empty<T>();
 
             public static readonly IntPtr ArrayAdjustment = MeasureArrayAdjustment();
 

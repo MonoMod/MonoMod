@@ -5,6 +5,7 @@
 namespace System {
     public static class TypeExtensions {
         public static bool IsByRefLike(this Type type) {
+            ThrowHelper.ThrowIfArgumentNull(type, ExceptionArgument.type);
             if (type is null)
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.type);
 

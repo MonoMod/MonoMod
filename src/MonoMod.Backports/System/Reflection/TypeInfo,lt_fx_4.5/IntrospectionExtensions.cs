@@ -10,7 +10,7 @@ namespace System.Reflection {
             if (type is IReflectableType reflectableType)
                 return reflectableType.GetTypeInfo();
 
-            return new TypeDelegator(type);
+            return new DelegatingTypeInfo(type);
         }
     }
 }

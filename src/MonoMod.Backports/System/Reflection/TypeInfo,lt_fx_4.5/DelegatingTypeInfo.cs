@@ -8,7 +8,7 @@
 using CultureInfo = System.Globalization.CultureInfo;
 
 namespace System.Reflection {
-    public class TypeDelegator : TypeInfo {
+    internal class DelegatingTypeInfo : TypeInfo {
         public override bool IsAssignableFrom(TypeInfo typeInfo) {
             if (typeInfo == null)
                 return false;
@@ -20,11 +20,10 @@ namespace System.Reflection {
         protected Type typeImpl = null!;
 #pragma warning restore CA1051 // Do not declare visible instance fields
 
-        protected TypeDelegator() { }
+        protected DelegatingTypeInfo() { }
 
-        public TypeDelegator(Type delegatingType) {
-            if (delegatingType == null)
-                ThrowHelper.ThrowArgumentNullException(nameof(delegatingType));
+        public DelegatingTypeInfo(Type delegatingType) {
+            ThrowHelper.ThrowIfArgumentNull(delegatingType, nameof(delegatingType));
 
             typeImpl = delegatingType;
         }
