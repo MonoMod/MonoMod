@@ -31,15 +31,15 @@ namespace MonoMod.UnitTest {
                 try {
                     using var hookTestMethodA = new Hook(
                         typeof(TestObject).GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
-                        typeof(HookTest).GetMethod("TestMethod_A", BindingFlags.Static | BindingFlags.Public)
+                        typeof(HookTest).GetMethod("TestMethod_A", BindingFlags.Static | BindingFlags.NonPublic)
                     );
                     using var hookTestStaticMethodA = new Hook(
                         typeof(TestObject).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
-                        typeof(HookTest).GetMethod("TestStaticMethod_A", BindingFlags.Static | BindingFlags.Public)
+                        typeof(HookTest).GetMethod("TestStaticMethod_A", BindingFlags.Static | BindingFlags.NonPublic)
                     );
                     using var hookTestVoidMethodA = new Hook(
                         typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                        typeof(HookTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
+                        typeof(HookTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.NonPublic)
                     );
                     Console.WriteLine("Hooks: A");
                     TestObject.TestStep(42, 12, 1);
@@ -47,7 +47,7 @@ namespace MonoMod.UnitTest {
 
                     using var hookTestMethodB = new Hook(
                         typeof(TestObject).GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
-                        typeof(HookTest).GetMethod("TestMethod_B", BindingFlags.Static | BindingFlags.Public)
+                        typeof(HookTest).GetMethod("TestMethod_B", BindingFlags.Static | BindingFlags.NonPublic)
                     );
                     using var hookTestStaticMethodB = new Hook(
                         typeof(TestObject).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),

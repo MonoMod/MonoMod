@@ -93,7 +93,7 @@ namespace MonoMod.UnitTest {
         public static void TestAssemblyLoadContextHookLoaded(object loader, int id1, int id2) {
             Assert.NotEqual(typeof(AssemblyLoadContextHookTest), loader.GetType());
             MethodInfo method = loader.GetType().GetMethod("TestStaticMethod");
-            MethodInfo verify = loader.GetType().GetMethod("Verify");
+            MethodInfo verify = loader.GetType().GetMethod("Verify", BindingFlags.Instance | BindingFlags.NonPublic);
 
             object[] argsEmpty = { null, -1, -1 };
             object[] argsSet = { loader, id1, id2 };

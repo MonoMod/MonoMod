@@ -24,7 +24,7 @@ namespace MonoMod.UnitTest {
             // Run the original method.
             Assert.Equal(Tuple.Create(StringOriginal, 1), ExampleMethod(1));
 
-            var original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod));
+            var original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod), BindingFlags.Static | BindingFlags.NonPublic);
             MethodInfo patched;
             using (var dmd = new DynamicMethodDefinition(original)) {
                 Assert.Equal("i", dmd.Definition.Parameters[0].Name);

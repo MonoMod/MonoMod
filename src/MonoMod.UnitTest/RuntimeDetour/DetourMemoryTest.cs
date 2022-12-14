@@ -37,8 +37,8 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine($"GC.GetTotalMemory before detour memory test: {memPre}");
                 for (var i = 0; i < 256; i++) {
                     var h = new Hook(
-                        typeof(DetourMemoryTest).GetMethod("TestStaticMethod"),
-                        typeof(DetourMemoryTest).GetMethod("TestStaticMethodHook")
+                        typeof(DetourMemoryTest).GetMethod("TestStaticMethod", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic),
+                        typeof(DetourMemoryTest).GetMethod("TestStaticMethodHook", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
                     );
                     hooks.Add(h);
                     var staticResult = TestStaticMethod(2, 3).Count;

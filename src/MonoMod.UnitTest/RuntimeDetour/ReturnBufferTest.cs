@@ -15,8 +15,8 @@ namespace MonoMod.UnitTest {
             Assert.True(Source(0, 0, 0, 0) is { f1: 1, f2: 2, f3: 3 });
 
             using var hook = new Hook(
-                typeof(ReturnBufferSysVTest).GetMethod("Source")!,
-                typeof(ReturnBufferSysVTest).GetMethod("Target")!,
+                typeof(ReturnBufferSysVTest).GetMethod("Source", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!,
+                typeof(ReturnBufferSysVTest).GetMethod("Target", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!,
                 true
             );
             

@@ -41,7 +41,7 @@ namespace MonoMod.UnitTest {
                 // Note: You only need GetTypeInfo() if you target .NET Standard 1.6
                 using var detourTestVoidMethodA = new Hook(
                     typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                    typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.Public)
+                    typeof(DetourTest).GetMethod("TestVoidMethod_A", BindingFlags.Static | BindingFlags.NonPublic)
                 );
                 Console.WriteLine("Detours: A");
                 TestObject.TestStep(42, 12, 1);

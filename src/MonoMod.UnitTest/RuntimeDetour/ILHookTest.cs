@@ -26,7 +26,7 @@ namespace MonoMod.UnitTest {
             Assert.True(DidNothing);
 
             using (var h = new ILHook(
-                typeof(ILHookTest).GetMethod("DoNothing"),
+                typeof(ILHookTest).GetMethod("DoNothing", BindingFlags.Instance | BindingFlags.NonPublic),
                 il => {
                     var c = new ILCursor(il);
                     c.Emit(OpCodes.Ldarg_0);

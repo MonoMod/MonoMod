@@ -29,8 +29,8 @@ namespace MonoMod.UnitTest {
             CheckColor(c, 0x0A, 0xDE, 0xEE, 0x80);
 
             using (new Hook(
-                typeof(StructMagicTest).GetMethod("ManipColor"),
-                typeof(StructMagicTest).GetMethod("ManipColorHook")
+                typeof(StructMagicTest).GetMethod("ManipColor", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic),
+                typeof(StructMagicTest).GetMethod("ManipColorHook", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
             )) {
                 IsHook = true;
                 ManipColor(ref c, 0x12, 0x34, 0x56, 0x78);
@@ -48,8 +48,8 @@ namespace MonoMod.UnitTest {
             Assert.Equal(100, GetStructCounter);
 
             using (new Hook(
-                typeof(StructMagicTest).GetMethod("GetStruct"),
-                typeof(StructMagicTest).GetMethod("GetStructHook")
+                typeof(StructMagicTest).GetMethod("GetStruct", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
+                typeof(StructMagicTest).GetMethod("GetStructHook", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
             )) {
                 IsHook = true;
                 GetStructCounter = 600;
@@ -69,7 +69,7 @@ namespace MonoMod.UnitTest {
 
             using (new Hook(
                 typeof(ColorRGBA).GetMethod("get_IsTransparent"),
-                typeof(StructMagicTest).GetMethod("GetIsTransparentHook")
+                typeof(StructMagicTest).GetMethod("GetIsTransparentHook", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
             )) {
                 IsHook = true;
                 c.A = 10;
@@ -93,7 +93,7 @@ namespace MonoMod.UnitTest {
 
             using (new Hook(
                 typeof(ColorRGBA).GetMethod("ToString"),
-                typeof(StructMagicTest).GetMethod("ToStringHook")
+                typeof(StructMagicTest).GetMethod("ToStringHook", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
             )) {
                 IsHook = true;
                 Assert.Equal("1 2 3 4 hooked", c.ToString());

@@ -20,3 +20,6 @@ dotnet_diagnostic.CA2237.severity = suggestion
 
 # CA1822: Mark members as static
 dotnet_diagnostic.CA1822.severity = none
+
+# IDE0040: Add accessibility modifiers
+dotnet_diagnostic.IDE0040.severity = none

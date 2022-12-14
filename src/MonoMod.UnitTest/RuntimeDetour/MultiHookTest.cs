@@ -27,7 +27,7 @@ namespace MonoMod.UnitTest {
 
         private void Setup() {
             h1 = new Hook(
-                typeof(ManualMultiHookTest).GetMethod("DoNothing"),
+                typeof(ManualMultiHookTest).GetMethod("DoNothing", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
                 new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) => {
                     orig(self);
                     h1Run = true;
@@ -35,7 +35,7 @@ namespace MonoMod.UnitTest {
                 applyByDefault: false
             );
             h2 = new Hook(
-                typeof(ManualMultiHookTest).GetMethod("DoNothing"),
+                typeof(ManualMultiHookTest).GetMethod("DoNothing", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
                 new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) => {
                     orig(self);
                     h2Run = true;
@@ -43,7 +43,7 @@ namespace MonoMod.UnitTest {
                 applyByDefault: false
             );
             hIL = new ILHook(
-                typeof(ManualMultiHookTest).GetMethod("DoNothing"),
+                typeof(ManualMultiHookTest).GetMethod("DoNothing", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
                 il => {
                     var c = new ILCursor(il);
                     c.Emit(OpCodes.Ldc_I4_1);
