@@ -1,5 +1,4 @@
-﻿#if !CECIL0_9
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Utils;
 using System;
@@ -7,32 +6,30 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MonoMod.DebugIL {
     public class DebugILGenerator {
 
+#pragma warning disable CA1707 // Identifiers should not contain underscores
         public static readonly System.Reflection.ConstructorInfo m_DebuggableAttribute_ctor =
             typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) });
+#pragma warning restore CA1707 // Identifiers should not contain underscores
 
-        public MonoModder Modder;
-
-        public bool Relative = false;
-        public bool SkipMaxStack = false;
-
-        public string OutputPath;
+        public MonoModder Modder { get; }
+        public bool Relative { get; }
+        public bool SkipMaxStack { get; }
+        public string OutputPath { get; set; }
 
         public DebugILGenerator(MonoModder modder) {
+            Helpers.ThrowIfArgumentNull(modder);
             Modder = modder;
 
             OutputPath = Path.GetFullPath(modder.OutputPath);
             modder.OutputPath = Path.Combine(OutputPath, Path.GetFileName(modder.InputPath));
 
-            Relative = Environment.GetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE") == "1";
-            SkipMaxStack = Environment.GetEnvironmentVariable("MONOMOD_DEBUGIL_SKIP_MAXSTACK") == "1";
+            Relative = Switches.TryGetSwitchEnabled("DebugIL_Relative", out var enabled) && enabled;
+            SkipMaxStack = Switches.TryGetSwitchEnabled("DebugIL_SkipMaxStack", out enabled) && enabled;
         }
 
         public static void Generate(MonoModder modder)
@@ -58,19 +55,19 @@ namespace MonoMod.DebugIL {
 
             Console.WriteLine($"[MonoMod] [DbgIlGen] Enqueueing dumping tasks...");
 
-            List<Task> tasksL = new List<Task>();
+            var tasksL = new List<Task>();
 
             tasksL.Add(Task.Factory.StartNew(() => {
                 DumpMetadata(OutputPath);
-            }));
+            }, default, TaskCreationOptions.None, TaskScheduler.Default));
 
-            Dictionary<string, int> indices = new Dictionary<string, int>();
+            var indices = new Dictionary<string, int>();
 
             // GetTypes includes nested types.
-            foreach (TypeDefinition type in Modder.Module.GetTypes()) {
+            foreach (var type in Modder.Module.GetTypes()) {
                 // Modder.Log($"[DbgIlGen] Enqueueing {type.FullName}");
 
-                string path = Path.Combine(
+                var path = Path.Combine(
                     OutputPath,
                     string.Join(
                         Path.DirectorySeparatorChar.ToString(),
@@ -83,10 +80,10 @@ namespace MonoMod.DebugIL {
                 
                 tasksL.Add(Task.Factory.StartNew(() => {
                     DumpType(path, type);
-                }));
+                }, default, TaskCreationOptions.None, TaskScheduler.Default));
 
                 foreach (MethodDefinition method in type.Methods) {
-                    if (indices.TryGetValue(method.Name, out int index)) {
+                    if (indices.TryGetValue(method.Name, out var index)) {
                         indices[method.Name] = ++index;
                     } else {
                         index = 0;
@@ -94,14 +91,14 @@ namespace MonoMod.DebugIL {
                     }
                     tasksL.Add(Task.Factory.StartNew(() => {
                         DumpMethod(path, index, method);
-                    }));
+                    }, default, TaskCreationOptions.None, TaskScheduler.Default));
                 }
                 indices.Clear();
             }
 
-            Task[] tasksA = tasksL.ToArray();
+            var tasksA = tasksL.ToArray();
             int completed;
-            int all = tasksA.Length;
+            var all = tasksA.Length;
             while ((completed = tasksL.Count(t => t.IsCompleted)) < all) {
                 Console.Write($"[MonoMod] [DbgIlGen] {completed} / {all} task{(all != 1 ? "s" : "")} finished        \r");
                 Task.WaitAny(tasksA, -1);
@@ -111,7 +108,7 @@ namespace MonoMod.DebugIL {
         }
 
         public void DumpMetadata(string path) {
-            using (DebugILWriter writer = new DebugILWriter(path, "__AssemblyInfo__")) {
+            using (var writer = new DebugILWriter(path, "__AssemblyInfo__")) {
                 writer.WriteLine("// MonoMod DebugILGenerator");
                 writer.WriteLine($"// MonoMod Version: {MonoModder.Version}");
                 writer.WriteLine();
@@ -131,10 +128,11 @@ namespace MonoMod.DebugIL {
             }
         }
 
-        public void DumpType(string path, TypeDefinition type) {
-            using (DebugILWriter writer = new DebugILWriter(path, "__TypeInfo__")) {
+        public static void DumpType(string path, TypeDefinition type) {
+            Helpers.ThrowIfArgumentNull(type);
+            using (var writer = new DebugILWriter(path, "__TypeInfo__")) {
                 writer.WriteLine("// MonoMod DebugILGenerator");
-                writer.WriteLine($"// Type: ({type.Attributes.ToString()}) {type.FullName}");
+                writer.WriteLine($"// Type: ({type.Attributes}) {type.FullName}");
                 writer.WriteLine();
 
                 writer.WriteLine("// Fields:");
@@ -160,10 +158,11 @@ namespace MonoMod.DebugIL {
         }
 
         public void DumpMethod(string parent, int index, MethodDefinition method) {
+            Helpers.ThrowIfArgumentNull(method);
             method.NoInlining = true;
             method.NoOptimization = true;
 
-            using (DebugILWriter writer = new DebugILWriter(parent, method.Name, index)) {
+            using (var writer = new DebugILWriter(parent, method.Name, index)) {
                 writer.WriteLine("// MonoMod DebugILGenerator");
                 writer.WriteLine($"// Method: ({method.Attributes}) {method.GetID()}");
                 writer.WriteLine();
@@ -187,9 +186,9 @@ namespace MonoMod.DebugIL {
                 if (method.Body.HasVariables) {
                     writer.WriteLine(method.Body.InitLocals ? ".locals init (" : ".locals (");
 
-                    for (int i = 0; i < method.Body.Variables.Count; i++) {
-                        VariableDefinition vd = method.Body.Variables[i];
-                        string name = vd.GenerateVariableName();
+                    for (var i = 0; i < method.Body.Variables.Count; i++) {
+                        var vd = method.Body.Variables[i];
+                        var name = vd.GenerateVariableName();
                         method.DebugInformation.GetOrAddScope().Variables.Add(new VariableDebugInformation(vd, name));
                         writer.WriteLine($"    [{i}] {(!vd.VariableType.IsPrimitive && !vd.VariableType.IsValueType ? "class " : "")}{vd.VariableType.FullName} {name}{(i < method.Body.Variables.Count - 1 ? "," : "")}");
                     }
@@ -198,7 +197,7 @@ namespace MonoMod.DebugIL {
 
                 writer.WriteLine("// Code:");
                 method.DebugInformation.SequencePoints.Clear();
-                Document symbolDoc = new Document(writer.FullPath) {
+                var symbolDoc = new Document(writer.FullPath) {
                     LanguageVendor = DocumentLanguageVendor.Microsoft,
                     Language = DocumentLanguage.CSharp, // Even Visual Studio can't deal with Cil!
                     HashAlgorithm = DocumentHashAlgorithm.None,
@@ -210,7 +209,7 @@ namespace MonoMod.DebugIL {
                 // Thanks to ghorsington (denikson) for allowing MonoMod to use it!
 
                 // Cache exception blocks for pretty printing
-                Dictionary<Instruction, List<ExceptionBlock>> handlerMap = new Dictionary<Instruction, List<ExceptionBlock>>();
+                var handlerMap = new Dictionary<Instruction, List<ExceptionBlock>>();
 
                 ExceptionBlock AddBlock(Instruction instr, ExceptionBlockType t) {
                     if (instr == null)
@@ -219,14 +218,14 @@ namespace MonoMod.DebugIL {
                     if (!handlerMap.TryGetValue(instr, out List<ExceptionBlock> list))
                         handlerMap[instr] = list = new List<ExceptionBlock>();
 
-                    ExceptionBlock block = new ExceptionBlock() {
+                    var block = new ExceptionBlock() {
                         BlockType = t
                     };
                     list.Add(block);
                     return block;
                 }
 
-                foreach (ExceptionHandler handler in method.Body.ExceptionHandlers) {
+                foreach (var handler in method.Body.ExceptionHandlers) {
                     AddBlock(handler.TryStart, ExceptionBlockType.BeginExceptionBlock);
                     AddBlock(handler.TryEnd, ExceptionBlockType.EndExceptionBlock);
                     AddBlock(handler.HandlerEnd, ExceptionBlockType.EndExceptionBlock);
@@ -255,10 +254,10 @@ namespace MonoMod.DebugIL {
 
                 var handlerStack = new Stack<string>();
 
-                for (int instri = 0; instri < method.Body.Instructions.Count; instri++) {
-                    Instruction instr = method.Body.Instructions[instri];
+                for (var instri = 0; instri < method.Body.Instructions.Count; instri++) {
+                    var instr = method.Body.Instructions[instri];
 
-                    if (handlerMap.TryGetValue(instr, out List<ExceptionBlock> blocks)) {
+                    if (handlerMap.TryGetValue(instr, out var blocks)) {
                         // Force exception close to the start for correct output
                         blocks.Sort((a, b) => a.BlockType == ExceptionBlockType.EndExceptionBlock ? -1 : 0);
 
@@ -299,7 +298,7 @@ namespace MonoMod.DebugIL {
                         }
                     }
 
-                    string instrStr = Relative ? instr.ToRelativeString() : instr.ToString();
+                    var instrStr = Relative ? instr.ToRelativeString() : instr.ToString();
 
                     method.DebugInformation.SequencePoints.Add(
                         new SequencePoint(instr, symbolDoc) {
@@ -319,4 +318,3 @@ namespace MonoMod.DebugIL {
 
     }
 }
-#endif

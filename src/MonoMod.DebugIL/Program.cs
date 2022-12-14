@@ -1,18 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using MonoMod.Utils;
-using System.Reflection;
 
 namespace MonoMod.DebugIL {
     class Program {
 
         public static void Main(string[] args) {
-#if CECIL0_9
-            throw new NotSupportedException();
-#else
             Console.WriteLine("MonoMod.DebugIL " + typeof(Program).Assembly.GetName().Version);
 
             if (args.Length == 0) {
@@ -25,9 +17,9 @@ namespace MonoMod.DebugIL {
             string pathIn;
             string pathOut;
 
-            int pathInI = 0;
+            var pathInI = 0;
 
-            for (int i = 0; i < args.Length; i++) {
+            for (var i = 0; i < args.Length; i++) {
                 if (args[i] == "--relative") {
                     Environment.SetEnvironmentVariable("MONOMOD_DEBUGIL_RELATIVE", "1");
                     pathInI = i + 1;
@@ -55,7 +47,7 @@ namespace MonoMod.DebugIL {
 
             pathOut = pathOut ?? Path.Combine(Path.GetDirectoryName(pathIn), "MMDBGIL_" + Path.GetFileName(pathIn));
 
-            using (MonoModder mm = new MonoModder() {
+            using (var mm = new MonoModder() {
                 InputPath = pathIn,
                 OutputPath = pathOut
             }) {
@@ -70,7 +62,6 @@ namespace MonoMod.DebugIL {
 
             if (System.Diagnostics.Debugger.IsAttached) // Keep window open when running in IDE
                 Console.ReadKey();
-#endif
         }
 
     }
