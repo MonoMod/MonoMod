@@ -8,6 +8,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
+#pragma warning disable CA1036 // Override methods on comparable types
+
 namespace System {
     /// <summary>
     /// Helper so we can call some tuple methods recursively without knowing the underlying types.
@@ -104,7 +106,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1> objTuple)) {
+            if (other is not Tuple<T1> objTuple) {
                 return false;
             }
 
@@ -123,7 +125,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1> objTuple)) {
+            if (other is not Tuple<T1> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 
@@ -205,7 +207,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1, T2> objTuple)) {
+            if (other is not Tuple<T1, T2> objTuple) {
                 return false;
             }
 
@@ -224,7 +226,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1, T2> objTuple)) {
+            if (other is not Tuple<T1, T2> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 
@@ -314,7 +316,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1, T2, T3> objTuple)) {
+            if (other is not Tuple<T1, T2, T3> objTuple) {
                 return false;
             }
 
@@ -333,7 +335,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1, T2, T3> objTuple)) {
+            if (other is not Tuple<T1, T2, T3> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 
@@ -434,7 +436,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1, T2, T3, T4> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4> objTuple) {
                 return false;
             }
 
@@ -453,7 +455,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1, T2, T3, T4> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 
@@ -565,7 +567,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5> objTuple) {
                 return false;
             }
 
@@ -584,7 +586,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 
@@ -707,7 +709,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5, T6> objTuple) {
                 return false;
             }
 
@@ -726,7 +728,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5, T6> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 
@@ -860,7 +862,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5, T6, T7> objTuple) {
                 return false;
             }
 
@@ -879,7 +881,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5, T6, T7> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 
@@ -1002,7 +1004,7 @@ namespace System {
         public TRest Rest => m_Rest;
 
         public Tuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, TRest rest) {
-            if (!(rest is ITupleInternal)) {
+            if (rest is not ITupleInternal) {
                 throw new ArgumentException("Last argument is not a tuple");
             }
 
@@ -1028,7 +1030,7 @@ namespace System {
             if (other == null)
                 return false;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple) {
                 return false;
             }
 
@@ -1047,7 +1049,7 @@ namespace System {
             if (other == null)
                 return 1;
 
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple)) {
+            if (other is not Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple) {
                 throw new ArgumentException($"Tuple of incorrect type (expected {GetType()})", nameof(other));
             }
 

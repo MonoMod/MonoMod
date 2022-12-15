@@ -180,8 +180,7 @@ namespace System.Runtime.CompilerServices {
         /// to prevent deadlocks.
         /// </remarks>
         public TValue GetValue(TKey key, CreateValueCallback createValueCallback) {
-            if (createValueCallback is null)
-                ThrowHelper.ThrowArgumentNullException(nameof(createValueCallback));
+            ThrowHelper.ThrowIfArgumentNull(createValueCallback, nameof(createValueCallback));
             // key is validated by TryGetValue
             return TryGetValue(key, out TValue? existingValue) ?
                 existingValue :

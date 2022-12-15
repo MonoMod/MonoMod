@@ -473,6 +473,8 @@ namespace System.Collections.Concurrent {
                 IEnumerator<KeyValuePair<long, TSource>>[] partitions
                     = new IEnumerator<KeyValuePair<long, TSource>>[partitionCount];
 
+#pragma warning disable CA2000 // Dispose objects before losing scope
+                // This is the BCL implementation of this method.
                 IEnumerable<KeyValuePair<long, TSource>> partitionEnumerable = new InternalPartitionEnumerable(_source.GetEnumerator(), _useSingleChunking, true);
                 for (int i = 0; i < partitionCount; i++) {
                     partitions[i] = partitionEnumerable.GetEnumerator();

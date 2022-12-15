@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
+#pragma warning disable CA1001 // Types that own disposable fields should be disposable
+
 namespace System.Collections.Concurrent {
     /// <summary>
     /// Represents a thread-safe, unordered collection of objects.
@@ -27,7 +29,7 @@ namespace System.Collections.Concurrent {
     /// </para>
     /// </remarks>
     [DebuggerTypeProxy(typeof(IProducerConsumerCollectionDebugView<>))]
-[DebuggerDisplay("Count = {Count}")]
+    [DebuggerDisplay("Count = {Count}")]
     public class ConcurrentBag<T> : IProducerConsumerCollection<T>, /*IReadOnlyCollection<T>*/ IEnumerable<T> {
         /// <summary>The per-bag, per-thread work-stealing queues.</summary>
         private readonly ThreadLocal<WorkStealingQueue> _locals;
@@ -50,8 +52,7 @@ namespace System.Collections.Concurrent {
         /// <exception cref="ArgumentNullException"><paramref name="collection"/> is a null reference
         /// (Nothing in Visual Basic).</exception>
         public ConcurrentBag(IEnumerable<T> collection) {
-            if (collection is null)
-                ThrowHelper.ThrowArgumentNullException(ExceptionArgument.collection);
+            ThrowHelper.ThrowIfArgumentNull(collection, ExceptionArgument.collection);
             _locals = new ThreadLocal<WorkStealingQueue>();
 
             WorkStealingQueue queue = GetCurrentThreadWorkStealingQueue(forceCreate: true)!;
@@ -242,8 +243,7 @@ namespace System.Collections.Concurrent {
         /// cref="ConcurrentBag{T}"/> is greater than the available space from
         /// <paramref name="index"/> to the end of the destination <paramref name="array"/>.</exception>
         public void CopyTo(T[] array, int index) {
-            if (array is null)
-                ThrowHelper.ThrowArgumentNullException(ExceptionArgument.array);
+            ThrowHelper.ThrowIfArgumentNull(array, ExceptionArgument.array);
             if (index < 0) {
                 throw new ArgumentOutOfRangeException(nameof(index), "CopyTo out of range");
             }
@@ -834,6 +834,9 @@ namespace System.Collections.Concurrent {
                 result = default;
                 return false;
             }
+
+#pragma warning disable CA1508 // Avoid dead conditional code
+            // This is concurrent code with volatile writes. This analysis does not consider that the writes are volatile.
 
             /// <summary>Steal an item from the head of the queue.</summary>
             /// <param name="result">the removed item</param>

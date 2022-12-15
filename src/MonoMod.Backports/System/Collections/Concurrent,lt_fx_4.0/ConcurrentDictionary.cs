@@ -139,6 +139,7 @@ namespace System.Collections.Concurrent {
         /// <exception cref="ArgumentNullException"><paramref name="collection"/> is a null reference (Nothing in Visual Basic).</exception>
         public ConcurrentDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey>? comparer)
             : this(comparer) {
+            ThrowHelper.ThrowIfArgumentNull(collection, ExceptionArgument.collection);
             InitializeFromCollection(collection);
         }
 
@@ -159,6 +160,7 @@ namespace System.Collections.Concurrent {
         /// <exception cref="ArgumentException"><paramref name="collection"/> contains one or more duplicate keys.</exception>
         public ConcurrentDictionary(int concurrencyLevel, IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey>? comparer)
             : this(concurrencyLevel, DefaultCapacity, growLockArray: false, comparer) {
+            ThrowHelper.ThrowIfArgumentNull(collection, ExceptionArgument.collection);
             InitializeFromCollection(collection);
         }
 
@@ -992,9 +994,7 @@ namespace System.Collections.Concurrent {
                 ThrowHelper.ThrowKeyNullException();
             }
 
-            if (valueFactory is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(valueFactory));
-            }
+            ThrowHelper.ThrowIfArgumentNull(valueFactory, nameof(valueFactory));
 
             IEqualityComparer<TKey>? comparer = _comparer;
             int hashcode = comparer is null ? key.GetHashCode() : comparer.GetHashCode(key);
@@ -1027,9 +1027,7 @@ namespace System.Collections.Concurrent {
                 ThrowHelper.ThrowKeyNullException();
             }
 
-            if (valueFactory is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(valueFactory));
-            }
+            ThrowHelper.ThrowIfArgumentNull(valueFactory, nameof(valueFactory));
 
             IEqualityComparer<TKey>? comparer = _comparer;
             int hashcode = comparer is null ? key.GetHashCode() : comparer.GetHashCode(key);
@@ -1094,13 +1092,8 @@ namespace System.Collections.Concurrent {
                 ThrowHelper.ThrowKeyNullException();
             }
 
-            if (addValueFactory is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(addValueFactory));
-            }
-
-            if (updateValueFactory is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(updateValueFactory));
-            }
+            ThrowHelper.ThrowIfArgumentNull(addValueFactory, nameof(addValueFactory));
+            ThrowHelper.ThrowIfArgumentNull(updateValueFactory, nameof(updateValueFactory));
 
             IEqualityComparer<TKey>? comparer = _comparer;
             int hashcode = comparer is null ? key.GetHashCode() : comparer.GetHashCode(key);
@@ -1145,13 +1138,8 @@ namespace System.Collections.Concurrent {
                 ThrowHelper.ThrowKeyNullException();
             }
 
-            if (addValueFactory is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(addValueFactory));
-            }
-
-            if (updateValueFactory is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(updateValueFactory));
-            }
+            ThrowHelper.ThrowIfArgumentNull(addValueFactory, nameof(addValueFactory));
+            ThrowHelper.ThrowIfArgumentNull(updateValueFactory, nameof(updateValueFactory));
 
             IEqualityComparer<TKey>? comparer = _comparer;
             int hashcode = comparer is null ? key.GetHashCode() : comparer.GetHashCode(key);
@@ -1194,9 +1182,7 @@ namespace System.Collections.Concurrent {
                 ThrowHelper.ThrowKeyNullException();
             }
 
-            if (updateValueFactory is null) {
-                ThrowHelper.ThrowArgumentNullException(nameof(updateValueFactory));
-            }
+            ThrowHelper.ThrowIfArgumentNull(updateValueFactory, nameof(updateValueFactory));
 
             IEqualityComparer<TKey>? comparer = _comparer;
             int hashcode = comparer is null ? key.GetHashCode() : comparer.GetHashCode(key);

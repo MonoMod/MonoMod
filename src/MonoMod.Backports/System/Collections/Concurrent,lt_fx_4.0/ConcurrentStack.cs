@@ -10,7 +10,6 @@
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
@@ -73,8 +72,7 @@ namespace System.Collections.Concurrent {
         /// <exception cref="System.ArgumentNullException">The <paramref name="collection"/> argument is
         /// null.</exception>
         public ConcurrentStack(IEnumerable<T> collection) {
-            if (collection is null)
-                ThrowHelper.ThrowArgumentNullException(ExceptionArgument.collection);
+            ThrowHelper.ThrowIfArgumentNull(collection, ExceptionArgument.collection);
             InitializeFromCollection(collection);
         }
 
@@ -283,8 +281,7 @@ namespace System.Collections.Concurrent {
         /// the <paramref name="items"/> array will be pushed before items at higher indices.
         /// </remarks>
         public void PushRange(T[] items) {
-            if (items is null)
-                ThrowHelper.ThrowArgumentNullException(nameof(items));
+            ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             PushRange(items, 0, items.Length);
         }
 
@@ -311,6 +308,7 @@ namespace System.Collections.Concurrent {
         /// <paramref name="items"/> array will be pushed before items at higher indices.
         /// </remarks>
         public void PushRange(T[] items, int startIndex, int count) {
+            ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             ValidatePushPopRangeInput(items, startIndex, count);
 
             // No op if the count is zero
@@ -458,8 +456,7 @@ namespace System.Collections.Concurrent {
         /// at startIndex + 1, and so on.
         /// </remarks>
         public int TryPopRange(T[] items) {
-            if (items is null)
-                ThrowHelper.ThrowArgumentNullException(nameof(items));
+            ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             return TryPopRange(items, 0, items.Length);
         }
 
@@ -492,6 +489,7 @@ namespace System.Collections.Concurrent {
         /// at startIndex + 1, and so on.
         /// </remarks>
         public int TryPopRange(T[] items, int startIndex, int count) {
+            ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             ValidatePushPopRangeInput(items, startIndex, count);
 
             // No op if the count is zero
