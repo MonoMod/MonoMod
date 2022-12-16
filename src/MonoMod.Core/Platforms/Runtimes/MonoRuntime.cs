@@ -2,6 +2,8 @@
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
@@ -22,11 +24,137 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         private readonly ISystem system;
 
+        private static TypeClassification LinuxAmd64Classifier(Type type, bool isReturn) {
+            // this is implemented by mini-amd64.c get_call_info
+
+            // first, always get the underlying type
+            if (type.IsEnum)
+                type = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).First().FieldType;
+
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Empty:
+                    // size == 0???
+                    return TypeClassification.InRegister;
+                case TypeCode.Object:
+                case TypeCode.DBNull:
+                case TypeCode.String:
+                    // reference types
+                    return TypeClassification.InRegister;
+
+                case TypeCode.Boolean:
+                case TypeCode.Char:
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                    // integer types
+                    return TypeClassification.InRegister;
+
+                case TypeCode.Single:
+                case TypeCode.Double:
+                    // floating point types (via SSE)
+                    return TypeClassification.InRegister;
+            }
+
+            // pointer types
+            if (type.IsPointer)
+                return TypeClassification.InRegister;
+            if (type.IsByRef)
+                return TypeClassification.InRegister;
+
+            // native integer types
+            if (type == typeof(IntPtr) || type == typeof(UIntPtr))
+                return TypeClassification.InRegister;
+
+            if (type == typeof(void))
+                return TypeClassification.InRegister;
+
+            Helpers.Assert(type.IsValueType);
+
+            // valuetype handling is implemented by add_valuetype 
+            return ClassifyValueType(type, true);
+        }
+
+        private static TypeClassification ClassifyValueType(Type type, bool isReturn) {
+            // this is implemented by mini-amd64.c add_valuetype
+            var size = type.GetManagedSize();
+
+            var passOnStack = (!isReturn || size is not 8) && (isReturn || size > 16);
+
+            foreach (var field in NestedValutypeFields(type)) {
+                /*
+		        if ((fields [i].offset < 8) && (fields [i].offset + fields [i].size) > 8) {
+			        pass_on_stack = TRUE;
+			        break;
+		        }
+                */
+                // TODO: how?
+            }
+
+            if (size == 0)
+                return TypeClassification.InRegister;
+
+            if (passOnStack) {
+                return isReturn ? TypeClassification.ByReference : TypeClassification.OnStack;
+            }
+
+            var nquads = size > 8 ? 2 : 1;
+
+            // mono_class_value_size???
+            //var n = /*mono_class_value_size*/size;
+            //var quadsize0 = n >= 8 ? 8 : n;
+            //var quadsize1 = n >= 8 ? Math.Max(n - 8, 8) : 0;
+
+            const int ClassInteger = 1;
+            const int ClassMemory = 2;
+
+            var args0 = ClassInteger;
+            var args1 = ClassInteger;
+
+            if (isReturn && nquads != 1) {
+                args0 = args1 = ClassMemory;
+            }
+
+            if (args0 is ClassMemory || args1 is ClassMemory) {
+                args0 = /*args1 =*/ ClassMemory;
+            }
+
+            // it then goes on to try to allocate regs, but we don't need to do that here
+            return args0 switch {
+                ClassInteger => TypeClassification.InRegister,
+                ClassMemory => TypeClassification.OnStack,
+                _ => throw new InvalidOperationException()
+            };
+        }
+
+        private static IEnumerable<FieldInfo> NestedValutypeFields(Type type) {
+            var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            foreach (var field in fields) {
+                if (field.FieldType.IsValueType) {
+                    foreach (var f in NestedValutypeFields(field.FieldType)) {
+                        yield return f;
+                    }
+                } else {
+                    yield return field;
+                }
+            }
+        }
+
         public MonoRuntime(ISystem system) {
             this.system = system;
 
             // see https://github.com/dotnet/runtime/blob/v6.0.5/src/mono/mono/mini/mini-amd64.c line 472, 847, 1735
             if (system.DefaultAbi is { } abi) {
+                if (PlatformDetection.OS is OSKind.Linux && PlatformDetection.Architecture is ArchitectureKind.x86_64) {
+                    // Linux on AMD64 doesn't actually use SystemV for managed calls.
+                    abi = abi with {
+                        Classifier = LinuxAmd64Classifier
+                    };
+                }
                 // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r10 on x64)
                 if (PlatformDetection.OS is OSKind.Windows or OSKind.Wine && PlatformDetection.Architecture is ArchitectureKind.x86_64 or ArchitectureKind.x86) {
                     // on x86_64, it seems like Mono always uses this, ret, args order
@@ -36,6 +164,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     };
                 }
                 Abi = abi;
+
             } else {
                 throw new InvalidOperationException("Cannot use Mono system, because the underlying system doesn't provide a default ABI!");
             }
