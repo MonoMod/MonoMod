@@ -382,10 +382,21 @@ namespace MonoMod.RuntimeDetour {
         internal static NativeDetourState GetNativeDetourState(IntPtr function)
             => nativeDetourStates.GetOrAdd(function, static f => new(f));
 
+        /// <summary>
+        /// Gets the <see cref="FunctionDetourInfo"/> for a native function pointed to by <paramref name="function"/>.
+        /// </summary>
+        /// <param name="function">A pointer to the native function to get the <see cref="FunctionDetourInfo"/> of.</param>
+        /// <returns>The <see cref="FunctionDetourInfo"/> for <paramref name="function"/>.</returns>
         public static FunctionDetourInfo GetNativeDetourInfo(IntPtr function)
             => GetNativeDetourState(function).Info;
 
+        /// <summary>
+        /// An event which is invoked whenever a <see cref="NativeHook"/> is applied.
+        /// </summary>
         public static event Action<NativeDetourInfo>? NativeDetourApplied;
+        /// <summary>
+        /// An event which is invoked whenever a <see cref="NativeHook"/> is undone.
+        /// </summary>
         public static event Action<NativeDetourInfo>? NativeDetourUndone;
     }
 }

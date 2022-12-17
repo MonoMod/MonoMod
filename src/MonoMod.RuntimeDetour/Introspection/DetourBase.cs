@@ -1,18 +1,33 @@
 ﻿namespace MonoMod.RuntimeDetour {
+    /// <summary>
+    /// The base class for detours associated with a <see cref="MethodDetourInfo"/>.
+    /// </summary>
     public abstract class DetourBase {
+        /// <summary>
+        /// Gets the <see cref="MethodDetourInfo"/> this detour is associated with.
+        /// </summary>
         public MethodDetourInfo Method { get; }
 
         private protected DetourBase(MethodDetourInfo method)
             => Method = method;
 
-        protected abstract bool IsAppliedCore();
-        protected abstract DetourConfig? ConfigCore();
+        private protected abstract bool IsAppliedCore();
+        private protected abstract DetourConfig? ConfigCore();
 
+        /// <summary>
+        /// Gets whether or not this detour is applied.
+        /// </summary>
         public bool IsApplied => IsAppliedCore();
+        /// <summary>
+        /// Gets the config associated with this detour, if any.
+        /// </summary>
         public DetourConfig? Config => ConfigCore();
 
         // I'm still not sure if I'm happy with this being publicly exposed...
 
+        /// <summary>
+        /// Applies this detour.
+        /// </summary>
         public void Apply() {
             ref var spinLock = ref Method.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
@@ -27,6 +42,9 @@
             }
         }
 
+        /// <summary>
+        /// Undoes this detour.
+        /// </summary>
         public void Undo() {
             ref var spinLock = ref Method.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
@@ -41,7 +59,7 @@
             }
         }
 
-        protected abstract void ApplyCore();
-        protected abstract void UndoCore();
+        private protected abstract void ApplyCore();
+        private protected abstract void UndoCore();
     }
 }

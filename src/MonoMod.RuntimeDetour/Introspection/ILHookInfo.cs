@@ -2,6 +2,9 @@
 using System.Reflection;
 
 namespace MonoMod.RuntimeDetour {
+    /// <summary>
+    /// An object which represents an <see cref="ILHook"/> without extending its lifetime.
+    /// </summary>
     public sealed class ILHookInfo : DetourBase {
         private readonly DetourManager.SingleILHookState hook;
 
@@ -9,10 +12,10 @@ namespace MonoMod.RuntimeDetour {
             this.hook = hook;
         }
 
-        protected override bool IsAppliedCore() => hook.IsApplied;
-        protected override DetourConfig? ConfigCore() => hook.Config;
+        private protected override bool IsAppliedCore() => hook.IsApplied;
+        private protected override DetourConfig? ConfigCore() => hook.Config;
 
-        protected override void ApplyCore() {
+        private protected override void ApplyCore() {
             if (hook.IsApplied) {
                 throw new InvalidOperationException("ILHook is already applied");
             }
@@ -24,7 +27,7 @@ namespace MonoMod.RuntimeDetour {
             Method.state.AddILHook(hook, false);
         }
 
-        protected override void UndoCore() {
+        private protected override void UndoCore() {
             if (!hook.IsApplied) {
                 throw new InvalidOperationException("ILHook is not currently applied");
             }
@@ -32,6 +35,9 @@ namespace MonoMod.RuntimeDetour {
             Method.state.RemoveILHook(hook, false);
         }
 
+        /// <summary>
+        /// Gets the manipulator method used by this <see cref="ILHook"/>.
+        /// </summary>
         public MethodInfo ManipulatorMethod => hook.Manip.Method;
     }
 }

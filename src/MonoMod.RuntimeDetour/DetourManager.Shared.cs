@@ -10,6 +10,9 @@ using System.Reflection;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
+    /// <summary>
+    /// The entry point for introspection of active detours, and the type which manages their application.
+    /// </summary>
     public static partial class DetourManager {
 
         #region DepGraph

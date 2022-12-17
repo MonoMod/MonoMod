@@ -501,12 +501,35 @@ namespace MonoMod.RuntimeDetour {
             return detourStates.GetOrAdd(method, static m => new(m));
         }
 
+        /// <summary>
+        /// Gets the <see cref="MethodDetourInfo"/> for the provided method.
+        /// </summary>
+        /// <param name="method">The <see cref="MethodBase"/> to get a <see cref="MethodDetourInfo"/> for.</param>
+        /// <returns>The <see cref="MethodDetourInfo"/> for <paramref name="method"/>.</returns>
         public static MethodDetourInfo GetDetourInfo(MethodBase method)
             => GetDetourState(method).Info;
 
+        /// <summary>
+        /// An event which is invoked whenever a detour is applied.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Hook"/> is the only kind of detour, at present.
+        /// </remarks>
         public static event Action<DetourInfo>? DetourApplied;
+        /// <summary>
+        /// An event which is invoked whenever a detour is undone.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Hook"/> is the only kind of detour, at present.
+        /// </remarks>
         public static event Action<DetourInfo>? DetourUndone;
+        /// <summary>
+        /// An event which is invoked whenever an <see cref="ILHook"/> is applied.
+        /// </summary>
         public static event Action<ILHookInfo>? ILHookApplied;
+        /// <summary>
+        /// An event which is invoked whenever an <see cref="ILHook"/> is undone.
+        /// </summary>
         public static event Action<ILHookInfo>? ILHookUndone;
     }
 }
