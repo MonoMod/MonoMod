@@ -5,6 +5,7 @@ using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
@@ -12,6 +13,7 @@ using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core.Platforms {
     public sealed class PlatformTriple {
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static IRuntime CreateCurrentRuntime(ISystem system, IArchitecture arch) {
             Helpers.ThrowIfArgumentNull(system);
             Helpers.ThrowIfArgumentNull(arch);
@@ -23,6 +25,7 @@ namespace MonoMod.Core.Platforms {
             };
         }
 
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static IArchitecture CreateCurrentArchitecture(ISystem system) {
             Helpers.ThrowIfArgumentNull(system);
             return PlatformDetection.Architecture switch {
@@ -34,6 +37,7 @@ namespace MonoMod.Core.Platforms {
             };
         }
 
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static ISystem CreateCurrentSystem()
             => PlatformDetection.OS switch {
                 OSKind.Posix => throw new NotImplementedException(),
@@ -61,6 +65,7 @@ namespace MonoMod.Core.Platforms {
             return new(arch, sys, runtime);
         }
 
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static void SetPlatformTriple(PlatformTriple triple) {
             Helpers.ThrowIfArgumentNull(triple);
             if (lazyCurrent is null)
@@ -79,6 +84,7 @@ namespace MonoMod.Core.Platforms {
             throw new InvalidOperationException("The platform triple has already been initialized; cannot set a new one");
         }
 
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime) {
             Helpers.ThrowIfArgumentNull(architecture);
             Helpers.ThrowIfArgumentNull(system);
