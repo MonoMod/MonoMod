@@ -85,15 +85,15 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             var passOnStack = (!isReturn || size is not 8) && (isReturn || size > 16);
 
+            /*
             foreach (var field in NestedValutypeFields(type)) {
-                /*
-		        if ((fields [i].offset < 8) && (fields [i].offset + fields [i].size) > 8) {
-			        pass_on_stack = TRUE;
-			        break;
-		        }
-                */
+                if ((fields [i].offset < 8) && (fields [i].offset + fields [i].size) > 8) {
+                    pass_on_stack = TRUE;
+                    break;
+                }
                 // TODO: how?
             }
+            */
 
             if (size == 0)
                 return TypeClassification.InRegister;
