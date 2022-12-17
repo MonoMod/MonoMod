@@ -1,19 +1,30 @@
 ﻿using MonoMod.Core;
 using MonoMod.Utils;
 using System;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
     public abstract class DetourContext {
 
+        private static DetourContext? globalCurrent;
+
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public static DetourContext? SetGlobalContext(DetourContext? context) {
+            return Interlocked.Exchange(ref globalCurrent, context);
+        }
+
         [ThreadStatic]
         private static Scope? current;
 
-        public static DetourContext? Current => current?.Context;
+        public static DetourContext? Current => current?.Context ?? globalCurrent;
 
         private class Scope {
             public readonly DetourContext Context;
             public readonly Scope? Prev;
+
+            public bool Active = true;
 
             public Scope(DetourContext context, Scope? prev) {
                 Context = context;
@@ -24,13 +35,17 @@ namespace MonoMod.RuntimeDetour {
         private sealed class ContextScopeHandler : ScopeHandlerBase {
             public static readonly ContextScopeHandler Instance = new();
             public override void EndScope(object? data) {
-                current = current?.Prev;
+                var scope = (Scope) data!;
+                scope.Active = false;
+
+                while (current is { Active: false })
+                    current = current.Prev;
             }
         }
 
         private static DataScope PushContext(DetourContext ctx) {
             current = new(ctx, current);
-            return new(ContextScopeHandler.Instance, null);
+            return new(ContextScopeHandler.Instance, current);
         }
 
         public DataScope Use() => PushContext(this);
@@ -50,12 +65,16 @@ namespace MonoMod.RuntimeDetour {
         public static bool TryGetCurrentConfig(out DetourConfig? config) {
             var scope = current;
             while (scope is not null) {
-                if (scope.Context.TryGetConfig(out var cfg)) {
-                    config = cfg;
+                if (scope.Active && scope.Context.TryGetConfig(out config)) {
                     return true;
                 }
                 scope = scope.Prev;
             }
+
+            if (globalCurrent is { } gc && gc.TryGetConfig(out config)) {
+                return true;
+            }
+
             config = null;
             return false;
         }
@@ -69,12 +88,16 @@ namespace MonoMod.RuntimeDetour {
         public static bool TryGetCurrentFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
             var scope = current;
             while (scope is not null) {
-                if (scope.Context.TryGetFactory(out var fac)) {
-                    detourFactory = fac;
+                if (scope.Context.TryGetFactory(out detourFactory)) {
                     return true;
                 }
                 scope = scope.Prev;
             }
+
+            if (globalCurrent is { } gc && gc.TryGetFactory(out detourFactory)) {
+                return true;
+            }
+
             detourFactory = null;
             return false;
         }
