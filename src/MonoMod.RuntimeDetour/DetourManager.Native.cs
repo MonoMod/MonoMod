@@ -199,7 +199,6 @@ namespace MonoMod.RuntimeDetour {
         }
         #endregion
 
-
         internal sealed class NativeDetourState {
             public readonly IntPtr Function;
 

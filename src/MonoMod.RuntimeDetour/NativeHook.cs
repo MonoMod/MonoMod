@@ -6,7 +6,6 @@ using System.Linq;
 namespace MonoMod.RuntimeDetour {
     public sealed class NativeHook : INativeDetour, IDisposable {
 
-
         #region Constructor overloads
         public NativeHook(IntPtr function, Delegate hook)
             : this(function, hook, applyByDefault: true) { }
