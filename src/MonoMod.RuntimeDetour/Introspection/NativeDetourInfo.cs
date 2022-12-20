@@ -2,6 +2,9 @@
 using System.Reflection;
 
 namespace MonoMod.RuntimeDetour {
+    /// <summary>
+    /// An object which represents a native detour, without extending its lifetime.
+    /// </summary>
     public sealed class NativeDetourInfo {
         private readonly DetourManager.SingleNativeDetourState detour;
 
@@ -10,13 +13,25 @@ namespace MonoMod.RuntimeDetour {
             this.detour = detour;
         }
 
+        /// <summary>
+        /// Gets the <see cref="FunctionDetourInfo"/> for the function this detour is attached to.
+        /// </summary>
         public FunctionDetourInfo Function { get; }
 
+        /// <summary>
+        /// Gets whether or not this detour is currently applied.
+        /// </summary>
         public bool IsApplied => detour.IsApplied;
+        /// <summary>
+        /// Gets the config associated with this detour, if any.
+        /// </summary>
         public DetourConfig? Config => detour.Config;
 
         // I'm still not sure if I'm happy with this being publicly exposed...
 
+        /// <summary>
+        /// Applies this detour.
+        /// </summary>
         public void Apply() {
             ref var spinLock = ref Function.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
@@ -31,6 +46,9 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
+        /// <summary>
+        /// Undoes this detour.
+        /// </summary>
         public void Undo() {
             ref var spinLock = ref Function.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
@@ -65,6 +83,9 @@ namespace MonoMod.RuntimeDetour {
             Function.state.RemoveDetour(detour, false);
         }
 
+        /// <summary>
+        /// Gets the entrypoint of the detour. This is the method which implements the delegate passed into <see cref="NativeHook"/>.
+        /// </summary>
         public MethodInfo Entry => detour.Invoker.Method;
 
         internal DetourManager.NativeDetourChainNode? ChainNode
@@ -74,6 +95,9 @@ namespace MonoMod.RuntimeDetour {
                 _ => null,
             };
 
+        /// <summary>
+        /// Gets the next detour in the detour chain, if any.
+        /// </summary>
         public NativeDetourInfo? Next
             => ChainNode?.Next is DetourManager.NativeDetourChainNode cn ? Function.GetDetourInfo(cn.Detour) : null;
     }

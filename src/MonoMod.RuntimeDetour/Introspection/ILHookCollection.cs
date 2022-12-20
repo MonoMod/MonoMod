@@ -3,17 +3,27 @@ using System.Collections;
 using System.Collections.Generic;
 
 namespace MonoMod.RuntimeDetour {
+    /// <summary>
+    /// A collection of <see cref="ILHookInfo"/> associated with a method.
+    /// </summary>
     public sealed class ILHookCollection : IEnumerable<ILHookInfo> {
         private readonly MethodDetourInfo mdi;
         internal ILHookCollection(MethodDetourInfo mdi)
             => this.mdi = mdi;
 
+        /// <summary>
+        /// Gets an enumerator for this collection.
+        /// </summary>
+        /// <returns>An enumerator which enumterates the <see cref="ILHookInfo"/> associated with this collection.</returns>
         public Enumerator GetEnumerator() => new(mdi);
 
         IEnumerator<ILHookInfo> IEnumerable<ILHookInfo>.GetEnumerator() => GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        /// <summary>
+        /// An enumerator for an <see cref="ILHookCollection"/>.
+        /// </summary>
         public struct Enumerator : IEnumerator<ILHookInfo> {
             private readonly MethodDetourInfo mdi;
             private DetourManager.DepListNode<DetourManager.ILHookEntry>? listEntry;
@@ -29,6 +39,7 @@ namespace MonoMod.RuntimeDetour {
                 listEnum = default;
             }
 
+            /// <inheritdoc/>
             public ILHookInfo Current
                 => state switch {
                     0 => throw new InvalidOperationException(), // Current should never be called in state 0
@@ -39,6 +50,7 @@ namespace MonoMod.RuntimeDetour {
 
             object IEnumerator.Current => Current;
 
+            /// <inheritdoc/>
             public bool MoveNext() {
                 if (version != mdi.state.ilhookVersion)
                     throw new InvalidOperationException("The detour chain was modified while enumerating");
@@ -78,6 +90,7 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
+            /// <inheritdoc/>
             public void Reset() {
                 version = mdi.state.ilhookVersion;
                 listEntry = null;
@@ -85,6 +98,7 @@ namespace MonoMod.RuntimeDetour {
                 listEnum = default;
             }
 
+            /// <inheritdoc/>
             public void Dispose() {
                 listEnum.Dispose();
                 Reset();

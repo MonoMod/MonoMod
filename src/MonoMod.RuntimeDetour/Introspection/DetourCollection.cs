@@ -15,7 +15,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Gets an enumerator for this collection.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An enumerator which enumterates the <see cref="DetourInfo"/> associated with this collection.</returns>
         public Enumerator GetEnumerator() => new(mdi);
 
         IEnumerator<DetourInfo> IEnumerable<DetourInfo>.GetEnumerator() => GetEnumerator();

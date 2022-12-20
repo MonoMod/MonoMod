@@ -11,6 +11,7 @@ namespace MonoMod.RuntimeDetour {
     /// <summary>
     /// A detour type which allows the manipulation of the IL of a method, instead of merely changing its target.
     /// </summary>
+    /// <remarks>
     /// <see cref="ILHook"/>s, like other kinds of detours, are automatically undone when the garbage collector collects the object,
     /// or the object is disposed. Use <see cref="HookInfo"/> to get an object which represents the hook without
     /// extending its lifetime.

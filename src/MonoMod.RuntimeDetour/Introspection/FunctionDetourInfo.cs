@@ -101,8 +101,7 @@ namespace MonoMod.RuntimeDetour {
             Justification = "This being a nested type makes sense, as its basically only expected to be a temporary on-stack to " +
             "hold and automatically release a lock.")]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        [SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "See above.")]
-        public readonly struct Lock : IDisposable {
+        public readonly ref struct Lock {
             private readonly FunctionDetourInfo fdi;
             private readonly bool lockTaken;
             internal Lock(FunctionDetourInfo fdi) {
