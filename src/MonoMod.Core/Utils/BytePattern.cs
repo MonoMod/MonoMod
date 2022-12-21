@@ -3,28 +3,62 @@ using System;
 using System.Linq;
 
 namespace MonoMod.Core.Utils {
+    /// <summary>
+    /// A byte pattern which can be quickly matched, and extract an address.
+    /// </summary>
     public sealed class BytePattern {
 
         private const ushort MaskMask = 0xFF00;
 
-        // one byte with any value
+        /// <summary>
+        /// A placeholder which represents one byte with any value. For use in <see cref="BytePattern(AddressMeaning, ReadOnlyMemory{byte}, ReadOnlyMemory{byte})"/>,
+        /// in the pattern argument, corresponding to an empty mask byte.
+        /// </summary>
         public const byte BAnyValue = 0x00;
+        /// <summary>
+        /// A placeholder which represents one byte with any value. For use in <see cref="BytePattern(AddressMeaning, bool, ReadOnlyMemory{ushort})"/>.
+        /// </summary>
         public const ushort SAnyValue = MaskMask | BAnyValue;
-        // zero or more bytes with any value
+        /// <summary>
+        /// A placeholder which represents any number of bytes with any value. For use in <see cref="BytePattern(AddressMeaning, ReadOnlyMemory{byte}, ReadOnlyMemory{byte})"/>,
+        /// in the pattern argument, corresponding to an empty mask byte.
+        /// </summary>
         public const byte BAnyRepeatingValue = 0x01;
+        /// <summary>
+        /// A placeholder which represents any number of bytes with any value. For use in <see cref="BytePattern(AddressMeaning, bool, ReadOnlyMemory{ushort})"/>.
+        /// </summary>
         public const ushort SAnyRepeatingValue = MaskMask | BAnyRepeatingValue;
         // a captured byte, pushed into the address buffer during matching
+        /// <summary>
+        /// A placeholder which represents an address byte. For use in <see cref="BytePattern(AddressMeaning, ReadOnlyMemory{byte}, ReadOnlyMemory{byte})"/>,
+        /// in the pattern argument, corresponding to an empty mask byte.
+        /// </summary>
         public const byte BAddressValue = 0x02;
+        /// <summary>
+        /// A placeholder which represents an address byte. For use in <see cref="BytePattern(AddressMeaning, bool, ReadOnlyMemory{ushort})"/>.
+        /// </summary>
         public const ushort SAddressValue = MaskMask | BAddressValue;
 
         private readonly ReadOnlyMemory<byte> pattern;
         private readonly ReadOnlyMemory<byte> bitmask;
         private readonly PatternSegment[] segments;
 
+        /// <summary>
+        /// Gets the number of address bytes.
+        /// </summary>
         public int AddressBytes { get; }
+        /// <summary>
+        /// Gets the minimum length of this pattern.
+        /// </summary>
         public int MinLength { get; }
 
+        /// <summary>
+        /// Gets the <see cref="AddressMeaning"/> associated with this <see cref="BytePattern"/>.
+        /// </summary>
         public AddressMeaning AddressMeaning { get; }
+        /// <summary>
+        /// Gets whether or not this pattern must match exactly at the start of the data being scanned.
+        /// </summary>
         public bool MustMatchAtStart { get; }
 
         private enum SegmentKind {
@@ -36,9 +70,51 @@ namespace MonoMod.Core.Utils {
             public ReadOnlyMemory<T> SliceOf<T>(ReadOnlyMemory<T> mem) => mem.Slice(Start, Length);
         }
 
+        /// <summary>
+        /// Constructs a <see cref="BytePattern"/> with the specified <see cref="AddressMeaning"/> and pattern.
+        /// </summary>
+        /// <remarks>
+        /// The pattern is a sequence of <see cref="ushort"/>s. Each element corresponds to one byte. If the high byte of the element is zero, then the low
+        /// byte is the exact byte value to match. If the high byte is 0xFF, then the low byte is some value with special meaning associated with it.
+        /// If the high byte is any other value, then that high byte acts as a mask for the bits of the low byte which must match.
+        /// </remarks>
+        /// <param name="meaning">The <see cref="AddressMeaning"/>.</param>
+        /// <param name="pattern">The pattern.</param>
         public BytePattern(AddressMeaning meaning, params ushort[] pattern) : this(meaning, false, pattern.AsMemory()) { }
+        /// <summary>
+        /// Constructs a <see cref="BytePattern"/> with the specified <see cref="AddressMeaning"/> and pattern.
+        /// </summary>
+        /// <remarks>
+        /// The pattern is a sequence of <see cref="ushort"/>s. Each element corresponds to one byte. If the high byte of the element is zero, then the low
+        /// byte is the exact byte value to match. If the high byte is 0xFF, then the low byte is some value with special meaning associated with it.
+        /// If the high byte is any other value, then that high byte acts as a mask for the bits of the low byte which must match.
+        /// </remarks>
+        /// <param name="meaning">The <see cref="AddressMeaning"/>.</param>
+        /// <param name="mustMatchAtStart"><see langword="true"/> if this pattern must match at the start of scanned data.</param>
+        /// <param name="pattern">The pattern.</param>
         public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, params ushort[] pattern) : this(meaning, mustMatchAtStart, pattern.AsMemory()) { }
+        /// <summary>
+        /// Constructs a <see cref="BytePattern"/> with the specified <see cref="AddressMeaning"/> and pattern.
+        /// </summary>
+        /// <remarks>
+        /// The pattern is a sequence of <see cref="ushort"/>s. Each element corresponds to one byte. If the high byte of the element is zero, then the low
+        /// byte is the exact byte value to match. If the high byte is 0xFF, then the low byte is some value with special meaning associated with it.
+        /// If the high byte is any other value, then that high byte acts as a mask for the bits of the low byte which must match.
+        /// </remarks>
+        /// <param name="meaning">The <see cref="AddressMeaning"/>.</param>
+        /// <param name="pattern">The pattern.</param>
         public BytePattern(AddressMeaning meaning, ReadOnlyMemory<ushort> pattern) : this(meaning, false, pattern) { }
+        /// <summary>
+        /// Constructs a <see cref="BytePattern"/> with the specified <see cref="AddressMeaning"/> and pattern.
+        /// </summary>
+        /// <remarks>
+        /// The pattern is a sequence of <see cref="ushort"/>s. Each element corresponds to one byte. If the high byte of the element is zero, then the low
+        /// byte is the exact byte value to match. If the high byte is 0xFF, then the low byte is some value with special meaning associated with it.
+        /// If the high byte is any other value, then that high byte acts as a mask for the bits of the low byte which must match.
+        /// </remarks>
+        /// <param name="meaning">The <see cref="AddressMeaning"/>.</param>
+        /// <param name="mustMatchAtStart"><see langword="true"/> if this pattern must match at the start of scanned data.</param>
+        /// <param name="pattern">The pattern.</param>
         public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<ushort> pattern) {
             AddressMeaning = meaning;
             MustMatchAtStart = mustMatchAtStart;
@@ -63,7 +139,28 @@ namespace MonoMod.Core.Utils {
             bitmask = bitmaskData;
         }
 
+        /// <summary>
+        /// Constructs a <see cref="BytePattern"/> with the specified <see cref="AddressMeaning"/> and pattern.
+        /// </summary>
+        /// <remarks>
+        /// <para><paramref name="mask"/> and <paramref name="pattern"/> must be the same length.</para>
+        /// <para>If an element of <paramref name="mask"/> is zero, then the corresponding byte in <paramref name="pattern"/> has a special meaning.</para>
+        /// </remarks>
+        /// <param name="meaning">The <see cref="AddressMeaning"/>.</param>
+        /// <param name="mask">The bitmask to use to match against <paramref name="pattern"/>.</param>
+        /// <param name="pattern">The pattern bytes.</param>
         public BytePattern(AddressMeaning meaning, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) : this(meaning, false, mask, pattern) { }
+        /// <summary>
+        /// Constructs a <see cref="BytePattern"/> with the specified <see cref="AddressMeaning"/> and pattern.
+        /// </summary>
+        /// <remarks>
+        /// <para><paramref name="mask"/> and <paramref name="pattern"/> must be the same length.</para>
+        /// <para>If an element of <paramref name="mask"/> is zero, then the corresponding byte in <paramref name="pattern"/> has a special meaning.</para>
+        /// </remarks>
+        /// <param name="meaning">The <see cref="AddressMeaning"/>.</param>
+        /// <param name="mustMatchAtStart"><see langword="true"/> if this pattern must match at the start of scanned data.</param>
+        /// <param name="mask">The bitmask to use to match against <paramref name="pattern"/>.</param>
+        /// <param name="pattern">The pattern bytes.</param>
         public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) {
             AddressMeaning = meaning;
             MustMatchAtStart = mustMatchAtStart;
@@ -201,6 +298,18 @@ namespace MonoMod.Core.Utils {
         //   this means that on big-endian, the resulting address may need to be shifted
         // around some to be useful. fortunately, no supported platforms *are* big-endian
         // as far as I am aware.
+
+        /// <summary>
+        /// Tries to match this pattern over the provided span.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="address"/> is constructed starting at the byte with the lowest address. This means that
+        /// big-endian machines may need the address to be shifted if the address is smaller than 64 bits.
+        /// </remarks>
+        /// <param name="data">The data to try to match at the start of.</param>
+        /// <param name="address">The address which is parsed out of the data.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if <paramref name="data"/> matched at the start; <see langword="false"/> otherwise.</returns>
         public bool TryMatchAt(ReadOnlySpan<byte> data, out ulong address, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
@@ -216,6 +325,13 @@ namespace MonoMod.Core.Utils {
             return result;
         }
 
+        /// <summary>
+        /// Tries to match this pattern over the provided span.
+        /// </summary>
+        /// <param name="data">The data to try to match at the start of.</param>
+        /// <param name="addrBuf">A buffer to write address bytes to.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if <paramref name="data"/> matched at the start; <see langword="false"/> otherwise.</returns>
         public bool TryMatchAt(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
@@ -307,6 +423,18 @@ namespace MonoMod.Core.Utils {
             return false;
         }
 
+        /// <summary>
+        /// Tries to find a match of this pattern within the provided span.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="address"/> is constructed starting at the byte with the lowest address. This means that
+        /// big-endian machines may need the address to be shifted if the address is smaller than 64 bits.
+        /// </remarks>
+        /// <param name="data">The data to find a match in.</param>
+        /// <param name="address">The address which is parsed out of the data.</param>
+        /// <param name="offset">The offset within the span that the pattern matched at.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if a match was found; <see langword="false"/> otherwise.</returns>
         public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;
@@ -328,6 +456,14 @@ namespace MonoMod.Core.Utils {
             return result;
         }
 
+        /// <summary>
+        /// Tries to find a match of this pattern within the provided span.
+        /// </summary>
+        /// <param name="data">The data to find a match in.</param>
+        /// <param name="addrBuf">A buffer to write address bytes to.</param>
+        /// <param name="offset">The offset within the span that the pattern matched at.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if a match was found; <see langword="false"/> otherwise.</returns>
         public bool TryFindMatch(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;
@@ -373,6 +509,9 @@ namespace MonoMod.Core.Utils {
         }
 
         private (ReadOnlyMemory<byte> Bytes, int Offset)? lazyFirstLiteralSegment;
+        /// <summary>
+        /// Gets the first literal segment of this pattern.
+        /// </summary>
         public (ReadOnlyMemory<byte> Bytes, int Offset) FirstLiteralSegment => lazyFirstLiteralSegment ??= GetFirstLiteralSegment();
 
         private (ReadOnlyMemory<byte> Bytes, int Offset) GetFirstLiteralSegment() {

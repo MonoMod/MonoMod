@@ -5,15 +5,31 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Utils {
+    /// <summary>
+    /// A collection of <see cref="BytePattern"/>s which can quickly try to match any contained pattern.
+    /// </summary>
     public sealed class BytePatternCollection : IEnumerable<BytePattern> {
 
         private readonly HomogenousPatternCollection[] patternCollections;
         private readonly BytePattern[]? emptyPatterns;
 
+        /// <summary>
+        /// The minimum length that this collection can match.
+        /// </summary>
         public int MinLength { get; }
+        /// <summary>
+        /// The maximum value of <see cref="BytePattern.MinLength"/> within this collection.
+        /// </summary>
         public int MaxMinLength { get; }
+        /// <summary>
+        /// The maximum address length.
+        /// </summary>
         public int MaxAddressLength { get; }
 
+        /// <summary>
+        /// Constructs a <see cref="BytePatternCollection"/> using the provided <see cref="BytePattern"/>s.
+        /// </summary>
+        /// <param name="patterns">The <see cref="BytePattern"/>s to construct this collection with.</param>
         public BytePatternCollection(ReadOnlyMemory<BytePattern?> patterns) {
             (patternCollections, emptyPatterns) = ComputeLut(patterns, out var minLength, out var maxMinLength, out var maxAddrLength);
             MinLength = minLength;
@@ -22,8 +38,16 @@ namespace MonoMod.Core.Utils {
             Helpers.Assert(MinLength > 0);
         }
 
+        /// <summary>
+        /// Constructs a <see cref="BytePatternCollection"/> using the provided <see cref="BytePattern"/>s.
+        /// </summary>
+        /// <param name="patterns">The <see cref="BytePattern"/>s to construct this collection with.</param>
         public BytePatternCollection(params BytePattern?[] patterns) : this(patterns.AsMemory()) { }
 
+        /// <summary>
+        /// Gets an enumerator over all of the patterns in this collection.
+        /// </summary>
+        /// <returns>An enumerator over all patterns in this collection.</returns>
         public IEnumerator<BytePattern> GetEnumerator() {
             for (var i = 0; i < patternCollections.Length; i++) {
                 var coll = patternCollections[i].Lut;
@@ -216,6 +240,19 @@ namespace MonoMod.Core.Utils {
             }
         }
 
+        /// <summary>
+        /// Tries to match this pattern over the provided span.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="address"/> is constructed starting at the byte with the lowest address. This means that
+        /// big-endian machines may need the address to be shifted if the address is smaller than 64 bits.
+        /// </remarks>
+        /// <param name="data">The data to try to match at the start of.</param>
+        /// <param name="address">The address which is parsed out of the data.</param>
+        /// <param name="matchingPattern">The <see cref="BytePattern"/> which matched the buffer.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if <paramref name="data"/> matched at the start; <see langword="false"/> otherwise.</returns>
+        /// <seealso cref="BytePattern.TryMatchAt(ReadOnlySpan{byte}, out ulong, out int)"/>
         public bool TryMatchAt(ReadOnlySpan<byte> data, out ulong address, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
@@ -231,6 +268,15 @@ namespace MonoMod.Core.Utils {
             return result;
         }
 
+        /// <summary>
+        /// Tries to match this pattern over the provided span.
+        /// </summary>
+        /// <param name="data">The data to try to match at the start of.</param>
+        /// <param name="addrBuf">A buffer to write address bytes to.</param>
+        /// <param name="matchingPattern">The <see cref="BytePattern"/> which matched the buffer.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if <paramref name="data"/> matched at the start; <see langword="false"/> otherwise.</returns>
+        /// <seealso cref="BytePattern.TryMatchAt(ReadOnlySpan{byte}, Span{byte}, out int)"/>
         public bool TryMatchAt(ReadOnlySpan<byte> data, Span<byte> addrBuf, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int length) {
             if (data.Length < MinLength) {
                 length = 0;
@@ -274,6 +320,20 @@ namespace MonoMod.Core.Utils {
             return false;
         }
 
+        /// <summary>
+        /// Tries to find a match of this pattern within the provided span.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="address"/> is constructed starting at the byte with the lowest address. This means that
+        /// big-endian machines may need the address to be shifted if the address is smaller than 64 bits.
+        /// </remarks>
+        /// <param name="data">The data to find a match in.</param>
+        /// <param name="address">The address which is parsed out of the data.</param>
+        /// <param name="matchingPattern">The <see cref="BytePattern"/> which matched the buffer.</param>
+        /// <param name="offset">The offset within the span that the pattern matched at.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if a match was found; <see langword="false"/> otherwise.</returns>
+        /// <seealso cref="BytePattern.TryFindMatch(ReadOnlySpan{byte}, out ulong, out int, out int)"/>
         public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;
@@ -288,6 +348,16 @@ namespace MonoMod.Core.Utils {
             return result;
         }
 
+        /// <summary>
+        /// Tries to find a match of this pattern within the provided span.
+        /// </summary>
+        /// <param name="data">The data to find a match in.</param>
+        /// <param name="addrBuf">A buffer to write address bytes to.</param>
+        /// <param name="matchingPattern">The <see cref="BytePattern"/> which matched the buffer.</param>
+        /// <param name="offset">The offset within the span that the pattern matched at.</param>
+        /// <param name="length">The length of the matched pattern.</param>
+        /// <returns><see langword="true"/> if a match was found; <see langword="false"/> otherwise.</returns>
+        /// <seealso cref="BytePattern.TryFindMatch(ReadOnlySpan{byte}, Span{byte}, out int, out int)"/>
         public bool TryFindMatch(ReadOnlySpan<byte> data, Span<byte> addrBuf, [MaybeNullWhen(false)] out BytePattern matchingPattern, out int offset, out int length) {
             if (data.Length < MinLength) {
                 length = offset = 0;

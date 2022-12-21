@@ -6,17 +6,22 @@ using System.Reflection;
 using System.Threading;
 
 namespace MonoMod.Core.Platforms {
-
+    /// <summary>
+    /// An <see cref="IDetourFactory"/> implementation based on <see cref="PlatformTriple"/>.
+    /// </summary>
     public class PlatformTripleDetourFactory : IDetourFactory {
 
         private readonly PlatformTriple triple;
 
+        /// <summary>
+        /// Constructs a <see cref="PlatformTripleDetourFactory"/> based on the provided <see cref="PlatformTriple"/>.
+        /// </summary>
+        /// <param name="triple">The <see cref="PlatformTriple"/> to create a detour factory using.</param>
         public PlatformTripleDetourFactory(PlatformTriple triple) {
             this.triple = triple;
         }
 
-        public FeatureFlags SupportedFeatures => triple.SupportedFeatures;
-
+        /// <inheritdoc/>
         public ICoreDetour CreateDetour(CreateDetourRequest request) {
             Helpers.ThrowIfArgumentNull(request.Source);
             Helpers.ThrowIfArgumentNull(request.Target);
@@ -407,6 +412,7 @@ namespace MonoMod.Core.Platforms {
             protected override void BeforeDispose() { }
         }
 
+        /// <inheritdoc/>
         public ICoreNativeDetour CreateNativeDetour(CreateNativeDetourRequest request) {
             var detour = new NativeDetour(triple, request.Source, request.Target);
             if (request.ApplyByDefault) {

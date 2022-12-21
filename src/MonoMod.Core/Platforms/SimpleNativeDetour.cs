@@ -3,6 +3,11 @@ using System.Diagnostics.CodeAnalysis;
 using MonoMod.Utils;
 
 namespace MonoMod.Core.Platforms {
+    /// <summary>
+    /// A simple native detour from one address to another.
+    /// </summary>
+    /// <seealso cref="PlatformTriple.CreateSimpleDetour(IntPtr, IntPtr, int, IntPtr)"/>
+    /// <seealso cref="PlatformTriple.CreateNativeDetour(IntPtr, IntPtr, int, IntPtr)"/>
     public sealed class SimpleNativeDetour : IDisposable {
         private bool disposedValue;
         private readonly PlatformTriple triple;
@@ -11,8 +16,17 @@ namespace MonoMod.Core.Platforms {
         // TODO: replace this with a StrongReference GCHandle so that it's not in the finalization queue simultaneously
         private IDisposable? AllocHandle;
 
+        /// <summary>
+        /// Gets the backup data for this detour. This contains the bytes which were originally at the detour location.
+        /// </summary>
         public ReadOnlyMemory<byte> DetourBackup => backup;
+        /// <summary>
+        /// Gets the detour source location.
+        /// </summary>
         public IntPtr Source => detourInfo.From;
+        /// <summary>
+        /// Gets the detour target location.
+        /// </summary>
         public IntPtr Destination => detourInfo.To;
 
         internal SimpleNativeDetour(PlatformTriple triple, NativeDetourInfo detourInfo, Memory<byte> backup, IDisposable? allocHandle) {
@@ -24,6 +38,18 @@ namespace MonoMod.Core.Platforms {
 
         // TODO: when this is a NativeDetour, we need to fix up the alt entry point too, if the new patch is bigger
 
+        /// <summary>
+        /// Changes the target of this detour to <paramref name="newTarget"/>.,
+        /// </summary>
+        /// <remarks>
+        /// If this <see cref="SimpleNativeDetour"/> was created as a result of <see cref="PlatformTriple.CreateNativeDetour(IntPtr, IntPtr, int, IntPtr)"/>,
+        /// then it is not safe to use this method. Because this method may enlarge the detour, it would need to fix up the generated alt entrypoint too, which is
+        /// not currently supported. Refer to <see cref="IAltEntryFactory.CreateAlternateEntrypoint(IntPtr, int, out IDisposable?)"/> for more information.
+        /// </remarks>
+        /// <param name="newTarget">The new target of the detour.</param>
+        /// <seealso cref="IArchitecture.ComputeRetargetInfo(NativeDetourInfo, IntPtr, int)"/>
+        /// <seealso cref="IArchitecture.GetRetargetBytes(NativeDetourInfo, NativeDetourInfo, Span{byte}, out IDisposable?, out bool, out bool)"/>
+        /// <seealso cref="IAltEntryFactory.CreateAlternateEntrypoint(IntPtr, int, out IDisposable?)"/>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
         public void ChangeTarget(IntPtr newTarget) {
@@ -104,12 +130,18 @@ namespace MonoMod.Core.Platforms {
                 disposedValue = true;
             }
         }
-
+        
+        /// <summary>
+        /// Undoes and cleans up this detour.
+        /// </summary>
         ~SimpleNativeDetour() {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }
 
+        /// <summary>
+        /// Undoes and cleans up this detour.
+        /// </summary>
         public void Dispose() {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);

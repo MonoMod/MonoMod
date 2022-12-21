@@ -12,7 +12,24 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core.Platforms {
+    /// <summary>
+    /// A triple of <see cref="IArchitecture"/>, <see cref="ISystem"/>, and <see cref="IRuntime"/> which provides higher-level operations
+    /// based on the underlying implementations.
+    /// </summary>
     public sealed class PlatformTriple {
+        /// <summary>
+        /// Creates an <see cref="IRuntime"/> implementation using the provided <see cref="ISystem"/> and <see cref="IArchitecture"/> according
+        /// to the runtime detected by <see cref="PlatformDetection.Runtime"/>.
+        /// </summary>
+        /// <remarks>
+        /// The runtime may utilize the values of <see cref="PlatformDetection"/> to make decisions about its behaviour. As such, the provided
+        /// implementations must be for the current process.
+        /// </remarks>
+        /// <param name="system">The <see cref="ISystem"/> implementation for the runtime to use.</param>
+        /// <param name="arch">The <see cref="IArchitecture"/> implementation for the runtime to use.</param>
+        /// <returns>An <see cref="IRuntime"/> implementation for the currently running runtime.</returns>
+        /// <exception cref="PlatformNotSupportedException">Thrown if <see cref="PlatformDetection.Runtime"/> returns an unsupported
+        /// runtime kind.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static IRuntime CreateCurrentRuntime(ISystem system, IArchitecture arch) {
             Helpers.ThrowIfArgumentNull(system);
@@ -25,6 +42,20 @@ namespace MonoMod.Core.Platforms {
             };
         }
 
+        /// <summary>
+        /// Creates an <see cref="IArchitecture"/> implementation using the provided <see cref="ISystem"/> according
+        /// to the architecture detected by <see cref="PlatformDetection.Architecture"/>.
+        /// </summary>
+        /// <remarks>
+        /// The architecture may utilize the values of <see cref="PlatformDetection"/> to make decisions about its behaviour. As such, the provided
+        /// implementations must be for the current process.
+        /// </remarks>
+        /// <param name="system">The <see cref="ISystem"/> implementation for the architecture to use.</param>
+        /// <returns>An <see cref="IArchitecture"/> implementation for the current architecture.</returns>
+        /// <exception cref="NotImplementedException">Thrown if <see cref="PlatformDetection.Architecture"/> returns an architecture
+        /// which will be supported in the future, but is not currently.</exception>
+        /// <exception cref="PlatformNotSupportedException">Thrown if <see cref="PlatformDetection.Architecture"/> returns an unsupported
+        /// architecture kind.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static IArchitecture CreateCurrentArchitecture(ISystem system) {
             Helpers.ThrowIfArgumentNull(system);
@@ -37,6 +68,14 @@ namespace MonoMod.Core.Platforms {
             };
         }
 
+        /// <summary>
+        /// Creates an <see cref="ISystem"/> implementation according to the operating system detected by <see cref="PlatformDetection.OS"/>.
+        /// </summary>
+        /// <returns>The <see cref="ISystem"/> implementation for the current operating system.</returns>
+        /// <exception cref="NotImplementedException">Thrown if <see cref="PlatformDetection.OS"/> returns an operating system
+        /// which will be supported in the future, but is not currently.</exception>
+        /// <exception cref="PlatformNotSupportedException">Thrown if <see cref="PlatformDetection.OS"/> returns an unsupported
+        /// operating system.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static ISystem CreateCurrentSystem()
             => PlatformDetection.OS switch {
@@ -50,12 +89,27 @@ namespace MonoMod.Core.Platforms {
                 var kind => throw new PlatformNotSupportedException($"OS kind {kind} not supported"),
             };
 
+        /// <summary>
+        /// Gets the <see cref="IArchitecture"/> for this <see cref="PlatformTriple"/>.
+        /// </summary>
         public IArchitecture Architecture { get; }
+        /// <summary>
+        /// Gets the <see cref="ISystem"/> for this <see cref="PlatformTriple"/>.
+        /// </summary>
         public ISystem System { get; }
+        /// <summary>
+        /// Gets the <see cref="IRuntime"/> for this <see cref="PlatformTriple"/>.
+        /// </summary>
         public IRuntime Runtime { get; }
 
         private static object lazyCurrentLock = new();
         private static PlatformTriple? lazyCurrent;
+        /// <summary>
+        /// Gets the current <see cref="PlatformTriple"/>.
+        /// </summary>
+        /// <remarks>
+        /// This <see cref="PlatformTriple"/> is automatically constructed on first access, according to the values returned by <see cref="PlatformDetection"/>.
+        /// </remarks>
         public static unsafe PlatformTriple Current => Helpers.GetOrInitWithLock(ref lazyCurrent, lazyCurrentLock, &CreateCurrent);
 
         private static PlatformTriple CreateCurrent() {
@@ -65,6 +119,15 @@ namespace MonoMod.Core.Platforms {
             return new(arch, sys, runtime);
         }
 
+        /// <summary>
+        /// Sets the current <see cref="PlatformTriple"/>.
+        /// </summary>
+        /// <remarks>
+        /// This must be called before the first invocation of <see cref="Current"/>.
+        /// </remarks>
+        /// <param name="triple">The <see cref="PlatformTriple"/> to set.</param>
+        /// <exception cref="InvalidOperationException">Thrown if a platform triple was previously set, or <see cref="Current"/>
+        /// was invoked before calling this method.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static void SetPlatformTriple(PlatformTriple triple) {
             Helpers.ThrowIfArgumentNull(triple);
@@ -84,6 +147,25 @@ namespace MonoMod.Core.Platforms {
             throw new InvalidOperationException("The platform triple has already been initialized; cannot set a new one");
         }
 
+        /// <summary>
+        /// Constructs a <see cref="PlatformTriple"/> with the provided <see cref="IArchitecture"/>, <see cref="ISystem"/>, and <see cref="IRuntime"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Each of the provided objects will be initialized, if they support it. The following interfaces are checked, and their initialize methods called:
+        /// <list type="bullet">
+        ///     <item><see cref="IInitialize{T}"/> of <see cref="ISystem"/></item>
+        ///     <item><see cref="IInitialize{T}"/> of <see cref="IArchitecture"/></item>
+        ///     <item><see cref="IInitialize{T}"/> of <see cref="IRuntime"/></item>
+        ///     <item><see cref="IInitialize{T}"/> of <see cref="PlatformTriple"/></item>
+        ///     <item><see cref="IInitialize"/></item>
+        /// </list>
+        /// After being initialized, <see cref="IRuntime.Abi"/> is read from the <see cref="IRuntime"/> instance.
+        /// </para>
+        /// </remarks>
+        /// <param name="architecture">The <see cref="IArchitecture"/> to use.</param>
+        /// <param name="system">The <see cref="ISystem"/> to use.</param>
+        /// <param name="runtime">The <see cref="IRuntime"/> to use.</param>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime) {
             Helpers.ThrowIfArgumentNull(architecture);
@@ -112,10 +194,19 @@ namespace MonoMod.Core.Platforms {
             (obj as IInitialize)?.Initialize();
         }
 
+        /// <summary>
+        /// Gets the triple of <see cref="ArchitectureKind"/>, <see cref="OSKind"/>, and <see cref="RuntimeKind"/> represented by this <see cref="PlatformTriple"/>.
+        /// </summary>
         public (ArchitectureKind Arch, OSKind OS, RuntimeKind Runtime) HostTriple => (Architecture.Target, System.Target, Runtime.Target);
 
+        /// <summary>
+        /// Gets the supported features of this <see cref="PlatformTriple"/>.
+        /// </summary>
         public FeatureFlags SupportedFeatures { get; }
 
+        /// <summary>
+        /// Gets the ABI for this <see cref="PlatformTriple"/>.
+        /// </summary>
         public Abi Abi { get; }
 
         /// <summary>
@@ -157,6 +248,12 @@ namespace MonoMod.Core.Platforms {
             }
         }
 
+        /// <summary>
+        /// Gets an "identifiable" <see cref="MethodBase"/> for a method, which has object identity.
+        /// </summary>
+        /// <param name="method">The method to identify.</param>
+        /// <returns>The identifiable <see cref="MethodBase"/>.</returns>
+        /// <seealso cref="IRuntime.GetIdentifiable(MethodBase)"/>
         public MethodBase GetIdentifiable(MethodBase method) {
             Helpers.ThrowIfArgumentNull(method);
 
@@ -197,6 +294,12 @@ namespace MonoMod.Core.Platforms {
             return method;
         }
 
+        /// <summary>
+        /// Pins a method if that is required by the runtime.
+        /// </summary>
+        /// <param name="method">The method to pin.</param>
+        /// <returns>An <see cref="IDisposable"/> which managed the lifetime of the pin.</returns>
+        /// <seealso cref="IRuntime.PinMethodIfNeeded(MethodBase)"/>
         public IDisposable? PinMethodIfNeeded(MethodBase method) {
             if (SupportedFeatures.Has(RuntimeFeature.RequiresMethodPinning)) {
                 // only make the interface call if it's needed, because interface dispatches are slow
@@ -207,6 +310,11 @@ namespace MonoMod.Core.Platforms {
             return null;
         }
 
+        /// <summary>
+        /// Tries to disable inlining of the provided method, if the underlying runtime supports it.
+        /// </summary>
+        /// <param name="method">The method to disable inlining of.</param>
+        /// <returns><see langword="true"/> if inlining could be disabled; <see langword="false"/> otherwise.</returns>
         public bool TryDisableInlining(MethodBase method) {
             if (SupportedFeatures.Has(RuntimeFeature.DisableInlining)) {
                 Runtime.DisableInlining(method);
@@ -216,6 +324,15 @@ namespace MonoMod.Core.Platforms {
             return false;
         }
 
+        /// <summary>
+        /// Creates and applies a <see cref="SimpleNativeDetour"/> from one address to another.
+        /// </summary>
+        /// <param name="from">The address to detour.</param>
+        /// <param name="to">The target of the detour.</param>
+        /// <param name="detourMaxSize">The maximum size available for the detour.</param>
+        /// <param name="fromRw">The address to write the detour to, if that is different from <paramref name="from"/>. Otherwise, the default value of <see langword="default"/> should be passed.
+        /// Refer to <see cref="OnMethodCompiledCallback"/> for more information.</param>
+        /// <returns>A <see cref="SimpleNativeDetour"/> instance managing the generated detour.</returns>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
         public SimpleNativeDetour CreateSimpleDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default) {
@@ -247,12 +364,32 @@ namespace MonoMod.Core.Platforms {
             return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
         }
 
+        /// <summary>
+        /// A wrapper struct containing a <see cref="SimpleNativeDetour"/> and alternate entrypoint handle.
+        /// </summary>
+        /// <param name="Simple">The <see cref="SimpleNativeDetour"/> instance backing this detour.</param>
+        /// <param name="AltEntry">A pointer to the generated alternate entrypoint, if one was generated.</param>
+        /// <param name="AltHandle">The memory handle for the alternate entry point, if one is present.</param>
+        /// <seealso cref="CreateNativeDetour(IntPtr, IntPtr, int, IntPtr)"/>
         [SuppressMessage("Design", "CA1034:Nested types should not be visible",
             Justification = "This type should rarely be used, and should not exist in the above namespace to avoid people trying to use it when they shouldn't.")]
         public record struct NativeDetour(SimpleNativeDetour Simple, IntPtr AltEntry, IDisposable? AltHandle) {
+            /// <summary>
+            /// Gets whether or not this instance is holding an alternate entrypoint in <see cref="AltEntry"/>.
+            /// </summary>
             public bool HasAltEntry => AltEntry != IntPtr.Zero;
         }
 
+        /// <summary>
+        /// Creates a <see cref="NativeDetour"/>. This is basically identical to <see cref="CreateSimpleDetour(IntPtr, IntPtr, int, IntPtr)"/>,
+        /// except that it generates an alternate entrypoint for <paramref name="from"/>.
+        /// </summary>
+        /// <param name="from">The address to detour.</param>
+        /// <param name="to">The target of the detour.</param>
+        /// <param name="detourMaxSize">The maximum size available for the detour.</param>
+        /// <param name="fromRw">The address to write the detour to, if that is different from <paramref name="from"/>. Otherwise, the default value of <see langword="default"/> should be passed.
+        /// Refer to <see cref="OnMethodCompiledCallback"/> for more information.</param>
+        /// <returns>A <see cref="NativeDetour"/> instance managing the generated detour.</returns>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
         public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default) {
@@ -293,6 +430,11 @@ namespace MonoMod.Core.Platforms {
             return new NativeDetour(new(this, detourInfo, backup, allocHandle), altEntry, altHandle);
         }
         
+        /// <summary>
+        /// Gets the native method body for a method.
+        /// </summary>
+        /// <param name="method">The method to get the body of.</param>
+        /// <returns>A pointer to the native method body of the method.</returns>
         public IntPtr GetNativeMethodBody(MethodBase method) {
             if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking)) {
                 return GetNativeMethodBodyWalk(method, reloadPtr: true);
@@ -400,6 +542,16 @@ namespace MonoMod.Core.Platforms {
             return wasPreStub ? ptrGot : ptrParsed;
         }
 
+        /// <summary>
+        /// Gets the 'real detour target' when detouring <paramref name="from"/> to <paramref name="to"/>.
+        /// </summary>
+        /// <remarks>
+        /// This will return an ABI fixup method instead of <paramref name="to"/> when needed, automatically
+        /// generating them when needed. When this is needed depends on the argument order in the ABI.
+        /// </remarks>
+        /// <param name="from">The method being detoured from.</param>
+        /// <param name="to">The method being detoured to.</param>
+        /// <returns>The method to detour to instead of <paramref name="to"/>.</returns>
         public MethodBase GetRealDetourTarget(MethodBase from, MethodBase to) {
             Helpers.ThrowIfArgumentNull(from);
             Helpers.ThrowIfArgumentNull(to);
