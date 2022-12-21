@@ -66,6 +66,11 @@ namespace MonoMod.Core {
         /// <summary>
         /// Gets the current (default) <see cref="IDetourFactory"/>. This is always the <see cref="PlatformTriple"/>-based <see cref="IDetourFactory"/>.
         /// </summary>
+        /// <remarks>
+        /// The default <see cref="IDetourFactory"/> is created the first time this property is accessed, using the value of <see cref="PlatformTriple.Current"/>
+        /// at that point in time. After it is constructed, the <see cref="PlatformTriple"/> implementation cannot be replaced.
+        /// </remarks>
+        /// <seealso cref="PlatformTriple.Current"/>
         public static unsafe IDetourFactory Current {
             [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
             get => Helpers.GetOrInit(ref lazyCurrent, &CreateDefaultFactory);

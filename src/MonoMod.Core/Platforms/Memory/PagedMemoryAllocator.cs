@@ -6,7 +6,9 @@ using System.Collections.Concurrent;
 using BitOperations = System.Numerics.BitOperationsEx;
 
 namespace MonoMod.Core.Platforms.Memory {
-
+    /// <summary>
+    /// An <see cref="IMemoryAllocator"/> based on a paged memory model.
+    /// </summary>
     public abstract class PagedMemoryAllocator : IMemoryAllocator {
         private sealed class FreeMem {
             public uint BaseOffset;
@@ -14,23 +16,36 @@ namespace MonoMod.Core.Platforms.Memory {
             public FreeMem? NextFree;
         }
 
+        /// <summary>
+        /// An allocation of memory within a page.
+        /// </summary>
         protected sealed class PageAllocation : IAllocatedMemory {
 
             private readonly Page owner;
             private readonly uint offset;
 
+            /// <inheritdoc/>
             public bool IsExecutable => owner.IsExecutable;
 
+            /// <summary>
+            /// Creates a new <see cref="PageAllocation"/> in the provided page, at the specified offset, with the specified size.
+            /// </summary>
+            /// <param name="page">The <see cref="Page"/> this allocation is a part of.</param>
+            /// <param name="offset">The offset in the page of this allocation.</param>
+            /// <param name="size">The size of the allocation.</param>
             public PageAllocation(Page page, uint offset, int size) {
                 owner = page;
                 this.offset = offset;
                 Size = size;
             }
 
+            /// <inheritdoc/>
             public IntPtr BaseAddress => (IntPtr) ((nint) owner.BaseAddr + offset);
 
+            /// <inheritdoc/>
             public int Size { get; }
 
+            /// <inheritdoc/>
             public unsafe Span<byte> Memory => new((void*) BaseAddress, Size);
 
             #region IDisposable implementation
@@ -43,11 +58,15 @@ namespace MonoMod.Core.Platforms.Memory {
                 }
             }
 
+            /// <summary>
+            /// Releases the allocated memory represented by this allocation.
+            /// </summary>
             ~PageAllocation() {
                 // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
                 Dispose(disposing: false);
             }
 
+            /// <inheritdoc/>
             public void Dispose() {
                 // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
                 Dispose(disposing: true);
@@ -56,6 +75,9 @@ namespace MonoMod.Core.Platforms.Memory {
             #endregion
         }
 
+        /// <summary>
+        /// A page of memory managed by a <see cref="PagedMemoryAllocator"/>.
+        /// </summary>
         protected sealed class Page {
 
             private readonly PagedMemoryAllocator owner;
@@ -65,14 +87,30 @@ namespace MonoMod.Core.Platforms.Memory {
             // we keep freeList sorted by BaseOffset, possibly with nulls between
             private FreeMem? freeList;
 
+            /// <summary>
+            /// Gets whether or not this page has no allocations.
+            /// </summary>
             public bool IsEmpty => freeList is { } list && list.BaseOffset == 0 && list.Size == Size;
-
+            /// <summary>
+            /// Gets the base address of this page.
+            /// </summary>
             public IntPtr BaseAddr { get; }
-
+            /// <summary>
+            /// Gets the size of this page.
+            /// </summary>
             public uint Size { get; }
-
+            /// <summary>
+            /// Gets whether or not this page is executable.
+            /// </summary>
             public bool IsExecutable { get; }
-
+            
+            /// <summary>
+            /// Constructs a <see cref="Page"/> object associated with the specified <see cref="PagedMemoryAllocator"/>.
+            /// </summary>
+            /// <param name="owner">The <see cref="PagedMemoryAllocator"/> which this page is managed by.</param>
+            /// <param name="baseAddr">The base address of this page.</param>
+            /// <param name="size">The size of this page.</param>
+            /// <param name="isExecutable"><see langword="true"/> if this page is executable; <see langword="false"/> otherwise.</param>
             public Page(PagedMemoryAllocator owner, IntPtr baseAddr, uint size, bool isExecutable) {
                 this.owner = owner;
                 (BaseAddr, Size) = (baseAddr, size);
@@ -84,6 +122,13 @@ namespace MonoMod.Core.Platforms.Memory {
                 };
             }
 
+            /// <summary>
+            /// Tries to create a new allocation in this page.
+            /// </summary>
+            /// <param name="size">The size of the allocation.</param>
+            /// <param name="align">The alignment of the allocation.</param>
+            /// <param name="alloc">THe new allocation, if one was made.</param>
+            /// <returns><see langword="true"/> if an allocation was made; <see langword="false"/> otherwise.</returns>
             public bool TryAllocate(uint size, uint align, [MaybeNullWhen(false)] out PageAllocation alloc) {
                 // the sizes we allocate we want to round to a power of two
                 //size = BitOperations.RoundUpToPowerOf2(size);
@@ -201,8 +246,15 @@ namespace MonoMod.Core.Platforms.Memory {
         private readonly nint pageSize;
         private readonly bool pageSizeIsPow2;
 
+        /// <summary>
+        /// Gets the page size.
+        /// </summary>
         protected nint PageSize => pageSize;
 
+        /// <summary>
+        /// Constructs a <see cref="PagedMemoryAllocator"/> with the specified page size.
+        /// </summary>
+        /// <param name="pageSize"></param>
         protected PagedMemoryAllocator(nint pageSize) {
             this.pageSize = pageSize;
 
@@ -210,6 +262,11 @@ namespace MonoMod.Core.Platforms.Memory {
             pageBaseMask = ~(nint) 0 << BitOperations.TrailingZeroCount(pageSize);
         }
 
+        /// <summary>
+        /// Rounds <paramref name="addr"/> down to the nearest page boundary below it.
+        /// </summary>
+        /// <param name="addr">The address to round.</param>
+        /// <returns>The dounded address.</returns>
         public nint RoundDownToPageBoundary(nint addr) {
             if (pageSizeIsPow2)
                 return addr & pageBaseMask;
@@ -244,6 +301,13 @@ namespace MonoMod.Core.Platforms.Memory {
             }
         }
 
+        /// <summary>
+        /// Inserts a newly allocated <see cref="Page"/> into this allocator.
+        /// </summary>
+        /// <remarks>
+        /// The allocation lock must be held when this is called.
+        /// </remarks>
+        /// <param name="page">The page to insert.</param>
         protected void InsertAllocatedPage(Page page) {
             if (pageCount == allocationList.Length) {
                 // we need to expand the allocationList
@@ -293,6 +357,15 @@ namespace MonoMod.Core.Platforms.Memory {
 
         private readonly ConcurrentBag<Page> pagesToClean = new();
         private int registeredForCleanup;
+
+        /// <summary>
+        /// Registers the provided page for cleanup.
+        /// </summary>
+        /// <remarks>
+        /// Pages are not freed when their last allocation is. Instead, we wait for the next GC to free them, to allow
+        /// other allocation requests to reuse that page without calling into the OS.
+        /// </remarks>
+        /// <param name="page">The page to register for cleanup.</param>
         protected void RegisterForCleanup(Page page) {
             if (Environment.HasShutdownStarted || AppDomain.CurrentDomain.IsFinalizingForUnload())
                 return;
@@ -330,12 +403,20 @@ namespace MonoMod.Core.Platforms.Memory {
             return false;
         }
 
+        /// <summary>
+        /// Tries to free a page.
+        /// </summary>
+        /// <param name="page">The page to free.</param>
+        /// <param name="errorMsg">The error message generated by the operation, if any./</param>
+        /// <returns><see langword="true"/> if the page was successfully freed; <see langword="false"/> otherwise.</returns>
         protected abstract bool TryFreePage(Page page, [NotNullWhen(false)] out string? errorMsg);
 
         private readonly object sync = new();
 
+        /// <inheritdoc/>
         public int MaxSize => (int) pageSize;
 
+        /// <inheritdoc/>
         public bool TryAllocateInRange(PositionedAllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
             if ((nint) request.Target < request.LowBound || (nint) request.Target > request.HighBound)
                 throw new ArgumentException("Target not between low and high", nameof(request));
@@ -421,6 +502,7 @@ namespace MonoMod.Core.Platforms.Memory {
             return false;
         }
 
+        /// <inheritdoc/>
         public bool TryAllocate(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
             if (request.Size < 0)
                 throw new ArgumentException("Size is negative", nameof(request));
@@ -442,7 +524,22 @@ namespace MonoMod.Core.Platforms.Memory {
             }
         }
 
+        /// <summary>
+        /// Tries to allocate memory from a newly allocated page, according to the provided <see cref="AllocationRequest"/>.
+        /// </summary>
+        /// <param name="request">The allocation request.</param>
+        /// <param name="allocated">The allocated memory, if any.</param>
+        /// <returns><see langword="true"/> if memory was successfully allocated; <see langword="false"/> otherwise.</returns>
         protected abstract bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
+        /// <summary>
+        /// Tries to allocate memory from a newly allocated page, according to the provided <see cref="PositionedAllocationRequest"/>.
+        /// </summary>
+        /// <param name="request">The allocation request.</param>
+        /// <param name="targetPage">The target page address.</param>
+        /// <param name="lowPageBound">The low page boundary.</param>
+        /// <param name="highPageBound">The high page boundary.</param>
+        /// <param name="allocated">The allocated memory, if any.</param>
+        /// <returns><see langword="true"/> if memory was successfully allocated; <see langword="false"/> otherwise.</returns>
         protected abstract bool TryAllocateNewPage(PositionedAllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated);
 
     }
