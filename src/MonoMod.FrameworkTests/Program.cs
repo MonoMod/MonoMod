@@ -24,6 +24,15 @@ if (Debugger.IsAttached) {
     Debugger.Break();
 }
 
+#if NETCOREAPP1_0_OR_GREATER
+
+{
+    using var tcTest = new MonoMod.UnitTest.DetourOrderTest(new DummyOutputHelper());
+    tcTest.TestDetoursOrder();
+}
+
+#endif
+
 unsafe {
 
     var clib = PlatformDetection.OS switch {
@@ -84,3 +93,15 @@ delegate int Get1Delegate();
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 delegate int RandHook(Get1Delegate orig);
+
+#if NETCOREAPP1_0_OR_GREATER
+
+internal class DummyOutputHelper : ITestOutputHelper {
+    public void WriteLine(string message) {
+    }
+
+    public void WriteLine(string format, params object[] args) {
+    }
+}
+
+#endif

@@ -7,6 +7,9 @@ namespace MonoMod.Core.Interop {
 
         public const string LibSystem = "libSystem";
 
+        [DllImport(LibSystem, EntryPoint = "getpagesize")]
+        public static extern int GetPageSize();
+
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/mach_vm.defs.auto.html
 
         /*
@@ -104,7 +107,7 @@ namespace MonoMod.Core.Interop {
         }
 
         public enum vm_region_flavor_t : int {
-            BasicINfo64 = 9
+            BasicInfo64 = 9
         }
 
 

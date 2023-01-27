@@ -117,7 +117,7 @@ namespace MonoMod.Core.Platforms.Memory {
         }
 
         private unsafe bool TryAllocNewPage(PositionedAllocationRequest request, ref nint page, bool goingUp, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
-            if (pageAlloc.TryQueryPage(page, out var isFree, out IntPtr baseAddr, out var allocSize)) {
+            if (pageAlloc.TryQueryPage(page, out var isFree, out var baseAddr, out var allocSize)) {
                 if (!isFree) // this is not a free block, so we don't care
                     goto Fail;
 
