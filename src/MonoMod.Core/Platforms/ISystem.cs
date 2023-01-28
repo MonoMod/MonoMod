@@ -1,5 +1,6 @@
 ﻿using MonoMod.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace MonoMod.Core.Platforms {
     /// <summary>
@@ -29,6 +30,8 @@ namespace MonoMod.Core.Platforms {
         /// Gets the <see cref="INativeExceptionHelper"/> for this OS, if it is needed.
         /// </summary>
         INativeExceptionHelper? NativeExceptionHelper { get; }
+
+        IEnumerable<string?> EnumerateLoadedModuleFiles();
 
         /// <summary>
         /// Gets an approximate amount of memory after <paramref name="start"/> which is readable.

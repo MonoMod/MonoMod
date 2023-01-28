@@ -1,6 +1,7 @@
 ﻿using MonoMod.Core.Platforms.Memory;
 using MonoMod.Utils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Platforms.Systems {
@@ -12,6 +13,22 @@ namespace MonoMod.Core.Platforms.Systems {
         public Abi? DefaultAbi => default; // TODO:
 
         public INativeExceptionHelper? NativeExceptionHelper => throw new NotImplementedException();
+
+        public unsafe IEnumerable<string?> EnumerateLoadedModuleFiles() {
+            var infoCnt = Interop.OSX.task_dyld_info.Count;
+            if (!Interop.OSX.task_info(Interop.OSX.mach_task_self(), Interop.OSX.task_flavor_t.DyldInfo, out var dyldInfo, ref infoCnt)) {
+                return ArrayEx.Empty<string>(); // could not get own dyld info
+            }
+
+            var infos = dyldInfo.all_image_infos->InfoArray;
+
+            var arr = new string?[infos.Length];
+            for (var i = 0; i < arr.Length; i++) {
+                arr[i] = infos[i].imageFilePath.ToString();
+            }
+
+            return arr;
+        }
 
         public unsafe nint GetSizeOfReadableMemory(IntPtr start, nint guess) {
             nint knownSize = 0;

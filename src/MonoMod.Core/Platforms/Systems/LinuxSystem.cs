@@ -5,9 +5,12 @@ using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -21,6 +24,10 @@ namespace MonoMod.Core.Platforms.Systems {
 
         private readonly Abi defaultAbi;
         public Abi? DefaultAbi => defaultAbi;
+
+        public IEnumerable<string?> EnumerateLoadedModuleFiles() {
+            return Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Select(m => m.FileName)!;
+        }
 
         private readonly nint PageSize;
 

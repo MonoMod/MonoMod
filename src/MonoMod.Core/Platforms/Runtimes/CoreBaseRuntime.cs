@@ -68,14 +68,13 @@ namespace MonoMod.Core.Platforms.Runtimes {
         }
 
         protected virtual string GetClrJitPath() {
-            var currentProc = Process.GetCurrentProcess();
-            var clrjitModule = currentProc.Modules.Cast<ProcessModule>()
-                .FirstOrDefault(m => m.FileName is not null && Path.GetFileNameWithoutExtension(m.FileName).EndsWith("clrjit", StringComparison.Ordinal));
-            if (clrjitModule is null)
+            var clrjitFile = System.EnumerateLoadedModuleFiles()
+                .FirstOrDefault(f => f is not null && Path.GetFileNameWithoutExtension(f).EndsWith("clrjit", StringComparison.Ordinal));
+
+            if (clrjitFile is null)
                 throw new PlatformNotSupportedException("Could not locate clrjit library");
 
-            Helpers.DAssert(clrjitModule.FileName is not null);
-            return clrjitModule.FileName;
+            return clrjitFile;
         }
 
         private IntPtr? lazyJitObject;

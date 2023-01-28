@@ -1,6 +1,7 @@
 ﻿using MonoMod.Utils;
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace MonoMod.Core.Interop {
     internal static class OSX {
@@ -91,6 +92,23 @@ namespace MonoMod.Core.Interop {
             return *ptr;
         }
 
+        /*
+        #ifdef  mig_external
+        mig_external
+        #else
+        extern
+        #endif
+        kern_return_t task_info
+        (
+                task_name_t target_task,
+                task_flavor_t flavor,
+                task_info_t task_info_out,
+                mach_msg_type_number_t* task_info_outCnt
+        );
+        */
+        [DllImport(LibSystem, EntryPoint = "task_info")]
+        public static extern kern_return_t task_info(int targetTask, task_flavor_t flavor, out task_dyld_info taskInfoOut, ref int taskInfoCnt);
+
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_region.h.auto.html
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/memory_object_types.h.auto.html
 
@@ -114,6 +132,7 @@ namespace MonoMod.Core.Interop {
             public task_dyld_all_image_info_format all_image_info_format;
 
             public unsafe dyld_all_image_infos* all_image_infos => (dyld_all_image_infos*) (nuint) all_image_info_addr;
+            public static unsafe int Count => sizeof(task_dyld_info) / sizeof(int);
         }
 
         // https://stackoverflow.com/a/23229148

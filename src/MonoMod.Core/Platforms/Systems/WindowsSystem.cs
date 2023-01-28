@@ -1,8 +1,11 @@
 ﻿using MonoMod.Core.Platforms.Memory;
 using MonoMod.Utils;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Windows.Win32.System.Memory;
@@ -88,6 +91,10 @@ namespace MonoMod.Core.Platforms.Systems {
             if (!Windows.Win32.Interop.FlushInstructionCache(Windows.Win32.Interop.GetCurrentProcess(), (void*) addr, size)) {
                 throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
             }
+        }
+
+        public IEnumerable<string?> EnumerateLoadedModuleFiles() {
+            return Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Select(m => m.FileName)!;
         }
 
         public unsafe nint GetSizeOfReadableMemory(nint start, nint guess) {
