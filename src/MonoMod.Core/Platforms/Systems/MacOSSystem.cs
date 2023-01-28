@@ -38,8 +38,8 @@ namespace MonoMod.Core.Platforms.Systems {
             var origAddr = (ulong) start;
             var addr = origAddr;
             do {
-                var infoSize = sizeof(Interop.OSX.vm_region_basic_info_64);
-                if (!Interop.OSX.mach_vm_region(selfTask, ref addr, out var size, Interop.OSX.vm_region_flavor_t.BasicInfo64, out var info, ref infoSize, out _)) {
+                var infoCount = sizeof(Interop.OSX.vm_region_basic_info_64) / sizeof(int);
+                if (!Interop.OSX.mach_vm_region(selfTask, ref addr, out var size, Interop.OSX.vm_region_flavor_t.BasicInfo64, out var info, ref infoCount, out _)) {
                     return knownSize;
                 }
 
