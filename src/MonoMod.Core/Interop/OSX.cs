@@ -273,7 +273,7 @@ namespace MonoMod.Core.Interop {
 
             public kern_return_t(int value) => this.value = value;
 
-            public static implicit operator bool(kern_return_t v) => v.value != 0;
+            public static implicit operator bool(kern_return_t v) => v.value == 0;
 
             public static bool operator ==(kern_return_t x, kern_return_t y) => x.value == y.value;
             public static bool operator !=(kern_return_t x, kern_return_t y) => x.value != y.value;
