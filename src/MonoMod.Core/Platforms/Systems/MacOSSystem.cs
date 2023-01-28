@@ -16,7 +16,8 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public unsafe IEnumerable<string?> EnumerateLoadedModuleFiles() {
             var infoCnt = Interop.OSX.task_dyld_info.Count;
-            if (!Interop.OSX.task_info(Interop.OSX.mach_task_self(), Interop.OSX.task_flavor_t.DyldInfo, out var dyldInfo, ref infoCnt)) {
+            var kr = Interop.OSX.task_info(Interop.OSX.mach_task_self(), Interop.OSX.task_flavor_t.DyldInfo, out var dyldInfo, ref infoCnt);
+            if (!kr) {
                 return ArrayEx.Empty<string>(); // could not get own dyld info
             }
 
