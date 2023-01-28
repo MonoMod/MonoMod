@@ -106,10 +106,47 @@ namespace MonoMod.Core.Interop {
             public ushort user_wired_count;
         }
 
+        // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/task_info.h#L279
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        public struct task_dyld_info {
+            public ulong all_image_info_addr; // mach_vm_address_t
+            public ulong all_image_info_size; // mach_vm_size_t
+            public task_dyld_all_image_info_format all_image_info_format;
+
+            public unsafe dyld_all_image_infos* all_image_infos => (dyld_all_image_infos*) (nuint) all_image_info_addr;
+        }
+
+        // https://stackoverflow.com/a/23229148
+        // because this is all in-process, we can use pointers normally
+        [StructLayout(LayoutKind.Sequential)] // don't know the pack setting unfortunately
+        public unsafe struct dyld_all_image_infos {
+            public uint version;
+            public uint infoArrayCount;
+            public dyld_image_info* infoArray;
+            // ...
+            // There is actually more, but it's not relevant to us.
+            public ReadOnlySpan<dyld_image_info> InfoArray => new(infoArray, (int)infoArrayCount);
+        }
+
+        [StructLayout(LayoutKind.Sequential)] // don't know the pack setting unfortunately
+        public unsafe struct dyld_image_info {
+            public void* imageLoadAddress; // mach_header*
+            public global::Windows.Win32.Foundation.PCSTR imageFilePath; // const char* (we use PCSTR because it already can give us a string with no extra work)
+            public nuint imageFileModDate; // uintptr_t
+        }
+
+        public enum task_dyld_all_image_info_format : int {
+            Bits32 = 0,
+            Bits64 = 1,
+        }
+
+        public enum task_flavor_t : uint {
+            DyldInfo = 17,
+        }
+
         public enum vm_region_flavor_t : int {
             BasicInfo64 = 9
         }
-
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_prot.h.auto.html
         [Flags]

@@ -226,8 +226,8 @@
       <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
       <CompilerGeneratedFilesOutputPath>$(IntermediateOutputPath)/generated</CompilerGeneratedFilesOutputPath>
     </PropertyGroup>
-    
-    <Delete Files="$(MMGeneratedSourcesDir)%(_IncludedConditionalGenerators.Identity)\" />
+
+    <RemoveDir Directories="$(MMGeneratedSourcesDir)%(_IncludedConditionalGenerators.Identity)\$(TargetFramework)\" Condition="'$(_IncludingAnyConditionalGenerators)' == 'true'" />
     
   </Target>
   
