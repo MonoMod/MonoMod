@@ -34,34 +34,6 @@ namespace MonoMod.Core.Platforms.Systems {
         private readonly MmapPagedMemoryAllocator allocator;
         public IMemoryAllocator MemoryAllocator => allocator;
 
-        private static readonly ConditionalWeakTable<Type, StrongBox<bool>> SysVIsMemoryCache = new();
-
-        public static TypeClassification ClassifyAMD64(Type type, bool isReturn) {
-            var totalSize = type.GetManagedSize();
-            if (totalSize > 16) {
-                if (totalSize > 32) return isReturn ? TypeClassification.ByReference : TypeClassification.OnStack;
-
-                var isMemory = SysVIsMemoryCache.GetValue(
-                    type,
-                    static t => new StrongBox<bool>(AnyFieldsNotFloat(t))
-                ).Value;
-                if (isMemory) {
-                    return isReturn ? TypeClassification.ByReference : TypeClassification.OnStack;
-                }
-            }
-            return TypeClassification.InRegister;
-        }
-
-        private static bool AnyFieldsNotFloat(Type type) {
-            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)) {
-                Type fieldType = field.FieldType;
-                if (fieldType is { IsPrimitive: false, IsValueType: true } && AnyFieldsNotFloat(fieldType)) return true;
-                if (Type.GetTypeCode(fieldType) is not TypeCode.Single and not TypeCode.Double) return true;
-            }
-
-            return false;
-        }
-
         public LinuxSystem() {
             PageSize = (nint)Unix.Sysconf(Unix.SysconfName.PageSize);
             allocator = new MmapPagedMemoryAllocator(PageSize);
@@ -69,7 +41,7 @@ namespace MonoMod.Core.Platforms.Systems {
             if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
                 defaultAbi = new Abi(
                     new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
-                    ClassifyAMD64,
+                    SystemVABI.ClassifyAMD64,
                     true
                 );
             } else {

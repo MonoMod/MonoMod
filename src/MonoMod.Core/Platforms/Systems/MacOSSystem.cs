@@ -11,7 +11,20 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public SystemFeature Features => SystemFeature.RXPages | SystemFeature.RWXPages;
 
-        public Abi? DefaultAbi => default; // TODO:
+        public Abi? DefaultAbi { get; }
+
+        public MacOSSystem() {
+            if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
+                // As best I can find (Apple docs are worthless) MacOS uses SystemV on x64
+                DefaultAbi = new Abi(
+                    new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
+                    SystemVABI.ClassifyAMD64,
+                    true
+                );
+            } else {
+                throw new NotImplementedException();
+            }
+        }
 
         // TODO: MacOS needs a native exception helper; implement it
         public INativeExceptionHelper? NativeExceptionHelper => null;
