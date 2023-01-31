@@ -12,7 +12,8 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public Abi? DefaultAbi => default; // TODO:
 
-        public INativeExceptionHelper? NativeExceptionHelper => throw new NotImplementedException();
+        // TODO: MacOS needs a native exception helper; implement it
+        public INativeExceptionHelper? NativeExceptionHelper => null;
 
         public unsafe IEnumerable<string?> EnumerateLoadedModuleFiles() {
             var infoCnt = Interop.OSX.task_dyld_info.Count;

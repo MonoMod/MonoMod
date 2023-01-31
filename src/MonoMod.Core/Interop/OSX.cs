@@ -137,6 +137,7 @@ namespace MonoMod.Core.Interop {
 
         // https://stackoverflow.com/a/23229148
         // because this is all in-process, we can use pointers normally
+        // this is defined in /usr/include/mach-o/dyld_images.h in the SDK
         [StructLayout(LayoutKind.Sequential)] // don't know the pack setting unfortunately
         public unsafe struct dyld_all_image_infos {
             public uint version;
