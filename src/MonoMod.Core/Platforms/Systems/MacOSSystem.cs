@@ -86,8 +86,8 @@ namespace MonoMod.Core.Platforms.Systems {
                 memIsWrite = curProt.Has(vm_prot_t.Write);
                 memIsExec = curProt.Has(vm_prot_t.Execute);
                 canMakeRead = maxProt.Has(vm_prot_t.Read);
-                canMakeWrite = curProt.Has(vm_prot_t.Write);
-                canMakeExec = curProt.Has(vm_prot_t.Execute);
+                canMakeWrite = maxProt.Has(vm_prot_t.Write);
+                canMakeExec = maxProt.Has(vm_prot_t.Execute);
             } else {
                 // we couldn't get prot info
                 // was it because the region wasn't allocated (in part or in full)?
@@ -161,11 +161,12 @@ namespace MonoMod.Core.Platforms.Systems {
                     // if our region crosses alloc boundaries, we return the union of all prots
                     prot &= info.protection;
                     maxProt &= info.max_protection;
+                    
+                    addr += allocSize;
 
-                    if (addr + allocSize < (ulong)(startAddr + length)) {
+                    if (addr < (ulong)(startAddr + length)) {
                         // the end of this alloc is before the end of the requrested region, so we cross a boundary
                         crossesAllocBoundary = true;
-                        addr += allocSize;
                         continue;
                     }
                 } else {
