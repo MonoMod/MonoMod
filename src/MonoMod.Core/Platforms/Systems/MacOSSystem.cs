@@ -1,8 +1,11 @@
-﻿using MonoMod.Core.Platforms.Memory;
+﻿using MonoMod.Core.Interop;
+using MonoMod.Core.Platforms.Memory;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using static MonoMod.Core.Interop.OSX;
 
 namespace MonoMod.Core.Platforms.Systems {
@@ -208,36 +211,172 @@ namespace MonoMod.Core.Platforms.Systems {
             return true;
         }
 
-        public IMemoryAllocator MemoryAllocator { get; } = new QueryingPagedMemoryAllocator(new PageAllocator());
+        public IMemoryAllocator MemoryAllocator { get; } = new VmAllocPagedMemoryAllocator(GetPageSize());
 
-        private sealed class PageAllocator : QueryingMemoryPageAllocatorBase {
-            private readonly uint pageSize;
-            public override uint PageSize => pageSize;
-
-            public PageAllocator() {
-                pageSize = (uint) GetPageSize();
+        private sealed class VmAllocPagedMemoryAllocator : PagedMemoryAllocator {
+            public VmAllocPagedMemoryAllocator(nint pageSize)
+                : base(pageSize) {
             }
 
-            public override bool TryAllocatePage(nint size, bool executable, out IntPtr allocated) {
-                allocated = default;
-                return false;
+            public static unsafe bool PageAllocated(nint page) {
+                var addr = (ulong) page;
+                var cnt = vm_region_basic_info_64.Count;
+                var kr = mach_vm_region(mach_task_self(), ref addr, out _, vm_region_flavor_t.BasicInfo64, out _, ref cnt, out _);
+                if (kr) {
+                    if (addr > (ulong) page) {
+                        return false;
+                    } else {
+                        return true;
+                    }
+                } else {
+                    return false;
+                }
             }
 
-            public override bool TryAllocatePage(IntPtr pageAddr, nint size, bool executable, out IntPtr allocated) {
-                allocated = default;
-                return false;
+            protected override bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+                var prot = request.Executable ? vm_prot_t.Execute : vm_prot_t.None;
+                prot |= vm_prot_t.Read | vm_prot_t.Write;
+
+                // map the page
+                var addr = 0uL;
+                var kr = mach_vm_allocate(mach_task_self(), ref addr, (ulong) PageSize, vm_flags.Anywhere);
+                if (!kr) {
+                    MMDbgLog.Error($"Error creating allocation: kr = {kr.Value}");
+                    allocated = null;
+                    return false;
+                }
+
+                // TODO: handle execute protections better
+                kr = mach_vm_protect(mach_task_self(), addr, (ulong) PageSize, false, prot);
+                if (!kr) {
+                    MMDbgLog.Error($"Could not set protections on newly created allocation: kr = {kr.Value}");
+                    _ = mach_vm_deallocate(mach_task_self(), addr, (ulong) PageSize);
+                    allocated = null;
+                    return false;
+                }
+
+                var mmapPtr = (nint) addr;
+
+                // create a Page object for the newly mapped memory, even before deciding whether we succeeded or not
+                var page = new Page(this, mmapPtr, (uint) PageSize, request.Executable);
+                InsertAllocatedPage(page);
+
+                // for simplicity, we'll try to allocate out of the page before checking bounds
+                if (!page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var pageAlloc)) {
+                    // huh???
+                    RegisterForCleanup(page);
+                    allocated = null;
+                    return false;
+                }
+
+                // we got an allocation!
+                allocated = pageAlloc;
+                return true;
             }
 
-            public override bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg) {
-                errorMsg = "Not yet implemented";
-                return false;
+            protected override bool TryAllocateNewPage(
+                PositionedAllocationRequest request,
+                nint targetPage, nint lowPageBound, nint highPageBound,
+                [MaybeNullWhen(false)] out IAllocatedMemory allocated
+            ) {
+                var prot = request.Base.Executable ? vm_prot_t.Execute : vm_prot_t.None;
+                prot |= vm_prot_t.Read | vm_prot_t.Write;
+
+                // number of pages needed to satisfy length requirements
+                var numPages = request.Base.Size / PageSize + 1;
+                Helpers.Assert(numPages == 1);
+
+                // find the nearest unallocated page within our bounds
+                var low = targetPage - PageSize;
+                var high = targetPage;
+                nint ptr = -1;
+
+                while (low >= lowPageBound || high <= highPageBound) {
+
+                    // check above the target page first
+                    if (high <= highPageBound) {
+                        for (nint i = 0; i < numPages; i++) {
+                            if (PageAllocated(high + PageSize * i)) {
+                                high += PageSize;
+                                goto FailHigh;
+                            }
+                        }
+                        // all pages are unallocated, we're done
+                        ptr = high;
+                        break;
+                    }
+                    FailHigh:
+                    if (low >= lowPageBound) {
+                        for (nint i = 0; i < numPages; i++) {
+                            if (PageAllocated(low + PageSize * i)) {
+                                low -= PageSize;
+                                goto FailLow;
+                            }
+                        }
+                        // all pages are unallocated, we're done
+                        ptr = low;
+                        break;
+                    }
+                    FailLow:
+                    { }
+                }
+
+                // unable to find a page within bounds
+                if (ptr == -1) {
+                    allocated = null;
+                    return false;
+                }
+
+                var addr = (ulong) ptr;
+                var kr = mach_vm_allocate(mach_task_self(), ref addr, (ulong) PageSize, vm_flags.Anywhere);
+                if (!kr) {
+                    MMDbgLog.Error($"Error creating allocation: kr = {kr.Value}");
+                    allocated = null;
+                    return false;
+                }
+
+                // TODO: handle execute protections better
+                kr = mach_vm_protect(mach_task_self(), addr, (ulong) PageSize, false, prot);
+                if (!kr) {
+                    MMDbgLog.Error($"Could not set protections on newly created allocation: kr = {kr.Value}");
+                    _ = mach_vm_deallocate(mach_task_self(), addr, (ulong) PageSize);
+                    allocated = null;
+                    return false;
+                }
+
+                var mmapPtr = (nint) addr;
+                // create a Page object for the newly mapped memory, even before deciding whether we succeeded or not
+                var page = new Page(this, mmapPtr, (uint) PageSize, request.Base.Executable);
+                InsertAllocatedPage(page);
+
+                // for simplicity, we'll try to allocate out of the page before checking bounds
+                if (!page.TryAllocate((uint) request.Base.Size, (uint) request.Base.Alignment, out var pageAlloc)) {
+                    // huh???
+                    RegisterForCleanup(page);
+                    allocated = null;
+                    return false;
+                }
+
+                if ((nint) pageAlloc.BaseAddress < request.LowBound || (nint) pageAlloc.BaseAddress + pageAlloc.Size >= request.HighBound) {
+                    // the allocation didn't land in bounds, fail out
+                    pageAlloc.Dispose(); // because this is the only allocation in the page, this auto-registers it for cleanup
+                    allocated = null;
+                    return false;
+                }
+
+                // we got an allocation!
+                allocated = pageAlloc;
+                return true;
             }
 
-            public override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize) {
-                isFree = false;
-                allocBase = default;
-                allocSize = default;
-                return false;
+            protected override bool TryFreePage(Page page, [NotNullWhen(false)] out string? errorMsg) {
+                var kr = mach_vm_deallocate(mach_task_self(), (ulong) page.BaseAddr, page.Size);
+                if (!kr) {
+                    errorMsg = $"Failure to deallocate page: kr = {kr.Value}";
+                    return false;
+                }
+                errorMsg = null;
+                return true;
             }
         }
     }
