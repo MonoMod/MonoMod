@@ -11,6 +11,9 @@ namespace MonoMod.Core.Interop {
         [DllImport(LibSystem, EntryPoint = "getpagesize")]
         public static extern int GetPageSize();
 
+        [DllImport(LibSystem, EntryPoint = "sys_icache_invalidate")]
+        public static unsafe extern void sys_icache_invalidate(void* start, nuint size);
+
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/mach_vm.defs.auto.html
 
         /*

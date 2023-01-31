@@ -53,7 +53,7 @@ namespace MonoMod.Core.Platforms.Systems {
             var origAddr = (ulong) start;
             var addr = origAddr;
             do {
-                var infoCount = sizeof(Interop.OSX.vm_region_basic_info_64) / sizeof(int);
+                var infoCount = vm_region_basic_info_64.Count;
                 if (!mach_vm_region(selfTask, ref addr, out var size, vm_region_flavor_t.BasicInfo64, out var info, ref infoCount, out _)) {
                     return knownSize;
                 }
@@ -116,9 +116,9 @@ namespace MonoMod.Core.Platforms.Systems {
 
             // We know know what protections the target memory region has, so we can decide on a course of action.
 
-            if (!memIsExec) {
-                // our target memory is not executable
-                if (!memIsWrite) {
+            if (!memIsWrite) {
+                if (!memIsExec) {
+                    // our target memory is not executable
                     // if the memory is not currently writable, make it writable
                     if (!canMakeWrite) {
                         // TODO: figure out a workaround for this
@@ -134,16 +134,23 @@ namespace MonoMod.Core.Platforms.Systems {
                         }
                         throw new InvalidOperationException($"Unable to make region writable (kr = {kr.Value})");
                     }
+                } else {
+                    // TODO: implement patching executable memory
+                    // TODO: how do we detect whether a region has MAP_JIT? (if MAP_JIT even exists on this system?)
+                    throw new NotImplementedException();
                 }
+            }
 
-                // now we copy target to backup, then data to target
-                var target = new Span<byte>((void*) patchTarget, data.Length);
-                _ = target.TryCopyTo(backup);
-                data.CopyTo(target);
-            } else {
-                // TODO: implement patching executable memory
-                // TODO: how do we detect whether a region has MAP_JIT? (if MAP_JIT even exists on this system?)
-                throw new NotImplementedException();
+            // at this point, we know our data to be writable
+
+            // now we copy target to backup, then data to target
+            var target = new Span<byte>((void*) patchTarget, data.Length);
+            _ = target.TryCopyTo(backup);
+            data.CopyTo(target);
+
+            // if we got here when executable (either because the memory was already writable or we were able to make it writable) we need to flush the icache
+            if (memIsExec) {
+                sys_icache_invalidate((void*) patchTarget, (nuint) data.Length);
             }
         }
 
