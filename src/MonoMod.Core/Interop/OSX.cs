@@ -1,7 +1,7 @@
 ﻿using MonoMod.Utils;
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace MonoMod.Core.Interop {
     internal static class OSX {
@@ -122,6 +122,8 @@ namespace MonoMod.Core.Interop {
             public ulong offset; // vm_object_offset_t
             public vm_behavior_t behavior;
             public ushort user_wired_count;
+
+            public static unsafe int Count => sizeof(vm_region_basic_info_64) / sizeof(int);
         }
 
         // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/task_info.h#L279
@@ -265,6 +267,7 @@ namespace MonoMod.Core.Interop {
         }
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/kern_return.h.auto.html
+        [DebuggerDisplay($"{{{nameof(Value)}}}")]
         [StructLayout(LayoutKind.Sequential)]
         public struct kern_return_t : IEquatable<kern_return_t> {
             // note: this is uint on x86_64, but int everywhere else
