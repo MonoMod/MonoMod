@@ -116,9 +116,33 @@ namespace MonoMod.Utils {
                 return c;
             }));
 
-            m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations); // Abstract. TODO: Implement deep CustomDebugInformations copy.
+            Instruction ResolveInstrOff(int off) {
+                // Can't check cloned instruction offsets directly, as those can change for some reason
+                for (int i = 0; i < bo.Instructions.Count; i++)
+                    if (bo.Instructions[i].Offset == off)
+                        return bc.Instructions[i];
+                throw new ArgumentException($"Invalid instruction offset {off}");
+            }
+
+            m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations.Select(o => {
+                if (o is AsyncMethodBodyDebugInformation ao) {
+                    AsyncMethodBodyDebugInformation c = new AsyncMethodBodyDebugInformation();
+                    if (ao.CatchHandler.Offset >= 0)
+                        c.CatchHandler = ao.CatchHandler.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(ao.CatchHandler.Offset));
+                    c.Yields.AddRange(ao.Yields.Select(off => off.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(off.Offset))));
+                    c.Resumes.AddRange(ao.Resumes.Select(off => off.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(off.Offset))));
+                    c.ResumeMethods.AddRange(ao.ResumeMethods);
+                    return c;
+                } else if (o is StateMachineScopeDebugInformation so) {
+                    StateMachineScopeDebugInformation c = new StateMachineScopeDebugInformation();
+                    c.Scopes.AddRange(so.Scopes.Select(s => new StateMachineScope(ResolveInstrOff(s.Start.Offset), s.End.IsEndOfMethod ? null : ResolveInstrOff(s.End.Offset))));
+                    return c;
+                } else
+                    return o;
+            }));
+
             m.DebugInformation.SequencePoints.AddRange(bo.Method.DebugInformation.SequencePoints.Select(o => {
-                var c = new SequencePoint(bc.Instructions.FirstOrDefault(i => i.Offset == o.Offset), o.Document);
+                var c = new SequencePoint(ResolveInstrOff(o.Offset), o.Document);
                 c.StartLine = o.StartLine;
                 c.StartColumn = o.StartColumn;
                 c.EndLine = o.EndLine;
