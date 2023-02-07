@@ -1594,7 +1594,7 @@ namespace MonoMod {
             for (int i = 0; i < type.GenericParameters.Count; i++) {
                 type.GenericParameters[i] = type.GenericParameters[i].Relink(Relinker, type);
                 for (int j = 0; j < type.GenericParameters[i].CustomAttributes.Count; j++)
-                    PatchRefsInCustomAttribute(type.GenericParameters[i].CustomAttributes[j]);
+                    PatchRefsInCustomAttribute(type.GenericParameters[i].CustomAttributes[j], type);
             }
 
             // Don't foreach when modifying the collection
@@ -1613,8 +1613,8 @@ namespace MonoMod {
             }
 
             // Don't foreach when modifying the collection
-            for (int i = 0; i < type.CustomAttributes.Count; i++) 
-                PatchRefsInCustomAttribute(type.CustomAttributes[i] = type.CustomAttributes[i].Relink(Relinker, type));
+            for (int i = 0; i < type.CustomAttributes.Count; i++)
+                PatchRefsInCustomAttribute(type.CustomAttributes[i] = type.CustomAttributes[i].Relink(Relinker, type), type);
 
             foreach (PropertyDefinition prop in type.Properties) {
                 prop.PropertyType = prop.PropertyType.Relink(Relinker, type);
@@ -1653,16 +1653,24 @@ namespace MonoMod {
             foreach (ParameterDefinition param in method.Parameters) {
                 param.ParameterType = param.ParameterType.Relink(Relinker, method);
                 for (int i = 0; i < param.CustomAttributes.Count; i++)
-                    PatchRefsInCustomAttribute(param.CustomAttributes[i] = param.CustomAttributes[i].Relink(Relinker, method));
+                    PatchRefsInCustomAttribute(param.CustomAttributes[i] = param.CustomAttributes[i].Relink(Relinker, method), method);
             }
 
             for (int i = 0; i < method.CustomAttributes.Count; i++)
-                PatchRefsInCustomAttribute(method.CustomAttributes[i] = method.CustomAttributes[i].Relink(Relinker, method));
+                PatchRefsInCustomAttribute(method.CustomAttributes[i] = method.CustomAttributes[i].Relink(Relinker, method), method);
 
             for (int i = 0; i < method.Overrides.Count; i++)
                 method.Overrides[i] = (MethodReference) method.Overrides[i].Relink(Relinker, method);
 
             method.ReturnType = method.ReturnType.Relink(Relinker, method);
+
+            for (int i = 0; i < method.MethodReturnType.CustomAttributes.Count; i++)
+                PatchRefsInCustomAttribute(method.MethodReturnType.CustomAttributes[i] = method.MethodReturnType.CustomAttributes[i].Relink(Relinker, method), method);
+
+            foreach (CustomDebugInformation dbgInfo in method.CustomDebugInformations)
+                if (dbgInfo is AsyncMethodBodyDebugInformation asyncDbgInfo)
+                    for (int i = 0; i < asyncDbgInfo.ResumeMethods.Count; i++)
+                        asyncDbgInfo.ResumeMethods[i] = ((MethodReference) asyncDbgInfo.ResumeMethods[i].Relink(Relinker, method)).Resolve();
 
             if (method.Body == null) return;
 
@@ -1785,12 +1793,27 @@ namespace MonoMod {
             }
         }
 
-        public virtual void PatchRefsInCustomAttribute(CustomAttribute attr) {
+        public virtual void PatchRefsInCustomAttribute(CustomAttribute attr, IGenericParameterProvider ctx) {
             // Try to resolve the method reference to work around Mono weirdness
             if (attr.Constructor.DeclaringType?.Scope == Module) {
                 TypeDefinition resolvedType = attr.Constructor.DeclaringType?.SafeResolve();
                 if (resolvedType != null)
                     attr.Constructor = resolvedType.FindMethod(attr.Constructor.GetID());
+            }
+
+            // Relink attribute arguments
+            for (int i = 0; i < attr.ConstructorArguments.Count; i++) {
+                CustomAttributeArgument arg = attr.ConstructorArguments[i];
+                if (arg.Value is IMetadataTokenProvider mtp) {
+                    attr.ConstructorArguments[i] = new CustomAttributeArgument(arg.Type, mtp.Relink(Relinker, ctx));
+                }
+            }
+
+            for (int i = 0; i < attr.Properties.Count; i++) {
+                CustomAttributeNamedArgument arg = attr.Properties[i];
+                if (arg.Argument.Value is IMetadataTokenProvider mtp) {
+                    attr.Properties[i] = new CustomAttributeNamedArgument(arg.Name, new CustomAttributeArgument(arg.Argument.Type, mtp.Relink(Relinker, ctx)));
+                }
             }
         }
 
