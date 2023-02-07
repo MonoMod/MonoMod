@@ -54,6 +54,8 @@ namespace MonoMod.UnitTest {
         [ModExportName("ModC")]
         internal static class UtilsC {
 
+#pragma warning disable CS0649 // Not initialized
+
             // Simple use case: Get the first registered "Something".
             public static Func<int, int, int> Something;
 
@@ -65,6 +67,8 @@ namespace MonoMod.UnitTest {
             [ModImportName("ModB.AnotherThing")]
             // This is only called AnotherThing because we're wrapping this.
             public static Func<int, int, int> AnotherThingFromModB;
+
+#pragma warning restore CS0649
 
             // Example of a wrapper.
             // If ModB.AnotherThing exists, use it.
@@ -81,8 +85,10 @@ namespace MonoMod.UnitTest {
         [ModExportName("ModD")]
         [ModImportName("ModB")] // We want to only import things from ModB.
         internal static class UtilsD {
+#pragma warning disable CS0649 // Not initialized
             public static Func<int, int, int> Something;
             public static Func<int, int, int> AnotherThing;
+#pragma warning restore CS0649
         }
 
     }

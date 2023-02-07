@@ -1,8 +1,11 @@
-﻿using MonoMod.Core.Platforms.Memory;
+﻿using MonoMod.Core.Interop;
+using MonoMod.Core.Platforms.Memory;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using static MonoMod.Core.Interop.OSX;
 
 namespace MonoMod.Core.Platforms.Systems {

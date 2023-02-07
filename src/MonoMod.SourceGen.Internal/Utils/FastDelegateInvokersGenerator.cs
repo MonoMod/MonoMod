@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Threading;
 using System.Linq;
 using System.Text;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.SourceGen.Internal.Utils {
     [Generator]
@@ -79,7 +80,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
             ctx.AddSource($"{methodName}.g.cs", sb.ToString());
         }
 
-#pragma warning disable CA1305 // Specify IFormatProvider
+        [SuppressMessage("Globalization", "CA1305:Specify IFormatProvider", Justification="SourceGen is a standalone program, not using specific localization settings for integers isn't that important.")]
         private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod method, out string methodName) {
             var methodSymbol = method.Method;
             var maxArgs = method.MaxArgs;
@@ -190,7 +191,6 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
             ctx.AppendExitContext(builder);
         }
-#pragma warning restore CA1305 // Specify IFormatProvider
 
         private static string ComputeNameForIdx(int idx) {
             // this index is structured as follows (low to high bits)

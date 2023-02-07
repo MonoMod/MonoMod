@@ -28,9 +28,11 @@ namespace MonoMod.UnitTest {
         private static void DummyMethod() => new DummyClass().B = 3;
 
         private class DummyClass {
+#pragma warning disable CS0649 // Not initialized
             public string A;
             public int B;
             public string C;
+#pragma warning restore CS0649
         }
 
     }

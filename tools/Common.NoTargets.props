@@ -2,6 +2,7 @@
 <Project>
 
   <PropertyGroup>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
     <IsPackable>false</IsPackable>
     <EnableDefaultItems>false</EnableDefaultItems>

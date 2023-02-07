@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyName>MonoMod.DebugIL</AssemblyName>
     <Nullable>annotations</Nullable>
-    <TargetFrameworks>net452;net6.0</TargetFrameworks>
+    <TargetFrameworks>net6.0;net452</TargetFrameworks>
 
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>

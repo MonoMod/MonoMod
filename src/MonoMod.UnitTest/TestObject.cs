@@ -51,7 +51,10 @@ namespace MonoMod.UnitTest {
     }
 
     internal abstract class TestObjectGeneric<T, TSelf> where TSelf : TestObjectGeneric<T, TSelf> {
+#pragma warning disable CS0649 // Not initialized
         public T Data;
+#pragma warning restore CS0649
+
         public static implicit operator T(TestObjectGeneric<T, TSelf> obj) {
             if (obj == default)
                 return default;

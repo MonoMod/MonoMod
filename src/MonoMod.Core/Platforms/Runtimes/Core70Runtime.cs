@@ -60,9 +60,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return new JitHookDelegateHolder(this, InvokeCompileMethodPtr, compileMethod).CompileMethodHook;
         }
 
-#pragma warning disable CA1001 // Types that own disposable fields should be disposable
+        [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Only instantiated once, and has to not be disposed otherwise stuff will break.")]
         private sealed class JitHookDelegateHolder {
-#pragma warning restore CA1001 // Types that own disposable fields should be disposable
             public readonly Core70Runtime Runtime;
             public readonly INativeExceptionHelper? NativeExceptionHelper;
             public readonly JitHookHelpersHolder JitHookHelpers;

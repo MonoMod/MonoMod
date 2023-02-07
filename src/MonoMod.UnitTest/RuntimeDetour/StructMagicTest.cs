@@ -8,6 +8,7 @@ using New::MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.UnitTest {
     public unsafe class StructMagicTest : TestBase {
@@ -211,10 +212,11 @@ namespace MonoMod.UnitTest {
         }
 
         internal struct SomeOtherStruct {
+#pragma warning disable CS0649 // Not initialized
             public byte A;
             public byte B;
             public byte C;
+#pragma warning restore CS0649
         }
-
     }
 }

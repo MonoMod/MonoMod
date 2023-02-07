@@ -389,7 +389,10 @@ namespace MonoMod.UnitTest {
         }
 
         internal class Thrower {
+#pragma warning disable CS0649 // Not initialized
             public int b;
+#pragma warning restore CS0649
+
             public Thrower(int a) {
                 throw new Exception(a.ToString(CultureInfo.InvariantCulture));
             }
