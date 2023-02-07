@@ -4,10 +4,11 @@
   <PropertyGroup>
     <AssemblyName>MonoMod.DebugIL</AssemblyName>
     <Nullable>annotations</Nullable>
+    <TargetFrameworks>net452;net6.0</TargetFrameworks>
 
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-
+    
     <NoWarn>$(NoWarn);CA1303</NoWarn>
   </PropertyGroup>
 
