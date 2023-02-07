@@ -1,20 +1,13 @@
 ﻿#define MM
 
-using Mono.Cecil.Cil;
-using MonoMod.Cil;
-using MonoMod.Core;
-using MonoMod.Core.Platforms;
 using MonoMod.RuntimeDetour;
 
-using MonoMod.Backports;
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using MonoMod.Utils;
 using System.Runtime.InteropServices;
 
 #if NETCOREAPP1_0_OR_GREATER
-using Xunit;
 using Xunit.Abstractions;
 #endif
 

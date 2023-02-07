@@ -19,7 +19,9 @@ namespace MonoMod.UnitTest {
                         return;
                 }
                 var localTime = time.ToLocalTime();
+#pragma warning disable CA1305 // Specify IFormatProvider
                 helper.WriteLine($"[{source}]({localTime}) {level.FastToString()}: {message}");
+#pragma warning restore CA1305 // Specify IFormatProvider
             };
         }
 

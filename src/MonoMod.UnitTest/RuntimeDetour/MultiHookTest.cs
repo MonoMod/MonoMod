@@ -14,9 +14,11 @@ using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     public class ManualMultiHookTest : TestBase {
+#pragma warning disable CA2213 // Disposable fields should be disposed
         Hook h1;
         Hook h2;
         ILHook hIL;
+#pragma warning restore CA2213 // Disposable fields should be disposed
 
         private bool h1Run;
         private bool h2Run;

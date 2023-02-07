@@ -79,6 +79,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
             ctx.AddSource($"{methodName}.g.cs", sb.ToString());
         }
 
+#pragma warning disable CA1305 // Specify IFormatProvider
         private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod method, out string methodName) {
             var methodSymbol = method.Method;
             var maxArgs = method.MaxArgs;
@@ -189,6 +190,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
             ctx.AppendExitContext(builder);
         }
+#pragma warning restore CA1305 // Specify IFormatProvider
 
         private static string ComputeNameForIdx(int idx) {
             // this index is structured as follows (low to high bits)
