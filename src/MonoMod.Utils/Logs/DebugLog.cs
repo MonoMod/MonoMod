@@ -154,7 +154,7 @@ namespace MonoMod.Logs {
                     //  2. Debugger.Log is implemented as a QCall (on CoreCLR, and probably Framework) which pulls in all of the P/Invoke machinery, and necessitates a GC transition.
                     //     Debugger.IsAttached, on the other hand, is an FCall (MethodImplOptions.InternalCall) and likely elides the helper frames entirely, making it much faster.
                     Debugger.Log((int) message.Level, message.Source,
-                        DebugFormatter.Format($"[{message.Source}] {message.Level.FastToString()}: {message.FormattedMessage}\n")); // the VS output window doesn't automatically add a newline
+                        DebugFormatter.Format($"[{message.Source}] {message.Level.FastToString(null)}: {message.FormattedMessage}\n")); // the VS output window doesn't automatically add a newline
                 } catch {
                     // We want to completely swallow exceptions that happen here, because logging errors shouldn't cause problems for the callers.
                 }
@@ -326,7 +326,8 @@ namespace MonoMod.Logs {
                     }
 
                     var realTime = time.ToLocalTime();
-                    var outMsg = $"[{source}]({realTime}) {level.FastToString()}: {msg}";
+                    var outMsg = $"[{source}]({realTime}) {level.FastToString(null)}: {msg}";
+
                     // if we don't do this, on .NET 6, we'll sometimes get a corrupt buffer out
                     lock (sync) {
                         writer.WriteLine(outMsg);

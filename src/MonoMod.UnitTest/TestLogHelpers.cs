@@ -19,7 +19,7 @@ namespace MonoMod.UnitTest {
                         return;
                 }
                 var localTime = time.ToLocalTime();
-                helper.WriteLine($"[{source}]({localTime}) {level.FastToString()}: {message}");
+                helper.WriteLine($"[{source}]({localTime}) {level.FastToString(null)}: {message}");
             };
         }
 

@@ -11,8 +11,11 @@ using MonoMod.Cil;
 using Xunit;
 using Mono.Cecil.Cil;
 using Xunit.Abstractions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.UnitTest {
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed",
+        Justification = "Hooks are disposed by the test teardown method")]
     public class ManualMultiHookTest : TestBase {
         Hook h1;
         Hook h2;

@@ -1,7 +1,6 @@
 ﻿using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
