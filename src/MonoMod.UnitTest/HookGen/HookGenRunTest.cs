@@ -64,7 +64,7 @@ namespace MonoMod.UnitTest {
 }
 
 namespace MonoMod.UnitTest.HookGenTrash.Other {
-    [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification="Empty stub class.")]
+    [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Empty stub class.")]
     class Dummy {
         public List<int> A() => default;
         public List<Dummy> B() => default;
@@ -78,7 +78,7 @@ namespace MonoMod.UnitTest.HookGenTrash.Other {
 namespace MonoMod.UnitTest.HookGenTrash.tModLoader {
     public class ItemDefinition {
     }
-    [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification="Empty stub class.")]
+    [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Empty stub class.")]
     class DefinitionOptionElement<T> where T : class {
     }
     public abstract class ConfigElement<T> {
@@ -87,7 +87,7 @@ namespace MonoMod.UnitTest.HookGenTrash.tModLoader {
         protected abstract DefinitionOptionElement<T> CreateDefinitionOptionElement();
     }
 
-    [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification="Empty stub class.")]
+    [SuppressMessage("Performance", "CA1812:Avoid uninstantiated internal classes", Justification = "Empty stub class.")]
     class ItemDefinitionElement : DefinitionElement<ItemDefinition> {
         protected override DefinitionOptionElement<ItemDefinition> CreateDefinitionOptionElement() => null;
     }

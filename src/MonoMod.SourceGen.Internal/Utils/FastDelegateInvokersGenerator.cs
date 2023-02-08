@@ -80,7 +80,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
             ctx.AddSource($"{methodName}.g.cs", sb.ToString());
         }
 
-        [SuppressMessage("Globalization", "CA1305:Specify IFormatProvider", Justification="SourceGen is a standalone program, not using specific localization settings for integers isn't that important.")]
+        [SuppressMessage("Globalization", "CA1305:Specify IFormatProvider",
+            Justification = "SourceGen is a Roslyn extension, not using specific localization settings for integers isn't that important.")]
         private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod method, out string methodName) {
             var methodSymbol = method.Method;
             var maxArgs = method.MaxArgs;
