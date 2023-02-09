@@ -43,7 +43,7 @@ Mods / mod loaders for the following games are already using it in one way or an
 - Celeste: [Everest](https://everestapi.github.io/)
 - Risk of Rain 2: [BepInExPack (BepInEx + MonoMod + R2API)](https://thunderstore.io/package/bbepis/BepInExPack/)
 - Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
-- Rain World: [RainDB via Partiality](http://www.raindb.net/)
+- Rain World: [RainDB via custom BepInEx package](http://www.raindb.net/)
 - Totally Accurate Battle Simulator: [TABS-Multiplayer](https://github.com/Ceiridge/TABS-Multiplayer)
 - Salt and Sanctuary: [Salt.Modding](https://github.com/seanpr96/Salt.Modding)
 - Nimbatus: [Nimbatus-Mods via Partiality](https://github.com/OmegaRogue/Nimbatus-Mods)
