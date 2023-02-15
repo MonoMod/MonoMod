@@ -76,10 +76,17 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
             var codeReader = new PtrCodeReader(entrypoint);
             var decoder = Decoder.Create(bitness, codeReader, (ulong) entrypoint, DecoderOptions.NoInvalidCheck | DecoderOptions.AMD);
 
-            var insns = new List<Instruction>();
+            var insns = new InstructionList();
             while (codeReader.Position < minLength) {
-                decoder.Decode(out var insn);
-                insns.Add(insn);
+                decoder.Decode(out insns.AllocUninitializedElement());
+            }
+
+            var hasRipRelAddress = false;
+            foreach (ref var insn in insns) {
+                if (insn.IsIPRelativeMemoryOperand) {
+                    hasRipRelAddress = true;
+                    break;
+                }
             }
 
             var lastInsn = insns[insns.Count - 1];
@@ -153,8 +160,16 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
             while (true) {
                 bufWriter.Reset();
 
+                IAllocatedMemory? allocated;
                 // first, allocate with our estimated size
-                Helpers.Assert(alloc.TryAllocate(new(estTotalSize) { Executable = true }, out var allocated));
+                if (hasRipRelAddress) {
+                    // if we have an RIP relative address (that wasn't created by us) try to allocate close to the original location
+                    Helpers.Assert(alloc.TryAllocateInRange(
+                        new(entrypoint, (nint) entrypoint + int.MinValue, (nint) entrypoint + int.MaxValue,
+                        new(estTotalSize) { Executable = true }), out allocated));
+                } else {
+                    Helpers.Assert(alloc.TryAllocate(new(estTotalSize) { Executable = true }, out allocated));
+                }
 
                 // now that we have a target address, try to assemble at that address
                 var target = allocated.BaseAddress;
