@@ -209,36 +209,26 @@ namespace MonoMod.Core.Platforms.Systems {
         private static unsafe kern_return_t GetLocalRegionInfo(nint origAddr, out nint startAddr, out nint outSize, out vm_prot_t prot, out vm_prot_t maxProt) {
             kern_return_t kr;
             ulong size;
-            int depth;
+            var depth = int.MaxValue;
 
-            // TODO: would just setting depth to int.MaxValue behave correctly and allow us to avoid this loop?
-
-            var ownTask = mach_task_self();
-            while (true) {
-                vm_region_submap_short_info_64 info;
-                var count = vm_region_submap_short_info_64.Count;
-                var addr = (ulong) origAddr;
-                kr = mach_vm_region_recurse(ownTask, &addr, &size, &depth, &info, &count);
-                if (!kr) {
-                    startAddr = default;
-                    outSize = default;
-                    prot = default;
-                    maxProt = default;
-                    return kr;
-                }
-
-                if (info.is_submap) {
-                    depth++;
-                    continue;
-                } else {
-                    // we're at the maximum depth, use the info we've found here
-                    startAddr = (nint) addr;
-                    outSize = (nint) size;
-                    prot = info.protection;
-                    maxProt = info.max_protection;
-                    return kr;
-                }
+            vm_region_submap_short_info_64 info;
+            var count = vm_region_submap_short_info_64.Count;
+            var addr = (ulong) origAddr;
+            kr = mach_vm_region_recurse(mach_task_self(), &addr, &size, &depth, &info, &count);
+            if (!kr) {
+                startAddr = default;
+                outSize = default;
+                prot = default;
+                maxProt = default;
+                return kr;
             }
+
+            Helpers.Assert(!info.is_submap);
+            startAddr = (nint) addr;
+            outSize = (nint) size;
+            prot = info.protection;
+            maxProt = info.max_protection;
+            return kr;
         }
 
         public IMemoryAllocator MemoryAllocator { get; } = new VmAllocPagedMemoryAllocator(GetPageSize());
