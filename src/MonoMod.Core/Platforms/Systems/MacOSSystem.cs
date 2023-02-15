@@ -34,7 +34,8 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public unsafe IEnumerable<string?> EnumerateLoadedModuleFiles() {
             var infoCnt = task_dyld_info.Count;
-            var kr = task_info(mach_task_self(), task_flavor_t.DyldInfo, out var dyldInfo, ref infoCnt);
+            var dyldInfo = default(task_dyld_info);
+            var kr = task_info(mach_task_self(), task_flavor_t.DyldInfo, &dyldInfo, &infoCnt);
             if (!kr) {
                 return ArrayEx.Empty<string>(); // could not get own dyld info
             }
@@ -52,25 +53,20 @@ namespace MonoMod.Core.Platforms.Systems {
         public unsafe nint GetSizeOfReadableMemory(IntPtr start, nint guess) {
             nint knownSize = 0;
 
-            var selfTask = mach_task_self();
-            var origAddr = (ulong) start;
-            var addr = origAddr;
             do {
-                var infoCount = vm_region_basic_info_64.Count;
-                if (!mach_vm_region(selfTask, ref addr, out var size, vm_region_flavor_t.BasicInfo64, out var info, ref infoCount, out _)) {
+                if (!GetLocalRegionInfo(start, out var realStart, out var realSize, out var prot, out _)) {
                     return knownSize;
                 }
 
-                if (addr > origAddr) // the page returned is further above
+                if (realStart > start) // the page returned is further above
                     return knownSize;
 
-                var isReadable = (info.protection & vm_prot_t.Read) != 0;
+                var isReadable = (prot & vm_prot_t.Read) != 0;
                 if (!isReadable)
                     return knownSize;
 
-                knownSize += (nint)(addr + size - origAddr);
-                origAddr = addr + size;
-                addr = origAddr;
+                knownSize += realStart + realSize - start;
+                start = realStart + realSize;
             } while (knownSize < guess);
 
             return knownSize;
@@ -157,37 +153,35 @@ namespace MonoMod.Core.Platforms.Systems {
             }
         }
 
-        private static unsafe bool TryGetProtForMem(nint startAddr, int length, out vm_prot_t maxProt, out vm_prot_t prot, out bool crossesAllocBoundary, out bool notAllocated) {
+        private static unsafe bool TryGetProtForMem(nint addr, int length, out vm_prot_t maxProt, out vm_prot_t prot, out bool crossesAllocBoundary, out bool notAllocated) {
             maxProt = (vm_prot_t) (-1);
             prot = (vm_prot_t) (-1);
 
-            var selfTask = mach_task_self();
             crossesAllocBoundary = false;
             notAllocated = false;
 
-            var addr = (ulong) startAddr;
+            var origAddr = addr;
 
             do {
-                if (addr >= (ulong)(startAddr + length))
+                if (addr >= origAddr + length)
                     break;
 
-                var origAddr = addr;
-                var infoCount = vm_region_basic_info_64.Count;
-                var kr = mach_vm_region(selfTask, ref addr, out var allocSize, vm_region_flavor_t.BasicInfo64, out var info, ref infoCount, out _);
+                // TODO: use mach_vm_region_recurse directly to enumerate consecutive regions sanely
+                var kr = GetLocalRegionInfo(addr, out var startAddr, out var realSize, out var iprot, out var iMaxProt);
                 if (kr) {
-                    if (addr > origAddr) {
+                    if (startAddr > addr) {
                         // the address isn't allocated, and it returned the next region
                         notAllocated = true;
                         return false;
                     }
 
                     // if our region crosses alloc boundaries, we return the union of all prots
-                    prot &= info.protection;
-                    maxProt &= info.max_protection;
-                    
-                    addr += allocSize;
+                    prot &= iprot;
+                    maxProt &= iMaxProt;
 
-                    if (addr < (ulong)(startAddr + length)) {
+                    addr = startAddr + realSize;
+
+                    if (addr < origAddr + length) {
                         // the end of this alloc is before the end of the requrested region, so we cross a boundary
                         crossesAllocBoundary = true;
                         continue;
@@ -211,6 +205,42 @@ namespace MonoMod.Core.Platforms.Systems {
             return true;
         }
 
+        // this is based loosely on https://stackoverflow.com/questions/6963625/mach-vm-region-recurse-mapping-memory-and-shared-libraries-on-osx
+        private static unsafe kern_return_t GetLocalRegionInfo(nint origAddr, out nint startAddr, out nint outSize, out vm_prot_t prot, out vm_prot_t maxProt) {
+            kern_return_t kr;
+            ulong size;
+            int depth;
+
+            // TODO: would just setting depth to int.MaxValue behave correctly and allow us to avoid this loop?
+
+            var ownTask = mach_task_self();
+            while (true) {
+                vm_region_submap_short_info_64 info;
+                var count = vm_region_submap_short_info_64.Count;
+                var addr = (ulong) origAddr;
+                kr = mach_vm_region_recurse(ownTask, &addr, &size, &depth, &info, &count);
+                if (!kr) {
+                    startAddr = default;
+                    outSize = default;
+                    prot = default;
+                    maxProt = default;
+                    return kr;
+                }
+
+                if (info.is_submap) {
+                    depth++;
+                    continue;
+                } else {
+                    // we're at the maximum depth, use the info we've found here
+                    startAddr = (nint) addr;
+                    outSize = (nint) size;
+                    prot = info.protection;
+                    maxProt = info.max_protection;
+                    return kr;
+                }
+            }
+        }
+
         public IMemoryAllocator MemoryAllocator { get; } = new VmAllocPagedMemoryAllocator(GetPageSize());
 
         private sealed class VmAllocPagedMemoryAllocator : PagedMemoryAllocator {
@@ -219,11 +249,9 @@ namespace MonoMod.Core.Platforms.Systems {
             }
 
             public static unsafe bool PageAllocated(nint page) {
-                var addr = (ulong) page;
-                var cnt = vm_region_basic_info_64.Count;
-                var kr = mach_vm_region(mach_task_self(), ref addr, out _, vm_region_flavor_t.BasicInfo64, out _, ref cnt, out _);
+                var kr = GetLocalRegionInfo(page, out var addr, out _, out _, out _);
                 if (kr) {
-                    if (addr > (ulong) page) {
+                    if (addr > page) {
                         return false;
                     } else {
                         return true;
@@ -233,13 +261,13 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
             }
 
-            protected override bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
+            protected override unsafe bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
                 var prot = request.Executable ? vm_prot_t.Execute : vm_prot_t.None;
                 prot |= vm_prot_t.Read | vm_prot_t.Write;
 
                 // map the page
                 var addr = 0uL;
-                var kr = mach_vm_allocate(mach_task_self(), ref addr, (ulong) PageSize, vm_flags.Anywhere);
+                var kr = mach_vm_allocate(mach_task_self(), &addr, (ulong) PageSize, vm_flags.Anywhere);
                 if (!kr) {
                     MMDbgLog.Error($"Error creating allocation: kr = {kr.Value}");
                     allocated = null;
@@ -274,7 +302,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 return true;
             }
 
-            protected override bool TryAllocateNewPage(
+            protected override unsafe bool TryAllocateNewPage(
                 PositionedAllocationRequest request,
                 nint targetPage, nint lowPageBound, nint highPageBound,
                 [MaybeNullWhen(false)] out IAllocatedMemory allocated
@@ -328,7 +356,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
 
                 var addr = (ulong) ptr;
-                var kr = mach_vm_allocate(mach_task_self(), ref addr, (ulong) PageSize, vm_flags.Anywhere);
+                var kr = mach_vm_allocate(mach_task_self(), &addr, (ulong) PageSize, vm_flags.Fixed);
                 if (!kr) {
                     MMDbgLog.Error($"Error creating allocation: kr = {kr.Value}");
                     allocated = null;

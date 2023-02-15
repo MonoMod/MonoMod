@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
-    internal static class OSX {
+    internal static unsafe class OSX {
 
         public const string LibSystem = "libSystem";
 
@@ -14,42 +14,28 @@ namespace MonoMod.Core.Interop {
         [DllImport(LibSystem, EntryPoint = "sys_icache_invalidate")]
         public static unsafe extern void sys_icache_invalidate(void* start, nuint size);
 
-        // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/mach_vm.defs.auto.html
-
         /*
         #ifdef  mig_external
-                mig_external
+        mig_external
         #else
         extern
-        #endif 
-        kern_return_t mach_vm_region
+        #endif
+        kern_return_t mach_vm_region_recurse
         (
             vm_map_read_t target_task,
             mach_vm_address_t* address,
             mach_vm_size_t* size,
-            vm_region_flavor_t flavor,
-            vm_region_info_t info,
-            mach_msg_type_number_t* infoCnt,
-            mach_port_t* object_name
+            natural_t* nesting_depth,
+            vm_region_recurse_info_t info,
+            mach_msg_type_number_t* infoCnt
         );
         */
 
         // vm_map_read_t = mach_msg_type_number_t = mach_port_t = natural_t = int/uint
         // mach_vm_size_t = uint64 everywhere but ios
-        /// <summary>
-        /// Returns information about the contents of the virtual
-        /// address space of the target task at the specified
-        /// address. The returned protection, inheritance, sharing
-        /// and memory object values apply to the entire range described
-        /// by the address range returned; the memory object offset
-        /// corresponds to the beginning of the address range.
-        /// [If the specified address is not allocated, the next
-        /// highest address range is described.  If no addresses beyond
-        /// the one specified are allocated, the call returns KERN_NO_SPACE.]
-        /// </summary>
-        [DllImport(LibSystem, EntryPoint = "mach_vm_region")]
-        public static extern kern_return_t mach_vm_region(int targetTask, [In, Out] ref ulong address, out ulong size,
-            vm_region_flavor_t flavor, out vm_region_basic_info_64 info, [In, Out] ref int infoSize, out int objectName);
+        [DllImport(LibSystem, EntryPoint = "mach_vm_region_recurse")]
+        public static extern kern_return_t mach_vm_region_recurse(int targetTask, [In, Out] ulong* address, [Out] ulong* size,
+            [In, Out] int* nestingDepth, [Out] vm_region_submap_short_info_64* info, [In, Out] int* infoSize);
 
         /*
         #ifdef  mig_external
@@ -75,7 +61,7 @@ namespace MonoMod.Core.Interop {
         /// of the specified size. The address at which the allocation actually took place is returned.
         /// </summary>
         [DllImport(LibSystem, EntryPoint = "mach_vm_allocate")]
-        public static extern kern_return_t mach_vm_allocate(int targetTask, [In, Out] ref ulong address, ulong size, vm_flags flags);
+        public static extern kern_return_t mach_vm_allocate(int targetTask, [In, Out] ulong* address, ulong size, vm_flags flags);
 
         [DllImport(LibSystem, EntryPoint = "mach_vm_deallocate")]
         public static extern kern_return_t mach_vm_deallocate(int targetTask, ulong address, ulong size);
@@ -110,24 +96,41 @@ namespace MonoMod.Core.Interop {
         );
         */
         [DllImport(LibSystem, EntryPoint = "task_info")]
-        public static extern kern_return_t task_info(int targetTask, task_flavor_t flavor, out task_dyld_info taskInfoOut, ref int taskInfoCnt);
+        public static extern kern_return_t task_info(int targetTask, task_flavor_t flavor, [Out] task_dyld_info* taskInfoOut, int* taskInfoCnt);
 
-        // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_region.h.auto.html
-        // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/memory_object_types.h.auto.html
 
+        // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/vm_region.h#L254
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        public struct vm_region_basic_info_64 {
+        public struct vm_region_submap_short_info_64 {
             public vm_prot_t protection;
             public vm_prot_t max_protection;
             public vm_inherit_t inheritance;
-            public boolean_t shared;
-            public boolean_t reserved;
             public ulong offset; // vm_object_offset_t
+            public uint user_tag;
+            public uint ref_count;
+            public ushort shadow_depth;
+            public byte external_pager;
+            public ShareMode share_mode; // enum???
+            public boolean_t is_submap;
             public vm_behavior_t behavior;
+            public uint object_id; // vm32_object_id_t
             public ushort user_wired_count;
 
-            public static unsafe int Count => sizeof(vm_region_basic_info_64) / sizeof(int);
+            public static unsafe int Count => sizeof(vm_region_submap_short_info_64) / sizeof(int);
         }
+
+        // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/vm_region.h#L120
+        public enum ShareMode : byte {
+            COW = 1,
+            Private = 2,
+            Empty = 3,
+            Shared = 4,
+            TrueShared = 5,
+            PrivateAliased = 6,
+            SharedAliased = 7,
+            LargePage = 8,
+        }
+
 
         // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/task_info.h#L279
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
