@@ -31,6 +31,7 @@
     
     <TargetFrameworks>$(_MMTargetFrameworks)</TargetFrameworks>
     <IcedFeatureFlags>DECODER;ENCODER;BLOCK_ENCODER</IcedFeatureFlags>
+    <IcedFeatureFlags Condition="'$(Configuration)' == 'Debug'">$(IcedFeatureFlags);NASM;INSTR_INFO</IcedFeatureFlags>
     <DefineConstants>$(_MMDefineConsts);$(IcedFeatureFlags);HAS_SPAN</DefineConstants>
 
     <NoWarn>$(NoWarn);NU1504</NoWarn>
