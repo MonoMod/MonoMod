@@ -124,7 +124,7 @@ steps:
     #command: 'pack'
     command: 'custom' # if you use command: pack, then you *have* to set packagesToPack, despite not providing it doing the right thing
     custom: 'pack'
-    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -o $(Build.ArtifactStagingDirectory)/nupkgs'
+    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)"'
     nobuild: true
     configuration: '$(buildConfiguration)'
     versioningScheme: 'byBuildNumber'
@@ -134,7 +134,7 @@ steps:
   displayName: 'Artifacts: Publish: nupkgs'
   continueOnError: true
   inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/nupkgs'
+    pathtoPublish: 'artifacts/packages/$(buildConfiguration)'
     artifactName: '$(artifactPrefix)nupkgs$(artifactSuffix)'
     publishLocation: 'Container'
 - task: NuGetCommand@2
@@ -142,7 +142,7 @@ steps:
   displayName: 'Artifacts: Push: nupkgs'
   inputs:
     command: push
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/nupkgs/*.nupkg'
+    packagesToPush: 'artifacts/packages/$(buildConfiguration)/*.nupkg'
     publishVstsFeed: '572c97eb-dbaa-4a55-90e5-1d05431535bd/72ad568d-c548-4599-8b0a-9ea52b45bbbd'
 #- task: PowerShell@2
 #  condition: and(always(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables.pushNuGet, 'true'))
