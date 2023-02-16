@@ -63,6 +63,88 @@ namespace MonoMod.Core.Interop {
         [DllImport(LibSystem, EntryPoint = "mach_vm_allocate")]
         public static extern kern_return_t mach_vm_allocate(int targetTask, [In, Out] ulong* address, ulong size, vm_flags flags);
 
+        /*
+        #ifdef  mig_external
+        mig_external
+        #else
+        extern
+        #endif
+        kern_return_t mach_vm_map
+        (
+            vm_map_t target_task,
+            mach_vm_address_t* address,
+            mach_vm_size_t size,
+            mach_vm_offset_t mask,
+            int flags,
+            mem_entry_name_port_t object,
+            memory_object_offset_t offset,
+            boolean_t copy,
+            vm_prot_t cur_protection,
+            vm_prot_t max_protection,
+            vm_inherit_t inheritance
+        );
+        */
+        // mem_entry_name_port_t = mach_port_t = int
+        // object can be NULL port (aka 0) for newly allocated pages, a la mach_vm_allocate
+        /// <summary>
+        /// Map a user-supplie memory object into the virtual address
+        /// space of the target task.  If desired (anywhere is TRUE),
+        /// the kernel will find a suitable address range of the
+        /// specified size; else, the specific address will be allocated.
+        /// 
+        /// The beginning address of the range will be aligned on a virtual
+        /// page boundary, be at or beyond the address specified, and
+        /// meet the mask requirements (bits turned on in the mask must not
+        /// be turned on in the result); the size of the range, in bytes,
+        /// will be rounded up to an integral number of virtual pages.
+        /// 
+        /// The memory in the resulting range will be associated with the
+        /// specified memory object, with the beginning of the memory range
+        /// referring to the specified offset into the memory object.
+        /// 
+        /// The mapping will take the current and maximum protections and
+        /// the inheritance attributes specified; see the vm_protect and
+        /// vm_inherit calls for a description of these attributes.
+        /// 
+        /// If desired (copy is TRUE), the memory range will be filled
+        /// with a copy of the data from the memory object; this copy will
+        /// be private to this mapping in this target task.  Otherwise,
+        /// the memory in this mapping will be shared with other mappings
+        /// of the same memory object at the same offset (in this task or
+        /// in other tasks).  [The Mach kernel only enforces shared memory
+        /// consistency among mappings on one host with similar page alignments.
+        /// The user-defined memory manager for this object is responsible
+        /// for further consistency.]
+        /// </summary>
+        [DllImport(LibSystem, EntryPoint = "mach_vm_map")]
+        public static extern kern_return_t mach_vm_map(int targetTask, [In, Out] ulong* address, ulong size, ulong mask, vm_flags flags, 
+            int @object, ulong offset, boolean_t copy, vm_prot_t curProt, vm_prot_t maxProt, vm_inherit_t inheritance);
+
+        /*
+        #ifdef  mig_external
+        mig_external
+        #else
+        extern
+        #endif
+        kern_return_t mach_vm_remap
+        (
+            vm_map_t target_task,
+            mach_vm_address_t* target_address,
+            mach_vm_size_t size,
+            mach_vm_offset_t mask,
+            int flags,
+            vm_map_t src_task,
+            mach_vm_address_t src_address,
+            boolean_t copy,
+            vm_prot_t* cur_protection,
+            vm_prot_t* max_protection,
+            vm_inherit_t inheritance
+        );
+        */
+        [DllImport(LibSystem, EntryPoint = "mach_vm_remap")]
+        public static extern kern_return_t mach_vm_remap(int targetTask, [In, Out] ulong* targetAddress, ulong size, ulong offset, vm_flags flags,
+            int srcTask, ulong srcAddress, boolean_t copy, [Out] vm_prot_t* curProt, [Out] vm_prot_t* maxProt, vm_inherit_t inherit);
+
         [DllImport(LibSystem, EntryPoint = "mach_vm_deallocate")]
         public static extern kern_return_t mach_vm_deallocate(int targetTask, ulong address, ulong size);
 
@@ -259,6 +341,7 @@ namespace MonoMod.Core.Interop {
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/machine/boolean.h.auto.html
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/i386/boolean.h.auto.html
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/arm/boolean.h.auto.html
+        [DebuggerDisplay($"{{{nameof(ToString)}(),nq}}")]
         [StructLayout(LayoutKind.Sequential)]
         public struct boolean_t {
             // note: this is uint on x86_64, but int everywhere else
@@ -270,6 +353,7 @@ namespace MonoMod.Core.Interop {
             public static implicit operator boolean_t(bool v) => new(v);
             public static bool operator true(boolean_t v) => v;
             public static bool operator false(boolean_t v) => !v;
+            public override string ToString() => this ? "true" : "false";
         }
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/kern_return.h.auto.html

@@ -248,18 +248,10 @@ namespace MonoMod.Core.Platforms.Systems {
 
                 // map the page
                 var addr = 0uL;
-                var kr = mach_vm_allocate(mach_task_self(), &addr, (ulong) size, vm_flags.Anywhere);
+                var kr = mach_vm_map(mach_task_self(), &addr, (ulong) size, 0, vm_flags.Anywhere, 
+                    0, 0, true, prot, prot, vm_inherit_t.Default);
                 if (!kr) {
                     MMDbgLog.Error($"Error creating allocation anywhere! kr = {kr.Value}");
-                    allocated = default;
-                    return false;
-                }
-
-                // TODO: handle execute protections better
-                kr = mach_vm_protect(mach_task_self(), addr, (ulong) size, false, prot);
-                if (!kr) {
-                    MMDbgLog.Error($"Could not set protections on newly created allocation: addr = {addr:X16} kr = {kr.Value}");
-                    _ = mach_vm_deallocate(mach_task_self(), addr, (ulong) size);
                     allocated = default;
                     return false;
                 }
@@ -276,18 +268,10 @@ namespace MonoMod.Core.Platforms.Systems {
 
                 // map the page
                 var addr = (ulong) pageAddr;
-                var kr = mach_vm_allocate(mach_task_self(), &addr, (ulong) size, vm_flags.Fixed);
+                var kr = mach_vm_map(mach_task_self(), &addr, (ulong) size, 0, vm_flags.Fixed,
+                    0, 0, true, prot, prot, vm_inherit_t.Default);
                 if (!kr) {
                     MMDbgLog.Spam($"Error creating allocation at 0x{addr:x16}: kr = {kr.Value}");
-                    allocated = default;
-                    return false;
-                }
-
-                // TODO: handle execute protections better
-                kr = mach_vm_protect(mach_task_self(), addr, (ulong) size, false, prot);
-                if (!kr) {
-                    MMDbgLog.Error($"Could not set protections on newly created allocation: addr = {addr:X16} kr = {kr.Value}");
-                    _ = mach_vm_deallocate(mach_task_self(), addr, (ulong) size);
                     allocated = default;
                     return false;
                 }
