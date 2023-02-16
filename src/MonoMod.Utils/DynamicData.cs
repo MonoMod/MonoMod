@@ -26,8 +26,8 @@ namespace MonoMod.Utils {
         private readonly _Data_ _Data;
 
         private class _Cache_ {
-            public readonly Dictionary<string, Func<object, object?>> Getters = new();
-            public readonly Dictionary<string, Action<object, object?>> Setters = new();
+            public readonly Dictionary<string, Func<object?, object?>> Getters = new();
+            public readonly Dictionary<string, Action<object?, object?>> Setters = new();
             public readonly Dictionary<string, Func<object?, object?[]?, object?>> Methods = new();
 
             [SuppressMessage("Design", "CA1031:Do not catch general exception types",
@@ -111,8 +111,8 @@ namespace MonoMod.Utils {
 
 
         private class _Data_ {
-            public readonly Dictionary<string, Func<object, object?>> Getters = new();
-            public readonly Dictionary<string, Action<object, object?>> Setters = new();
+            public readonly Dictionary<string, Func<object?, object?>> Getters = new();
+            public readonly Dictionary<string, Action<object?, object?>> Setters = new();
             public readonly Dictionary<string, Func<object?, object?[]?, object?>> Methods = new();
             public readonly Dictionary<string, object?> Data = new();
 
@@ -122,8 +122,8 @@ namespace MonoMod.Utils {
             }
         }
 
-        public Dictionary<string, Func<object, object?>> Getters => _Data.Getters;
-        public Dictionary<string, Action<object, object?>> Setters => _Data.Setters;
+        public Dictionary<string, Func<object?, object?>> Getters => _Data.Getters;
+        public Dictionary<string, Action<object?, object?>> Setters => _Data.Setters;
         public Dictionary<string, Func<object?, object?[]?, object?>> Methods => _Data.Methods;
         public Dictionary<string, object?> Data => _Data.Data;
 
@@ -226,7 +226,7 @@ namespace MonoMod.Utils {
             return data.Target;
         }
 
-        public void RegisterProperty(string name, Func<object, object?> getter, Action<object, object?> setter) {
+        public void RegisterProperty(string name, Func<object?, object?> getter, Action<object?, object?> setter) {
             Getters[name] = getter;
             Setters[name] = setter;
         }
@@ -258,10 +258,6 @@ namespace MonoMod.Utils {
 
         public bool TryGet(string name, out object? value) {
             var target = Target;
-            if (target is null) {
-                value = null;
-                return false;
-            }
 
             if (_Data.Getters.TryGetValue(name, out var cb)) {
                 value = cb(target);
@@ -292,9 +288,6 @@ namespace MonoMod.Utils {
 
         public void Set(string name, object? value) {
             var target = Target;
-
-            if (target is null)
-                return;
 
             if (_Data.Setters.TryGetValue(name, out var cb)) {
                 cb(target, value);
