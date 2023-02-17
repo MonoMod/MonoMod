@@ -145,6 +145,33 @@ namespace MonoMod.Core.Interop {
         public static extern kern_return_t mach_vm_remap(int targetTask, [In, Out] ulong* targetAddress, ulong size, ulong offset, vm_flags flags,
             int srcTask, ulong srcAddress, boolean_t copy, [Out] vm_prot_t* curProt, [Out] vm_prot_t* maxProt, vm_inherit_t inherit);
 
+        /*
+        #ifdef  mig_external
+        mig_external
+        #else
+        extern
+        #endif
+        kern_return_t mach_make_memory_entry_64
+        (
+            vm_map_t target_task,
+            memory_object_size_t* size,
+            memory_object_offset_t offset,
+            vm_prot_t permission,
+            mach_port_t* object_handle,
+            mem_entry_name_port_t parent_entry
+        );
+        */
+        /// <summary>
+        /// Allow application level processes to create named entries which
+        /// correspond to mapped portions of their address space.  These named
+        /// entries can then be manipulated, shared with other processes in
+        /// other address spaces and ultimately mapped in ohter address spaces
+        ///
+        /// THIS INTERFACE IS STILL EVOLVING.
+        /// </summary>
+        [DllImport(LibSystem, EntryPoint = "mach_make_memory_entry_64")]
+        public static extern kern_return_t mach_make_memory_entry_64(int targetTask, [In, Out] ulong* size, ulong offset, vm_prot_t permission, int* objectHandle, int parentHandle);
+
         [DllImport(LibSystem, EntryPoint = "mach_vm_deallocate")]
         public static extern kern_return_t mach_vm_deallocate(int targetTask, ulong address, ulong size);
 

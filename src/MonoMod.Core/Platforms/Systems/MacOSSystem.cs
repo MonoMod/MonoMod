@@ -134,9 +134,30 @@ namespace MonoMod.Core.Platforms.Systems {
                         throw new InvalidOperationException($"Unable to make region writable (kr = {kr.Value})");
                     }
                 } else {
-                    // TODO: implement patching executable memory
                     // TODO: how do we detect whether a region has MAP_JIT? (if MAP_JIT even exists on this system?)
-                    throw new NotImplementedException();
+
+                    Helpers.Assert(!crossesBoundary);
+                    Helpers.Assert(GetLocalRegionInfo(patchTarget, out var allocStart, out var allocSize, out var allocProt, out var allocMaxProt));
+                    Helpers.Assert(allocStart <= patchTarget);
+
+                    // first, alloc a new page
+                    ulong newAddr;
+                    var kr = mach_vm_map(selfTask, &newAddr, (ulong) allocSize, 0, vm_flags.Anywhere, 0, 0, true, vm_prot_t.All, vm_prot_t.All, vm_inherit_t.Default);
+                    Helpers.Assert(kr);
+                    // then copy data from the map into it
+                    new Span<byte>((void*) allocStart, (int) allocSize).CopyTo(new Span<byte>((void*) newAddr, (int) allocSize));
+                    // then create an object for that memory
+                    int obj;
+                    var memSize = (ulong) allocSize;
+                    kr = mach_make_memory_entry_64(selfTask, &memSize, newAddr, vm_prot_t.All, &obj, 0);
+                    Helpers.Assert(kr);
+                    // then map it over the old memory segment
+                    var targetAddr = (ulong) allocStart;
+                    kr = mach_vm_map(selfTask, &targetAddr, (ulong) allocSize, 0, vm_flags.Fixed | vm_flags.Overwrite, obj, 0, true, vm_prot_t.All, vm_prot_t.All, vm_inherit_t.Default);
+                    Helpers.Assert(kr);
+                    // then unmap the created memory
+                    kr = mach_vm_deallocate(selfTask, newAddr, (ulong) allocSize);
+                    Helpers.Assert(kr);
                 }
             }
 
