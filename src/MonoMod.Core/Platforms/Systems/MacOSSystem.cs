@@ -146,7 +146,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 kr = mach_vm_protect(selfTask, (ulong) allocStart, (ulong) allocSize, false, allocProt | vm_prot_t.Write);
                 if (!kr) {
                     MMDbgLog.Error($"Could not vm_protect page 0x{allocStart:x16}+0x{allocSize:x} " +
-                        $"from {allocProt} to {allocProt | vm_prot_t.Write} (max prot {allocMaxProt}): kr = {kr.Value}");
+                        $"from {P(allocProt)} to {P(allocProt | vm_prot_t.Write)} (max prot {P(allocMaxProt)}): kr = {kr.Value}");
                     MMDbgLog.Error("Trying copy/remap instead...");
                     // fall out to try page remap
                 } else {
@@ -159,17 +159,17 @@ namespace MonoMod.Core.Platforms.Systems {
             if (!allocProt.Has(vm_prot_t.Read)) {
                 if (!allocMaxProt.Has(vm_prot_t.Read)) {
                     // max prot doesn't have read, can't continue
-                    MMDbgLog.Error($"Requested 0x{allocStart:x16}+0x{allocSize:x} (max: {allocMaxProt}) to be made writable, but its not readable!");
+                    MMDbgLog.Error($"Requested 0x{allocStart:x16}+0x{allocSize:x} (max: {P(allocMaxProt)}) to be made writable, but its not readable!");
                     throw new NotSupportedException("Cannot make page writable because its not readable");
                 }
                 kr = mach_vm_protect(selfTask, (ulong) allocStart, (ulong) allocSize, false, allocProt | vm_prot_t.Read);
                 if (!kr) {
-                    MMDbgLog.Error($"vm_protect of 0x{allocStart:x16}+0x{allocSize:x} (max: {allocMaxProt}) to become readable failed: kr = {kr.Value}");
+                    MMDbgLog.Error($"vm_protect of 0x{allocStart:x16}+0x{allocSize:x} (max: {P(allocMaxProt)}) to become readable failed: kr = {kr.Value}");
                     throw new NotSupportedException("Could not make page readable for remap");
                 }
             }
 
-            MMDbgLog.Trace($"Performing page remap on 0x{allocStart:x16}+0x{allocSize:x} from {allocProt}/{allocMaxProt} to {allocProt | vm_prot_t.Write}");
+            MMDbgLog.Trace($"Performing page remap on 0x{allocStart:x16}+0x{allocSize:x} from {P(allocProt)}/{P(allocMaxProt)} to {P(allocProt | vm_prot_t.Write)}");
 
             var wantProt = allocProt | vm_prot_t.Write;
             var wantMaxProt = allocMaxProt | vm_prot_t.Write;
@@ -192,15 +192,15 @@ namespace MonoMod.Core.Platforms.Systems {
                 var memSize = (ulong) allocSize;
                 kr = mach_make_memory_entry_64(selfTask, &memSize, newAddr, wantMaxProt, &obj, 0);
                 if (!kr) {
-                    MMDbgLog.Error($"make_memory_entry(task_self(), size: 0x{memSize:x}, addr: {newAddr:x16}, prot: {wantMaxProt}, &obj, 0) failed: kr = {kr.Value}");
+                    MMDbgLog.Error($"make_memory_entry(task_self(), size: 0x{memSize:x}, addr: {newAddr:x16}, prot: {P(wantMaxProt)}, &obj, 0) failed: kr = {kr.Value}");
                     throw new NotSupportedException("make_memory_entry() failed");
                 }
                 // then map it over the old memory segment
                 var targetAddr = (ulong) allocStart;
                 kr = mach_vm_map(selfTask, &targetAddr, (ulong) allocSize, 0, vm_flags.Fixed | vm_flags.Overwrite, obj, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
                 if (!kr) {
-                    MMDbgLog.Error($"vm_map() failed to map over target range: 0x{targetAddr:x16}+0x{allocSize:x} ({allocProt}/{allocMaxProt})" +
-                        $" <- (obj {obj}) 0x{newAddr:x16}+0x{allocSize:x} ({wantProt}/{wantMaxProt}), kr = {kr.Value}");
+                    MMDbgLog.Error($"vm_map() failed to map over target range: 0x{targetAddr:x16}+0x{allocSize:x} ({P(allocProt)}/{P(allocMaxProt)})" +
+                        $" <- (obj {obj}) 0x{newAddr:x16}+0x{allocSize:x} ({P(wantProt)}/{P(wantMaxProt)}), kr = {kr.Value}");
                     throw new NotSupportedException("vm_map() failed");
                 }
             } finally {

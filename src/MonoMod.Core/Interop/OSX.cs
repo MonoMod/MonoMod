@@ -1,4 +1,5 @@
-﻿using MonoMod.Utils;
+﻿using MonoMod.Logs;
+using MonoMod.Utils;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -311,6 +312,65 @@ namespace MonoMod.Core.Interop {
 
             [Obsolete("Invalid value. Use only for mprotect.")]
             ExecuteOnly = Execute | StripRead,
+        }
+
+        public static VmProtFmtProxy P(vm_prot_t prot) => new(prot);
+
+        public struct VmProtFmtProxy : IDebugFormattable {
+            private readonly vm_prot_t value;
+            public VmProtFmtProxy(vm_prot_t value) => this.value = value;
+
+            // format is: [~]rwx[!][c][ (mask)]
+            public bool TryFormatInto(Span<char> span, out int wrote) {
+                var w = 0;
+
+#pragma warning disable CS0618 // Type or member is obsolete
+                if (value.Has(vm_prot_t.NoChange)) {
+                    if (span.Slice(w).Length < 1) {
+                        wrote = w;
+                        return false;
+                    }
+                    span[w++] = '~';
+                }
+
+                if (span.Slice(w).Length < 3) {
+                    wrote = 0;
+                    return false;
+                }
+                span[w++] = value.Has(vm_prot_t.Read) ? 'r' : '-';
+                span[w++] = value.Has(vm_prot_t.Write) ? 'w' : '-';
+                span[w++] = value.Has(vm_prot_t.Execute) ? 'x' : '-';
+
+                if (value.Has(vm_prot_t.StripRead)) {
+                    if (span.Slice(w).Length < 1) {
+                        wrote = w;
+                        return false;
+                    }
+                    span[w++] = '!';
+                }
+
+                if (value.Has(vm_prot_t.Copy)) {
+                    if (span.Slice(w).Length < 1) {
+                        wrote = w;
+                        return false;
+                    }
+                    span[w++] = 'c';
+                }
+
+                if (value.Has(vm_prot_t.IsMask)) {
+                    const string MaskStr = " (mask)";
+                    if (span.Slice(w).Length < MaskStr.Length) {
+                        wrote = w;
+                        return false;
+                    }
+                    MaskStr.AsSpan().CopyTo(span.Slice(w));
+                    w += MaskStr.Length;
+                }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+                wrote = w;
+                return true;
+            }
         }
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_statistics.h.auto.html
