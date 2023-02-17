@@ -1,11 +1,8 @@
-﻿using MonoMod.Core.Interop;
-using MonoMod.Core.Platforms.Memory;
+﻿using MonoMod.Core.Platforms.Memory;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using static MonoMod.Core.Interop.OSX;
 
 namespace MonoMod.Core.Platforms.Systems {
@@ -77,29 +74,29 @@ namespace MonoMod.Core.Platforms.Systems {
             // targetKind is a hint for what the caller believes the memory to be. Because MacOS is more strict than Linux or Windows,
             // we need to actually check that to behave correctly in all cases.
 
-            var selfTask = mach_task_self();
+            //var selfTask = mach_task_self();
             var len = data.Length;
 
-            bool memIsRead;
+            //bool memIsRead;
             bool memIsWrite;
             bool memIsExec;
 
             // we assume these defaults; this may end up blowing up completely
-            var canMakeRead = true;
-            var canMakeWrite = true;
-            var canMakeExec = true;
+            //var canMakeRead = true;
+            //var canMakeWrite = true;
+            //var canMakeExec = true;
 
-            if (TryGetProtForMem(patchTarget, len, out var maxProt, out var curProt, out var crossesBoundary, out var notAllocated)) {
+            if (TryGetProtForMem(patchTarget, len, out _/*var maxProt*/, out var curProt, out var crossesBoundary, out var notAllocated)) {
                 if (crossesBoundary) {
                     MMDbgLog.Warning($"Patch requested for memory which spans multiple memory allocations. Failures may result. (0x{patchTarget:x16} length {len})");
                 }
 
-                memIsRead = curProt.Has(vm_prot_t.Read);
+                //memIsRead = curProt.Has(vm_prot_t.Read);
                 memIsWrite = curProt.Has(vm_prot_t.Write);
                 memIsExec = curProt.Has(vm_prot_t.Execute);
-                canMakeRead = maxProt.Has(vm_prot_t.Read);
-                canMakeWrite = maxProt.Has(vm_prot_t.Write);
-                canMakeExec = maxProt.Has(vm_prot_t.Execute);
+                //canMakeRead = maxProt.Has(vm_prot_t.Read);
+                //canMakeWrite = maxProt.Has(vm_prot_t.Write);
+                //canMakeExec = maxProt.Has(vm_prot_t.Execute);
             } else {
                 // we couldn't get prot info
                 // was it because the region wasn't allocated (in part or in full)?
@@ -108,7 +105,7 @@ namespace MonoMod.Core.Platforms.Systems {
                     throw new InvalidOperationException("Cannot patch unallocated region"); // TODO: is there a better exception for this?
                 }
                 // otherwise, assume based on what the caller gave us
-                memIsRead = true;
+                //memIsRead = true;
                 memIsWrite = false;
                 memIsExec = targetKind is PatchTargetKind.Executable;
             }
@@ -116,49 +113,9 @@ namespace MonoMod.Core.Platforms.Systems {
             // We know know what protections the target memory region has, so we can decide on a course of action.
 
             if (!memIsWrite) {
-                if (!memIsExec) {
-                    // our target memory is not executable
-                    // if the memory is not currently writable, make it writable
-                    if (!canMakeWrite) {
-                        // TODO: figure out a workaround for this
-                        MMDbgLog.Error($"Requested patch of region which cannot be made writable (cur prot: {curProt}, max prot: {maxProt}, None means failed to get info) (0x{patchTarget:x16} length {len})");
-                        throw new InvalidOperationException("Requested patch region cannot be made writable");
-                    }
-
-                    // we should be able to make the region writable, after which we can just copy data in using spans
-                    var kr = mach_vm_protect(selfTask, (ulong) patchTarget, (ulong) len, false, vm_prot_t.Read | vm_prot_t.Write);
-                    if (!kr) {
-                        if (kr == kern_return_t.ProtectionFailure) {
-                            MMDbgLog.Error($"Protection failure trying to make (0x{patchTarget:x16} length {len}) writable (how?)");
-                        }
-                        throw new InvalidOperationException($"Unable to make region writable (kr = {kr.Value})");
-                    }
-                } else {
-                    // TODO: how do we detect whether a region has MAP_JIT? (if MAP_JIT even exists on this system?)
-
-                    Helpers.Assert(!crossesBoundary);
-                    Helpers.Assert(GetLocalRegionInfo(patchTarget, out var allocStart, out var allocSize, out var allocProt, out var allocMaxProt));
-                    Helpers.Assert(allocStart <= patchTarget);
-
-                    // first, alloc a new page
-                    ulong newAddr;
-                    var kr = mach_vm_map(selfTask, &newAddr, (ulong) allocSize, 0, vm_flags.Anywhere, 0, 0, true, vm_prot_t.All, vm_prot_t.All, vm_inherit_t.Default);
-                    Helpers.Assert(kr);
-                    // then copy data from the map into it
-                    new Span<byte>((void*) allocStart, (int) allocSize).CopyTo(new Span<byte>((void*) newAddr, (int) allocSize));
-                    // then create an object for that memory
-                    int obj;
-                    var memSize = (ulong) allocSize;
-                    kr = mach_make_memory_entry_64(selfTask, &memSize, newAddr, vm_prot_t.All, &obj, 0);
-                    Helpers.Assert(kr);
-                    // then map it over the old memory segment
-                    var targetAddr = (ulong) allocStart;
-                    kr = mach_vm_map(selfTask, &targetAddr, (ulong) allocSize, 0, vm_flags.Fixed | vm_flags.Overwrite, obj, 0, true, vm_prot_t.All, vm_prot_t.All, vm_inherit_t.Default);
-                    Helpers.Assert(kr);
-                    // then unmap the created memory
-                    kr = mach_vm_deallocate(selfTask, newAddr, (ulong) allocSize);
-                    Helpers.Assert(kr);
-                }
+                Helpers.Assert(!crossesBoundary);
+                // TODO: figure out if MAP_JIT is available and necessary, and use that instead when needed
+                MakePageWritable(patchTarget);
             }
 
             // at this point, we know our data to be writable
@@ -171,6 +128,87 @@ namespace MonoMod.Core.Platforms.Systems {
             // if we got here when executable (either because the memory was already writable or we were able to make it writable) we need to flush the icache
             if (memIsExec) {
                 sys_icache_invalidate((void*) patchTarget, (nuint) data.Length);
+            }
+        }
+
+        private static unsafe void MakePageWritable(nint addrInPage) {
+            Helpers.Assert(GetLocalRegionInfo(addrInPage, out var allocStart, out var allocSize, out var allocProt, out var allocMaxProt));
+            Helpers.Assert(allocStart <= addrInPage);
+
+            if (allocProt.Has(vm_prot_t.Write))
+                return;
+
+            kern_return_t kr;
+
+            var selfTask = mach_task_self();
+
+            if (allocMaxProt.Has(vm_prot_t.Write)) {
+                kr = mach_vm_protect(selfTask, (ulong) allocStart, (ulong) allocSize, false, allocProt | vm_prot_t.Write);
+                if (!kr) {
+                    MMDbgLog.Error($"Could not vm_protect page 0x{allocStart:x16}+0x{allocSize:x} " +
+                        $"from {allocProt} to {allocProt | vm_prot_t.Write} (max prot {allocMaxProt}): kr = {kr.Value}");
+                    MMDbgLog.Error("Trying copy/remap instead...");
+                    // fall out to try page remap
+                } else {
+                    // succeeded, bail out
+                    return;
+                }
+            }
+
+            // make sure we can read the page in the first place
+            if (!allocProt.Has(vm_prot_t.Read)) {
+                if (!allocMaxProt.Has(vm_prot_t.Read)) {
+                    // max prot doesn't have read, can't continue
+                    MMDbgLog.Error($"Requested 0x{allocStart:x16}+0x{allocSize:x} (max: {allocMaxProt}) to be made writable, but its not readable!");
+                    throw new NotSupportedException("Cannot make page writable because its not readable");
+                }
+                kr = mach_vm_protect(selfTask, (ulong) allocStart, (ulong) allocSize, false, allocProt | vm_prot_t.Read);
+                if (!kr) {
+                    MMDbgLog.Error($"vm_protect of 0x{allocStart:x16}+0x{allocSize:x} (max: {allocMaxProt}) to become readable failed: kr = {kr.Value}");
+                    throw new NotSupportedException("Could not make page readable for remap");
+                }
+            }
+
+            MMDbgLog.Trace($"Performing page remap on 0x{allocStart:x16}+0x{allocSize:x} from {allocProt}/{allocMaxProt} to {allocProt | vm_prot_t.Write}");
+
+            var wantProt = allocProt | vm_prot_t.Write;
+            var wantMaxProt = allocMaxProt | vm_prot_t.Write;
+
+            // first, alloc a new page
+            ulong newAddr;
+            kr = mach_vm_map(selfTask, &newAddr, (ulong) allocSize, 0, vm_flags.Anywhere, 0, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
+            if (!kr) {
+                MMDbgLog.Error($"Could not allocate new memory! kr = {kr.Value}");
+#pragma warning disable CA2201 // Do not raise reserved exception types
+                throw new OutOfMemoryException();
+#pragma warning restore CA2201 // Do not raise reserved exception types
+            }
+
+            try {
+                // then copy data from the map into it
+                new Span<byte>((void*) allocStart, (int) allocSize).CopyTo(new Span<byte>((void*) newAddr, (int) allocSize));
+                // then create an object for that memory
+                int obj;
+                var memSize = (ulong) allocSize;
+                kr = mach_make_memory_entry_64(selfTask, &memSize, newAddr, wantMaxProt, &obj, 0);
+                if (!kr) {
+                    MMDbgLog.Error($"make_memory_entry(task_self(), size: 0x{memSize:x}, addr: {newAddr:x16}, prot: {wantMaxProt}, &obj, 0) failed: kr = {kr.Value}");
+                    throw new NotSupportedException("make_memory_entry() failed");
+                }
+                // then map it over the old memory segment
+                var targetAddr = (ulong) allocStart;
+                kr = mach_vm_map(selfTask, &targetAddr, (ulong) allocSize, 0, vm_flags.Fixed | vm_flags.Overwrite, obj, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
+                if (!kr) {
+                    MMDbgLog.Error($"vm_map() failed to map over target range: 0x{targetAddr:x16}+0x{allocSize:x} ({allocProt}/{allocMaxProt})" +
+                        $" <- (obj {obj}) 0x{newAddr:x16}+0x{allocSize:x} ({wantProt}/{wantMaxProt}), kr = {kr.Value}");
+                    throw new NotSupportedException("vm_map() failed");
+                }
+            } finally {
+                // then unmap the created memory
+                kr = mach_vm_deallocate(selfTask, newAddr, (ulong) allocSize);
+                if (!kr) {
+                    MMDbgLog.Error($"Could not deallocate created memory page 0x{newAddr:x16}+0x{allocSize:x}! kr = {kr.Value}");
+                }
             }
         }
 
