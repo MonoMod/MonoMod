@@ -275,12 +275,22 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             var handle = GetMethodHandle(method);
 
-            const int offset =
-                2 // UINT16 m_wFlags3AndTokenRemainder
+            var isDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var outIsDebugClr) && outIsDebugClr;
+
+            var offset = 0
+              + (isDebugClr ? 0 // #ifdef _DEBUG
+                + IntPtr.Size   // LPCUTF8 m_pszDebugMethodName;
+                + IntPtr.Size   // LPCUTF8 m_pszDebugClassName;
+                + IntPtr.Size   // LPCUTF8 m_pszDebugMethodSignature;
+                + IntPtr.Size   // FixupPointer<PTR_MethodTable> m_pDebugMethodTable;
+                + IntPtr.Size   // PTR_GCCoverageInfo m_GcCover;
+              : 0)              // #endif
+              + 2 // UINT16 m_wFlags3AndTokenRemainder
               + 1 // BYTE m_chunkIndex
               + 1 // BYTE m_chunkIndex
               + 2 // WORD m_wSlotNumber
               ;
+
             var m_wFlags = (ushort*) (((byte*) handle.Value) + offset);
             *m_wFlags |= 0x2000;
         }

@@ -75,6 +75,16 @@ namespace MonoMod {
         /// Boolean. Forces <see cref="PlatformDetection"/> to detect that Windows is Wine.
         /// </summary>
         public const string RunningOnWine = "RunningOnWine";
+        /// <summary>
+        /// Boolean. Tells MonoMod that it is running on a Debug or Checked build of CoreCLR.
+        /// </summary>
+        /// <remarks>
+        /// MonoMod.Core, in its CoreCLR implementation, pokes into certain internal CLR datastructures. Some of these
+        /// have a different layout in Release builds than in Debug or Checked builds, so MonoMod needs to know which
+        /// type of build it is running on, and that is not detectable. MonoMod assumes Release builds by default,
+        /// because that is the most common configuration.
+        /// </remarks>
+        public const string DebugClr = "DebugClr";
 
         /// <summary>
         /// Boolean. Forces the logger to always record the value of message holes.

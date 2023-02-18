@@ -394,6 +394,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             const int PEFILE_SYSTEM = 0x01;
 
+            var isDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var outIsDebugClr) && outIsDebugClr;
+
             var domAssembly = (IntPtr) RuntimeAssemblyPtrField.GetValue(assembly)!;
 
             // DomainAssembly in src/coreclr/src/vm/domainfile.h
@@ -413,6 +415,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 IntPtr.Size + // class UMThunkHash *m_pUMThunkHash;
                 sizeof(int) + // BOOL m_bDisableActivationCheck;
                 sizeof(int) + // DWORD m_dwReasonForRejectingNativeImage;
+                // #ifdef FEATURE_PREJIT Volatile<DomainFile*> m_pNextDomainFileWithNativeImage;
                               // DomainAssembly
                 IntPtr.Size + // LOADERHANDLE                            m_hExposedAssemblyObject;
                 0; // here is our Assembly*
@@ -430,7 +433,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 IntPtr.Size + // PTR_ClassLoader       m_pClassLoader;
                 IntPtr.Size + // PTR_MethodDesc        m_pEntryPoint;
                 IntPtr.Size + // PTR_Module            m_pManifest;
-                0; // here is out PEAssembly* (manifestFile)
+                0; // here is out PEAssembly* (m_pManifestFile)
 
             var peAssembly = *(IntPtr*) (((byte*) pAssembly) + pAssemOffset);
 
@@ -438,6 +441,19 @@ namespace MonoMod.Core.Platforms.Runtimes {
             var peAssemOffset =
                 IntPtr.Size + // VTable ptr
                               // PEFile
+                (isDebugClr ? 0 + // #ifdef _DEBUG 
+                    IntPtr.Size + // LPCWSTR             m_pDebugName;
+                                  // SBuffer // src/coreclr/vm/sbuffer.h
+                    sizeof(int) + // COUNT_T             m_size; // COUNT_T is a typedef of uint32_t
+                    sizeof(int) + // COUNT_T             m_allocation;
+                    sizeof(int) + // UINT32              m_flags;
+                    //sizeof(int) + // padding to 8 bytes
+                    IntPtr.Size + // union { BYTE* m_buffer; WCHAR* m_asStr; };
+                    sizeof(int) + // int                 m_revision
+                                  // SString (itself empty, only base type SBuffer has data)
+                                  // SString             m_debugName; // src/coreclr/vm/sstring.h
+                    //sizeof(int) + // padding to 8 bytes
+                0 : 0) +          // #endif
                 IntPtr.Size + // PTR_PEImage              m_identity;
                 IntPtr.Size + // PTR_PEImage              m_openedILimage;
                 sizeof(int) + // BOOL                     m_MDImportIsRW_Debugger_Use_Only; // i'm pretty sure that these bools are sizeof(int)
@@ -447,7 +463,11 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 IntPtr.Size + // IMetaDataEmit           *m_pEmitter;
                 IntPtr.Size + // SimpleRWLock            *m_pMetadataLock;
                 sizeof(int) + // Volatile<LONG>           m_refCount; // fuck C long
-                +0; // here is out int (flags)
+                0; // here is out int (flags)
+
+            if (isDebugClr && IntPtr.Size == 8) {
+                peAssemOffset += 2 * sizeof(int); // filled in padding
+            }
 
             var flags = (int*) (((byte*) peAssembly) + peAssemOffset);
             *flags |= PEFILE_SYSTEM;
