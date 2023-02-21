@@ -9,8 +9,10 @@ foreach ($file in $asm) {
     pushd $file.Directory
     $fst = Get-Content $file -First 1
     $colidx = $fst.IndexOf(":;")
-    $cmd = $fst.Substring($colidx + 2).Trim()
-    Invoke-Expression $cmd
+    if ($colIdx -gte 0) {
+        $cmd = $fst.Substring($colidx + 2).Trim()
+        Invoke-Expression $cmd
+    }
     popd
 }
 

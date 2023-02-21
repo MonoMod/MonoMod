@@ -12,9 +12,9 @@
 %define DW_EH_PE_sdata8 0x0C
 
 %define DW_EH_PE_pcrel 0x10
-%define DW_EH_PE_textrel 0x20 ; DON'T USE, NOT SUPPORTED
-%define DW_EH_PE_datarel 0x30 ; DON'T USE, NOT SUPPORTED
-%define DW_EH_PE_funcrel 0x40 ; DON'T USE, NOT SUPPORTED
+%define DW_EH_PE_textrel 0x20 ; DON'T USE, NOT SUPPORTED (ELF)
+%define DW_EH_PE_datarel 0x30 ; DON'T USE, NOT SUPPORTED (ELF)
+%define DW_EH_PE_funcrel 0x40 ; DON'T USE, NOT SUPPORTED (ELF)
 %define DW_EH_PE_aligned 0x50
 %define DW_EH_PE_indirect 0x80
 
@@ -55,6 +55,13 @@
 %define _URC_HANDLER_FOUND 6
 %define _URC_INSTALL_CONTEXT 7
 %define _URC_CONTINUE_UNWIND 8
+
+%ifndef DWARF_EH_SECTION_DECL
+%error "DWARF_EH_SECTION_DECL must be defined before including dwarf_eh.inc"
+%endif
+%ifndef DWARF_EH_SECTION_NAME
+%error "DWARF_EH_SECTION_NAME must be defined before including dwarf_eh.inc"
+%endif
 
 extern _Unwind_RaiseException ; _Unwind_Exception* exception
 extern _Unwind_GetLanguageSpecificData ; _Unwind_Context* context
@@ -154,12 +161,12 @@ extern _Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
 %assign DWARF_WORDSIZE __?BITS?__ / 8
 
 ; define this section ahead of time
-section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
+section DWARF_EH_SECTION_DECL
 
 ; https://refspecs.linuxfoundation.org/LSB_5.0.0/LSB-Core-generic/LSB-Core-generic.html#DWARFEXT
 %macro CFI_INIT 1 ; takes personality routine
 
-    [section .eh_frame] ; put our data in the .eh_frame section
+    [section DWARF_EH_SECTION_NAME] ; put our data in the DWARF_EH_SECTION_NAME section
     %%CIE: 
     %define __CFI_LastCIE %%CIE
 
@@ -197,7 +204,7 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
 %macro CFI_UNINIT 0
     %undef __CFI_LastCIE
 
-    [section .eh_frame]
+    [section DWARF_EH_SECTION_NAME]
     dd 0
     ALIGN DWARF_WORDSIZE, db 0
     __?SECT?__
@@ -210,7 +217,7 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
     %%proc_start:
     %define %$__CFI_FDEProcEndTok %%proc_end
 
-    [section .eh_frame] ; put our data in the .eh_frame section
+    [section DWARF_EH_SECTION_NAME] ; put our data in the DWARF_EH_SECTION_NAME section
 
     %%FDE:
     %define %$__CFI_LastFDE %%FDE
@@ -239,7 +246,7 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
     ; mark the end of the proc
     %$__CFI_FDEProcEndTok:
 
-    [section .eh_frame] ; put our data in the .eh_frame section
+    [section DWARF_EH_SECTION_NAME] ; put our data in the DWARF_EH_SECTION_NAME section
     
     ; align
     ALIGN DWARF_WORDSIZE, db 0
@@ -266,7 +273,7 @@ section .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
 %macro CFI_ENTER_DATA 0
     CFI_IN_PROC
     %%pc EQU $
-    [section .eh_frame]
+    [section DWARF_EH_SECTION_NAME]
     %%delta EQU %%pc - __CFA_LastPC
     %if %%delta > 0
         %if %%delta < (1<<6) ;>
