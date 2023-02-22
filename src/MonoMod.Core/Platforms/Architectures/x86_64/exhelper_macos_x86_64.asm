@@ -1,7 +1,9 @@
-;:; nasm -f macho64 -Ox exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld -shared -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
+;:; nasm -f macho64 -Ox exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld -arch x86_64 -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
+
+%pragma macho lprefix L_
 
 %define DWARF_EH_SECTION_NAME __TEXT,__eh_frame
-%define DWARF_EH_SECTION_DECL __TEXT,__eh_frame align=DWARF_WORDSIZE
+%define DWARF_EH_SECTION_DECL __TEXT,__eh_frame align=DWARF_WORDSIZE no_dead_strip
 
 %define SHR_DECL_DATA .data ; alias for __DATA,__data data
 %define SHR_DECL_TEXT .text ; alias for __TEXT,__text text
