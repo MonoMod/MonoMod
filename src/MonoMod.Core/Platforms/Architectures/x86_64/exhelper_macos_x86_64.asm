@@ -8,6 +8,9 @@
 %define SHR_DECL_DATA .data ; alias for __DATA,__data data
 %define SHR_DECL_TEXT .text ; alias for __TEXT,__text text
 
+%define DWARF_DATA_SECTION_NAME .data
+%assign DWARF_EH_PERS_INDIR 1
+
 %define SHR_DECLFN(name) GLOBAL name
 %define SHR_EXTFN(name) name wrt ..gotpcrel
 

@@ -186,8 +186,13 @@ section DWARF_EH_SECTION_DECL
     %%CIE.AugmentationLength: LEB128 7 ; MAKE SURE THIS STAYS UP-TO-DATE
     %%CIE.AugmentationData:
         %%CIE.PointerEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
+%if DWARF_EH_PERS_INDIR
+        %%CIE.PersonalityEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4 | DW_EH_PE_indirect
+        %%CIE.PersonalityRoutine: dd %%CIE.PersonalityIndir - $
+%else
         %%CIE.PersonalityEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
         %%CIE.PersonalityRoutine: dd %1 - $
+%endif
         %%CIE.LSDAEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
     %%CIE.AugEnd:
     %%CIE.InitialInstructions:
@@ -196,6 +201,11 @@ section DWARF_EH_SECTION_DECL
     ALIGN DWARF_WORDSIZE, db 0
 
     %%CIE.end:
+
+%if DWARF_EH_PERS_INDIR
+    [section DWARF_DATA_SECTION_NAME]
+    %%CIE.PersonalityIndir: dq %1
+%endif
 
     __?SECT?__ ; then return back to the original section
 
