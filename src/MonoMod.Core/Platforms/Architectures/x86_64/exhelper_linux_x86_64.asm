@@ -3,6 +3,8 @@
 %define DWARF_EH_SECTION_NAME .eh_frame
 %define DWARF_EH_SECTION_DECL .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
 
+%define DWARF_EH_PERS_INDIR 0
+
 %define SHR_DECL_DATA .data
 %define SHR_DECL_TEXT .text
 
