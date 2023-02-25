@@ -1778,7 +1778,7 @@ namespace MonoMod {
                 else if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && operand is MethodReference) {
                     if (hasForceCall) {
                         instr.OpCode = forceCall;
-                    } else if (!body.IsBaseMethodCall(operand as MethodReference)) {
+                    } else if ((operand as MethodReference)?.SafeResolve() != null && !body.IsBaseMethodCall(operand as MethodReference)) {
                         instr.OpCode = ((MethodReference) operand).IsCallvirt() ? OpCodes.Callvirt : OpCodes.Call;
                     }
                 }
