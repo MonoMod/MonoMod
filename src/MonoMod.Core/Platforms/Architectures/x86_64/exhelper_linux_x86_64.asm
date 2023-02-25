@@ -15,8 +15,8 @@
 
 eh_get_exception_ptr:
     CFI_STARTPROC LSDA_none
-    mov rax, [rel cur_ex_ptr wrt ..gottpoff]
-    lea rax, [fs:rax]
+    mov rax, [fs:0]
+    add rax, [rel cur_ex_ptr wrt ..gottpoff]
     ret
     CFI_ENDPROC
 
