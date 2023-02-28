@@ -24,6 +24,14 @@ if (Debugger.IsAttached) {
     Debugger.Break();
 }
 
+var str = "text".AsMemory();
+
+using (new Hook(typeof(ReadOnlyMemory<char>).GetMethod("ToString")!, (ReadOnlyMemoryToString orig, ref ReadOnlyMemory<char> mem) => {
+    return orig(ref mem) + " lol";
+})) {
+    var str2 = str.ToString();
+}
+
 #if NETCOREAPP1_0_OR_GREATER
 
 {
@@ -87,6 +95,8 @@ static int Get1() {
 static int MixRand(Get1Delegate orig) {
     return (orig() << 4) ^ (orig() >> 4) ^ orig();
 }
+
+delegate string ReadOnlyMemoryToString(ref ReadOnlyMemory<char> mem);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 delegate int Get1Delegate();

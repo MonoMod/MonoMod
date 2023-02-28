@@ -446,6 +446,7 @@ namespace MonoMod.Core.Platforms {
         private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr) {
             var regenerated = false;
             var didPrepareLastIter = false;
+            var iters = 0;
 
             var archMatchCollection = Architecture.KnownMethodThunks;
 
@@ -457,6 +458,11 @@ namespace MonoMod.Core.Platforms {
             var entry = (nint) Runtime.GetMethodEntryPoint(method);
             MMDbgLog.Trace($"Starting entry point = 0x{entry:x16}");
             do {
+                if (iters++ > 20) {
+                    MMDbgLog.Error($"Could not get entry point for {method}! (tried {iters} times) entry: 0x{entry:x16} prevEntry: 0x{prevEntry:x16}");
+                    throw new NotSupportedException(DebugFormatter.Format($"Could not get entrypoint for {method} (stuck in a loop)"));
+                }
+
                 if (!didPrepareLastIter && prevEntry == entry) {
                     // we're in a loop, break out
                     break;
