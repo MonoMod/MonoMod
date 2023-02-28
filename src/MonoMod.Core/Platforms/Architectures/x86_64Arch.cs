@@ -170,6 +170,24 @@ namespace MonoMod.Core.Platforms.Architectures {
                             //0x90, 0x66, 0x66, 0x66, 0x66 // I'm not actually sure if it's safe to match this padding, so I'm not going to
                         }),
 
+                    // .NET 7 Call Counting stub (0x1000 page size)
+                    new(new(AddressKind.Rel32 | AddressKind.Indirect, 18), mustMatchAtStart: true,
+                        new byte[] { // mask
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                            0xff, 0xff, 0xff,
+                            0xff, 0xff,
+                            0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                        },
+                        new byte[] { // pattern
+                            0x48, 0x8b, 0x05, 0xf9, 0x0f, 0x00, 0x00,   // mov rax, qword [rip - 7 + 0x1000]
+                            0x66, 0xff, 0x08,                           // dec word [rax]
+                            0x74, 0x06,                                 // je +6 (trigger_recomp)
+                            // address will always be 0xf6, 0x0f, 0x00, 0x00
+                            0xff, 0x25, Bd, Bd, Bd, Bd,                 // jmp [rip - 10 + 0x1000]
+                            0xff, 0x25, 0xf8, 0x0f, 0x00, 0x00, // trigger_recomp: jmp [rip - 8 + 0x1000]
+                        }),
+
                     null
                 );
             } else {
