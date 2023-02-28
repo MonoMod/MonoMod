@@ -394,8 +394,6 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             const int PEFILE_SYSTEM = 0x01;
 
-            var isDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var outIsDebugClr) && outIsDebugClr;
-
             var domAssembly = (IntPtr) RuntimeAssemblyPtrField.GetValue(assembly)!;
 
             // DomainAssembly in src/coreclr/src/vm/domainfile.h
@@ -441,7 +439,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             var peAssemOffset =
                 IntPtr.Size + // VTable ptr
                               // PEFile
-                (isDebugClr ? 0 + // #ifdef _DEBUG 
+                (IsDebugClr ? 0 + // #ifdef _DEBUG 
                     IntPtr.Size + // LPCWSTR             m_pDebugName;
                                   // SBuffer // src/coreclr/vm/sbuffer.h
                     sizeof(int) + // COUNT_T             m_size; // COUNT_T is a typedef of uint32_t
@@ -465,7 +463,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 sizeof(int) + // Volatile<LONG>           m_refCount; // fuck C long
                 0; // here is out int (flags)
 
-            if (isDebugClr && IntPtr.Size == 8) {
+            if (IsDebugClr && IntPtr.Size == 8) {
                 peAssemOffset += 2 * sizeof(int); // filled in padding
             }
 

@@ -266,6 +266,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return null;
         }
 
+        protected static readonly bool IsDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var isEnabled) && isEnabled;
+
         // It seems that across all versions of Framework and Core, the layout of the start of a MethodDesc is quite consistent
         public unsafe virtual void DisableInlining(MethodBase method) {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
@@ -275,10 +277,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             var handle = GetMethodHandle(method);
 
-            var isDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var outIsDebugClr) && outIsDebugClr;
-
             var offset = 0
-              + (isDebugClr ? 0 // #ifdef _DEBUG
+              + (IsDebugClr ? 0 // #ifdef _DEBUG
                 + IntPtr.Size   // LPCUTF8 m_pszDebugMethodName;
                 + IntPtr.Size   // LPCUTF8 m_pszDebugClassName;
                 + IntPtr.Size   // LPCUTF8 m_pszDebugMethodSignature;
