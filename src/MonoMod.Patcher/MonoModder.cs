@@ -822,6 +822,11 @@ namespace MonoMod {
                 if (type.Module != null && !Mods.Contains(type.Module))
                     return Module.ImportReference(type);
 
+                // Don't resolve references to system libraries
+                // Doing so will bypass system reference assemblies like System.Runtime and cause a lot of jank in general 
+                if (type.Scope.Name.StartsWith("System."))
+                    return Module.ImportReference(type);
+
                 // Type **reference** is coming from a mod module - resolve it just to be safe.
                 type = type.SafeResolve() ?? type;
                 TypeReference found = FindTypeDeep(type.GetPatchFullName());
@@ -834,7 +839,7 @@ namespace MonoMod {
                 return Module.ImportReference(found);
             }
 
-            if (mtp is FieldReference || mtp is MethodReference || mtp is PropertyReference || mtp is EventReference)
+            if (mtp is FieldReference || mtp is MethodReference || mtp is PropertyReference || mtp is EventReference || mtp is CallSite)
                 // Don't relink those. It'd be useful to f.e. link to member B instead of member A.
                 // MonoModExt already handles the default "deep" relinking.
                 return Module.ImportReference(mtp);
