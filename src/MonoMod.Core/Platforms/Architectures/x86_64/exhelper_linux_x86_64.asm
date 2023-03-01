@@ -9,6 +9,7 @@
 %define SHR_DECL_TEXT .text
 
 %define SHR_DECLFN(name) GLOBAL name:function
+%define SHR_IMPFN(name) EXTERN name
 %define SHR_EXTFN(name) name wrt ..plt
 
 %macro SHR_EXTRA_TEXT 0

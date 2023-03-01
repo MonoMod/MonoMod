@@ -63,12 +63,12 @@
 %error "DWARF_EH_SECTION_NAME must be defined before including dwarf_eh.inc"
 %endif
 
-extern _Unwind_RaiseException ; _Unwind_Exception* exception
-extern _Unwind_GetLanguageSpecificData ; _Unwind_Context* context
-extern _Unwind_GetGR ; _Unwind_Context* context, int reg
-extern _Unwind_SetGR ; _Unwind_Context* context, int reg, uint64 new_value
-extern _Unwind_GetIP ; _Unwind_Context* context
-extern _Unwind_SetIP ; _Unwind_Context* context, uint64 new_value
+SHR_IMPFN(_Unwind_RaiseException) ; _Unwind_Exception* exception
+SHR_IMPFN(_Unwind_GetLanguageSpecificData) ; _Unwind_Context* context
+SHR_IMPFN(_Unwind_GetGR) ; _Unwind_Context* context, int reg
+SHR_IMPFN(_Unwind_SetGR) ; _Unwind_Context* context, int reg, uint64 new_value
+SHR_IMPFN(_Unwind_GetIP) ; _Unwind_Context* context
+SHR_IMPFN(_Unwind_SetIP) ; _Unwind_Context* context, uint64 new_value
 
 %macro LEB128 1-*
 %push
