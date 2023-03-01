@@ -256,10 +256,34 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return false;
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "We want to catch and swallow exceptions from CreateDelegate.")]
         public virtual void Compile(MethodBase method) {
             var handle = GetMethodHandle(method);
+            RuntimeHelpers.PrepareMethod(handle);
             Helpers.Assert(TryInvokeBclCompileMethod(handle));
+
+            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
+                // if the method is a virtual method on a value type, we want to do something to compile the real
+                // method instead of just the unboxing stub. The RuntimeMethodHandle we got from the MethodBase
+                // points to the unboxing stub. We could use knowlege of the runtime to get the non-unboxing stub
+                // MethodDesc, then create a RuntimeMethodHandle for it, however that may change per-runtime.
+                // If we want to implement that, we can implement TryGetCacnonicalMethodHandle.
+
+                if (TryGetCanonicalMethodHandle(ref handle)) {
+                    Helpers.Assert(TryInvokeBclCompileMethod(handle));
+                } else {
+                    try {
+                        // Just like in GetMethodHandle, CreateDelegate will likely compile the right method.
+                        _ = method.CreateDelegate<Action>();
+                    } catch (Exception e) {
+                        MMDbgLog.Spam($"Caught exception while attempting to compile real entry point of virtual method on struct: {e}");
+                    }
+                }
+            }
         }
+
+        protected virtual bool TryGetCanonicalMethodHandle(ref RuntimeMethodHandle handle) => false;
 
         // pinning isn't usually needed in fx/core
         public virtual IDisposable? PinMethodIfNeeded(MethodBase method) {
