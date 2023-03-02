@@ -227,7 +227,7 @@ section DWARF_EH_SECTION_DECL
 %macro CFI_UNINIT 0
 
 ; This is *incredibly* cursed, but we need a stub function with an FDE entry at the end to not cause any symbol misalignment errors
-; It works because it causes LLVM to add another subsection at the end which catches the .end symbol of the last FDE actual entry
+; It works because it causes LLVM to add another subsection at the end which catches the .end symbol of the last actual FDE entry
     [section .text]
 
     %%align_stub: ret
