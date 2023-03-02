@@ -1,4 +1,5 @@
-;:; nasm -f macho64 -Ox exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld -arch x86_64 -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
+;:; nasm -f macho64 -O0 exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld64.lld -arch x86_64 -undefined dynamic_lookup -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
+;:; needs a patched nasm + LLVM (for now) ._.
 
 %pragma macho lprefix L_
 
@@ -18,8 +19,8 @@
 
 eh_get_exception_ptr:
     CFI_STARTPROC LSDA_none
-    lea rax, [rel cur_ex_ptr wrt ..tlvp]
-    call [rax]
+    mov rax, [rel cur_ex_ptr wrt ..tlvp]
+    call rax
     ret
     CFI_ENDPROC
 
@@ -27,7 +28,7 @@ eh_get_exception_ptr:
 
 %include "exhelper_linux_macos_shared.asm"
 
-section __DATA,__thread_bss bss align=8
+section __DATA,__thread_bss thread_bss align=8
     cur_ex_ptr$tlv$init: resq 1
-section __DATA,__thread_vars data align=8
+section __DATA,__thread_vars align=8
     cur_ex_ptr: dq 0

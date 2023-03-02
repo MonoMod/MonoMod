@@ -170,32 +170,45 @@ section DWARF_EH_SECTION_DECL
     %%CIE: 
     %define __CFI_LastCIE %%CIE
 
-    %%CIE.Length: dd %%CIE.end - %%CIE.ID
+    ; Length
+    dd %%CIE.end - %%CIE - 4
 
-    %%CIE.ID: dd 0
-    %%CIE.Version: db 1
-    %%CIE.AugString:
+    ; ID
+    dd 0
+    ; Version
+    db 1
+    ; AugString
         db 'z' ; include AugmentationData
         db 'R' ; include encoding for pointers
         db 'P' ; AugData contains a pointer to a personality routine
         db 'L' ; include an encoding for LSDA, and LSDA in FDE
         db 0
-    %%CIE.CodeAlignmentFactor: LEB128 0x01 ; set it to 1 because I'm not sure what its purpose is
-    %%CIE.DataAlignmentFactor: db 0x80 - DWARF_WORDSIZE ; -DWARF_WORDSIZE, encoded SLEB128
-    %%CIE.ReturnAddressColumn: LEB128 DW_REG_RA
-    %%CIE.AugmentationLength: LEB128 7 ; MAKE SURE THIS STAYS UP-TO-DATE
-    %%CIE.AugmentationData:
-        %%CIE.PointerEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
+    ; CodeAlignmentFactor
+    LEB128 0x01 ; set it to 1 because I'm not sure what its purpose is
+    ; DataAlignmentFactor
+    db 0x80 - DWARF_WORDSIZE ; -DWARF_WORDSIZE, encoded SLEB128
+    ; ReturnAddressColumn
+    LEB128 DW_REG_RA
+    ; AugmentationLength
+    LEB128 7 ; MAKE SURE THIS STAYS UP-TO-DATE
+    ; AugmentationData
+        ; .PointerEncoding
+        db DW_EH_PE_pcrel | DW_EH_PE_sdata4
 %if DWARF_EH_PERS_INDIR
-        %%CIE.PersonalityEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4 | DW_EH_PE_indirect
-        %%CIE.PersonalityRoutine: dd %%CIE.PersonalityIndir - $
+        ; PersonalityEncoding
+        db DW_EH_PE_pcrel | DW_EH_PE_sdata4 | DW_EH_PE_indirect
+        ; PersonalityRoutine
+        dd %%CIE.PersonalityIndir - $
 %else
-        %%CIE.PersonalityEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
-        %%CIE.PersonalityRoutine: dd %1 - $
+        ; PersonalityEncoding
+        db DW_EH_PE_pcrel | DW_EH_PE_sdata4
+        ; PersonalityRoutine
+        dd %1 - $
 %endif
-        %%CIE.LSDAEncoding: db DW_EH_PE_pcrel | DW_EH_PE_sdata4
-    %%CIE.AugEnd:
-    %%CIE.InitialInstructions:
+        ; LSDAEncoding
+        db DW_EH_PE_pcrel | DW_EH_PE_sdata4
+    ; AugEnd
+    ; InitialInstructions
         ; a sequence of Call Frame Instructions (6.4.2 of the DWARF spec)
         __CFA_Initial
     ALIGN DWARF_WORDSIZE, db 0
@@ -212,9 +225,33 @@ section DWARF_EH_SECTION_DECL
 %endmacro
 
 %macro CFI_UNINIT 0
+
+; This is *incredibly* cursed, but we need a stub function with an FDE entry at the end to not cause any symbol misalignment errors
+; It works because it causes LLVM to add another subsection at the end which catches the .end symbol of the last FDE actual entry
+    [section .text]
+
+    %%align_stub: ret
+
+    __?SECT?__ 
+    [section DWARF_EH_SECTION_NAME]
+
+    dd 24
+    ; pCIE
+    dd $ - __CFI_LastCIE
+    ; PCBegin
+    dd %%align_stub - $
+    ; PCRange
+    dd 1
+    ; AugmentationLength
+    LEB128_fixed 1, 4
+        dd 0
+    ; AugmentationData
+    ; AugEnd
+    ; CallFrameInstructions
+    ALIGN DWARF_WORDSIZE, db 0
+
     %undef __CFI_LastCIE
 
-    [section DWARF_EH_SECTION_NAME]
     dd 0
     ALIGN DWARF_WORDSIZE, db 0
     __?SECT?__
@@ -233,16 +270,22 @@ section DWARF_EH_SECTION_DECL
     %define %$__CFI_LastFDE %%FDE
     %define %$__CFI_FDE_end %%FDE.end
 
-    %%FDE.Length: dd %%FDE.end - %%FDE.pCIE
-    %%FDE.pCIE: dd $ - __CFI_LastCIE
-    %%FDE.PCBegin: dd %%proc_start - $
-    %%FDE.PCRange: dd %%proc_end - %%proc_start
-    %%FDE.AugmentationLength: LEB128_fixed 1, 4
-        %%FDE.LSDA: dd %1 - $
-    %%FDE.AugmentationData:
-    %%FDE.AugEnd:
-    %%FDE.CallFrameInstructions:
-
+    ; Length
+    dd %%FDE.end - %%FDE - 4
+    ; pCIE
+    dd $ - __CFI_LastCIE
+    ; PCBegin
+    dd %%proc_start - $
+    ; PCRange
+    dd %%proc_end - %%proc_start
+    ; AugmentationLength
+    LEB128_fixed 1, 4
+        ; LSDA
+        dd %1 - $
+    ; AugmentationData
+    ; AugEnd
+    ; CallFrameInstructions
+    
     %define __CFI_InProc 1
 
     CFI_EXIT_DATA
