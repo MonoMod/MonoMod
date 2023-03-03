@@ -1,5 +1,5 @@
 diff --git a/lld/MachO/InputFiles.cpp b/lld/MachO/InputFiles.cpp
-index e1289103faf7..be94fa5288cf 100644
+index e1289103faf7..baaac6ac894d 100644
 --- a/lld/MachO/InputFiles.cpp
 +++ b/lld/MachO/InputFiles.cpp
 @@ -1285,7 +1285,8 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
@@ -12,13 +12,37 @@ index e1289103faf7..be94fa5288cf 100644
  //
  // Concretely, we expect our relocations to write the value of `PC -
  // target_addr` to `PC`. `PC` itself is denoted by a minuend relocation that
-@@ -1318,9 +1319,12 @@ template <bool Invert = false>
+@@ -1318,16 +1319,43 @@ template <bool Invert = false>
  Defined *
  targetSymFromCanonicalSubtractor(const InputSection *isec,
                                   std::vector<macho::Reloc>::iterator relocIt) {
 +  // Some object files have normal relocations here
-+  if (!target->hasAttr(relocIt->type, RelocAttrBits::SUBTRAHEND))
-+    return cast<Defined>(relocIt->referent.get<macho::Symbol *>());
++  if (!target->hasAttr(relocIt->type, RelocAttrBits::SUBTRAHEND)) {
++    Defined *target =
++      cast_or_null<Defined>(relocIt->referent.dyn_cast<macho::Symbol *>());
++
++    // Adjust the addend for x86-64 signed relocations
++    int64_t relocAddend = relocIt->addend;
++    switch (relocIt->type) {
++      case X86_64_RELOC_SIGNED:
++      case X86_64_RELOC_SIGNED_1:
++      case X86_64_RELOC_SIGNED_2:
++      case X86_64_RELOC_SIGNED_4:
++        // The loader would resolve with the PC 4 bytes after the relocation
++        // Adjust the addend to cancel this out
++        relocAddend -= 4;
++        break;
++    }
++
++    if (target) {
++      auto *relocIsec = cast<ConcatInputSection>(target->isec);
++      return findSymbolAtOffset(relocIsec, target->value + relocAddend);
++    } else {
++      auto *relocIsec =
++          cast<ConcatInputSection>(relocIt->referent.get<InputSection *>());
++      return findSymbolAtOffset(relocIsec, relocAddend);
++    }
++  }
 +
    macho::Reloc &subtrahend = *relocIt;
    macho::Reloc &minuend = *std::next(relocIt);
@@ -26,7 +50,15 @@ index e1289103faf7..be94fa5288cf 100644
    assert(target->hasAttr(minuend.type, RelocAttrBits::UNSIGNED));
    // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
    // addend.
-@@ -1452,10 +1456,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
+   auto *pcSym = cast<Defined>(subtrahend.referent.get<macho::Symbol *>());
+   Defined *target =
+       cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
+-  if (!pcSym) {
++  if (!target) {
+     auto *targetIsec =
+         cast<ConcatInputSection>(minuend.referent.get<InputSection *>());
+     target = findSymbolAtOffset(targetIsec, minuend.addend);
+@@ -1452,10 +1480,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
      auto funcAddrRelocIt = isec->relocs.end();
      auto lsdaAddrRelocIt = isec->relocs.end();
      for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
@@ -44,3 +76,19 @@ index e1289103faf7..be94fa5288cf 100644
      }
  
      Defined *funcSym;
+@@ -1466,12 +1497,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
+       // to register the unwind entry under same symbol.
+       // This is not particularly efficient, but we should run into this case
+       // infrequently (only when handling the output of `ld -r`).
+-      if (funcSym->isec)
++      if (funcSym && funcSym->isec)
+         funcSym = findSymbolAtOffset(cast<ConcatInputSection>(funcSym->isec),
+                                      funcSym->value);
+     } else {
+       funcSym = findSymbolAtAddress(sections, funcAddr);
+-      ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);
++      if (funcSym)
++        ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);
+     }
+     // The symbol has been coalesced, or already has a compact unwind entry.
+     if (!funcSym || funcSym->getFile() != this || funcSym->unwindEntry) {
