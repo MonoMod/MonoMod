@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
@@ -25,8 +26,18 @@ namespace MonoMod.RuntimeDetour {
 
             private MethodBase? lastTarget;
             private ICoreDetour? trampolineDetour;
+            private bool hasStolenTrampoline;
 
             public bool IsApplied { get; private set; }
+
+            private void UndoTrampolineDetour() {
+                if (trampolineDetour is not null) {
+                    trampolineDetour.Undo();
+                    // TODO: cache trampolineDetours for a time, so they can be reused
+                    trampolineDetour.Dispose();
+                    trampolineDetour = null;
+                }
+            }
 
             public virtual void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
                 var to = Next?.Entry;
@@ -39,12 +50,7 @@ namespace MonoMod.RuntimeDetour {
                     return;
                 }
 
-                if (trampolineDetour is not null) {
-                    trampolineDetour.Undo();
-                    // TODO: cache trampolineDetours for a time, so they can be reused
-                    trampolineDetour.Dispose();
-                    trampolineDetour = null;
-                }
+                UndoTrampolineDetour();
 
                 if (to is not null) {
                     trampolineDetour = factory.CreateDetour(NextTrampoline, to, applyByDefault: true);
@@ -55,15 +61,53 @@ namespace MonoMod.RuntimeDetour {
             }
 
             public void Remove() {
-                if (trampolineDetour is not null) {
-                    trampolineDetour.Undo();
-                    // TODO: cache trampolineDetours for a time, so they can be reused
-                    trampolineDetour.Dispose();
-                    trampolineDetour = null;
+                if (!hasStolenTrampoline) {
+                    UndoTrampolineDetour();
                 }
                 lastTarget = null;
                 Next = null;
                 IsApplied = false;
+            }
+
+            public void StealTrampoline(IDetourFactory factory) {
+                Helpers.Assert(!hasStolenTrampoline);
+
+                StealTrampolineInner();
+                hasStolenTrampoline = true;
+
+                UndoTrampolineDetour();
+                trampolineDetour = factory.CreateDetour(NextTrampoline, GetRemovedStub(MethodSignature.ForMethod(NextTrampoline)), applyByDefault: true);
+            }
+            protected virtual void StealTrampolineInner() => throw new NotSupportedException("Can't steal ManagedChainNode trampoline");
+
+            public virtual void ReturnStolenTrampoline() {
+                Helpers.Assert(hasStolenTrampoline);
+
+                UndoTrampolineDetour();
+
+                ReturnStolenTrampolineInner();
+                hasStolenTrampoline = false;
+            }
+            protected virtual void ReturnStolenTrampolineInner() => throw new NotSupportedException("Can't steal ManagedChainNode trampoline");
+
+            private static MethodInfo GenerateRemovedStub(MethodSignature trampolineSig) {
+                using var dmd = trampolineSig.CreateDmd(DebugFormatter.Format($"RemovedStub<{trampolineSig}>"));
+                Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);
+                var module = dmd.Module;
+
+                var il = dmd.GetILProcessor();
+
+                // instantiate a new System.InvalidOperationException and throw it
+                il.Emit(OpCodes.Ldstr, "Detour has been removed");
+                il.Emit(OpCodes.Newobj, module.ImportReference(typeof(InvalidOperationException).GetConstructor(new Type[] { typeof(string) })));
+                il.Emit(OpCodes.Throw);
+
+                return dmd.Generate();
+            }
+
+            private static readonly ConditionalWeakTable<MethodSignature, MethodInfo> removedStubCache = new();
+            private static MethodInfo GetRemovedStub(MethodSignature trampolineSig) {
+                return removedStubCache.GetValue(trampolineSig, orig => GenerateRemovedStub(trampolineSig));
             }
         }
 
@@ -75,10 +119,46 @@ namespace MonoMod.RuntimeDetour {
             public readonly SingleManagedDetourState Detour;
 
             public override MethodBase Entry => Detour.InvokeTarget;
-            public override MethodBase NextTrampoline => Detour.NextTrampoline;
+            public override MethodBase NextTrampoline => Detour.NextTrampoline.TrampolineMethod;
             public override DetourConfig? Config => Detour.Config;
             public IDetourFactory Factory => Detour.Factory;
+
+            protected override void StealTrampolineInner() => Detour.NextTrampoline.StealTrampolineOwnership();
+            protected override void ReturnStolenTrampolineInner() => Detour.NextTrampoline.ReturnTrampolineOwnership();
         }
+
+        internal class ManagedDetourSyncInfo : DetourSyncInfo {
+
+            public bool HasStolenTrampolines;
+            public readonly ConcurrentQueue<ManagedChainNode> TrampolineStealers = new ConcurrentQueue<ManagedChainNode>();
+
+            public void StealTrampoline(IDetourFactory factory, ManagedChainNode node) {
+                node.StealTrampoline(factory);
+
+                // We don't have a race condition with ReturnStolenTrampolines here because:
+                // 1. there is at least one active call by this thread whenever we steal a trampoline
+                // 2. we wait for all other threads to have returned from the method before stealing the trampoline
+                // -> these threads can't end up in ReturnStolenTrampolines because of 1.
+                TrampolineStealers.Enqueue(node);
+                Volatile.Write(ref HasStolenTrampolines, true);
+            }
+
+            public void ReturnStolenTrampolines() {
+                if (!Volatile.Read(ref HasStolenTrampolines)) {
+                    return;
+                }
+
+                // Clear the flag ahead of time so that other threads can bail out early
+                Volatile.Write(ref HasStolenTrampolines, false);
+
+                while (TrampolineStealers.TryDequeue(out ManagedChainNode? node)) {
+                    node.ReturnStolenTrampoline();
+                }
+            }
+
+        }
+
+        private static readonly MethodInfo ManagedDetourSyncInfo_ReturnStolenTrampolines = typeof(ManagedDetourSyncInfo).GetMethod(nameof(ManagedDetourSyncInfo.ReturnStolenTrampolines))!;
 
         // The root node is the existing method. It's NextTrampoline is the method, which is the same
         // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
@@ -89,8 +169,8 @@ namespace MonoMod.RuntimeDetour {
             public override bool DetourToFallback => true; // we do want to detour to fallback, because our sync proxy might be waiting to call the method
 
             public readonly MethodSignature Sig;
-            public readonly MethodBase SyncProxy;
-            public readonly DetourSyncInfo SyncInfo = new();
+            public readonly ManagedDetourSyncInfo SyncInfo = new();
+            public readonly ConcurrentQueue<Action> StolenTrampolineReturners = new ConcurrentQueue<Action>();
             private readonly DataScope<DynamicReferenceCell> syncProxyRefScope;
 
             public bool HasILHook;
@@ -99,14 +179,21 @@ namespace MonoMod.RuntimeDetour {
                 Sig = MethodSignature.ForMethod(method);
                 Entry = method;
                 NextTrampoline = TrampolinePool.Rent(Sig);
-                DataScope<DynamicReferenceCell> refScope = default;
-                SyncProxy = GenerateSyncProxy(DebugFormatter.Format($"{Entry}"), Sig,
-                    (method, il) => refScope = il.EmitNewTypedReference(SyncInfo, out _),
+
+                DataScope<DynamicReferenceCell> refScope = DynamicReferenceManager.AllocReference(SyncInfo, out DynamicReferenceCell syncInfoCell);
+                SyncInfo.SyncProxy = GenerateSyncProxy(DebugFormatter.Format($"{Entry}"), Sig,
+                    (method, il) => il.EmitLoadTypedReference(syncInfoCell, typeof(ManagedDetourSyncInfo)),
                     (method, il) => {
                         foreach (var p in method.Parameters) {
                             il.Emit(OpCodes.Ldarg, p);
                         }
                         il.Emit(OpCodes.Call, method.Module.ImportReference(NextTrampoline));
+                    },
+                    (method, il) => {
+                        // we keep the stolen trampolines alive a bit longer than required by only returning them once *all* threads have returned from the method
+                        // but doing it this way avoids an expensive TLV lookup to track per-thread active calls
+                        il.EmitLoadTypedReference(syncInfoCell, typeof(ManagedDetourSyncInfo));
+                        il.Emit(OpCodes.Call, ManagedDetourSyncInfo_ReturnStolenTrampolines);
                     });
                 syncProxyRefScope = refScope;
             }
@@ -116,7 +203,7 @@ namespace MonoMod.RuntimeDetour {
             public override void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
                 base.UpdateDetour(factory, fallback);
 
-                syncDetour ??= factory.CreateDetour(Entry, SyncProxy, applyByDefault: false);
+                syncDetour ??= factory.CreateDetour(Entry, SyncInfo.SyncProxy!, applyByDefault: false);
 
                 if (!HasILHook && Next is null && syncDetour.IsApplied) {
                     syncDetour.Undo();
@@ -196,7 +283,7 @@ namespace MonoMod.RuntimeDetour {
                         detour.ManagerData = cnode;
                     }
 
-                    UpdateChain(detour.Factory);
+                    UpdateChain(detour.Factory, out _);
                 } finally {
                     if (lockTaken)
                         detourLock.Exit(true);
@@ -241,7 +328,10 @@ namespace MonoMod.RuntimeDetour {
 
             private void RemoveGraphDetour(SingleManagedDetourState detour, DepGraphNode<ManagedChainNode> node) {
                 detourGraph.Remove(node);
-                UpdateChain(detour.Factory);
+                UpdateChain(detour.Factory, out bool stealTrampoline);
+                if (stealTrampoline) {
+                    detourList.SyncInfo.StealTrampoline(detour.Factory, node.ListNode.ChainNode);
+                }
                 node.ListNode.ChainNode.Remove();
             }
 
@@ -257,7 +347,10 @@ namespace MonoMod.RuntimeDetour {
                     chain = ref chain.Next;
                 }
 
-                UpdateChain(detour.Factory);
+                UpdateChain(detour.Factory, out bool stealTrampoline);
+                if (stealTrampoline) {
+                    detourList.SyncInfo.StealTrampoline(detour.Factory, node);
+                }
                 node.Remove();
             }
 
@@ -289,7 +382,7 @@ namespace MonoMod.RuntimeDetour {
                     }
 
                     UpdateEndOfChain();
-                    UpdateChain(ilhook.Factory);
+                    UpdateChain(ilhook.Factory, out _);
                 } finally {
                     if (lockTaken)
                         detourLock.Exit(true);
@@ -335,7 +428,7 @@ namespace MonoMod.RuntimeDetour {
             private void RemoveGraphILHook(SingleILHookState ilhook, DepGraphNode<ILHookEntry> node) {
                 ilhookGraph.Remove(node);
                 UpdateEndOfChain();
-                UpdateChain(ilhook.Factory);
+                UpdateChain(ilhook.Factory, out _);
                 CleanILContexts();
                 node.ListNode.ChainNode.Remove();
             }
@@ -343,7 +436,7 @@ namespace MonoMod.RuntimeDetour {
             private void RemoveNoConfigILHook(SingleILHookState ilhook, ILHookEntry node) {
                 noConfigIlhooks.Remove(node);
                 UpdateEndOfChain();
-                UpdateChain(ilhook.Factory);
+                UpdateChain(ilhook.Factory, out _);
                 CleanILContexts();
                 node.Remove();
             }
@@ -411,7 +504,7 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            private void UpdateChain(IDetourFactory updatingFactory) {
+            private void UpdateChain(IDetourFactory updatingFactory, out bool stealTrampolines) {
                 var graphNode = detourGraph.ListHead;
 
                 ManagedChainNode? chain = null;
@@ -430,7 +523,7 @@ namespace MonoMod.RuntimeDetour {
                 detourList.Next = chain; // detourList is the head of the real chain, and represents the original method
 
                 Volatile.Write(ref detourList.SyncInfo.UpdatingThread, EnvironmentEx.CurrentManagedThreadId);
-                detourList.SyncInfo.WaitForNoActiveCalls();
+                detourList.SyncInfo.WaitForNoActiveCalls(out stealTrampolines);
                 try {
                     chain = detourList;
                     while (chain is not null) {
@@ -474,7 +567,7 @@ namespace MonoMod.RuntimeDetour {
         internal sealed class SingleManagedDetourState : SingleDetourStateBase {
             public readonly MethodInfo PublicTarget;
             public readonly MethodInfo InvokeTarget;
-            public readonly MethodBase NextTrampoline;
+            public readonly IDetourTrampoline NextTrampoline;
 
             public DetourInfo? DetourInfo;
 

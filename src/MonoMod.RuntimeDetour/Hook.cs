@@ -454,8 +454,54 @@ namespace MonoMod.RuntimeDetour {
         MethodInfo IDetour.InvokeTarget => realTarget;
 
 
-        private readonly MethodInfo trampoline;
-        MethodBase IDetour.NextTrampoline => trampoline;
+        private sealed class TrampolineData : IDetourTrampoline, IDisposable {
+
+            private readonly object LOCK = new object();
+            private bool alive, hasOwnership;
+
+            public MethodBase TrampolineMethod { get; private set; }
+
+            public TrampolineData(MethodSignature sig) {
+                TrampolineMethod = TrampolinePool.Rent(sig);
+                alive = hasOwnership = true;
+            }
+
+            public void Dispose() {
+                lock (LOCK) {
+                    if (!alive) {
+                        return;
+                    }
+                    alive = false;
+
+                    if (hasOwnership) {
+                        TrampolinePool.Return((MethodInfo) TrampolineMethod);
+                    }
+                }
+            }
+
+            public void StealTrampolineOwnership() {
+                lock (LOCK) {
+                    Helpers.Assert(alive && hasOwnership);
+                    hasOwnership = false;
+                }
+            }
+
+            public void ReturnTrampolineOwnership() {
+                lock (LOCK) {
+                    Helpers.Assert(!hasOwnership);
+
+                    if (!alive) {
+                        TrampolinePool.Return((MethodInfo) TrampolineMethod);
+                    } else {
+                        hasOwnership = true;
+                    }
+                }
+            }
+
+        }
+
+        private readonly TrampolineData trampoline;
+        IDetourTrampoline IDetour.NextTrampoline => trampoline;
 
         private readonly DetourManager.ManagedDetourState state;
         private readonly DetourManager.SingleManagedDetourState detour;
@@ -506,7 +552,7 @@ namespace MonoMod.RuntimeDetour {
         private static readonly FieldInfo HookData_Target = typeof(HookData).GetField(nameof(HookData.Target))!;
         private static readonly FieldInfo HookData_InvokeNext = typeof(HookData).GetField(nameof(HookData.InvokeNext))!;
 
-        private MethodInfo PrepareRealTarget(object? target, out MethodInfo trampoline, out DataScope<DynamicReferenceCell> scope) {
+        private MethodInfo PrepareRealTarget(object? target, out TrampolineData trampoline, out DataScope<DynamicReferenceCell> scope) {
             var srcSig = MethodSignature.ForMethod(Source);
             var dstSig = MethodSignature.ForMethod(Target, ignoreThis: true); // the dest sig we don't want to consider its this param
 
@@ -544,7 +590,7 @@ namespace MonoMod.RuntimeDetour {
                 throw new ArgumentException("Target method's delegate parameter is not compatible with the source method");
             }
 
-            trampoline = TrampolinePool.Rent(trampSig);
+            trampoline = new TrampolineData(trampSig);
             // note: even in the below case, where it'll never be used, we still need to *get* a trampoline because the DetourManager
             //     expects to have one available to it
 
@@ -557,7 +603,7 @@ namespace MonoMod.RuntimeDetour {
 
             var hookData = new HookData(target,
                 nextDelegateType is not null
-                ? trampoline.CreateDelegate(nextDelegateType)
+                ? trampoline.TrampolineMethod.CreateDelegate(nextDelegateType)
                 : null);
 
             using (var dmd = srcSig.CreateDmd(DebugFormatter.Format($"Hook<{Target.GetID()}>"))) {
@@ -671,7 +717,7 @@ namespace MonoMod.RuntimeDetour {
                 delegateObjectScope.Dispose();
 
                 if (disposing) {
-                    TrampolinePool.Return(trampoline);
+                    trampoline.Dispose();
                 }
 
                 disposedValue = true;

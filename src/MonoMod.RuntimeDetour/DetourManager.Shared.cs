@@ -5,6 +5,7 @@ using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -190,10 +191,15 @@ namespace MonoMod.RuntimeDetour {
 
         #region SyncInfo
         internal class DetourSyncInfo {
+            public MethodBase? SyncProxy;
             public int ActiveCalls;
             public int UpdatingThread;
 
-            public void WaitForChainUpdate() {
+            public bool WaitForChainUpdate() {
+                // If this is a nested call, allow the call to continue without waiting for the update to avoid deadlocks
+                if (Volatile.Read(ref ActiveCalls) > 1 && DetermineThreadCallDepth() > 1)
+                    return true;
+
                 _ = Interlocked.Decrement(ref ActiveCalls);
 
                 if (UpdatingThread == EnvironmentEx.CurrentManagedThreadId) {
@@ -204,15 +210,29 @@ namespace MonoMod.RuntimeDetour {
                 while (Volatile.Read(ref UpdatingThread) != -1) {
                     spin.SpinOnce();
                 }
+
+                return false;
             }
 
-            public void WaitForNoActiveCalls() {
-                // TODO: find a decent way to prevent deadlocks here
+            public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread) {
+                int threadCallDepth = DetermineThreadCallDepth();
+                hasActiveCallsFromThread = threadCallDepth > 0; 
 
+                // Wait for other threads to have returned from the function
                 var spin = new SpinWait();
-                while (Volatile.Read(ref ActiveCalls) > 0) {
+                while (Volatile.Read(ref ActiveCalls) > threadCallDepth) {
                     spin.SpinOnce();
                 }
+            }
+
+            private int DetermineThreadCallDepth() {
+                if (Volatile.Read(ref ActiveCalls) <= 0 || SyncProxy == null)
+                    return 0;
+
+                // Determine active call depth of the current thread
+                StackFrame[] stackFrames = new StackTrace().GetFrames();
+                string syncProxyID = SyncProxy.GetID();
+                return stackFrames.Count(f => f.GetMethod()?.GetID() == syncProxyID);
             }
         }
 
@@ -229,7 +249,8 @@ namespace MonoMod.RuntimeDetour {
         private static MethodInfo GenerateSyncProxy(
             string innerName, MethodSignature Sig,
             Action<MethodDefinition, ILProcessor> emitLoadSyncInfo,
-            Action<MethodDefinition, ILProcessor> emitInvoke
+            Action<MethodDefinition, ILProcessor> emitInvoke,
+            Action<MethodDefinition, ILProcessor>? emitLastCallReturn = null
         ) {
             using var dmd = Sig.CreateDmd(DebugFormatter.Format($"SyncProxy<{innerName}>"));
 
@@ -264,8 +285,10 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Beq_S, noWait);
 
             // if UpdatingChain was true, wait for that to finish, then jump back up to the top, because WaitForChainUpdate decrements
+            // if WaitForChainUpdate returns true, continue with the call without waiting anyway
             il.Emit(OpCodes.Ldloc, syncInfoVar);
             il.Emit(OpCodes.Call, module.ImportReference(DetourSyncInfo_WaitForChainUpdate));
+            il.Emit(OpCodes.Brtrue_S, noWait);
             il.Emit(OpCodes.Br_S, checkWait);
 
             // if UpdatingChain was false, we're good to continue
@@ -299,7 +322,17 @@ namespace MonoMod.RuntimeDetour {
             il.Append(finallyStartIns);
             il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
             il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Decrement));
-            il.Emit(OpCodes.Pop);
+
+            if (emitLastCallReturn == null) {
+                il.Emit(OpCodes.Pop);
+            } else {
+                // if Interlocked.Decrement returned zero, this has been the last call to the method
+                var notLastCall = il.Create(OpCodes.Nop);
+                il.Emit(OpCodes.Brtrue_S, notLastCall);
+                emitLastCallReturn(method, il);
+                il.Append(notLastCall);
+            }
+
             il.Emit(OpCodes.Endfinally);
             eh.HandlerEnd = beforeReturnIns;
 

@@ -19,6 +19,8 @@ namespace MonoMod.RuntimeDetour {
             public abstract Delegate EntryDelegate { get; }
 
             public abstract void UpdateChain(IDetourFactory factory, Delegate? fallback);
+            public virtual void Remove() {}
+
         }
 
         internal sealed class NativeDetourChainNode : NativeChainNode {
@@ -41,6 +43,12 @@ namespace MonoMod.RuntimeDetour {
                 del = del?.CastDelegate(Detour.NativeDelegateType);
                 if (ChainState is not null) {
                     ChainState.Next = del;
+                }
+            }
+
+            public override void Remove() {
+                if (ChainState is not null) {
+                    ChainState.Remove();
                 }
             }
         }
@@ -98,6 +106,7 @@ namespace MonoMod.RuntimeDetour {
                 // note: we defer writing to any fields until *after* GetFunctionPointerForDelegate because we want it to throw if no marshaling info is set up
                 // if it does, we want a later caller to be able to set the entry type here
                 EntryType = type;
+                SyncInfo.SyncProxy = syncMeth;
                 SyncProxyDelegate = del;
             }
 
@@ -185,16 +194,43 @@ namespace MonoMod.RuntimeDetour {
                 return dmd.Generate();
             }
 
-            private static readonly ConditionalWeakTable<Type, MethodInfo> chainMethodCache = new();
+            private static MethodInfo GenerateRemovedStub(Type origDelType, Type nextDelType) {
+                var nextInvoke = nextDelType.GetMethod("Invoke")!;
+                Helpers.Assert(nextInvoke is not null);
 
+                using var dmd = MethodSignature.ForMethod(nextInvoke, true).CreateDmd(DebugFormatter.Format($"RemovedStub<{nextDelType}>"));
+                Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);
+                var module = dmd.Module;
+
+                var il = dmd.GetILProcessor();
+
+                // instantiate a new System.InvalidOperationException and throw it
+                il.Emit(OpCodes.Ldstr, "Native detour has been removed");
+                il.Emit(OpCodes.Newobj, module.ImportReference(typeof(InvalidOperationException).GetConstructor(new Type[] { typeof(string) })));
+                il.Emit(OpCodes.Throw);
+
+                return dmd.Generate();
+            }
+
+            private static readonly ConditionalWeakTable<Type, MethodInfo> chainMethodCache = new();
             private static MethodInfo GetChainMethod(Type origDelType, Type nextDelType) {
                 // we can cache on only origDelType because technically, nextDelType is derived from origDelType
                 return chainMethodCache.GetValue(origDelType, orig => GenerateChainMethod(orig, nextDelType));
             }
 
+            private static readonly ConditionalWeakTable<Type, MethodInfo> removedStubCache = new();
+            private static MethodInfo GetRemovedStub(Type origDelType, Type nextDelType) {
+                // we can cache on only origDelType because technically, nextDelType is derived from origDelType
+                return removedStubCache.GetValue(origDelType, orig => GenerateRemovedStub(orig, nextDelType));
+            }
+
             private Delegate? selfDelegate;
             public Delegate GetDelegate() {
                 return selfDelegate ??= GetChainMethod(Orig.GetType(), NextType).CreateDelegate(NextType, this);
+            }
+
+            public void Remove() {
+                Next = GetRemovedStub(Orig.GetType(), NextType).CreateDelegate(NextType, null);
             }
         }
         #endregion
@@ -288,7 +324,7 @@ namespace MonoMod.RuntimeDetour {
             private void RemoveGraphDetour(SingleNativeDetourState detour, DepGraphNode<NativeChainNode> node) {
                 detourGraph.Remove(node);
                 UpdateChain(detour.Factory);
-                //node.ListNode.ChainNode.Remove();
+                node.ListNode.ChainNode.Remove();
             }
 
             private void RemoveNoConfigDetour(SingleNativeDetourState detour, NativeDetourChainNode node) {
@@ -304,7 +340,7 @@ namespace MonoMod.RuntimeDetour {
                 }
 
                 UpdateChain(detour.Factory);
-                //node.Remove();
+                node.Remove();
             }
 
             private void UpdateChain(IDetourFactory updatingFactory) {
@@ -326,7 +362,7 @@ namespace MonoMod.RuntimeDetour {
                 detourList.Next = chain; // detourList is the head of the real chain, and represents the original method
 
                 Volatile.Write(ref detourList.SyncInfo.UpdatingThread, EnvironmentEx.CurrentManagedThreadId);
-                detourList.SyncInfo.WaitForNoActiveCalls();
+                detourList.SyncInfo.WaitForNoActiveCalls(out _);
                 try {
                     chain = detourList;
                     while (chain is not null) {
