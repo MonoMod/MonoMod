@@ -457,12 +457,13 @@ namespace MonoMod.RuntimeDetour {
         private sealed class TrampolineData : IDetourTrampoline, IDisposable {
 
             private readonly object LOCK = new object();
+            private readonly MethodInfo trampoline;
             private bool alive, hasOwnership;
 
-            public MethodBase TrampolineMethod { get; private set; }
+            public MethodBase TrampolineMethod => trampoline;
 
             public TrampolineData(MethodSignature sig) {
-                TrampolineMethod = TrampolinePool.Rent(sig);
+                trampoline = TrampolinePool.Rent(sig);
                 alive = hasOwnership = true;
             }
 
@@ -474,7 +475,7 @@ namespace MonoMod.RuntimeDetour {
                     alive = false;
 
                     if (hasOwnership) {
-                        TrampolinePool.Return((MethodInfo) TrampolineMethod);
+                        TrampolinePool.Return(trampoline);
                     }
                 }
             }
@@ -491,7 +492,7 @@ namespace MonoMod.RuntimeDetour {
                     Helpers.Assert(!hasOwnership);
 
                     if (!alive) {
-                        TrampolinePool.Return((MethodInfo) TrampolineMethod);
+                        TrampolinePool.Return(trampoline);
                     } else {
                         hasOwnership = true;
                     }

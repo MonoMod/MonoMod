@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Core;
+using MonoMod.Core.Platforms;
 using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
@@ -231,8 +232,8 @@ namespace MonoMod.RuntimeDetour {
 
                 // Determine active call depth of the current thread
                 StackFrame[] stackFrames = new StackTrace().GetFrames();
-                string syncProxyID = SyncProxy.GetID();
-                return stackFrames.Count(f => f.GetMethod()?.GetID() == syncProxyID);
+                MethodBase syncProxyIdentif = PlatformTriple.Current.GetIdentifiable(SyncProxy);
+                return stackFrames.Count(f => f.GetMethod() is MethodBase m && PlatformTriple.Current.GetIdentifiable(m) == syncProxyIdentif);
             }
         }
 
