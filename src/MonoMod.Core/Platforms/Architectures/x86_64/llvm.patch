@@ -1,8 +1,8 @@
 diff --git a/lld/MachO/InputFiles.cpp b/lld/MachO/InputFiles.cpp
-index e1289103faf7..baaac6ac894d 100644
+index ed0d98a2ecec..98601f7e3125 100644
 --- a/lld/MachO/InputFiles.cpp
 +++ b/lld/MachO/InputFiles.cpp
-@@ -1285,7 +1285,8 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
+@@ -1286,7 +1286,8 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
  // EH frame target addresses may be encoded as pcrel offsets. However, instead
  // of using an actual pcrel reloc, ld64 emits subtractor relocations instead.
  // This function recovers the target address from the subtractors, essentially
@@ -12,7 +12,7 @@ index e1289103faf7..baaac6ac894d 100644
  //
  // Concretely, we expect our relocations to write the value of `PC -
  // target_addr` to `PC`. `PC` itself is denoted by a minuend relocation that
-@@ -1318,16 +1319,43 @@ template <bool Invert = false>
+@@ -1319,16 +1320,43 @@ template <bool Invert = false>
  Defined *
  targetSymFromCanonicalSubtractor(const InputSection *isec,
                                   std::vector<macho::Reloc>::iterator relocIt) {
@@ -58,7 +58,7 @@ index e1289103faf7..baaac6ac894d 100644
      auto *targetIsec =
          cast<ConcatInputSection>(minuend.referent.get<InputSection *>());
      target = findSymbolAtOffset(targetIsec, minuend.addend);
-@@ -1452,10 +1480,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
+@@ -1453,10 +1481,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
      auto funcAddrRelocIt = isec->relocs.end();
      auto lsdaAddrRelocIt = isec->relocs.end();
      for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
@@ -76,7 +76,7 @@ index e1289103faf7..baaac6ac894d 100644
      }
  
      Defined *funcSym;
-@@ -1466,12 +1497,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
+@@ -1467,12 +1498,13 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
        // to register the unwind entry under same symbol.
        // This is not particularly efficient, but we should run into this case
        // infrequently (only when handling the output of `ld -r`).
@@ -92,3 +92,30 @@ index e1289103faf7..baaac6ac894d 100644
      }
      // The symbol has been coalesced, or already has a compact unwind entry.
      if (!funcSym || funcSym->getFile() != this || funcSym->unwindEntry) {
+diff --git a/lld/MachO/UnwindInfoSection.cpp b/lld/MachO/UnwindInfoSection.cpp
+index b7d0d563360a..bc825e49b6cd 100644
+--- a/lld/MachO/UnwindInfoSection.cpp
++++ b/lld/MachO/UnwindInfoSection.cpp
+@@ -466,6 +466,22 @@ void UnwindInfoSectionImpl::finalize() {
+     return cuEntries[a].functionAddress < cuEntries[b].functionAddress;
+   });
+ 
++  // Fix up function boundaries by erasing all entries without an encoding
++  // which fall into the bounds of another function with unwind info
++  auto funcWrite = cuIndices.begin();
++  uint64_t funcEnd = 0;
++  for (auto funcIt = cuIndices.begin(); funcIt != cuIndices.end(); ++funcIt) {
++    CompactUnwindEntry& cu = cuEntries[*funcIt];
++
++    // Skip entries without an encoding which are in the range of another function
++    if (!cu.encoding && cu.functionAddress < funcEnd)
++        continue;
++
++    funcEnd = cu.functionAddress + cu.functionLength;
++    *funcWrite++ = *funcIt;
++  }
++  cuIndices.erase(funcWrite, cuIndices.end());
++
+   // Record the ending boundary before we fold the entries.
+   cueEndBoundary = cuEntries[cuIndices.back()].functionAddress +
+                    cuEntries[cuIndices.back()].functionLength;
