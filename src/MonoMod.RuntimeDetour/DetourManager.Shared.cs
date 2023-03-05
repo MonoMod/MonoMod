@@ -250,8 +250,8 @@ namespace MonoMod.RuntimeDetour {
         private static MethodInfo GenerateSyncProxy(
             string innerName, MethodSignature Sig,
             Action<MethodDefinition, ILProcessor> emitLoadSyncInfo,
-            Action<MethodDefinition, ILProcessor> emitInvoke,
-            Action<MethodDefinition, ILProcessor>? emitLastCallReturn = null
+            Action<MethodDefinition, ILProcessor, Action> emitInvoke,
+            Action<MethodDefinition, ILProcessor, Action>? emitLastCallReturn = null
         ) {
             using var dmd = Sig.CreateDmd(DebugFormatter.Format($"SyncProxy<{innerName}>"));
 
@@ -310,7 +310,7 @@ namespace MonoMod.RuntimeDetour {
                 eh.TryStart = i;
             }
 
-            emitInvoke(method, il);
+            emitInvoke(method, il, () => il.Emit(OpCodes.Ldloc, syncInfoVar));
             if (returnVar is not null) {
                 il.Emit(OpCodes.Stloc, returnVar);
             }
@@ -330,7 +330,7 @@ namespace MonoMod.RuntimeDetour {
                 // if Interlocked.Decrement returned zero, this has been the last call to the method
                 var notLastCall = il.Create(OpCodes.Nop);
                 il.Emit(OpCodes.Brtrue_S, notLastCall);
-                emitLastCallReturn(method, il);
+                emitLastCallReturn(method, il, () => il.Emit(OpCodes.Ldloc, syncInfoVar));
                 il.Append(notLastCall);
             }
 

@@ -86,7 +86,7 @@ namespace MonoMod.RuntimeDetour {
                         // and load that first param
                         il.Emit(OpCodes.Ldarg_0);
                     },
-                    (method, il) => { // emit the call
+                    (method, il, loadSyncInfo) => { // emit the call
                         il.Emit(OpCodes.Ldarg_0); // load our sync info
                         // now we load the FirstDelegate field, and invoke that
                         il.Emit(OpCodes.Ldfld, method.Module.ImportReference(NativeDetourSyncInfo_FirstDelegate));

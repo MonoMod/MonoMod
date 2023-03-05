@@ -180,19 +180,19 @@ namespace MonoMod.RuntimeDetour {
                 Entry = method;
                 NextTrampoline = TrampolinePool.Rent(Sig);
 
-                DataScope<DynamicReferenceCell> refScope = DynamicReferenceManager.AllocReference(SyncInfo, out DynamicReferenceCell syncInfoCell);
+                DataScope<DynamicReferenceCell> refScope = default;
                 SyncInfo.SyncProxy = GenerateSyncProxy(DebugFormatter.Format($"{Entry}"), Sig,
-                    (method, il) => il.EmitLoadTypedReference(syncInfoCell, typeof(ManagedDetourSyncInfo)),
-                    (method, il) => {
+                    (method, il) => refScope = il.EmitNewTypedReference(SyncInfo, out _),
+                    (method, il, loadSyncInfo) => {
                         foreach (var p in method.Parameters) {
                             il.Emit(OpCodes.Ldarg, p);
                         }
                         il.Emit(OpCodes.Call, method.Module.ImportReference(NextTrampoline));
                     },
-                    (method, il) => {
+                    (method, il, loadSyncInfo) => {
                         // we keep the stolen trampolines alive a bit longer than required by only returning them once *all* threads have returned from the method
                         // but doing it this way avoids an expensive TLV lookup to track per-thread active calls
-                        il.EmitLoadTypedReference(syncInfoCell, typeof(ManagedDetourSyncInfo));
+                        loadSyncInfo();
                         il.Emit(OpCodes.Call, ManagedDetourSyncInfo_ReturnStolenTrampolines);
                     });
                 syncProxyRefScope = refScope;
