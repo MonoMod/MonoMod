@@ -17,12 +17,7 @@ namespace MonoMod.Core.Platforms.Systems {
             eh_native_to_managed = n2m;
         }
 
-        public static PosixExceptionHelper CreateHelper(IArchitecture arch, string resourceName, string filename, Stream tmpFile) {
-            using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
-            Helpers.Assert(embedded is not null);
-
-            embedded.CopyTo(tmpFile);
-
+        public static PosixExceptionHelper CreateHelper(IArchitecture arch, string filename) {
             // we've now got the file on disk, and we know its name
             // lets load it
             var handle = DynDll.OpenLibrary(filename, skipMapping: true);

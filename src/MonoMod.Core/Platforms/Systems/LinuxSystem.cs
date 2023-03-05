@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -313,8 +314,12 @@ namespace MonoMod.Core.Platforms.Systems {
 
             using (var fh = new SafeFileHandle((IntPtr) fd, true))
             using (var fs = new FileStream(fh, FileAccess.Write)) {
-                return PosixExceptionHelper.CreateHelper(arch, soname, fname, fs);
+                using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname);
+                Helpers.Assert(embedded is not null);
+
+                embedded.CopyTo(fs);
             }
+            return PosixExceptionHelper.CreateHelper(arch, fname);
         }
     }
 }

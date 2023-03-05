@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using static MonoMod.Core.Interop.OSX;
@@ -417,10 +418,15 @@ namespace MonoMod.Core.Platforms.Systems {
                 ArrayPool<byte>.Shared.Return(templ);
             }
 
+
             using (var fh = new SafeFileHandle((IntPtr) fd, true))
             using (var fs = new FileStream(fh, FileAccess.Write)) {
-                return PosixExceptionHelper.CreateHelper(arch, soname, fname, fs);
+                using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname);
+                Helpers.Assert(embedded is not null);
+
+                embedded.CopyTo(fs);
             }
+            return PosixExceptionHelper.CreateHelper(arch, fname);
         }
     }
 }
