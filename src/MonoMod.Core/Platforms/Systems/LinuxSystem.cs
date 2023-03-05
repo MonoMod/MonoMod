@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -276,21 +275,18 @@ namespace MonoMod.Core.Platforms.Systems {
             arch = value;
         }
 
-        private ExceptionHelper? lazyNativeExceptionHelper;
+        private PosixExceptionHelper? lazyNativeExceptionHelper;
         public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= CreateNativeExceptionHelper();
 
         private static ReadOnlySpan<byte> NEHTempl => "/tmp/mm-exhelper.so.XXXXXX"u8;
 
-        private unsafe ExceptionHelper CreateNativeExceptionHelper() {
+        private unsafe PosixExceptionHelper CreateNativeExceptionHelper() {
             Helpers.Assert(arch is not null);
 
             var soname = arch.Target switch {
                 ArchitectureKind.x86_64 => "exhelper_linux_x86_64.so",
                 _ => throw new NotImplementedException($"No exception helper for current arch")
             };
-
-            using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname);
-            Helpers.Assert(embedded is not null);
 
             // we want to get a temp file, write our helper to it, and load it
             var templ = ArrayPool<byte>.Shared.Rent(NEHTempl.Length + 1);
@@ -317,57 +313,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
             using (var fh = new SafeFileHandle((IntPtr) fd, true))
             using (var fs = new FileStream(fh, FileAccess.Write)) {
-                embedded.CopyTo(fs);
-            }
-
-            // we've now got the file on disk, and we know its name
-            // lets load it
-            var handle = DynDll.OpenLibrary(fname, skipMapping: true);
-            IntPtr eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed;
-            try {
-                eh_get_exception_ptr = DynDll.GetFunction(handle, nameof(eh_get_exception_ptr));
-                eh_managed_to_native = DynDll.GetFunction(handle, nameof(eh_managed_to_native));
-                eh_native_to_managed = DynDll.GetFunction(handle, nameof(eh_native_to_managed));
-
-                Helpers.Assert(eh_get_exception_ptr != IntPtr.Zero);
-                Helpers.Assert(eh_managed_to_native != IntPtr.Zero);
-                Helpers.Assert(eh_native_to_managed != IntPtr.Zero);
-            } catch {
-                _ = DynDll.CloseLibrary(handle);
-                throw;
-            }
-
-            return new ExceptionHelper(arch, eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed);
-        }
-
-        private sealed class ExceptionHelper : INativeExceptionHelper {
-            private readonly IArchitecture arch;
-            private readonly IntPtr eh_get_exception_ptr;
-            private readonly IntPtr eh_managed_to_native;
-            private readonly IntPtr eh_native_to_managed;
-
-            public ExceptionHelper(IArchitecture arch, IntPtr getExPtr, IntPtr m2n, IntPtr n2m) {
-                this.arch = arch;
-                eh_get_exception_ptr = getExPtr;
-                eh_managed_to_native = m2n;
-                eh_native_to_managed = n2m;
-            }
-
-            public unsafe IntPtr NativeException {
-                get => *((delegate* unmanaged[Cdecl]<IntPtr*>) eh_get_exception_ptr)();
-                set => *((delegate* unmanaged[Cdecl]<IntPtr*>) eh_get_exception_ptr)() = value;
-            }
-
-            public IntPtr CreateManagedToNativeHelper(IntPtr target, out IDisposable? handle) {
-                var alloc = arch.CreateSpecialEntryStub(eh_managed_to_native, target);
-                handle = alloc;
-                return alloc.BaseAddress;
-            }
-
-            public IntPtr CreateNativeToManagedHelper(IntPtr target, out IDisposable? handle) {
-                var alloc = arch.CreateSpecialEntryStub(eh_native_to_managed, target);
-                handle = alloc;
-                return alloc.BaseAddress;
+                return PosixExceptionHelper.CreateHelper(arch, soname, fname, fs);
             }
         }
     }

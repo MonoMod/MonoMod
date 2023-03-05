@@ -15,6 +15,9 @@ namespace MonoMod.Core.Interop {
         [DllImport(LibSystem, EntryPoint = "sys_icache_invalidate")]
         public static unsafe extern void sys_icache_invalidate(void* start, nuint size);
 
+        [DllImport(LibSystem, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mkstemp", SetLastError = true)]
+        public static extern unsafe int MkSTemp(byte* template);
+
         /*
         #ifdef  mig_external
         mig_external

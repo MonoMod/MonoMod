@@ -1,12 +1,20 @@
-﻿using MonoMod.Core.Platforms.Memory;
+﻿using Microsoft.Win32.SafeHandles;
+using MonoMod.Core.Interop;
+using MonoMod.Core.Platforms.Memory;
+using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using static MonoMod.Core.Interop.OSX;
 
 namespace MonoMod.Core.Platforms.Systems {
-    internal class MacOSSystem : ISystem {
+    internal class MacOSSystem : ISystem, IInitialize<IArchitecture> {
         public OSKind Target => OSKind.OSX;
 
         public SystemFeature Features => SystemFeature.RXPages | SystemFeature.RWXPages;
@@ -25,9 +33,6 @@ namespace MonoMod.Core.Platforms.Systems {
                 throw new NotImplementedException();
             }
         }
-
-        // TODO: MacOS needs a native exception helper; implement it
-        public INativeExceptionHelper? NativeExceptionHelper => null;
 
         public unsafe IEnumerable<string?> EnumerateLoadedModuleFiles() {
             var infoCnt = task_dyld_info.Count;
@@ -368,6 +373,53 @@ namespace MonoMod.Core.Platforms.Systems {
                     isFree = false;
                     return false;
                 }
+            }
+        }
+
+        private IArchitecture? arch;
+        void IInitialize<IArchitecture>.Initialize(IArchitecture value) {
+            arch = value;
+        }
+
+        private PosixExceptionHelper? lazyNativeExceptionHelper;
+        public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= CreateNativeExceptionHelper();
+
+        private static ReadOnlySpan<byte> NEHTempl => "/tmp/mm-exhelper.dylib.XXXXXX"u8;
+
+        private unsafe PosixExceptionHelper CreateNativeExceptionHelper() {
+            Helpers.Assert(arch is not null);
+
+            var soname = arch.Target switch {
+                ArchitectureKind.x86_64 => "exhelper_macos_x86_64.dylib",
+                _ => throw new NotImplementedException($"No exception helper for current arch")
+            };
+
+            // we want to get a temp file, write our helper to it, and load it
+            var templ = ArrayPool<byte>.Shared.Rent(NEHTempl.Length + 1);
+            int fd;
+            string fname;
+            try {
+                templ.AsSpan().Fill(0);
+                NEHTempl.CopyTo(templ);
+
+                fixed (byte* pTmpl = templ)
+                    fd = MkSTemp(pTmpl);
+
+                if (fd == -1) {
+                    var lastError = Marshal.GetLastWin32Error();
+                    var ex = new Win32Exception(lastError);
+                    MMDbgLog.Error($"Could not create temp file for NativeExceptionHelper: {lastError} {ex}");
+                    throw ex;
+                }
+
+                fname = Encoding.UTF8.GetString(templ, 0, NEHTempl.Length);
+            } finally {
+                ArrayPool<byte>.Shared.Return(templ);
+            }
+
+            using (var fh = new SafeFileHandle((IntPtr) fd, true))
+            using (var fs = new FileStream(fh, FileAccess.Write)) {
+                return PosixExceptionHelper.CreateHelper(arch, soname, fname, fs);
             }
         }
     }

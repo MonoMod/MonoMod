@@ -1,4 +1,4 @@
-;:; nasm -f macho64 -O0 exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld64.lld -arch x86_64 -undefined dynamic_lookup -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
+;:; nasm -f macho64 -O0 exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld64.lld -dylib -arch x86_64 -undefined dynamic_lookup -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
 ;:; needs a patched nasm + LLVM (for now) ._.
 
 %pragma macho lprefix L_
@@ -15,14 +15,13 @@
 
 %define SHR_DECLFN(name) GLOBAL name
 %define SHR_IMPFN(name) EXTERN name
-%define SHR_EXTFN(name) name wrt ..gotpcrel
+%define SHR_EXTFN(name) [name wrt ..gotpcrel]
 
 %macro SHR_EXTRA_TEXT 0
 
 eh_get_exception_ptr:
     CFI_STARTPROC LSDA_none
     mov rax, [rel cur_ex_ptr wrt ..tlvp]
-    call rax
     ret
     CFI_ENDPROC
 

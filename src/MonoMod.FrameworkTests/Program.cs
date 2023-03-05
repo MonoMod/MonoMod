@@ -37,6 +37,9 @@ using (new Hook(typeof(ReadOnlyMemory<char>).GetMethod("ToString")!, (ReadOnlyMe
 {
     using var tcTest = new MonoMod.UnitTest.DetourOrderTest(new DummyOutputHelper());
     tcTest.TestDetoursOrder();
+} {
+    using var tcTest = new MonoMod.UnitTest.JitExceptionTest(new DummyOutputHelper());
+    tcTest.TestJitExceptions();
 }
 
 #endif
