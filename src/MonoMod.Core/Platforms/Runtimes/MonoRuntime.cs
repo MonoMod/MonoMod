@@ -149,7 +149,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             // see https://github.com/dotnet/runtime/blob/v6.0.5/src/mono/mono/mini/mini-amd64.c line 472, 847, 1735
             if (system.DefaultAbi is { } abi) {
-                if (PlatformDetection.OS is OSKind.Linux && PlatformDetection.Architecture is ArchitectureKind.x86_64) {
+                if (PlatformDetection.OS.GetKernel() is OSKind.Linux or OSKind.OSX && PlatformDetection.Architecture is ArchitectureKind.x86_64) {
                     // Linux on AMD64 doesn't actually use SystemV for managed calls.
                     abi = abi with {
                         Classifier = LinuxAmd64Classifier
