@@ -51,10 +51,7 @@ namespace MonoMod.UnitTest {
 
             // Test removing our own hook while already in an active call
             hook.Dispose();
-            try {
-                orig(hook, true);
-                Assert.Fail("Mustn't be able to call orig after disposing our own hook");
-            } catch(InvalidOperationException) {}
+            Assert.Throws(typeof(InvalidOperationException), () => orig(hook, true));
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
