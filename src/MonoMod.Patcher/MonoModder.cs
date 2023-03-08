@@ -86,6 +86,7 @@ namespace MonoMod {
 
         public Dictionary<ModuleDefinition, List<ModuleDefinition>> DependencyMap = new Dictionary<ModuleDefinition, List<ModuleDefinition>>();
         public Dictionary<string, ModuleDefinition> DependencyCache = new Dictionary<string, ModuleDefinition>();
+        public Dictionary<ModuleDefinition, Dictionary<string, TypeReference>> ForwardedTypeCache = new Dictionary<ModuleDefinition, Dictionary<string, TypeReference>>();
 
         public Func<ICustomAttributeProvider, TypeReference, bool> ShouldCleanupAttrib;
 
@@ -282,6 +283,7 @@ namespace MonoMod {
                     dep.Value.Dispose();
 #endif
                 DependencyCache.Clear();
+                ForwardedTypeCache.Clear();
             }
 
             if (all || moduleSpecific) {
@@ -402,6 +404,9 @@ namespace MonoMod {
         public virtual void MapDependency(ModuleDefinition main, string name, string fullName = null, AssemblyNameReference depRef = null) {
             if (!DependencyMap.TryGetValue(main, out List<ModuleDefinition> mapped))
                 DependencyMap[main] = mapped = new List<ModuleDefinition>();
+
+            if (!main.Name.StartsWith("System") && name.StartsWith("System.Private"))
+                return;
 
             if (fullName != null && (
                 DependencyCache.TryGetValue(fullName, out ModuleDefinition dep) ||
@@ -960,13 +965,45 @@ namespace MonoMod {
                 return type;
             if (fullName.StartsWith("<PrivateImplementationDetails>/", StringComparison.Ordinal))
                 return null;
+
             if (crawled.Contains(main))
                 return null;
             crawled.Push(main);
-            foreach (ModuleDefinition dep in DependencyMap[main])
-                if (!(RemovePatchReferences && dep.Assembly.Name.Name.EndsWith(".mm", StringComparison.Ordinal)) && (type = FindType(dep, fullName, crawled)) != null)
-                    return type;
-            return null;
+
+            TypeReference CrawlDependencies(bool crawlPrivateSystemLibs = false) {
+                foreach (ModuleDefinition dep in DependencyMap[main]) {
+                    if (RemovePatchReferences && dep.Assembly.Name.Name.EndsWith(".mm", StringComparison.Ordinal))
+                        continue;
+
+                    if (!crawlPrivateSystemLibs && dep.Assembly.Name.Name.StartsWith("System.Private"))
+                        continue;
+
+                    if (FindType(dep, fullName, crawled) is { } typeRef)
+                        return typeRef;
+                }
+                return null;
+            }
+
+            if (main.HasExportedTypes) {
+                if (!ForwardedTypeCache.TryGetValue(main, out Dictionary<string, TypeReference> forwardedTypes))
+                    ForwardedTypeCache.Add(main, forwardedTypes = new Dictionary<string, TypeReference>());
+
+                if (!forwardedTypes.TryGetValue(fullName, out TypeReference forwardedType)) {
+                    if (main.ExportedTypes.FirstOrDefault(t => t.FullName == fullName) is { } exportedType) {
+                        TypeReference crawledType = CrawlDependencies(true);
+                        if (crawledType != null)
+                            forwardedType = new TypeReference(exportedType.Namespace, exportedType.Name, main, main.Assembly.Name, crawledType.IsValueType);
+                        else
+                            forwardedType = new TypeReference(exportedType.Namespace, exportedType.Name, main, main.Assembly.Name);
+                    }
+                    forwardedTypes.Add(fullName, forwardedType);
+                }
+
+                if (forwardedType != null)
+                    return forwardedType;
+            }
+
+            return CrawlDependencies();
         }
         public virtual TypeReference FindTypeDeep(string name) {
             TypeReference type = FindType(name, false);
