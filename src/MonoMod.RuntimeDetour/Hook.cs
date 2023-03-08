@@ -456,7 +456,6 @@ namespace MonoMod.RuntimeDetour {
 
         private sealed class TrampolineData : IDetourTrampoline, IDisposable {
 
-            private readonly object LOCK = new object();
             private readonly MethodInfo trampoline;
             private bool alive, hasOwnership;
 
@@ -468,7 +467,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             public void Dispose() {
-                lock (LOCK) {
+                lock (this) {
                     if (!alive) {
                         return;
                     }
@@ -481,14 +480,14 @@ namespace MonoMod.RuntimeDetour {
             }
 
             public void StealTrampolineOwnership() {
-                lock (LOCK) {
+                lock (this) {
                     Helpers.Assert(alive && hasOwnership);
                     hasOwnership = false;
                 }
             }
 
             public void ReturnTrampolineOwnership() {
-                lock (LOCK) {
+                lock (this) {
                     Helpers.Assert(!hasOwnership);
 
                     if (!alive) {

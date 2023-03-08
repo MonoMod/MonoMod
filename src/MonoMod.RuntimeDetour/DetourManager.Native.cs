@@ -194,34 +194,10 @@ namespace MonoMod.RuntimeDetour {
                 return dmd.Generate();
             }
 
-            private static MethodInfo GenerateRemovedStub(Type origDelType, Type nextDelType) {
-                var nextInvoke = nextDelType.GetMethod("Invoke")!;
-                Helpers.Assert(nextInvoke is not null);
-
-                using var dmd = MethodSignature.ForMethod(nextInvoke, true).CreateDmd(DebugFormatter.Format($"RemovedStub<{nextDelType}>"));
-                Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);
-                var module = dmd.Module;
-
-                var il = dmd.GetILProcessor();
-
-                // instantiate a new System.InvalidOperationException and throw it
-                il.Emit(OpCodes.Ldstr, "Native detour has been removed");
-                il.Emit(OpCodes.Newobj, module.ImportReference(typeof(InvalidOperationException).GetConstructor(new Type[] { typeof(string) })));
-                il.Emit(OpCodes.Throw);
-
-                return dmd.Generate();
-            }
-
             private static readonly ConditionalWeakTable<Type, MethodInfo> chainMethodCache = new();
             private static MethodInfo GetChainMethod(Type origDelType, Type nextDelType) {
                 // we can cache on only origDelType because technically, nextDelType is derived from origDelType
                 return chainMethodCache.GetValue(origDelType, orig => GenerateChainMethod(orig, nextDelType));
-            }
-
-            private static readonly ConditionalWeakTable<Type, MethodInfo> removedStubCache = new();
-            private static MethodInfo GetRemovedStub(Type origDelType, Type nextDelType) {
-                // we can cache on only origDelType because technically, nextDelType is derived from origDelType
-                return removedStubCache.GetValue(origDelType, orig => GenerateRemovedStub(orig, nextDelType));
             }
 
             private Delegate? selfDelegate;
@@ -230,7 +206,9 @@ namespace MonoMod.RuntimeDetour {
             }
 
             public void Remove() {
-                Next = GetRemovedStub(Orig.GetType(), NextType).CreateDelegate(NextType, null);
+                var nextInvoke = NextType.GetMethod("Invoke")!;
+                Helpers.Assert(nextInvoke is not null);
+                Next = GetRemovedStub(MethodSignature.ForMethod(nextInvoke)).CreateDelegate(NextType, null);
             }
         }
         #endregion

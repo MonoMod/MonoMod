@@ -9,7 +9,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
@@ -90,25 +89,6 @@ namespace MonoMod.RuntimeDetour {
             }
             protected virtual void ReturnStolenTrampolineInner() => throw new NotSupportedException("Can't steal ManagedChainNode trampoline");
 
-            private static MethodInfo GenerateRemovedStub(MethodSignature trampolineSig) {
-                using var dmd = trampolineSig.CreateDmd(DebugFormatter.Format($"RemovedStub<{trampolineSig}>"));
-                Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);
-                var module = dmd.Module;
-
-                var il = dmd.GetILProcessor();
-
-                // instantiate a new System.InvalidOperationException and throw it
-                il.Emit(OpCodes.Ldstr, "Detour has been removed");
-                il.Emit(OpCodes.Newobj, module.ImportReference(typeof(InvalidOperationException).GetConstructor(new Type[] { typeof(string) })));
-                il.Emit(OpCodes.Throw);
-
-                return dmd.Generate();
-            }
-
-            private static readonly ConditionalWeakTable<MethodSignature, MethodInfo> removedStubCache = new();
-            private static MethodInfo GetRemovedStub(MethodSignature trampolineSig) {
-                return removedStubCache.GetValue(trampolineSig, orig => GenerateRemovedStub(trampolineSig));
-            }
         }
 
         internal sealed class ManagedDetourChainNode : ManagedChainNode {
