@@ -9,10 +9,16 @@ namespace MonoMod.RuntimeDetour {
         DetourConfig? Config { get; }
     }
 
+    internal interface IDetourTrampoline {
+        MethodBase TrampolineMethod { get; }
+        void StealTrampolineOwnership();
+        void ReturnTrampolineOwnership();
+    }
+
     internal interface IDetour : IDetourBase {
         MethodInfo PublicTarget { get; }
         MethodInfo InvokeTarget { get; }
-        MethodBase NextTrampoline { get; }
+        IDetourTrampoline NextTrampoline { get; }
     }
 
     internal interface IILHook : IDetourBase {
