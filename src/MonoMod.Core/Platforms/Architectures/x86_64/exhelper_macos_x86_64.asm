@@ -1,4 +1,4 @@
-;:; nasm -f macho64 -O0 exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld64.lld -dylib -arch x86_64 -undefined dynamic_lookup -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
+;:; nasm -f macho64 -O0 exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld64.lld -dylib -arch x86_64 -L. -lSystem -undefined dynamic_lookup -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
 ;:; needs a patched nasm + LLVM (for now) ._.
 
 %pragma macho lprefix L_
