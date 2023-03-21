@@ -17,12 +17,45 @@
 %define SHR_IMPFN(name) EXTERN name
 %define SHR_EXTFN(name) [name wrt ..gotpcrel]
 
+%define SAVE_XMM_REGS 0
+
 %macro SHR_EXTRA_TEXT 0
 
+; eh_get_exception pointer is expected to not clobber anything except rax (because we can expect that on Linux)
+; as a result, we're using a kind-of custom calling convention that has argument registers be callee-saved, and so
+; this function must save and restore argument registers. I don't think we need to care about vector regs though,
+; because 1. this isn't used anywhere that uses them, and 2. I don't think tlv_get_addr uses them.
 eh_get_exception_ptr:
     CFI_STARTPROC LSDA_none
+%xdefine regSlots 8
+%if SAVE_XMM_REGS
+    %assign regSlots regSlots + 8*2
+%endif
+    DECL_REG_SLOTS regSlots
+    FUNCTION_PROLOG
+    svreg rcx, rdx, rsi, rdi, r8, r9, r10, r11
+
+%if SAVE_XMM_REGS
+%xdefine i 0
+%rep 8
+    movdqu [rbp - 8*8 - 16*(i+1)], xmm%+i
+    %assign i i+1
+%endrep
+%endif
+
     mov rdi, [rel cur_ex_ptr wrt ..tlvp]
     call [rdi]
+    
+%if SAVE_XMM_REGS
+%xdefine i 0
+%rep 8
+    movdqu xmm%+i, [rbp - 8*8 - 16*(i+1)]
+    %assign i i+1
+%endrep
+%endif
+
+    ldreg rcx, rdx, rsi, rdi, r8, r9, r10, r11
+    FUNCTION_EPILOG
     ret
     CFI_ENDPROC
 

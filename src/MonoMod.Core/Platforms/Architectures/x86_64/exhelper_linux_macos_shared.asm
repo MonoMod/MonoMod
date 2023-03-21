@@ -49,7 +49,7 @@ eh_managed_to_native:
     ; clear rax for safety
     xor eax, eax
     ldreg r15
-    FRAME_EPILOG
+    FUNCTION_EPILOG
     ret
     
     CFI_ENDPROC
@@ -72,12 +72,12 @@ eh_native_to_managed:
     ; return value in rax now
 
     ; load cur_ex_ptr
-    mov r10, rax
+    mov r11, rax
     call eh_get_exception_ptr
     mov rax, [rax]
-    xchg rax, r10
+    xchg rax, r11
     ; if it's nonzero, rethrow
-    test r10, r10
+    test r11, r11
     jnz .do_rethrow
 
     CFI_push
@@ -89,7 +89,7 @@ eh_native_to_managed:
     CFI_pop
 
 .do_rethrow:
-    mov rdi, r10
+    mov rdi, r11
     call SHR_EXTFN(_Unwind_RaiseException)
     int3 ; deliberately don't handle failures at this point. This will have been a crash anyway.
     CFI_ENDPROC
