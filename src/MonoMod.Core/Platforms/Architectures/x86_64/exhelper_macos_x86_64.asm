@@ -1,7 +1,7 @@
-;:; nasm -f macho64 -O0 exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld64.lld -dylib -arch x86_64 -undefined dynamic_lookup -platform_version macos 10.6 10.6 -x -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
+;:; nasm -f macho64 -O0 exhelper_macos_x86_64.asm -o exhelper_macos_x86_64.o && ld64.lld -dylib -arch x86_64 -undefined dynamic_lookup -platform_version macos 10.6 10.6 -x -L . -lSystem -o exhelper_macos_x86_64.dylib exhelper_macos_x86_64.o
 ;:; needs a patched nasm + LLVM (for now) ._.
 
-%pragma macho lprefix L_
+%pragma macho lprefix _
 %pragma macho gprefix _
 
 %define DWARF_EH_SECTION_NAME __TEXT,__eh_frame
@@ -21,7 +21,8 @@
 
 eh_get_exception_ptr:
     CFI_STARTPROC LSDA_none
-    mov rax, [rel cur_ex_ptr wrt ..tlvp]
+    mov rdi, [rel cur_ex_ptr wrt ..tlvp]
+    call [rdi]
     ret
     CFI_ENDPROC
 
@@ -29,7 +30,20 @@ eh_get_exception_ptr:
 
 %include "exhelper_linux_macos_shared.asm"
 
+SHR_IMPFN(_tlv_bootstrap)
+
 section __DATA,__thread_bss thread_bss align=8
+thread_bss_start:
     cur_ex_ptr$tlv$init: resq 1
+
+; this is a sequence of TLVDescriptors
+;    struct TLVDescriptor
+;    {
+;        void*			(*thunk)(struct TLVDescriptor*);
+;        unsigned long	key;
+;        unsigned long	offset;
+;    };
 section __DATA,__thread_vars align=8
-    cur_ex_ptr: dq 0
+    cur_ex_ptr: dq _tlv_bootstrap
+    dq 0
+    dq cur_ex_ptr$tlv$init - thread_bss_start
