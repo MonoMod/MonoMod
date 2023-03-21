@@ -1,12 +1,15 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Core;
+using MonoMod.Core.Platforms;
 using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace MonoMod.RuntimeDetour {
@@ -190,10 +193,15 @@ namespace MonoMod.RuntimeDetour {
 
         #region SyncInfo
         internal class DetourSyncInfo {
+            public MethodBase? SyncProxy;
             public int ActiveCalls;
             public int UpdatingThread;
 
-            public void WaitForChainUpdate() {
+            public bool WaitForChainUpdate() {
+                // If this is a nested call, allow the call to continue without waiting for the update to avoid deadlocks
+                if (Volatile.Read(ref ActiveCalls) > 1 && DetermineThreadCallDepth() > 1)
+                    return true;
+
                 _ = Interlocked.Decrement(ref ActiveCalls);
 
                 if (UpdatingThread == EnvironmentEx.CurrentManagedThreadId) {
@@ -204,15 +212,29 @@ namespace MonoMod.RuntimeDetour {
                 while (Volatile.Read(ref UpdatingThread) != -1) {
                     spin.SpinOnce();
                 }
+
+                return false;
             }
 
-            public void WaitForNoActiveCalls() {
-                // TODO: find a decent way to prevent deadlocks here
+            public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread) {
+                int threadCallDepth = DetermineThreadCallDepth();
+                hasActiveCallsFromThread = threadCallDepth > 0; 
 
+                // Wait for other threads to have returned from the function
                 var spin = new SpinWait();
-                while (Volatile.Read(ref ActiveCalls) > 0) {
+                while (Volatile.Read(ref ActiveCalls) > threadCallDepth) {
                     spin.SpinOnce();
                 }
+            }
+
+            private int DetermineThreadCallDepth() {
+                if (Volatile.Read(ref ActiveCalls) <= 0 || SyncProxy == null)
+                    return 0;
+
+                // Determine active call depth of the current thread
+                StackFrame[] stackFrames = new StackTrace().GetFrames();
+                MethodBase syncProxyIdentif = PlatformTriple.Current.GetIdentifiable(SyncProxy);
+                return stackFrames.Count(f => f.GetMethod() is { } m && PlatformTriple.Current.GetIdentifiable(m) == syncProxyIdentif);
             }
         }
 
@@ -229,7 +251,8 @@ namespace MonoMod.RuntimeDetour {
         private static MethodInfo GenerateSyncProxy(
             string innerName, MethodSignature Sig,
             Action<MethodDefinition, ILProcessor> emitLoadSyncInfo,
-            Action<MethodDefinition, ILProcessor> emitInvoke
+            Action<MethodDefinition, ILProcessor, Action> emitInvoke,
+            Action<MethodDefinition, ILProcessor, Action>? emitLastCallReturn = null
         ) {
             using var dmd = Sig.CreateDmd(DebugFormatter.Format($"SyncProxy<{innerName}>"));
 
@@ -264,8 +287,10 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Beq_S, noWait);
 
             // if UpdatingChain was true, wait for that to finish, then jump back up to the top, because WaitForChainUpdate decrements
+            // if WaitForChainUpdate returns true, continue with the call without waiting anyway
             il.Emit(OpCodes.Ldloc, syncInfoVar);
             il.Emit(OpCodes.Call, module.ImportReference(DetourSyncInfo_WaitForChainUpdate));
+            il.Emit(OpCodes.Brtrue_S, noWait);
             il.Emit(OpCodes.Br_S, checkWait);
 
             // if UpdatingChain was false, we're good to continue
@@ -286,7 +311,7 @@ namespace MonoMod.RuntimeDetour {
                 eh.TryStart = i;
             }
 
-            emitInvoke(method, il);
+            emitInvoke(method, il, () => il.Emit(OpCodes.Ldloc, syncInfoVar));
             if (returnVar is not null) {
                 il.Emit(OpCodes.Stloc, returnVar);
             }
@@ -299,7 +324,17 @@ namespace MonoMod.RuntimeDetour {
             il.Append(finallyStartIns);
             il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
             il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Decrement));
-            il.Emit(OpCodes.Pop);
+
+            if (emitLastCallReturn == null) {
+                il.Emit(OpCodes.Pop);
+            } else {
+                // if Interlocked.Decrement returned zero, this has been the last call to the method
+                var notLastCall = il.Create(OpCodes.Nop);
+                il.Emit(OpCodes.Brtrue_S, notLastCall);
+                emitLastCallReturn(method, il, () => il.Emit(OpCodes.Ldloc, syncInfoVar));
+                il.Append(notLastCall);
+            }
+
             il.Emit(OpCodes.Endfinally);
             eh.HandlerEnd = beforeReturnIns;
 
@@ -328,6 +363,26 @@ namespace MonoMod.RuntimeDetour {
                 ManagerData = null;
                 IsValid = true;
             }
+        }
+        
+        private static MethodInfo GenerateRemovedStub(MethodSignature trampolineSig) {
+            using var dmd = trampolineSig.CreateDmd(DebugFormatter.Format($"RemovedStub<{trampolineSig}>"));
+            Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);
+            var module = dmd.Module;
+
+            var il = dmd.GetILProcessor();
+
+            // instantiate a new System.InvalidOperationException and throw it
+            il.Emit(OpCodes.Ldstr, "Detour has been removed");
+            il.Emit(OpCodes.Newobj, module.ImportReference(typeof(InvalidOperationException).GetConstructor(new Type[] { typeof(string) })));
+            il.Emit(OpCodes.Throw);
+
+            return dmd.Generate();
+        }
+
+        private static readonly ConditionalWeakTable<MethodSignature, MethodInfo> removedStubCache = new();
+        private static MethodInfo GetRemovedStub(MethodSignature trampolineSig) {
+            return removedStubCache.GetValue(trampolineSig, orig => GenerateRemovedStub(trampolineSig));
         }
     }
 }
