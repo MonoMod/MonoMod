@@ -1,5 +1,4 @@
 ﻿using Microsoft.Win32.SafeHandles;
-using MonoMod.Core.Interop;
 using MonoMod.Core.Platforms.Memory;
 using MonoMod.Core.Utils;
 using MonoMod.Utils;

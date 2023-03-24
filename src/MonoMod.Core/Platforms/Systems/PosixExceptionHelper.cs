@@ -1,7 +1,5 @@
 ﻿using MonoMod.Utils;
 using System;
-using System.IO;
-using System.Reflection;
 
 namespace MonoMod.Core.Platforms.Systems {
     internal sealed class PosixExceptionHelper : INativeExceptionHelper {

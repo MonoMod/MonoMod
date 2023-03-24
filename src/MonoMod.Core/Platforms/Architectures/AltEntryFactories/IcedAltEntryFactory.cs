@@ -2,7 +2,6 @@
 using MonoMod.Utils;
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 
 namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
     internal class IcedAltEntryFactory : IAltEntryFactory {

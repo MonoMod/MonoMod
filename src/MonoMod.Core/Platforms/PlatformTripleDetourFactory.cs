@@ -9,7 +9,7 @@ namespace MonoMod.Core.Platforms {
     /// <summary>
     /// An <see cref="IDetourFactory"/> implementation based on <see cref="PlatformTriple"/>.
     /// </summary>
-    public class PlatformTripleDetourFactory : IDetourFactory {
+    internal sealed class PlatformTripleDetourFactory : IDetourFactory {
 
         private readonly PlatformTriple triple;
 
