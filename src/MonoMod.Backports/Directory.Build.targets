@@ -2,162 +2,44 @@
 <Project>
 
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
-  
+
+  <PropertyGroup>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+  </PropertyGroup>
+    
   <ItemGroup>
-    <!-- Filter application -->
-    <ProjectReference Include="$(MMSourcePath)MonoMod.Backports.Filter\MonoMod.Backports.Filter.csproj" 
-                      Reference="false" ReferenceOutputAssembly="false" 
-                      OutputItemType="BackportsFilter" Private="false"
-                      SetTargetFramework="TargetFramework=net6.0"
-                      SkipGetTargetFrameworkProperties="true"
-                      Pack="false"/>
+    <PackageReference Include="System.Collections.Immutable" Version="6.0.0">
+      <PrivateAssets>all;buildTransitive</PrivateAssets>
+      <ExcludeAssets>all;buildTransitive</ExcludeAssets>
+      <IncludeAssets>none</IncludeAssets>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <GeneratePathProperty>true</GeneratePathProperty>
+      <Pack>false</Pack>
+    </PackageReference>
   </ItemGroup>
 
-  <PropertyGroup>
-    <_MSBPropsFile>$(IntermediateOutputPath)Backports.TfmFilter.props</_MSBPropsFile>
-    <_BPCompileCache>$(IntermediateOutputPath)Backports.TfmFilter.cache</_BPCompileCache>
-    <_ToSortPath>$(IntermediateOutputPath)to_sort.txt</_ToSortPath>
-    <_SortedPath>$(IntermediateOutputPath)sorted.txt</_SortedPath>
-    <_FileOptionsPath>$(IntermediateOutputPath)to_compile.txt</_FileOptionsPath>
-    <_ToRemovePath>$(IntermediateOutputPath)to_remove.txt</_ToRemovePath>
-    <CompileRemovedItem>____DoesNotExist____</CompileRemovedItem>
-    <_DidRegenerateBPProps>false</_DidRegenerateBPProps>
-  </PropertyGroup>
+  <UsingTask TaskName="FilterTfmsTask"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <Task>
+      <Reference Include="$(PkgSystem_Collections_Immutable)\lib\netstandard2.0\System.Collections.Immutable.dll" />
+      <Code Language="cs" Type="Class" Source="$(MMSourcePath)MonoMod.Backports.Tasks\FilterTfmsTask.cs" />
+    </Task>
+  </UsingTask>
 
-  <Import Project="$(_MSBPropsFile)" Condition="Exists('$(_MSBPropsFile)')"/>
-  
-  <Target Name="_GenerateSortedItemsList" DependsOnTargets="_ComputeFilterBinaryPath" BeforeTargets="_GenerateCompileDependencyCache"
-          Condition="'$(dotnet-nugetize)' == ''">
-    <!-- TODO: come up with a better way to sort items -->
-    <WriteLinesToFile File="$(_ToSortPath)" Overwrite="true" WriteOnlyWhenDifferent="true" Lines="@(Compile);@($(CompileRemovedItem))" />
-    
+  <Target Name="FilterTFMRestrictedFiles" BeforeTargets="_GenerateCompileDependencyCache">
     <ItemGroup>
-      <_SortArguments Include="$(_ToSortPath)"/>
-      <_SortArguments Include="$(_SortedPath)" />
+      <_CompileUnfiltered Include="@(Compile)" />
     </ItemGroup>
-
-    <Exec Command="&quot;$(_BackportsFilterBinary)&quot; sort @(_SortArguments->'&quot;%(Identity)&quot;',' ')">
-      <Output TaskParameter="ExitCode" PropertyName="_FilterExitCode" />
-    </Exec>
-
-    <Error Text="Sort failed" Condition="'$(_FilterExitCode)' != '0'" />
-    
-    <ReadLinesFromFile File="$(_SortedPath)">
-      <Output TaskParameter="Lines" ItemName="_SortedFilterInputs" />
-    </ReadLinesFromFile>
-    
-    <ItemGroup>
-      <FileWrites Include="$(_ToSortPath)" />
-      <FileWrites Include="$(_SortedPath)" />
-    </ItemGroup>
-    
-    <!-- Do some shenanigans to make sure that Compile has the sorted order too -->
+    <FilterTfmsTask Items="@(_CompileUnfiltered)"
+                    TargetFrameworkKind="$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))"
+                    TargetFrameworkVersion="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))">
+      <Output TaskParameter="Filtered" ItemName="_CompileFiltered" />
+    </FilterTfmsTask>
     <ItemGroup>
       <Compile Remove="@(Compile)" />
-      <Compile Include="@(_SortedFilterInputs)" />
-      <Compile Remove="@($(CompileRemovedItem))" />
+      <Compile Include="@(_CompileFiltered)" />
     </ItemGroup>
   </Target>
-  
-  <Target Name="_GenerateBPCompileCache" Condition="'$(DesignTimeBuild)' != 'true' and '$(BuildingProject)' == 'true'"
-          DependsOnTargets="_GenerateSortedItemsList">
-    <ItemGroup>
-      <_BPCompileCacheItem Include="@(_SortedFilterInputs)" />
-    </ItemGroup>
-
-    <Hash
-      ItemsToHash="@(_BPCompileCacheItem)"
-      IgnoreCase="$([MSBuild]::ValueOrDefault(`$(CoreCompileCacheIgnoreCase)`, `true`))">
-      <Output TaskParameter="HashResult" PropertyName="_BPCompileCacheHash" />
-    </Hash>
-
-    <WriteLinesToFile Lines="$(_BPCompileCacheHash)" File="$(_BPCompileCache)" Overwrite="True" WriteOnlyWhenDifferent="True" />
-
-    <ItemGroup>
-      <FileWrites Include="$(_BPCompileCache)" />
-    </ItemGroup>
-  </Target>
-  
-  <Target Name="_WriteFileOptions" DependsOnTargets="_GenerateBPCompileCache"
-          Inputs="$(_BPCompileCache);@(_SortedFilterInputs)" Outputs="$(_FileOptionsPath)">
-    <WriteLinesToFile File="$(_FileOptionsPath)" Overwrite="true" WriteOnlyWhenDifferent="true" Lines="@(_SortedFilterInputs)" />
-    <ItemGroup>
-      <FileWrites Include="$(_FileOptionsPath)" />
-    </ItemGroup>
-  </Target>
-
-  <Target Name="_ComputeFilterBinaryPath" DependsOnTargets="ResolveProjectReferences" Returns="$(_BackportsFilterBinary)">
-    <PropertyGroup>
-      <_NativeExecutableExtension Condition="'$(_NativeExecutableExtension)' == '' and '$(OS)' == 'Windows_NT'">.exe</_NativeExecutableExtension>
-      <_BackportsFilterBinary>%(BackportsFilter.RelativeDir)%(FileName)$(_NativeExecutableExtension)</_BackportsFilterBinary>
-    </PropertyGroup>
-  </Target>
-
-  <Target Name="_GenerateBPPropsFile" DependsOnTargets="_WriteFileOptions;_ComputeFilterBinaryPath"
-          Inputs="$(_FileOptionsPath);$(_BackportsFilterBinary)" Outputs="$(_MSBPropsFile)"
-          Condition="'$(dotnet-nugetize)' == ''">
-    <ItemGroup>
-      <_GenArguments Include="$(_FileOptionsPath)"/>
-      <_GenArguments Include="$(_MSBPropsFile)" />
-    </ItemGroup>
-
-    <Exec Command="&quot;$(_BackportsFilterBinary)&quot; gen @(_GenArguments->'&quot;%(Identity)&quot;',' ')">
-      <Output TaskParameter="ExitCode" PropertyName="_FilterExitCode" />
-    </Exec>
-
-    <Error Text="Gen failed" Condition="'$(_FilterExitCode)' != '0'" />
-    
-    <CreateProperty Value="true">
-      <Output TaskParameter="ValueSetByTask" PropertyName="_DidRegenerateBPProps" />
-    </CreateProperty>
-
-    <ItemGroup>
-      <FileWrites Include="$(_MSBPropsFile)" />
-    </ItemGroup>
-  </Target>
-
-  <Target Name="_RunFilterOnFiles" DependsOnTargets="_WriteFileOptions;_ComputeFilterBinaryPath"
-          Inputs="$(_FileOptionsPath);$(_BackportsFilterBinary)" Outputs="$(_ToRemovePath)"
-          Condition="'$(dotnet-nugetize)' == ''">
-    <ItemGroup>
-      <_FilterArguments Include="$(_FileOptionsPath)"/>
-      <_FilterArguments Include="$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))" />
-      <_FilterArguments Include="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))" />
-      <_FilterArguments Include="$(_ToRemovePath)" />
-    </ItemGroup>
-    
-    <Exec Command="&quot;$(_BackportsFilterBinary)&quot; filter @(_FilterArguments->'&quot;%(Identity)&quot;',' ')">
-      <Output TaskParameter="ExitCode" PropertyName="_FilterExitCode" />
-    </Exec>
-
-    <Error Text="Filter failed" Condition="'$(_FilterExitCode)' != '0'" />
-
-    <ItemGroup>
-      <FileWrites Include="$(_ToRemovePath)" />
-    </ItemGroup>
-  </Target>
-  
-  <!-- Only filter by reading the file if the props file was out of date -->
-  <Target Name="_FilterFilesIfNeeded" DependsOnTargets="_RunFilterOnFiles;_GenerateBPPropsFile"
-          Condition="'$(_DidRegenerateBPProps)' == 'true'">
-    <ReadLinesFromFile File="$(_ToRemovePath)">
-      <Output TaskParameter="Lines" ItemName="_ItemsToFilter" />
-    </ReadLinesFromFile>
-
-    <ItemGroup>
-      <!-- Clear the Compile list, add the sorted list, then remove the filtered items  -->
-      <Compile Remove="@(Compile)" />
-      <Compile Include="@(_SortedFilterInputs)" /> 
-      <Compile Remove="@(_ItemsToFilter)" />
-    </ItemGroup>
-  </Target>
-  
-  <!-- Conditionally importing based on TFMs, but automated -->
-  <PropertyGroup>
-    <CoreCompileDependsOn>FilterTFMRestrictedFiles;$(CoreCompileDependsOn)</CoreCompileDependsOn>
-  </PropertyGroup>
-  
-  <Target Name="FilterTFMRestrictedFiles" DependsOnTargets="_RunFilterOnFiles;_GenerateBPPropsFile;_FilterFilesIfNeeded" 
-          BeforeTargets="_GenerateCompileDependencyCache"/>
 
 </Project>

@@ -22,6 +22,7 @@
     
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
+    <MMReferenceSourcePkgs>true</MMReferenceSourcePkgs>
     
     <MMReferenceUtils>true</MMReferenceUtils>
     <MMReferenceBackports>true</MMReferenceBackports>
@@ -40,7 +41,7 @@
     <OldCecilVersion>0.10.4</OldCecilVersion>
     
     <RoslynVersion>4.4.0</RoslynVersion>
-    <MSBuildRequiredVersion>17.0.0</MSBuildRequiredVersion>
+    <MSBuildRequiredVersion>17.5.0</MSBuildRequiredVersion>
   </PropertyGroup>
 
   <!-- For our C# projects, we want to pull in the code analyzers -->
@@ -49,6 +50,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(MMReferenceSourcePkgs)' == 'true'">
     <PackageReference Include="Nullable" Version="1.3.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>

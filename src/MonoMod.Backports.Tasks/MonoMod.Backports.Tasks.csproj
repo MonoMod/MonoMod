@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Note: this package isn't actually referenced by anything. Instead, its files are used as inline tasks for Backports. -->
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+
+    <MMReferenceILHelpers>false</MMReferenceILHelpers>
+    <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>
+
+    <MMReferenceUtils>false</MMReferenceUtils>
+    <MMReferenceBackports>false</MMReferenceBackports>
+    <MMSharedSourceFiles>false</MMSharedSourceFiles>
+    <MMReferenceSourcePkgs>false</MMReferenceSourcePkgs>
+
+    <Nullable>disable</Nullable>
+    
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1812;CA1819;CA1031</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="$(MSBuildRequiredVersion)" />
+    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
+  </ItemGroup>
+
+</Project>
