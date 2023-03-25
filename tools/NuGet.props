@@ -9,7 +9,7 @@
     <Version Condition="'$(BuildPrerelease)' != ''">$(Version)-$(BuildPrerelease)</Version>
     <Version Condition="'$(BUILD_BUILDNUMBER)' != ''">$(BUILD_BUILDNUMBER)</Version> <!-- Azure Pipelines -->
     
-    <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) 0x0ade</Copyright>
+    <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) $(Authors)</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Repository>https://github.com/MonoMod/MonoMod</Repository>
