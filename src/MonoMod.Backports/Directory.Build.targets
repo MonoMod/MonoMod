@@ -22,8 +22,8 @@
              TaskFactory="RoslynCodeTaskFactory"
              AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
     <Task>
-      <Reference Include="$(PkgSystem_Collections_Immutable)\lib\netstandard2.0\System.Collections.Immutable.dll" />
-      <Code Language="cs" Type="Class" Source="$(MMSourcePath)MonoMod.Backports.Tasks\FilterTfmsTask.cs" />
+      <Reference Include="$(PkgSystem_Collections_Immutable)/lib/netstandard2.0/System.Collections.Immutable.dll" />
+      <Code Language="cs" Type="Class" Source="$(MMSourcePath)MonoMod.Backports.Tasks/FilterTfmsTask.cs" />
     </Task>
   </UsingTask>
 
