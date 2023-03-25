@@ -93,20 +93,6 @@
         <!-- For Core 2.1, we need this to make sure it doesn't include the shim assemblies in the package -->
         <PackageReference Update="Microsoft.NETCore.App" Pack="false" />
       </ItemGroup>
-      
-      <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. ->
-      <ItemGroup>
-        <PackageReference Include="System.Reflection.TypeExtensions" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.Collections.NonGeneric" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.ComponentModel.TypeConverter" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.IO.FileSystem.Primitives" Version="$(NETShimVersion)" />
-      </ItemGroup>
-      <!- This could be made optional at compile-time, but it's preferred to check for availability at runtime. ->
-      <ItemGroup>
-        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="$(NETShimVersion)" />
-      </ItemGroup>
-      --> <!-- These are commented out for .NET Core because I'm pretty sure they're not really needed -->
     </When>
     
     <When Condition="'$(_TFMIdentifier)' == '.NETStandard'">
@@ -117,17 +103,10 @@
         <CecilVersion Condition="'$(CecilVersion)' == ''">$(NewCecilVersion)</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
-      <!-- These are also required when targeting .NET Standard 2.0 to resolve a version conflict with Mono.Cecil's deps. -->
+      
       <ItemGroup>
-        <PackageReference Include="System.Reflection.TypeExtensions" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.Collections.NonGeneric" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.ComponentModel.TypeConverter" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.IO.FileSystem.Primitives" Version="$(NETShimVersion)" />
-      </ItemGroup>
-      <!-- This could be made optional at compile-time, but it's preferred to check for availability at runtime. -->
-      <ItemGroup>
-        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="$(NETShimVersion)" />
-        <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="$(NETShimVersion)" />
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
+        <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="4.7.0" />
       </ItemGroup>
     </When>
     
@@ -139,7 +118,6 @@
         <CecilVersion Condition="'$(CecilVersion)' == ''">$(NewCecilVersion)</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
-        <!-- <Reference Include="mscorlib" /> -->
         <Reference Include="System" />
       </ItemGroup>
     </When>
@@ -152,7 +130,6 @@
         <CecilVersion Condition="'$(CecilVersion)' == ''">$(OldCecilVersion)</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
-        <!-- <Reference Include="mscorlib" /> -->
         <Reference Include="System" />
       </ItemGroup>
     </When>
