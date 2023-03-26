@@ -27,6 +27,10 @@
     <EmbeddedResource Include="$(RealProjDir)**/*.resx" Exclude="$(RealProjDir)$(DefaultItemExcludes);$(RealProjDir)$(DefaultExcludesInProjectFolder)" Condition=" '$(EnableDefaultEmbeddedResourceItems)' == 'true' " />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Remove="Microsoft.CodeAnalysis.NetAnalyzers" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(EnableDefaultNoneItems)' == 'true' ">
     <None Include="$(RealProjDir)**/*" Exclude="$(DefaultExcludesInProjectFolder)" />
     <None Remove="$(RealProjDir)**/*$(DefaultLanguageSourceExtension)" />

@@ -4,6 +4,8 @@
     <MMImportAfterProps>$(MSBuildThisFileDirectory)iced.props</MMImportAfterProps>
     <BeforeTargetFrameworkInferenceTargets>$(MSBuildThisFileDirectory)iced.targets</BeforeTargetFrameworkInferenceTargets>
 
+    <SkipGlobalAnalyzerConfigForPackage>true</SkipGlobalAnalyzerConfigForPackage>
+
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
