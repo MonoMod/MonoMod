@@ -20,6 +20,8 @@
     <DefineConstants>$(AssemblyName.ToUpper().Replace('.', '_'));$(DefineConstants)</DefineConstants>
     <!-- TODO: do we even need the assembly constant? the vast majority of shared code has been un-shared -->
     <DisableImplicitFrameworkDefines>false</DisableImplicitFrameworkDefines>
+
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
     
     <!-- Properties for the repository paths -->
     <MMToolsPath>$(MSBuildThisFileDirectory)</MMToolsPath>
