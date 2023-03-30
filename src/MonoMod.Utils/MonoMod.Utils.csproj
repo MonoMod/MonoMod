@@ -16,6 +16,10 @@
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
   </ItemGroup>
+  
+  <ItemGroup>
+    <AdditionalFiles Include="Cil\ILCursorOpcodes.txt" />
+  </ItemGroup>
 
   <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->
   <ItemGroup>

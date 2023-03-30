@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoMod.SourceGen.Attributes;
 using MonoMod.Utils;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
@@ -56,7 +57,12 @@ namespace MonoMod.Cil {
     /// <summary>
     /// A cursor used to manipulate a method body in an ILContext.
     /// </summary>
-    public class ILCursor {
+    
+    // can't explain it in the file, so i'll explain it here.
+    // the file starts with a set of conversion definitions, these will be as expressions to convert the parameter operand type to the destination operand type as needed.
+    // after those comes the sets of opcodes and target types. methods will be generated for the defined type and any type that has a conversion to that type.
+    [EmitParams("ILCursorOpcodes.txt")]
+    public sealed partial class ILCursor {
         /// <summary>
         /// The context to which this cursor belongs to.
         /// </summary>
@@ -425,6 +431,21 @@ namespace MonoMod.Cil {
             else {
                 _afterLabels = new[] { label };
             }
+        }
+
+        /// <summary>
+        /// Create a new label targetting a specific instruction.
+        /// </summary>
+        /// <param name="inst">The instruction to target</param>
+        /// <returns>The created label</returns>
+        public ILLabel MarkLabel(Instruction inst) {
+            ILLabel label = Context.DefineLabel();
+            if (inst == Next) {
+                MarkLabel(label);
+                return label;
+            }
+            label.Target = inst;
+            return label;
         }
 
         /// <summary>
