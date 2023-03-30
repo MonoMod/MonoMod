@@ -104,6 +104,8 @@ namespace MonoMod.SourceGen.Internal.Cil {
                 var opcode = parts[0];
                 var opcodeFormatted = opcode.Replace("_", "");
                 if (parts.Length == 1) {
+                    builder.WriteLine($"/// <summary>Emit a {opcode} opcode to the current cursor position.</summary>");
+                    builder.WriteLine("/// <returns>this</returns>");
                     builder.WriteLine($"public {klassName} Emit{opcodeFormatted}() => _Insert(IL.Create(OpCodes.{opcode}));");
                 } else {
                     var destType = parts[1];
@@ -111,6 +113,13 @@ namespace MonoMod.SourceGen.Internal.Cil {
                         types = new List<(string type, string expr)>() { (destType, "operand") };
                     }
                     foreach ((string type, string expr) type in types) {
+                        builder.WriteLine($"/// <summary>Emit a {opcode} opcode with a {type.type} operand to the current cursor position.</summary>");
+                        builder.Write("""/// <param name="operand">The emitted instruction's operand.""");
+                        if (type.type != destType) {
+                            builder.Write($$""" Will be automatically converted to a <see cref="{{destType}}" />.""");
+                        }
+                        builder.WriteLine("</param>");
+                        builder.WriteLine("/// <returns>this</returns>");
                         builder.WriteLine($"public {klassName} Emit{opcodeFormatted}({type.type} operand) => _Insert(IL.Create(OpCodes.{opcode}, {type.expr}));");
                     }
                 }
