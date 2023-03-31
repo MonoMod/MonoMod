@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Threading;
 using System.Linq;
 using System.Text;
 using System.Diagnostics.CodeAnalysis;
@@ -12,66 +11,25 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
         public void Initialize(IncrementalGeneratorInitializationContext context) {
             var methods = context.SyntaxProvider
-                .CreateSyntaxProvider(IsPotentialTarget, GetSemanticTarget)
-                .Where(static m => m is not null);
+                .ForAttributeWithMetadataName(AttributeName,
+                    (n, ct) => true,
+                    (ctx, ct)
+                        => ctx.Attributes
+                            .Select(a => {
+                                if (a.ConstructorArguments is [{ Value: int maxArgs }]) {
+                                    return new GeneratorMethod(ctx.TargetSymbol.ContainingType.MetadataName, ctx.TargetSymbol.MetadataName,
+                                        ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), maxArgs);
+                                }
+                                return null;
+                            }).Where(d => d is not null))
+                .SelectMany((e, _) => e)
+                .Combine(context.CompilationProvider);
 
             context.RegisterSourceOutput(methods, Execute!);
         }
 
-        private bool IsPotentialTarget(SyntaxNode node, CancellationToken cancellation)
-            => node is MethodDeclarationSyntax s && s.AttributeLists.Count > 0;
-
-        private sealed record GeneratorMethod(IMethodSymbol Method, SyntaxTokenList Modifiers, int MaxArgs);
-
-        private GeneratorMethod? GetSemanticTarget(GeneratorSyntaxContext ctx, CancellationToken cancellationToken) {
-            var methodSyntax = (MethodDeclarationSyntax) ctx.Node;
-
-            foreach (var attrList in methodSyntax.AttributeLists) {
-                foreach (var attr in attrList.Attributes) {
-                    if (ctx.SemanticModel.GetSymbolInfo(attr, cancellationToken).Symbol is not IMethodSymbol attrSym) {
-                        // we couldn't get the model for the attribute, for some reason
-                        continue;
-                    }
-
-                    var type = attrSym.ContainingType;
-                    if (type.ToDisplayString() == AttributeName) {
-                        if (attr.ArgumentList is not { } attrArgs) {
-                            // what?
-                            //Console.WriteLine("[SRC] Arg list doesn't exist");
-                            continue;
-                        }
-
-                        if (attrArgs.Arguments.Count < 1) {
-                            // what?
-                            //Console.WriteLine("[SRC] Arg list too short");
-                            continue;
-                        }
-
-                        var firstArg = attrArgs.Arguments[0];
-                        var argValue = ctx.SemanticModel.GetConstantValue(firstArg.Expression, cancellationToken);
-                        if (!argValue.HasValue) {
-                            continue;
-                        }
-                        if (argValue.Value is not int numArgs) {
-                            // what?
-                            continue;
-                        }
-
-                        if (ctx.SemanticModel.GetDeclaredSymbol(methodSyntax, cancellationToken) is not IMethodSymbol methSym) {
-                            //Console.WriteLine($"[SRC] No method ({methodSyntax} ({methodSyntax.GetType()}))");
-                            // we couldn't get the model for the field, for some reason
-                            continue;
-                        }
-
-                        return new(methSym, methodSyntax.Modifiers, numArgs);
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private void Execute(SourceProductionContext ctx, GeneratorMethod method) {
+        private sealed record GeneratorMethod(string MethodType, string MethodName, string Modifiers, int MaxArgs);
+        private void Execute(SourceProductionContext ctx, (GeneratorMethod, Compilation) method) {
             var sb = new StringBuilder();
             var builder = new CodeBuilder(sb);
             _ = builder.WriteHeader();
@@ -82,31 +40,28 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
         [SuppressMessage("Globalization", "CA1305:Specify IFormatProvider",
             Justification = "SourceGen is a Roslyn extension, not using specific localization settings for integers isn't that important.")]
-        private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod method, out string methodName) {
-            var methodSymbol = method.Method;
-            var maxArgs = method.MaxArgs;
+        private static void BuildSourceFor(CodeBuilder builder, (GeneratorMethod info, Compilation compilation) tup, out string methodName) {
+            var methodType = tup.compilation.GetTypeByMetadataName(tup.info.MethodType)!;
 
             _ = builder.WriteLine("using BindingFlags = global::System.Reflection.BindingFlags;");
             _ = builder.WriteLine("using MethodInfo = global::System.Reflection.MethodInfo;");
             _ = builder.WriteLine("using Type = global::System.Type;");
             _ = builder.WriteLine("using Helpers = global::MonoMod.Utils.Helpers;");
 
-            var ctx = new TypeSourceContext(methodSymbol);
+            var ctx = new TypeSourceContext(methodType);
             ctx.AppendEnterContext(builder);
 
-            methodName = $"{ctx.FullContextName}.{methodSymbol.Name}";
+            methodName = $"{ctx.FullContextName}.{tup.info.MethodName}";
 
             const string ReturnType = "(MethodInfo, Type)";
             var selfTypeof = $"typeof({ctx.InnermostType.Name})";
 
             // first, we want to generate the getter method
-            foreach (var mod in method.Modifiers) {
-                _ = builder.Write(mod.Text).Write(' ');
-            }
-            _ = builder.WriteLine($"{ReturnType}[] {methodSymbol.Name}() {{").IncreaseIndent();
+            _ = builder.Write(tup.info.Modifiers);
+            _ = builder.WriteLine($"{ReturnType}[] {tup.info.MethodName}() {{").IncreaseIndent();
 
-            _ = builder.WriteLine($"var array = new {ReturnType}[{maxArgs << 2}];");
-            for (var i = 0; i < (maxArgs << 2); i++) {
+            _ = builder.WriteLine($"var array = new {ReturnType}[{tup.info.MaxArgs << 2}];");
+            for (var i = 0; i < (tup.info.MaxArgs << 2); i++) {
                 var name = ComputeNameForIdx(i);
                 _ = builder.Write($"array[{i}] = (").Write(selfTypeof).Write(".GetMethod(\"Invoke").Write(name)
                     .Write("\", BindingFlags.NonPublic | BindingFlags.Static)!, ")
@@ -128,7 +83,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
             _ = builder.WriteLine("#nullable disable").WriteLine();
 
             // now we generate the types and methods themselves
-            for (var i = 0; i < (maxArgs << 2); i++) {
+            for (var i = 0; i < (tup.info.MaxArgs << 2); i++) {
                 var name = ComputeNameForIdx(i);
                 // generic parameters are TResult, T0, ...
                 var hasResult = (i & 1) != 0;
