@@ -41,12 +41,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <!-- NuGetizer for better control over NuGet package generation with dotnet pack -->
-    <!-- We can't use anything newer than 0.9.1, because those pull in Devlooped.SponsorLink, which is an obfuscated(!), closed-source(!!) analyzer
-          which *murders* build performance (2-3 minutes -> 7-8 minutes) -->
-    <PackageReference Include="NuGetizer" Version="0.9.1">
+    <PackageReference Include="UnNuGetizer" Version="1.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+  
+  <!-- Package Validation -->
+  <PropertyGroup>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
 
 </Project>
