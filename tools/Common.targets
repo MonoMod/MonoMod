@@ -7,5 +7,5 @@
   <!-- This contains common stuff that specific packages may wish to disable. -->  
   <!-- Include the language-specific targets file, if it exists -->
   <Import Project="$(MMLanguageTargets)" Condition="Exists('$(MMLanguageTargets)')" />
-
+  
 </Project>
