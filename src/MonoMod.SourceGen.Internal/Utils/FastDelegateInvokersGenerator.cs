@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 using System.Text;
 using System.Diagnostics.CodeAnalysis;
+using MonoMod.SourceGen.Internal.Extensions;
 
 namespace MonoMod.SourceGen.Internal.Utils {
     [Generator]
@@ -17,7 +18,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
                         => ctx.Attributes
                             .Select(a => {
                                 if (a.ConstructorArguments is [{ Value: int maxArgs }]) {
-                                    return new GeneratorMethod(ctx.TargetSymbol.ContainingType.MetadataName, ctx.TargetSymbol.MetadataName,
+                                    return new GeneratorMethod(ctx.TargetSymbol.ContainingType.GetFullyQualifiedMetadataName(), ctx.TargetSymbol.Name,
                                         ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), maxArgs);
                                 }
                                 return null;
@@ -57,7 +58,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
             var selfTypeof = $"typeof({ctx.InnermostType.Name})";
 
             // first, we want to generate the getter method
-            _ = builder.Write(tup.info.Modifiers);
+            _ = builder.Write(tup.info.Modifiers).Write(' ');
             _ = builder.WriteLine($"{ReturnType}[] {tup.info.MethodName}() {{").IncreaseIndent();
 
             _ = builder.WriteLine($"var array = new {ReturnType}[{tup.info.MaxArgs << 2}];");

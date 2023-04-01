@@ -1,10 +1,10 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MonoMod.SourceGen.Internal.Extensions;
 using System.Linq;
 using System.Text;
 
-namespace MonoMod.SourceGen.Internal.Interop
-{
+namespace MonoMod.SourceGen.Internal.Interop {
     [Generator]
     public class MultipurposeSlotOffsetGenerator : IIncrementalGenerator {
         private const string AttributeName = "MonoMod.Core.Interop.Attributes.MultipurposeSlotOffsetTableAttribute";
@@ -17,8 +17,8 @@ namespace MonoMod.SourceGen.Internal.Interop
                 (ctx, ct) => {
                     if (ctx.Attributes is [{ ConstructorArguments: [{ Value: int depth }, { Value: INamedTypeSymbol type }] }])
                     {
-                        return new GenerationInfo(ctx.TargetSymbol.ContainingType.MetadataName, ctx.TargetSymbol.MetadataName,
-                            ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), depth, type.MetadataName);
+                        return new GenerationInfo(ctx.TargetSymbol.ContainingType.GetFullyQualifiedMetadataName(), ctx.TargetSymbol.MetadataName,
+                            ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), depth, type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                     }
                     return null;
                 }).Where(i => i is not null);
@@ -45,7 +45,7 @@ namespace MonoMod.SourceGen.Internal.Interop
 
             ctx.AppendEnterContext(builder);
 
-            builder.Write(tup.info.Modifiers);
+            builder.Write(tup.info.Modifiers).Write(' ');
             builder.WriteLine($"byte[] {tup.info.MethodName}() => new byte[] {{").IncreaseIndent();
 
             // https://github.com/dotnet/runtime/blob/v6.0.5/src/coreclr/vm/methodtable.cpp#L318

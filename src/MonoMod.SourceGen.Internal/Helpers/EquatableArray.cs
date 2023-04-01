@@ -10,7 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.SourceGen.Internal;
+namespace MonoMod.SourceGen.Internal.Helpers;
 
 /// <summary>
 /// Extensions for <see cref="EquatableArray{T}"/>.
@@ -77,15 +77,11 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
 
     /// <sinheritdoc/>
     public override int GetHashCode() {
-        if (this.array is not T[] array) {
-            return 0;
-        }
+        if (this.array is not T[] array)             return 0;
 
         HashCode hashCode = default;
 
-        foreach (T item in array) {
-            hashCode.Add(item);
-        }
+        foreach (T item in array)             hashCode.Add(item);
 
         return hashCode.ToHashCode();
     }
@@ -96,7 +92,7 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
     /// <returns>The <see cref="ImmutableArray{T}"/> from the current <see cref="EquatableArray{T}"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ImmutableArray<T> AsImmutableArray() {
-        return Unsafe.As<T[]?, ImmutableArray<T>>(ref Unsafe.AsRef(in this.array));
+        return Unsafe.As<T[]?, ImmutableArray<T>>(ref Unsafe.AsRef(in array));
     }
 
     /// <summary>

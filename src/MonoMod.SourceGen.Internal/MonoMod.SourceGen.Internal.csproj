@@ -12,6 +12,8 @@
     <MMUseSourceGen>false</MMUseSourceGen>
   
     <IsPackable>false</IsPackable>
+
+    <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals($(RoslynVersion), 4.3.1))">$(DefineConstants);ROSLYN_4_3_1_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
