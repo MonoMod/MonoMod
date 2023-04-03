@@ -44,6 +44,11 @@
     <MSBuildRequiredVersion>17.5.0</MSBuildRequiredVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- We want to remove JSImportGenerator by default, becuase it takes a good deal of compilation time -->
+    <RemoveAnalyzer Include="Microsoft.Interop.JavaScript.JSImportGenerator" />
+  </ItemGroup>
+
   <!-- For our C# projects, we want to pull in the code analyzers -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.1">

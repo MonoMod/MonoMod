@@ -138,6 +138,20 @@
   <ItemGroup>
     <PackageReference Update="Mono.Cecil" Version="$(CecilVersion)" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <CoreCompileDependsOn>$(CoreCompileDependsOn);_DisableAnalyzers</CoreCompileDependsOn>
+  </PropertyGroup>
+  
+  <Target Name="_DisableAnalyzers" DependsOnTargets="ResolveTargetingPackAssets" Inputs="@(RemoveAnalyzer)" Outputs="|%(Identity)|">
+    <PropertyGroup>
+      <_RemoveAnalyzer>%(RemoveAnalyzer.Identity)</_RemoveAnalyzer>
+    </PropertyGroup>
+    <ItemGroup>
+      <Analyzer Remove="$(_RemoveAnalyzer)"/>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == '$(_RemoveAnalyzer)'"/>
+    </ItemGroup>
+  </Target>
   
   <!-- Conditional Source Generators a.k.a. Source Generators whose output is checked in to git -->
   <Target Name="_TestFilesForChange" Returns="$(HaveFilesChanged)">
