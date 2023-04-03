@@ -11,6 +11,10 @@
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild> <!-- Remove after / during rework -->
     
     <OutputType>Exe</OutputType>
+    <!-- If we don't set this to false, NuGetizer tries to pack using the publish output. Normally, that would be a good idea for
+         a package like this one, except that we pack several TFMs together under lib/, which means that we end up with duplicate
+         (but different!) files with the same package path, which results in a pack error. -->
+    <PackAsPublish>false</PackAsPublish>
   </PropertyGroup>
 
   <!-- Dependencies -->

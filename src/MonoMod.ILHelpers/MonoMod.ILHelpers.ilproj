@@ -3,6 +3,9 @@
 
   <PropertyGroup>
     <Descripton>A collection of IL helpers for MonoMod, including a backport of System.Runtime.CompilerServices.Unsafe.</Descripton>
+
+    <!-- Unfortunately, the package validators don't understand type-forwarding, and so issue loads of (probably) bogus errors. -->
+    <EnablePackageValidation>false</EnablePackageValidation>
   </PropertyGroup>
   
 </Project>
