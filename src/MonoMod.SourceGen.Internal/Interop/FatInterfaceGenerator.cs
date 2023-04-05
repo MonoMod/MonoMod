@@ -1,156 +1,77 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
-using System.Collections.Generic;
+using MonoMod.SourceGen.Internal.Extensions;
+using MonoMod.SourceGen.Internal.Helpers;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace MonoMod.SourceGen.Internal.Interop {
     [Generator]
-    public class FatInterfaceGenerator : ISourceGenerator {
+    public class FatInterfaceGenerator : IIncrementalGenerator {
         private const string FatInterfaceAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceAttribute";
         private const string FatInterfaceImplAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceImplAttribute";
         private const string FatInterfaceIgnoreAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceIgnoreAttribute";
 
-        internal record FatInterfaceInfo(StructDeclarationSyntax TypeDef) {
-            public List<MethodDeclarationSyntax> InterfaceMethods { get; } = new();
+        private sealed record TypeRef(string MdName, string FqName, string Refness);
+        private static TypeRef CreateRef(ITypeSymbol symbol, string refness = "") {
+            return new(symbol.GetFullyQualifiedMetadataName(), refness + symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), refness);
+        }
+        private static TypeRef CreateRef(IParameterSymbol symbol) {
+            return CreateRef(symbol.Type, GetRefString(symbol));
         }
 
-        internal record FatInterfaceImplInfo(StructDeclarationSyntax TypeDef, TypeSyntax Interface);
+        private sealed record FatIfaceMethod(string Name, TypeRef RetType, EquatableArray<TypeRef> Parameters, string Access);
+        private sealed record FatInterfaceGenInfo(string MdName, EquatableArray<FatIfaceMethod> Methods);
+        private sealed record FatIfaceImplInfo(string ImplType, TypeRef IfaceType);
 
-        public void Initialize(GeneratorInitializationContext context) {
-            context.RegisterForSyntaxNotifications(() => new SyntaxContextReciever());
+        private static ImmutableArray<FatIfaceMethod> GetIfaceTypeMethods(INamedTypeSymbol sym) {
+            using var methodListBuilder = ImmutableArrayBuilder<FatIfaceMethod>.Rent();
+            foreach (var member in sym.GetMembers()) {
+                if (member is not IMethodSymbol method) {
+                    continue;
+                }
+                if (method.IsStatic || !method.IsPartialDefinition) {
+                    continue;
+                }
+                if (method.HasAttributeWithFullyQualifiedMetadataName(FatInterfaceIgnoreAttribute)) {
+                    continue;
+                }
+
+                using var paramsBuilder = ImmutableArrayBuilder<TypeRef>.Rent();
+                foreach (var param in method.Parameters) {
+                    paramsBuilder.Add(CreateRef(param));
+                }
+
+                methodListBuilder.Add(new(method.Name, CreateRef(method.ReturnType), paramsBuilder.ToImmutable(), GetAccessibililty(method.DeclaredAccessibility)));
+            }
+            return methodListBuilder.ToImmutable();
         }
 
-        internal class SyntaxContextReciever : ISyntaxContextReceiver {
-            internal readonly List<FatInterfaceInfo> FatInterfaces = new();
-            internal readonly List<FatInterfaceImplInfo> InterfaceImpls = new();
-
-            public void OnVisitSyntaxNode(GeneratorSyntaxContext context) {
-                if (context.Node is not StructDeclarationSyntax type) {
-                    return;
-                }
-
-                var semantic = context.SemanticModel;
-
-                var fatInterfaceAttr = GetAttribute(semantic, type.AttributeLists, FatInterfaceAttribute);
-                if (fatInterfaceAttr is not null) {
-                    VisitFatInterface(semantic, type);
-                    return;
-                }
-
-                var fatInterfaceImplAttr = GetAttribute(semantic, type.AttributeLists, FatInterfaceImplAttribute);
-                if (fatInterfaceImplAttr is not null) {
-                    VisitFatInterfaceImpl(semantic, type, fatInterfaceImplAttr);
-                    return;
-                }
-            }
-
-            private void VisitFatInterface(SemanticModel semantic, StructDeclarationSyntax type) {
-                var ifInfo = new FatInterfaceInfo(type);
-                foreach (var member in type.Members) {
-                    if (member is not MethodDeclarationSyntax method) {
-                        continue;
-                    }
-
-                    if (!method.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PartialKeyword)) {
-                        continue;
-                    }
-
-                    if (method.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.StaticKeyword)) {
-                        continue;
-                    }
-
-                    var ignoreAttr = GetAttribute(semantic, method.AttributeLists, FatInterfaceIgnoreAttribute);
-                    if (ignoreAttr is not null) {
-                        continue;
-                    }
-
-                    ifInfo.InterfaceMethods.Add(method);
-                }
-
-                FatInterfaces.Add(ifInfo);
-            }
-
-            private void VisitFatInterfaceImpl(SemanticModel semantic, StructDeclarationSyntax type, AttributeSyntax fatInterfaceAttr) {
-                var argList = fatInterfaceAttr.ArgumentList;
-                if (argList is null) {
-                    return;
-                }
-
-                if (argList.Arguments.Count < 1) {
-                    // huh?
-                    return;
-                }
-
-                var expr = argList.Arguments[0].Expression;
-                if (expr is not TypeOfExpressionSyntax typeOf) {
-                    return;
-                }
-
-                var implName = typeOf.Type;
-                InterfaceImpls.Add(new(type, implName));
-            }
-
-            private static AttributeSyntax? GetAttribute(SemanticModel semantic, SyntaxList<AttributeListSyntax> attrLists, string attrType) {
-                if (attrLists.Count < 0) {
-                    return null;
-                }
-
-                foreach (var attrList in attrLists) {
-                    foreach (var attr in attrList.Attributes) {
-                        if (semantic.GetSymbolInfo(attr).Symbol is not IMethodSymbol attrCtor) {
-                            continue;
-                        }
-
-                        if (attrCtor.ContainingType is not { } type) {
-                            // huh?
-                            continue;
-                        }
-
-                        if (type.ToDisplayString() != attrType) {
-                            continue;
-                        }
-
-                        return attr;
-                    }
-                }
-
-                return null;
-            }
-        }
-
-        public void Execute(GeneratorExecutionContext context) {
-            if (context.SyntaxContextReceiver is not SyntaxContextReciever recv) {
-                // huh?
-                return;
-            }
-
-            var sb = new StringBuilder();
-            var cb = new CodeBuilder(sb);
-
-            foreach (var iface in recv.FatInterfaces) {
-                GenerateSource(sb, cb, context, (x, b) => {
-                    GenerateFatInterface(b, x.Compilation, iface, out var name);
-                    return name;
+        public void Initialize(IncrementalGeneratorInitializationContext context) {
+            // find our methods to implement
+            var interfaces = context.SyntaxProvider.ForAttributeWithMetadataName(FatInterfaceAttribute,
+                (n, ct) => n is StructDeclarationSyntax,
+                (ctx, ct) => {
+                    var sym = (INamedTypeSymbol) ctx.TargetSymbol;
+                    var methods = GetIfaceTypeMethods(sym);
+                    return new FatInterfaceGenInfo(sym.GetFullyQualifiedMetadataName(), methods);
                 });
-            }
 
+            var interfaceImpls = context.SyntaxProvider.ForAttributeWithMetadataName(FatInterfaceImplAttribute,
+                (n, ct) => n is StructDeclarationSyntax,
+                (ctx, ct) => {
+                    if (ctx.Attributes is not [AttributeData { ConstructorArguments: [{ Value: INamedTypeSymbol ifaceType }] }]) {
+                        return null;
+                    }
 
-            foreach (var impl in recv.InterfaceImpls) {
-                GenerateSource(sb, cb, context, (x, b) => {
-                    GenerateFatInterfaceImpl(b, x.Compilation, recv, impl, out var name);
-                    return name;
-                });
-            }
-        }
+                    return new FatIfaceImplInfo(((INamedTypeSymbol) ctx.TargetSymbol).GetFullyQualifiedMetadataName(), CreateRef(ifaceType));
+                }).Where(x => x is not null);
 
-        private static void GenerateSource(StringBuilder sb, CodeBuilder cb, GeneratorExecutionContext ctx, Func<GeneratorExecutionContext, CodeBuilder, string> generate) {
-            cb.WriteHeader();
+            // then actually generate the code
 
-            var name = generate(ctx, cb);
-
-            ctx.AddSource($"{name}.g.cs", sb.ToString());
-            sb.Clear();
+            // first, the interface decls
+            context.RegisterImplementationSourceOutput(interfaces.Combine(context.CompilationProvider), GenerateIfaceDecl);
+            context.RegisterImplementationSourceOutput(interfaceImpls.Combine(context.CompilationProvider), GenerateIfaceImpl!);
         }
 
         const string IntPtr = "global::System.IntPtr";
@@ -168,92 +89,81 @@ namespace MonoMod.SourceGen.Internal.Interop {
             => acc switch {
                 Accessibility.NotApplicable => "",
                 Accessibility.Private => "private ",
-                Accessibility.ProtectedAndInternal => "protected /*and*/ internal ",
+                Accessibility.ProtectedAndInternal => "private protected ",
                 Accessibility.Protected => "protected ",
                 Accessibility.Internal => "internal ",
-                Accessibility.ProtectedOrInternal => "protected /*or*/ internal ",
+                Accessibility.ProtectedOrInternal => "protected internal ",
                 Accessibility.Public => "public ",
                 _ => "/*unknown accessibility*/ ",
             };
 
-        private static void GenerateFatInterface(CodeBuilder code, Compilation comp, FatInterfaceInfo iface, out string ifName) {
-            var typeSem = comp.GetSemanticModel(iface.TypeDef.SyntaxTree);
-            if (typeSem.GetDeclaredSymbol(iface.TypeDef) is not INamedTypeSymbol namedType) {
-                ifName = $"fat_unknown_{iface.GetHashCode()}";
-                code.WriteLine("// Could not get the declared symbol of the fat interface type");
-                return;
+        private void GenerateIfaceDecl(SourceProductionContext ctx, (FatInterfaceGenInfo info, Compilation compilation) tup) {
+            // TODO: pool stringbuilder/codebuilder
+            var sb = new StringBuilder();
+            var cb = new CodeBuilder(sb);
+            cb.WriteHeader();
+            var fname = DoGenerateIfaceDecl(cb, tup.compilation, tup.info);
+            ctx.AddSource(fname + ".g.cs", sb.ToString());
+        }
+
+        private static string DoGenerateIfaceDecl(CodeBuilder code, Compilation compilation, FatInterfaceGenInfo info) {
+            var ifType = compilation.Assembly.GetTypeByMetadataName(info.MdName);
+            if (ifType is null) {
+                code.WriteLine($"#error Could not get type with metadata name {info.MdName}");
+                return $"fat_iface_unknown_{info.GetHashCode()}";
             }
 
-            var typeCtx = new TypeSourceContext(namedType);
-            ifName = "FatIf_" + typeCtx.FullContextName;
-
+            var typeCtx = new TypeSourceContext(ifType);
             typeCtx.AppendEnterContext(code, "unsafe");
 
-            // first, we want the core implementation, which is the same for all interfaces
+            // common core code
             code.WriteLine("private readonly void* ptr_;")
                 .WriteLine($"private readonly {IntPtr}[] vtbl_;")
                 .WriteLine()
-                .WriteLine($"public {namedType.Name}(void* ptr, {IntPtr}[] vtbl) {{")
+                .WriteLine($"public {ifType.Name}(void* ptr, {IntPtr}[] vtbl) {{")
                 .IncreaseIndent().WriteLine("ptr_ = ptr; vtbl_ = vtbl;").DecreaseIndent()
                 .WriteLine("}")
                 .WriteLine();
 
-            for (var i = 0; i < iface.InterfaceMethods.Count; i++) {
-                var methSyntax = iface.InterfaceMethods[i];
-                var semantic = comp.GetSemanticModel(methSyntax.SyntaxTree);
-                if (semantic.GetDeclaredSymbol(methSyntax) is not IMethodSymbol method) {
-                    code.WriteLine($"// Could not get symbol for method {methSyntax.Identifier.Text}");
-                    continue;
-                }
-
-                var access = GetAccessibililty(method.DeclaredAccessibility);
-
-                var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-                code.WriteLine($"{access}partial {returnType} {method.Name}(")
+            // the methods
+            foreach (var method in info.Methods) {
+                code.WriteLine($"{method.Access}partial {method.RetType.FqName} {method.Name}(")
                     .IncreaseIndent();
 
-                var isFirst = true;
+                var i = 0;
                 foreach (var param in method.Parameters) {
-                    if (isFirst)
+                    if (i is not 0)
                         code.WriteLine(", ");
-                    isFirst = false;
 
-                    var refKind = GetRefString(param);
-
-                    code.Write(refKind)
-                        .Write(param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                        .Write(' ')
-                        .Write(param.Name);
+                    code.Write(param.FqName)
+                        .Write(" _")
+                        .Write(i.ToString("x2", null));
+                    i++;
                 }
 
                 code.WriteLine().DecreaseIndent().WriteLine(") {").IncreaseIndent();
                 code.Write("return ((delegate*<void*").IncreaseIndent();
 
                 foreach (var param in method.Parameters) {
-                    code.WriteLine(", ");
-
-                    var refKind = GetRefString(param);
-
-                    code.Write(refKind)
-                        .Write(param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                    code.WriteLine(", ")
+                        .Write(param.FqName);
                 }
 
-                code.WriteLine(", ");
-                code.WriteLine(returnType)
+                code.WriteLine(", ")
+                    .WriteLine(method.RetType.FqName)
                     .DecreaseIndent()
                     .Write(">) ")
                     .Write($"vtbl_[{i}])")
                     .Write("(ptr_")
                     .IncreaseIndent();
 
+                i = 0;
                 foreach (var param in method.Parameters) {
-                    code.WriteLine(", ");
-
-                    var refKind = GetRefString(param);
-
-                    code.Write(refKind)
-                        .Write(param.Name);
+                    code.WriteLine(", ")
+                        .Write(param.Refness)
+                        .Write("_")
+                        .Write(i.ToString("x2", null));
+                    i++;
                 }
 
                 code.WriteLine()
@@ -265,105 +175,94 @@ namespace MonoMod.SourceGen.Internal.Interop {
             }
 
             typeCtx.AppendExitContext(code);
+            return "FatIf_" + typeCtx.FullContextName;
         }
 
-        private static void GenerateFatInterfaceImpl(CodeBuilder code, Compilation comp, SyntaxContextReciever recv, FatInterfaceImplInfo ifaceImpl, out string ifName) {
-            var implTypeSem = comp.GetSemanticModel(ifaceImpl.TypeDef.SyntaxTree);
-            if (implTypeSem.GetDeclaredSymbol(ifaceImpl.TypeDef) is not INamedTypeSymbol implType) {
-                ifName = $"unknown_impl_{ifaceImpl.GetHashCode()}";
-                code.WriteLine("// Could not get implementation type symbol");
-                return;
+        private static void GenerateIfaceImpl(SourceProductionContext ctx, (FatIfaceImplInfo info, Compilation compilation) tup) {
+            // TODO: pool stringbuilder/codebuilder
+            var sb = new StringBuilder();
+            var cb = new CodeBuilder(sb);
+            cb.WriteHeader();
+            var fname = DoGenerateIfaceImpl(cb, tup.compilation, tup.info);
+            ctx.AddSource(fname + ".g.cs", sb.ToString());
+        }
+
+        private static string DoGenerateIfaceImpl(CodeBuilder code, Compilation compilation, FatIfaceImplInfo info) {
+            var implType = compilation.Assembly.GetTypeByMetadataName(info.ImplType);
+            if (implType is null) {
+                code.WriteLine($"#error Could not get type with metadata name {info.ImplType}");
+                return $"fat_ifaceimpl_unknown_{info.GetHashCode()}";
             }
 
-            ifName = $"FatIfImpl_{implType.ToDisplayString()}";
-
-            var ifaceTypeSem = comp.GetSemanticModel(ifaceImpl.Interface.SyntaxTree);
-            if (ifaceTypeSem.GetSymbolInfo(ifaceImpl.Interface).Symbol is not INamedTypeSymbol ifaceType) {
-                code.WriteLine("// Could not get interface symbol");
-                return;
+            var ifType = compilation.GetTypeByMetadataName(info.IfaceType.MdName);
+            if (ifType is null) {
+                code.WriteLine($"#error Could not get type with metadata name {info.IfaceType.MdName}");
+                return $"fat_ifaceimpl_unknown_{info.GetHashCode()}";
             }
 
             var typeCtx = new TypeSourceContext(implType);
-            ifName = $"FatIfImpl_{typeCtx.FullContextName}";
 
-            if (FindMatchingFatInterface(comp, recv, ifaceType) is not { } fatIface) {
-                code.WriteLine($"// Could not find fat interface {ifaceType.ToDisplayString()}");
-                return;
+            if (!ifType.HasAttributeWithFullyQualifiedMetadataName(FatInterfaceAttribute)) {
+                code.WriteLine($"#error Target type {ifType.GetFullyQualifiedName()} is not a fat interface");
+                return "FatIfImpl_" + typeCtx.FullContextName;
             }
 
+            var ifaceMethods = GetIfaceTypeMethods(ifType);
             typeCtx.AppendEnterContext(code, "unsafe");
 
-            code.WriteLine($"private static {IntPtr}[]? fatVtable_;");
-            code.WriteLine($"public static {IntPtr}[] FatVtable_ {{ get {{").IncreaseIndent();
+            code.WriteLine($"private static {IntPtr}[]? fatVtable_;")
+                .WriteLine($"public static {IntPtr}[] FatVtable_ {{ get {{").IncreaseIndent();
 
-            var methSymbols = new List<(IMethodSymbol, int)>();
-            foreach (var methSyntax in fatIface.InterfaceMethods) {
-                var semantic = comp.GetSemanticModel(methSyntax.SyntaxTree);
-                if (semantic.GetDeclaredSymbol(methSyntax) is not IMethodSymbol method) {
-                    code.WriteLine($"// Could not get symbol for method {methSyntax.Identifier.Text}");
-                    continue;
-                }
-
-                var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-                code.WriteLine($"static {returnType} S_{method.Name}_{methSymbols.Count}(void* ptr__")
+            var i = 0;
+            foreach (var method in ifaceMethods) {
+                code.Write($"static {method.RetType.FqName} S_{method.Name}_{i}(void* ptr__")
                     .IncreaseIndent();
-
-                methSymbols.Add((method, methSymbols.Count));
-
+                var j = 0;
                 foreach (var param in method.Parameters) {
-                    code.WriteLine(", ");
-
-                    var refKind = GetRefString(param);
-
-                    code.Write(refKind)
-                        .Write(param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                    code.WriteLine(", ")
+                        .Write(param.FqName)
                         .Write(' ')
-                        .Write(param.Name);
+                        .Write(j.ToString("x2", null));
+                    j++;
                 }
 
-                code.WriteLine().DecreaseIndent().WriteLine(") {").IncreaseIndent();
+                code.WriteLine().DecreaseIndent().WriteLine(") {").IncreaseIndent()
+                    .Write($"return (({implType.Name}*)ptr__)->{method.Name}(").IncreaseIndent();
 
-                code.Write($"return (({implType.Name}*)ptr__)->{method.Name}(").IncreaseIndent();
-
-                var isFirst = true;
+                j = 0;
                 foreach (var param in method.Parameters) {
-                    if (isFirst)
+                    if (j is not 0)
                         code.WriteLine(", ");
-                    isFirst = false;
 
-                    var refKind = GetRefString(param);
-
-                    code.Write(refKind)
-                        .Write(param.Name);
+                    code.Write(param.Refness)
+                        .Write('_')
+                        .Write(j.ToString("x2", null));
+                    j++;
                 }
 
                 code.WriteLine()
                     .DecreaseIndent().WriteLine(");")
                     .DecreaseIndent().WriteLine("}");
 
+                i++;
             }
 
             code.WriteLine($"return fatVtable_ ??= new {IntPtr}[] {{").IncreaseIndent();
 
-            foreach (var (method, num) in methSymbols) {
-                var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
+            i = 0;
+            foreach (var method in ifaceMethods) {
                 code.Write($"({IntPtr}) (delegate*<void*").IncreaseIndent();
 
                 foreach (var param in method.Parameters) {
-                    code.WriteLine(", ");
-
-                    var refKind = GetRefString(param);
-
-                    code.Write(refKind)
-                        .Write(param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                    code.WriteLine(", ")
+                        .Write(param.FqName);
                 }
 
                 code.WriteLine(", ");
-                code.WriteLine(returnType)
+                code.WriteLine(method.RetType.FqName)
                     .DecreaseIndent()
-                    .WriteLine($">) &S_{method.Name}_{num}, ");
+                    .WriteLine($">) &S_{method.Name}_{i}, ");
+                i++;
             }
 
             code.DecreaseIndent().WriteLine("};");
@@ -371,22 +270,7 @@ namespace MonoMod.SourceGen.Internal.Interop {
             code.DecreaseIndent().WriteLine("} }");
 
             typeCtx.AppendExitContext(code);
+            return "FatIfImpl_" + typeCtx.FullContextName;
         }
-
-        private static FatInterfaceInfo? FindMatchingFatInterface(Compilation comp, SyntaxContextReciever recv, INamedTypeSymbol ifSymbol) {
-            foreach (var iface in recv.FatInterfaces) {
-                var model = comp.GetSemanticModel(iface.TypeDef.SyntaxTree);
-                if (model.GetDeclaredSymbol(iface.TypeDef) is not INamedTypeSymbol cur) {
-                    continue;
-                }
-
-                if (SymbolEqualityComparer.Default.Equals(ifSymbol, cur)) {
-                    return iface;
-                }
-            }
-
-            return null;
-        }
-
     }
 }
