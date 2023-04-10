@@ -66,13 +66,31 @@ namespace MonoMod.Core.Platforms.Runtimes {
             InstallJitHook(JitObject);
         }
 
+        private static bool IsMaybeClrJitPath(string path)
+            => Path.GetFileNameWithoutExtension(path).EndsWith("clrjit", StringComparison.Ordinal);
+
         protected virtual string GetClrJitPath() {
-            var clrjitFile = System.EnumerateLoadedModuleFiles()
-                .FirstOrDefault(f => f is not null && Path.GetFileNameWithoutExtension(f).EndsWith("clrjit", StringComparison.Ordinal));
+            string? clrjitFile = null;
+
+            if (Switches.TryGetSwitchValue(Switches.JitPath, out var swValue) && swValue is string jitPath) {
+                if (!IsMaybeClrJitPath(jitPath)) {
+                    MMDbgLog.Warning($"Provided value for MonoMod.JitPath switch '{jitPath}' does not look like a ClrJIT path");
+                } else {
+                    clrjitFile = System.EnumerateLoadedModuleFiles()
+                        .FirstOrDefault(f => f is not null && f == jitPath);
+                    if (clrjitFile is null) {
+                        MMDbgLog.Warning($"Provided path for MonoMod.JitPath switch was not loaded in this process. jitPath: {jitPath}");
+                    }
+                }
+            }
+
+            clrjitFile ??= System.EnumerateLoadedModuleFiles()
+                .FirstOrDefault(f => f is not null && IsMaybeClrJitPath(f));
 
             if (clrjitFile is null)
                 throw new PlatformNotSupportedException("Could not locate clrjit library");
 
+            MMDbgLog.Trace($"Got jit path: {clrjitFile}");
             return clrjitFile;
         }
 

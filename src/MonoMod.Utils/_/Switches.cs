@@ -85,6 +85,20 @@ namespace MonoMod {
         /// because that is the most common configuration.
         /// </remarks>
         public const string DebugClr = "DebugClr";
+        /// <summary>
+        /// String. Full path to the ClrJIT binary used by the current runtime.
+        /// </summary>
+        /// <remarks>
+        /// <para>MonoMod.Core, in its CoreCLR implementation, implements JIT hooks to track method recompilations. To do this,
+        /// it needs to find the runtime's ClrJIT binary. By default, it looks for the first loaded module with an extensionless
+        /// name ending with <c>clrjit</c>, however in certain circumstances, such as if .NET Framework 4.8 and .NET Core are
+        /// loaded together into the same process, this process can get the wrong module. This value overrides the default
+        /// behavior.</para>
+        /// <para>This path must still meet the above criteria, and must be the full path of the binary. If it doesn't match
+        /// the above criteria, a warning will be printed and this will be ignored. If the specified path is not loaded, this
+        /// is also ignored, and the default behavior is used.</para>
+        /// </remarks>
+        public const string JitPath = "JitPath";
 
         /// <summary>
         /// Boolean. Forces the logger to always record the value of message holes.
