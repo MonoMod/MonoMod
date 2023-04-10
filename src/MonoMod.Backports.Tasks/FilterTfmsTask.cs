@@ -1,12 +1,16 @@
 ﻿#nullable enable
+#pragma warning disable CA1062 // Validate arguments of public methods
 
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security;
+using System.Text;
 
 namespace System.Runtime.CompilerServices {
     internal static class IsExternalInit {
@@ -14,65 +18,9 @@ namespace System.Runtime.CompilerServices {
 }
 
 namespace MonoMod.Backports.Tasks {
-    public class FilterTfmsTask : Task {
-        [Required]
-        public ITaskItem[] Items { get; set; } = Array.Empty<ITaskItem>();
-        [Required]
-        public string TargetFrameworkKind { get; set; } = "";
-        [Required]
-        public string TargetFrameworkVersion { get; set; } = "";
-
-        [Output]
-        public ITaskItem[] Filtered { get; set; } = Array.Empty<ITaskItem>();
-
-        public override bool Execute() {
-            var tfmKindString = TargetFrameworkKind;
-            var tfmVerString = TargetFrameworkVersion;
-
-            TfmKind tfmKind;
-            if (tfmKindString == ".NETFramework") {
-                tfmKind = TfmKind.Framework;
-            } else if (tfmKindString == ".NETStandard") {
-                tfmKind = TfmKind.Standard;
-            } else if (tfmKindString == ".NETCoreApp") {
-                tfmKind = TfmKind.Core;
-            } else {
-                Log.LogError($"Unknown target framework kind '{tfmKindString}'");
-                return false;
-            }
-
-            try {
-                var tfmVersion = new Version(tfmVerString);
-
-                var filtered = new List<ITaskItem>();
-                foreach (var item in Items) {
-                    if (Path.IsPathRooted(item.ItemSpec)) {
-                        filtered.Add(item);
-                        continue;
-                    }
-
-                    var expr = GetExprFor(item.ItemSpec);
-
-                    if (expr is null) {
-                        filtered.Add(item);
-                        continue;
-                    }
-
-                    if (expr.Matches(tfmKind, tfmVersion))
-                        filtered.Add(item);
-                }
-
-                Filtered = filtered.ToArray();
-            } catch (Exception e) {
-                Log.LogErrorFromException(e);
-                return false;
-            }
-
-            return !Log.HasLoggedErrors;
-        }
-
+    public abstract class TfmTaskBase : Task {
         // TODO: basename processing, to be able to do `otherwise`
-        TfmExpr? GetExprFor(string filename) {
+        protected TfmExpr? GetExprFor(string filename) {
             var dirEntries = filename.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             var andBuilder = ImmutableArray.CreateBuilder<TfmExpr>();
 
@@ -172,7 +120,7 @@ namespace MonoMod.Backports.Tasks {
             }
         }
 
-        static int CompareTfmExpr(TfmExpr a, TfmExpr b) {
+        protected static int CompareTfmExpr(TfmExpr a, TfmExpr b) {
             var res = DoOneWay(a, b);
             if (res != 0) {
                 return res;
@@ -210,7 +158,7 @@ namespace MonoMod.Backports.Tasks {
             }
         }
 
-        TfmKind? ParseTfmKind(string filename, string text) {
+        protected TfmKind? ParseTfmKind(string filename, string text) {
             if (text == "fx") {
                 return TfmKind.Framework;
             } else if (text == "core") {
@@ -228,10 +176,10 @@ namespace MonoMod.Backports.Tasks {
                 message);
         }
 
-        abstract record TfmExpr() {
+        protected abstract record TfmExpr() {
             public abstract bool Matches(TfmKind kind, Version version);
         }
-        record OrTfmExpr(ImmutableArray<TfmExpr> Exprs) : TfmExpr() {
+        protected record OrTfmExpr(ImmutableArray<TfmExpr> Exprs) : TfmExpr() {
             public override bool Matches(TfmKind kind, Version version) {
                 foreach (var expr in Exprs) {
                     if (expr.Matches(kind, version))
@@ -240,7 +188,7 @@ namespace MonoMod.Backports.Tasks {
                 return false;
             }
         }
-        record AndTfmExpr(ImmutableArray<TfmExpr> Exprs) : TfmExpr() {
+        protected record AndTfmExpr(ImmutableArray<TfmExpr> Exprs) : TfmExpr() {
             public override bool Matches(TfmKind kind, Version version) {
                 foreach (var expr in Exprs) {
                     if (!expr.Matches(kind, version))
@@ -250,22 +198,22 @@ namespace MonoMod.Backports.Tasks {
             }
         }
 
-        enum TfmKind {
+        protected enum TfmKind {
             Framework,
             Standard,
             Core
         }
 
-        enum Operation {
+        protected enum Operation {
             Eq, Neq, Gt, Gte, Lt, Lte
         }
 
-        record IsKindTfmExpr(TfmKind Kind) : TfmExpr() {
+        protected record IsKindTfmExpr(TfmKind Kind) : TfmExpr() {
             public override bool Matches(TfmKind kind, Version version) {
                 return kind == Kind;
             }
         }
-        record MatchesTfmExpr(TfmKind Kind, Operation Operation, Version Version) : TfmExpr() {
+        protected record MatchesTfmExpr(TfmKind Kind, Operation Operation, Version Version) : TfmExpr() {
             public override bool Matches(TfmKind kind, Version version) {
                 return kind == Kind && Operation switch {
                     Operation.Eq => Version == version,
@@ -277,6 +225,165 @@ namespace MonoMod.Backports.Tasks {
                     _ => throw new InvalidOperationException()
                 };
             }
+        }
+    }
+
+    public class FilterTfmsTask : TfmTaskBase {
+        [Required]
+        public ITaskItem[] Items { get; set; } = Array.Empty<ITaskItem>();
+        [Required]
+        public string TargetFrameworkKind { get; set; } = "";
+        [Required]
+        public string TargetFrameworkVersion { get; set; } = "";
+
+        [Output]
+        public ITaskItem[] Filtered { get; set; } = Array.Empty<ITaskItem>();
+
+        public override bool Execute() {
+            var tfmKindString = TargetFrameworkKind;
+            var tfmVerString = TargetFrameworkVersion;
+
+            TfmKind tfmKind;
+            if (tfmKindString == ".NETFramework") {
+                tfmKind = TfmKind.Framework;
+            } else if (tfmKindString == ".NETStandard") {
+                tfmKind = TfmKind.Standard;
+            } else if (tfmKindString == ".NETCoreApp") {
+                tfmKind = TfmKind.Core;
+            } else {
+                Log.LogError($"Unknown target framework kind '{tfmKindString}'");
+                return false;
+            }
+
+            try {
+                var tfmVersion = new Version(tfmVerString);
+
+                var filtered = new List<ITaskItem>();
+                foreach (var item in Items) {
+                    if (Path.IsPathRooted(item.ItemSpec)) {
+                        filtered.Add(item);
+                        continue;
+                    }
+
+                    var expr = GetExprFor(item.ItemSpec);
+
+                    if (expr is null) {
+                        filtered.Add(item);
+                        continue;
+                    }
+
+                    if (expr.Matches(tfmKind, tfmVersion))
+                        filtered.Add(item);
+                }
+
+                Filtered = filtered.ToArray();
+            } catch (Exception e) {
+                Log.LogErrorFromException(e);
+                return false;
+            }
+
+            return !Log.HasLoggedErrors;
+        }
+    }
+
+    public class GenerateTfmFilterPropsTask : TfmTaskBase {
+        [Required]
+        public ITaskItem[] Items { get; set; } = Array.Empty<ITaskItem>();
+        [Output]
+        public string Text { get; set; } = "";
+
+        public override bool Execute() {
+
+            const string TrueCond = "(''=='')";
+
+            Array.Sort(Items, comparison: (l, r) => string.Compare(l.ItemSpec, r.ItemSpec, StringComparison.Ordinal));
+            var matchConds = new List<(ITaskItem File, string Cond)>(Items.Length);
+            foreach (var file in Items) {
+                if (Path.IsPathRooted(file.ItemSpec)) {
+                    matchConds.Add((file, TrueCond));
+                    continue;
+                }
+
+                var expr = GetExprFor(file.ItemSpec);
+
+                if (expr is null) {
+                    matchConds.Add((file, TrueCond));
+                    continue;
+                }
+
+                matchConds.Add((file, GetCondition(expr)));
+            }
+
+            var sb = new StringBuilder();
+            _ = sb.Append($@"<?xml version=""1.0"" encoding=""utf-8"" ?>
+<Project>
+    <PropertyGroup>
+        <{TfmIdVar}>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</{TfmIdVar}>
+        <{TfmVerVar}>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</{TfmVerVar}>
+        <CompileRemovedItem>{CompileRemovedItem}</CompileRemovedItem>
+    </PropertyGroup>
+    <ItemGroup>
+        <{CompileRemovedItem} Include=""@(Compile)"" />
+    </ItemGroup>
+");
+
+            foreach (var grp in matchConds.GroupBy(t => t.Cond)) {
+                _ = sb.Append($@"
+    <ItemGroup Condition=""!{grp.Key}"">");
+                foreach (var (f, _) in grp) {
+                    var escaped = SecurityElement.Escape(f.ItemSpec);
+                    _ = sb.Append($@"
+        <Compile Remove=""{escaped}"" />");
+                }
+                _ = sb.Append($@"
+    </ItemGroup>");
+            }
+
+            _ = sb.Append($@"
+    <ItemGroup>
+        <{CompileRemovedItem} Remove=""@(Compile)"" />
+        <None Include=""@({CompileRemovedItem})"" />
+    </ItemGroup>
+</Project>");
+
+            Text = sb.ToString();
+
+            return !Log.HasLoggedErrors;
+        }
+
+        const string TfmIdVar = "___tfmid";
+        const string TfmVerVar = "___tfmver";
+        const string CompileRemovedItem = "___CompileRemoved";
+
+        static string GetCondition(TfmExpr expr) {
+            return expr switch {
+                IsKindTfmExpr(var kind) => $"('$({TfmIdVar})' == '{GetTfmKindString(kind)}')",
+                MatchesTfmExpr(var kind, var op, var ver) => $"('$({TfmIdVar})' == '{GetTfmKindString(kind)}' and {GetOpCompareBegin(op)}('$({TfmVerVar})','{ver}')))",
+                AndTfmExpr(var exprs) => "(" + string.Join(" and ", exprs.Select(GetCondition)) + ")",
+                OrTfmExpr(var exprs) => "(" + string.Join(separator: " or ", exprs.Select(GetCondition)) + ")",
+                _ => throw new InvalidOperationException()
+            };
+        }
+
+        static string GetTfmKindString(TfmKind kind) {
+            return kind switch {
+                TfmKind.Framework => ".NETFramework",
+                TfmKind.Core => ".NETCoreApp",
+                TfmKind.Standard => ".NETStandard",
+                _ => throw new InvalidOperationException()
+            };
+        }
+
+        static string GetOpCompareBegin(Operation op) {
+            return op switch {
+                Operation.Eq => "$([MSBuild]::VersionEquals",
+                Operation.Neq => "!$([MSBuild]::VersionEquals",
+                Operation.Lt => "$([MSBuild]::VersionLessThan",
+                Operation.Lte => "$([MSBuild]::VersionLessThanOrEquals",
+                Operation.Gt => "$([MSBuild]::VersionGreaterThan",
+                Operation.Gte => "$([MSBuild]::VersionGreaterThanOrEquals",
+                _ => throw new InvalidOperationException()
+            };
         }
     }
 }
