@@ -20,7 +20,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     // .NET Core 3.x
                     return version.Minor switch {
                         0 => new Core30Runtime(system),
-                        1 => new Core31Runtime(system),
+                        1 => version.Build switch {
+                            31 => new Core31_31Runtime(system),
+                            _ => new Core31Runtime(system),
+                        },
                         _ => throw new PlatformNotSupportedException($"Unknown .NET Core 3.x minor version {version.Minor}"),
                     };
 
