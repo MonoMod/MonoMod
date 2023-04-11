@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- https://learn.microsoft.com/en-us/dotnet/fundamentals/package-validation/diagnostic-ids -->
+<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <!-- These are needed because for some reason the package validator can't find System.Runtime.CompilerServices.Unsafe for .NET 6 -->
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:System.Runtime.CompilerServices.Unsafe</Target>
+    <Left>lib/net5.0/MonoMod.ILHelpers.dll</Left>
+    <Right>lib/net6.0/MonoMod.ILHelpers.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP1002</DiagnosticId>
+    <Target>System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=null</Target>
+    <Left>left</Left>
+    <Right>lib/net6.0/MonoMod.ILHelpers.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP1002</DiagnosticId>
+    <Target>System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=null</Target>
+    <Left>lib/net6.0/MonoMod.ILHelpers.dll</Left>
+    <Right>right</Right>
+  </Suppression>
+</Suppressions>

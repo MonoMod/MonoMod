@@ -7,12 +7,23 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
+#ifdef NET6_0_OR_GREATER
+
 #ifdef NET6_0
 .assembly extern System.Runtime.CompilerServices.Unsafe { .ver CORE_ASSEMBLY_VERSION }
-.class extern forwarder System.Runtime.CompilerServices.Unsafe { .assembly extern System.Runtime.CompilerServices.Unsafe }
 #endif
 
-#ifdef NET6_0_OR_GREATER
+.class extern forwarder System.Runtime.CompilerServices.Unsafe
+{
+#ifdef NET6_0
+    .assembly extern System.Runtime.CompilerServices.Unsafe
+#else
+#ifdef NET7_0_OR_GREATER
+    .assembly extern System.Runtime
+#endif
+#endif
+}
+
 #else
 
 // TODO: nullable annotations (ugh)
