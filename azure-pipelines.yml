@@ -36,7 +36,7 @@ variables:
   xunitVer: '2.4.2'
   xunit: '{0}{1}/.nuget/packages/xunit.runner.console/$(xunitVer)/tools/{2}/xunit.console.{3} artifacts/bin/MonoMod.UnitTest/Release/{6}/MonoMod.UnitTest.dll -xml testresults.{4}.{6}.xml {5}'
 
-name: 'Automatic $(Date:YYYY-MM-dd)+$(Rev:rr)'
+name: '$(Date:yyyy-MM-dd)+$(Rev:rr)'
 
 pool:
   vmImage: '$(imageName)'
