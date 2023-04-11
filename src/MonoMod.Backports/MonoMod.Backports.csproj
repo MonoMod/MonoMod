@@ -9,6 +9,9 @@
     <MMReferenceUtils>false</MMReferenceUtils>
     <MMReferenceBackports>false</MMReferenceBackports>
     <RootNamespace><![CDATA[ ]]></RootNamespace>
+
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <!-- <PackageValidationBaselineVersion> -->
   </PropertyGroup>
 
   <PropertyGroup>

@@ -12,6 +12,9 @@
     </Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <!-- <PackageValidationBaselineVersion> -->
+
     <NoWarn>$([String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
   </PropertyGroup>
   
