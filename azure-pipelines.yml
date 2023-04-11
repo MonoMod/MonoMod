@@ -35,8 +35,9 @@ variables:
   buildPlatform: 'Any CPU'
   xunitVer: '2.4.2'
   xunit: '{0}{1}/.nuget/packages/xunit.runner.console/$(xunitVer)/tools/{2}/xunit.console.{3} artifacts/bin/MonoMod.UnitTest/Release/{6}/MonoMod.UnitTest.dll -xml testresults.{4}.{6}.xml {5}'
+  buildArgs: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -p:VersionSuffix="daily.$(Date:yy.MM.dd)$(Rev:.rr)"'
 
-name: '$(Date:yy.MM.dd)$(Rev:.rr)-prerelease'
+name: 'Automatic $(Date)+$(Rev:rr)'
 
 pool:
   vmImage: '$(imageName)'
@@ -97,7 +98,7 @@ steps:
   displayName: 'dotnet: Build'
   inputs:
     command: 'build'
-    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)"'
+    arguments: '$(buildArgs)'
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
@@ -124,7 +125,7 @@ steps:
     #command: 'pack'
     command: 'custom' # if you use command: pack, then you *have* to set packagesToPack, despite not providing it doing the right thing
     custom: 'pack'
-    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)"'
+    arguments: '$(buildArgs)'
     nobuild: true
     configuration: '$(buildConfiguration)'
     versioningScheme: 'byBuildNumber'
