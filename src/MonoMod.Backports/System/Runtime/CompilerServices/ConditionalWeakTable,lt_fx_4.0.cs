@@ -83,11 +83,12 @@ namespace System.Runtime.CompilerServices {
             }
         }
 
+        // this is added in .NET 7
         /// <summary>Adds a key to the table if it doesn't already exist.</summary>
         /// <param name="key">The key to add.</param>
         /// <param name="value">The key's property value.</param>
         /// <returns>true if the key/value pair was added; false if the table already contained the key.</returns>
-        public bool TryAdd(TKey key, TValue value) // TODO: Expose in ref assembly https://github.com/dotnet/runtime/issues/29368
+        internal bool TryAdd(TKey key, TValue value) // TODO: Expose in ref assembly https://github.com/dotnet/runtime/issues/29368
         {
             if (key is null) {
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.key);
@@ -104,10 +105,12 @@ namespace System.Runtime.CompilerServices {
             }
         }
 
+
+        // this is added in NS2.1 and Core2.0
         /// <summary>Adds the key and value if the key doesn't exist, or updates the existing key's value if it does exist.</summary>
         /// <param name="key">key to add or update. May not be null.</param>
         /// <param name="value">value to associate with key.</param>
-        public void AddOrUpdate(TKey key, TValue value) {
+        internal void AddOrUpdate(TKey key, TValue value) {
             if (key is null) {
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.key);
             }
@@ -142,8 +145,9 @@ namespace System.Runtime.CompilerServices {
             }
         }
 
+        // this is added in NS2.1 and Core2.0
         /// <summary>Clear all the key/value pairs</summary>
-        public void Clear() {
+        internal void Clear() {
             lock (_lock) {
                 // To clear, we would prefer to simply drop the existing container
                 // and replace it with an empty one, as that's overall more efficient.

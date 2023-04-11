@@ -1,4 +1,15 @@
-﻿#if NET40_OR_GREATER && !NETSTANDARD2_1_OR_GREATER  && !NETCOREAPP2_0_OR_GREATER
+﻿#if NETFRAMEWORK && !NET40_OR_GREATER
+#define BACKPORTS_IMPL
+#endif
+
+#if BACKPORTS_IMPL || NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+#define HAS_CWT_CLEAR
+#endif
+#if BACKPORTS_IMPL || NET7_0_OR_GREATER
+#define HAS_TRYADD
+#endif
+
+#if !BACKPORTS_IMPL && !NETSTANDARD2_1_OR_GREATER  && !NETCOREAPP2_0_OR_GREATER
 #define CWT_NOT_ENUMERABLE
 #endif
 
@@ -88,5 +99,34 @@ namespace System.Runtime.CompilerServices {
 #endif
             }
         }
+
+        public static void Clear<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class? {
+            ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
+#if HAS_CWT_CLEAR
+            self.Clear();
+#else
+            foreach (var kvp in self) {
+                self.Remove(kvp.Key);
+            } 
+#endif
+        }
+
+        public static bool TryAdd<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self, TKey key, TValue value) where TKey : class where TValue : class? {
+            ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
+#if HAS_TRYADD
+            return self.TryAdd(key, value);
+#else
+            var didAdd = false;
+            _ = self.GetValue(key, _ => {
+                didAdd = true;
+                return value;
+            });
+            return didAdd;
+#endif
+        }
+
+        // I'd like to include AddOrUpdate, but I don't think there's another way to update a value...
+        // We *could* remove-then-add, but I'm not sure I'm OK with that given its concurrency implications.
+        // I could do reflection again to find the lock object, but I'm not sure that its an important enough API.
     }
 }

@@ -283,6 +283,7 @@ namespace System.Collections.Concurrent {
             return TryRemoveInternal(key, out value, matchValue: false, default);
         }
 
+        // this is added in .NET 5
         /// <summary>Removes a key and value from the dictionary.</summary>
         /// <param name="item">The <see cref="KeyValuePair{TKey,TValue}"/> representing the key and value to remove.</param>
         /// <returns>
@@ -298,7 +299,7 @@ namespace System.Collections.Concurrent {
         /// <exception cref="ArgumentNullException">
         /// The <see cref="KeyValuePair{TKey, TValue}.Key"/> property of <paramref name="item"/> is a null reference.
         /// </exception>
-        public bool TryRemove(KeyValuePair<TKey, TValue> item) {
+        internal bool TryRemove(KeyValuePair<TKey, TValue> item) {
             if (item.Key is null) {
                 ThrowHelper.ThrowArgumentNullException(nameof(item), "Item key is null");
             }
@@ -907,6 +908,7 @@ namespace System.Collections.Concurrent {
         private static void ThrowKeyNotFoundException(TKey key) =>
             throw new KeyNotFoundException($"Key {key} not found");
 
+        // this is only present in .NET 6, 7, and 8
         /// <summary>
         /// Gets the <see cref="IEqualityComparer{TKey}" />
         /// that is used to determine equality of keys for the dictionary.
@@ -922,7 +924,7 @@ namespace System.Collections.Concurrent {
         /// generic interface by using a constructor that accepts a comparer parameter;
         /// if you do not specify one, the default generic equality comparer <see cref="EqualityComparer{TKey}.Default" /> is used.
         /// </remarks>
-        public IEqualityComparer<TKey> Comparer => _comparer ?? _defaultComparer;
+        internal IEqualityComparer<TKey> Comparer => _comparer ?? _defaultComparer;
 
         /// <summary>
         /// Gets the number of key/value pairs contained in the <see
@@ -1006,6 +1008,7 @@ namespace System.Collections.Concurrent {
             return resultingValue;
         }
 
+        // added in NS2.1, Core2.0, and FX4.7.2
         /// <summary>
         /// Adds a key/value pair to the <see cref="ConcurrentDictionary{TKey,TValue}"/>
         /// if the key does not already exist.
@@ -1022,7 +1025,7 @@ namespace System.Collections.Concurrent {
         /// <returns>The value for the key.  This will be either the existing value for the key if the
         /// key is already in the dictionary, or the new value for the key as returned by valueFactory
         /// if the key was not in the dictionary.</returns>
-        public TValue GetOrAdd<TArg>(TKey key, Func<TKey, TArg, TValue> valueFactory, TArg factoryArgument) {
+        internal TValue GetOrAdd<TArg>(TKey key, Func<TKey, TArg, TValue> valueFactory, TArg factoryArgument) {
             if (key is null) {
                 ThrowHelper.ThrowKeyNullException();
             }
@@ -1066,6 +1069,7 @@ namespace System.Collections.Concurrent {
             return resultingValue;
         }
 
+        // this method was added in NS2.1, Core2.0, and FX472
         /// <summary>
         /// Adds a key/value pair to the <see cref="ConcurrentDictionary{TKey,TValue}"/> if the key does not already
         /// exist, or updates a key/value pair in the <see cref="ConcurrentDictionary{TKey,TValue}"/> if the key
@@ -1086,7 +1090,7 @@ namespace System.Collections.Concurrent {
         /// elements.</exception>
         /// <returns>The new value for the key.  This will be either be the result of addValueFactory (if the key was
         /// absent) or the result of updateValueFactory (if the key was present).</returns>
-        public TValue AddOrUpdate<TArg>(
+        internal TValue AddOrUpdate<TArg>(
             TKey key, Func<TKey, TArg, TValue> addValueFactory, Func<TKey, TValue, TArg, TValue> updateValueFactory, TArg factoryArgument) {
             if (key is null) {
                 ThrowHelper.ThrowKeyNullException();

@@ -80,10 +80,12 @@ namespace System.Diagnostics.CodeAnalysis {
         /// </summary>
         NonPublicEvents = 0x1000,
 
+        /* This is added after .NET 5
         /// <summary>
         /// Specifies all interfaces implemented by the type.
         /// </summary>
         Interfaces = 0x2000,
+        */
 
         /// <summary>
         /// Specifies all members.

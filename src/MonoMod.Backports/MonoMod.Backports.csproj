@@ -9,9 +9,6 @@
     <MMReferenceUtils>false</MMReferenceUtils>
     <MMReferenceBackports>false</MMReferenceBackports>
     <RootNamespace><![CDATA[ ]]></RootNamespace>
-
-    <!-- Unfortunately, the package validators don't understand type-forwarding, and so issue loads of (probably) bogus errors. -->
-    <EnablePackageValidation>false</EnablePackageValidation>
   </PropertyGroup>
 
   <PropertyGroup>

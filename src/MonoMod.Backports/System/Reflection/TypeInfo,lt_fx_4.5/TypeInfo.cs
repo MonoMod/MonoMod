@@ -6,7 +6,8 @@ using System.Collections.Generic;
 
 namespace System.Reflection {
     public abstract partial class TypeInfo : Type, IReflectableType {
-        protected TypeInfo() { }
+        // this ctor is only available in Core3.0 and NS2.1 :/
+        private protected TypeInfo() { }
 
         TypeInfo IReflectableType.GetTypeInfo() => this;
         public virtual Type AsType() => this;

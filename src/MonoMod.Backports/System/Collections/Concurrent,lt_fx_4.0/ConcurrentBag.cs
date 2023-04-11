@@ -354,10 +354,11 @@ namespace System.Collections.Concurrent {
             return ArrayEx.Empty<T>();
         }
 
+        // this method was added in NS2.1 and Core2.0
         /// <summary>
         /// Removes all values from the <see cref="ConcurrentBag{T}"/>.
         /// </summary>
-        public void Clear() {
+        internal void Clear() {
             // If there are no queues in the bag, there's nothing to clear.
             if (_workStealingQueues == null) {
                 return;

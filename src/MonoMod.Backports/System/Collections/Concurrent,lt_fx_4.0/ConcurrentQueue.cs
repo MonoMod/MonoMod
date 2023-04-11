@@ -731,10 +731,11 @@ namespace System.Collections.Concurrent {
             return false;
         }
 
+        // this was added in NS2.1 and Core2.0
         /// <summary>
         /// Removes all objects from the <see cref="ConcurrentQueue{T}"/>.
         /// </summary>
-        public void Clear() {
+        internal void Clear() {
             lock (_crossSegmentLock) {
                 // Simply substitute a new segment for the existing head/tail,
                 // as is done in the constructor.  Operations currently in flight
