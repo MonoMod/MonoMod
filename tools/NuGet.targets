@@ -12,6 +12,10 @@
     <PackageReadmeName Condition="'$(PackageReadmeName)' == '' and '$(PackageReadmeFile)' == ''">$(PackageDocsName)</PackageReadmeName>
     <PackageReadmeName Condition="'$(ReadmeNameHasPrefix)' == 'true' and '$(PackageReadmeName)' != ''">README.$(PackageReadmeName)</PackageReadmeName>
     <_PackageReadmePath Condition="'$(PackageReadmeName)' != ''">$(MMDocsPath)$(PackageReadmeName).md</_PackageReadmePath>
+  
+    <!-- NuGetizer doesn't seem to play well with this (what with clearing the package cache), so until we fix that always clear it here. -->
+    <!-- TODO: figure out how to make this play well with NuGetizer -->
+    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <!-- Include the docs in the project listing -->
