@@ -13,6 +13,8 @@
     <OutputType>Exe</OutputType>
 
     <IsPackable>false</IsPackable> <!-- TODO: update this to not need HookEndpointManager in RuntimeDetour -->
+    <VersionPrefix>24.0.0</VersionPrefix>
+    <PackageValidationBaselineVersion>22.7.31.1</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <!-- Dependencies -->

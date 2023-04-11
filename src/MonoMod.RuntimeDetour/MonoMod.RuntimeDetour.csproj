@@ -10,6 +10,9 @@
     <RootNamespace>MonoMod.RuntimeDetour</RootNamespace>
 
     <NoWarn>$([String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
+
+    <VersionPrefix>24.0.0</VersionPrefix>
+    <PackageValidationBaselineVersion>22.7.31.1</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>

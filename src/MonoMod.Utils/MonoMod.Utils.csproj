@@ -8,6 +8,9 @@
     <PackageTags>$(PackageTags)</PackageTags>
     <Nullable>enable</Nullable>
     <MMReferenceUtils>false</MMReferenceUtils>
+
+    <VersionPrefix>24.0.0</VersionPrefix>
+    <PackageValidationBaselineVersion>22.7.31.1</PackageValidationBaselineVersion>
   </PropertyGroup>
   
   <!-- Dependencies -->
