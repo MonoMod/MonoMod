@@ -58,3 +58,14 @@ and `DMDType` and `DMDDumpTo` when it is being generated.
 
 - `RunningOnWine` (`boolean`) - Forces `PlatformDetection` to detect Wine, when it detects Windows. This is only
   checked once, during the initial operating system detection.
+
+### CLR Information switches
+
+- `DebugClr` (`boolean`) - When set, MonoMod assumes a Debug or Checked build of the CLR. This is important because
+  some object layouts are different in debug builds.
+- `JitPath` (`string`) - Specifies the full path for the actual JIT used by the runtime.
+
+  This is intended for cases where there may be some confusion on that point, most notably when multiple CLRs are
+  loaded into the same process. In that case, during CLR initialization (or shortly thereafter, before MonoMod is
+  initialized), the host should set the `JitPath` switch (`MonoMod.JitPath` appcontext, or `MONOMOD_JitPath` env var)
+  to the full path of the actual JIT the runtime will use.
