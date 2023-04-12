@@ -20,6 +20,11 @@ namespace MonoMod.SourceGen.Internal {
             return this;
         }
 
+        public CodeBuilder OpenBlock()
+            => WriteLine('{').IncreaseIndent();
+        public CodeBuilder CloseBlock()
+            => DecreaseIndent().WriteLine('}');
+
         public CodeBuilder IncreaseIndent() {
             indentLevel++;
             return this;

@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 using System.Text;
 using System.Diagnostics.CodeAnalysis;
-using MonoMod.SourceGen.Internal.Extensions;
 
 namespace MonoMod.SourceGen.Internal.Utils {
     [Generator]
@@ -16,21 +15,18 @@ namespace MonoMod.SourceGen.Internal.Utils {
                     (n, ct) => true,
                     (ctx, ct)
                         => ctx.Attributes
-                            .Select(a => {
-                                if (a.ConstructorArguments is [{ Value: int maxArgs }]) {
-                                    return new GeneratorMethod(ctx.TargetSymbol.ContainingType.GetFullyQualifiedMetadataName(), ctx.TargetSymbol.Name,
-                                        ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), maxArgs);
-                                }
-                                return null;
-                            }).Where(d => d is not null))
-                .SelectMany((e, _) => e)
-                .Combine(context.CompilationProvider);
+                            .Select(a
+                                => a.ConstructorArguments is [{ Value: int maxArgs }]
+                                    ? new GeneratorMethod(GenHelpers.CreateTypeContext(ctx.TargetSymbol.ContainingType), ctx.TargetSymbol.Name,
+                                        ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), maxArgs)
+                                    : null).Where(d => d is not null))
+                .SelectMany((e, _) => e);
 
             context.RegisterSourceOutput(methods, Execute!);
         }
 
-        private sealed record GeneratorMethod(string MethodType, string MethodName, string Modifiers, int MaxArgs);
-        private void Execute(SourceProductionContext ctx, (GeneratorMethod, Compilation) method) {
+        private sealed record GeneratorMethod(TypeContext Type, string MethodName, string Modifiers, int MaxArgs);
+        private void Execute(SourceProductionContext ctx, GeneratorMethod method) {
             var sb = new StringBuilder();
             var builder = new CodeBuilder(sb);
             _ = builder.WriteHeader();
@@ -41,28 +37,25 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
         [SuppressMessage("Globalization", "CA1305:Specify IFormatProvider",
             Justification = "SourceGen is a Roslyn extension, not using specific localization settings for integers isn't that important.")]
-        private static void BuildSourceFor(CodeBuilder builder, (GeneratorMethod info, Compilation compilation) tup, out string methodName) {
-            var methodType = tup.compilation.GetTypeByMetadataName(tup.info.MethodType)!;
-
+        private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod info, out string methodName) {
             _ = builder.WriteLine("using BindingFlags = global::System.Reflection.BindingFlags;");
             _ = builder.WriteLine("using MethodInfo = global::System.Reflection.MethodInfo;");
             _ = builder.WriteLine("using Type = global::System.Type;");
             _ = builder.WriteLine("using Helpers = global::MonoMod.Utils.Helpers;");
 
-            var ctx = new TypeSourceContext(methodType);
-            ctx.AppendEnterContext(builder);
+            info.Type.AppendEnterContext(builder);
 
-            methodName = $"{ctx.FullContextName}.{tup.info.MethodName}";
+            methodName = $"{info.Type.FullContextName}.{info.MethodName}";
 
             const string ReturnType = "(MethodInfo, Type)";
-            var selfTypeof = $"typeof({ctx.InnermostType.Name})";
+            var selfTypeof = $"typeof({info.Type.InnermostType.FqName})";
 
             // first, we want to generate the getter method
-            _ = builder.Write(tup.info.Modifiers).Write(' ');
-            _ = builder.WriteLine($"{ReturnType}[] {tup.info.MethodName}() {{").IncreaseIndent();
+            _ = builder.Write(info.Modifiers).Write(' ');
+            _ = builder.WriteLine($"{ReturnType}[] {info.MethodName}() {{").IncreaseIndent();
 
-            _ = builder.WriteLine($"var array = new {ReturnType}[{tup.info.MaxArgs << 2}];");
-            for (var i = 0; i < (tup.info.MaxArgs << 2); i++) {
+            _ = builder.WriteLine($"var array = new {ReturnType}[{info.MaxArgs << 2}];");
+            for (var i = 0; i < (info.MaxArgs << 2); i++) {
                 var name = ComputeNameForIdx(i);
                 _ = builder.Write($"array[{i}] = (").Write(selfTypeof).Write(".GetMethod(\"Invoke").Write(name)
                     .Write("\", BindingFlags.NonPublic | BindingFlags.Static)!, ")
@@ -84,7 +77,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
             _ = builder.WriteLine("#nullable disable").WriteLine();
 
             // now we generate the types and methods themselves
-            for (var i = 0; i < (tup.info.MaxArgs << 2); i++) {
+            for (var i = 0; i < (info.MaxArgs << 2); i++) {
                 var name = ComputeNameForIdx(i);
                 // generic parameters are TResult, T0, ...
                 var hasResult = (i & 1) != 0;
@@ -146,7 +139,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
             _ = builder.WriteLine("#nullable enable");
 
-            ctx.AppendExitContext(builder);
+            info.Type.AppendExitContext(builder);
         }
 
         private static string ComputeNameForIdx(int idx) {

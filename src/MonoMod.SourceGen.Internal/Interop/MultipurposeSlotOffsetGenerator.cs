@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using MonoMod.SourceGen.Internal.Extensions;
 using System.Linq;
 using System.Text;
 
@@ -9,7 +8,7 @@ namespace MonoMod.SourceGen.Internal.Interop {
     public class MultipurposeSlotOffsetGenerator : IIncrementalGenerator {
         private const string AttributeName = "MonoMod.Core.Interop.Attributes.MultipurposeSlotOffsetTableAttribute";
 
-        private sealed record GenerationInfo(string MethodType, string MethodName, string Modifiers, int Depth, string HelperType);
+        private sealed record GenerationInfo(TypeContext Type, string MethodName, string Modifiers, int Depth, string HelperType);
 
         public void Initialize(IncrementalGeneratorInitializationContext context) {
             var fields = context.SyntaxProvider
@@ -17,57 +16,50 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 (ctx, ct) => {
                     if (ctx.Attributes is [{ ConstructorArguments: [{ Value: int depth }, { Value: INamedTypeSymbol type }] }])
                     {
-                        return new GenerationInfo(ctx.TargetSymbol.ContainingType.GetFullyQualifiedMetadataName(), ctx.TargetSymbol.MetadataName,
+                        return new GenerationInfo(GenHelpers.CreateTypeContext(ctx.TargetSymbol.ContainingType), ctx.TargetSymbol.MetadataName,
                             ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), depth, type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                     }
                     return null;
                 }).Where(i => i is not null);
 
-            var execSrc = fields.Combine(context.CompilationProvider)!;
-
-            context.RegisterSourceOutput(execSrc, Execute!);
+            context.RegisterSourceOutput(fields, Execute!);
         }
 
-        private static void Execute(SourceProductionContext spc, (GenerationInfo info, Compilation compilation) tup) {
+        private static void Execute(SourceProductionContext spc, GenerationInfo info) {
             var sb = new StringBuilder();
             var builder = new CodeBuilder(sb);
             builder.WriteHeader();
 
-            BuildSourceFor(builder, tup, out var fieldName);
+            BuildSourceFor(builder, info, out var fieldName);
             spc.AddSource($"{fieldName}.g.cs", sb.ToString());
         }
 
-        private static void BuildSourceFor(CodeBuilder builder, (GenerationInfo info, Compilation compilation) tup, out string fieldName) {
+        private static void BuildSourceFor(CodeBuilder builder, GenerationInfo info, out string fieldName) {
+            info.Type.AppendEnterContext(builder);
 
-            var methodType = tup.compilation.GetTypeByMetadataName(tup.info.MethodType)!;
-
-            var ctx = new TypeSourceContext(methodType);
-
-            ctx.AppendEnterContext(builder);
-
-            builder.Write(tup.info.Modifiers).Write(' ');
-            builder.WriteLine($"byte[] {tup.info.MethodName}() => new byte[] {{").IncreaseIndent();
+            builder.Write(info.Modifiers).Write(' ');
+            builder.WriteLine($"byte[] {info.MethodName}() => new byte[] {{").IncreaseIndent();
 
             // https://github.com/dotnet/runtime/blob/v6.0.5/src/coreclr/vm/methodtable.cpp#L318
-            var maxVal = 1u << tup.info.Depth;
+            var maxVal = 1u << info.Depth;
             for (var mask = 0u; mask < maxVal; mask++) {
                 var raw = PopCount(mask);
                 var index = (((mask & 3) == 2) && (raw == 1)) ? 0 : raw;
 
                 if (index == 0) {
-                    builder.WriteLine($"{tup.info.HelperType}.OffsetOfMp1(),");
+                    builder.WriteLine($"{info.HelperType}.OffsetOfMp1(),");
                 } else if (index == 1) {
-                    builder.WriteLine($"{tup.info.HelperType}.OffsetOfMp2(), ");
+                    builder.WriteLine($"{info.HelperType}.OffsetOfMp2(), ");
                 } else {
-                    builder.WriteLine($"{tup.info.HelperType}.RegularOffset({index}), ");
+                    builder.WriteLine($"{info.HelperType}.RegularOffset({index}), ");
                 }
             }
 
             builder.DecreaseIndent().WriteLine("};");
 
-            ctx.AppendExitContext(builder);
+            info.Type.AppendExitContext(builder);
 
-            fieldName = $"{ctx.FullContextName}.{tup.info.MethodName}";
+            fieldName = $"{info.Type.FullContextName}.{info.MethodName}";
         }
 
         private static int PopCount(uint value) {

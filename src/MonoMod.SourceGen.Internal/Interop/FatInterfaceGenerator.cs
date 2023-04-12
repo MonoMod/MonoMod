@@ -12,17 +12,10 @@ namespace MonoMod.SourceGen.Internal.Interop {
         private const string FatInterfaceImplAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceImplAttribute";
         private const string FatInterfaceIgnoreAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceIgnoreAttribute";
 
-        private sealed record TypeRef(string MdName, string FqName, string Refness);
-        private static TypeRef CreateRef(ITypeSymbol symbol, string refness = "") {
-            return new(symbol.GetFullyQualifiedMetadataName(), refness + symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), refness);
-        }
-        private static TypeRef CreateRef(IParameterSymbol symbol) {
-            return CreateRef(symbol.Type, GetRefString(symbol));
-        }
 
         private sealed record FatIfaceMethod(string Name, TypeRef RetType, EquatableArray<TypeRef> Parameters, string Access);
-        private sealed record FatInterfaceGenInfo(string MdName, EquatableArray<FatIfaceMethod> Methods);
-        private sealed record FatIfaceImplInfo(string ImplType, TypeRef IfaceType);
+        private sealed record FatInterfaceGenInfo(TypeContext Type, EquatableArray<FatIfaceMethod> Methods);
+        private sealed record FatIfaceImplInfo(TypeContext Type, TypeRef IfaceType, bool IfaceHasAttr, EquatableArray<FatIfaceMethod> IfaceMethods);
 
         private static ImmutableArray<FatIfaceMethod> GetIfaceTypeMethods(INamedTypeSymbol sym) {
             using var methodListBuilder = ImmutableArrayBuilder<FatIfaceMethod>.Rent();
@@ -39,10 +32,10 @@ namespace MonoMod.SourceGen.Internal.Interop {
 
                 using var paramsBuilder = ImmutableArrayBuilder<TypeRef>.Rent();
                 foreach (var param in method.Parameters) {
-                    paramsBuilder.Add(CreateRef(param));
+                    paramsBuilder.Add(GenHelpers.CreateRef(param));
                 }
 
-                methodListBuilder.Add(new(method.Name, CreateRef(method.ReturnType), paramsBuilder.ToImmutable(), GetAccessibililty(method.DeclaredAccessibility)));
+                methodListBuilder.Add(new(method.Name, GenHelpers.CreateRef(method.ReturnType), paramsBuilder.ToImmutable(), GetAccessibililty(method.DeclaredAccessibility)));
             }
             return methodListBuilder.ToImmutable();
         }
@@ -54,7 +47,7 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 (ctx, ct) => {
                     var sym = (INamedTypeSymbol) ctx.TargetSymbol;
                     var methods = GetIfaceTypeMethods(sym);
-                    return new FatInterfaceGenInfo(sym.GetFullyQualifiedMetadataName(), methods);
+                    return new FatInterfaceGenInfo(GenHelpers.CreateTypeContext(sym), methods);
                 });
 
             var interfaceImpls = context.SyntaxProvider.ForAttributeWithMetadataName(FatInterfaceImplAttribute,
@@ -64,26 +57,20 @@ namespace MonoMod.SourceGen.Internal.Interop {
                         return null;
                     }
 
-                    return new FatIfaceImplInfo(((INamedTypeSymbol) ctx.TargetSymbol).GetFullyQualifiedMetadataName(), CreateRef(ifaceType));
+                    return new FatIfaceImplInfo(GenHelpers.CreateTypeContext((INamedTypeSymbol) ctx.TargetSymbol),
+                        GenHelpers.CreateRef(ifaceType),
+                        ifaceType.HasAttributeWithFullyQualifiedMetadataName(FatInterfaceAttribute),
+                        GetIfaceTypeMethods(ifaceType));
                 }).Where(x => x is not null);
 
             // then actually generate the code
 
             // first, the interface decls
-            context.RegisterImplementationSourceOutput(interfaces.Combine(context.CompilationProvider), GenerateIfaceDecl);
-            context.RegisterImplementationSourceOutput(interfaceImpls.Combine(context.CompilationProvider), GenerateIfaceImpl!);
+            context.RegisterImplementationSourceOutput(interfaces, GenerateIfaceDecl);
+            context.RegisterImplementationSourceOutput(interfaceImpls, GenerateIfaceImpl!);
         }
 
         const string IntPtr = "global::System.IntPtr";
-
-        private static string GetRefString(IParameterSymbol param)
-            => param.RefKind switch {
-                RefKind.None => "",
-                RefKind.Ref => "ref ",
-                RefKind.Out => "out ",
-                RefKind.In => "in ",
-                _ => "/*unknown ref kind*/ ",
-            };
 
         private static string GetAccessibililty(Accessibility acc)
             => acc switch {
@@ -97,30 +84,23 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 _ => "/*unknown accessibility*/ ",
             };
 
-        private void GenerateIfaceDecl(SourceProductionContext ctx, (FatInterfaceGenInfo info, Compilation compilation) tup) {
+        private void GenerateIfaceDecl(SourceProductionContext ctx, FatInterfaceGenInfo info) {
             // TODO: pool stringbuilder/codebuilder
             var sb = new StringBuilder();
             var cb = new CodeBuilder(sb);
             cb.WriteHeader();
-            var fname = DoGenerateIfaceDecl(cb, tup.compilation, tup.info);
+            var fname = DoGenerateIfaceDecl(cb, info);
             ctx.AddSource(fname + ".g.cs", sb.ToString());
         }
 
-        private static string DoGenerateIfaceDecl(CodeBuilder code, Compilation compilation, FatInterfaceGenInfo info) {
-            var ifType = compilation.Assembly.GetTypeByMetadataName(info.MdName);
-            if (ifType is null) {
-                code.WriteLine($"#error Could not get type with metadata name {info.MdName}");
-                return $"fat_iface_unknown_{info.GetHashCode()}";
-            }
-
-            var typeCtx = new TypeSourceContext(ifType);
-            typeCtx.AppendEnterContext(code, "unsafe");
+        private static string DoGenerateIfaceDecl(CodeBuilder code, FatInterfaceGenInfo info) {
+            info.Type.AppendEnterContext(code, "unsafe");
 
             // common core code
             code.WriteLine("private readonly void* ptr_;")
                 .WriteLine($"private readonly {IntPtr}[] vtbl_;")
                 .WriteLine()
-                .WriteLine($"public {ifType.Name}(void* ptr, {IntPtr}[] vtbl) {{")
+                .WriteLine($"public {info.Type.InnermostType.Name}(void* ptr, {IntPtr}[] vtbl) {{")
                 .IncreaseIndent().WriteLine("ptr_ = ptr; vtbl_ = vtbl;").DecreaseIndent()
                 .WriteLine("}")
                 .WriteLine();
@@ -174,41 +154,27 @@ namespace MonoMod.SourceGen.Internal.Interop {
                     .WriteLine();
             }
 
-            typeCtx.AppendExitContext(code);
-            return "FatIf_" + typeCtx.FullContextName;
+            info.Type.AppendExitContext(code);
+            return "FatIf_" + info.Type.FullContextName;
         }
 
-        private static void GenerateIfaceImpl(SourceProductionContext ctx, (FatIfaceImplInfo info, Compilation compilation) tup) {
+        private static void GenerateIfaceImpl(SourceProductionContext ctx, FatIfaceImplInfo info) {
             // TODO: pool stringbuilder/codebuilder
             var sb = new StringBuilder();
             var cb = new CodeBuilder(sb);
             cb.WriteHeader();
-            var fname = DoGenerateIfaceImpl(cb, tup.compilation, tup.info);
+            var fname = DoGenerateIfaceImpl(cb, info);
             ctx.AddSource(fname + ".g.cs", sb.ToString());
         }
 
-        private static string DoGenerateIfaceImpl(CodeBuilder code, Compilation compilation, FatIfaceImplInfo info) {
-            var implType = compilation.Assembly.GetTypeByMetadataName(info.ImplType);
-            if (implType is null) {
-                code.WriteLine($"#error Could not get type with metadata name {info.ImplType}");
-                return $"fat_ifaceimpl_unknown_{info.GetHashCode()}";
+        private static string DoGenerateIfaceImpl(CodeBuilder code, FatIfaceImplInfo info) {
+            if (!info.IfaceHasAttr) {
+                code.WriteLine($"#error Target type {info.IfaceType.FqName} is not a fat interface");
+                return "FatIfImpl_" + info.Type.FullContextName;
             }
 
-            var ifType = compilation.GetTypeByMetadataName(info.IfaceType.MdName);
-            if (ifType is null) {
-                code.WriteLine($"#error Could not get type with metadata name {info.IfaceType.MdName}");
-                return $"fat_ifaceimpl_unknown_{info.GetHashCode()}";
-            }
-
-            var typeCtx = new TypeSourceContext(implType);
-
-            if (!ifType.HasAttributeWithFullyQualifiedMetadataName(FatInterfaceAttribute)) {
-                code.WriteLine($"#error Target type {ifType.GetFullyQualifiedName()} is not a fat interface");
-                return "FatIfImpl_" + typeCtx.FullContextName;
-            }
-
-            var ifaceMethods = GetIfaceTypeMethods(ifType);
-            typeCtx.AppendEnterContext(code, "unsafe");
+            var ifaceMethods = info.IfaceMethods;
+            info.Type.AppendEnterContext(code, "unsafe");
 
             code.WriteLine($"private static {IntPtr}[]? fatVtable_;")
                 .WriteLine($"public static {IntPtr}[] FatVtable_ {{ get {{").IncreaseIndent();
@@ -227,7 +193,7 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 }
 
                 code.WriteLine().DecreaseIndent().WriteLine(") {").IncreaseIndent()
-                    .Write($"return (({implType.Name}*)ptr__)->{method.Name}(").IncreaseIndent();
+                    .Write($"return (({info.Type.InnermostType.FqName}*)ptr__)->{method.Name}(").IncreaseIndent();
 
                 j = 0;
                 foreach (var param in method.Parameters) {
@@ -269,8 +235,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
 
             code.DecreaseIndent().WriteLine("} }");
 
-            typeCtx.AppendExitContext(code);
-            return "FatIfImpl_" + typeCtx.FullContextName;
+            info.Type.AppendExitContext(code);
+            return "FatIfImpl_" + info.Type.FullContextName;
         }
     }
 }
