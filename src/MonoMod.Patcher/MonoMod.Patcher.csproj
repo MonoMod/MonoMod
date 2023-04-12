@@ -16,7 +16,7 @@
          (but different!) files with the same package path, which results in a pack error. -->
     <PackAsPublish>false</PackAsPublish>
 
-    <VersionPrefix>24.0.0</VersionPrefix>
+    <VersionPrefix>25.0.0</VersionPrefix>
     <!-- <PackageValidationBaselineVersion> -->
   </PropertyGroup>
 
