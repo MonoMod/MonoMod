@@ -1,3 +1,8 @@
+# Conversion definitions. These declare additional types which can be converted to known types, so 
+# the generator will automatically generate more overloads that take them.
+#
+# Syntax: fromType '->' toType ' ' conversionExpr
+# conversionExpr may not have spaces, and must take `operand` as the input.
 Type->TypeReference Context.Import(operand)
 Type->IMetadataTokenProvider Context.Import(operand)
 FieldInfo->FieldReference Context.Import(operand)
@@ -9,6 +14,11 @@ ulong->long unchecked((long)operand)
 Instruction->ILLabel MarkLabel(operand)
 Instruction[]->ILLabel[] operand.Select(MarkLabel).ToArray()
 
+# Opcode definitions. These must be the Mono.Cecil.Cil.OpCodes opcode names.
+# One opcode may have multiple definitions. This will create overloads. Additionally, conversions
+# (defined above) will create extra overloads.
+#
+# Syntax: opcodeName ' ' argumentType
 Add
 Add_Ovf
 Add_Ovf_Un

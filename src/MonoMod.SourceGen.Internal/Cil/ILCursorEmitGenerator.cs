@@ -1,17 +1,15 @@
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Threading;
+using MonoMod.SourceGen.Internal.Helpers;
 
 namespace MonoMod.SourceGen.Internal.Cil {
     [Generator]
     public class ILCursorEmitGenerator : IIncrementalGenerator { 
-        private record Data(INamedTypeSymbol Klass, string FileName, string FileText);
+        private sealed record Data(TypeContext Klass, Location? Location, string FileName, string? FileText);
         
         public void Initialize(IncrementalGeneratorInitializationContext context) {
             context.RegisterPostInitializationOutput(static ctx => ctx.AddSource("EmitParamsAttribute.g.cs", 
@@ -25,47 +23,38 @@ namespace MonoMod.SourceGen.Internal.Cil {
                 )
             );
 
-            IncrementalValuesProvider<Data> provider = context.SyntaxProvider.CreateSyntaxProvider(IsTargetClass, GetSemanticData)
-                .Where(x => x is not null)
+            var provider = context.SyntaxProvider
+                .ForAttributeWithMetadataName("MonoMod.SourceGen.Attributes.EmitParamsAttribute",
+                    static (_, _) => true,
+                    static (ctx, ct) => {
+                        using var b = ImmutableArrayBuilder<(TypeContext Ctx, Location? Location, string Filename)>.Rent();
+                        var type = GenHelpers.CreateTypeContext((INamedTypeSymbol) ctx.TargetSymbol);
+                        foreach (var attr in ctx.Attributes) {
+                            if (attr is { ConstructorArguments: [{ Value: string fname }] }) {
+                                b.Add((type, attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation(), fname));
+                            }
+                        }
+                        return b.ToImmutable();
+                    })
+                .SelectMany(static (i, _) => i)
                 .Combine(context.AdditionalTextsProvider.Collect())
-                .Select((tup, _) => (tup.Item1, Right: tup.Item2.First(t => Path.GetFileName(t.Path) == tup.Item1!.FileName)))
-                .Where(tup => tup.Item2 is not null)
-                .Select((tup, token) => tup.Item1! with { FileText = tup.Item2!.GetText(token)!.ToString() });
-            
+                .Select(static (t, ct)
+                    => new Data(t.Left.Ctx, t.Left.Location, t.Left.Filename, t.Right.FirstOrDefault(text => Path.GetFileName(text.Path) == t.Left.Filename)?.GetText(ct)?.ToString()));
+
             context.RegisterSourceOutput(provider, Generate);
         }
 
-        private static bool IsTargetClass(SyntaxNode node, CancellationToken token)
-            => node is ClassDeclarationSyntax { AttributeLists.Count: > 0 };
-
-        private static Data? GetSemanticData(GeneratorSyntaxContext ctx, CancellationToken token) {
-            var classSyntax = (ClassDeclarationSyntax) ctx.Node;
-
-            foreach (AttributeSyntax? attr in classSyntax.AttributeLists.SelectMany(l => l.Attributes)) {
-                if (ctx.SemanticModel.GetSymbolInfo(attr, token).Symbol is not IMethodSymbol attrSym) {
-                    continue;
-                }
-
-                INamedTypeSymbol? attrType = attrSym.ContainingType;
-
-                if (attrType.ToDisplayString() != "MonoMod.SourceGen.Attributes.EmitParamsAttribute") {
-                    continue;
-                }
-
-                if (attr is not { ArgumentList.Arguments.Count: 1 }) {
-                    continue;
-                }
-
-                var fileName = (string)ctx.SemanticModel.GetConstantValue(attr.ArgumentList.Arguments[0].Expression, token).Value!;
-
-                return new Data((INamedTypeSymbol) ctx.SemanticModel.GetDeclaredSymbol(classSyntax, token)!, fileName, null!);
-            }
-            return null;
-        }
+        private static readonly DiagnosticDescriptor ErrNoAdditionalFile
+            = new("MM.ILCursor.NoFile", "No such additional file", 
+                "No additional file with the name of '{0}' was found", "", DiagnosticSeverity.Error, true);
 
         private static void Generate(SourceProductionContext ctx, Data data) {
-            var klassName = data.Klass.Name;
-            
+
+            if (data.FileText is null) {
+                ctx.ReportDiagnostic(Diagnostic.Create(ErrNoAdditionalFile, data.Location, data.FileName));
+                return;
+            }
+
             var stringBuilder = new StringBuilder();
             var builder = new CodeBuilder(stringBuilder);
             builder.WriteHeader();
@@ -77,15 +66,15 @@ namespace MonoMod.SourceGen.Internal.Cil {
             builder.WriteLine("using Mono.Cecil;");
             builder.WriteLine("using Mono.Cecil.Cil;");
 
-            builder.WriteLine($$"""namespace {{data.Klass.ContainingNamespace}} {""");
-            builder.IncreaseIndent();
-            builder.WriteLine($$"""partial class {{klassName}} {""");
-            builder.IncreaseIndent();
+            data.Klass.AppendEnterContext(builder);
 
             Dictionary<string, List<(string type, string expr)>> typeMaps = new();
             var sections = data.FileText.Split(new string[] { "\n\n" }, StringSplitOptions.None);
 
             foreach (var typeMap in sections[0].Split('\n')) {
+                if (typeMap.StartsWith("#", StringComparison.Ordinal))
+                    continue;
+
                 var firstSpace = typeMap.IndexOf(' ');
                 var mapping = typeMap.Substring(0, firstSpace);
                 var expr = typeMap.Substring(firstSpace + 1);
@@ -100,13 +89,15 @@ namespace MonoMod.SourceGen.Internal.Cil {
             }
 
             foreach (var opcodeSection in sections[1].Split('\n')) {
+                if (opcodeSection.StartsWith("#", StringComparison.Ordinal))
+                    continue;
                 var parts = opcodeSection.Split(' ');
                 var opcode = parts[0];
                 var opcodeFormatted = opcode.Replace("_", "");
                 if (parts.Length == 1) {
                     builder.WriteLine($"/// <summary>Emit a {opcode} opcode to the current cursor position.</summary>");
                     builder.WriteLine("/// <returns>this</returns>");
-                    builder.WriteLine($"public {klassName} Emit{opcodeFormatted}() => _Insert(IL.Create(OpCodes.{opcode}));");
+                    builder.WriteLine($"public {data.Klass.InnermostType.FqName} Emit{opcodeFormatted}() => _Insert(IL.Create(OpCodes.{opcode}));");
                 } else {
                     var destType = parts[1];
                     if (!typeMaps.TryGetValue(destType, out List<(string type, string expr)> types)) {
@@ -120,18 +111,17 @@ namespace MonoMod.SourceGen.Internal.Cil {
                         }
                         builder.WriteLine("</param>");
                         builder.WriteLine("/// <returns>this</returns>");
-                        builder.WriteLine($"public {klassName} Emit{opcodeFormatted}({type.type} operand) => _Insert(IL.Create(OpCodes.{opcode}, {type.expr}));");
+                        builder.WriteLine($"public {data.Klass.InnermostType.FqName} Emit{opcodeFormatted}({type.type} operand) => _Insert(IL.Create(OpCodes.{opcode}, {type.expr}));");
                     }
                 }
                 builder.WriteLine();
             }
 
-            builder.DecreaseIndent();
-            builder.WriteLine("}");
-            builder.DecreaseIndent();
-            builder.WriteLine("}");
+            builder
+                .CloseBlock()
+                .CloseBlock();
             
-            ctx.AddSource(data.Klass.ToDisplayString() + ".g.cs", stringBuilder.ToString());
+            ctx.AddSource(data.Klass.FullContextName + ".g.cs", stringBuilder.ToString());
         }
     }
 }
