@@ -69,6 +69,8 @@ internal struct ImmutableArrayBuilder<T> : IDisposable {
         writer!.AddRange(items);
     }
 
+    public readonly void Clear() => writer!.Clear();
+
     /// <inheritdoc cref="ImmutableArray{T}.Builder.ToImmutable"/>
     public readonly ImmutableArray<T> ToImmutable() {
         T[] array = writer!.WrittenSpan.ToArray();

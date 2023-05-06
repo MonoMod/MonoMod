@@ -21,7 +21,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <AdditionalFiles Include="Cil\ILCursorOpcodes.txt" />
+    <AdditionalFiles Include="Cil\ILOpcodes.txt" />
   </ItemGroup>
 
   <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->

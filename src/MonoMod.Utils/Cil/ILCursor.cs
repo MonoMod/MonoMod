@@ -57,11 +57,7 @@ namespace MonoMod.Cil {
     /// <summary>
     /// A cursor used to manipulate a method body in an ILContext.
     /// </summary>
-    
-    // can't explain it in the file, so i'll explain it here.
-    // the file starts with a set of conversion definitions, these will be as expressions to convert the parameter operand type to the destination operand type as needed.
-    // after those comes the sets of opcodes and target types. methods will be generated for the defined type and any type that has a conversion to that type.
-    [EmitParams("ILCursorOpcodes.txt")]
+    [EmitILOverloads("ILOpcodes.txt", ILOverloadKind.Cursor)]
     public sealed partial class ILCursor {
         /// <summary>
         /// The context to which this cursor belongs to.

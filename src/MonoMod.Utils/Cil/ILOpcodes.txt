@@ -1,24 +1,40 @@
-# Conversion definitions. These declare additional types which can be converted to known types, so 
-# the generator will automatically generate more overloads that take them.
-#
-# Syntax: fromType '->' toType ' ' conversionExpr
-# conversionExpr may not have spaces, and must take `operand` as the input.
-Type->TypeReference Context.Import(operand)
-Type->IMetadataTokenProvider Context.Import(operand)
-FieldInfo->FieldReference Context.Import(operand)
-FieldInfo->IMetadataTokenProvider Context.Import(operand)
-MethodBase->MethodReference Context.Import(operand)
-MethodBase->IMetadataTokenProvider Context.Import(operand)
-uint->int unchecked((int)operand)
-ulong->long unchecked((long)operand)
-Instruction->ILLabel MarkLabel(operand)
-Instruction[]->ILLabel[] operand.Select(MarkLabel).ToArray()
+# Usings.
+# These will be emitted in the generated source file as using statements.
+[Using]
+System
+System.Linq
+System.Reflection
+Mono.Cecil
+Mono.Cecil.Cil
+MonoMod.Utils
 
-# Opcode definitions. These must be the Mono.Cecil.Cil.OpCodes opcode names.
+# Conversion definitions.
+# Defines available conversions for certain types. These will be used to generate overloads
+# of methods for each opcode.
+#
+# Syntax: fromType '->' toType ':' convertExpr
+# convertExpr should take `operand` as its operand.
+#
+# This definition is for ILCursor generation. They will only be used for that.
+[Conversions ILCursor]
+Type -> TypeReference                   : Context.Import(operand)
+Type -> IMetadataTokenProvider          : Context.Import(operand)
+FieldInfo -> FieldReference             : Context.Import(operand)
+FieldInfo -> IMetadataTokenProvider     : Context.Import(operand)
+MethodBase -> MethodReference           : Context.Import(operand)
+MethodBase -> IMetadataTokenProvider    : Context.Import(operand)
+uint -> int                             : unchecked((int)operand)
+ulong -> long                           : unchecked((long)operand)
+Instruction -> ILLabel                  : MarkLabel(operand)
+Instruction[] -> ILLabel[]              : operand.Select(MarkLabel).ToArray()
+
+# Opcode definitions.
+# These must be the Mono.Cecil.Cil.OpCodes opcode names.
 # One opcode may have multiple definitions. This will create overloads. Additionally, conversions
 # (defined above) will create extra overloads.
 #
 # Syntax: opcodeName ' ' argumentType
+[Opcodes]
 Add
 Add_Ovf
 Add_Ovf_Un
