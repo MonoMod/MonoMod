@@ -30,11 +30,11 @@ namespace MonoMod.RuntimeDetour {
             public bool IsApplied { get; private set; }
 
             private void UndoTrampolineDetour() {
-                if (trampolineDetour is not null) {
-                    trampolineDetour.Undo();
+                var detour = Interlocked.Exchange(ref trampolineDetour, null);
+                if (detour is not null) {
+                    detour.Undo();
                     // TODO: cache trampolineDetours for a time, so they can be reused
-                    trampolineDetour.Dispose();
-                    trampolineDetour = null;
+                    detour.Dispose();
                 }
             }
 
@@ -109,7 +109,7 @@ namespace MonoMod.RuntimeDetour {
 
         internal class ManagedDetourSyncInfo : DetourSyncInfo {
 
-            public bool HasStolenTrampolines;
+            public int HasStolenTrampolines;
             public readonly ConcurrentQueue<ManagedChainNode> TrampolineStealers = new ConcurrentQueue<ManagedChainNode>();
 
             public void StealTrampoline(IDetourFactory factory, ManagedChainNode node) {
@@ -120,16 +120,13 @@ namespace MonoMod.RuntimeDetour {
                 // 2. we wait for all other threads to have returned from the method before stealing the trampoline
                 // -> these threads can't end up in ReturnStolenTrampolines because of 1.
                 TrampolineStealers.Enqueue(node);
-                Volatile.Write(ref HasStolenTrampolines, true);
+                Volatile.Write(ref HasStolenTrampolines, 1);
             }
 
             public void ReturnStolenTrampolines() {
-                if (!Volatile.Read(ref HasStolenTrampolines)) {
+                if (Interlocked.CompareExchange(ref HasStolenTrampolines, 0, 1) != 1) {
                     return;
                 }
-
-                // Clear the flag ahead of time so that other threads can bail out early
-                Volatile.Write(ref HasStolenTrampolines, false);
 
                 while (TrampolineStealers.TryDequeue(out ManagedChainNode? node)) {
                     node.ReturnStolenTrampoline();
@@ -308,7 +305,7 @@ namespace MonoMod.RuntimeDetour {
 
             private void RemoveGraphDetour(SingleManagedDetourState detour, DepGraphNode<ManagedChainNode> node) {
                 detourGraph.Remove(node);
-                UpdateChain(detour.Factory, out bool stealTrampoline);
+                UpdateChain(detour.Factory, out var stealTrampoline);
                 if (stealTrampoline) {
                     detourList.SyncInfo.StealTrampoline(detour.Factory, node.ListNode.ChainNode);
                 }
@@ -327,7 +324,7 @@ namespace MonoMod.RuntimeDetour {
                     chain = ref chain.Next;
                 }
 
-                UpdateChain(detour.Factory, out bool stealTrampoline);
+                UpdateChain(detour.Factory, out var stealTrampoline);
                 if (stealTrampoline) {
                     detourList.SyncInfo.StealTrampoline(detour.Factory, node);
                 }
