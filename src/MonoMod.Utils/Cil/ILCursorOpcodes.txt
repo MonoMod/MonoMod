@@ -1,0 +1,189 @@
+Type->TypeReference Context.Import(operand)
+Type->IMetadataTokenProvider Context.Import(operand)
+FieldInfo->FieldReference Context.Import(operand)
+FieldInfo->IMetadataTokenProvider Context.Import(operand)
+MethodBase->MethodReference Context.Import(operand)
+MethodBase->IMetadataTokenProvider Context.Import(operand)
+uint->int unchecked((int)operand)
+ulong->long unchecked((long)operand)
+Instruction->ILLabel MarkLabel(operand)
+Instruction[]->ILLabel[] operand.Select(MarkLabel).ToArray()
+
+Add
+Add_Ovf
+Add_Ovf_Un
+And
+Arglist
+Beq ILLabel
+Bge ILLabel
+Bge_Un ILLabel
+Bgt ILLabel
+Bgt_Un ILLabel
+Ble ILLabel
+Ble_Un ILLabel
+Blt ILLabel
+Blt_Un ILLabel
+Bne_Un ILLabel
+Box TypeReference
+Br ILLabel
+Break
+Brfalse ILLabel
+Brtrue ILLabel
+Call MethodReference
+Calli MethodReference
+Callvirt MethodReference
+Castclass TypeReference
+Ceq
+Cgt
+Cgt_Un
+Ckfinite
+Clt
+Clt_Un
+Constrained TypeReference
+Conv_I
+Conv_I1
+Conv_I2
+Conv_I4
+Conv_I8
+Conv_Ovf_I
+Conv_Ovf_I_Un
+Conv_Ovf_I1
+Conv_Ovf_I1_Un
+Conv_Ovf_I2
+Conv_Ovf_I2_Un
+Conv_Ovf_I4
+Conv_Ovf_I4_Un
+Conv_Ovf_I8
+Conv_Ovf_I8_Un
+Conv_Ovf_U
+Conv_Ovf_U_Un
+Conv_Ovf_U1
+Conv_Ovf_U1_Un
+Conv_Ovf_U2
+Conv_Ovf_U2_Un
+Conv_Ovf_U4
+Conv_Ovf_U4_Un
+Conv_Ovf_U8
+Conv_Ovf_U8_Un
+Conv_R_Un
+Conv_R4
+Conv_R8
+Conv_U
+Conv_U1
+Conv_U2
+Conv_U4
+Conv_U8
+Cpblk
+Cpobj TypeReference
+Div
+Div_Un
+Dup
+Endfilter
+Endfinally
+Initblk
+Initobj TypeReference
+Isinst TypeReference
+Jmp MethodReference
+Ldarg int
+Ldarga int
+Ldc_I4
+Ldc_I8
+Ldc_R4
+Ldc_R8
+Ldelem_Any TypeReference
+Ldelem_I
+Ldelem_I1
+Ldelem_I2
+Ldelem_I4
+Ldelem_I8
+Ldelem_R4
+Ldelem_R8
+Ldelem_Ref
+Ldelem_U1
+Ldelem_U2
+Ldelem_U4
+Ldelema TypeReference
+Ldfld FieldReference
+Ldflda FieldReference
+Ldftn MethodReference
+Ldind_I
+Ldind_I1
+Ldind_I2
+Ldind_I4
+Ldind_I8
+Ldind_R4
+Ldind_R8
+Ldind_Ref
+Ldind_U1
+Ldind_U2
+Ldind_U4
+Ldlen
+Ldloc int
+Ldloc VariableReference
+Ldloca int
+Ldloca VariableReference
+Ldnull
+Ldobj TypeReference
+Ldsfld FieldReference
+Ldsflda FieldReference
+Ldstr string
+Ldtoken IMetadataTokenProvider
+Ldvirtftn MethodReference
+Leave ILLabel
+Localloc
+Mkrefany TypeReference
+Mul
+Mul_Ovf
+Mul_Ovf_Un
+Neg
+Newarr TypeReference
+Newobj MethodReference
+Nop
+Not
+Or
+Pop
+Readonly
+Refanytype
+Refanyval TypeReference
+Rem
+Rem_Un
+Ret
+Rethrow
+Shl
+Shr
+Shr_Un
+Sizeof TypeReference
+Starg int
+Stelem_Any TypeReference
+Stelem_I
+Stelem_I1
+Stelem_I2
+Stelem_I4
+Stelem_I8
+Stelem_R4
+Stelem_R8
+Stelem_Ref
+Stfld FieldReference
+Stind_I
+Stind_I1
+Stind_I2
+Stind_I4
+Stind_I8
+Stind_R4
+Stind_R8
+Stind_Ref
+Stloc int
+Stloc VariableReference
+Stobj TypeReference
+Stsfld FieldReference
+Sub
+Sub_Ovf
+Sub_Ovf_Un
+Switch ILLabel[]
+Tail
+Throw
+Unaligned byte
+Unbox TypeReference
+Unbox_Any TypeReference
+Volatile
+Xor
