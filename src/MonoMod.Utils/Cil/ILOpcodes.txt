@@ -8,6 +8,17 @@ Mono.Cecil
 Mono.Cecil.Cil
 MonoMod.Utils
 
+# Value types.
+# This defines the types which are considered value types by the generator.
+[ValueTypes]
+byte
+int
+uint
+long
+ulong
+float
+double
+
 # Conversion definitions.
 # Defines available conversions for certain types. These will be used to generate overloads
 # of methods for each opcode.
@@ -27,6 +38,59 @@ uint -> int                             : unchecked((int)operand)
 ulong -> long                           : unchecked((long)operand)
 Instruction -> ILLabel                  : MarkLabel(operand)
 Instruction[] -> ILLabel[]              : operand.Select(MarkLabel).ToArray()
+
+[Conversions ILMatcher]
+Type -> TypeReference                   :
+Type -> IMetadataTokenProvider          :
+FieldInfo -> FieldReference             :
+FieldInfo -> IMetadataTokenProvider     :
+MethodBase -> MethodReference           :
+MethodBase -> IMetadataTokenProvider    :
+uint -> int                             :
+ulong -> long                           :
+Instruction -> ILLabel                  :
+Instruction[] -> ILLabel[]              :
+
+# Skip definitions.
+# These are Opcode definitions which will get skipped for the respective generator kinds.
+[Skip ILCursor]
+
+[Skip ILMatcher]
+# Skip ldarg/ldloc/starg/stloc because we will manually implement a matcher for all of them
+# Part of it is the fact that it could have a value of either int or VariableReference
+Ldarg int
+Ldloc int
+Ldloc VariableReference
+Ldloca int
+Ldloca VariableReference
+Stloc int
+Stloc VariableReference
+# Skip ldc.i4 for a similar reason as above
+Ldc_I4 int
+
+# S-Form list
+[SForm]
+Ldarg int
+Ldloc int
+Ldloc VariableReference
+Ldloca int
+Ldloca variableReference
+Stloc int
+Stloc VariableReference
+Br ILLabel
+Brtrue ILLabel
+Brfalse ILLabel
+Beq ILLabel
+Bge ILLabel
+Bge_Un ILLabel
+Bgt ILLabel
+Bgt_Un ILLabel
+Ble ILLabel
+Ble_Un ILLabel
+Blt ILLabel
+Blt_Un ILLabel
+Bne_Un ILLabel
+Leave ILLabel
 
 # Opcode definitions.
 # These must be the Mono.Cecil.Cil.OpCodes opcode names.
@@ -56,7 +120,7 @@ Break
 Brfalse ILLabel
 Brtrue ILLabel
 Call MethodReference
-Calli MethodReference
+Calli IMethodSignature
 Callvirt MethodReference
 Castclass TypeReference
 Ceq
@@ -112,10 +176,10 @@ Isinst TypeReference
 Jmp MethodReference
 Ldarg int
 Ldarga int
-Ldc_I4
-Ldc_I8
-Ldc_R4
-Ldc_R8
+Ldc_I4 int
+Ldc_I8 long
+Ldc_R4 float
+Ldc_R8 double
 Ldelem_Any TypeReference
 Ldelem_I
 Ldelem_I1

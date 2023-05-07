@@ -21,9 +21,13 @@ namespace MonoMod.SourceGen.Internal.Cil {
         private record struct ParsedConversionDef(string FromType, string ToType, string ConvertExpr);
         private record struct ConversionDefSet(string Name, EquatableArray<ParsedConversionDef> Defs);
         private record struct OpcodeDef(string Opcode, string Formatted, string? ArgumentType);
+        private record struct SkipDefSet(string Name, EquatableArray<OpcodeDef> Defs);
         private sealed record ParsedDefFile(
             EquatableArray<string> Usings,
+            EquatableArray<string> ValueTypes,
             EquatableArray<ConversionDefSet> ConversionDefs,
+            EquatableArray<SkipDefSet> SkipDefs,
+            EquatableArray<OpcodeDef> SForms,
             EquatableArray<OpcodeDef> Opcodes);
 
         public void Initialize(IncrementalGeneratorInitializationContext context) {
@@ -121,15 +125,24 @@ namespace MonoMod.SourceGen.Internal.Cil {
             Using,
             Conversions,
             Opcodes,
+            Skip,
+            ValueTypes,
+            SForm,
         }
 
         private static (string Path, ParsedDefFile Defs) ParseDefsFile((string Path, SourceText Text) text, System.Threading.CancellationToken ct) {
             using var reader = new SourceTextReader(text.Text);
 
             using var usingsBuilder = ImmutableArrayBuilder<string>.Rent();
+            using var opcodeDefsBuilder = ImmutableArrayBuilder<OpcodeDef>.Rent();
+            using var valueTypesBuilder = ImmutableArrayBuilder<string>.Rent();
+            using var sformsBuilder = ImmutableArrayBuilder<OpcodeDef>.Rent();
+
             using var conversionDefSetBuilder = ImmutableArrayBuilder<ConversionDefSet>.Rent();
             using var conversionDefsBuilder = ImmutableArrayBuilder<ParsedConversionDef>.Rent();
-            using var opcodeDefsBuilder = ImmutableArrayBuilder<OpcodeDef>.Rent();
+
+            using var skipSetsBuilder = ImmutableArrayBuilder<SkipDefSet>.Rent();
+            using var skipOpsBuilder = ImmutableArrayBuilder<OpcodeDef>.Rent();
 
             string? line;
             var state = ParseState.None;
@@ -151,6 +164,10 @@ namespace MonoMod.SourceGen.Internal.Cil {
                             conversionDefSetBuilder.Add(new(sectArg, conversionDefsBuilder.ToImmutable()));
                             conversionDefsBuilder.Clear();
                             break;
+                        case ParseState.Skip:
+                            skipSetsBuilder.Add(new(sectArg, skipOpsBuilder.ToImmutable()));
+                            skipOpsBuilder.Clear();
+                            break;
                     }
 
                     // section header
@@ -167,6 +184,9 @@ namespace MonoMod.SourceGen.Internal.Cil {
                         "Using" => ParseState.Using,
                         "Conversions" => ParseState.Conversions,
                         "Opcodes" => ParseState.Opcodes,
+                        "Skip" => ParseState.Skip,
+                        "ValueTypes" => ParseState.ValueTypes,
+                        "SForm" => ParseState.SForm,
                         _ => ParseState.None,
                     };
 
@@ -176,6 +196,9 @@ namespace MonoMod.SourceGen.Internal.Cil {
                     switch (state) {
                         case ParseState.Using:
                             usingsBuilder.Add(line);
+                            break;
+                        case ParseState.ValueTypes:
+                            valueTypesBuilder.Add(line);
                             break;
                         case ParseState.Conversions: {
                                 var typeSepIdx = line.IndexOf("->", StringComparison.Ordinal);
@@ -199,6 +222,21 @@ namespace MonoMod.SourceGen.Internal.Cil {
                                 opcodeDefsBuilder.Add(new(split[0], split[0].Replace("_", ""), split.Length > 1 ? split[1] : null));
                                 break;
                             }
+                        case ParseState.Skip: {
+                                var split = line.Split(' ');
+                                if (split.Length < 1)
+                                    continue;
+                                skipOpsBuilder.Add(new(split[0], split[0].Replace("_", ""), split.Length > 1 ? split[1] : null));
+                                break;
+                            }
+                        case ParseState.SForm: {
+                                var split = line.Split(' ');
+                                if (split.Length < 1)
+                                    continue;
+                                sformsBuilder.Add(new(split[0], split[0].Replace("_", ""), split.Length > 1 ? split[1] : null));
+                                break;
+                            }
+
                     }
                 }
             }
@@ -209,9 +247,19 @@ namespace MonoMod.SourceGen.Internal.Cil {
                     conversionDefSetBuilder.Add(new(sectArg, conversionDefsBuilder.ToImmutable()));
                     conversionDefsBuilder.Clear();
                     break;
+                case ParseState.Skip:
+                    skipSetsBuilder.Add(new(sectArg, skipOpsBuilder.ToImmutable()));
+                    skipOpsBuilder.Clear();
+                    break;
             }
 
-            return (text.Path, Defs: new ParsedDefFile(usingsBuilder.ToImmutable(), conversionDefSetBuilder.ToImmutable(), opcodeDefsBuilder.ToImmutable()));
+            return (text.Path, Defs: new ParsedDefFile(
+                usingsBuilder.ToImmutable(),
+                valueTypesBuilder.ToImmutable(),
+                conversionDefSetBuilder.ToImmutable(),
+                skipSetsBuilder.ToImmutable(),
+                sformsBuilder.ToImmutable(),
+                opcodeDefsBuilder.ToImmutable()));
         }
 
         private sealed class SourceTextTupleComparer : IEqualityComparer<(string Path, SourceText Text)> {
@@ -238,6 +286,19 @@ namespace MonoMod.SourceGen.Internal.Cil {
             _ = builder.WriteLine();
         }
 
+        private static void GetConversionsAndSkips(
+            TypeWithEmitOverloads type, ParsedDefFile defs,
+            out ImmutableArray<ParsedConversionDef> conversions,
+            out ImmutableArray<OpcodeDef> skips
+        ) {
+            conversions = defs.ConversionDefs.FirstOrDefault(c => c.Name == type.Kind).Defs.AsImmutableArray();
+            if (conversions.IsDefault)
+                conversions = ImmutableArray.Create<ParsedConversionDef>();
+            skips = defs.SkipDefs.FirstOrDefault(c => c.Name == type.Kind).Defs.AsImmutableArray();
+            if (skips.IsDefault)
+                skips = ImmutableArray.Create<OpcodeDef>();
+        }
+
         private static void GenerateCursorKind(SourceProductionContext spc, (TypeWithEmitOverloads type, ParsedDefFile defs) t) {
             var (type, defs) = t;
 
@@ -248,14 +309,12 @@ namespace MonoMod.SourceGen.Internal.Cil {
             EmitUsings(builder, defs);
 
             type.Type.AppendEnterContext(builder);
-
-            var conversions = defs.ConversionDefs.FirstOrDefault(c => c.Name == KindCursor).Defs.AsImmutableArray();
-            if (conversions.IsDefault)
-                conversions = ImmutableArray.Create<ParsedConversionDef>();
+            GetConversionsAndSkips(type, defs, out var conversions, out var skips);
 
             foreach (var op in defs.Opcodes) {
+                if (skips.Contains(op)) continue;
                 if (op.ArgumentType is null) {
-                    builder
+                    _ = builder
                         .WriteLine($"""/// <summary>Emit a <see cref="OpCodes.{op.Opcode}"/> opcode to the current cursor position.</summary>""")
                         .WriteLine("/// <returns>this</returns>")
                         .WriteLine($"public {type.Type.InnermostType.FqName} Emit{op.Formatted}() => _Insert(IL.Create(OpCodes.{op.Opcode}));")
@@ -277,13 +336,14 @@ namespace MonoMod.SourceGen.Internal.Cil {
                         .WriteLine();
 
                     static void EmitMethodWithArg(CodeBuilder builder, string selfFqName, OpcodeDef op, string argType, string targetType, string argExpr) {
-                        builder
+                        _ = builder
                             .WriteLine($"/// <summary>Emit a <see cref=\"OpCodes.{op.Opcode}\"/> opcode with a <see cref=\"{argType}\"/> operand to the current cursor position.</summary>")
                             .Write("""/// <param name="operand">The emitted instruction's operand.""");
                         if (argType != targetType) {
-                            builder.Write($$""" Will be automatically converted to a <see cref="{{targetType}}" />.""");
+                            _ = builder.Write($$""" Will be automatically converted to a <see cref="{{targetType}}" />.""");
                         }
-                        builder.WriteLine("</param>")
+                        _ = builder
+                            .WriteLine("</param>")
                             .WriteLine("/// <returns>this</returns>")
                             .WriteLine($"public {selfFqName} Emit{op.Formatted}({argType} operand) => _Insert(IL.Create(OpCodes.{op.Opcode}, {argExpr}));")
                             .WriteLine();
@@ -299,8 +359,99 @@ namespace MonoMod.SourceGen.Internal.Cil {
         private static void GenerateMatcherKind(SourceProductionContext spc, (TypeWithEmitOverloads type, ParsedDefFile defs) t) {
             var (type, defs) = t;
 
+            var sb = new StringBuilder();
+            var builder = new CodeBuilder(sb);
 
-            spc.AddSource("Matcher." + type.Type.FullContextName + ".g.cs", "#error Matcher kind is NYI.");
+            builder.WriteHeader();
+            EmitUsings(builder, defs);
+
+            type.Type.AppendEnterContext(builder);
+
+            GetConversionsAndSkips(type, defs, out var conversions, out var skips);
+
+            foreach (var op in defs.Opcodes) {
+                if (skips.Contains(op))
+                    continue;
+
+                var normalCond = $"instr.OpCode == OpCodes.{op.Opcode}";
+                var sformCond = defs.SForms.AsImmutableArray().Contains(op)
+                    ? $" || instr.OpCode == OpCodes.{op.Opcode}_S"
+                    : "";
+
+                var matchCond = normalCond + sformCond;
+
+                if (op.ArgumentType is null) {
+                    _ = builder
+                        .WriteLine($"/// <summary>Emit a <see cref=\"OpCodes.{op.Opcode}\"/> opcode to the current cursor position.</summary>")
+                        .WriteLine("/// <returns>this</returns>")
+                        .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr) => {matchCond};")
+                        .WriteLine();
+                } else {
+                    var suffix = defs.ValueTypes.Contains(op.ArgumentType) ? "" : "?";
+                    _ = builder
+                        .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, [global::System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out {op.ArgumentType} value)")
+                        .OpenBlock()
+                        .WriteLine($"if ({matchCond})")
+                        .OpenBlock()
+                        .WriteLine($"value = ({op.ArgumentType})instr.Operand;")
+                        .WriteLine("return true;")
+                        .CloseBlock()
+                        .WriteLine("else")
+                        .OpenBlock()
+                        .WriteLine("value = default;")
+                        .WriteLine("return false;")
+                        .CloseBlock()
+                        .CloseBlock()
+                        .WriteLine()
+                        .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, {op.ArgumentType} value)")
+                        .IncreaseIndent()
+                        .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && IsEquivalent(v, value);")
+                        .DecreaseIndent()
+                        .WriteLine();
+
+                    foreach (var conversion in conversions) {
+                        if (conversion.ToType != op.ArgumentType)
+                            continue;
+
+                        _ = builder
+                            .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, {conversion.FromType} value)")
+                            .IncreaseIndent()
+                            .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && IsEquivalent(v, value);")
+                            .DecreaseIndent()
+                            .WriteLine();
+
+                        if (conversion.FromType == "Type") {
+                            // generic variant
+                            _ = builder
+                                .WriteLine($"public static bool Match{op.Formatted}<T>(this Instruction instr)")
+                                .IncreaseIndent()
+                                .WriteLine($"=> Match{op.Formatted}(instr, typeof(T));")
+                                .DecreaseIndent()
+                                .WriteLine();
+                        }
+
+                        if (conversion.FromType is "FieldInfo" or "MethodBase" or "MethodInfo" && op.ArgumentType is not "IMetadataTokenProvider") {
+                            // generic variant
+                            _ = builder
+                                .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, Type type, string fieldName)")
+                                .IncreaseIndent()
+                                .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && IsEquivalent(v, type, fieldName);")
+                                .DecreaseIndent()
+                                .WriteLine()
+                                .WriteLine($"public static bool Match{op.Formatted}<T>(this Instruction instr, string fieldName)")
+                                .IncreaseIndent()
+                                .WriteLine($"=> Match{op.Formatted}(instr, typeof(T), fieldName);")
+                                .DecreaseIndent()
+                                .WriteLine();
+                        }
+                    }
+
+                }
+            }
+
+            type.Type.AppendExitContext(builder);
+
+            spc.AddSource("Matcher." + type.Type.FullContextName + ".g.cs", sb.ToString());
         }
 
     }
