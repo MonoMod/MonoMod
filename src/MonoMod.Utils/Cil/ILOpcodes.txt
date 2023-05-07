@@ -39,6 +39,9 @@ ulong -> long                           : unchecked((long)operand)
 Instruction -> ILLabel                  : MarkLabel(operand)
 Instruction[] -> ILLabel[]              : operand.Select(MarkLabel).ToArray()
 
+# ILMatcher definitions don't have a convertExpr, because we don't need to create
+# instances of the target type. Instead, we comparee against them, using IsEquivalent
+# definitions in the type being generated into.
 [Conversions ILMatcher]
 Type -> TypeReference                   :
 Type -> IMetadataTokenProvider          :
@@ -55,22 +58,26 @@ Instruction[] -> ILLabel[]              :
 # These are Opcode definitions which will get skipped for the respective generator kinds.
 [Skip ILCursor]
 
-[Skip ILMatcher]
-# Skip ldarg/ldloc/starg/stloc because we will manually implement a matcher for all of them
-# Part of it is the fact that it could have a value of either int or VariableReference
+# SkipBase definitions.
+# When using the ILMatcher backend, this will skip generation of the core matcher function,
+# instead only generating the variants that check for specific operands.
+[SkipBase ILMatcher]
 Ldarg int
+Ldc_I4 int
+
+# TODO: move these up to SkipBase as we implement the bases in ILPatternMatchingExt
+[Skip ILMatcher]
 Ldloc int
 Ldloc VariableReference
 Ldloca int
 Ldloca VariableReference
 Stloc int
 Stloc VariableReference
-# Skip ldc.i4 for a similar reason as above
-Ldc_I4 int
 
 # S-Form list
 [SForm]
 Ldarg int
+Ldarga int
 Ldloc int
 Ldloc VariableReference
 Ldloca int

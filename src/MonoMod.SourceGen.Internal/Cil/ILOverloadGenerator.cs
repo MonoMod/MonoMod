@@ -27,6 +27,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
             EquatableArray<string> ValueTypes,
             EquatableArray<ConversionDefSet> ConversionDefs,
             EquatableArray<SkipDefSet> SkipDefs,
+            EquatableArray<SkipDefSet> SkipBaseOnlyDefs,
             EquatableArray<OpcodeDef> SForms,
             EquatableArray<OpcodeDef> Opcodes);
 
@@ -126,6 +127,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
             Conversions,
             Opcodes,
             Skip,
+            SkipBaseOnly,
             ValueTypes,
             SForm,
         }
@@ -143,6 +145,8 @@ namespace MonoMod.SourceGen.Internal.Cil {
 
             using var skipSetsBuilder = ImmutableArrayBuilder<SkipDefSet>.Rent();
             using var skipOpsBuilder = ImmutableArrayBuilder<OpcodeDef>.Rent();
+
+            using var skipBaseSetsBuilder = ImmutableArrayBuilder<SkipDefSet>.Rent();
 
             string? line;
             var state = ParseState.None;
@@ -168,6 +172,10 @@ namespace MonoMod.SourceGen.Internal.Cil {
                             skipSetsBuilder.Add(new(sectArg, skipOpsBuilder.ToImmutable()));
                             skipOpsBuilder.Clear();
                             break;
+                        case ParseState.SkipBaseOnly:
+                            skipBaseSetsBuilder.Add(new(sectArg, skipOpsBuilder.ToImmutable()));
+                            skipOpsBuilder.Clear();
+                            break;
                     }
 
                     // section header
@@ -185,6 +193,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
                         "Conversions" => ParseState.Conversions,
                         "Opcodes" => ParseState.Opcodes,
                         "Skip" => ParseState.Skip,
+                        "SkipBase" => ParseState.SkipBaseOnly,
                         "ValueTypes" => ParseState.ValueTypes,
                         "SForm" => ParseState.SForm,
                         _ => ParseState.None,
@@ -222,6 +231,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
                                 opcodeDefsBuilder.Add(new(split[0], split[0].Replace("_", ""), split.Length > 1 ? split[1] : null));
                                 break;
                             }
+                        case ParseState.SkipBaseOnly:
                         case ParseState.Skip: {
                                 var split = line.Split(' ');
                                 if (split.Length < 1)
@@ -251,6 +261,10 @@ namespace MonoMod.SourceGen.Internal.Cil {
                     skipSetsBuilder.Add(new(sectArg, skipOpsBuilder.ToImmutable()));
                     skipOpsBuilder.Clear();
                     break;
+                case ParseState.SkipBaseOnly:
+                    skipBaseSetsBuilder.Add(new(sectArg, skipOpsBuilder.ToImmutable()));
+                    skipOpsBuilder.Clear();
+                    break;
             }
 
             return (text.Path, Defs: new ParsedDefFile(
@@ -258,6 +272,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
                 valueTypesBuilder.ToImmutable(),
                 conversionDefSetBuilder.ToImmutable(),
                 skipSetsBuilder.ToImmutable(),
+                skipBaseSetsBuilder.ToImmutable(),
                 sformsBuilder.ToImmutable(),
                 opcodeDefsBuilder.ToImmutable()));
         }
@@ -289,7 +304,8 @@ namespace MonoMod.SourceGen.Internal.Cil {
         private static void GetConversionsAndSkips(
             TypeWithEmitOverloads type, ParsedDefFile defs,
             out ImmutableArray<ParsedConversionDef> conversions,
-            out ImmutableArray<OpcodeDef> skips
+            out ImmutableArray<OpcodeDef> skips,
+            out ImmutableArray<OpcodeDef> skipBaseOnlies
         ) {
             conversions = defs.ConversionDefs.FirstOrDefault(c => c.Name == type.Kind).Defs.AsImmutableArray();
             if (conversions.IsDefault)
@@ -297,6 +313,9 @@ namespace MonoMod.SourceGen.Internal.Cil {
             skips = defs.SkipDefs.FirstOrDefault(c => c.Name == type.Kind).Defs.AsImmutableArray();
             if (skips.IsDefault)
                 skips = ImmutableArray.Create<OpcodeDef>();
+            skipBaseOnlies = defs.SkipBaseOnlyDefs.FirstOrDefault(c => c.Name == type.Kind).Defs.AsImmutableArray();
+            if (skipBaseOnlies.IsDefault)
+                skipBaseOnlies = ImmutableArray.Create<OpcodeDef>();
         }
 
         private static void GenerateCursorKind(SourceProductionContext spc, (TypeWithEmitOverloads type, ParsedDefFile defs) t) {
@@ -309,7 +328,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
             EmitUsings(builder, defs);
 
             type.Type.AppendEnterContext(builder);
-            GetConversionsAndSkips(type, defs, out var conversions, out var skips);
+            GetConversionsAndSkips(type, defs, out var conversions, out var skips, out _);
 
             foreach (var op in defs.Opcodes) {
                 if (skips.Contains(op)) continue;
@@ -337,7 +356,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
 
                     static void EmitMethodWithArg(CodeBuilder builder, string selfFqName, OpcodeDef op, string argType, string targetType, string argExpr) {
                         _ = builder
-                            .WriteLine($"/// <summary>Emit a <see cref=\"OpCodes.{op.Opcode}\"/> opcode with a <see cref=\"{argType}\"/> operand to the current cursor position.</summary>")
+                            .WriteLine($"/// <summary>Emits a <see cref=\"OpCodes.{op.Opcode}\"/> opcode with a <see cref=\"{argType}\"/> operand to the current cursor position.</summary>")
                             .Write("""/// <param name="operand">The emitted instruction's operand.""");
                         if (argType != targetType) {
                             _ = builder.Write($$""" Will be automatically converted to a <see cref="{{targetType}}" />.""");
@@ -367,13 +386,13 @@ namespace MonoMod.SourceGen.Internal.Cil {
 
             type.Type.AppendEnterContext(builder);
 
-            GetConversionsAndSkips(type, defs, out var conversions, out var skips);
+            GetConversionsAndSkips(type, defs, out var conversions, out var skips, out var skipBaseOnlies);
 
             foreach (var op in defs.Opcodes) {
                 if (skips.Contains(op))
                     continue;
 
-                var normalCond = $"instr.OpCode == OpCodes.{op.Opcode}";
+                var normalCond = $"global::MonoMod.Utils.Helpers.ThrowIfNull(instr).OpCode == OpCodes.{op.Opcode}";
                 var sformCond = defs.SForms.AsImmutableArray().Contains(op)
                     ? $" || instr.OpCode == OpCodes.{op.Opcode}_S"
                     : "";
@@ -381,28 +400,44 @@ namespace MonoMod.SourceGen.Internal.Cil {
                 var matchCond = normalCond + sformCond;
 
                 if (op.ArgumentType is null) {
-                    _ = builder
-                        .WriteLine($"/// <summary>Emit a <see cref=\"OpCodes.{op.Opcode}\"/> opcode to the current cursor position.</summary>")
-                        .WriteLine("/// <returns>this</returns>")
-                        .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr) => {matchCond};")
-                        .WriteLine();
+                    if (!skipBaseOnlies.Contains(op)) {
+                        _ = builder
+                            .WriteLine($"/// <summary>Matches an instruction with opcode <see cref=\"OpCodes.{op.Opcode}\"/>.</summary>")
+                            .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                            .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
+                            .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr) => {matchCond};")
+                            .WriteLine();
+                    }
                 } else {
                     var suffix = defs.ValueTypes.Contains(op.ArgumentType) ? "" : "?";
+
+                    if (!skipBaseOnlies.Contains(op)) {
+                        _ = builder
+                            .WriteLine($"/// <summary>Matches an instruction with opcode <see cref=\"OpCodes.{op.Opcode}\"/>.</summary>")
+                            .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                            .WriteLine("/// <param name=\"value\">The operand value of the instruction.</param>")
+                            .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
+                            .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, [global::System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out {op.ArgumentType} value)")
+                            .OpenBlock()
+                            .WriteLine($"if ({matchCond})")
+                            .OpenBlock()
+                            .WriteLine($"value = ({op.ArgumentType})instr.Operand;")
+                            .WriteLine("return true;")
+                            .CloseBlock()
+                            .WriteLine("else")
+                            .OpenBlock()
+                            .WriteLine("value = default;")
+                            .WriteLine("return false;")
+                            .CloseBlock()
+                            .CloseBlock()
+                            .WriteLine();
+                    }
+
                     _ = builder
-                        .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, [global::System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out {op.ArgumentType} value)")
-                        .OpenBlock()
-                        .WriteLine($"if ({matchCond})")
-                        .OpenBlock()
-                        .WriteLine($"value = ({op.ArgumentType})instr.Operand;")
-                        .WriteLine("return true;")
-                        .CloseBlock()
-                        .WriteLine("else")
-                        .OpenBlock()
-                        .WriteLine("value = default;")
-                        .WriteLine("return false;")
-                        .CloseBlock()
-                        .CloseBlock()
-                        .WriteLine()
+                        .WriteLine($"/// <summary>Matches an instruction with opcode <see cref=\"OpCodes.{op.Opcode}\"/>.</summary>")
+                        .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                        .WriteLine("/// <param name=\"value\">The operand value required for the instruction to match.</param>")
+                        .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
                         .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, {op.ArgumentType} value)")
                         .IncreaseIndent()
                         .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && IsEquivalent(v, value);")
@@ -414,6 +449,10 @@ namespace MonoMod.SourceGen.Internal.Cil {
                             continue;
 
                         _ = builder
+                            .WriteLine($"/// <summary>Matches an instruction with opcode <see cref=\"OpCodes.{op.Opcode}\"/>.</summary>")
+                            .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                            .WriteLine("/// <param name=\"value\">The operand value required for the instruction to match.</param>")
+                            .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
                             .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, {conversion.FromType} value)")
                             .IncreaseIndent()
                             .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && IsEquivalent(v, value);")
@@ -423,6 +462,10 @@ namespace MonoMod.SourceGen.Internal.Cil {
                         if (conversion.FromType == "Type") {
                             // generic variant
                             _ = builder
+                                .WriteLine($"/// <summary>Matches an instruction with opcode <see cref=\"OpCodes.{op.Opcode}\"/>.</summary>")
+                                .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                                .WriteLine("/// <typeparam name=\"T\">The type that must be the instruction operand for the instruction to match.</typeparam>")
+                                .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
                                 .WriteLine($"public static bool Match{op.Formatted}<T>(this Instruction instr)")
                                 .IncreaseIndent()
                                 .WriteLine($"=> Match{op.Formatted}(instr, typeof(T));")
@@ -433,14 +476,24 @@ namespace MonoMod.SourceGen.Internal.Cil {
                         if (conversion.FromType is "FieldInfo" or "MethodBase" or "MethodInfo" && op.ArgumentType is not "IMetadataTokenProvider") {
                             // generic variant
                             _ = builder
-                                .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, Type type, string fieldName)")
+                                .WriteLine($"/// <summary>Matches an instruction with opcode <see cref=\"OpCodes.{op.Opcode}\"/>.</summary>")
+                                .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                                .WriteLine("/// <param name=\"type\">The type the operand member must be defined on for the instruction to match.</param>")
+                                .WriteLine("/// <param name=\"name\">The name that the operand member must have for the instruction to match.</param>")
+                                .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
+                                .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, Type type, string name)")
                                 .IncreaseIndent()
-                                .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && IsEquivalent(v, type, fieldName);")
+                                .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && IsEquivalent(v, type, name);")
                                 .DecreaseIndent()
                                 .WriteLine()
-                                .WriteLine($"public static bool Match{op.Formatted}<T>(this Instruction instr, string fieldName)")
+                                .WriteLine($"/// <summary>Matches an instruction with opcode <see cref=\"OpCodes.{op.Opcode}\"/>.</summary>")
+                                .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                                .WriteLine("/// <param name=\"name\">The name that the operand member must have for the instruction to match.</param>")
+                                .WriteLine("/// <typeparam name=\"T\">The type the operand member must be defined on for the instruction to match.</typeparam>")
+                                .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
+                                .WriteLine($"public static bool Match{op.Formatted}<T>(this Instruction instr, string name)")
                                 .IncreaseIndent()
-                                .WriteLine($"=> Match{op.Formatted}(instr, typeof(T), fieldName);")
+                                .WriteLine($"=> Match{op.Formatted}(instr, typeof(T), name);")
                                 .DecreaseIndent()
                                 .WriteLine();
                         }
