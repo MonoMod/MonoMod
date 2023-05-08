@@ -62,32 +62,124 @@ namespace MonoMod.Cil {
             => l == r;
         #endregion
 
-        public static bool MatchLdarg(this Instruction instr, out int argIndex) {
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Ldarg"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value of the instruction.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchLdarg(this Instruction instr, out int value) {
             Helpers.ThrowIfArgumentNull(instr);
             if (instr.OpCode == OpCodes.Ldarg) {
-                argIndex = (int)instr.Operand;
+                value = (int)instr.Operand;
                 return true;
             } else if (instr.OpCode == OpCodes.Ldarg_S) {
-                argIndex = (byte)instr.Operand;
+                value = (byte)instr.Operand;
                 return true;
             } else if (instr.OpCode == OpCodes.Ldarg_0) {
-                argIndex = 0;
+                value = 0;
                 return true;
             } else if (instr.OpCode == OpCodes.Ldarg_1) {
-                argIndex = 1;
+                value = 1;
                 return true;
             } else if (instr.OpCode == OpCodes.Ldarg_2) {
-                argIndex = 2;
+                value = 2;
                 return true;
             } else if (instr.OpCode == OpCodes.Ldarg_3) {
-                argIndex = 3;
+                value = 3;
                 return true;
             } else {
-                argIndex = default;
+                value = default;
                 return false;
             }
         }
 
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Ldloc"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value of the instruction.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchLdloc(this Instruction instr, out int value) {
+            Helpers.ThrowIfArgumentNull(instr);
+            if (instr.OpCode == OpCodes.Ldloc || instr.OpCode == OpCodes.Ldloc_S) {
+                value = instr.Operand switch {
+                    VariableReference vr => vr.Index,
+                    int i => i,
+                    byte b => b,
+                    _ => throw new ArgumentException("Instruction has bad operand kind!")
+                };
+                return true;
+            } else if (instr.OpCode == OpCodes.Ldloc_0) {
+                value = 0;
+                return true;
+            } else if (instr.OpCode == OpCodes.Ldloc_1) {
+                value = 1;
+                return true;
+            } else if (instr.OpCode == OpCodes.Ldloc_2) {
+                value = 2;
+                return true;
+            } else if (instr.OpCode == OpCodes.Ldloc_3) {
+                value = 3;
+                return true;
+            } else {
+                value = default;
+                return false;
+            }
+        }
+
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Stloc"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value of the instruction.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchStloc(this Instruction instr, out int value) {
+            Helpers.ThrowIfArgumentNull(instr);
+            if (instr.OpCode == OpCodes.Stloc || instr.OpCode == OpCodes.Stloc_S) {
+                value = instr.Operand switch {
+                    VariableReference vr => vr.Index,
+                    int i => i,
+                    byte b => b,
+                    _ => throw new ArgumentException("Instruction has bad operand kind!")
+                };
+                return true;
+            } else if (instr.OpCode == OpCodes.Stloc_0) {
+                value = 0;
+                return true;
+            } else if (instr.OpCode == OpCodes.Stloc_1) {
+                value = 1;
+                return true;
+            } else if (instr.OpCode == OpCodes.Stloc_2) {
+                value = 2;
+                return true;
+            } else if (instr.OpCode == OpCodes.Stloc_3) {
+                value = 3;
+                return true;
+            } else {
+                value = default;
+                return false;
+            }
+        }
+
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Ldloca"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value of the instruction.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchLdloca(this Instruction instr, out int value) {
+            Helpers.ThrowIfArgumentNull(instr);
+            if (instr.OpCode == OpCodes.Ldloca || instr.OpCode == OpCodes.Ldloca_S) {
+                value = instr.Operand switch {
+                    VariableReference vr => vr.Index,
+                    int i => i,
+                    byte b => b,
+                    _ => throw new ArgumentException("Instruction has bad operand kind!")
+                };
+                return true;
+            } else {
+                value = default;
+                return false;
+            }
+        }
+
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Ldc_I4"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value of the instruction.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
         public static bool MatchLdcI4(this Instruction instr, out int value) {
             Helpers.ThrowIfArgumentNull(instr);
             if (instr.OpCode == OpCodes.Ldc_I4) {
@@ -125,6 +217,21 @@ namespace MonoMod.Cil {
                 return true;
             } else if (instr.OpCode == OpCodes.Ldc_I4_M1) {
                 value = -1;
+                return true;
+            } else {
+                value = default;
+                return false;
+            }
+        }
+
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Call"/> or <see cref="OpCodes.Callvirt"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value of the instruction.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchCallOrCallvirt(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
+            Helpers.ThrowIfArgumentNull(instr);
+            if (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) {
+                value = (MethodReference) instr.Operand;
                 return true;
             } else {
                 value = default;

@@ -57,6 +57,8 @@ Instruction[] -> ILLabel[]              :
 # Skip definitions.
 # These are Opcode definitions which will get skipped for the respective generator kinds.
 [Skip ILCursor]
+# This isn't a real instruction; we can't emit it.
+CallOrCallvirt MethodReference
 
 # SkipBase definitions.
 # When using the ILMatcher backend, this will skip generation of the core matcher function,
@@ -64,14 +66,16 @@ Instruction[] -> ILLabel[]              :
 [SkipBase ILMatcher]
 Ldarg int
 Ldc_I4 int
-
-# TODO: move these up to SkipBase as we implement the bases in ILPatternMatchingExt
-[Skip ILMatcher]
 Ldloc int
-Ldloc VariableReference
-Ldloca int
-Ldloca VariableReference
 Stloc int
+Ldloca int
+# This isn't a real instruction; we need to implement the core matcher.
+CallOrCallvirt MethodReference
+
+[Skip ILMatcher]
+# We cannot reliably get a VariableReference, so we won't try
+Ldloc VariableReference
+Ldloca VariableReference
 Stloc VariableReference
 
 # S-Form list
@@ -104,7 +108,7 @@ Leave ILLabel
 # One opcode may have multiple definitions. This will create overloads. Additionally, conversions
 # (defined above) will create extra overloads.
 #
-# Syntax: opcodeName ' ' argumentType
+# Syntax: opcodeName (' ' argumentType)? ('///' docCommentCrefDecl)? 
 [Opcodes]
 Add
 Add_Ovf
@@ -129,6 +133,8 @@ Brtrue ILLabel
 Call MethodReference
 Calli IMethodSignature
 Callvirt MethodReference
+# This is a fake opcode that we skip for emit, and only include for the convenience of generation of matchers.
+CallOrCallvirt MethodReference /// <see cref="OpCodes.Call"/> or <see cref="OpCodes.Callvirt"/>
 Castclass TypeReference
 Ceq
 Cgt
