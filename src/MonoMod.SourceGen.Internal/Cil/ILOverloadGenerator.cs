@@ -256,14 +256,15 @@ namespace MonoMod.SourceGen.Internal.Cil {
                 var tslashIdx = spcIdx < 0 ? -1 : line.IndexOf("///", spcIdx, StringComparison.Ordinal);
                 if (spcIdx < 0)
                     spcIdx = line.Length;
-                if (tslashIdx < 0)
+                if (tslashIdx < 0) {
                     tslashIdx = line.Length;
+                }
 
                 var opcodeName = line.Substring(0, spcIdx).Trim();
                 var argType = line.Substring(spcIdx, tslashIdx - spcIdx).Trim();
                 if (string.IsNullOrEmpty(argType))
                     argType = null;
-                doc = line.Substring(tslashIdx).Trim();
+                doc = line.Substring(tslashIdx < line.Length ? tslashIdx + 3 : tslashIdx).Trim();
                 if (string.IsNullOrEmpty(doc))
                     doc = $"<see cref=\"OpCodes.{opcodeName}\"/>";
 
