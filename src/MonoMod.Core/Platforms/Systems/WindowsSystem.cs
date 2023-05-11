@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Windows.Win32.System.Memory;
+using static MonoMod.Core.Interop.Windows;
 
 namespace MonoMod.Core.Platforms.Systems {
     internal class WindowsSystem : ISystem {
@@ -76,19 +76,21 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         private unsafe static void ProtectRW(IntPtr addr, nuint size) {
-            if (!Windows.Win32.Interop.VirtualProtect((void*) addr, size, PAGE_PROTECTION_FLAGS.PAGE_READWRITE, out _)) {
+            uint oldProtect;
+            if (!VirtualProtect((void*) addr, size, PAGE_READWRITE, &oldProtect)) {
                 throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
             }
         }
 
         private unsafe static void ProtectRWX(IntPtr addr, nuint size) {
-            if (!Windows.Win32.Interop.VirtualProtect((void*) addr, size, PAGE_PROTECTION_FLAGS.PAGE_EXECUTE_READWRITE, out _)) {
+            uint oldProtect;
+            if (!VirtualProtect((void*) addr, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {
                 throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
             }
         }
 
         private unsafe static void FlushInstructionCache(IntPtr addr, nuint size) {
-            if (!Windows.Win32.Interop.FlushInstructionCache(Windows.Win32.Interop.GetCurrentProcess(), (void*) addr, size)) {
+            if (!Interop.Windows.FlushInstructionCache(GetCurrentProcess(), (void*) addr, size)) {
                 throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
             }
         }
@@ -101,23 +103,24 @@ namespace MonoMod.Core.Platforms.Systems {
             nint knownSize = 0;
 
             do {
-                if (Interop.Windows.VirtualQuery((void*) start, out var buf, (nuint) sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) == 0) {
+                MEMORY_BASIC_INFORMATION buf;
+                if (VirtualQuery((void*) start, &buf, (nuint) sizeof(MEMORY_BASIC_INFORMATION)) == 0) {
                     // VirtualQuery failed, return 0
                     return 0;
                 }
 
-                const PAGE_PROTECTION_FLAGS ReadableMask =
-                    PAGE_PROTECTION_FLAGS.PAGE_READONLY
-                    | PAGE_PROTECTION_FLAGS.PAGE_READWRITE
-                    | PAGE_PROTECTION_FLAGS.PAGE_EXECUTE_READ
-                    | PAGE_PROTECTION_FLAGS.PAGE_EXECUTE_READWRITE;
+                const uint ReadableMask =
+                    PAGE_READONLY
+                    | PAGE_READWRITE
+                    | PAGE_EXECUTE_READ
+                    | PAGE_EXECUTE_READWRITE;
 
                 var isReadable = (buf.Protect & ReadableMask) != 0;
 
                 if (!isReadable)
                     return knownSize;
 
-                var nextPage = (nint) (buf.BaseAddress + buf.RegionSize);
+                var nextPage = (nint) ((nuint)buf.BaseAddress + buf.RegionSize);
                 knownSize += nextPage - start;
                 start = nextPage;
             } while (knownSize < guess);
@@ -137,19 +140,20 @@ namespace MonoMod.Core.Platforms.Systems {
                 var addr = (IntPtr) 0x00000000000010000;
                 var i = 0;
                 while (true) {
-                    if (Interop.Windows.VirtualQuery((void*) addr, out Interop.Windows.MEMORY_BASIC_INFORMATION infoBasic, (nuint) sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) == 0)
+                    MEMORY_BASIC_INFORMATION infoBasic;
+                    if (VirtualQuery((void*)addr, &infoBasic, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) == 0)
                         break;
 
                     var srcL = (nuint) (nint) src;
                     var srcR = srcL + size;
-                    var infoL = infoBasic.BaseAddress;
+                    var infoL = (nuint) infoBasic.BaseAddress;
                     var infoR = infoL + infoBasic.RegionSize;
                     var overlap = infoL <= srcR && srcL <= infoR;
 
                     MMDbgLog.Trace($"{(overlap ? "*" : "-")} #{i++}");
-                    MMDbgLog.Trace($"addr: 0x{infoBasic.BaseAddress:X16}");
+                    MMDbgLog.Trace($"addr: 0x{(nuint) infoBasic.BaseAddress:X16}");
                     MMDbgLog.Trace($"size: 0x{infoBasic.RegionSize:X16}");
-                    MMDbgLog.Trace($"aaddr: 0x{infoBasic.AllocationBase:X16}");
+                    MMDbgLog.Trace($"aaddr: 0x{(nuint) infoBasic.AllocationBase:X16}");
                     MMDbgLog.Trace($"state: {infoBasic.State}");
                     MMDbgLog.Trace($"type: {infoBasic.Type}");
                     MMDbgLog.Trace($"protect: {infoBasic.Protect}");
@@ -157,7 +161,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
                     try {
                         var addrPrev = addr;
-                        addr = unchecked((IntPtr) (infoBasic.BaseAddress + (ulong) infoBasic.RegionSize));
+                        addr = unchecked((IntPtr) ((nuint) infoBasic.BaseAddress + (ulong) infoBasic.RegionSize));
                         if ((ulong) addr <= (ulong) addrPrev)
                             break;
                     } catch (OverflowException oe) {
@@ -178,26 +182,27 @@ namespace MonoMod.Core.Platforms.Systems {
             public override uint PageSize { get; }
 
             public PageAllocator() {
-                Windows.Win32.Interop.GetSystemInfo(out var sysInfo);
+                SYSTEM_INFO sysInfo;
+                unsafe { GetSystemInfo(&sysInfo); }
                 PageSize = sysInfo.dwPageSize;
             }
 
             public override unsafe bool TryAllocatePage(nint size, bool executable, out IntPtr allocated) {
-                var pageProt = executable ? PAGE_PROTECTION_FLAGS.PAGE_EXECUTE_READWRITE : PAGE_PROTECTION_FLAGS.PAGE_READWRITE;
+                var pageProt = executable ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
 
-                allocated = (IntPtr) Windows.Win32.Interop.VirtualAlloc(null, (nuint) size, VIRTUAL_ALLOCATION_TYPE.MEM_RESERVE | VIRTUAL_ALLOCATION_TYPE.MEM_COMMIT, pageProt);
+                allocated = (IntPtr) VirtualAlloc(null, (nuint) size, MEM_RESERVE | MEM_COMMIT, (uint)pageProt);
                 return allocated != IntPtr.Zero;
             }
 
             public unsafe override bool TryAllocatePage(IntPtr pageAddr, nint size, bool executable, out IntPtr allocated) {
-                var pageProt = executable ? PAGE_PROTECTION_FLAGS.PAGE_EXECUTE_READWRITE : PAGE_PROTECTION_FLAGS.PAGE_READWRITE;
+                var pageProt = executable ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
 
-                allocated = (IntPtr) Windows.Win32.Interop.VirtualAlloc((void*) pageAddr, (nuint) size, VIRTUAL_ALLOCATION_TYPE.MEM_RESERVE | VIRTUAL_ALLOCATION_TYPE.MEM_COMMIT, pageProt);
+                allocated = (IntPtr) VirtualAlloc((void*) pageAddr, (nuint) size, MEM_RESERVE | MEM_COMMIT, (uint) pageProt);
                 return allocated != IntPtr.Zero;
             }
 
             public unsafe override bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg) {
-                if (!Windows.Win32.Interop.VirtualFree((void*) pageAddr, 0, VIRTUAL_FREE_TYPE.MEM_RELEASE)) {
+                if (!VirtualFree((void*) pageAddr, 0, MEM_RELEASE)) {
                     // VirtualFree failing is kinda wierd, but whatever
                     errorMsg = new Win32Exception(Marshal.GetLastWin32Error()).Message;
                     return false;
@@ -208,8 +213,9 @@ namespace MonoMod.Core.Platforms.Systems {
             }
 
             public unsafe override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize) {
-                if (Interop.Windows.VirtualQuery((void*) pageAddr, out var buffer, (nuint) sizeof(Interop.Windows.MEMORY_BASIC_INFORMATION)) != 0) {
-                    isFree = buffer.State == VIRTUAL_ALLOCATION_TYPE.MEM_FREE;
+                MEMORY_BASIC_INFORMATION buffer;
+                if (Interop.Windows.VirtualQuery((void*) pageAddr, &buffer, (nuint) sizeof(MEMORY_BASIC_INFORMATION)) != 0) {
+                    isFree = buffer.State == MEM_FREE;
                     allocBase = isFree ? (nint) buffer.BaseAddress : (nint) buffer.AllocationBase;
 
                     // RegionSize is relative to the provided pageAddr for some reason

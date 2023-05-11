@@ -272,7 +272,7 @@ namespace MonoMod.Core.Interop {
         [StructLayout(LayoutKind.Sequential)] // don't know the pack setting unfortunately
         public unsafe struct dyld_image_info {
             public void* imageLoadAddress; // mach_header*
-            public global::Windows.Win32.Foundation.PCSTR imageFilePath; // const char* (we use PCSTR because it already can give us a string with no extra work)
+            public PCSTR imageFilePath; // const char* (we use PCSTR because it already can give us a string with no extra work)
             public nuint imageFileModDate; // uintptr_t
         }
 

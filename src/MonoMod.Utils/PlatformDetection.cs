@@ -5,8 +5,6 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Windows.Win32.System.Diagnostics.Debug;
-using Windows.Win32.Foundation;
 
 namespace MonoMod.Utils {
     public static class PlatformDetection {
@@ -201,25 +199,26 @@ namespace MonoMod.Utils {
             }
         }
 
-        private static void DetectInfoWindows(ref OSKind os, ref ArchitectureKind arch) {
-            Windows.Win32.Interop.GetSystemInfo(out var sysInfo);
+        private static unsafe void DetectInfoWindows(ref OSKind os, ref ArchitectureKind arch) {
+            Interop.Windows.SYSTEM_INFO sysInfo;
+            Interop.Windows.GetSystemInfo(&sysInfo);
 
             // we don't update OS here, because Windows
 
             // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
             arch = sysInfo.Anonymous.Anonymous.wProcessorArchitecture switch {
-                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_AMD64 => ArchitectureKind.x86_64,
-                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_IA64 => throw new PlatformNotSupportedException("You're running .NET on an Itanium device!?!?"),
-                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_INTEL => ArchitectureKind.x86,
-                PROCESSOR_ARCHITECTURE.PROCESSOR_ARCHITECTURE_ARM => ArchitectureKind.Arm,
-                (PROCESSOR_ARCHITECTURE)12 => ArchitectureKind.Arm64,
+                Interop.Windows.PROCESSOR_ARCHITECTURE_AMD64 => ArchitectureKind.x86_64,
+                Interop.Windows.PROCESSOR_ARCHITECTURE_IA64 => throw new PlatformNotSupportedException("You're running .NET on an Itanium device!?!?"),
+                Interop.Windows.PROCESSOR_ARCHITECTURE_INTEL => ArchitectureKind.x86,
+                Interop.Windows.PROCESSOR_ARCHITECTURE_ARM => ArchitectureKind.Arm,
+                Interop.Windows.PROCESSOR_ARCHITECTURE_ARM64 => ArchitectureKind.Arm64,
                 var x => throw new PlatformNotSupportedException($"Unknown Windows processor architecture {x}"),
             };
         }
         #endregion
 
         // Separated method so that this P/Invoke mess doesn't error out on non-Windows.
-        private static bool CheckWine() {
+        private static unsafe bool CheckWine() {
             // wine_get_version can be missing because of course it can.
             // Read a configuration switch.
             if (Switches.TryGetSwitchEnabled(Switches.RunningOnWine, out var runningWine))
@@ -234,9 +233,16 @@ namespace MonoMod.Utils {
             if (env == "FALSE")
                 return false;
 
-            var ntdll = Windows.Win32.Interop.GetModuleHandle("ntdll.dll");
-            if (ntdll != HINSTANCE.Null && Windows.Win32.Interop.GetProcAddress(ntdll, "wine_get_version") != FARPROC.Null)
-                return true;
+            fixed (char* pNtdll = "ntdll.dll") {
+                var ntdll = Interop.Windows.GetModuleHandleW((ushort*)pNtdll);
+                if (ntdll != Interop.Windows.HMODULE.NULL && ntdll != Interop.Windows.HMODULE.INVALID_VALUE) {
+                    fixed (byte* pWineGetVersion = "wineGetVersion"u8) {
+                        if (Interop.Windows.GetProcAddress(ntdll, (sbyte*)pWineGetVersion) != IntPtr.Zero) {
+                            return true;
+                        }
+                    }
+                }
+            }
 
             return false;
         }

@@ -42,7 +42,7 @@ namespace MonoMod.Utils.Interop {
         [DllImport(DL2, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlerror();
 
-        private static (byte[]?, ReadOnlyMemory<byte> Utf8) MarshalToUtf8(string? str) {
+        internal static (byte[]?, ReadOnlyMemory<byte> Utf8) MarshalToUtf8(string? str) {
             if (str is null)
                 return (null, default);
 
@@ -53,7 +53,7 @@ namespace MonoMod.Utils.Interop {
             return (arr, arr.AsMemory().Slice(0, encoded + 1));
         }
 
-        private static void FreeMarshalledArray(byte[]? arr) {
+        internal static void FreeMarshalledArray(byte[]? arr) {
             if (arr is null)
                 return;
             ArrayPool<byte>.Shared.Return(arr);

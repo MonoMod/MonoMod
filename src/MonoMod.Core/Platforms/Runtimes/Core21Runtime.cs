@@ -68,8 +68,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             => *GetVTableEntry(@object, index);
 
         private unsafe void CheckVersionGuid(IntPtr jit) {
-            var getVersionIdentPtr = (delegate* unmanaged[Thiscall]<IntPtr, out Guid, void>) ReadObjectVTable(jit, VtableIndexICorJitCompilerGetVersionGuid);
-            getVersionIdentPtr(jit, out var guid);
+            var getVersionIdentPtr = (delegate* unmanaged[Thiscall]<IntPtr, Guid*, void>) ReadObjectVTable(jit, VtableIndexICorJitCompilerGetVersionGuid);
+            Guid guid;
+            getVersionIdentPtr(jit, &guid);
             Helpers.Assert(guid == ExpectedJitVersion,
                 $"JIT version does not match expected JIT version! " +
                 $"expected: {ExpectedJitVersion}, got: {guid}");

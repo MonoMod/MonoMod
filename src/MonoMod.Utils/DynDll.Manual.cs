@@ -86,11 +86,15 @@ namespace MonoMod.Utils {
             return libraryPtr != IntPtr.Zero;
         }
 
-        private static IntPtr OpenLibraryCore(string? name) {
+        private static unsafe IntPtr OpenLibraryCore(string? name) {
             if (PlatformDetection.OS.Is(OSKind.Windows)) {
-                return name is null
-                    ? Windows.Win32.Interop.GetModuleHandle(name)
-                    : Windows.Win32.Interop.LoadLibrary(name);
+                if (name is null) {
+                    return (IntPtr)Interop.Windows.GetModuleHandleW(null).Value;
+                } else {
+                    fixed (char* pName = name) {
+                        return (IntPtr)Interop.Windows.LoadLibraryW((ushort*)pName).Value;
+                    }
+                }
             } else {
                 var flags = Interop.Unix.DlopenFlags.RTLD_NOW | Interop.Unix.DlopenFlags.RTLD_GLOBAL;
                 return Interop.Unix.DlOpen(name, flags);
@@ -156,9 +160,9 @@ namespace MonoMod.Utils {
         /// Release a library handle obtained via OpenLibrary. Don't release the result of OpenLibrary(null)!
         /// </summary>
         /// <param name="lib">The library handle.</param>
-        public static bool CloseLibrary(IntPtr lib) {
+        public static unsafe bool CloseLibrary(IntPtr lib) {
             if (PlatformDetection.OS.Is(OSKind.Windows))
-                Windows.Win32.Interop.FreeLibrary((Windows.Win32.Foundation.HINSTANCE) lib);
+                Interop.Windows.FreeLibrary(new((void*)lib));
             else
                 Interop.Unix.DlClose(lib);
 
@@ -192,13 +196,19 @@ namespace MonoMod.Utils {
             return InternalTryGetFunction(libraryPtr, name, out functionPtr) || CheckError(out _);
         }
 
-        private static bool InternalTryGetFunction(IntPtr libraryPtr, string name, out IntPtr functionPtr) {
+        private static unsafe bool InternalTryGetFunction(IntPtr libraryPtr, string name, out IntPtr functionPtr) {
             if (libraryPtr == IntPtr.Zero)
                 throw new ArgumentNullException(nameof(libraryPtr));
 
-            functionPtr = PlatformDetection.OS.Is(OSKind.Windows)
-                ? Windows.Win32.Interop.GetProcAddress((Windows.Win32.Foundation.HINSTANCE) libraryPtr, name)
-                : Interop.Unix.DlSym(libraryPtr, name);
+            if (PlatformDetection.OS.Is(OSKind.Windows)) {
+                var (arr, span) = Interop.Unix.MarshalToUtf8(name);
+                fixed (byte* pName = span.Span) {
+                    functionPtr = Interop.Windows.GetProcAddress(new((void*) libraryPtr), (sbyte*)pName);
+                }
+                Interop.Unix.FreeMarshalledArray(arr);
+            } else {
+                functionPtr = Interop.Unix.DlSym(libraryPtr, name);
+            }
 
             return functionPtr != IntPtr.Zero;
         }
