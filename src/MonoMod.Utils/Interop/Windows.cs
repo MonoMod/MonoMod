@@ -44,6 +44,11 @@ namespace MonoMod.Utils.Interop {
         [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         public static extern BOOL FreeLibrary(HMODULE hLibModule);
 
+        [DllImport("kernel32", ExactSpelling = true)]
+        [return: NativeTypeName("DWORD")]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        public static extern uint GetLastError();
+
         public unsafe partial struct SYSTEM_INFO {
             [NativeTypeName("_SYSTEM_INFO::(anonymous union at C:/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/um/sysinfoapi.h:48:5)")]
             public _Anonymous_e__Union Anonymous;

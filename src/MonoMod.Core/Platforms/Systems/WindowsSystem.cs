@@ -78,20 +78,20 @@ namespace MonoMod.Core.Platforms.Systems {
         private unsafe static void ProtectRW(IntPtr addr, nuint size) {
             uint oldProtect;
             if (!VirtualProtect((void*) addr, size, PAGE_READWRITE, &oldProtect)) {
-                throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
+                throw LogAllSections(GetLastError(), addr, size);
             }
         }
 
         private unsafe static void ProtectRWX(IntPtr addr, nuint size) {
             uint oldProtect;
             if (!VirtualProtect((void*) addr, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {
-                throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
+                throw LogAllSections(GetLastError(), addr, size);
             }
         }
 
         private unsafe static void FlushInstructionCache(IntPtr addr, nuint size) {
             if (!Interop.Windows.FlushInstructionCache(GetCurrentProcess(), (void*) addr, size)) {
-                throw LogAllSections(Marshal.GetLastWin32Error(), addr, size);
+                throw LogAllSections(GetLastError(), addr, size);
             }
         }
 
@@ -128,8 +128,8 @@ namespace MonoMod.Core.Platforms.Systems {
             return knownSize;
         }
 
-        private static unsafe Exception LogAllSections(int error, IntPtr src, nuint size, [CallerMemberName] string from = "") {
-            Exception ex = new Win32Exception(error);
+        private static unsafe Exception LogAllSections(uint error, IntPtr src, nuint size, [CallerMemberName] string from = "") {
+            Exception ex = new Win32Exception((int)error);
             if (!MMDbgLog.IsWritingLog)
                 return ex;
 
@@ -204,7 +204,7 @@ namespace MonoMod.Core.Platforms.Systems {
             public unsafe override bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg) {
                 if (!VirtualFree((void*) pageAddr, 0, MEM_RELEASE)) {
                     // VirtualFree failing is kinda wierd, but whatever
-                    errorMsg = new Win32Exception(Marshal.GetLastWin32Error()).Message;
+                    errorMsg = new Win32Exception((int)GetLastError()).Message;
                     return false;
                 }
 

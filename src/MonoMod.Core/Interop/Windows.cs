@@ -51,6 +51,9 @@ namespace MonoMod.Core.Interop {
         [SetsLastSystemError]
         public static extern BOOL FlushInstructionCache(HANDLE hProcess, [NativeTypeName("LPCVOID")] void* lpBaseAddress, [NativeTypeName("SIZE_T")] nuint dwSize);
 
+        [DllImport("kernel32", ExactSpelling = true)]
+        [return: NativeTypeName("DWORD")]
+        public static extern uint GetLastError();
 
         public unsafe partial struct MEMORY_BASIC_INFORMATION {
             [NativeTypeName("PVOID")]

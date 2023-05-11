@@ -106,13 +106,13 @@ namespace MonoMod.Core.Interop {
                 IntPtr corJitInfo, // ICorJitInfo*
                 CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
                 uint flags,
-                byte** nativeEntry,
-                uint* nativeSizeOfCode
+                byte** pNativeEntry,
+                uint* pNativeSizeOfCode
             ) {
                 // this is present so that we can pre-JIT this method by calling it
                 if (functionPtr == IntPtr.Zero) {
-                    *nativeEntry = null;
-                    *nativeSizeOfCode = 0;
+                    *pNativeEntry = null;
+                    *pNativeSizeOfCode = 0;
                     return CorJitResult.CORJIT_OK;
                 }
 
@@ -123,7 +123,7 @@ namespace MonoMod.Core.Interop {
                         CorJitResult
                     >) functionPtr;
 
-                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
+                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, pNativeEntry, pNativeSizeOfCode);
             }
         }
 

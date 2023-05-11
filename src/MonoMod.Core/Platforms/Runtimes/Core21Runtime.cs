@@ -159,11 +159,11 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 IntPtr corJitInfo, // ICorJitInfo*
                 V21.CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
                 uint flags,
-                byte** nativeEntry,
-                uint* nativeSizeOfCode) {
+                byte** pNativeEntry,
+                uint* pNativeSizeOfCode) {
 
-                *nativeEntry = null;
-                *nativeSizeOfCode = 0;
+                *pNativeEntry = null;
+                *pNativeSizeOfCode = 0;
 
                 if (jit == IntPtr.Zero)
                     return CorJitResult.CORJIT_OK;
@@ -179,7 +179,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                      * -ade
                      */
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
-                        jit, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
+                        jit, corJitInfo, methodInfo, flags, pNativeEntry, pNativeSizeOfCode);
                     // if a native exception was caught, return immediately and skip all of our normal processing
                     if (NativeExceptionHelper is { } neh && (nativeException = neh.NativeException) is not 0) {
                         MMDbgLog.Warning($"Native exception caught in JIT by exception helper (ex: 0x{nativeException:x16})");
@@ -209,7 +209,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
 
                             // codeStart and codeStartRw are the same because this runtime doesn't distinguish them at this point in the JIT
-                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) nativeEntry, (IntPtr) (*nativeEntry), *nativeSizeOfCode);
+                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) (*pNativeEntry), (IntPtr) (*pNativeEntry), *pNativeSizeOfCode);
                         } catch {
                             // eat the exception so we don't accidentally bubble up to native code
                         }

@@ -16,9 +16,9 @@ namespace MonoMod.Utils {
 
         private static bool CheckError([NotNullWhen(false)] out Exception? exception) {
             if (PlatformDetection.OS.Is(OSKind.Windows)) {
-                var errorCode = Marshal.GetLastWin32Error();
+                var errorCode = Interop.Windows.GetLastError();
                 if (errorCode != 0) {
-                    exception = new Win32Exception(errorCode);
+                    exception = new Win32Exception((int)errorCode);
                     return false;
                 }
             } else {
