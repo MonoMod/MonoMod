@@ -17,10 +17,10 @@ namespace MonoMod.Core.Interop {
             public new delegate CorJitResult CompileMethodDelegate(
                 IntPtr thisPtr, // ICorJitCompiler*
                 IntPtr corJitInfo, // ICorJitInfo*
-                in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
+                CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
                 uint flags,
-                out byte* nativeEntry,
-                out uint nativeSizeOfCode
+                byte** nativeEntry,
+                uint* nativeSizeOfCode
             );
 
             public new static InvokeCompileMethodPtr InvokeCompileMethodPtr => new(&InvokeCompileMethod);
@@ -29,25 +29,25 @@ namespace MonoMod.Core.Interop {
                 IntPtr functionPtr,
                 IntPtr thisPtr, // ICorJitCompiler*
                 IntPtr corJitInfo, // ICorJitInfo*
-                in CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
+                CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
                 uint flags,
-                out byte* nativeEntry,
-                out uint nativeSizeOfCode
+                byte** nativeEntry,
+                uint* nativeSizeOfCode
             ) {
                 // this is present so that we can pre-JIT this method by calling it
                 if (functionPtr == IntPtr.Zero) {
-                    nativeEntry = null;
-                    nativeSizeOfCode = 0;
+                    *nativeEntry = null;
+                    *nativeSizeOfCode = 0;
                     return CorJitResult.CORJIT_OK;
                 }
 
                 var fnPtr =
                     (delegate* unmanaged[Thiscall]<
-                        IntPtr, IntPtr, in CORINFO_METHOD_INFO,
-                        uint, out byte*, out uint,
+                        IntPtr, IntPtr, CORINFO_METHOD_INFO*,
+                        uint, byte**, uint*,
                         CorJitResult
                     >) functionPtr;
-                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
             }
 
             public enum MethodClassification {

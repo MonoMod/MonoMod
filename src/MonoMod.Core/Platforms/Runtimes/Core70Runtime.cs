@@ -85,7 +85,13 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 MMDbgLog.Trace($"Allocated ICorJitInfo wrapper vtable at 0x{iCorJitInfoWrapperVtbl:x16}");
 
                 // eagerly call ICMP to ensure that it's JITted before installing the hook
-                unsafe { icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, default, 0, out _, out _); }
+                unsafe {
+                    V21.CORINFO_METHOD_INFO methodInfo;
+                    byte* nativeStart;
+                    uint nativeSize;
+                    icmp.InvokeCompileMethod(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, &methodInfo, 0, &nativeStart, &nativeSize);
+                }
+
                 // and the same with MarshalEx.(Get/Set)LastPInvokeError
                 MarshalEx.SetLastPInvokeError(MarshalEx.GetLastPInvokeError());
                 // and the same for NativeExceptionHelper.NativeException { get; set; }
@@ -106,13 +112,13 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public unsafe CorJitResult CompileMethodHook(
                 IntPtr jit, // ICorJitCompiler*
                 IntPtr corJitInfo, // ICorJitInfo*
-                in V21.CORINFO_METHOD_INFO methodInfo, // CORINFO_METHOD_INFO*
+                V21.CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
                 uint flags,
-                out byte* nativeEntry,
-                out uint nativeSizeOfCode) {
+                byte** nativeEntry,
+                uint* nativeSizeOfCode) {
 
-                nativeEntry = null;
-                nativeSizeOfCode = 0;
+                *nativeEntry = null;
+                *nativeSizeOfCode = 0;
 
                 if (jit == IntPtr.Zero)
                     return CorJitResult.CORJIT_OK;
@@ -154,7 +160,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     }
 
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
-                        jit, corJitInfo, methodInfo, flags, out nativeEntry, out nativeSizeOfCode);
+                        jit, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
                     // if a native exception was caught, return immediately and skip all of our normal processing
                     if (NativeExceptionHelper is { } neh && (nativeException = neh.NativeException) is not 0) {
                         MMDbgLog.Warning($"Native exception caught in JIT by exception helper (ex: 0x{nativeException:x16})");
@@ -175,23 +181,23 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             RuntimeTypeHandle[]? genericClassArgs = null;
                             RuntimeTypeHandle[]? genericMethodArgs = null;
 
-                            if (methodInfo.args.sigInst.classInst != null) {
-                                genericClassArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.classInstCount];
+                            if (methodInfo->args.sigInst.classInst != null) {
+                                genericClassArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.classInstCount];
                                 for (var i = 0; i < genericClassArgs.Length; i++) {
-                                    genericClassArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo.args.sigInst.classInst[i]).TypeHandle;
+                                    genericClassArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.classInst[i]).TypeHandle;
                                 }
                             }
-                            if (methodInfo.args.sigInst.methInst != null) {
-                                genericMethodArgs = new RuntimeTypeHandle[methodInfo.args.sigInst.methInstCount];
+                            if (methodInfo->args.sigInst.methInst != null) {
+                                genericMethodArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.methInstCount];
                                 for (var i = 0; i < genericMethodArgs.Length; i++) {
-                                    genericMethodArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo.args.sigInst.methInst[i]).TypeHandle;
+                                    genericMethodArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.methInst[i]).TypeHandle;
                                 }
                             }
 
-                            RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo.ftn).TypeHandle;
-                            RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo.ftn);
+                            RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
+                            RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
 
-                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) nativeEntry, rwEntry, nativeSizeOfCode);
+                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) (*nativeEntry), rwEntry, *nativeSizeOfCode);
                         } catch {
                             // eat the exception so we don't accidentally bubble up to native code
                         }
