@@ -18,18 +18,18 @@ namespace MonoMod.Core.Platforms.Systems {
         public static PosixExceptionHelper CreateHelper(IArchitecture arch, string filename) {
             // we've now got the file on disk, and we know its name
             // lets load it
-            var handle = DynDll.OpenLibrary(filename, skipMapping: true);
+            var handle = DynDll.OpenLibrary(filename);
             IntPtr eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed;
             try {
-                eh_get_exception_ptr = DynDll.GetFunction(handle, nameof(eh_get_exception_ptr));
-                eh_managed_to_native = DynDll.GetFunction(handle, nameof(eh_managed_to_native));
-                eh_native_to_managed = DynDll.GetFunction(handle, nameof(eh_native_to_managed));
+                eh_get_exception_ptr = DynDll.GetExport(handle, nameof(eh_get_exception_ptr));
+                eh_managed_to_native = DynDll.GetExport(handle, nameof(eh_managed_to_native));
+                eh_native_to_managed = DynDll.GetExport(handle, nameof(eh_native_to_managed));
 
                 Helpers.Assert(eh_get_exception_ptr != IntPtr.Zero);
                 Helpers.Assert(eh_managed_to_native != IntPtr.Zero);
                 Helpers.Assert(eh_native_to_managed != IntPtr.Zero);
             } catch {
-                _ = DynDll.CloseLibrary(handle);
+                DynDll.CloseLibrary(handle);
                 throw;
             }
 

@@ -1,138 +1,73 @@
 ﻿using System.Reflection;
-using System.Runtime.InteropServices;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace MonoMod.Utils {
     public static partial class DynDll {
+        // TODO: remove calls to Assembly.GetCallingAssembly when its not necessary (perhaps by moving them into the backend?)
+        // (if we move them into the backend, how can it know how far up to look?)
 
         /// <summary>
-        /// Allows you to remap library paths / names and specify loading flags. Useful for cross-platform compatibility. Applies only to DynDll.
+        /// Open a given library and get its handle.
         /// </summary>
-        public static readonly Dictionary<string, List<DynDllMapping>> Mappings = new Dictionary<string, List<DynDllMapping>>();
-
-        /// <summary>
-        /// Extension method wrapping Marshal.GetDelegateForFunctionPointer
-        /// </summary>
-        public static T AsDelegate<T>(this IntPtr s) where T : Delegate {
-            return (T)Marshal.GetDelegateForFunctionPointer(s, typeof(T));
+        /// <remarks>
+        /// Passing <see langword="null"/> to <paramref name="name"/> will get the entrypoint module's handle.
+        /// </remarks>
+        /// <param name="name">The library name.</param>
+        /// <returns>The library handle.</returns>
+        public static IntPtr OpenLibrary(string? name) {
+            return Backend.OpenLibrary(name, Assembly.GetCallingAssembly());
         }
 
         /// <summary>
-        /// Fill all static delegate fields with the DynDllImport attribute.
-        /// Call this early on in the static constructor.
+        /// Try to open a given library and get its handle.
         /// </summary>
-        /// <param name="type">The type containing the DynDllImport delegate fields.</param>
-        /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
-        public static void ResolveDynDllImports(this Type type, Dictionary<string, List<DynDllMapping>>? mappings = null)
-            => InternalResolveDynDllImports(Helpers.ThrowIfNull(type), null, mappings);
-
-        /// <summary>
-        /// Fill all instance delegate fields with the DynDllImport attribute.
-        /// Call this early on in the constructor.
-        /// </summary>
-        /// <param name="instance">An instance of a type containing the DynDllImport delegate fields.</param>
-        /// <param name="mappings">Any optional mappings similar to the static mappings.</param>
-        public static void ResolveDynDllImports(object instance, Dictionary<string, List<DynDllMapping>>? mappings = null)
-            => InternalResolveDynDllImports(Helpers.ThrowIfNull(instance).GetType(), instance, mappings);
-
-        private static void InternalResolveDynDllImports(Type type, object? instance, Dictionary<string, List<DynDllMapping>>? mappings) {
-            BindingFlags fieldFlags = BindingFlags.Public | BindingFlags.NonPublic;
-            if (instance == null)
-                fieldFlags |= BindingFlags.Static;
-            else
-                fieldFlags |= BindingFlags.Instance;
-
-            foreach (FieldInfo field in type.GetFields(fieldFlags)) {
-                var found = true;
-
-                foreach (DynDllImportAttribute attrib in field.GetCustomAttributes(typeof(DynDllImportAttribute), true)) {
-                    found = false;
-
-                    IntPtr libraryPtr = IntPtr.Zero;
-
-                    if (mappings != null && mappings.TryGetValue(attrib.LibraryName, out var mappingList)) {
-                        var mappingFound = false;
-
-                        foreach (var mapping in mappingList) {
-                            if (TryOpenLibrary(mapping.LibraryName, out libraryPtr, true)) {
-                                mappingFound = true;
-                                break;
-                            }
-                        }
-
-                        if (!mappingFound)
-                            continue;
-                    } else {
-                        if (!TryOpenLibrary(attrib.LibraryName, out libraryPtr))
-                            continue;
-                    }
-
-
-                    foreach (var entryPoint in attrib.EntryPoints.Concat(new[] { field.Name, field.FieldType.Name })) {
-                        if (!libraryPtr.TryGetFunction(entryPoint, out IntPtr functionPtr))
-                            continue;
-
-#pragma warning disable CS0618 // Type or member is obsolete
-                        field.SetValue(instance, Marshal.GetDelegateForFunctionPointer(functionPtr, field.FieldType));
-#pragma warning restore CS0618 // Type or member is obsolete
-
-                        found = true;
-                        break;
-                    }
-
-                    if (found)
-                        break;
-                }
-
-                if (!found)
-                    throw new EntryPointNotFoundException($"No matching entry point found for {field.Name} in {field.DeclaringType?.FullName}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Similar to DllImport, but requires you to run typeof(DeclaringType).ResolveDynDllImports();
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-    public sealed class DynDllImportAttribute : Attribute {
-        /// <summary>
-        /// The library or library alias to use.
-        /// </summary>
-        public string LibraryName { get; }
-
-        /// <summary>
-        /// A list of possible entrypoints that the function can be resolved to. Implicitly includes the field name and delegate name.
-        /// </summary>
-        public string[] EntryPoints { get; }
-
-        /// <param name="libraryName">The library or library alias to use.</param>
-        /// <param name="entryPoints">A list of possible entrypoints that the function can be resolved to. Implicitly includes the field name and delegate name.</param>
-        public DynDllImportAttribute(string libraryName, params string[] entryPoints) {
-            LibraryName = libraryName;
-            EntryPoints = entryPoints;
-        }
-    }
-
-    /// <summary>
-    /// A mapping entry, to be used by <see cref="DynDllImportAttribute"/>.
-    /// </summary>
-    public sealed class DynDllMapping {
-        /// <summary>
-        /// The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.
-        /// </summary>
-        public string LibraryName { get; }
-
-        /// <param name="libraryName">The name as which the library will be resolved as. Useful to remap libraries or to provide full paths.</param>
-        public DynDllMapping(string libraryName) {
-            LibraryName = libraryName ?? throw new ArgumentNullException(nameof(libraryName));
+        /// <remarks>
+        /// Passing <see langword="null"/> to <paramref name="name"/> will get the entrypoint module's handle.
+        /// </remarks>
+        /// <param name="name">The library name.</param>
+		/// <param name="libraryPtr">The library handle.</param>
+        /// <returns><see langword="true"/> if the library was opened successfully; <see langword="false"/> if an error ocurred.</returns>
+        public static bool TryOpenLibrary(string? name, out IntPtr libraryPtr) {
+            return Backend.TryOpenLibrary(name, Assembly.GetCallingAssembly(), out libraryPtr);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2225:Operator overloads have named alternates",
-            Justification = "Alternative is constructor.")]
-        public static implicit operator DynDllMapping(string libraryName) {
-            return new DynDllMapping(libraryName);
+        /// <summary>
+        /// Release a library handle obtained from <see cref="OpenLibrary(string?)"/> or <see cref="TryOpenLibrary(string?, out IntPtr)"/>.
+        /// </summary>
+        /// <param name="lib">The library handle.</param>
+        public static void CloseLibrary(IntPtr lib) {
+            Backend.CloseLibrary(lib);
         }
+
+        /// <summary>
+        /// Try to close a library handle obtained from <see cref="OpenLibrary(string?)"/> or <see cref="TryOpenLibrary(string?, out IntPtr)"/>.
+        /// </summary>
+        /// <param name="lib">The library handle.</param>
+        /// <returns><see langword="true"/> if the library was closed successfully; <see langword="false"/> if an error ocurred.</returns>
+        public static bool TryCloseLibrary(IntPtr lib) {
+            return Backend.TryCloseLibrary(lib);
+        }
+
+        /// <summary>
+        /// Get a pointer to an export from the given library.
+        /// </summary>
+        /// <param name="libraryPtr">The library handle.</param>
+        /// <param name="name">The function name.</param>
+        /// <returns>The function pointer.</returns>
+        public static IntPtr GetExport(this IntPtr libraryPtr, string name) {
+            return Backend.GetExport(libraryPtr, name);
+        }
+
+        /// <summary>
+        /// Get a pointer to an export from the given library.
+        /// </summary>
+        /// <param name="libraryPtr">The library handle.</param>
+        /// <param name="name">The function name.</param>
+        /// <param name="functionPtr">The export pointer, or null if it wasn't found.</param>
+        /// <returns><see langword="true"/> if the export was obtained successfully; <see langword="false"/> if an error ocurred.</returns>
+        public static bool TryGetExport(this IntPtr libraryPtr, string name, out IntPtr functionPtr) {
+            return Backend.TryGetExport(libraryPtr, name, out functionPtr);
+        }
+
     }
 }

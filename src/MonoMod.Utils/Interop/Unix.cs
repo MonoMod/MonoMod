@@ -26,7 +26,7 @@ namespace MonoMod.Utils.Interop {
         [DllImport(DL1, EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL1dlopen(byte* filename, DlopenFlags flags);
         [DllImport(DL1, EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool DL1dlclose(IntPtr handle);
+        private static extern int DL1dlclose(IntPtr handle);
         [DllImport(DL1, EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL1dlsym(IntPtr handle, byte* symbol);
         [DllImport(DL1, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
@@ -36,21 +36,22 @@ namespace MonoMod.Utils.Interop {
         [DllImport(DL2, EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlopen(byte* filename, DlopenFlags flags);
         [DllImport(DL2, EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool DL2dlclose(IntPtr handle);
+        private static extern int DL2dlclose(IntPtr handle);
         [DllImport(DL2, EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlsym(IntPtr handle, byte* symbol);
         [DllImport(DL2, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlerror();
 
-        internal static (byte[]?, ReadOnlyMemory<byte> Utf8) MarshalToUtf8(string? str) {
+        internal static byte[]? MarshalToUtf8(string? str) {
             if (str is null)
-                return (null, default);
+                return null;
 
             var len = Encoding.UTF8.GetByteCount(str);
             var arr = ArrayPool<byte>.Shared.Rent(len + 1);
             arr.AsSpan().Fill(0);
             var encoded = Encoding.UTF8.GetBytes(str, 0, str.Length, arr, 0);
-            return (arr, arr.AsMemory().Slice(0, encoded + 1));
+            Helpers.DAssert(len == encoded);
+            return arr;
         }
 
         internal static void FreeMarshalledArray(byte[]? arr) {
@@ -62,11 +63,11 @@ namespace MonoMod.Utils.Interop {
         private static int dlVersion = 1;
 
         public static IntPtr DlOpen(string? filename, DlopenFlags flags) {
-            var (arr, str) = MarshalToUtf8(filename);
+            var arr = MarshalToUtf8(filename);
             try {
                 while (true) {
                     try {
-                        fixed (byte* pStr = str.Span) {
+                        fixed (byte* pStr = arr) {
                             switch (dlVersion) {
                                 case 1:
                                     return DL2dlopen(pStr, flags);
@@ -90,11 +91,11 @@ namespace MonoMod.Utils.Interop {
                 try {
                     switch (dlVersion) {
                         case 1:
-                            return DL2dlclose(handle);
+                            return DL2dlclose(handle) == 0;
 
                         case 0:
                         default:
-                            return DL1dlclose(handle);
+                            return DL1dlclose(handle) == 0;
                     }
                 } catch (DllNotFoundException) when (dlVersion > 0) {
                     dlVersion--;
@@ -103,11 +104,11 @@ namespace MonoMod.Utils.Interop {
         }
 
         public static IntPtr DlSym(IntPtr handle, string symbol) {
-            var (arr, str) = MarshalToUtf8(symbol);
+            var arr = MarshalToUtf8(symbol);
             try {
                 while (true) {
                     try {
-                        fixed (byte* pStr = str.Span) {
+                        fixed (byte* pStr = arr) {
                             switch (dlVersion) {
                                 case 1:
                                     return DL2dlsym(handle, pStr);

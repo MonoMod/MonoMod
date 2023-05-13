@@ -184,9 +184,9 @@ namespace MonoMod.Core.Interop {
         public static unsafe int mach_task_self() {
             var ptr = mach_task_self_;
             if (ptr is null) {
-                var lib = DynDll.OpenLibrary(LibSystem, skipMapping: true);
+                var lib = DynDll.OpenLibrary(LibSystem);
                 try {
-                    mach_task_self_ = ptr = (int*) DynDll.GetFunction(lib, "mach_task_self_");
+                    mach_task_self_ = ptr = (int*) DynDll.GetExport(lib, "mach_task_self_");
                 } finally {
                     DynDll.CloseLibrary(lib);
                 }

@@ -100,11 +100,11 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private unsafe IntPtr GetJitObject() {
             var path = GetClrJitPath();
 
-            if (!DynDll.TryOpenLibrary(path, out var clrjit, true))
+            if (!DynDll.TryOpenLibrary(path, out var clrjit))
                 throw new PlatformNotSupportedException("Could not open clrjit library");
 
             try {
-                return ((delegate* unmanaged[Stdcall]<IntPtr>) DynDll.GetFunction(clrjit, "getJit"))();
+                return ((delegate* unmanaged[Stdcall]<IntPtr>) DynDll.GetExport(clrjit, "getJit"))();
             } catch {
                 DynDll.CloseLibrary(clrjit);
                 throw;

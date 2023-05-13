@@ -52,7 +52,7 @@ unsafe {
     };
 
     var msvcrt = DynDll.OpenLibrary(clib);
-    var msvcrand = (delegate* unmanaged[Cdecl]<int>) DynDll.GetFunction(msvcrt, "rand");
+    var msvcrand = (delegate* unmanaged[Cdecl]<int>) DynDll.GetExport(msvcrt, "rand");
 
     var get1del = (Get1Delegate) Get1;
     var get1ptr = (delegate* unmanaged[Cdecl]<int>) Marshal.GetFunctionPointerForDelegate(get1del);
