@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32.SafeHandles;
+using MonoMod.Core.Interop;
 using MonoMod.Core.Platforms.Memory;
 using MonoMod.Core.Utils;
 using MonoMod.Utils;
@@ -9,7 +10,6 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using static MonoMod.Core.Interop.OSX;
 
@@ -406,7 +406,7 @@ namespace MonoMod.Core.Platforms.Systems {
                     fd = MkSTemp(pTmpl);
 
                 if (fd == -1) {
-                    var lastError = Marshal.GetLastWin32Error();
+                    var lastError = OSX.Errno;
                     var ex = new Win32Exception(lastError);
                     MMDbgLog.Error($"Could not create temp file for NativeExceptionHelper: {lastError} {ex}");
                     throw ex;

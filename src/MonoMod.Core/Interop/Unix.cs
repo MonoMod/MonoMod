@@ -7,23 +7,28 @@ namespace MonoMod.Core.Interop {
         public const string LibC = "libc";
 
 
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mmap", SetLastError = true)]
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mmap")]
         public static extern unsafe nint Mmap(IntPtr addr, nuint length, Protection prot, MmapFlags flags, int fd, int offset);
 
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "munmap", SetLastError = true)]
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "munmap")]
         public static extern unsafe int Munmap(IntPtr addr, nuint length);
 
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mprotect", SetLastError = true)]
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mprotect")]
         public static extern unsafe int Mprotect(IntPtr addr, nuint len, Protection prot);
 
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sysconf", SetLastError = true)]
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "sysconf")]
         public static extern unsafe long Sysconf(SysconfName name);
 
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mincore", SetLastError = true)]
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mincore")]
         public static extern unsafe int Mincore(IntPtr addr, nuint len, byte* vec);
 
-        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mkstemp", SetLastError = true)]
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mkstemp")]
         public static extern unsafe int MkSTemp(byte* template);
+
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "__errno_location")]
+        public static extern unsafe int* __errno_location();
+
+        public static unsafe int Errno => *__errno_location();
 
         [Flags]
         public enum Protection : int {

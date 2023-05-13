@@ -12,7 +12,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace MonoMod.Core.Platforms.Systems {
@@ -94,14 +93,14 @@ namespace MonoMod.Core.Platforms.Systems {
         private void ProtectRW(IntPtr addr, nint size) {
             RoundToPageBoundary(ref addr, ref size);
             if (Unix.Mprotect(addr, (nuint) size, Unix.Protection.Read | Unix.Protection.Write) != 0) {
-                throw new Win32Exception();
+                throw new Win32Exception(Unix.Errno);
             }
         }
 
         private void ProtectRWX(IntPtr addr, nint size) {
             RoundToPageBoundary(ref addr, ref size);
             if (Unix.Mprotect(addr, (nuint) size, Unix.Protection.Read | Unix.Protection.Write | Unix.Protection.Execute) != 0) {
-                throw new Win32Exception();
+                throw new Win32Exception(Unix.Errno);
             }
         }
 
@@ -119,7 +118,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 byte garbage;
                 // TODO: Mincore isn't implemented in WSL, and always gives ENOSYS
                 if (Unix.Mincore(page, 1, &garbage) == -1) {
-                    var lastError = Marshal.GetLastWin32Error();
+                    var lastError = Unix.Errno;
                     if (lastError == 12) {  // ENOMEM, page is unallocated
                         return false;
                     }
@@ -142,8 +141,8 @@ namespace MonoMod.Core.Platforms.Systems {
                 var mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint) PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous, -1, 0);
                 if (mmapPtr is 0 or -1) {
                     // fuck
-                    int errno;
-                    MMDbgLog.Error($"Error creating allocation: {errno = MarshalEx.GetLastPInvokeError()} {new Win32Exception(errno).Message}");
+                    var errno = Unix.Errno;
+                    MMDbgLog.Error($"Error creating allocation: {errno} {new Win32Exception(errno).Message}");
                     allocated = null;
                     return false;
                 }
@@ -263,7 +262,7 @@ namespace MonoMod.Core.Platforms.Systems {
             protected override bool TryFreePage(Page page, [NotNullWhen(false)] out string? errorMsg) {
                 var res = Unix.Munmap(page.BaseAddr, page.Size);
                 if (res != 0) {
-                    errorMsg = new Win32Exception().Message;
+                    errorMsg = new Win32Exception(Unix.Errno).Message;
                     return false;
                 }
                 errorMsg = null;
@@ -301,7 +300,7 @@ namespace MonoMod.Core.Platforms.Systems {
                     fd = Unix.MkSTemp(pTmpl);
 
                 if (fd == -1) {
-                    var lastError = Marshal.GetLastWin32Error();
+                    var lastError = Unix.Errno;
                     var ex = new Win32Exception(lastError);
                     MMDbgLog.Error($"Could not create temp file for NativeExceptionHelper: {lastError} {ex}");
                     throw ex;
