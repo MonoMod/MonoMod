@@ -11,7 +11,12 @@ parameters:
 - name: condition
   type: string
   default: true
-
+- name: usePgo
+  type: bool
+  default: false
+- name: pgoTimeout
+  type: string
+  default: 5
 
 steps:
 - ${{ if eq(length('${{parameters.arch}}'), 0) }}:
@@ -43,3 +48,43 @@ steps:
       testResultsFormat: 'VSTest'
       testResultsFiles: '**/testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx'
       testRunTitle: 'Tests @ $(jobArchName) core ${{parameters.targetFramework}}-${{parameters.arch}}'
+      
+- ${{ if and(${{parameters.usePgo}}, eq(length('${{parameters.arch}}'), 0)) }}:
+  - task: CmdLine@2
+    condition: and(always(), ${{parameters.condition}})
+    timeoutInMinutes: ${{parameters.pgoTimeout}}
+    displayName: 'Test: core: ${{parameters.targetFramework}} PGO'
+    env:
+      DOTNET_ReadyToRun: 0
+      DOTNET_TC_QuickJitForLoops: 1
+      DOTNET_TieredPGO: 1
+    inputs:
+      script: |
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}.trx"
+  - task: PublishTestResults@2
+    condition: and(always(), ${{parameters.condition}})
+    displayName: 'Test: Publish: core: ${{parameters.targetFramework}}'
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '**/testresults.core.${{parameters.targetFramework}}.pgo.trx'
+      testRunTitle: 'Tests @ $(jobArchName) core ${{parameters.targetFramework}} PGO'
+      
+- ${{ if and(${{parameters.usePgo}}, ne(length('${{parameters.arch}}'), 0)) }}:
+  - task: CmdLine@2
+    condition: and(always(), ${{parameters.condition}})
+    timeoutInMinutes: ${{parameters.pgoTimeout}}
+    displayName: 'Test: core: ${{parameters.targetFramework}}-${{parameters.arch}} PGO'
+    env:
+      DOTNET_ReadyToRun: 0
+      DOTNET_TC_QuickJitForLoops: 1
+      DOTNET_TieredPGO: 1
+    inputs:
+      script: |
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} --arch '${{parameters.arch}}' -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx"
+  - task: PublishTestResults@2
+    condition: and(always(), ${{parameters.condition}})
+    displayName: 'Test: Publish: core: ${{parameters.targetFramework}}-${{parameters.arch}}'
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '**/testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.pgo.trx'
+      testRunTitle: 'Tests @ $(jobArchName) core ${{parameters.targetFramework}}-${{parameters.arch}} PGO'
