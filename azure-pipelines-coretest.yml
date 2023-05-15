@@ -49,7 +49,7 @@ steps:
       testResultsFiles: '**/testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx'
       testRunTitle: 'Tests @ $(jobArchName) core ${{parameters.targetFramework}}-${{parameters.arch}}'
       
-- ${{ if and(${{parameters.usePgo}}, eq(length('${{parameters.arch}}'), 0)) }}:
+- ${{ if and(eq('${{parameters.usePgo}}', 'true'), eq(length('${{parameters.arch}}'), 0)) }}:
   - task: CmdLine@2
     condition: and(always(), ${{parameters.condition}})
     timeoutInMinutes: ${{parameters.pgoTimeout}}
@@ -69,7 +69,7 @@ steps:
       testResultsFiles: '**/testresults.core.${{parameters.targetFramework}}.pgo.trx'
       testRunTitle: 'Tests @ $(jobArchName) core ${{parameters.targetFramework}} PGO'
       
-- ${{ if and(${{parameters.usePgo}}, ne(length('${{parameters.arch}}'), 0)) }}:
+- ${{ if and(eq('${{parameters.usePgo}}', 'true'), ne(length('${{parameters.arch}}'), 0)) }}:
   - task: CmdLine@2
     condition: and(always(), ${{parameters.condition}})
     timeoutInMinutes: ${{parameters.pgoTimeout}}
