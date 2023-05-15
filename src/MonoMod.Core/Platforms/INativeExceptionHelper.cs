@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Platforms {
     /// <summary>
-    /// A native excepotion helper to enable interop with native code that throws exceptions.
+    /// A native exception helper to enable interop with native code that throws exceptions.
     /// </summary>
     /// <remarks>
     /// <para>This helper must only be used when native->managed->native transitions are present. If the only transition
@@ -17,7 +17,7 @@ namespace MonoMod.Core.Platforms {
     /// </remarks>
     public interface INativeExceptionHelper {
         /// <summary>
-        /// Gets or sets the thread's current native exception.
+        /// Gets a delegate which can be used to get a pointer to the current thread's native exception slot.
         /// </summary>
         /// <remarks>
         /// Native exceptions which are caught this way <i>must</i> be preserved and restored just before returning to the 
@@ -25,7 +25,7 @@ namespace MonoMod.Core.Platforms {
         /// must be read and preserved immediately after any calls to the managed->native helper, to protect against other
         /// uses of the exception helper. It must then be restored before returning to the native->managed helper.
         /// </remarks>
-        IntPtr NativeException { get; set; }
+        GetExceptionSlot GetExceptionSlot { get; }
 
         /// <summary>
         /// Creates a native to managed thunk for this exception helper.
@@ -42,4 +42,10 @@ namespace MonoMod.Core.Platforms {
         /// <returns>A pointer to the thunk for managed code to call instead of <paramref name="target"/>.</returns>
         IntPtr CreateManagedToNativeHelper(IntPtr target, out IDisposable? handle);
     }
+
+    /// <summary>
+    /// A delegate which gets a pointer to the current thread's native exception slot.
+    /// </summary>
+    /// <returns>A pointer to the current thread's native exception slot.</returns>
+    public unsafe delegate IntPtr* GetExceptionSlot();
 }

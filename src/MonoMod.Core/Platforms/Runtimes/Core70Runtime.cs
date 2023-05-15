@@ -64,6 +64,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private sealed class JitHookDelegateHolder {
             public readonly Core70Runtime Runtime;
             public readonly INativeExceptionHelper? NativeExceptionHelper;
+            public readonly GetExceptionSlot? GetNativeExceptionSlot;
             public readonly JitHookHelpersHolder JitHookHelpers;
             public readonly InvokeCompileMethodPtr InvokeCompileMethodPtr;
             public readonly IntPtr CompileMethodPtr;
@@ -96,7 +97,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 MarshalEx.SetLastPInvokeError(MarshalEx.GetLastPInvokeError());
                 // and the same for NativeExceptionHelper.NativeException { get; set; }
                 if (NativeExceptionHelper is { } neh) {
-                    neh.NativeException = neh.NativeException;
+                    GetNativeExceptionSlot = neh.GetExceptionSlot;
+                    unsafe { _ = GetNativeExceptionSlot(); }
                 }
 
                 // ensure the static constructor has been called
@@ -125,6 +127,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 var lastError = MarshalEx.GetLastPInvokeError();
                 nint nativeException = default;
+                var pNEx = GetNativeExceptionSlot is { } getNex ? getNex() : null;
                 hookEntrancy++;
                 try {
 
@@ -162,7 +165,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
                         jit, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
                     // if a native exception was caught, return immediately and skip all of our normal processing
-                    if (NativeExceptionHelper is { } neh && (nativeException = neh.NativeException) is not 0) {
+                    if (pNEx is not null && (nativeException = *pNEx) is not 0) {
                         MMDbgLog.Warning($"Native exception caught in JIT by exception helper (ex: 0x{nativeException:x16})");
                         return result;
                     }
@@ -206,8 +209,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     return result;
                 } finally {
                     hookEntrancy--;
-                    if (NativeExceptionHelper is { } neh)
-                        neh.NativeException = nativeException;
+                    if (pNEx is not null)
+                        *pNEx = nativeException;
                     MarshalEx.SetLastPInvokeError(lastError);
                 }
             }
@@ -236,6 +239,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private sealed class AllocMemDelegateHolder {
             public readonly Core70Runtime Runtime;
             public readonly INativeExceptionHelper? NativeExceptionHelper;
+            public readonly GetExceptionSlot? GetNativeExceptionSlot;
             public readonly InvokeAllocMemPtr InvokeAllocMemPtr;
             public readonly int ICorJitInfoAllocMemIdx;
             public readonly ConcurrentDictionary<IntPtr, (IntPtr M2N, IDisposable?)> AllocMemExceptionHelperCache = new();
@@ -243,6 +247,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public AllocMemDelegateHolder(Core70Runtime runtime, InvokeAllocMemPtr iamp) {
                 Runtime = runtime;
                 NativeExceptionHelper = runtime.NativeExceptionHelper;
+                GetNativeExceptionSlot = NativeExceptionHelper?.GetExceptionSlot;
                 InvokeAllocMemPtr = iamp;
                 ICorJitInfoAllocMemIdx = Runtime.VtableIndexICorJitInfoAllocMem;
 
@@ -260,7 +265,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 var wrap = (ICorJitInfoWrapper*) thisPtr;
                 var wrapped = wrap->Wrapped;
                 InvokeAllocMemPtr.InvokeAllocMem(GetRealInvokePtr((*wrapped)[ICorJitInfoAllocMemIdx]), (IntPtr) wrapped, args);
-                if (NativeExceptionHelper is { } neh && (nint)neh.NativeException is not 0) {
+                if (GetNativeExceptionSlot is { } neh && (nint)(*neh()) is not 0) {
                     return;
                 }
                 (*wrap)[ICorJitInfoWrapper.HotCodeRW] = args->hotCodeBlockRW;
