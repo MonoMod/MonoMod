@@ -12,7 +12,7 @@ parameters:
   type: string
   default: true
 - name: usePgo
-  type: bool
+  type: string
   default: false
 - name: pgoTimeout
   type: string
