@@ -11,20 +11,28 @@ namespace MonoMod.Utils {
     public static class Helpers {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static void Swap<T>(ref T a, ref T b) => (b, a) = (a, b);
-
-        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static bool Has<T>(this T @enum, T value) where T : struct, Enum {
-            var flgsVal = NumericValue(value);
-            return (NumericValue(@enum) & flgsVal) == flgsVal;
+        public static void Swap<T>(ref T a, ref T b) {
+            var tmp = a;
+            a = b;
+            b = tmp;
         }
 
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static ulong NumericValue<T>(T value) where T : struct, Enum {
-            ulong result = 0;
-            Unsafe.CopyBlock(ref Unsafe.As<ulong, byte>(ref result), ref Unsafe.As<T, byte>(ref value), (uint) Unsafe.SizeOf<T>());
-            return result;
+        public static unsafe bool Has<T>(this T value, T flag) where T : struct, Enum {
+            if (sizeof(T) == sizeof(long)) {
+                return (Unsafe.As<T, long>(ref value) & Unsafe.As<T, long>(ref flag)) != 0;
+            } else if (sizeof(T) == sizeof(int)) {
+                return (Unsafe.As<T, int>(ref value) & Unsafe.As<T, int>(ref flag)) != 0;
+            } else if (sizeof(T) == sizeof(short)) {
+                return (Unsafe.As<T, short>(ref value) & Unsafe.As<T, short>(ref flag)) != 0;
+            } else if (sizeof(T) == sizeof(byte)) {
+                return (Unsafe.As<T, byte>(ref value) & Unsafe.As<T, byte>(ref flag)) != 0;
+            } else {
+                throw new InvalidOperationException("unknown enum size?");
+            }
         }
+#pragma warning restore
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static void ThrowIfArgumentNull<T>([NotNull] T? arg, [CallerArgumentExpression("arg")] string name = "") {
@@ -37,12 +45,6 @@ namespace MonoMod.Utils {
             if (arg is null)
                 ThrowArgumentNull(name);
             return arg;
-        }
-
-        [MethodImpl(MethodImplOptionsEx.NoInlining)]
-        [DoesNotReturn]
-        private static void ThrowArgumentNull(string argName) {
-            throw new ArgumentNullException(argName);
         }
 
         public static T EventAdd<T>(ref T? evt, T del) where T : Delegate {
@@ -90,7 +92,7 @@ namespace MonoMod.Utils {
             [CallerArgumentExpression("value")] string expr = ""
         ) {
             if (!value)
-                ThrowAssertionFailed(message.ToStringAndClear(), expr);
+                ThrowAssertionFailed(ref message, expr);
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
@@ -100,17 +102,31 @@ namespace MonoMod.Utils {
             [CallerArgumentExpression("value")] string expr = ""
         ) {
             if (!value)
-                ThrowAssertionFailed(message.ToStringAndClear(), expr);
+                ThrowAssertionFailed(ref message, expr);
         }
 
-        [MethodImpl(MethodImplOptionsEx.NoInlining)]
+        // note: throw helpers should not be NoInline because that prevents the CoreCLR JIT from seeing that it's a throw helper
+        [DoesNotReturn]
+        private static void ThrowArgumentNull(string argName) {
+            throw new ArgumentNullException(argName);
+        }
+
         [DoesNotReturn]
         private static void ThrowAssertionFailed(string? msg, string expr) {
             DebugLog.Log(AssemblyInfo.AssemblyName + ".Assert", LogLevel.Assert, $"Assertion failed! {expr} {msg}");
+            Debug.Fail(expr, msg);
             throw new AssertionFailedException(msg, expr);
         }
 
-#region GetOrInit*
+        [DoesNotReturn]
+        private static void ThrowAssertionFailed(ref AssertionInterpolatedStringHandler message, string expr) {
+            var msg = message.ToStringAndClear();
+            DebugLog.Log(AssemblyInfo.AssemblyName + ".Assert", LogLevel.Assert, $"Assertion failed! {expr} {msg}");
+            Debug.Fail(expr, msg);
+            throw new AssertionFailedException(msg, expr);
+        }
+
+        #region GetOrInit*
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public unsafe static T GetOrInit<T>(ref T? location, Func<T> init) where T : class {
             if (location is not null)
@@ -182,7 +198,6 @@ namespace MonoMod.Utils {
                     (nuint) first.Length);
         }
 
-        [MethodImpl(MethodImplOptionsEx.NoInlining)]
         [DoesNotReturn]
         private static void ThrowMaskTooShort() {
             throw new ArgumentException("Mask too short", "mask");

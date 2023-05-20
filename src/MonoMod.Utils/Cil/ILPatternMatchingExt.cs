@@ -58,8 +58,16 @@ namespace MonoMod.Cil {
              && l.HasThis == r.HasThis
              && l.ExplicitThis == r.ExplicitThis
              && IsEquivalent(l.ReturnType, r.ReturnType)
-             && l.Parameters.SequenceEqual(r.Parameters, ParameterRefEqualityComparer.Instance)
+             && CastParamsToRef(l).SequenceEqual(CastParamsToRef(r), ParameterRefEqualityComparer.Instance)
             );
+
+        private static IEnumerable<ParameterReference> CastParamsToRef(IMethodSignature sig) {
+#if NET35
+            return sig.Parameters.Cast<ParameterReference>();
+#else
+            return sig.Parameters;
+#endif
+        }
 
         private sealed class ParameterRefEqualityComparer : IEqualityComparer<ParameterReference> {
             public static readonly ParameterRefEqualityComparer Instance = new();
@@ -88,7 +96,7 @@ namespace MonoMod.Cil {
             => l is FieldReference fl ? IsEquivalent(fl, r) : false;
         private static bool IsEquivalent(IMetadataTokenProvider l, MethodBase r)
             => l is MethodReference ml ? IsEquivalent(ml, r) : false;
-        #endregion
+#endregion
 
         /// <summary>Matches an instruction with opcode <see cref="OpCodes.Ldarg"/>.</summary>
         /// <param name="instr">The instruction to try to match.</param>
