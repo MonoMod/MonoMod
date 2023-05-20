@@ -5,7 +5,7 @@
     <PackageId>$(MSBuildProjectName)</PackageId>
     <Authors>0x0ade, DaNike</Authors> <!-- Note: With dotnet pack, <Authors> is also the list of owners. -->
     <VersionPrefix>0.0.0</VersionPrefix> <!-- Devbuild (version hasn't been set) -->
-    <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha.dev</VersionSuffix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == '' and '$(DoNotAddSuffix)' == ''">alpha.dev</VersionSuffix>
     
     <Copyright>Copyright $([System.DateTime]::Now.ToString(yyyy)) $(Authors)</Copyright>
     <PackageTags>MonoMod;assembly;assemblies;module;modules;il;cil;msil;bytecode;reflection;injection;cecil;mono;$(PackageTags)</PackageTags>
