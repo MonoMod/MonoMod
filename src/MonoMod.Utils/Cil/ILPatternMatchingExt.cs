@@ -8,6 +8,7 @@ using Mono.Cecil.Cil;
 using System.Linq;
 using MonoMod.SourceGen.Attributes;
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 
 namespace MonoMod.Cil {
     [EmitILOverloads("ILOpcodes.txt", ILOverloadKind.Matcher)]
@@ -51,15 +52,42 @@ namespace MonoMod.Cil {
         }
 
         private static bool IsEquivalent(IMethodSignature l, IMethodSignature r)
-            => l == r; // TODO: is this valid?
+            => l == r
+            || (
+                l.CallingConvention == r.CallingConvention
+             && l.HasThis == r.HasThis
+             && l.ExplicitThis == r.ExplicitThis
+             && IsEquivalent(l.ReturnType, r.ReturnType)
+             && l.Parameters.SequenceEqual(r.Parameters, ParameterRefEqualityComparer.Instance)
+            );
+
+        private sealed class ParameterRefEqualityComparer : IEqualityComparer<ParameterReference> {
+            public static readonly ParameterRefEqualityComparer Instance = new();
+
+            public bool Equals(ParameterReference? x, ParameterReference? y) {
+                if (x is null) {
+                    return y is null;
+                }
+                if (y is null) {
+                    return false;
+                }
+
+                return IsEquivalent(x.ParameterType, y.ParameterType);
+            }
+
+            public int GetHashCode([DisallowNull] ParameterReference obj) {
+                return obj.ParameterType.GetHashCode();
+            }
+        }
+
         private static bool IsEquivalent(IMetadataTokenProvider l, IMetadataTokenProvider r)
-            => l == r; // TODO: is this valid?
+            => l == r || l.MetadataToken == r.MetadataToken; // TODO: is this valid?
         private static bool IsEquivalent(IMetadataTokenProvider l, Type r)
-            => l == r; // TODO: is this valid?
+            => l is TypeReference tl ? IsEquivalent(tl, r) : false;
         private static bool IsEquivalent(IMetadataTokenProvider l, FieldInfo r)
-            => l == r;
+            => l is FieldReference fl ? IsEquivalent(fl, r) : false;
         private static bool IsEquivalent(IMetadataTokenProvider l, MethodBase r)
-            => l == r;
+            => l is MethodReference ml ? IsEquivalent(ml, r) : false;
         #endregion
 
         /// <summary>Matches an instruction with opcode <see cref="OpCodes.Ldarg"/>.</summary>
