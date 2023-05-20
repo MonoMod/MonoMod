@@ -54,9 +54,9 @@ namespace MonoMod.Utils {
 
             using (var reader = new BinaryReader(new MemoryStream(data))) {
                 for (Instruction? instr = null, prev = null; reader.BaseStream.Position < reader.BaseStream.Length; prev = instr) {
-                    int offset = (int) reader.BaseStream.Position;
+                    var offset = (int) reader.BaseStream.Position;
                     instr = Instruction.Create(OpCodes.Nop);
-                    byte op = reader.ReadByte();
+                    var op = reader.ReadByte();
                     instr.OpCode = op != 0xfe ? _CecilOpCodes1X[op] : _CecilOpCodes2X[reader.ReadByte()];
                     instr.Offset = offset;
                     if (prev != null)
@@ -75,9 +75,9 @@ namespace MonoMod.Utils {
                         break;
 
                     case OperandType.InlineSwitch:
-                        int[] offsets = (int[]) instr.Operand!;
-                        Instruction[] targets = new Instruction[offsets.Length];
-                        for (int i = 0; i < offsets.Length; i++)
+                        var offsets = (int[]) instr.Operand!;
+                        var targets = new Instruction[offsets.Length];
+                        for (var i = 0; i < offsets.Length; i++)
                             targets[i] = GetInstruction(offsets[i])!;
                         instr.Operand = targets;
                         break;
@@ -85,7 +85,7 @@ namespace MonoMod.Utils {
             }
 
             foreach (ExceptionHandlingClause clause in bodyFrom.ExceptionHandlingClauses) {
-                ExceptionHandler handler = new ExceptionHandler((ExceptionHandlerType) clause.Flags);
+                var handler = new ExceptionHandler((ExceptionHandlerType) clause.Flags);
                 bodyTo.ExceptionHandlers.Add(handler);
 
                 handler.TryStart = GetInstruction(clause.TryOffset);
@@ -108,8 +108,8 @@ namespace MonoMod.Utils {
                     case OperandType.InlineSwitch:
                         length = reader.ReadInt32();
                         offs = (int) reader.BaseStream.Position + (4 * length);
-                        int[] targets = new int[length];
-                        for (int i = 0; i < length; i++)
+                        var targets = new int[length];
+                        for (var i = 0; i < length; i++)
                             targets[i] = reader.ReadInt32() + offs;
                         instr.Operand = targets;
                         break;
@@ -230,19 +230,19 @@ namespace MonoMod.Utils {
                     // we could not resolve the method normally, so lets read the import table
                     // but we can only do that if the module was loaded from disk
                     // this can still throw if the assembly is a dynamic one, but if that's broken, you have bigger issues
-                    string filePath = moduleFrom.Assembly.Location;
+                    var filePath = moduleFrom.Assembly.Location;
                     if (!File.Exists(filePath)) {
                         // in this case, the fallback cannot be followed, and so throwing the original error gives the user information
                         throw;
                     }
 
                     // TODO: make this cached somehow so its not read and re-opened a bunch
-                    using (AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(filePath, new ReaderParameters {
+                    using (var assembly = AssemblyDefinition.ReadAssembly(filePath, new ReaderParameters {
                         ReadingMode = ReadingMode.Deferred
                     })) {
                         ModuleDefinition module = assembly.Modules.First(m => m.Name == moduleFrom.Name);
                         // this should only fail if the token itself is somehow wrong
-                        MemberReference reference = (MemberReference) module.LookupToken(token);
+                        var reference = (MemberReference) module.LookupToken(token);
                         // the explicit casts here are to throw if they are incorrect
                         // normally the references would need to be imported, but moduleTo isn't written to anywhere
                         switch (resolveMode) {
@@ -266,14 +266,14 @@ namespace MonoMod.Utils {
             }
 
             Instruction? GetInstruction(int offset) {
-                int last = bodyTo.Instructions.Count - 1;
+                var last = bodyTo.Instructions.Count - 1;
                 if (offset < 0 || offset > bodyTo.Instructions[last].Offset)
                     return null;
 
-                int min = 0;
-                int max = last;
+                var min = 0;
+                var max = last;
                 while (min <= max) {
-                    int mid = min + ((max - min) / 2);
+                    var mid = min + ((max - min) / 2);
                     Instruction instr = bodyTo.Instructions[mid];
 
                     if (offset == instr.Offset)
