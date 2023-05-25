@@ -105,9 +105,13 @@ namespace MonoMod.Core.Platforms.Systems {
             do {
                 MEMORY_BASIC_INFORMATION buf;
                 if (VirtualQuery((void*) start, &buf, (nuint) sizeof(MEMORY_BASIC_INFORMATION)) == 0) {
+                    var lastError = GetLastError();
+                    MMDbgLog.Warning($"VirtualQuery failed: {lastError} {new Win32Exception((int) lastError).Message}");
                     // VirtualQuery failed, return 0
                     return 0;
                 }
+
+                MMDbgLog.Spam($"VirtualQuery(0x{start:x16}) == {{ Protect = {buf.Protect:x}, BaseAddr = {(nuint)buf.BaseAddress:x16}, Size = {buf.RegionSize:x4} }}");
 
                 const uint ReadableMask =
                     PAGE_READONLY

@@ -62,8 +62,10 @@ namespace MonoMod.Core.Interop {
             public void* AllocationBase;
             [NativeTypeName("DWORD")]
             public uint AllocationProtect;
-            [NativeTypeName("WORD")]
-            public ushort PartitionId;
+
+            // Note: in Win64 this has a PartitionId field. However, we don't care about it.
+            // It is OK to leave it out because padding to RegionSize keeps the struct the same size anyway.
+
             [NativeTypeName("SIZE_T")]
             public nuint RegionSize;
             [NativeTypeName("DWORD")]
