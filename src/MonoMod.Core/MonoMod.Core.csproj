@@ -13,7 +13,7 @@
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
     <VersionPrefix>1.0.0</VersionPrefix>
-    <!-- <PackageValidationBaselineVersion> -->
+    <PackageValidationBaselineVersion>1.0.0-prerelease.1</PackageValidationBaselineVersion>
 
     <NoWarn>$([String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
   </PropertyGroup>

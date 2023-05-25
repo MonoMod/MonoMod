@@ -10,7 +10,7 @@
     <MMReferenceUtils>false</MMReferenceUtils>
 
     <VersionPrefix>25.0.0</VersionPrefix>
-    <PackageValidationBaselineVersion>22.7.31.1</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>25.0.0-prerelease.1</PackageValidationBaselineVersion>
   </PropertyGroup>
   
   <!-- Dependencies -->
