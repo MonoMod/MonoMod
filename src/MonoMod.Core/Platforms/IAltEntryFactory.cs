@@ -2,7 +2,7 @@
 
 namespace MonoMod.Core.Platforms {
     /// <summary>
-    /// A factory for constructin native alternate entrypoints for functions.
+    /// A factory for construction native alternate entrypoints for functions.
     /// </summary>
     public interface IAltEntryFactory {
         /// <summary>

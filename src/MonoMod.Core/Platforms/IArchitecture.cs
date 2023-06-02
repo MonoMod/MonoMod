@@ -75,7 +75,7 @@ namespace MonoMod.Core.Platforms {
         /// <para>Usually, callers should use <see cref="SimpleNativeDetour.ChangeTarget(IntPtr)"/> instead.</para>
         /// </remarks>
         /// <param name="detour">The detour to retarget.</param>
-        /// <param name="target">The new narget of the detour.</param>
+        /// <param name="target">The new target of the detour.</param>
         /// <param name="maxSizeHint">The maximum amount of readable/writable memory at the detour site, or -1. This is to be used as a hint, and may be ignored.</param>
         /// <returns>The computed <see cref="NativeDetourInfo"/>.</returns>
         /// <seealso cref="GetRetargetBytes(NativeDetourInfo, NativeDetourInfo, Span{byte}, out IDisposable?, out bool, out bool)"/>
