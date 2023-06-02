@@ -29,7 +29,7 @@ namespace MonoMod.Core.Utils {
         }
 
         /// <summary>
-        /// Construcs an <see cref="AddressMeaning"/> for the specified <see cref="AddressKind"/> and relative offset.
+        /// Constructs an <see cref="AddressMeaning"/> for the specified <see cref="AddressKind"/> and relative offset.
         /// </summary>
         /// <param name="kind">The <see cref="AddressKind"/>.</param>
         /// <param name="relativeOffset">The offset relative to the match start.</param>
@@ -66,7 +66,7 @@ namespace MonoMod.Core.Utils {
         /// Processes an address according to this <see cref="AddressMeaning"/> into an absolute address.
         /// </summary>
         /// <param name="basePtr">The base pointer of the match.</param>
-        /// <param name="offset">The offset from the base pointer that the match ocurred at.</param>
+        /// <param name="offset">The offset from the base pointer that the match occurred at.</param>
         /// <param name="address">The address which was extracted from the match.</param>
         /// <returns>The resolved target address.</returns>
         public nint ProcessAddress(nint basePtr, int offset, ulong address) {

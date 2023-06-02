@@ -113,7 +113,7 @@ namespace MonoMod.Core.Platforms {
     /// <param name="methodHandle">The <see cref="RuntimeMethodHandle"/> of the method which was compiled.</param>
     /// <param name="method">A <see cref="MethodBase"/> representing the method, if one could be found.</param>
     /// <param name="codeStart">A pointer to the start of the method code. This only represents the final location which the code will exist at.</param>
-    /// <param name="codeRw">A pointer to the start of the read/write capable code. This contains the actual codedata.</param>
+    /// <param name="codeRw">A pointer to the start of the read/write capable code. This contains the actual code data.</param>
     /// <param name="codeSize">The size of the code.</param>
     public delegate void OnMethodCompiledCallback(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, IntPtr codeRw, ulong codeSize);
 }

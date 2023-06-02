@@ -135,7 +135,7 @@ namespace MonoMod.Core.Utils {
                 }
             }
 
-            // now we want to count the acutal number of different offsets we found
+            // now we want to count the actual number of different offsets we found
             if (offsetArrayCounts is not null) {
                 foreach (var arr in offsetArrayCounts) {
                     if (arr is not null) {

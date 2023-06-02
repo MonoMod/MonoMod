@@ -262,7 +262,7 @@ namespace MonoMod.Core.Platforms {
                 method = Runtime.GetIdentifiable(method);
             }
 
-            // because the .NET reflcetion APIs are really bad, two MethodBases may not compare equal if they represent the same method
+            // because the .NET reflection APIs are really bad, two MethodBases may not compare equal if they represent the same method
             // *but were gotten through different means*. Because MemberInfo.ReflectedType exists.
             // In order to fix this, when getting an identifiable method, we make sure to correct it, by retrieving it directly from its declaring type (or module, as it may be)
             if (method.ReflectedType != method.DeclaringType) {
@@ -614,7 +614,7 @@ namespace MonoMod.Core.Platforms {
                         DebugFormatter.Format($"Glue:AbiFixup<{from},{to}>"),
                         newRetType, argTypes.ToArray()
                     )) {
-                        // TODO: make DMD apply atributes to the generated DynamicMethod, when possible
+                        // TODO: make DMD apply attributes to the generated DynamicMethod, when possible
                         dmd.Definition!.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining |
                             (Mono.Cecil.MethodImplAttributes) (int) MethodImplOptionsEx.AggressiveOptimization;
 

@@ -40,7 +40,7 @@ namespace MonoMod.Core.Platforms {
         /// <summary>
         /// Gets an approximate amount of memory after <paramref name="start"/> which is readable.
         /// </summary>
-        /// <param name="start">The start adress to check.</param>
+        /// <param name="start">The start address to check.</param>
         /// <param name="guess">The amount which is expected. This method may not return values larger than to the page following this guess.</param>
         /// <returns>A number of bytes after <paramref name="start"/> which it is safe to read.</returns>
         nint GetSizeOfReadableMemory(IntPtr start, nint guess);

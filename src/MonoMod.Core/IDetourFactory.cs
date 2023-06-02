@@ -21,7 +21,7 @@ namespace MonoMod.Core {
         /// Creates an <see cref="ICoreNativeDetour"/> according to the arguments specified in <paramref name="request"/>.
         /// </summary>
         /// <param name="request">The <see cref="CreateNativeDetourRequest"/> containing detour creation options.</param>
-        /// <returns>The ceated <see cref="ICoreNativeDetour"/>.</returns>
+        /// <returns>The created <see cref="ICoreNativeDetour"/>.</returns>
         ICoreNativeDetour CreateNativeDetour(CreateNativeDetourRequest request);
     }
 
