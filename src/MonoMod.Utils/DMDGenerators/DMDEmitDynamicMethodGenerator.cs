@@ -59,7 +59,7 @@ namespace MonoMod.Utils {
             var dm = new DynamicMethod(
                 name,
                 typeof(void), argTypes,
-                orig?.DeclaringType ?? dmd.OwnerType ?? typeof(DynamicMethodDefinition),
+                orig?.DeclaringType,
                 true // If any random errors pop up, try setting this to false first.
             );
 

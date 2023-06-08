@@ -56,8 +56,6 @@ namespace MonoMod.Utils {
 
         public string? Name { get; }
 
-        public Type? OwnerType { get; }
-
         public bool Debug { get; init; }
 
         private Guid GUID = Guid.NewGuid();
