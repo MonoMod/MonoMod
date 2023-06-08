@@ -56,12 +56,24 @@ namespace MonoMod.Utils {
                 MMDbgLog.Trace($"orig: {orig}");
             MMDbgLog.Trace($"mdef: {def.ReturnType?.ToString() ?? "NULL"} {name}({string.Join(",", def.Parameters.Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
 
-            var dm = new DynamicMethod(
-                name,
-                typeof(void), argTypes,
-                orig?.DeclaringType,
-                true // If any random errors pop up, try setting this to false first.
-            );
+            var associatedType = orig?.DeclaringType;
+
+            DynamicMethod dm;
+            if (associatedType is not null) {
+                dm = new DynamicMethod(
+                    name,
+                    typeof(void), argTypes,
+                    associatedType,
+                    true // If any random errors pop up, try setting this to false first.
+                );
+            } else {
+
+                dm = new DynamicMethod(
+                    name,
+                    typeof(void), argTypes,
+                    true // If any random errors pop up, try setting this to false first.
+                );
+            }
 
             // DynamicMethods don't officially "support" certain return types, such as ByRef types.
             _DynamicMethod_returnType.SetValue(dm, retType);
