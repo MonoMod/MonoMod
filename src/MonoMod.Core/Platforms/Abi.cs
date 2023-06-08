@@ -76,7 +76,7 @@ namespace MonoMod.Core.Platforms {
     /// <param name="ArgumentOrder">A sequence of <see cref="SpecialArgumentKind"/> indicating the ABI's argument order.</param>
     /// <param name="Classifier">A <see cref="MonoMod.Core.Platforms.Classifier"/> which classifies value types according to the ABI.</param>
     /// <param name="ReturnsReturnBuffer"><see langword="true"/> if functions are expected to return the return buffer pointer they are passed;
-    /// <see langword="false"/> othwerise.</param>
+    /// <see langword="false"/> otherwise.</param>
     public readonly record struct Abi(
         ReadOnlyMemory<SpecialArgumentKind> ArgumentOrder,
         Classifier Classifier,

@@ -13,7 +13,7 @@ namespace MonoMod.Core.Platforms {
     /// used at the native->managed transition. This will rethrow the exception on the current thread, if there is one.
     /// Similarly, use <see cref="CreateManagedToNativeHelper(IntPtr, out IDisposable?)"/> to generate a thunk to use at
     /// the managed->native transition. This thunk will catch exceptions which are thrown in the native code, and store
-    /// them in a thread local assoicated with the exception helper.</para>
+    /// them in a thread local associated with the exception helper.</para>
     /// </remarks>
     public interface INativeExceptionHelper {
         /// <summary>
