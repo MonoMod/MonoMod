@@ -59,19 +59,21 @@ namespace MonoMod.Utils {
             var associatedType = orig?.DeclaringType;
 
             DynamicMethod dm;
-            if (associatedType is not null) {
+            if (associatedType is not null || PlatformDetection.Runtime is RuntimeKind.Framework) {
+                // If we're running on .NET Framework, the overload without associatedType is a CAS overload
+                // that was introduced in 3.5, which quite reliably causes VerificationExceptions when the DM
+                // is executed. In that case, we have to use the overload with associatedType.
                 dm = new DynamicMethod(
                     name,
                     typeof(void), argTypes,
-                    associatedType,
-                    true // If any random errors pop up, try setting this to false first.
+                    associatedType ?? typeof(DynamicMethodDefinition),
+                    true
                 );
             } else {
-
                 dm = new DynamicMethod(
                     name,
                     typeof(void), argTypes,
-                    true // If any random errors pop up, try setting this to false first.
+                    true
                 );
             }
 
