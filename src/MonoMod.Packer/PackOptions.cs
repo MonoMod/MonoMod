@@ -13,7 +13,6 @@ namespace MonoMod.Packer {
 
     public enum MemberMergeMode {
         UnifyIdentical,
-        RenameConflicts,
     }
 
     public sealed record PackOptions {
@@ -21,7 +20,7 @@ namespace MonoMod.Packer {
 
         public AssemblyDescriptor DefaultCorLib { get; init; } = KnownCorLibs.SystemPrivateCoreLib_v6_0_0_0;
 
-        public bool Internalize { get; init; } = true;
+        public bool Internalize { get; init; } // = false;
         public bool EnsurePublicApi { get; init; } = true;
 
         // Note: when Internalize is true, this means exclude, when it is false, it means to do it anyway
@@ -31,8 +30,8 @@ namespace MonoMod.Packer {
         public PackOptions AddExplicitInternalize(params AssemblyDescriptor[] values)
             => this with { ExplicitInternalize = AddToCollection(ExplicitInternalize, Helpers.ThrowIfNull(values)) };
 
-        public TypeMergeMode TypeMergeMode { get; init; }
-        public MemberMergeMode MemberMergeMode { get; init; }
+        public TypeMergeMode TypeMergeMode { get; init; } = TypeMergeMode.MergeLayoutIdentical;
+        public MemberMergeMode MemberMergeMode { get; init; } = MemberMergeMode.UnifyIdentical;
 
         public bool ExcludeCorelib { get; init; } = true;
         public bool UseBlacklist { get; init; } // = false;
@@ -42,9 +41,7 @@ namespace MonoMod.Packer {
         public PackOptions AddFiltered(params AssemblyDescriptor[] values)
             => this with { AssemblyFilterList = AddToCollection(AssemblyFilterList, Helpers.ThrowIfNull(values)) };
 
-        // -1 means default system concurrency
-        // 0 or 1 means non-concurrent
-        public int Concurrency { get; init; } = -1;
+        public bool Parallelize { get; init; } = false;
 
         private static IReadOnlyCollection<T> AddToCollection<T>(IReadOnlyCollection<T> orig, T value) {
             var arr = new T[orig.Count + 1];

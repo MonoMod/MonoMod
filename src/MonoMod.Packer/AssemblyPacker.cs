@@ -93,10 +93,10 @@ namespace MonoMod.Packer {
                             continue;
                         }
                     }
-
-                    // this is part of an assembly we want to process; add it to the list
-                    modules.Add(module);
                 }
+
+                // this is part of an assembly we want to process; add it to the list
+                modules.Add(module);
 
                 // this is part of an asesmbly we want to grab references from, do that and add them to the queue
                 foreach (var asmRef in module.AssemblyReferences) {
@@ -137,7 +137,7 @@ namespace MonoMod.Packer {
             var moduleType = outputModule.GetOrCreateModuleType();
             var processingOptions = new TypeProcessingOptions(packer, rootAssembly, options, entityMap, importer, mdResolver);
 
-            if (options.Concurrency is 0 or 1) {
+            if (options.Parallelize) {
                 foreach (var types in entityMap.EnumerateEntitySets()) {
                     var merged = MergeTypes(types, moduleType, processingOptions);
                     foreach (var type in merged) {
@@ -146,10 +146,6 @@ namespace MonoMod.Packer {
                     }
                 }
             } else {
-                var parallelOptions = new ParallelOptions() {
-                    MaxDegreeOfParallelism = options.Concurrency,
-                };
-
                 var result = entityMap.EnumerateEntitySets()
                     .AsParallel()
                     .AsUnordered()

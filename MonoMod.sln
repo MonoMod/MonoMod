@@ -52,6 +52,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Backports.Tasks", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.Packer", "src\MonoMod.Packer\MonoMod.Packer.csproj", "{A39D0A59-19D1-4DE0-B0C8-47B8647F309A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.Packer.Driver", "src\MonoMod.Packer.Driver\MonoMod.Packer.Driver.csproj", "{BCD3D8CF-2427-402C-A3CD-FD346595ED23}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -196,6 +198,14 @@ Global
 		{A39D0A59-19D1-4DE0-B0C8-47B8647F309A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A39D0A59-19D1-4DE0-B0C8-47B8647F309A}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
 		{A39D0A59-19D1-4DE0-B0C8-47B8647F309A}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.DebugTrace|Any CPU.ActiveCfg = DebugTrace|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.DebugTrace|Any CPU.Build.0 = DebugTrace|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.ReleaseTrace|Any CPU.ActiveCfg = ReleaseTrace|Any CPU
+		{BCD3D8CF-2427-402C-A3CD-FD346595ED23}.ReleaseTrace|Any CPU.Build.0 = ReleaseTrace|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
