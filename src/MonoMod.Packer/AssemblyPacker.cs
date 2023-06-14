@@ -1,6 +1,7 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
+using MonoMod.Packer.Entities;
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
@@ -135,7 +136,7 @@ namespace MonoMod.Packer {
 
             var importer = new ReferenceImporter(outputModule);
 
-            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge);
+            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options);
             // note: if resolver can resolve a member, it is in the merge space, and should be merged into the final assembly
             var asmResolver = MergingAssemblyResolver.Create(modulesToMerge);
             var mdResolver = new DefaultMetadataResolver(asmResolver);
@@ -145,27 +146,10 @@ namespace MonoMod.Packer {
             var moduleType = outputModule.GetOrCreateModuleType();
             var processingOptions = new TypeProcessingOptions(packer, rootAssembly, options, entityMap, importer, mdResolver);
 
-            if (!options.Parallelize) {
-                foreach (var types in entityMap.EnumerateEntitySets()) {
-                    var merged = MergeTypes(types, moduleType, processingOptions);
-                    foreach (var type in merged) {
-                        RebuildBodyWithFixedReferences(type, processingOptions);
-                        outputModule.TopLevelTypes.Add(type);
-                    }
-                }
-            } else {
-                var result = entityMap.EnumerateEntitySets()
-                    .AsParallel()
-                    .AsUnordered()
-                    .SelectMany(list
-                        => MergeTypes(list, moduleType, processingOptions))
-                    .AsUnordered()
-                    .Select(t => {
-                        RebuildBodyWithFixedReferences(t, processingOptions);
-                        return t;
-                    });
-
-                foreach (var type in result) {
+            foreach (var types in entityMap.EnumerateUnifiedTypeEntities()) {
+                var merged = MergeTypes(types, moduleType, processingOptions);
+                foreach (var type in merged) {
+                    RebuildBodyWithFixedReferences(type, processingOptions);
                     outputModule.TopLevelTypes.Add(type);
                 }
             }
@@ -180,44 +164,9 @@ namespace MonoMod.Packer {
         );
 
         private static IReadOnlyList<TypeDefinition> MergeTypes(
-            IReadOnlyList<TypeEntity> entities, TypeDefinition targetModuleType, TypeProcessingOptions options
+            UnifiedTypeEntities entities, TypeDefinition targetModuleType, TypeProcessingOptions options
         ) {
-            if (entities.Count == 0) {
-                return Array.Empty<TypeDefinition>();
-            }
-
-            var isModuleType = entities[0].Definition.IsModuleType;
-            if (isModuleType) {
-                var target = targetModuleType;
-                foreach (var source in entities) {
-                    var result = TryMergeTypeInto(ref target, source, options, isModuleType: true);
-                    Helpers.DAssert(result); // this should *always* succeed for the <Module> type; it has to
-                }
-                return new[] { target };
-            }
-
-            // this is *not* the module type; use the normal approach
-
-            // TODO: aggressive (i.e. multiple merged results) merging
-            var outputList = new List<TypeDefinition>();
-            TypeDefinition? currentDef = null;
-
-            foreach (var type in entities) {
-                if (!TryMergeTypeInto(ref currentDef, type, options, isModuleType: false)) {
-                    // merge failed; instead, close type and throw it on the output list
-                    var result = CloneType(type.Definition, options);
-                    outputList.Add(result);
-                    options.EntityMap.MarkMappedDef(type, result);
-                } else {
-                    options.EntityMap.MarkMappedDef(type, currentDef);
-                }
-            }
-
-            if (currentDef is not null) {
-                outputList.Add(currentDef);
-            }
-
-            return outputList;
+            throw new NotImplementedException();
         }
 
         private static bool TryMergeTypeInto([NotNull] ref TypeDefinition? target, TypeEntity source, in TypeProcessingOptions options, bool isModuleType) {

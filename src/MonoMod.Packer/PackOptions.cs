@@ -6,6 +6,7 @@ using MonoMod.Utils;
 namespace MonoMod.Packer {
 
     public enum TypeMergeMode {
+        DoNotMerge,
         UnifyIdentical,
         MergeLayoutIdentical,
         MergeAnyWithoutConflict,
