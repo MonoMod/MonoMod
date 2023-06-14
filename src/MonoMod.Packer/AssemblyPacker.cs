@@ -3,6 +3,7 @@ using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
 using MonoMod.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -22,6 +23,13 @@ namespace MonoMod.Packer {
         private void ReportDiagnostic(ErrorCode code, params object?[] args) {
             // TODO: improve
             diagnosticReciever.ReportDiagnostic(code.ToString(), args);
+        }
+
+        private readonly ConcurrentDictionary<string, AssemblyDefinition?> descCache = new();
+        private AssemblyDefinition? Resolve(AssemblyDescriptor asm) {
+            return descCache.GetOrAdd(asm.FullName, 
+                static (_, t) => t.@this.assemblyResolver.Resolve(t.asm) ?? t.asm.Resolve(),
+                (@this: this, asm));
         }
 
         public AssemblyDefinition Pack(AssemblyDefinition rootAssembly, PackOptions? options = null) {
@@ -100,7 +108,7 @@ namespace MonoMod.Packer {
 
                 // this is part of an asesmbly we want to grab references from, do that and add them to the queue
                 foreach (var asmRef in module.AssemblyReferences) {
-                    var asm = asmRef.Resolve() ?? assemblyResolver.Resolve(asmRef);
+                    var asm = Resolve(asmRef);
                     if (asm is null) {
                         ReportDiagnostic(ErrorCode.WRN_CouldNotResolveAssembly, asmRef, module);
                         continue;
@@ -137,7 +145,7 @@ namespace MonoMod.Packer {
             var moduleType = outputModule.GetOrCreateModuleType();
             var processingOptions = new TypeProcessingOptions(packer, rootAssembly, options, entityMap, importer, mdResolver);
 
-            if (options.Parallelize) {
+            if (!options.Parallelize) {
                 foreach (var types in entityMap.EnumerateEntitySets()) {
                     var merged = MergeTypes(types, moduleType, processingOptions);
                     foreach (var type in merged) {

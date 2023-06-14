@@ -20,7 +20,7 @@ namespace MonoMod.Packer {
 
         public MergingAssemblyResolver(IReadOnlyCollection<AssemblyDefinition> assemblies) {
             foreach (var assembly in assemblies) {
-                fullNameMap.Add(assembly.FullName, assembly);
+                fullNameMap.TryAdd(assembly.FullName, assembly);
             }
         }
 
