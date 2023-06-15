@@ -1,5 +1,6 @@
 ﻿using AsmResolver;
 using MonoMod.Utils;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -39,20 +40,61 @@ namespace MonoMod.Packer.Entities {
                 .CastArray<TypeEntityBase>();
         }
 
+        public new ImmutableArray<UnifiedMethodEntity> StaticMethods => base.StaticMethods.CastArray<UnifiedMethodEntity>();
         protected override ImmutableArray<MethodEntityBase> MakeStaticMethods() {
-            throw new System.NotImplementedException();
+            return MakeMethodsWithFilter(static t => t.StaticMethods);
         }
 
+        public new ImmutableArray<UnifiedMethodEntity> InstanceMethods => base.InstanceMethods.CastArray<UnifiedMethodEntity>();
         protected override ImmutableArray<MethodEntityBase> MakeInstanceMethods() {
-            throw new System.NotImplementedException();
+            return MakeMethodsWithFilter(static t => t.InstanceMethods);
         }
 
+        private ImmutableArray<MethodEntityBase> MakeMethodsWithFilter(Func<TypeEntity, ImmutableArray<MethodEntity>> filter) {
+            var dict = new Dictionary<string, List<MethodEntity>>();
+            // for methods, we unify by full sig
+            foreach (var type in types) {
+                foreach (var method in filter(type)) {
+                    var fullName = method.Definition.FullName;
+                    if (!dict.TryGetValue(fullName, out var list)) {
+                        dict.Add(fullName, list = new());
+                    }
+                    list.Add(method);
+                }
+            }
+
+            return dict.Values
+                .Select(l => new UnifiedMethodEntity(Map, l))
+                .ToImmutableArray()
+                .CastArray<MethodEntityBase>();
+        }
+
+        public new ImmutableArray<UnifiedFieldEntity> StaticFields => base.StaticFields.CastArray<UnifiedFieldEntity>();
         protected override ImmutableArray<FieldEntityBase> MakeStaticFields() {
-            throw new System.NotImplementedException();
+            return MakeFieldsWithFilter(static t => t.StaticFields);
         }
 
+        public new ImmutableArray<UnifiedFieldEntity> InstanceFields => base.InstanceFields.CastArray<UnifiedFieldEntity>();
         protected override ImmutableArray<FieldEntityBase> MakeInstanceFields() {
-            throw new System.NotImplementedException();
+            return MakeFieldsWithFilter(static t => t.InstanceFields);
+        }
+
+        private ImmutableArray<FieldEntityBase> MakeFieldsWithFilter(Func<TypeEntity, ImmutableArray<FieldEntity>> filter) {
+            var dict = new Dictionary<NullableUtf8String, List<FieldEntity>>();
+            // for fields, we unify by-name only
+            foreach (var type in types) {
+                foreach (var field in filter(type)) {
+                    if (!dict.TryGetValue(field.Definition.Name, out var list)) {
+                        dict.Add(field.Definition.Name, list = new());
+                    }
+                    list.Add(field);
+                }
+            }
+
+            return dict.Values
+                .Select(l => new UnifiedFieldEntity(Map, l))
+                .ToImmutableArray()
+                .CastArray<FieldEntityBase>();
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using AsmResolver.DotNet;
+﻿using AsmResolver;
+using AsmResolver.DotNet;
 using System.Diagnostics;
 
 namespace MonoMod.Packer.Entities {
@@ -11,6 +12,8 @@ namespace MonoMod.Packer.Entities {
         public MethodEntity(TypeEntityMap map, MethodDefinition def) : base(map) {
             Definition = def;
         }
+
+        public override Utf8String? Name => Definition.Name;
 
         public TypeEntity DeclaringType => Map.Lookup(Definition.DeclaringType!);
     }

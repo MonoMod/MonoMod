@@ -146,6 +146,7 @@ namespace MonoMod.Packer {
                 .NestedTypes.First();
             var firstEntity = entityMap.Lookup(firstType);
             var unified = firstEntity.UnifiedType;
+            var unifiedMethods = unified.InstanceMethods;
 
             foreach (var unifiedTypes in entityMap.EnumerateUnifiedTypeEntities()) {
                 

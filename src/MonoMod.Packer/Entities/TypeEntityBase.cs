@@ -8,7 +8,6 @@ namespace MonoMod.Packer.Entities {
         }
 
         public abstract Utf8String? Namespace { get; }
-        public abstract Utf8String? Name { get; }
 
 
         private ImmutableArray<MethodEntityBase> lazyStaticMethods;

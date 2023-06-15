@@ -1,7 +1,6 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
 using System.Collections.Generic;
-using MonoMod.Utils;
 using MonoMod.Packer.Entities;
 using System;
 
