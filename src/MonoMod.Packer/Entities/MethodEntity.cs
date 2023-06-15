@@ -1,11 +1,9 @@
 ﻿using AsmResolver.DotNet;
-using MonoMod.Utils;
-using System;
 using System.Diagnostics;
 
 namespace MonoMod.Packer.Entities {
     [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
-    internal sealed class MethodEntity : EntityBase {
+    internal sealed class MethodEntity : MethodEntityBase {
         private string DebuggerDisplay() => Definition.ToString();
 
         public readonly MethodDefinition Definition;
@@ -15,14 +13,5 @@ namespace MonoMod.Packer.Entities {
         }
 
         public TypeEntity DeclaringType => Map.Lookup(Definition.DeclaringType!);
-
-        public bool IsMergeCandidate(MethodEntity other) {
-            Helpers.DAssert(DeclaringType == other.DeclaringType);
-
-            if (Definition.Name != other.Definition.Name)
-                return false;
-
-            throw new NotImplementedException();
-        }
     }
 }

@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace MonoMod.Packer.Entities {
     [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
-    internal sealed class FieldEntity : EntityBase {
+    internal sealed class FieldEntity: FieldEntityBase {
         private string DebuggerDisplay() => Definition.ToString();
 
         public readonly FieldDefinition Definition;

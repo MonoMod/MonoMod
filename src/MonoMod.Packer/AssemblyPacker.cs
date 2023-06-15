@@ -142,9 +142,7 @@ namespace MonoMod.Packer {
             // TODO: copy more stuff over
 
             foreach (var unifiedTypes in entityMap.EnumerateUnifiedTypeEntities()) {
-                // complete this set of types
-                unifiedTypes.Complete();
-
+                
             }
 
             return outputAsm;

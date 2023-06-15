@@ -2,7 +2,6 @@
 using AsmResolver.DotNet;
 using System.Collections.Generic;
 using MonoMod.Utils;
-using System.Collections.Concurrent;
 using MonoMod.Packer.Entities;
 using System;
 
@@ -17,7 +16,7 @@ namespace MonoMod.Packer {
         public readonly IMetadataResolver MdResolver;
 
         private readonly Dictionary<TypeDefinition, TypeEntity> entityMap = new();
-        private readonly Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, UnifiedTypeEntities>> entitiesByName = new();
+        private readonly Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, UnifiedTypeEntity>> entitiesByName = new();
 
         private TypeEntityMap(PackOptions options, IMetadataResolver mdResolver) {
             Options = options;
@@ -41,7 +40,7 @@ namespace MonoMod.Packer {
             // reebuild entsByName into entitiesByName
             map.entitiesByName.EnsureCapacity(entsByName.Count);
             foreach (var kvp in entsByName) {
-                var innerDict = new Dictionary<NullableUtf8String, UnifiedTypeEntities>(kvp.Value.Count);
+                var innerDict = new Dictionary<NullableUtf8String, UnifiedTypeEntity>(kvp.Value.Count);
                 foreach (var kvp2 in kvp.Value) {
                     innerDict.Add(kvp2.Key, new(map, kvp2.Value));
                 }
@@ -74,12 +73,12 @@ namespace MonoMod.Packer {
         }
 
         public TypeEntity Lookup(TypeDefinition def) => entityMap[def];
-        public UnifiedTypeEntities UnifiedEntitiesFor(TypeEntity entity) {
+        public UnifiedTypeEntity UnifiedEntitiesFor(TypeEntity entity) {
             Helpers.DAssert(entity.Definition.DeclaringType is null);
             return entitiesByName[entity.Definition.Namespace][entity.Definition.Name];
         }
 
-        public IEnumerable<UnifiedTypeEntities> EnumerateUnifiedTypeEntities() {
+        public IEnumerable<UnifiedTypeEntity> EnumerateUnifiedTypeEntities() {
             foreach (var v1 in entitiesByName.Values) {
                 foreach (var v2 in v1.Values) {
                     yield return v2;

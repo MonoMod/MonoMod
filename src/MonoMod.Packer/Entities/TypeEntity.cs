@@ -1,11 +1,12 @@
-﻿using AsmResolver.DotNet;
+﻿using AsmResolver;
+using AsmResolver.DotNet;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
 namespace MonoMod.Packer.Entities {
     [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
-    internal sealed class TypeEntity : EntityBase {
+    internal sealed class TypeEntity : TypeEntityBase {
         private string DebuggerDisplay() => Definition.FullName;
 
         public readonly TypeDefinition Definition;
@@ -14,87 +15,54 @@ namespace MonoMod.Packer.Entities {
             Definition = def;
         }
 
-        private MethodEntity CreateMethod(MethodDefinition m) => new(Map, m);
+        public override Utf8String? Namespace => Definition.Namespace;
+        public override Utf8String? Name => Definition.Name;
 
-        private ImmutableArray<MethodEntity> lazyStaticMethods;
-        public ImmutableArray<MethodEntity> StaticMethods {
-            get {
-                if (lazyStaticMethods.IsDefault) {
-                    ImmutableInterlocked.InterlockedInitialize(
-                        ref lazyStaticMethods,
-                        Definition.Methods
-                            .Where(m => m.IsStatic)
-                            .Select(CreateMethod)
-                            .ToImmutableArray()
-                    );
-                }
-                return lazyStaticMethods;
-            }
+        private MethodEntity CreateMethod(MethodDefinition m) => new(Map, m);
+        private FieldEntity CreateField(FieldDefinition f) => new(Map, f);
+
+        public new ImmutableArray<MethodEntity> StaticMethods => base.StaticMethods.CastArray<MethodEntity>();
+        protected override ImmutableArray<MethodEntityBase> MakeStaticMethods() {
+            return Definition.Methods
+                        .Where(m => m.IsStatic)
+                        .Select(CreateMethod)
+                        .ToImmutableArray()
+                        .CastArray<MethodEntityBase>();
         }
 
-        private ImmutableArray<MethodEntity> lazyInstanceMethods;
-        public ImmutableArray<MethodEntity> InstanceMethods {
-            get {
-                if (lazyInstanceMethods.IsDefault) {
-                    ImmutableInterlocked.InterlockedInitialize(
-                        ref lazyInstanceMethods,
-                        Definition.Methods
+        public new ImmutableArray<MethodEntity> InstanceMethods => base.InstanceMethods.CastArray<MethodEntity>();
+        protected override ImmutableArray<MethodEntityBase> MakeInstanceMethods() {
+            return Definition.Methods
                             .Where(m => !m.IsStatic)
                             .Select(CreateMethod)
                             .ToImmutableArray()
-                    );
-                }
-                return lazyInstanceMethods;
-            }
+                            .CastArray<MethodEntityBase>();
         }
 
-        private FieldEntity CreateField(FieldDefinition f) => new(Map, f);
-
-        private ImmutableArray<FieldEntity> lazyStaticFields;
-        public ImmutableArray<FieldEntity> StaticFields {
-            get {
-                if (lazyStaticFields.IsDefault) {
-                    ImmutableInterlocked.InterlockedInitialize(
-                        ref lazyStaticFields,
-                        Definition.Fields
+        public new ImmutableArray<FieldEntity> StaticFields => base.StaticFields.CastArray<FieldEntity>();
+        protected override ImmutableArray<FieldEntityBase> MakeStaticFields() {
+            return Definition.Fields
                             .Where(f => f.IsStatic)
                             .Select(CreateField)
                             .ToImmutableArray()
-                    );
-                }
-                return lazyStaticFields;
-            }
+                            .CastArray<FieldEntityBase>();
         }
 
-        private ImmutableArray<FieldEntity> lazyInstanceFields;
-        public ImmutableArray<FieldEntity> InstanceFields {
-            get {
-                if (lazyInstanceFields.IsDefault) {
-                    ImmutableInterlocked.InterlockedInitialize(
-                        ref lazyInstanceFields,
-                        Definition.Fields
+        public new ImmutableArray<FieldEntity> InstanceFields => base.InstanceFields.CastArray<FieldEntity>();
+        protected override ImmutableArray<FieldEntityBase> MakeInstanceFields() {
+            return Definition.Fields
                             .Where(f => !f.IsStatic)
                             .Select(CreateField)
                             .ToImmutableArray()
-                    );
-                }
-                return lazyInstanceFields;
-            }
+                            .CastArray<FieldEntityBase>();
         }
 
-        private ImmutableArray<TypeEntity> lazyNestedTypes;
-        public ImmutableArray<TypeEntity> NestedTypes {
-            get {
-                if (lazyNestedTypes.IsDefault) {
-                    ImmutableInterlocked.InterlockedInitialize(
-                        ref lazyNestedTypes,
-                        Definition.NestedTypes
+        public new ImmutableArray<TypeEntity> NestedTypes => base.NestedTypes.CastArray<TypeEntity>();
+        protected override ImmutableArray<TypeEntityBase> MakeNestedTypes() {
+            return Definition.NestedTypes
                             .Select(Map.Lookup)
                             .ToImmutableArray()
-                    );
-                }
-                return lazyNestedTypes;
-            }
+                            .CastArray<TypeEntityBase>();
         }
     }
 }
