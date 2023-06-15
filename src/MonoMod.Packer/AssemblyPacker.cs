@@ -1,14 +1,11 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
-using MonoMod.Packer.Entities;
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace MonoMod.Packer {
     public sealed class AssemblyPacker
@@ -136,59 +133,21 @@ namespace MonoMod.Packer {
 
             var importer = new ReferenceImporter(outputModule);
 
-            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options);
             // note: if resolver can resolve a member, it is in the merge space, and should be merged into the final assembly
             var asmResolver = MergingAssemblyResolver.Create(modulesToMerge);
             var mdResolver = new DefaultMetadataResolver(asmResolver);
 
+            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options, mdResolver);
+
             // TODO: copy more stuff over
 
-            var moduleType = outputModule.GetOrCreateModuleType();
-            var processingOptions = new TypeProcessingOptions(packer, rootAssembly, options, entityMap, importer, mdResolver);
+            foreach (var unifiedTypes in entityMap.EnumerateUnifiedTypeEntities()) {
+                // complete this set of types
+                unifiedTypes.Complete();
 
-            foreach (var types in entityMap.EnumerateUnifiedTypeEntities()) {
-                var merged = MergeTypes(types, moduleType, processingOptions);
-                foreach (var type in merged) {
-                    RebuildBodyWithFixedReferences(type, processingOptions);
-                    outputModule.TopLevelTypes.Add(type);
-                }
             }
 
             return outputAsm;
-        }
-
-        private readonly record struct TypeProcessingOptions(
-            AssemblyPacker Packer, AssemblyDefinition RootAssembly,
-            PackOptions Options, TypeEntityMap EntityMap,
-            ReferenceImporter Importer, IMetadataResolver MdResolver
-        );
-
-        private static IReadOnlyList<TypeDefinition> MergeTypes(
-            UnifiedTypeEntities entities, TypeDefinition targetModuleType, TypeProcessingOptions options
-        ) {
-            throw new NotImplementedException();
-        }
-
-        private static bool TryMergeTypeInto([NotNull] ref TypeDefinition? target, TypeEntity source, in TypeProcessingOptions options, bool isModuleType) {
-            if (target is null) {
-                Helpers.Assert(!isModuleType);
-                target = CloneType(source.Definition, options);
-                return true;
-            }
-
-            var srcDef = source.Definition;
-
-
-
-            throw new NotImplementedException();
-        }
-
-        private static TypeDefinition CloneType(TypeDefinition type, in TypeProcessingOptions options) {
-            throw new NotImplementedException();
-        }
-
-        private static void RebuildBodyWithFixedReferences(TypeDefinition type, TypeProcessingOptions options) {
-            throw new NotImplementedException();
         }
     }
 }

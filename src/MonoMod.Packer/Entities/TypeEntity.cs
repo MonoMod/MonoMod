@@ -1,9 +1,13 @@
 ﻿using AsmResolver.DotNet;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 namespace MonoMod.Packer.Entities {
+    [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
     internal sealed class TypeEntity : EntityBase {
+        private string DebuggerDisplay() => Definition.FullName;
+
         public readonly TypeDefinition Definition;
 
         public TypeEntity(TypeEntityMap map, TypeDefinition def) : base(map) {
@@ -15,7 +19,7 @@ namespace MonoMod.Packer.Entities {
         private ImmutableArray<MethodEntity> lazyStaticMethods;
         public ImmutableArray<MethodEntity> StaticMethods {
             get {
-                if (lazyStaticMethods.IsDefault)
+                if (lazyStaticMethods.IsDefault) {
                     ImmutableInterlocked.InterlockedInitialize(
                         ref lazyStaticMethods,
                         Definition.Methods
@@ -23,6 +27,7 @@ namespace MonoMod.Packer.Entities {
                             .Select(CreateMethod)
                             .ToImmutableArray()
                     );
+                }
                 return lazyStaticMethods;
             }
         }
@@ -30,7 +35,7 @@ namespace MonoMod.Packer.Entities {
         private ImmutableArray<MethodEntity> lazyInstanceMethods;
         public ImmutableArray<MethodEntity> InstanceMethods {
             get {
-                if (lazyInstanceMethods.IsDefault)
+                if (lazyInstanceMethods.IsDefault) {
                     ImmutableInterlocked.InterlockedInitialize(
                         ref lazyInstanceMethods,
                         Definition.Methods
@@ -38,6 +43,7 @@ namespace MonoMod.Packer.Entities {
                             .Select(CreateMethod)
                             .ToImmutableArray()
                     );
+                }
                 return lazyInstanceMethods;
             }
         }
@@ -47,7 +53,7 @@ namespace MonoMod.Packer.Entities {
         private ImmutableArray<FieldEntity> lazyStaticFields;
         public ImmutableArray<FieldEntity> StaticFields {
             get {
-                if (lazyStaticFields.IsDefault)
+                if (lazyStaticFields.IsDefault) {
                     ImmutableInterlocked.InterlockedInitialize(
                         ref lazyStaticFields,
                         Definition.Fields
@@ -55,6 +61,7 @@ namespace MonoMod.Packer.Entities {
                             .Select(CreateField)
                             .ToImmutableArray()
                     );
+                }
                 return lazyStaticFields;
             }
         }
@@ -62,7 +69,7 @@ namespace MonoMod.Packer.Entities {
         private ImmutableArray<FieldEntity> lazyInstanceFields;
         public ImmutableArray<FieldEntity> InstanceFields {
             get {
-                if (lazyInstanceFields.IsDefault)
+                if (lazyInstanceFields.IsDefault) {
                     ImmutableInterlocked.InterlockedInitialize(
                         ref lazyInstanceFields,
                         Definition.Fields
@@ -70,7 +77,23 @@ namespace MonoMod.Packer.Entities {
                             .Select(CreateField)
                             .ToImmutableArray()
                     );
+                }
                 return lazyInstanceFields;
+            }
+        }
+
+        private ImmutableArray<TypeEntity> lazyNestedTypes;
+        public ImmutableArray<TypeEntity> NestedTypes {
+            get {
+                if (lazyNestedTypes.IsDefault) {
+                    ImmutableInterlocked.InterlockedInitialize(
+                        ref lazyNestedTypes,
+                        Definition.NestedTypes
+                            .Select(Map.Lookup)
+                            .ToImmutableArray()
+                    );
+                }
+                return lazyNestedTypes;
             }
         }
     }

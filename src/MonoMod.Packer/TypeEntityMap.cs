@@ -14,20 +14,22 @@ namespace MonoMod.Packer {
 
     internal sealed class TypeEntityMap {
         public readonly PackOptions Options;
+        public readonly IMetadataResolver MdResolver;
 
         private readonly Dictionary<TypeDefinition, TypeEntity> entityMap = new();
         private readonly Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, UnifiedTypeEntities>> entitiesByName = new();
 
-        private TypeEntityMap(PackOptions options) {
+        private TypeEntityMap(PackOptions options, IMetadataResolver mdResolver) {
             Options = options;
+            MdResolver = mdResolver;
 
             if (options.Parallelize) {
                 throw new InvalidOperationException("Cannot parallelize at present");
             }
         }
 
-        public static TypeEntityMap CreateForAllTypes(IEnumerable<ModuleDefinition> modules, PackOptions options) {
-            var map = new TypeEntityMap(options);
+        public static TypeEntityMap CreateForAllTypes(IEnumerable<ModuleDefinition> modules, PackOptions options, IMetadataResolver mdResolver) {
+            var map = new TypeEntityMap(options, mdResolver);
             var entsByName = new Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, List<TypeEntity>>>();
 
             foreach (var module in modules) {
