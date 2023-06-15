@@ -141,6 +141,12 @@ namespace MonoMod.Packer {
 
             // TODO: copy more stuff over
 
+            var firstType = rootAssembly.ManifestModule!.TopLevelTypes
+                .First(t => t.NestedTypes.Count > 0)
+                .NestedTypes.First();
+            var firstEntity = entityMap.Lookup(firstType);
+            var unified = firstEntity.UnifiedType;
+
             foreach (var unifiedTypes in entityMap.EnumerateUnifiedTypeEntities()) {
                 
             }

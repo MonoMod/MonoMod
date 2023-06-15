@@ -21,7 +21,6 @@ namespace MonoMod.Packer.Entities {
         public override Utf8String? Name => types[0].Definition.Name;
 
         public new ImmutableArray<UnifiedTypeEntity> NestedTypes => base.NestedTypes.CastArray<UnifiedTypeEntity>();
-
         protected override ImmutableArray<TypeEntityBase> MakeNestedTypes() {
             var dict = new Dictionary<NullableUtf8String, List<TypeEntity>>();
             foreach (var type in types) {

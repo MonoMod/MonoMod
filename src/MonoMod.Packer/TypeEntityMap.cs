@@ -73,10 +73,9 @@ namespace MonoMod.Packer {
         }
 
         public TypeEntity Lookup(TypeDefinition def) => entityMap[def];
-        public UnifiedTypeEntity UnifiedEntitiesFor(TypeEntity entity) {
-            Helpers.DAssert(entity.Definition.DeclaringType is null);
-            return entitiesByName[entity.Definition.Namespace][entity.Definition.Name];
-        }
+
+        public UnifiedTypeEntity ByName(Utf8String? @namespace, Utf8String? name)
+            => entitiesByName[@namespace][name];
 
         public IEnumerable<UnifiedTypeEntity> EnumerateUnifiedTypeEntities() {
             foreach (var v1 in entitiesByName.Values) {

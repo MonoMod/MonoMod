@@ -18,6 +18,22 @@ namespace MonoMod.Packer.Entities {
         public override Utf8String? Namespace => Definition.Namespace;
         public override Utf8String? Name => Definition.Name;
 
+        private UnifiedTypeEntity? lazyUnifiedType;
+        public UnifiedTypeEntity UnifiedType => lazyUnifiedType ??= GetUnifiedType();
+
+        private UnifiedTypeEntity GetUnifiedType() {
+            if (Definition.DeclaringType is null) {
+                // we can just look up by name
+                return Map.ByName(Namespace, Name);
+            } else {
+                return Map
+                    .Lookup(Definition.DeclaringType)
+                    .GetUnifiedType()
+                    .NestedTypes
+                    .Single(t => t.Name == Name);
+            }
+        }
+
         private MethodEntity CreateMethod(MethodDefinition m) => new(Map, m);
         private FieldEntity CreateField(FieldDefinition f) => new(Map, f);
 
