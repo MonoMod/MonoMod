@@ -11,16 +11,11 @@ namespace MonoMod.Packer.Entities {
                 if (lazyTypesInSignature.IsDefault) {
                     ImmutableInterlocked.InterlockedInitialize(
                         ref lazyTypesInSignature,
-                        MakeTypesInSignature()
+                        MakeTypesInSignatureCore()
                     );
                 }
                 return lazyTypesInSignature;
             }
-        }
-
-        private ImmutableArray<TypeEntityBase> MakeTypesInSignature() {
-            var sigTypes = MakeTypesInSignatureCore();
-            return sigTypes.Sort(static (x, y) => x.GetHashCode().CompareTo(y.GetHashCode()));
         }
 
         protected abstract ImmutableArray<TypeEntityBase> MakeTypesInSignatureCore();

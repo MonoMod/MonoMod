@@ -1,11 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using AsmResolver;
 using MonoMod.Utils;
 
 namespace MonoMod.Packer.Entities {
+    [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
     internal sealed class UnifiedFieldEntity : FieldEntityBase {
+        private string DebuggerDisplay() => $"Unified field {Name}";
+
         private readonly IReadOnlyList<FieldEntity> fields;
 
         public UnifiedFieldEntity(TypeEntityMap map, IReadOnlyList<FieldEntity> fields) : base(map) {
@@ -19,8 +23,16 @@ namespace MonoMod.Packer.Entities {
 
         public override Utf8String? Name => fields[0].Name;
 
+        public new ImmutableArray<UnifiedTypeEntity> TypesInSignature => base.TypesInSignature.CastArray<UnifiedTypeEntity>();
+
         protected override ImmutableArray<TypeEntityBase> MakeTypesInSignatureCore() {
-            throw new System.NotImplementedException();
+            var set = new HashSet<UnifiedTypeEntity>();
+            foreach (var field in fields) {
+                foreach (var type in field.TypesInSignature) {
+                    _ = set.Add(type.UnifiedType);
+                }
+            }
+            return set.ToImmutableArray().CastArray<TypeEntityBase>();
         }
     }
 }
