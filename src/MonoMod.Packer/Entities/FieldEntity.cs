@@ -2,6 +2,8 @@
 using AsmResolver.DotNet;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 
 namespace MonoMod.Packer.Entities {
     [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
@@ -28,6 +30,23 @@ namespace MonoMod.Packer.Entities {
             } else {
                 return ImmutableArray<TypeEntity>.Empty.CastArray<TypeEntityBase>();
             }
+        }
+
+        protected override ImmutableArray<ModuleDefinition> MakeContributingModules()
+            => Definition.Module is { } module
+                ? ImmutableArray.Create(module)
+                : ImmutableArray<ModuleDefinition>.Empty;
+
+        private UnifiedFieldEntity? lazyUnified;
+        public UnifiedFieldEntity GetUnified() {
+            if (Volatile.Read(ref lazyUnified) is { } result)
+                return result;
+            // this is SLOW
+            var unifiedDeclType = DeclaringType.UnifiedType;
+            var fieldSet = Definition.IsStatic
+                ? unifiedDeclType.StaticFields
+                : unifiedDeclType.InstanceFields;
+            return lazyUnified ??= fieldSet.First(f => f.Name == Name);
         }
     }
 }

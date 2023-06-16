@@ -33,8 +33,12 @@ namespace MonoMod.Packer.Entities {
             }
         }
 
-        private UnifiedMethodEntity? lazyUnified;
+        protected override ImmutableArray<ModuleDefinition> MakeContributingModules()
+            => Definition.Module is { } module
+                ? ImmutableArray.Create(module)
+                : ImmutableArray<ModuleDefinition>.Empty;
 
+        private UnifiedMethodEntity? lazyUnified;
         public UnifiedMethodEntity GetUnified() {
             if (Volatile.Read(ref lazyUnified) is { } result)
                 return result;
@@ -46,5 +50,6 @@ namespace MonoMod.Packer.Entities {
             var fullSig = Definition.Signature?.ToString();
             return lazyUnified ??= methodSet.First(m => m.Name == Name && m.FullSig == fullSig);
         }
+
     }
 }

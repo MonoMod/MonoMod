@@ -1,4 +1,5 @@
 ﻿using AsmResolver;
+using AsmResolver.DotNet;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -35,6 +36,14 @@ namespace MonoMod.Packer.Entities {
                 }
             }
             return set.ToImmutableArray().CastArray<TypeEntityBase>();
+        }
+
+        protected override ImmutableArray<ModuleDefinition> MakeContributingModules() {
+            var builder = ImmutableArray.CreateBuilder<ModuleDefinition>();
+            foreach (var method in methods) {
+                builder.AddRange(method.ContributingModules);
+            }
+            return builder.ToImmutable();
         }
     }
 }

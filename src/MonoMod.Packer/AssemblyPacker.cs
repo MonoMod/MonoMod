@@ -151,6 +151,9 @@ namespace MonoMod.Packer {
             var nonUnifiedTypes = firstMethod.TypesInSignature;
             var unifiedFirstMethod = firstMethod.GetUnified();
             var unifiedTypes = unifiedFirstMethod.TypesInSignature;
+            var contributing1 = unifiedFirstMethod.ContributingModules;
+            var firstUnified = entityMap.Lookup(rootAssembly.ManifestModule!.TopLevelTypes.First()).UnifiedType;
+            var contributing2 = firstUnified.ContributingModules;
 
             return outputAsm;
         }

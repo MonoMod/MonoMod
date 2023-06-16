@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using AsmResolver;
+using AsmResolver.DotNet;
 using MonoMod.Utils;
 
 namespace MonoMod.Packer.Entities {
@@ -33,6 +34,14 @@ namespace MonoMod.Packer.Entities {
                 }
             }
             return set.ToImmutableArray().CastArray<TypeEntityBase>();
+        }
+
+        protected override ImmutableArray<ModuleDefinition> MakeContributingModules() {
+            var builder = ImmutableArray.CreateBuilder<ModuleDefinition>();
+            foreach (var field in fields) {
+                builder.AddRange(field.ContributingModules);
+            }
+            return builder.ToImmutable();
         }
     }
 }

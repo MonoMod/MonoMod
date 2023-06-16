@@ -1,4 +1,5 @@
 ﻿using AsmResolver;
+using AsmResolver.DotNet;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
@@ -95,6 +96,14 @@ namespace MonoMod.Packer.Entities {
                 .Select(l => new UnifiedFieldEntity(Map, l))
                 .ToImmutableArray()
                 .CastArray<FieldEntityBase>();
+        }
+
+        protected override ImmutableArray<ModuleDefinition> MakeContributingModules() {
+            var builder = ImmutableArray.CreateBuilder<ModuleDefinition>();
+            foreach (var type in types) {
+                builder.AddRange(type.ContributingModules);
+            }
+            return builder.ToImmutable();
         }
     }
 }

@@ -37,6 +37,11 @@ namespace MonoMod.Packer.Entities {
         private MethodEntity CreateMethod(MethodDefinition m) => new(Map, m);
         private FieldEntity CreateField(FieldDefinition f) => new(Map, f);
 
+        protected override ImmutableArray<ModuleDefinition> MakeContributingModules()
+            => Definition.Module is { } module
+                ? ImmutableArray.Create(module)
+                : ImmutableArray<ModuleDefinition>.Empty;
+
         public new ImmutableArray<MethodEntity> StaticMethods => base.StaticMethods.CastArray<MethodEntity>();
         protected override ImmutableArray<MethodEntityBase> MakeStaticMethods() {
             return Definition.Methods
