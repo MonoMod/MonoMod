@@ -1,6 +1,7 @@
 ﻿using AsmResolver;
 using MonoMod.Utils;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace MonoMod.Packer.Entities {
@@ -17,5 +18,9 @@ namespace MonoMod.Packer.Entities {
         }
 
         public override Utf8String? Name => methods[0].Name;
+
+        protected override ImmutableArray<TypeEntityBase> MakeTypesInSignatureCore() {
+            throw new System.NotImplementedException();
+        }
     }
 }

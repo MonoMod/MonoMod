@@ -3,6 +3,8 @@ using AsmResolver.DotNet;
 using System.Collections.Generic;
 using MonoMod.Packer.Entities;
 using System;
+using System.Collections.Concurrent;
+using MonoMod.Packer.Utilities;
 
 namespace MonoMod.Packer {
 
@@ -16,6 +18,14 @@ namespace MonoMod.Packer {
 
         private readonly Dictionary<TypeDefinition, TypeEntity> entityMap = new();
         private readonly Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, UnifiedTypeEntity>> entitiesByName = new();
+
+        private readonly ConcurrentBag<TypesInSignatureBuilder> typeInSignatureBuilders = new();
+
+        public TypesInSignatureBuilder RentTypeInSigBuilder() => typeInSignatureBuilders.TryTake(out var result) ? result : new(this);
+        public void ReturnTypeInSigBuilder(TypesInSignatureBuilder builder) {
+            builder.Clear();
+            typeInSignatureBuilders.Add(builder);
+        }
 
         private TypeEntityMap(PackOptions options, IMetadataResolver mdResolver) {
             Options = options;
