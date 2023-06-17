@@ -7,7 +7,7 @@
 
         WRN_CouldNotFindCorLibReference,
         ERR_CouldNotResolveCorLib,
-        WRN_CouldNotResolveAssembly,
+        DBG_CouldNotResolveAssembly,
 
 
         _Count,

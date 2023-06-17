@@ -1,12 +1,14 @@
 ﻿using AsmResolver.DotNet;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 
 namespace MonoMod.Packer {
-    internal sealed class MergingAssemblyResolver : IAssemblyResolver {
+    public sealed class MergingAssemblyResolver : IAssemblyResolver {
         private readonly Dictionary<string, AssemblyDefinition> fullNameMap = new();
 
         public static MergingAssemblyResolver Create(IEnumerable<ModuleDefinition> modules) {
+            Helpers.ThrowIfArgumentNull(modules);
             var asmList = new HashSet<AssemblyDefinition>();
             foreach (var module in modules) {
                 if (module.Assembly is not null)
@@ -16,12 +18,14 @@ namespace MonoMod.Packer {
         }
 
         public MergingAssemblyResolver(IReadOnlyCollection<AssemblyDefinition> assemblies) {
+            Helpers.ThrowIfArgumentNull(assemblies);
             foreach (var assembly in assemblies) {
                 fullNameMap.TryAdd(assembly.FullName, assembly);
             }
         }
 
         public AssemblyDefinition? Resolve(AssemblyDescriptor assembly) {
+            Helpers.ThrowIfArgumentNull(assembly);
             if (fullNameMap.TryGetValue(assembly.FullName, out var result)) {
                 return result;
             } else {

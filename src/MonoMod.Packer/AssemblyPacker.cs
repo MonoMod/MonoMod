@@ -11,10 +11,8 @@ namespace MonoMod.Packer {
     public sealed class AssemblyPacker
     {
         private readonly IDiagnosticReciever diagnosticReciever;
-        private readonly IAssemblyResolver assemblyResolver;
 
-        public AssemblyPacker(IAssemblyResolver resolver, IDiagnosticReciever diagnosticReciever) {
-            assemblyResolver = resolver;
+        public AssemblyPacker(IDiagnosticReciever diagnosticReciever) {
             this.diagnosticReciever = diagnosticReciever;
         }
 
@@ -24,20 +22,15 @@ namespace MonoMod.Packer {
         }
 
         private readonly ConcurrentDictionary<string, AssemblyDefinition?> descCache = new();
-        private AssemblyDefinition? Resolve(AssemblyDescriptor asm) {
+        private AssemblyDefinition? Resolve(IAssemblyResolver resolver, AssemblyDescriptor asm) {
             return descCache.GetOrAdd(asm.FullName, 
-                static (_, t) => t.@this.assemblyResolver.Resolve(t.asm) ?? t.asm.Resolve(),
-                (@this: this, asm));
+                static (_, t) => t.resolver.Resolve(t.asm),// ?? t.asm.Resolve(),
+                (resolver, asm));
         }
 
-        public AssemblyDefinition Pack(AssemblyDefinition rootAssembly, PackOptions? options = null) {
+        public AssemblyDefinition Pack(AssemblyDefinition rootAssembly, IAssemblyResolver includedSetResolver, PackOptions? options = null) {
             Helpers.ThrowIfArgumentNull(rootAssembly);
             options ??= PackOptions.Default;
-
-            AssemblyDefinition[] matchList = options.AssemblyFilterList
-                .Select(assemblyResolver.Resolve)
-                .Where(d => d is not null)
-                .ToArray()!;
 
             // First, we want to resolve all of the assemblies (modules) we will be merging.
             var modules = new HashSet<ModuleDefinition>();
@@ -75,25 +68,8 @@ namespace MonoMod.Packer {
                 var assembly = module.Assembly;
                 if (assembly != rootAssembly) {
                     if (assembly is null) {
-                        if (options.UseBlacklist) {
-                            // we allow by default
-                        } else {
-                            // we're using a whitelist, this module can't be a part of this
-                            ReportDiagnostic(ErrorCode.DBG_ModuleSkipped, module);
-                            continue;
-                        }
+                        // ???
                     } else {
-                        // check whether the assembly is in the list
-                        var listHasAssembly = matchList.Contains(assembly);
-                        if (listHasAssembly ^ options.UseBlacklist) {
-                            // (!listHasAssembly && UseBlacklist) || (listHasAssembly && !UseBlacklist)
-                            // this means we want to allow this module
-                        } else {
-                            // we don't want to include this module; continue to the next one
-                            ReportDiagnostic(ErrorCode.DBG_ModuleSkipped, module);
-                            continue;
-                        }
-
                         if (options.ExcludeCorelib && assembly.IsCorLib) {
                             ReportDiagnostic(ErrorCode.DBG_SkippedCorelibModule, module);
                             continue;
@@ -106,9 +82,10 @@ namespace MonoMod.Packer {
 
                 // this is part of an asesmbly we want to grab references from, do that and add them to the queue
                 foreach (var asmRef in module.AssemblyReferences) {
-                    var asm = Resolve(asmRef);
+                    var asm = Resolve(includedSetResolver, asmRef);
                     if (asm is null) {
-                        ReportDiagnostic(ErrorCode.WRN_CouldNotResolveAssembly, asmRef, module);
+                        // not resolved means the assembly isn't in the set to merge
+                        ReportDiagnostic(ErrorCode.DBG_CouldNotResolveAssembly, asmRef, module);
                         continue;
                     }
 

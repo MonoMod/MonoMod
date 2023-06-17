@@ -35,14 +35,8 @@ namespace MonoMod.Packer {
         public MemberMergeMode MemberMergeMode { get; init; } = MemberMergeMode.UnifyIdentical;
 
         public bool ExcludeCorelib { get; init; } = true;
-        public bool UseBlacklist { get; init; } // = false;
-        public IReadOnlyCollection<AssemblyDescriptor> AssemblyFilterList { get; init; } = Array.Empty<AssemblyDescriptor>();
-        public PackOptions AddFiltered(AssemblyDescriptor value)
-            => this with { AssemblyFilterList = AddToCollection(AssemblyFilterList, Helpers.ThrowIfNull(value)) };
-        public PackOptions AddFiltered(params AssemblyDescriptor[] values)
-            => this with { AssemblyFilterList = AddToCollection(AssemblyFilterList, Helpers.ThrowIfNull(values)) };
-
-        public bool Parallelize { get; init; } = false;
+        
+        public bool Parallelize { get; init; } // = false;
 
         private static IReadOnlyCollection<T> AddToCollection<T>(IReadOnlyCollection<T> orig, T value) {
             var arr = new T[orig.Count + 1];

@@ -1,5 +1,7 @@
 ﻿using AsmResolver.DotNet;
 using AsmResolver.DotNet.Config.Json;
+using Microsoft.Extensions.FileSystemGlobbing;
+using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
@@ -43,10 +45,6 @@ namespace MonoMod.Packer.Driver {
             getDefaultValue: () => PackOptions.Default.ExcludeCorelib,
             description: "Whether or not to exclude the corlib from merge, regardless of other settings. Use with care.");
 
-        public static readonly Option<bool> OptBlacklist = new("--blacklist",
-            getDefaultValue: () => PackOptions.Default.UseBlacklist,
-            description: "Whether the filtered assemblies are blacklisted (i.e. excluded), as opposed to whitelisted (i.e. included).");
-
         public static readonly Option<bool> OptParallelize = new("--parallel",
             getDefaultValue: () => PackOptions.Default.Parallelize,
             description: "Whether or not to parallelize processing.");
@@ -66,11 +64,10 @@ namespace MonoMod.Packer.Driver {
             Arity = ArgumentArity.ExactlyOne,
         };
 
-        public static readonly Argument<IEnumerable<string>> ArgFilterList = new("filtered assemblies",
-            description: "An assembly filter (either as a whitelist or a blacklist) to filter which assemblies will be merged together. " +
-            "This can be either a file path or assembly name.")
+        public static readonly Argument<IEnumerable<string>> ArgOtherAssemblies = new("other assemblies",
+            description: "The set of assemblies to merge into the root assembly. May be globbed.")
         {
-            Arity = ArgumentArity.ZeroOrMore,
+            Arity = ArgumentArity.OneOrMore,
         };
 
         public static void AddOptionsAndArguments(Command cmd) {
@@ -82,12 +79,11 @@ namespace MonoMod.Packer.Driver {
             cmd.Add(OptTypeMergeMode);
             cmd.Add(OptMemberMergeMode);
             cmd.Add(OptExcludeCorlib);
-            cmd.Add(OptBlacklist);
             cmd.Add(OptParallelize);
             cmd.Add(OptRuntimeConfig);
             cmd.Add(OptExplicitInternalize);
             cmd.Add(ArgRootAssembly);
-            cmd.Add(ArgFilterList);
+            cmd.Add(ArgOtherAssemblies);
         }
 
         public static void Execute(InvocationContext context) {
@@ -127,10 +123,6 @@ namespace MonoMod.Packer.Driver {
                 packOpts = packOpts with { ExcludeCorelib = parseResult.GetValueForOption(OptExcludeCorlib) };
             }
 
-            if (parseResult.HasOption(OptBlacklist)) {
-                packOpts = packOpts with { UseBlacklist = parseResult.GetValueForOption(OptBlacklist) };
-            }
-
             if (parseResult.HasOption(OptParallelize)) {
                 packOpts = packOpts with { Parallelize = parseResult.GetValueForOption(OptParallelize) };
             }
@@ -141,36 +133,24 @@ namespace MonoMod.Packer.Driver {
 
             var rootAssembly = parseResult.GetValueForArgument(ArgRootAssembly);
             var runtimeConfigFile = parseResult.GetValueForOption(OptRuntimeConfig);
-            var filterList = parseResult.GetValueForArgument(ArgFilterList).Select(ParseAssemblyNameOrPath).ToArray();
+            var otherAssemblies = GlobAndLoadAssemblies(parseResult.GetValueForArgument(ArgOtherAssemblies));
             var output = parseResult.GetValueForOption(OptOutput);
             Helpers.Assert(output is not null);
-
-            if (filterList.Length > 0) {
-                packOpts = packOpts.AddFiltered(filterList);
-            }
 
             RuntimeConfiguration? runtimeConfig = null;
             if (runtimeConfigFile is not null) {
                 runtimeConfig = RuntimeConfiguration.FromFile(runtimeConfigFile.FullName);
             }
 
-            // TODO: try to make a better guess here
-            var isNetFx = corlibKind is DefaultCorlibKind.Mscorlib2 or DefaultCorlibKind.Mscorlib4;
-            IAssemblyResolver assemblyResolver;
-            if (isNetFx) {
-                assemblyResolver = new DotNetFrameworkAssemblyResolver();
-            } else {
-                assemblyResolver = new DotNetCoreAssemblyResolver(runtimeConfig, Environment.Version);
-            }
+            var resolver = new MergingAssemblyResolver(otherAssemblies);
 
             context.ExitCode = 0;
             var diagReciever = new ConsoleDiagnosticReciever(context.Console, context);
-            var packer = new AssemblyPacker(assemblyResolver, diagReciever);
+            var packer = new AssemblyPacker(diagReciever);
 
             var rootFile = AssemblyDefinition.FromFile(rootAssembly.FullName);
-            var finalAssembly = packer.Pack(rootFile, packOpts);
+            var finalAssembly = packer.Pack(rootFile, resolver, packOpts);
             finalAssembly.Write(output);
-
         }
 
         private static AssemblyDescriptor GetCorlib(DefaultCorlibKind kind, ParseResult parseResult, IConsole console) {
@@ -245,6 +225,28 @@ namespace MonoMod.Packer.Driver {
             }
 
             return AssemblyDefinition.FromFile(nameOrPath);
+        }
+
+        private static IReadOnlyList<AssemblyDefinition> GlobAndLoadAssemblies(IEnumerable<string> args) {
+            var matcher = new Matcher(PlatformDetection.OS.Is(OSKind.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+            var targetDir = new DirectoryInfoWrapper(new DirectoryInfo("."));
+
+            foreach (var arg in args) {
+                matcher.AddInclude(arg);
+            }
+
+            var result = matcher.Execute(targetDir);
+
+            if (!result.HasMatches) {
+                throw new FileNotFoundException("globs didn't match any files");
+            }
+
+            var defs = new List<AssemblyDefinition>();
+            foreach (var file in result.Files) {
+                defs.Add(AssemblyDefinition.FromFile(file.Path));
+            }
+
+            return defs;
         }
     }
 }
