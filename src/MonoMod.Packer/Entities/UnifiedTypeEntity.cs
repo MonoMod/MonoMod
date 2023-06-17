@@ -138,12 +138,13 @@ namespace MonoMod.Packer.Entities {
             isCheckingFullyUnified = true;
 
             try {
-                if (IsModuleType) {
-                    // if this type is the module type, it must *always* be fully unified, no matter what
+                if (types.Count == 1) {
+                    // if we have only one original, we unify completely
                     return true;
                 }
 
-                if (types.Count == 1) {
+                if (IsModuleType) {
+                    // if this type is the module type, it must *always* be fully unified, no matter what
                     return true;
                 }
 

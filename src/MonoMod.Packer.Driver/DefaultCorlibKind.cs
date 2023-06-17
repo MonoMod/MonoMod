@@ -23,10 +23,11 @@
         Standard21,
 
         Standard13 = Runtime4020,
-        Standard14 = Standard13,
+        Standard14 = Runtime4020,
+
         Standard15 = Runtime4100,
-        Standard16 = Standard15,
-        Standard17 = Standard15,
+        Standard16 = Runtime4100,
+        Standard17 = Runtime4100,
 
         Core21 = Runtime4210,
         Core31 = Runtime4220,

@@ -4,23 +4,6 @@ using System.Collections.Generic;
 using MonoMod.Utils;
 
 namespace MonoMod.Packer {
-
-    public enum TypeMergeMode {
-        DoNotMerge,
-        UnifyIdentical,
-        MergeLayoutIdentical,
-        MergeAlways,
-    }
-
-    internal static class TypeMergeModeExtra {
-        public const int MinValue = (int)TypeMergeMode.DoNotMerge;
-        public const int MaxValue = (int)TypeMergeMode.MergeAlways;
-    }
-
-    public enum MemberMergeMode {
-        UnifyIdentical,
-    }
-
     public sealed record PackOptions {
         public static PackOptions Default { get; } = new();
 
@@ -37,6 +20,7 @@ namespace MonoMod.Packer {
             => this with { ExplicitInternalize = AddToCollection(ExplicitInternalize, Helpers.ThrowIfNull(values)) };
 
         public TypeMergeMode TypeMergeMode { get; init; } = TypeMergeMode.MergeLayoutIdentical;
+        public BaseTypeMergeMode BaseTypeMergeMode { get; init; } = BaseTypeMergeMode.AllowMoreDerived;
         public MemberMergeMode MemberMergeMode { get; init; } = MemberMergeMode.UnifyIdentical;
 
         public bool ExcludeCorelib { get; init; } = true;

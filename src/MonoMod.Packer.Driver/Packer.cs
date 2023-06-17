@@ -37,6 +37,9 @@ namespace MonoMod.Packer.Driver {
         public static readonly Option<TypeMergeMode> OptTypeMergeMode = new("--type-merge",
             getDefaultValue: () => PackOptions.Default.TypeMergeMode,
             description: "The rules to use when merging types.");
+        public static readonly Option<BaseTypeMergeMode> OptBaseTypeMergeMode = new("--base-type",
+            getDefaultValue: () => PackOptions.Default.BaseTypeMergeMode,
+            description: "The rules to use when merging a type's base.");
         public static readonly Option<MemberMergeMode> OptMemberMergeMode = new("--member-merge",
             getDefaultValue: () => PackOptions.Default.MemberMergeMode,
             description: "The rules to use when merging members.");
@@ -77,6 +80,7 @@ namespace MonoMod.Packer.Driver {
             cmd.Add(OptInternalize);
             cmd.Add(OptEnsurePublicApi);
             cmd.Add(OptTypeMergeMode);
+            cmd.Add(OptBaseTypeMergeMode);
             cmd.Add(OptMemberMergeMode);
             cmd.Add(OptExcludeCorlib);
             cmd.Add(OptParallelize);
@@ -103,29 +107,15 @@ namespace MonoMod.Packer.Driver {
                 packOpts = packOpts with { DefaultCorLib = GetCorlib(corlibKind, parseResult, context.Console) };
             }
 
-            if (parseResult.HasOption(OptInternalize)) {
-                packOpts = packOpts with { Internalize = parseResult.GetValueForOption(OptInternalize) };
-            }
-
-            if (parseResult.HasOption(OptEnsurePublicApi)) {
-                packOpts = packOpts with { EnsurePublicApi = parseResult.GetValueForOption(OptEnsurePublicApi) };
-            }
-
-            if (parseResult.HasOption(OptTypeMergeMode)) {
-                packOpts = packOpts with { TypeMergeMode = parseResult.GetValueForOption(OptTypeMergeMode) };
-            }
-
-            if (parseResult.HasOption(OptMemberMergeMode)) {
-                packOpts = packOpts with { MemberMergeMode = parseResult.GetValueForOption(OptMemberMergeMode) }; 
-            }
-
-            if (parseResult.HasOption(OptExcludeCorlib)) {
-                packOpts = packOpts with { ExcludeCorelib = parseResult.GetValueForOption(OptExcludeCorlib) };
-            }
-
-            if (parseResult.HasOption(OptParallelize)) {
-                packOpts = packOpts with { Parallelize = parseResult.GetValueForOption(OptParallelize) };
-            }
+            packOpts = packOpts with {
+                Internalize = parseResult.GetValueForOption(OptInternalize),
+                EnsurePublicApi = parseResult.GetValueForOption(OptEnsurePublicApi),
+                TypeMergeMode = parseResult.GetValueForOption(OptTypeMergeMode),
+                BaseTypeMergeMode = parseResult.GetValueForOption(OptBaseTypeMergeMode),
+                MemberMergeMode = parseResult.GetValueForOption(OptMemberMergeMode),
+                ExcludeCorelib = parseResult.GetValueForOption(OptExcludeCorlib),
+                Parallelize = parseResult.GetValueForOption(OptParallelize)
+            };
 
             if (parseResult.GetValueForOption(OptExplicitInternalize) is { } strings) {
                 packOpts = packOpts.AddExplicitInternalize(strings.Select(ParseAssemblyNameOrPath).ToArray());
