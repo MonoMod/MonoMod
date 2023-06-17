@@ -24,7 +24,7 @@ namespace MonoMod.Packer {
     public sealed record PackOptions {
         public static PackOptions Default { get; } = new();
 
-        public AssemblyDescriptor DefaultCorLib { get; init; } = KnownCorLibs.SystemPrivateCoreLib_v6_0_0_0;
+        public AssemblyDescriptor DefaultCorLib { get; init; } = KnownCorLibs.SystemRuntime_v6_0_0_0;
 
         public bool Internalize { get; init; } // = false;
         public bool EnsurePublicApi { get; init; } = true;
