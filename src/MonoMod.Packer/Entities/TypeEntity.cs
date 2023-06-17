@@ -1,5 +1,6 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
+using MonoMod.Packer.Utilities;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -33,6 +34,32 @@ namespace MonoMod.Packer.Entities {
                     .Single(t => t.Name == Name);
             }
         }
+
+        protected override TypeMergeMode? GetTypeMergeMode() {
+            return Definition.GetDeclaredMergeMode();
+        }
+
+        protected override bool GetHasBase() {
+            return Definition.BaseType is not null;
+        }
+        protected override bool GetHasUnifiableBase() {
+            return Definition.BaseType is not { } @base // has no base type
+                || Map.MdResolver.ResolveType(@base) is not { } type // or that type is not in our resolve set
+                || Map.TryLookup(type, out _); // or lookup of that type succeeded; this *should* always pass
+        }
+
+        public new TypeEntity? UnifiableBase => (TypeEntity?)base.UnifiableBase;
+        protected override TypeEntityBase? GetUnifiableBase() {
+            var @base = Definition.BaseType;
+            if (@base is null)
+                return null;
+            var resolved = Map.MdResolver.ResolveType(@base);
+            if (resolved is null)
+                return null;
+            return Map.TryLookup(resolved, out var result) ? result : null;
+        }
+
+        public override bool IsModuleType => Definition.IsModuleType;
 
         private MethodEntity CreateMethod(MethodDefinition m) => new(Map, m);
         private FieldEntity CreateField(FieldDefinition f) => new(Map, f);

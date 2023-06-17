@@ -105,5 +105,68 @@ namespace MonoMod.Packer.Entities {
             }
             return builder.ToImmutable();
         }
+
+        // note: this returns the overall (most strict) type merge mode; there may be a less strict one used when merging some component types
+        protected override TypeMergeMode? GetTypeMergeMode() {
+            var result = TypeMergeModeExtra.MaxValue;
+            foreach (var type in types) {
+                result = int.Min(result, (int) type.TypeMergeMode);
+            }
+            return (TypeMergeMode) result;
+        }
+
+        protected override bool GetHasBase() {
+            return types.Any(static t => t.HasBase);
+        }
+
+        protected override bool GetHasUnifiableBase() {
+            throw new NotImplementedException();
+        }
+
+        public new UnifiedTypeEntity? UnifiableBase => (UnifiedTypeEntity?) base.UnifiableBase;
+        protected override TypeEntityBase? GetUnifiableBase() {
+            throw new NotImplementedException();
+        }
+
+
+        private bool isCheckingFullyUnified;
+        public ThreeState CanBeFullyUnifiedUncached() {
+            if (isCheckingFullyUnified) {
+                // assume yes, if we reach this point
+                return ThreeState.Maybe;
+            }
+            isCheckingFullyUnified = true;
+
+            try {
+                if (IsModuleType) {
+                    // if this type is the module type, it must *always* be fully unified, no matter what
+                    return true;
+                }
+
+                if (types.Count == 1) {
+                    return true;
+                }
+
+                var overallMergeMode = TypeMergeMode;
+                if (overallMergeMode is TypeMergeMode.DoNotMerge) {
+                    // at least one component type is DoNotMerge; we also know there are multiple, so we definitely fully unify
+                    return false;
+                }
+
+                if (!HasUnifiableBase) {
+                    // this type's bases cannot possibly be unified; the type cannot be unified
+                    return false;
+                }
+
+                if (overallMergeMode is TypeMergeMode.MergeAlways) {
+
+                }
+
+                throw new NotImplementedException();
+
+            } finally {
+                isCheckingFullyUnified = false;
+            }
+        }
     }
 }

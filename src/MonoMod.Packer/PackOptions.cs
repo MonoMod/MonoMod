@@ -9,7 +9,12 @@ namespace MonoMod.Packer {
         DoNotMerge,
         UnifyIdentical,
         MergeLayoutIdentical,
-        MergeAnyWithoutConflict,
+        MergeAlways,
+    }
+
+    internal static class TypeMergeModeExtra {
+        public const int MinValue = (int)TypeMergeMode.DoNotMerge;
+        public const int MaxValue = (int)TypeMergeMode.MergeAlways;
     }
 
     public enum MemberMergeMode {

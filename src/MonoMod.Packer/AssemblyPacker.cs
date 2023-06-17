@@ -1,8 +1,6 @@
-﻿using AsmResolver;
-using AsmResolver.DotNet;
+﻿using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
 using MonoMod.Utils;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -131,6 +129,9 @@ namespace MonoMod.Packer {
             var contributing1 = unifiedFirstMethod.ContributingModules;
             var firstUnified = entityMap.Lookup(rootAssembly.ManifestModule!.TopLevelTypes.First()).UnifiedType;
             var contributing2 = firstUnified.ContributingModules;
+
+            var canBeUnified2 = firstUnified.CanBeFullyUnifiedUncached();
+            var canBeUnified = unified.CanBeFullyUnifiedUncached();
 
             return outputAsm;
         }

@@ -5,6 +5,7 @@ using MonoMod.Packer.Entities;
 using System;
 using System.Collections.Concurrent;
 using MonoMod.Packer.Utilities;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Packer {
 
@@ -82,6 +83,8 @@ namespace MonoMod.Packer {
         }
 
         public TypeEntity Lookup(TypeDefinition def) => entityMap[def];
+        public bool TryLookup(TypeDefinition def, [MaybeNullWhen(false)] out TypeEntity result)
+            => entityMap.TryGetValue(def, out result);
 
         public UnifiedTypeEntity ByName(Utf8String? @namespace, Utf8String? name)
             => entitiesByName[@namespace][name];
