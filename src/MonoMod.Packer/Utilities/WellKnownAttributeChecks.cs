@@ -10,7 +10,7 @@ namespace MonoMod.Packer.Utilities {
         private const string MergeLayoutIdenticalAttrName = "MergeLayoutIdenticalAttribute";
         private const string MergeAlwaysAttrName = "MergeAlwaysAttribute";
 
-        public static TypeMergeMode? GetDeclaredMergeMode(this TypeDefinition type) {
+        public static TypeMergeMode? GetDeclaredMergeMode(this IHasCustomAttribute type) {
             TypeMergeMode? result = null;
             // when resolving this, we return the most restricted of the found attributes
             foreach (var attr in type.CustomAttributes) {
@@ -78,8 +78,7 @@ namespace MonoMod.Packer.Utilities {
         private const string MergeExactBaseAttrName = "MergeExactBaseAttribute";
         private const string MergeMoreDerivedBaseAttrName = "MergeMoreDerivedBaseAttribute";
 
-
-        public static BaseTypeMergeMode? GetDeclaredBaseMergeMode(this TypeDefinition type) {
+        public static BaseTypeMergeMode? GetDeclaredBaseMergeMode(this IHasCustomAttribute type) {
             BaseTypeMergeMode? result = null;
             // when resolving this, we return the most restricted of the found attributes
             foreach (var attr in type.CustomAttributes) {

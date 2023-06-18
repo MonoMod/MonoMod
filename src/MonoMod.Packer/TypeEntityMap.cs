@@ -86,6 +86,32 @@ namespace MonoMod.Packer {
         public bool TryLookup(TypeDefinition def, [MaybeNullWhen(false)] out TypeEntity result)
             => entityMap.TryGetValue(def, out result);
 
+        private readonly ConcurrentDictionary<(object? scopeEntity, Utf8String? ns, Utf8String? name), ReferenceTypeEntity> referenceEntities = new();
+        public TypeEntityBase GetEntity(ITypeDefOrRef defOrRef) {
+            if (defOrRef is TypeDefinition def) {
+                return Lookup(def);
+            }
+
+            var resolved = MdResolver.ResolveType(defOrRef);
+            if (resolved is not null) {
+                return Lookup(resolved);
+            }
+
+            var @ref = (TypeReference) defOrRef;
+            var scope = @ref.Scope;
+            object? obj;
+            if (scope is ITypeDefOrRef scopeRef) {
+                obj = GetEntity(scopeRef);
+            } else {
+                var asm = scope?.GetAssembly()?.FullName;
+                obj = asm;
+            }
+
+            return referenceEntities.GetOrAdd((obj, @ref.Namespace, @ref.Name),
+                static (k, t)
+                    => new ReferenceTypeEntity(t.@this, t.defOrRef), (@this: this, defOrRef));
+        }
+
         public UnifiedTypeEntity ByName(Utf8String? @namespace, Utf8String? name)
             => entitiesByName[@namespace][name];
 
@@ -95,6 +121,38 @@ namespace MonoMod.Packer {
                     yield return v2;
                 }
             }
+        }
+
+        private readonly ConcurrentDictionary<IHasCustomAttribute, TypeMergeMode?> cachedTypeMergeModes = new();
+
+        public TypeMergeMode? GetTypeMergeMode(IHasCustomAttribute attrProv) {
+            return cachedTypeMergeModes.GetOrAdd(attrProv, static (attrProv, @this) => {
+                var result = attrProv.GetDeclaredMergeMode();
+                if (result is null && attrProv is IModuleProvider { Module: { } module }) {
+                    result = @this.GetTypeMergeMode(module);
+                    attrProv = module;
+                }
+                if (result is null && attrProv is ModuleDefinition { Assembly: { } assembly }) {
+                    result = @this.GetTypeMergeMode(assembly);
+                }
+                return result;
+            }, this);
+        }
+
+        private readonly ConcurrentDictionary<IHasCustomAttribute, BaseTypeMergeMode?> cachedBaseTypeMergeModes = new();
+
+        public BaseTypeMergeMode? GetBaseTypeMergeMode(IHasCustomAttribute attrProv) {
+            return cachedBaseTypeMergeModes.GetOrAdd(attrProv, static (attrProv, @this) => {
+                var result = attrProv.GetDeclaredBaseMergeMode();
+                if (result is null && attrProv is IModuleProvider { Module: { } module }) {
+                    result = @this.GetBaseTypeMergeMode(module);
+                    attrProv = module;
+                }
+                if (result is null && attrProv is ModuleDefinition { Assembly: { } assembly }) {
+                    result = @this.GetBaseTypeMergeMode(assembly);
+                }
+                return result;
+            }, this);
         }
     }
 }

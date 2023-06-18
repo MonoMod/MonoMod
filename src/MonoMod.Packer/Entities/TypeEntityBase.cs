@@ -35,10 +35,6 @@ namespace MonoMod.Packer.Entities {
 
         protected abstract TypeMergeMode? GetTypeMergeMode();
 
-        public bool HasBase => GetHasBase();
-        protected abstract bool GetHasBase();
-
-
         private bool lazyHasUnifiableBase;
         public bool HasUnifiableBase {
             get {
@@ -49,19 +45,20 @@ namespace MonoMod.Packer.Entities {
                 return lazyHasUnifiableBase;
             }
         }
+
         protected abstract bool GetHasUnifiableBase();
 
         private TypeEntityBase? lazyUnifiableBase;
-        public TypeEntityBase? UnifiableBase {
+        public TypeEntityBase? BaseType {
             get {
                 if ((updatingState & UnifiableBaseMask) == 0) {
-                    lazyUnifiableBase = GetUnifiableBase();
+                    lazyUnifiableBase = GetBaseType();
                     MarkState(UnifiableBaseMask);
                 }
                 return lazyUnifiableBase;
             }
         }
-        protected abstract TypeEntityBase? GetUnifiableBase();
+        protected abstract TypeEntityBase? GetBaseType();
 
         public virtual bool IsModuleType => Namespace is null && Name == "<Module>"; // TODO: is there a constant somewhere for this?
 

@@ -115,19 +115,13 @@ namespace MonoMod.Packer.Entities {
             return (TypeMergeMode) result;
         }
 
-        protected override bool GetHasBase() {
-            return types.Any(static t => t.HasBase);
+        protected override TypeEntityBase? GetBaseType() {
+            throw new NotImplementedException();
         }
 
         protected override bool GetHasUnifiableBase() {
             throw new NotImplementedException();
         }
-
-        public new UnifiedTypeEntity? UnifiableBase => (UnifiedTypeEntity?) base.UnifiableBase;
-        protected override TypeEntityBase? GetUnifiableBase() {
-            throw new NotImplementedException();
-        }
-
 
         private bool isCheckingFullyUnified;
         public ThreeState CanBeFullyUnifiedUncached() {
@@ -155,7 +149,7 @@ namespace MonoMod.Packer.Entities {
                 }
 
                 if (!HasUnifiableBase) {
-                    // this type's bases cannot possibly be unified; the type cannot be unified
+                    // the base class isn't unifiable, we can't merge
                     return false;
                 }
 
