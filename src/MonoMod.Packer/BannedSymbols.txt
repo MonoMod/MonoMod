@@ -1,0 +1,29 @@
+// *.Resolve() is Evil
+M:AsmResolver.DotNet.AssemblyDescriptor.Resolve
+M:AsmResolver.DotNet.ReflectionAssemblyDescriptor.Resolve
+M:AsmResolver.DotNet.AssemblyDefinition.Resolve
+M:AsmResolver.DotNet.AssemblyReference.Resolve
+M:AsmResolver.DotNet.ModuleReference.Resolve
+M:AsmResolver.DotNet.TypeReference.Resolve
+M:AsmResolver.DotNet.TypeSpecification.Resolve
+M:AsmResolver.DotNet.ITypeDescriptor.Resolve
+M:AsmResolver.DotNet.MemberReference.Resolve
+M:AsmResolver.DotNet.MethodSpecification.Resolve
+M:AsmResolver.DotNet.IMemberDescriptor.Resolve
+M:AsmResolver.DotNet.IMethodDescriptor.Resolve
+M:AsmResolver.DotNet.IFieldDescriptor.Resolve
+
+M:AsmResolver.DotNet.ExportedType.Resolve
+P:AsmResolver.DotNet.ExportedType.IsValueType;Uses Resolve()
+
+M:AsmResolver.DotNet.Signatures.Types.TypeSignature.Resolve
+M:AsmResolver.DotNet.Signatures.Types.TypeSpecificationSignature.Resolve
+M:AsmResolver.DotNet.Signatures.Types.CorLibTypeSignaturee.Resolve
+M:AsmResolver.DotNet.Signatures.Types.GenericInstanceTypeSignature.Resolve
+M:AsmResolver.DotNet.Signatures.Types.GenericInstanceTypeSignature.GetDirectBaseClass;Uses Resolve()
+M:AsmResolver.DotNet.Signatures.Types.GenericInstanceTypeSignature.GetDirectlyImplementedInterfaces;Uses Resolve()
+M:AsmResolver.DotNet.Signatures.Types.GenericInstanceTypeSignature.IsDirectlyCompatibleWith;Uses Resolve()
+M:AsmResolver.DotNet.Signatures.Types.TypeDefOrRefSignature.Resolve
+M:AsmResolver.DotNet.Signatures.Types.FunctionPointerTypeSignature.Resolve
+
+T:AsmResolver.DotNet.Memory.TypeMemoryLayoutDetector;Uses Resolve()

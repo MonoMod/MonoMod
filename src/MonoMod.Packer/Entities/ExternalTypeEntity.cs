@@ -16,7 +16,7 @@ namespace MonoMod.Packer.Entities {
             get {
                 if (lazyDefinition is null) {
                     // note: we just call Resolve() here, because this should only exist for types external to the merge, so Map's mdresolver is wrong
-                    Interlocked.CompareExchange(ref lazyDefinition, Reference.Resolve(), null);
+                    Interlocked.CompareExchange(ref lazyDefinition, Map.ExternalMdResolver.ResolveType(Reference), null);
                 }
                 return lazyDefinition;
             }

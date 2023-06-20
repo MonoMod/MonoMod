@@ -4,14 +4,23 @@
     <TargetFrameworks>net7.0</TargetFrameworks>
     
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
+    <WarningsAsErrors>$(WarningsAsErrors);RS0030</WarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <AdditionalFiles Include="BannedSymbols.txt" />
+  </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Remove="Mono.Cecil" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AsmResolver.DotNet" Version="5.3.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   
 </Project>

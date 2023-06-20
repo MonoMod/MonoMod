@@ -108,7 +108,10 @@ namespace MonoMod.Packer {
             var asmResolver = MergingAssemblyResolver.Create(modulesToMerge);
             var mdResolver = new DefaultMetadataResolver(asmResolver);
 
-            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options, mdResolver, packer.diagnostics);
+            var externalMdResolver = rootAssembly.ManifestModule!.MetadataResolver;
+            Helpers.Assert(externalMdResolver is not null);
+
+            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options, mdResolver, externalMdResolver, packer.diagnostics);
 
             // TODO: copy more stuff over
 
@@ -130,6 +133,10 @@ namespace MonoMod.Packer {
 
             var canBeUnified2 = firstUnified.CanBeFullyUnifiedUncached();
             var canBeUnified = unified.CanBeFullyUnifiedUncached();
+
+            var embedded = entityMap.ByName("Microsoft.CodeAnalysis", "EmbeddedAttribute");
+            var ebt = embedded.BaseType;
+            var embeddedCanBeUnified = embedded.CanBeFullyUnifiedUncached();
 
             return outputAsm;
         }

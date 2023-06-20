@@ -17,6 +17,7 @@ namespace MonoMod.Packer {
     internal sealed class TypeEntityMap {
         public readonly PackOptions Options;
         public readonly IMetadataResolver MdResolver;
+        public readonly IMetadataResolver ExternalMdResolver;
         public readonly DiagnosticTranslator Diagnostics;
 
         private readonly Dictionary<TypeDefinition, TypeEntity> entityMap = new();
@@ -30,9 +31,10 @@ namespace MonoMod.Packer {
             typeInSignatureBuilders.Add(builder);
         }
 
-        private TypeEntityMap(PackOptions options, IMetadataResolver mdResolver, DiagnosticTranslator translator) {
+        private TypeEntityMap(PackOptions options, IMetadataResolver mdResolver, IMetadataResolver externalMdResolver, DiagnosticTranslator translator) {
             Options = options;
             MdResolver = mdResolver;
+            ExternalMdResolver = externalMdResolver;
             Diagnostics = translator;
 
             if (options.Parallelize) {
@@ -40,8 +42,11 @@ namespace MonoMod.Packer {
             }
         }
 
-        public static TypeEntityMap CreateForAllTypes(IEnumerable<ModuleDefinition> modules, PackOptions options, IMetadataResolver mdResolver, DiagnosticTranslator translator) {
-            var map = new TypeEntityMap(options, mdResolver, translator);
+        public static TypeEntityMap CreateForAllTypes(IEnumerable<ModuleDefinition> modules,
+            PackOptions options, IMetadataResolver mdResolver,
+            IMetadataResolver externalResolver, DiagnosticTranslator translator
+        ) {
+            var map = new TypeEntityMap(options, mdResolver, externalResolver, translator);
             var entsByName = new Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, List<TypeEntity>>>();
 
             foreach (var module in modules) {
@@ -89,38 +94,32 @@ namespace MonoMod.Packer {
         public bool TryLookup(TypeDefinition def, [MaybeNullWhen(false)] out TypeEntity result)
             => entityMap.TryGetValue(def, out result);
 
+        private readonly ConcurrentDictionary<ITypeDefOrRef, TypeEntityBase> defOrRefCache = new();
         private readonly ConcurrentDictionary<(object? scopeEntity, Utf8String? ns, Utf8String? name), ExternalTypeEntity> referenceEntities = new();
         public TypeEntityBase GetEntity(ITypeDefOrRef defOrRef) {
-            if (defOrRef is TypeDefinition def && TryLookup(def, out var result)) {
-                return result;
-            }
-
-            var resolved = MdResolver.ResolveType(defOrRef);
-            if (resolved is not null && TryLookup(resolved, out result)) {
-                return result;
-            }
-
-            object? obj = null;
-            if (defOrRef is TypeReference @ref) {
-                var scope = @ref.Scope;
-                if (scope is ITypeDefOrRef scopeRef) {
-                    obj = GetEntity(scopeRef);
-                } else {
-                    var asm = scope?.GetAssembly()?.FullName;
-                    obj = asm;
+            return defOrRefCache.GetOrAdd(defOrRef, static (defOrRef, @this) => {
+                if (defOrRef is TypeDefinition def && @this.TryLookup(def, out var result)) {
+                    return result;
                 }
-            } else if (defOrRef is TypeDefinition def2) {
-                if (def2.DeclaringType is { } declType) {
-                    obj = GetEntity(declType);
-                } else {
-                    var asm = def2.Module?.Assembly?.FullName;
-                    obj = asm;
-                }
-            } 
 
-            return referenceEntities.GetOrAdd((obj, defOrRef.Namespace, defOrRef.Name),
-                static (k, t)
-                    => new ExternalTypeEntity(t.@this, t.defOrRef), (@this: this, defOrRef));
+                var resolved = @this.MdResolver.ResolveType(defOrRef);
+                if (resolved is not null && @this.TryLookup(resolved, out result)) {
+                    return result;
+                }
+
+                var resolvedDef = defOrRef as TypeDefinition;
+                resolvedDef ??= @this.ExternalMdResolver.ResolveType(defOrRef);
+
+                if (resolvedDef is null) {
+                    @this.Diagnostics.ReportDiagnostic(ErrorCode.ERR_CouldNotResolveExternalReference, defOrRef);
+                }
+
+                var obj = resolvedDef?.Module?.Assembly?.ToString() ?? defOrRef.Scope?.GetAssembly()?.ToString();
+
+                return @this.referenceEntities.GetOrAdd((obj, defOrRef.Namespace, defOrRef.Name),
+                    static (k, t)
+                        => new ExternalTypeEntity(t.@this, t.defOrRef), (@this, defOrRef));
+            }, this);
         }
 
         public UnifiedTypeEntity ByName(Utf8String? @namespace, Utf8String? name)

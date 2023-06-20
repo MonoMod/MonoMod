@@ -8,6 +8,7 @@
         WRN_CouldNotFindCorLibReference,
         ERR_CouldNotResolveCorLib,
         DBG_CouldNotResolveAssembly,
+        ERR_CouldNotResolveExternalReference,
 
         WRN_MergingSystemObject,
         ERR_SystemObjectDefinitionHasBase,

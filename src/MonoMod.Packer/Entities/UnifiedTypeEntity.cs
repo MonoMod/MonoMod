@@ -179,6 +179,7 @@ namespace MonoMod.Packer.Entities {
             while (cur is not null) {
                 if (cur == @base)
                     return true;
+                cur = cur.BaseType;
             }
             return false;
         }
