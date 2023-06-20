@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using MonoMod.Packer.Utilities;
 using System.Diagnostics.CodeAnalysis;
+using MonoMod.Packer.Diagnostics;
 
 namespace MonoMod.Packer {
 
@@ -16,6 +17,7 @@ namespace MonoMod.Packer {
     internal sealed class TypeEntityMap {
         public readonly PackOptions Options;
         public readonly IMetadataResolver MdResolver;
+        public readonly DiagnosticTranslator Diagnostics;
 
         private readonly Dictionary<TypeDefinition, TypeEntity> entityMap = new();
         private readonly Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, UnifiedTypeEntity>> entitiesByName = new();
@@ -28,17 +30,18 @@ namespace MonoMod.Packer {
             typeInSignatureBuilders.Add(builder);
         }
 
-        private TypeEntityMap(PackOptions options, IMetadataResolver mdResolver) {
+        private TypeEntityMap(PackOptions options, IMetadataResolver mdResolver, DiagnosticTranslator translator) {
             Options = options;
             MdResolver = mdResolver;
+            Diagnostics = translator;
 
             if (options.Parallelize) {
                 throw new InvalidOperationException("Cannot parallelize at present");
             }
         }
 
-        public static TypeEntityMap CreateForAllTypes(IEnumerable<ModuleDefinition> modules, PackOptions options, IMetadataResolver mdResolver) {
-            var map = new TypeEntityMap(options, mdResolver);
+        public static TypeEntityMap CreateForAllTypes(IEnumerable<ModuleDefinition> modules, PackOptions options, IMetadataResolver mdResolver, DiagnosticTranslator translator) {
+            var map = new TypeEntityMap(options, mdResolver, translator);
             var entsByName = new Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, List<TypeEntity>>>();
 
             foreach (var module in modules) {
@@ -86,30 +89,38 @@ namespace MonoMod.Packer {
         public bool TryLookup(TypeDefinition def, [MaybeNullWhen(false)] out TypeEntity result)
             => entityMap.TryGetValue(def, out result);
 
-        private readonly ConcurrentDictionary<(object? scopeEntity, Utf8String? ns, Utf8String? name), ReferenceTypeEntity> referenceEntities = new();
+        private readonly ConcurrentDictionary<(object? scopeEntity, Utf8String? ns, Utf8String? name), ExternalTypeEntity> referenceEntities = new();
         public TypeEntityBase GetEntity(ITypeDefOrRef defOrRef) {
-            if (defOrRef is TypeDefinition def) {
-                return Lookup(def);
+            if (defOrRef is TypeDefinition def && TryLookup(def, out var result)) {
+                return result;
             }
 
             var resolved = MdResolver.ResolveType(defOrRef);
-            if (resolved is not null) {
-                return Lookup(resolved);
+            if (resolved is not null && TryLookup(resolved, out result)) {
+                return result;
             }
 
-            var @ref = (TypeReference) defOrRef;
-            var scope = @ref.Scope;
-            object? obj;
-            if (scope is ITypeDefOrRef scopeRef) {
-                obj = GetEntity(scopeRef);
-            } else {
-                var asm = scope?.GetAssembly()?.FullName;
-                obj = asm;
-            }
+            object? obj = null;
+            if (defOrRef is TypeReference @ref) {
+                var scope = @ref.Scope;
+                if (scope is ITypeDefOrRef scopeRef) {
+                    obj = GetEntity(scopeRef);
+                } else {
+                    var asm = scope?.GetAssembly()?.FullName;
+                    obj = asm;
+                }
+            } else if (defOrRef is TypeDefinition def2) {
+                if (def2.DeclaringType is { } declType) {
+                    obj = GetEntity(declType);
+                } else {
+                    var asm = def2.Module?.Assembly?.FullName;
+                    obj = asm;
+                }
+            } 
 
-            return referenceEntities.GetOrAdd((obj, @ref.Namespace, @ref.Name),
+            return referenceEntities.GetOrAdd((obj, defOrRef.Namespace, defOrRef.Name),
                 static (k, t)
-                    => new ReferenceTypeEntity(t.@this, t.defOrRef), (@this: this, defOrRef));
+                    => new ExternalTypeEntity(t.@this, t.defOrRef), (@this: this, defOrRef));
         }
 
         public UnifiedTypeEntity ByName(Utf8String? @namespace, Utf8String? name)
@@ -128,7 +139,7 @@ namespace MonoMod.Packer {
         public TypeMergeMode? GetTypeMergeMode(IHasCustomAttribute attrProv) {
             return cachedTypeMergeModes.GetOrAdd(attrProv, static (attrProv, @this) => {
                 var result = attrProv.GetDeclaredMergeMode();
-                if (result is null && attrProv is IModuleProvider { Module: { } module }) {
+                if (result is null && attrProv is not ModuleDefinition and not AssemblyDefinition and IModuleProvider { Module: { } module }) {
                     result = @this.GetTypeMergeMode(module);
                     attrProv = module;
                 }

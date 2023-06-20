@@ -8,16 +8,12 @@ using System.Linq;
 namespace MonoMod.Packer {
     public sealed class AssemblyPacker
     {
-        private readonly IDiagnosticReciever diagnosticReciever;
+        private readonly DiagnosticTranslator diagnostics;
 
         public AssemblyPacker(IDiagnosticReciever diagnosticReciever) {
-            this.diagnosticReciever = diagnosticReciever;
+            diagnostics = new(diagnosticReciever);
         }
 
-        private void ReportDiagnostic(ErrorCode code, params object?[] args) {
-            // TODO: improve
-            diagnosticReciever.ReportDiagnostic(code.ToString(), args);
-        }
 
         private readonly ConcurrentDictionary<string, AssemblyDefinition?> descCache = new();
         private AssemblyDefinition? Resolve(IAssemblyResolver resolver, AssemblyDescriptor asm) {
@@ -46,13 +42,13 @@ namespace MonoMod.Packer {
             }
 
             if (corlibDescriptor is null) {
-                ReportDiagnostic(ErrorCode.WRN_CouldNotFindCorLibReference);
+                diagnostics.ReportDiagnostic(ErrorCode.WRN_CouldNotFindCorLibReference);
                 corlibDescriptor = options.DefaultCorLib;
             }
 
             var realCorlib = corlibDescriptor as AssemblyReference;
             if (realCorlib is null) {
-                ReportDiagnostic(ErrorCode.ERR_CouldNotResolveCorLib, corlibDescriptor);
+                diagnostics.ReportDiagnostic(ErrorCode.ERR_CouldNotResolveCorLib, corlibDescriptor);
                 // we reported an error, try to continue anyway, using some default reference
                 realCorlib = KnownCorLibs.SystemRuntime_v7_0_0_0;
             }
@@ -69,7 +65,7 @@ namespace MonoMod.Packer {
                         // ???
                     } else {
                         if (options.ExcludeCorelib && assembly.IsCorLib) {
-                            ReportDiagnostic(ErrorCode.DBG_SkippedCorelibModule, module);
+                            diagnostics.ReportDiagnostic(ErrorCode.DBG_SkippedCorelibModule, module);
                             continue;
                         }
                     }
@@ -83,7 +79,7 @@ namespace MonoMod.Packer {
                     var asm = Resolve(includedSetResolver, asmRef);
                     if (asm is null) {
                         // not resolved means the assembly isn't in the set to merge
-                        ReportDiagnostic(ErrorCode.DBG_CouldNotResolveAssembly, asmRef, module);
+                        diagnostics.ReportDiagnostic(ErrorCode.DBG_CouldNotResolveAssembly, module, new object?[] { module });
                         continue;
                     }
 
@@ -112,7 +108,7 @@ namespace MonoMod.Packer {
             var asmResolver = MergingAssemblyResolver.Create(modulesToMerge);
             var mdResolver = new DefaultMetadataResolver(asmResolver);
 
-            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options, mdResolver);
+            var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options, mdResolver, packer.diagnostics);
 
             // TODO: copy more stuff over
 
@@ -127,7 +123,9 @@ namespace MonoMod.Packer {
             var unifiedFirstMethod = firstMethod.GetUnified();
             var unifiedTypes = unifiedFirstMethod.TypesInSignature;
             var contributing1 = unifiedFirstMethod.ContributingModules;
+            var unifiedBase = unified.BaseType;
             var firstUnified = entityMap.Lookup(rootAssembly.ManifestModule!.TopLevelTypes.First()).UnifiedType;
+            var mergeMode = firstUnified.TypeMergeMode;
             var contributing2 = firstUnified.ContributingModules;
 
             var canBeUnified2 = firstUnified.CanBeFullyUnifiedUncached();

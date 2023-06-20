@@ -2,15 +2,27 @@
 using AsmResolver.DotNet;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Threading;
 
 namespace MonoMod.Packer.Entities {
     [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
-    internal sealed class ReferenceTypeEntity : TypeEntityBase {
-        private string DebuggerDisplay() => Reference.FullName;
+    internal sealed class ExternalTypeEntity : TypeEntityBase {
+        private string DebuggerDisplay() => $"External {Reference.FullName}";
 
         public readonly ITypeDefOrRef Reference;
+        private TypeDefinition? lazyDefinition;
 
-        public ReferenceTypeEntity(TypeEntityMap map, ITypeDefOrRef reference) : base(map) {
+        public TypeDefinition? Definition {
+            get {
+                if (lazyDefinition is null) {
+                    // note: we just call Resolve() here, because this should only exist for types external to the merge, so Map's mdresolver is wrong
+                    Interlocked.CompareExchange(ref lazyDefinition, Reference.Resolve(), null);
+                }
+                return lazyDefinition;
+            }
+        }
+
+        public ExternalTypeEntity(TypeEntityMap map, ITypeDefOrRef reference) : base(map) {
             Reference = reference;
         }
 
@@ -19,8 +31,12 @@ namespace MonoMod.Packer.Entities {
         public override Utf8String? Name => Reference.Name;
 
         protected override TypeEntityBase? GetBaseType() {
-            // this is an externally referenced type; we don't care
-            return null;
+            var baseRef = Definition?.BaseType;
+            if (baseRef is not null) {
+                return Map.GetEntity(baseRef);
+            } else {
+                return null;
+            }
         }
 
         protected override TypeMergeMode? GetTypeMergeMode() {
@@ -33,9 +49,14 @@ namespace MonoMod.Packer.Entities {
         }
 
         protected override ImmutableArray<ModuleDefinition> MakeContributingModules() {
-            return ImmutableArray<ModuleDefinition>.Empty;
+            if (Definition?.Module is { } module) {
+                return ImmutableArray.Create(module);
+            } else {
+                return ImmutableArray<ModuleDefinition>.Empty;
+            }
         }
 
+        // TODO: members? or do those matter?
         protected override ImmutableArray<FieldEntityBase> MakeInstanceFields() {
             return ImmutableArray<FieldEntityBase>.Empty;
         }

@@ -35,9 +35,6 @@ namespace MonoMod.Packer.Utilities {
                             continue;
                         }
                         var arg = sig.FixedArguments[0];
-                        if (arg.ArgumentType.ElementType is not AsmResolver.PE.DotNet.Metadata.Tables.Rows.ElementType.I4) {
-                            continue;
-                        }
                         if (arg.Element is not int ival) {
                             continue;
                         }
@@ -103,9 +100,6 @@ namespace MonoMod.Packer.Utilities {
                             continue;
                         }
                         var arg = sig.FixedArguments[0];
-                        if (arg.ArgumentType.ElementType is not AsmResolver.PE.DotNet.Metadata.Tables.Rows.ElementType.I4) {
-                            continue;
-                        }
                         if (arg.Element is not int ival) {
                             continue;
                         }

@@ -9,6 +9,8 @@
         ERR_CouldNotResolveCorLib,
         DBG_CouldNotResolveAssembly,
 
+        WRN_MergingSystemObject,
+        ERR_SystemObjectDefinitionHasBase,
 
         _Count,
     }

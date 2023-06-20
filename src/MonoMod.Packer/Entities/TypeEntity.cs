@@ -1,5 +1,6 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
+using MonoMod.Packer.Diagnostics;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -39,9 +40,14 @@ namespace MonoMod.Packer.Entities {
         }
 
         protected override TypeEntityBase? GetBaseType() {
-            return Definition.BaseType is { } @base
-                ? Map.GetEntity(@base)
-                : null;
+            if (Definition.BaseType is { } @base) {
+                if (Definition.IsTypeOf("System", "Object")) {
+                    Map.Diagnostics.ReportDiagnostic(ErrorCode.ERR_SystemObjectDefinitionHasBase, Definition);
+                }
+                return Map.GetEntity(@base);
+            } else {
+                return null;
+            }
         }
 
         protected override bool GetHasUnifiableBase() => true;

@@ -1,11 +1,13 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
+using MonoMod.Packer.Diagnostics;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace MonoMod.Packer.Entities {
     [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
@@ -17,6 +19,12 @@ namespace MonoMod.Packer.Entities {
         public UnifiedTypeEntity(TypeEntityMap map, IReadOnlyList<TypeEntity> types) : base(map) {
             Helpers.Assert(types.Count > 0);
             this.types = types;
+
+            if (types.Count > 1) {
+                if (types[0].Definition.IsTypeOf("System", "Object")) {
+                    map.Diagnostics.ReportDiagnostic(ErrorCode.WRN_MergingSystemObject, this);
+                }
+            }
         }
 
         public override Utf8String? Namespace => types[0].Definition.Namespace;
@@ -115,12 +123,64 @@ namespace MonoMod.Packer.Entities {
             return (TypeMergeMode) result;
         }
 
-        protected override TypeEntityBase? GetBaseType() {
-            throw new NotImplementedException();
-        }
+        private TypeEntityBase? lazyBaseType;
 
         protected override bool GetHasUnifiableBase() {
-            throw new NotImplementedException();
+            // this *should* basically always be true; its worth checking anyway
+            if (!types.All(static t => t.HasUnifiableBase))
+                return false;
+
+            TypeEntityBase? baseType = null;
+            foreach (var type in types) {
+                var thisBaseType = type.BaseType;
+                if (thisBaseType is TypeEntity te) {
+                    // resolve TypeEntitys to their UnifiedType
+                    thisBaseType = te.UnifiedType;
+                }
+                if (baseType is null) {
+                    baseType = thisBaseType;
+                } else if (baseType != thisBaseType) {
+                    if (thisBaseType is null) {
+                        // we're merging object with some other type; we've already reported an error, bail out
+                        return false;
+                    }
+                    // we need to check the inheritance graph, but only if we're allowed to merge non-layout identical types
+                    if (TypeMergeMode >= TypeMergeMode.MergeLayoutIdentical) {
+                        if (IsDerived(baseType, thisBaseType)) {
+                            // move baseType to more derived thisBaseType
+                            baseType = thisBaseType;
+                        } else if (IsDerived(thisBaseType, baseType)) {
+                            // allow, keep baseType the same as it is the more derived
+                        } else {
+                            // no relation, bail out
+                            return false;
+                        }
+                    } else {
+                        // we're not allowe3d to merge these, bail out
+                        return false;
+                    }
+                }
+                // baseType == type.BaseType, move on
+            }
+            // write the computed base type so that it can be accessed
+            Volatile.Write(ref lazyBaseType, baseType);
+            return true;
+        }
+
+        protected override TypeEntityBase? GetBaseType() {
+            if (!HasUnifiableBase)
+                return null;
+            // by this point, lazyBaseType is guaranteed to have been set
+            return lazyBaseType;
+        }
+
+        private static bool IsDerived(TypeEntityBase @base, TypeEntityBase derived) {
+            var cur = derived.BaseType;
+            while (cur is not null) {
+                if (cur == @base)
+                    return true;
+            }
+            return false;
         }
 
         private bool isCheckingFullyUnified;

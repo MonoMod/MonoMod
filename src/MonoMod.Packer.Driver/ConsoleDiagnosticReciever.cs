@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using AsmResolver.DotNet;
+using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.CommandLine.IO;
 
@@ -12,9 +13,12 @@ namespace MonoMod.Packer.Driver {
             this.context = context;
         }
 
-        public void ReportDiagnostic(string message, object?[] args) {
+        public void ReportDiagnostic(string message, IMetadataMember? scope, object?[] args) {
             context.ExitCode = -1;
             console.Out.WriteLine(message);
+            if (scope is IFullNameProvider fn) {
+                console.Out.WriteLine(fn.FullName);
+            }
             foreach (var arg in args) {
                 console.Out.WriteLine(arg?.ToString() ?? "<null>");
             }
