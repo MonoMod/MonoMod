@@ -39,7 +39,7 @@ namespace MonoMod.Packer.Entities {
                 : ImmutableArray<ModuleDefinition>.Empty;
 
         private UnifiedFieldEntity? lazyUnified;
-        public UnifiedFieldEntity GetUnified() {
+        public new UnifiedFieldEntity GetUnified() {
             if (Volatile.Read(ref lazyUnified) is { } result)
                 return result;
             // this is SLOW
@@ -49,6 +49,7 @@ namespace MonoMod.Packer.Entities {
                 : unifiedDeclType.InstanceFields;
             return lazyUnified ??= fieldSet.First(f => f.Name == Name);
         }
+        protected override EntityBase GetUnifiedCore() => GetUnified();
 
         protected override bool GetHasUnifiableInitializer() {
             var scanner = DeclaringType.CtorScanner;

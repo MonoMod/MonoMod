@@ -3,7 +3,6 @@ using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Collections;
 using AsmResolver.PE.DotNet.Cil;
 using AsmResolver.PE.DotNet.Metadata.Tables;
-using MonoMod.Packer.Entities;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
@@ -16,16 +15,32 @@ namespace MonoMod.Packer.Utilities {
         private readonly TypeEntityMap map;
         private readonly TypeDefinition type;
         private readonly Dictionary<FieldDefinition, FieldInitializer?> fieldInitializers = new();
+        private readonly bool hasStaticFields;
+        private readonly bool hasInstanceFields;
+
         private bool hasScannedStatic;
         private bool hasScannedInstance;
 
         public ConstructorScanner(TypeEntityMap map, TypeDefinition type) {
             this.map = map;
             this.type = type;
+
+            foreach (var field in type.Fields) {
+                if (field.IsStatic) {
+                    hasStaticFields = true;
+                } else {
+                    hasInstanceFields = true;
+                }
+
+                if (hasStaticFields && hasInstanceFields)
+                    break;
+            }
         }
 
         // if true but null, then we found what look like multiple conflicting initializers
         public bool TryGetInitializer(FieldDefinition field, out FieldInitializer? initializer) {
+            Helpers.DAssert(field.DeclaringType == type);
+
             if (field.IsStatic) {
                 ScanStatic();
             } else {
@@ -34,7 +49,7 @@ namespace MonoMod.Packer.Utilities {
 
             var lockTaken = false;
             try {
-                if (!hasScannedInstance || !hasScannedStatic) {
+                if ((!hasScannedInstance && hasInstanceFields) || (!hasScannedStatic && hasStaticFields)) {
                     // we need to lock, because the dict might be modified
                     Monitor.Enter(fieldInitializers, ref lockTaken);
                 }
@@ -284,48 +299,25 @@ namespace MonoMod.Packer.Utilities {
                 throw new InvalidOperationException("the fuck am I supposed to do with a MetadataToken here?");
             }
 
-            if (operand is ITypeDefOrRef defOrRef) {
-                var ent = map.GetEntity(defOrRef);
-                if (ent is TypeEntity te) {
-                    return te.UnifiedType;
-                } else {
-                    return ent;
-                }
+            if (operand is IMemberDescriptor md) {
+                return ComparableSignature.CreateComparableInstance(map, md);
             }
 
-            if (operand is IFieldDescriptor field) {
-                var resolvedField = map.TryLookupField(field);
-                if (resolvedField is not null) {
-                    return resolvedField.GetUnified();
-                }
-                // on failure, try to use a definition for identity's sake
-                return map.ExternalMdResolver.ResolveField(field) ?? operand;
-            }
-
-            if (operand is IMethodDescriptor method) {
-                var resolvedMethod = map.TryLookupMethod(method);
-                if (resolvedMethod is not null) {
-                    return resolvedMethod.GetUnified();
-                }
-                // on failure, try to use a definition for identity's sake
-                return map.ExternalMdResolver.ResolveMethod(method) ?? operand;
-            }
+            int offset;
 
             if (operand is ICilLabel label) {
-                // translate labels to relative offsets
-                var offset = label.Offset - ins.Offset;
-                // TODO: validate that this offset lies within the copied initializer region?
-                return offset;
+                offset = label.Offset;
+                goto ResolveLabel;
             }
 
             if (operand is int i && ins.OpCode.OperandType is CilOperandType.InlineBrTarget) {
-                var offset = i - ins.Offset;
-                return offset; // see above
+                offset = i;
+                goto ResolveLabel;
             }
 
             if (operand is sbyte s && ins.OpCode.OperandType is CilOperandType.ShortInlineBrTarget) {
-                var offset = s - ins.Offset;
-                return offset;
+                offset = s;
+                goto ResolveLabel;
             }
 
             // TODO: special case other token types?
@@ -334,12 +326,18 @@ namespace MonoMod.Packer.Utilities {
             Helpers.DAssert(operand is not Parameter and not ICilLabel and not CilLocalVariable);
 
             return operand;
+
+        ResolveLabel:
+            // translate labels to relative offsets
+            // TODO: validate that this offset lies within the copied initializer region?
+            return offset - ins.Offset;
         }
 
         private void ProcessInitializer(CilMethodBody body, int initializerStart, int ldThisHint, int initializerEnd, bool allowDuplicate) {
             var targetFld = body.Instructions[initializerEnd].Operand as IFieldDescriptor;
             var resolvedField = map.MdResolver.ResolveField(targetFld);
             Helpers.Assert(resolvedField is not null);
+            Helpers.DAssert(resolvedField.DeclaringType == type);
 
             var numInsns = initializerEnd - initializerStart; // note: initializerStart is inclusive
             var builder = ImmutableArray.CreateBuilder<(CilOpCode, object?)>(numInsns);
@@ -348,8 +346,10 @@ namespace MonoMod.Packer.Utilities {
                 builder.Add((ins.OpCode, TranslateOperand(ins)));
             }
 
-            var initializer = new FieldInitializer(builder.ToImmutable());
+            var initializer = new FieldInitializer(map, builder.ToImmutable());
 
+            // TODO: make this completely ignore duplicates found in the same ctor
+            // that probably means that we're looking at an explicit cctor, and the second isn't actually an initializer
             if (fieldInitializers.TryGetValue(resolvedField, out var existing)) {
                 // there is an existing; what do we do?
                 if (allowDuplicate) {

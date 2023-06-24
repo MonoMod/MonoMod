@@ -25,6 +25,8 @@ namespace MonoMod.Packer.Entities {
             this.methods = methods;
         }
 
+        protected override EntityBase GetUnifiedCore() => this;
+
         public override Utf8String? Name => methods[0].Name;
 
         public new ImmutableArray<UnifiedTypeEntity> TypesInSignature => base.TypesInSignature.CastArray<UnifiedTypeEntity>();

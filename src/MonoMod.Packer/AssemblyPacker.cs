@@ -1,5 +1,6 @@
 ﻿using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
+using MonoMod.Packer.Entities;
 using MonoMod.Utils;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -120,6 +121,8 @@ namespace MonoMod.Packer {
             var packOptionsUnified = packOptionsEntity.UnifiedType;
             var fstPackOptionsUnifiedField = packOptionsUnified.InstanceFields.First();
             var fstFldInitializer = fstPackOptionsUnifiedField.Initializer;
+            var refFld = fstFldInitializer?.Instructions[0].Operand as FieldEntityBase;
+            var refFldInit = refFld?.Initializer;
 
             var firstType = rootAssembly.ManifestModule!.TopLevelTypes
                 .First(t => t.NestedTypes.Count > 0)

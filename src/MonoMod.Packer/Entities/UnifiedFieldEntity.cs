@@ -23,6 +23,8 @@ namespace MonoMod.Packer.Entities {
             this.fields = fields;
         }
 
+        protected override EntityBase GetUnifiedCore() => this;
+
         public override Utf8String? Name => fields[0].Name;
 
         public new ImmutableArray<UnifiedTypeEntity> TypesInSignature => base.TypesInSignature.CastArray<UnifiedTypeEntity>();

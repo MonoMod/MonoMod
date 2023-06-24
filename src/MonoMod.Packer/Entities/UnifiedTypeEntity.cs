@@ -27,6 +27,8 @@ namespace MonoMod.Packer.Entities {
             }
         }
 
+        protected override EntityBase GetUnifiedCore() => this;
+
         public override Utf8String? Namespace => types[0].Definition.Namespace;
         public override Utf8String? Name => types[0].Definition.Name;
 

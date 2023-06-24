@@ -26,6 +26,8 @@ namespace MonoMod.Packer.Entities {
             Reference = reference;
         }
 
+        protected override EntityBase GetUnifiedCore() => this;
+
         public override Utf8String? Namespace => Reference.Namespace;
 
         public override Utf8String? Name => Reference.Name;
@@ -45,7 +47,7 @@ namespace MonoMod.Packer.Entities {
 
         protected override bool GetHasUnifiableBase() {
             // this really shouldn't be called for this type
-            throw new System.NotImplementedException();
+            throw new System.NotSupportedException();
         }
 
         protected override ImmutableArray<ModuleDefinition> MakeContributingModules() {

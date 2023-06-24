@@ -21,6 +21,7 @@ namespace MonoMod.Packer {
         public readonly IMetadataResolver MdResolver;
         public readonly IMetadataResolver ExternalMdResolver;
         public readonly DiagnosticTranslator Diagnostics;
+        public readonly TypeMapUnifiedSignatureComparer UnifiedComparer;
 
         private readonly Dictionary<TypeDefinition, TypeEntity> entityMap = new();
         private readonly Dictionary<NullableUtf8String, Dictionary<NullableUtf8String, UnifiedTypeEntity>> entitiesByName = new();
@@ -38,6 +39,8 @@ namespace MonoMod.Packer {
             MdResolver = mdResolver;
             ExternalMdResolver = externalMdResolver;
             Diagnostics = translator;
+
+            UnifiedComparer = new(this);
 
             if (options.Parallelize) {
                 throw new InvalidOperationException("Cannot parallelize at present");
@@ -101,7 +104,7 @@ namespace MonoMod.Packer {
                 return true;
             }
 
-            var resolved = MdResolver.ResolveType(defOrRef);
+            var resolved = MdResolver.ResolveType(defOrRef as TypeReference); // specifically exclude TypeSpecification
             if (resolved is not null && TryLookup(resolved, out result)) {
                 return true;
             }
@@ -113,6 +116,8 @@ namespace MonoMod.Packer {
         private readonly ConcurrentDictionary<ITypeDefOrRef, TypeEntityBase> defOrRefCache = new();
         private readonly ConcurrentDictionary<(object? scopeEntity, Utf8String? ns, Utf8String? name), ExternalTypeEntity> referenceEntities = new();
         public TypeEntityBase GetEntity(ITypeDefOrRef defOrRef) {
+            if (defOrRef is TypeSpecification)
+                throw new ArgumentException("GetEntity must not be called on a TypeSpecification", nameof(defOrRef));
             return defOrRefCache.GetOrAdd(defOrRef, static (defOrRef, @this) => {
                 if (@this.TryLookup(defOrRef, out var result)) {
                     return result;
@@ -158,12 +163,11 @@ namespace MonoMod.Packer {
             return list.Single(f => f.Definition == mdResolved);
         }
 
-        public MethodEntity? TryLookupMethod(IMethodDescriptor method) {
+        public MethodEntity? TryLookupMethod(IMethodDefOrRef method) {
             var mdResolved = MdResolver.ResolveMethod(method);
             if (mdResolved is null) {
                 return null;
             }
-
 
             Helpers.Assert(mdResolved.DeclaringType is not null);
             var declType = Lookup(mdResolved.DeclaringType);

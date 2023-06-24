@@ -37,6 +37,8 @@ namespace MonoMod.Packer.Entities {
             }
         }
 
+        protected override EntityBase GetUnifiedCore() => UnifiedType;
+
         protected override TypeMergeMode? GetTypeMergeMode() {
             return Map.GetTypeMergeMode(Definition);
         }

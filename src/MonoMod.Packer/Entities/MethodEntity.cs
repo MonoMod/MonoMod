@@ -51,5 +51,7 @@ namespace MonoMod.Packer.Entities {
             return lazyUnified ??= methodSet.First(m => m.Name == Name && m.FullSig == fullSig);
         }
 
+        protected override EntityBase GetUnifiedCore() => GetUnified();
+
     }
 }

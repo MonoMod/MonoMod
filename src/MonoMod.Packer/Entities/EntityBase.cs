@@ -25,8 +25,10 @@ namespace MonoMod.Packer.Entities {
             } while (Interlocked.CompareExchange(ref fieldRef, next, prev) != prev);
         }
 
-        private ImmutableArray<ModuleDefinition> lazyContributingModules;
+        public EntityBase GetUnified() => GetUnifiedCore();
+        protected abstract EntityBase GetUnifiedCore();
 
+        private ImmutableArray<ModuleDefinition> lazyContributingModules;
         public ImmutableArray<ModuleDefinition> ContributingModules {
             get {
                 if (lazyContributingModules.IsDefault) {

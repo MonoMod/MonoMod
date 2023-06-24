@@ -27,7 +27,7 @@ indent_size = 4
 
 csharp_indent_block_contents = true
 csharp_indent_case_contents = true
-csharp_indent_labels = no_change
+csharp_indent_labels = one_less_than_current
 csharp_indent_switch_labels = true
 csharp_new_line_before_catch = false
 csharp_new_line_before_else = false
