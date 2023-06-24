@@ -7,6 +7,8 @@ using System.Collections.Concurrent;
 using MonoMod.Packer.Utilities;
 using System.Diagnostics.CodeAnalysis;
 using MonoMod.Packer.Diagnostics;
+using MonoMod.Utils;
+using System.Linq;
 
 namespace MonoMod.Packer {
 
@@ -94,16 +96,25 @@ namespace MonoMod.Packer {
         public bool TryLookup(TypeDefinition def, [MaybeNullWhen(false)] out TypeEntity result)
             => entityMap.TryGetValue(def, out result);
 
+        public bool TryLookup(ITypeDefOrRef defOrRef, [MaybeNullWhen(false)] out TypeEntity result) {
+            if (defOrRef is TypeDefinition def && TryLookup(def, out result)) {
+                return true;
+            }
+
+            var resolved = MdResolver.ResolveType(defOrRef);
+            if (resolved is not null && TryLookup(resolved, out result)) {
+                return true;
+            }
+
+            result = null;
+            return false;
+        }
+
         private readonly ConcurrentDictionary<ITypeDefOrRef, TypeEntityBase> defOrRefCache = new();
         private readonly ConcurrentDictionary<(object? scopeEntity, Utf8String? ns, Utf8String? name), ExternalTypeEntity> referenceEntities = new();
         public TypeEntityBase GetEntity(ITypeDefOrRef defOrRef) {
             return defOrRefCache.GetOrAdd(defOrRef, static (defOrRef, @this) => {
-                if (defOrRef is TypeDefinition def && @this.TryLookup(def, out var result)) {
-                    return result;
-                }
-
-                var resolved = @this.MdResolver.ResolveType(defOrRef);
-                if (resolved is not null && @this.TryLookup(resolved, out result)) {
+                if (@this.TryLookup(defOrRef, out var result)) {
                     return result;
                 }
 
@@ -131,6 +142,35 @@ namespace MonoMod.Packer {
                     yield return v2;
                 }
             }
+        }
+
+        public FieldEntity? TryLookupField(IFieldDescriptor field) {
+            var mdResolved = MdResolver.ResolveField(field);
+            if (mdResolved is null) {
+                return null;
+            }
+
+            Helpers.Assert(mdResolved.DeclaringType is not null);
+            var declType = Lookup(mdResolved.DeclaringType);
+            var list = mdResolved.IsStatic
+                ? declType.StaticFields
+                : declType.InstanceFields;
+            return list.Single(f => f.Definition == mdResolved);
+        }
+
+        public MethodEntity? TryLookupMethod(IMethodDescriptor method) {
+            var mdResolved = MdResolver.ResolveMethod(method);
+            if (mdResolved is null) {
+                return null;
+            }
+
+
+            Helpers.Assert(mdResolved.DeclaringType is not null);
+            var declType = Lookup(mdResolved.DeclaringType);
+            var list = mdResolved.IsStatic
+                ? declType.StaticMethods
+                : declType.InstanceMethods;
+            return list.Single(f => f.Definition == mdResolved);
         }
 
         private readonly ConcurrentDictionary<IHasCustomAttribute, TypeMergeMode?> cachedTypeMergeModes = new();

@@ -1,5 +1,6 @@
 ﻿using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
+using MonoMod.Packer.Utilities;
 using MonoMod.Utils;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -114,6 +115,13 @@ namespace MonoMod.Packer {
             var entityMap = TypeEntityMap.CreateForAllTypes(modulesToMerge, options, mdResolver, externalMdResolver, packer.diagnostics);
 
             // TODO: copy more stuff over
+
+            var ctorScanner = rootAssembly.ManifestModule!.TopLevelTypes.First(t => t.IsTypeOf("MonoMod.Packer", "PackOptions"));
+            var scanner = new ConstructorScanner(entityMap, ctorScanner);
+
+            foreach (var field in ctorScanner.Fields) {
+                scanner.TryGetInitializer(field, out var initializer);
+            }
 
             var firstType = rootAssembly.ManifestModule!.TopLevelTypes
                 .First(t => t.NestedTypes.Count > 0)

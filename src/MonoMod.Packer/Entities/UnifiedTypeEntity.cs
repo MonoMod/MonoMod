@@ -205,7 +205,7 @@ namespace MonoMod.Packer.Entities {
 
                 var overallMergeMode = TypeMergeMode;
                 if (overallMergeMode is TypeMergeMode.DoNotMerge) {
-                    // at least one component type is DoNotMerge; we also know there are multiple, so we definitely fully unify
+                    // at least one component type is DoNotMerge; we also know there are multiple, so we definitely do not fully unify
                     return false;
                 }
 
@@ -214,8 +214,8 @@ namespace MonoMod.Packer.Entities {
                     return false;
                 }
 
-                if (overallMergeMode is TypeMergeMode.MergeAlways) {
-
+                if (overallMergeMode is TypeMergeMode.MergeWhenPossible) {
+                    // TODO: ???
                 }
 
                 throw new NotImplementedException();

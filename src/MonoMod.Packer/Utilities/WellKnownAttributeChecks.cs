@@ -54,7 +54,7 @@ namespace MonoMod.Packer.Utilities {
                         thisValueResult = TypeMergeMode.MergeLayoutIdentical;
                         break;
                     case MergeAlwaysAttrName:
-                        thisValueResult = TypeMergeMode.MergeAlways;
+                        thisValueResult = TypeMergeMode.MergeWhenPossible;
                         break;
 
                     default:

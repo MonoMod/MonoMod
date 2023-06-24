@@ -13,6 +13,9 @@
         WRN_MergingSystemObject,
         ERR_SystemObjectDefinitionHasBase,
 
+        WRN_CtorHasNoIlBody,
+        WRN_BackwardJumpInFieldInitializer,
+
         _Count,
     }
 }
