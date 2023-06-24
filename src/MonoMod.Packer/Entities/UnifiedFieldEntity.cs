@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using AsmResolver;
 using AsmResolver.DotNet;
+using MonoMod.Packer.Utilities;
 using MonoMod.Utils;
 
 namespace MonoMod.Packer.Entities {
@@ -42,6 +43,35 @@ namespace MonoMod.Packer.Entities {
                 builder.AddRange(field.ContributingModules);
             }
             return builder.ToImmutable();
+        }
+
+        private FieldInitializer? lazyInitializer;
+        protected override bool GetHasUnifiableInitializer() {
+            var hasEnumeratedOnce = false;
+            FieldInitializer? initializer = null;
+            foreach (var field in fields) {
+                if (!field.HasUnifiableInitializer) {
+                    return false;
+                }
+
+                if (!hasEnumeratedOnce) {
+                    initializer = field.Initializer;
+                } else if (field.Initializer != initializer) {
+                    // different initializers
+                    return false;
+                }
+
+                hasEnumeratedOnce = true;
+            }
+            lazyInitializer = initializer;
+            return true;
+        }
+
+        protected override FieldInitializer? GetInitializer() {
+            // we have to check HasUnifiableInitializer because it does the actual unification work
+            if (!HasUnifiableInitializer)
+                return null;
+            return lazyInitializer;
         }
     }
 }

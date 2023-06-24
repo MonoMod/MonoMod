@@ -1,5 +1,6 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
+using MonoMod.Packer.Utilities;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -47,6 +48,17 @@ namespace MonoMod.Packer.Entities {
                 ? unifiedDeclType.StaticFields
                 : unifiedDeclType.InstanceFields;
             return lazyUnified ??= fieldSet.First(f => f.Name == Name);
+        }
+
+        protected override bool GetHasUnifiableInitializer() {
+            var scanner = DeclaringType.CtorScanner;
+            var hasInit = scanner.TryGetInitializer(Definition, out var init);
+            return !hasInit || init is not null; // if hasInit && init is null, the initializer is non-unifiable
+        }
+
+        protected override FieldInitializer? GetInitializer() {
+            var scanner = DeclaringType.CtorScanner;
+            return scanner.TryGetInitializer(Definition, out var init) ? init : null;
         }
     }
 }

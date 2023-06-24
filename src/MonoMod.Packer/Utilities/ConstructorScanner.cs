@@ -3,6 +3,7 @@ using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Collections;
 using AsmResolver.PE.DotNet.Cil;
 using AsmResolver.PE.DotNet.Metadata.Tables;
+using MonoMod.Packer.Entities;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
@@ -284,13 +285,18 @@ namespace MonoMod.Packer.Utilities {
             }
 
             if (operand is ITypeDefOrRef defOrRef) {
-                return map.GetEntity(defOrRef);
+                var ent = map.GetEntity(defOrRef);
+                if (ent is TypeEntity te) {
+                    return te.UnifiedType;
+                } else {
+                    return ent;
+                }
             }
 
             if (operand is IFieldDescriptor field) {
                 var resolvedField = map.TryLookupField(field);
                 if (resolvedField is not null) {
-                    return resolvedField;
+                    return resolvedField.GetUnified();
                 }
                 // on failure, try to use a definition for identity's sake
                 return map.ExternalMdResolver.ResolveField(field) ?? operand;
@@ -299,7 +305,7 @@ namespace MonoMod.Packer.Utilities {
             if (operand is IMethodDescriptor method) {
                 var resolvedMethod = map.TryLookupMethod(method);
                 if (resolvedMethod is not null) {
-                    return resolvedMethod;
+                    return resolvedMethod.GetUnified();
                 }
                 // on failure, try to use a definition for identity's sake
                 return map.ExternalMdResolver.ResolveMethod(method) ?? operand;
@@ -309,6 +315,16 @@ namespace MonoMod.Packer.Utilities {
                 // translate labels to relative offsets
                 var offset = label.Offset - ins.Offset;
                 // TODO: validate that this offset lies within the copied initializer region?
+                return offset;
+            }
+
+            if (operand is int i && ins.OpCode.OperandType is CilOperandType.InlineBrTarget) {
+                var offset = i - ins.Offset;
+                return offset; // see above
+            }
+
+            if (operand is sbyte s && ins.OpCode.OperandType is CilOperandType.ShortInlineBrTarget) {
+                var offset = s - ins.Offset;
                 return offset;
             }
 

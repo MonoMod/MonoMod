@@ -1,9 +1,11 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
+using MonoMod.Packer.Utilities;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace MonoMod.Packer.Entities {
     [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(),nq}}")]
@@ -51,6 +53,21 @@ namespace MonoMod.Packer.Entities {
         }
 
         protected override bool GetHasUnifiableBase() => true;
+
+        private ConstructorScanner? lazyCtorScanner;
+        public ConstructorScanner CtorScanner {
+            get {
+                if (lazyCtorScanner is null) {
+                    Interlocked.CompareExchange(
+                        ref lazyCtorScanner,
+                        new(Map, Definition),
+                        null
+                    );
+                }
+
+                return lazyCtorScanner;
+            }
+        }
 
         public override bool IsModuleType => Definition.IsModuleType;
 

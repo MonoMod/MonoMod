@@ -1,6 +1,5 @@
 ﻿using AsmResolver;
 using System.Collections.Immutable;
-using System.Threading;
 
 namespace MonoMod.Packer.Entities {
     internal abstract class TypeEntityBase : EntityBase {
@@ -10,24 +9,13 @@ namespace MonoMod.Packer.Entities {
 
         public abstract Utf8String? Namespace { get; }
 
-        private int updatingState;
-        private const int TypeMergeModeMask = 0b1 << 0;
-        private const int HasUnifiableBaseMask = 0b1 << 1;
-        private const int UnifiableBaseMask = 0b1 << 2;
-        private void MarkState(int state) {
-            int prev, next;
-            do {
-                prev = Volatile.Read(ref updatingState);
-                next = prev | state;
-            } while (Interlocked.CompareExchange(ref updatingState, next, prev) != prev);
-        }
 
         private TypeMergeMode lazyTypeMergeMode;
         public TypeMergeMode TypeMergeMode {
             get {
-                if ((updatingState & TypeMergeModeMask) == 0) {
+                if (!HasState(EntityInitializationState.TypeMergeMode)) {
                     lazyTypeMergeMode = GetTypeMergeMode() ?? Map.Options.TypeMergeMode;
-                    MarkState(TypeMergeModeMask);
+                    MarkState(EntityInitializationState.TypeMergeMode);
                 }
                 return lazyTypeMergeMode;
             }
@@ -38,9 +26,9 @@ namespace MonoMod.Packer.Entities {
         private bool lazyHasUnifiableBase;
         public bool HasUnifiableBase {
             get {
-                if ((updatingState & HasUnifiableBaseMask) == 0) {
+                if (!HasState(EntityInitializationState.HasUnifiableBase)) {
                     lazyHasUnifiableBase = GetHasUnifiableBase();
-                    MarkState(HasUnifiableBaseMask);
+                    MarkState(EntityInitializationState.HasUnifiableBase);
                 }
                 return lazyHasUnifiableBase;
             }
@@ -48,14 +36,14 @@ namespace MonoMod.Packer.Entities {
 
         protected abstract bool GetHasUnifiableBase();
 
-        private TypeEntityBase? lazyUnifiableBase;
+        private TypeEntityBase? lazyBase;
         public TypeEntityBase? BaseType {
             get {
-                if ((updatingState & UnifiableBaseMask) == 0) {
-                    lazyUnifiableBase = GetBaseType();
-                    MarkState(UnifiableBaseMask);
+                if (!HasState(EntityInitializationState.BaseType)) {
+                    lazyBase = GetBaseType();
+                    MarkState(EntityInitializationState.BaseType);
                 }
-                return lazyUnifiableBase;
+                return lazyBase;
             }
         }
         protected abstract TypeEntityBase? GetBaseType();

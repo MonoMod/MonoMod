@@ -20,7 +20,7 @@ namespace MonoMod.Packer.Utilities {
         }
 
         public override bool Equals([NotNullWhen(true)] object? obj) {
-            return Equals(obj as FieldInitializer);
+            return obj is FieldInitializer init && Equals(init);
         }
 
         public override int GetHashCode() {
@@ -31,5 +31,12 @@ namespace MonoMod.Packer.Utilities {
             }
             return hc.ToHashCode();
         }
+
+        public static bool operator ==(FieldInitializer? l, FieldInitializer? r)
+            => (l is null && r is null)
+            || l is not null && l.Equals(r);
+
+        public static bool operator !=(FieldInitializer? l, FieldInitializer? r)
+            => !(l == r);
     }
 }
