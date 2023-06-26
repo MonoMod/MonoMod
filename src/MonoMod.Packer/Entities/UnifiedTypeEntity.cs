@@ -1,6 +1,7 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
 using MonoMod.Packer.Diagnostics;
+using MonoMod.Packer.Utilities;
 using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
@@ -214,6 +215,12 @@ namespace MonoMod.Packer.Entities {
                 if (!HasUnifiableBase) {
                     // the base class isn't unifiable, we can't merge
                     return false;
+                }
+
+                if (overallMergeMode is TypeMergeMode.MergeLayoutIdentical) {
+                    return types.Aggregate<TypeEntity, (bool Result, TypeEntity? Type)>((Result: true, Type: null), (t, ty)
+                        => (Result: t.Result && (t.Type is null || TypeLayoutEqualityComparer.Default.Equals(t.Type.Definition, ty.Definition)), Type: ty))
+                        .Result;
                 }
 
                 if (overallMergeMode is TypeMergeMode.MergeWhenPossible) {

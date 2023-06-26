@@ -1,7 +1,8 @@
 ﻿using AsmResolver;
 using AsmResolver.DotNet;
+using MonoMod.Packer.Utilities;
+using MonoMod.Utils;
 using System.Collections.Immutable;
-using System.Threading;
 
 namespace MonoMod.Packer.Entities {
     internal abstract class EntityBase {
@@ -14,16 +15,18 @@ namespace MonoMod.Packer.Entities {
         public abstract Utf8String? Name { get; }
 
         private EntityInitializationState updatingState;
+        private EntityFlags flags;
 
-        protected bool HasState(EntityInitializationState state) => (updatingState & state) != 0;
+        protected bool HasState(EntityInitializationState state) => updatingState.Has(state);
         protected void MarkState(EntityInitializationState state) {
-            ref var fieldRef = ref Unsafe.As<EntityInitializationState, int>(ref updatingState);
-            int prev, next;
-            do {
-                prev = Volatile.Read(ref fieldRef);
-                next = prev | (int)state;
-            } while (Interlocked.CompareExchange(ref fieldRef, next, prev) != prev);
+            _ = InterlockedFlags.Set(ref updatingState, state);
         }
+
+        protected bool GetFlag(EntityFlags flags) => this.flags.Has(flags);
+        protected void SetFlag(EntityFlags flag, bool value)
+            => _ = value
+            ? InterlockedFlags.Set(ref flags, flag)
+            : InterlockedFlags.Clear(ref flags, flag);
 
         public EntityBase GetUnified() => GetUnifiedCore();
         protected abstract EntityBase GetUnifiedCore();

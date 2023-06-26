@@ -23,14 +23,13 @@ namespace MonoMod.Packer.Entities {
 
         protected abstract TypeMergeMode? GetTypeMergeMode();
 
-        private bool lazyHasUnifiableBase;
         public bool HasUnifiableBase {
             get {
                 if (!HasState(EntityInitializationState.HasUnifiableBase)) {
-                    lazyHasUnifiableBase = GetHasUnifiableBase();
+                    SetFlag(EntityFlags.HasUnifiableBase, GetHasUnifiableBase());
                     MarkState(EntityInitializationState.HasUnifiableBase);
                 }
-                return lazyHasUnifiableBase;
+                return GetFlag(EntityFlags.HasUnifiableBase);
             }
         }
 

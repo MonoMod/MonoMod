@@ -75,5 +75,6 @@ namespace MonoMod.Packer.Entities {
                 return null;
             return lazyInitializer;
         }
+
     }
 }

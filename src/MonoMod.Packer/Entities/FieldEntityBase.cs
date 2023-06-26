@@ -5,14 +5,13 @@ namespace MonoMod.Packer.Entities {
         protected FieldEntityBase(TypeEntityMap map) : base(map) {
         }
 
-        private bool lazyHasUnifiableInitializer;
         public bool HasUnifiableInitializer {
             get {
                 if (!HasState(EntityInitializationState.HasInitializer)) {
-                    lazyHasUnifiableInitializer = GetHasUnifiableInitializer();
+                    SetFlag(EntityFlags.HasUnifiableInitializer, GetHasUnifiableInitializer());
                     MarkState(EntityInitializationState.HasInitializer);
                 }
-                return lazyHasUnifiableInitializer;
+                return GetFlag(EntityFlags.HasUnifiableInitializer);
             }
         }
         protected abstract bool GetHasUnifiableInitializer();

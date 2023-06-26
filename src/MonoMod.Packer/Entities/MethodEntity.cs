@@ -39,7 +39,7 @@ namespace MonoMod.Packer.Entities {
                 : ImmutableArray<ModuleDefinition>.Empty;
 
         private UnifiedMethodEntity? lazyUnified;
-        public UnifiedMethodEntity GetUnified() {
+        public new UnifiedMethodEntity GetUnified() {
             if (Volatile.Read(ref lazyUnified) is { } result)
                 return result;
             // this is SLOW

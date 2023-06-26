@@ -25,6 +25,8 @@ namespace MonoMod.Packer {
 
         public bool ExcludeCorelib { get; init; } = true;
         
+        public bool AllowFieldsWithSameOriginalName { get; init; } = true;
+
         public bool Parallelize { get; init; } // = false;
 
         private static IReadOnlyCollection<T> AddToCollection<T>(IReadOnlyCollection<T> orig, T value) {
