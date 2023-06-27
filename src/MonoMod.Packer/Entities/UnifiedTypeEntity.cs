@@ -81,34 +81,6 @@ namespace MonoMod.Packer.Entities {
                 .CastArray<MethodEntityBase>();
         }
 
-        public new ImmutableArray<UnifiedFieldEntity> StaticFields => base.StaticFields.CastArray<UnifiedFieldEntity>();
-        protected override ImmutableArray<FieldEntityBase> MakeStaticFields() {
-            return MakeFieldsWithFilter(static t => t.StaticFields);
-        }
-
-        public new ImmutableArray<UnifiedFieldEntity> InstanceFields => base.InstanceFields.CastArray<UnifiedFieldEntity>();
-        protected override ImmutableArray<FieldEntityBase> MakeInstanceFields() {
-            return MakeFieldsWithFilter(static t => t.InstanceFields);
-        }
-
-        private ImmutableArray<FieldEntityBase> MakeFieldsWithFilter(Func<TypeEntity, ImmutableArray<FieldEntity>> filter) {
-            var dict = new Dictionary<NullableUtf8String, List<FieldEntity>>();
-            // for fields, we unify by-name only
-            foreach (var type in types) {
-                foreach (var field in filter(type)) {
-                    if (!dict.TryGetValue(field.Definition.Name, out var list)) {
-                        dict.Add(field.Definition.Name, list = new());
-                    }
-                    list.Add(field);
-                }
-            }
-
-            return dict.Values
-                .Select(l => new UnifiedFieldEntity(Map, l))
-                .ToImmutableArray()
-                .CastArray<FieldEntityBase>();
-        }
-
         protected override ImmutableArray<ModuleDefinition> MakeContributingModules() {
             var builder = ImmutableArray.CreateBuilder<ModuleDefinition>();
             foreach (var type in types) {

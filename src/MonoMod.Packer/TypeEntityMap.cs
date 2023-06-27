@@ -149,20 +149,6 @@ namespace MonoMod.Packer {
             }
         }
 
-        public FieldEntity? TryLookupField(IFieldDescriptor field) {
-            var mdResolved = MdResolver.ResolveField(field);
-            if (mdResolved is null) {
-                return null;
-            }
-
-            Helpers.Assert(mdResolved.DeclaringType is not null);
-            var declType = Lookup(mdResolved.DeclaringType);
-            var list = mdResolved.IsStatic
-                ? declType.StaticFields
-                : declType.InstanceFields;
-            return list.Single(f => f.Definition == mdResolved);
-        }
-
         public MethodEntity? TryLookupMethod(IMethodDefOrRef method) {
             var mdResolved = MdResolver.ResolveMethod(method);
             if (mdResolved is null) {

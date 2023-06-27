@@ -22,11 +22,6 @@ namespace MonoMod.Packer.Utilities {
                     // we always want to get the entity, just like with typeDef
                     return map.GetEntity(typeRef)?.GetUnified();
 
-                case FieldDefinition fieldDef:
-                    // a field definition
-                    // always forward to map
-                    return map.TryLookupField(fieldDef)?.GetUnified();
-
                 case MethodDefinition methodDef:
                     // a method def
                     // always forward to map

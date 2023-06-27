@@ -59,20 +59,12 @@ namespace MonoMod.Packer.Entities {
         }
 
         // TODO: members? or do those matter?
-        protected override ImmutableArray<FieldEntityBase> MakeInstanceFields() {
-            return ImmutableArray<FieldEntityBase>.Empty;
-        }
-
         protected override ImmutableArray<MethodEntityBase> MakeInstanceMethods() {
             return ImmutableArray<MethodEntityBase>.Empty;
         }
 
         protected override ImmutableArray<TypeEntityBase> MakeNestedTypes() {
             return ImmutableArray<TypeEntityBase>.Empty;
-        }
-
-        protected override ImmutableArray<FieldEntityBase> MakeStaticFields() {
-            return ImmutableArray<FieldEntityBase>.Empty;
         }
 
         protected override ImmutableArray<MethodEntityBase> MakeStaticMethods() {

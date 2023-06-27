@@ -74,7 +74,6 @@ namespace MonoMod.Packer.Entities {
         public override bool IsModuleType => Definition.IsModuleType;
 
         private MethodEntity CreateMethod(MethodDefinition m) => new(Map, m);
-        private FieldEntity CreateField(FieldDefinition f) => new(Map, f);
 
         protected override ImmutableArray<ModuleDefinition> MakeContributingModules()
             => Definition.Module is { } module
@@ -97,24 +96,6 @@ namespace MonoMod.Packer.Entities {
                             .Select(CreateMethod)
                             .ToImmutableArray()
                             .CastArray<MethodEntityBase>();
-        }
-
-        public new ImmutableArray<FieldEntity> StaticFields => base.StaticFields.CastArray<FieldEntity>();
-        protected override ImmutableArray<FieldEntityBase> MakeStaticFields() {
-            return Definition.Fields
-                            .Where(f => f.IsStatic)
-                            .Select(CreateField)
-                            .ToImmutableArray()
-                            .CastArray<FieldEntityBase>();
-        }
-
-        public new ImmutableArray<FieldEntity> InstanceFields => base.InstanceFields.CastArray<FieldEntity>();
-        protected override ImmutableArray<FieldEntityBase> MakeInstanceFields() {
-            return Definition.Fields
-                            .Where(f => !f.IsStatic)
-                            .Select(CreateField)
-                            .ToImmutableArray()
-                            .CastArray<FieldEntityBase>();
         }
 
         public new ImmutableArray<TypeEntity> NestedTypes => base.NestedTypes.CastArray<TypeEntity>();

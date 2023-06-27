@@ -79,36 +79,6 @@ namespace MonoMod.Packer.Entities {
 
         protected abstract ImmutableArray<MethodEntityBase> MakeInstanceMethods();
 
-        private ImmutableArray<FieldEntityBase> lazyStaticFields;
-        public ImmutableArray<FieldEntityBase> StaticFields {
-            get {
-                if (lazyStaticFields.IsDefault) {
-                    ImmutableInterlocked.InterlockedInitialize(
-                        ref lazyStaticFields,
-                        MakeStaticFields()
-                    );
-                }
-                return lazyStaticFields;
-            }
-        }
-
-        protected abstract ImmutableArray<FieldEntityBase> MakeStaticFields();
-
-        private ImmutableArray<FieldEntityBase> lazyInstanceFields;
-        public ImmutableArray<FieldEntityBase> InstanceFields {
-            get {
-                if (lazyInstanceFields.IsDefault) {
-                    ImmutableInterlocked.InterlockedInitialize(
-                        ref lazyInstanceFields,
-                        MakeInstanceFields()
-                    );
-                }
-                return lazyInstanceFields;
-            }
-        }
-
-        protected abstract ImmutableArray<FieldEntityBase> MakeInstanceFields();
-
         private ImmutableArray<TypeEntityBase> lazyNestedTypes;
         public ImmutableArray<TypeEntityBase> NestedTypes {
             get {
