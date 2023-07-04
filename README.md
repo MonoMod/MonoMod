@@ -55,7 +55,6 @@ It consists of the following **modular components**:
 - **MonoMod:** The core MonoMod IL patcher and relinker.
 - **MonoMod.Utils:** Utilities and helpers that not only benefit MonoMod, but also mods in general. It contains classes such as `FastReflectionHelper`, `LimitedStream`, `DynamicMethodHelper`, `DynamicMethodDefinition`, `DynDll` and the `ModInterop` namespace.
 - **MonoMod.DebugIL:** Enable IL-level debugging of third-party assemblies in Visual Studio / MonoDevelop.
-- **MonoMod.BaseLoader:** A base on which a C# mod loader can be built upon, including a basic engine-agnostic mod content manager and mod relinker.
 - **MonoMod.RuntimeDetour:** A flexible and easily extensible runtime detouring library, supporting X86+ and ARMv7+, .NET Framework, .NET Core and mono.
 - **HookGen:** A utility to generate a "hook helper .dll" for any IL assembly. This allows you to hook methods in runtime mods as if they were events. Built with MonoMod and RuntimeDetour.
 
