@@ -3,7 +3,7 @@
 
   <!-- C#-specific properties -->
   <PropertyGroup>
-    <LangVersion>preview</LangVersion> <!-- Use preview so that we have UTF-8 string literals -->
+    <LangVersion>11</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable> <!-- C# projects should have nullability enabled. -->
     <WarningsAsErrors>$(WarningsAsErrors);nullable</WarningsAsErrors> <!-- Nullability warnings should be errors. -->
@@ -18,7 +18,7 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisMode>All</AnalysisMode>
-    <AnalysisLevel>6.0</AnalysisLevel>
+    <AnalysisLevel>7.0</AnalysisLevel>
     
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
@@ -37,7 +37,7 @@
     <NewCecilVersion>0.11.4</NewCecilVersion>
     <OldCecilVersion>0.10.4</OldCecilVersion>
     
-    <RoslynVersion>4.4.0</RoslynVersion>
+    <RoslynVersion>4.6.0</RoslynVersion>
     <MSBuildRequiredVersion>17.5.0</MSBuildRequiredVersion>
   </PropertyGroup>
 

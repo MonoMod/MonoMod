@@ -4,6 +4,7 @@ using MonoMod.Core.Platforms;
 using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -454,6 +455,8 @@ namespace MonoMod.RuntimeDetour {
         MethodInfo IDetour.InvokeTarget => realTarget;
 
 
+        [SuppressMessage("Reliability", "CA2002:Do not lock on objects with weak identity",
+            Justification = "This type is never available externally, and will never be locked on externally.")]
         private sealed class TrampolineData : IDetourTrampoline, IDisposable {
 
             private readonly MethodInfo trampoline;
