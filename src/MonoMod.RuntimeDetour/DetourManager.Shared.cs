@@ -57,7 +57,7 @@ namespace MonoMod.RuntimeDetour {
                 for (var i = 0; i < list.Count; i++) {
                     var cur = list[i];
                     if (cur.Config.Priority is { } cPrio) {
-                        if (nPrio > cPrio) {
+                        if (nPrio >= cPrio) {
                             insertIdx = i;
                             break;
                         }
@@ -88,7 +88,7 @@ namespace MonoMod.RuntimeDetour {
                     if (insertIdx < 0 && node.Config.Priority is { } nPrio) {
                         // if the current node is the first node with lower priority, insert here
                         if (cur.Config.Priority is { } cPrio) {
-                            if (nPrio > cPrio) {
+                            if (nPrio >= cPrio) {
                                 insertIdx = i;
                             }
                         } else {
@@ -217,7 +217,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread) {
-                int threadCallDepth = DetermineThreadCallDepth();
+                var threadCallDepth = DetermineThreadCallDepth();
                 hasActiveCallsFromThread = threadCallDepth > 0; 
 
                 // Wait for other threads to have returned from the function
