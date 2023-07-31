@@ -28,6 +28,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		azure-pipelines-postbuild.yml = azure-pipelines-postbuild.yml
 		azure-pipelines-prepushcommon.ps1 = azure-pipelines-prepushcommon.ps1
 		azure-pipelines.yml = azure-pipelines.yml
+		global.json = global.json
 		icon.png = icon.png
 		README.md = README.md
 	EndProjectSection
@@ -48,7 +49,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "external", "external", "{69
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "iced", "external\iced.csproj", "{119A01EE-2238-423C-BE5B-48C68D7D14A7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.Backports.Tasks", "src\MonoMod.Backports.Tasks\MonoMod.Backports.Tasks.csproj", "{ED959596-2FAE-4B3D-8DF8-8F0058E8068D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoMod.Backports.Tasks", "src\MonoMod.Backports.Tasks\MonoMod.Backports.Tasks.csproj", "{ED959596-2FAE-4B3D-8DF8-8F0058E8068D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

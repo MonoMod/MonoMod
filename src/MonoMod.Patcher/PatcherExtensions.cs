@@ -1,14 +1,8 @@
 ﻿using System;
-using SRE = System.Reflection.Emit;
-using CIL = Mono.Cecil.Cil;
-using System.Linq.Expressions;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using Mono.Cecil.Cil;
 using Mono.Cecil;
-using System.Text;
-using Mono.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace MonoMod {
     public static partial class PatcherExtensions {
@@ -100,8 +94,8 @@ namespace MonoMod {
         internal static CustomAttribute GetNextCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
             if (cap == null || !cap.HasCustomAttributes)
                 return null;
-            bool next = false;
-            for (int i = 0; i < cap.CustomAttributes.Count; i++) {
+            var next = false;
+            for (var i = 0; i < cap.CustomAttributes.Count; i++) {
                 CustomAttribute attrib = cap.CustomAttributes[i];
                 if (attrib.AttributeType.FullName != attribute)
                     continue;

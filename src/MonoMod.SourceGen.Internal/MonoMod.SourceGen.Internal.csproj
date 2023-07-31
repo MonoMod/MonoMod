@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
     <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>

@@ -1,5 +1,5 @@
 ﻿namespace MonoMod.Core.Platforms.Runtimes {
-    internal class FxCLR2Runtime : FxBaseRuntime {
+    internal sealed class FxCLR2Runtime : FxBaseRuntime {
 
         private readonly ISystem system;
         public FxCLR2Runtime(ISystem system) : base() {

@@ -7,6 +7,7 @@ using System.Threading;
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes {
+    [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 8.")]
     internal class Core70Runtime : Core60Runtime {
 
         private readonly IArchitecture arch;

@@ -1,7 +1,7 @@
 ﻿using System.Text;
 
 namespace MonoMod.SourceGen.Internal {
-    internal class CodeBuilder {
+    internal sealed class CodeBuilder {
         private readonly StringBuilder sb;
         private readonly char indentChar = ' ';
         private readonly int indentAmount;

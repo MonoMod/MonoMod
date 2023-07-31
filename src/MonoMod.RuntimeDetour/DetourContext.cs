@@ -44,7 +44,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private class Scope {
+        private sealed class Scope {
             public readonly DetourContext Context;
             public readonly Scope? Prev;
 

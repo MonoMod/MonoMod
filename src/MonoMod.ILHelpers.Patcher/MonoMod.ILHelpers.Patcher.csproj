@@ -12,7 +12,6 @@
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
     
     <IsPackable>false</IsPackable>
-    
     <NoWarn>$(NoWarn);CA1812;CA1303</NoWarn>
   </PropertyGroup>
 

@@ -7,11 +7,10 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using static MonoMod.Core.Interop.Windows;
 
 namespace MonoMod.Core.Platforms.Systems {
-    internal class WindowsSystem : ISystem {
+    internal sealed class WindowsSystem : ISystem {
         public OSKind Target => OSKind.Windows;
 
         public SystemFeature Features => SystemFeature.RWXPages;

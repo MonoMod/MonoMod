@@ -9,11 +9,15 @@
     <Description></Description>
     <PackageTags>$(PackageTags)</PackageTags>
 
+    <NoWarn>$(NoWarn);CA1852</NoWarn>
+
     <!-- Put .NET 6.0 as the first framework so that OmniSharp uses it for VS Code Intelisense -->
     <TargetFrameworks>net6.0;net5.0;net7.0;net46;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
     <OutputType>Library</OutputType>
     <SignAssembly>skip</SignAssembly>
     <Nullable>annotations</Nullable>
+
+    <IsPackable>false</IsPackable>
 
     <XunitVersion Condition="'$(XunitVersion)' == ''">2.4.2</XunitVersion>
     <XunitVsRunnerVersion>$(XunitVersion)</XunitVsRunnerVersion>

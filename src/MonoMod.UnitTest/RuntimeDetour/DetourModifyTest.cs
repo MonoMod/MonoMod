@@ -51,7 +51,7 @@ namespace MonoMod.UnitTest {
 
             // Test removing our own hook while already in an active call
             hook.Dispose();
-            Assert.Throws(typeof(InvalidOperationException), () => orig(hook, true));
+            Assert.Throws<InvalidOperationException>(() => orig(hook, true));
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

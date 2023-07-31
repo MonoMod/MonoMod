@@ -9,7 +9,7 @@ using System.Reflection.Emit;
 using System.Threading;
 
 namespace MonoMod.Core.Platforms.Runtimes {
-    internal class MonoRuntime : IRuntime {
+    internal sealed class MonoRuntime : IRuntime {
         public RuntimeKind Target => RuntimeKind.Mono;
 
         public RuntimeFeature Features =>
@@ -201,7 +201,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return method.MethodHandle;
         }
 
-        private class PrivateMethodPin {
+        private sealed class PrivateMethodPin {
             private readonly MonoRuntime runtime;
             public PrivateMethodPin(MonoRuntime runtime)
                 => this.runtime = runtime;
@@ -211,7 +211,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public void UnpinOnce() => runtime.UnpinOnce(this);
         }
 
-        private class PinHandle : IDisposable {
+        private sealed class PinHandle : IDisposable {
             private readonly PrivateMethodPin pin;
             public PinHandle(PrivateMethodPin pin) {
                 this.pin = pin;
@@ -219,7 +219,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             private bool disposedValue;
 
-            protected virtual void Dispose(bool disposing) {
+            private void Dispose(bool disposing) {
                 if (!disposedValue) {
                     if (disposing) {
                         // dispose managed state (managed objects)

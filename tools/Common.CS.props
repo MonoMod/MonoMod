@@ -33,6 +33,8 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- XML documentation warning. TODO: We should probably remove this at some point and ensure that MM is fully documented. -->
     <NoWarn>$(NoWarn);CA1716</NoWarn> <!-- Members have name shared with primitive type. -->
     <NoWarn>$(NoWarn);CA1003</NoWarn> <!-- Change event to use EventHandler<EventArgs> -->
+    <NoWarn>$(NoWarn);CA2020</NoWarn> <!-- Starting with .NET 7, conversions with IntPtr don't throw in an unchecked context -->
+    <NoWarn>$(NoWarn);CA1303</NoWarn> <!-- Use resource tables for strings passed to Console.WriteLine -->
 
     <NewCecilVersion>0.11.4</NewCecilVersion>
     <OldCecilVersion>0.10.4</OldCecilVersion>
@@ -44,14 +46,6 @@
   <ItemGroup>
     <!-- We want to remove JSImportGenerator by default, becuase it takes a good deal of compilation time -->
     <RemoveAnalyzer Include="Microsoft.Interop.JavaScript.JSImportGenerator" />
-  </ItemGroup>
-
-  <!-- For our C# projects, we want to pull in the code analyzers -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   
   <ItemGroup Condition="'$(MMReferenceSourcePkgs)' == 'true'">

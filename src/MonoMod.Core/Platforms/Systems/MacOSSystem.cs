@@ -14,7 +14,7 @@ using System.Text;
 using static MonoMod.Core.Interop.OSX;
 
 namespace MonoMod.Core.Platforms.Systems {
-    internal class MacOSSystem : ISystem, IInitialize<IArchitecture> {
+    internal sealed class MacOSSystem : ISystem, IInitialize<IArchitecture> {
         public OSKind Target => OSKind.OSX;
 
         public SystemFeature Features => SystemFeature.RXPages | SystemFeature.RWXPages;
@@ -399,7 +399,7 @@ namespace MonoMod.Core.Platforms.Systems {
             int fd;
             string fname;
             try {
-                templ.AsSpan().Fill(0);
+                templ.AsSpan().Clear();
                 NEHTempl.CopyTo(templ);
 
                 fixed (byte* pTmpl = templ)

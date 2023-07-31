@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Platforms.Architectures {
-    internal class x86_64Arch : IArchitecture {
+    internal sealed class x86_64Arch : IArchitecture {
         public ArchitectureKind Target => ArchitectureKind.x86_64;
 
         public ArchitectureFeature Features => ArchitectureFeature.Immediate64 | ArchitectureFeature.CreateAltEntryPoint;

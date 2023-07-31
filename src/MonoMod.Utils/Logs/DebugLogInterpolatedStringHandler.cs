@@ -270,35 +270,43 @@ namespace MonoMod.Logs {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(IntPtr value) {
-            if (IntPtr.Size == 4) {
-                AppendFormatted((int) value);
-            } else {
-                AppendFormatted((long) value);
+            unchecked {
+                if (IntPtr.Size == 4) {
+                    AppendFormatted((int) value);
+                } else {
+                    AppendFormatted((long) value);
+                }
             }
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(IntPtr value, string? format) {
-            if (IntPtr.Size == 4) {
-                AppendFormatted((int) value, format);
-            } else {
-                AppendFormatted((long) value, format);
+            unchecked {
+                if (IntPtr.Size == 4) {
+                    AppendFormatted((int) value, format);
+                } else {
+                    AppendFormatted((long) value, format);
+                }
             }
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(UIntPtr value) {
-            if (UIntPtr.Size == 4) {
-                AppendFormatted((uint) value);
-            } else {
-                AppendFormatted((ulong) value);
+            unchecked {
+                if (UIntPtr.Size == 4) {
+                    AppendFormatted((uint) value);
+                } else {
+                    AppendFormatted((ulong) value);
+                }
             }
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(UIntPtr value, string? format) {
-            if (UIntPtr.Size == 4) {
-                AppendFormatted((uint) value, format);
-            } else {
-                AppendFormatted((ulong) value, format);
+            unchecked {
+                if (UIntPtr.Size == 4) {
+                    AppendFormatted((uint) value, format);
+                } else {
+                    AppendFormatted((ulong) value, format);
+                }
             }
         }
 

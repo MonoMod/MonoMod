@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 
@@ -13,6 +14,8 @@ namespace System;
 /// <summary>
 /// A polyfill type that mirrors some methods from <see cref="HashCode"/> on .NET 6.
 /// </summary>
+[SuppressMessage("Design", "CA1066:Implement IEquatable when overriding Object.Equals",
+    Justification = "This is a polyfill for System.HashCode, which is not equatable.")]
 internal struct HashCode {
     private const uint Prime1 = 2654435761U;
     private const uint Prime2 = 2246822519U;

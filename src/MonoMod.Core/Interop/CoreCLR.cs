@@ -133,7 +133,7 @@ namespace MonoMod.Core.Interop {
             "needing duplicates.")]
         public class V30 : V21 { }
 
-        public class V31 : V21 { }
+        public class V31 : V30 { }
 
         public class V50 : V31 { }
     }

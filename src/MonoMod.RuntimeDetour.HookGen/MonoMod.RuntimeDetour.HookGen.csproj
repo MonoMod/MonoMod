@@ -11,6 +11,7 @@
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild> <!-- Remove after / during rework -->
 
     <OutputType>Exe</OutputType>
+    <NoWarn>$(NoWarn);CA1062</NoWarn>
 
     <IsPackable>false</IsPackable> <!-- TODO: update this to not need HookEndpointManager in RuntimeDetour -->
     <VersionPrefix>24.0.0</VersionPrefix>

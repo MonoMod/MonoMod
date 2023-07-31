@@ -8,7 +8,7 @@
 using CultureInfo = System.Globalization.CultureInfo;
 
 namespace System.Reflection {
-    internal class DelegatingTypeInfo : TypeInfo {
+    internal sealed class DelegatingTypeInfo : TypeInfo {
         public override bool IsAssignableFrom(TypeInfo typeInfo) {
             if (typeInfo == null)
                 return false;
@@ -16,11 +16,7 @@ namespace System.Reflection {
         }
 
         // this is what's done by the BCL
-#pragma warning disable CA1051 // Do not declare visible instance fields
-        protected Type typeImpl = null!;
-#pragma warning restore CA1051 // Do not declare visible instance fields
-
-        protected DelegatingTypeInfo() { }
+        private Type typeImpl = null!;
 
         public DelegatingTypeInfo(Type delegatingType) {
             ThrowHelper.ThrowIfArgumentNull(delegatingType, nameof(delegatingType));

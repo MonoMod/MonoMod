@@ -14,6 +14,8 @@ namespace System.Collections.Generic
     }
 
     // Note: Because .NET 3 does not allow for covariance for IEnumerable, we cannot support that
+    [Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix",
+        Justification = "This is a polyfill for the BCL's IReadOnlyList")]
     public interface IReadOnlyList<T> : IReadOnlyCollection<T>
     {
         T this[int index]

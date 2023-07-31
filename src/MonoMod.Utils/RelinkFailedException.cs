@@ -47,6 +47,5 @@ namespace MonoMod.Utils {
 
             return builder.ToString();
         }
-
     }
 }

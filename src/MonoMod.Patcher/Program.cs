@@ -1,11 +1,5 @@
-﻿using Mono.Cecil;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using MonoMod.Utils;
-using System.Reflection;
 
 namespace MonoMod {
     class Program {
@@ -24,9 +18,9 @@ namespace MonoMod {
             string pathIn;
             string pathOut;
 
-            int pathInI = 0;
+            var pathInI = 0;
 
-            for (int i = 0; i < args.Length; i++)
+            for (var i = 0; i < args.Length; i++)
                 if (args[i] == "--dependency-missing-throw=0" || args[i] == "--lean-dependencies") {
                     Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "0");
                     pathInI = i + 1;
@@ -60,7 +54,7 @@ namespace MonoMod {
 #if !DEBUG
             try {
 #endif
-                using (MonoModder mm = new MonoModder() {
+                using (var mm = new MonoModder() {
                     InputPath = pathIn,
                     OutputPath = pathOut
                 }) {
@@ -71,7 +65,7 @@ namespace MonoMod {
                         mm.ReadMod(Directory.GetParent(pathIn).FullName);
                     } else {
                         mm.Log("[Main] Reading mods list from arguments.");
-                        for (int i = pathInI + 1; i < args.Length - 1; i++)
+                        for (var i = pathInI + 1; i < args.Length - 1; i++)
                             mm.ReadMod(args[i]);
                     }
 

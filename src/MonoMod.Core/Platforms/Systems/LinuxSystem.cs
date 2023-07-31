@@ -15,7 +15,7 @@ using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Core.Platforms.Systems {
-    internal class LinuxSystem : ISystem, IInitialize<IArchitecture> {
+    internal sealed class LinuxSystem : ISystem, IInitialize<IArchitecture> {
         public OSKind Target => OSKind.Linux;
 
         public SystemFeature Features => SystemFeature.RWXPages | SystemFeature.RXPages;
@@ -293,7 +293,7 @@ namespace MonoMod.Core.Platforms.Systems {
             int fd;
             string fname;
             try {
-                templ.AsSpan().Fill(0);
+                templ.AsSpan().Clear();
                 NEHTempl.CopyTo(templ);
 
                 fixed (byte* pTmpl = templ)

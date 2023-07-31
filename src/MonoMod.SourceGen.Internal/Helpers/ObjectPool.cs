@@ -8,6 +8,8 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
+#pragma warning disable RS1035 // Environment is only used for ProcessorCount
+
 namespace MonoMod.SourceGen.Internal.Helpers;
 
 /// <summary>

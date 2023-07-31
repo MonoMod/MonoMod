@@ -2,7 +2,7 @@
 using System.IO;
 
 namespace MonoMod.DebugIL {
-    class Program {
+    public sealed class Program {
 
         public static void Main(string[] args) {
             Console.WriteLine("MonoMod.DebugIL " + typeof(Program).Assembly.GetName().Version);

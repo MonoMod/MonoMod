@@ -1,6 +1,4 @@
 ﻿using Mono.Cecil;
-using MonoMod.Utils;
-using System;
 
 namespace MonoMod.InlineRT {
     public static partial class MonoModRule {
@@ -10,8 +8,8 @@ namespace MonoMod.InlineRT {
         public static void RelinkModule(string from, string toName) {
             MonoModder self = Modder;
 
-            bool retrying = false;
-            ModuleDefinition to = null;
+            var retrying = false;
+            ModuleDefinition to;
             RETRY:
             if (toName + ".dll" == self.Module.Name)
                 to = self.Module;

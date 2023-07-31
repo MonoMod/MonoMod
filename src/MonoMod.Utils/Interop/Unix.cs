@@ -56,7 +56,7 @@ namespace MonoMod.Utils.Interop {
 
             var len = Encoding.UTF8.GetByteCount(str);
             var arr = ArrayPool<byte>.Shared.Rent(len + 1);
-            arr.AsSpan().Fill(0);
+            arr.AsSpan().Clear();
             var encoded = Encoding.UTF8.GetBytes(str, 0, str.Length, arr, 0);
             Helpers.DAssert(len == encoded);
             return arr;
