@@ -222,7 +222,7 @@ namespace MonoMod.Cil {
                 value = (int) instr.Operand;
                 return true;
             } else if (instr.OpCode == OpCodes.Ldc_I4_S) {
-                value = (byte) instr.Operand;
+                value = (sbyte) instr.Operand;
                 return true;
             } else if (instr.OpCode == OpCodes.Ldc_I4_0) {
                 value = 0;
@@ -274,5 +274,26 @@ namespace MonoMod.Cil {
                 return false;
             }
         }
+
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Newobj"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="type">The type the operand member must be defined on for the instruction to match.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchNewobj(this Instruction instr, Type type)
+            => MatchNewobj(instr, out MethodReference? v) && v.DeclaringType.Is(type);
+
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Newobj"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <typeparam name="T">The type the operand member must be defined on for the instruction to match.</typeparam>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchNewobj<T>(this Instruction instr)
+            => MatchNewobj(instr, typeof(T));
+
+        /// <summary>Matches an instruction with opcode <see cref="OpCodes.Newobj"/>.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="typeFullName">The full name of the type the operand member must be defined on for the instruction to match.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        public static bool MatchNewobj(this Instruction instr, string typeFullName)
+            => MatchNewobj(instr, out MethodReference? v) && v.DeclaringType.Is(typeFullName);
     }
 }
