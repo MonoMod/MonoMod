@@ -11,6 +11,7 @@
 
     <VersionPrefix>25.0.2</VersionPrefix>
     <PackageValidationBaselineVersion>25.0.0</PackageValidationBaselineVersion>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
   
   <!-- Dependencies -->
