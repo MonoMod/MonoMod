@@ -89,12 +89,12 @@ Ldarg int
 Ldarg ParameterReference
 Ldarga int
 Ldarga ParameterReference
+Starg int
+Starg ParameterReference
 Ldloc int
 Ldloc VariableReference
 Ldloca int
 Ldloca VariableReference
-Starg int
-Starg ParameterReference
 Stloc int
 Stloc VariableReference
 Br ILLabel
