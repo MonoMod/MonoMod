@@ -96,7 +96,7 @@ namespace MonoMod.InlineRT {
                     Runtime = TargetRuntime.Net_2_0
                 }
             );
-            using MonoModder wrapperMod = new MonoModRulesModder() {
+            MonoModder wrapperMod = new MonoModRulesModder() {
                 Module = wrapper,
                 Orig = orig,
 
