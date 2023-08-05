@@ -59,7 +59,8 @@ eh_managed_to_native:
 SHR_DECLFN(eh_native_to_managed)
 eh_native_to_managed:
     CFI_STARTPROC LSDA_none
-    FRAME_PROLOG
+    DECL_REG_SLOTS 0
+    FUNCTION_PROLOG
 
     mov r11, rax
     call eh_get_exception_ptr
@@ -83,7 +84,7 @@ eh_native_to_managed:
     CFI_push
 
     ; otherwise, exit normally
-    FRAME_EPILOG
+    FUNCTION_EPILOG
     ret
     
     CFI_pop
@@ -94,9 +95,6 @@ eh_native_to_managed:
     int3 ; deliberately don't handle failures at this point. This will have been a crash anyway.
     CFI_ENDPROC
     
-; TODO: for some reason, when our personality is called in phase 2, it doesn't point to the same exception object it does in phase 1
-; the pointer seems to be outright invalid in phase 2, while correct in phase 1
-
 ; argument passing:
 ; rdi, rsi, rdx, rcx, r8, r9
 ; int version, _Unwind_Actions actions, uint64 exceptionClass, _Unwind_Exception* exceptionObject, _Unwind_Context* context
