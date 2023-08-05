@@ -11,7 +11,7 @@
 
     <NoWarn>$([String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
 
-    <VersionPrefix>25.0.1</VersionPrefix>
+    <VersionPrefix>25.0.2</VersionPrefix>
     <PackageValidationBaselineVersion>25.0.0</PackageValidationBaselineVersion>
   </PropertyGroup>
 
