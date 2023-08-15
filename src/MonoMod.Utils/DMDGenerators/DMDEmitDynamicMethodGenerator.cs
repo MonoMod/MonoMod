@@ -11,7 +11,7 @@ namespace MonoMod.Utils {
             typeof(DynamicMethod).GetField("returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
             typeof(DynamicMethod).GetField("_returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
             typeof(DynamicMethod).GetField("m_returnType", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Cannot find returnType fieeld on DynamicMethod");
+            ?? throw new InvalidOperationException("Cannot find returnType field on DynamicMethod");
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
             var orig = dmd.OriginalMethod;
