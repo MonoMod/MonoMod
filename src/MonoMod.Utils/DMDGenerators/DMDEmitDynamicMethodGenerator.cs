@@ -9,6 +9,7 @@ namespace MonoMod.Utils {
 
         private static readonly FieldInfo _DynamicMethod_returnType =
             typeof(DynamicMethod).GetField("returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
+            typeof(DynamicMethod).GetField("_returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
             typeof(DynamicMethod).GetField("m_returnType", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Cannot find returnType fieeld on DynamicMethod");
 
