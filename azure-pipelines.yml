@@ -5,7 +5,7 @@ strategy:
       imageName: 'windows-latest'
       artifactPrefix: ''
       artifactSuffix: ''
-      testers: ';fx;core2.1;core3;core3.1;core5;core6;core7;'
+      testers: ';fx;core2.1;core3;core3.1;core5;core6;core7;core8;'
       testx86: 'true'
       generateDocFX: 'false'
       pushNuGet: 'true'
@@ -14,7 +14,7 @@ strategy:
       imageName: 'ubuntu-latest'
       artifactPrefix: '~dbg.linux.'
       artifactSuffix: ''
-      testers: ';mono;core2.1;core3;core3.1;core5;core6;core7;'
+      testers: ';mono;core2.1;core3;core3.1;core5;core6;core7;core8;'
       testx86: 'false'
       generateDocFX: 'false'
       pushNuGet: 'false'
@@ -23,7 +23,7 @@ strategy:
       imageName: 'macOS-latest'
       artifactPrefix: '~dbg.macos.'
       artifactSuffix: ''
-      testers: ';mono;core2.1;core3;core3.1;core5;core6;core7;'
+      testers: ';mono;core2.1;core3;core3.1;core5;core6;core7;core8;'
       testx86: 'false'
       generateDocFX: 'false'
       pushNuGet: 'false'
@@ -82,6 +82,12 @@ steps:
   inputs:
     packageType: sdk
     version: '7.0.x'
+- task: UseDotNet@2
+  condition: contains(variables.testers, ';core8;')
+  displayName: 'Install .NET SDK 8.0.x'
+  inputs:
+    packageType: sdk
+    version: '8.0.x'
 - task: NuGetToolInstaller@1
   displayName: 'Update NuGet'
   inputs:
@@ -118,6 +124,9 @@ steps:
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'net7.0'
+- template: 'azure-pipelines-postbuild.yml'
+  parameters:
+    targetFramework: 'net8.0'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
@@ -203,7 +212,7 @@ steps:
     testResultsFormat: 'xUnit'
     testResultsFiles: '**/testresults.monoslow.net46.xml'
     testRunTitle: 'Tests @ $(jobArchName) monoslow net46'
-    
+
 # All of the .NET Core tests run via azure-pipelines-coretest.yml, and have an optional 'arch' parameter to allow specific arch selection
 - template: 'azure-pipelines-coretest.yml'
   parameters:
@@ -266,6 +275,19 @@ steps:
   parameters:
     condition: and(contains(variables.testers, ';core7;'), eq(variables.testx86, 'true'))
     targetFramework: 'net7.0'
+    arch: 'x86'
+    usePgo: 'true'
+
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(true, contains(variables.testers, ';core8;'))
+    targetFramework: 'net8.0'
+    arch: 'x64'
+    usePgo: 'true'
+- template: 'azure-pipelines-coretest.yml'
+  parameters:
+    condition: and(contains(variables.testers, ';core8;'), eq(variables.testx86, 'true'))
+    targetFramework: 'net8.0'
     arch: 'x86'
     usePgo: 'true'
 

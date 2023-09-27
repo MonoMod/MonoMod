@@ -39,6 +39,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 #else
                     return new Core70Runtime(system, arch);
 #endif
+                case 8:
+                    return new Core80Runtime(system, arch);
 
                 // currently, we need to manually add support for new versions.
                 // TODO: possibly fall back to a JIT GUID check if we can?
