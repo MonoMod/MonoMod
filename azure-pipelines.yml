@@ -125,9 +125,9 @@ steps:
 - template: 'azure-pipelines-postbuild.yml'
   parameters:
     targetFramework: 'net7.0'
-- template: 'azure-pipelines-postbuild.yml'
-  parameters:
-    targetFramework: 'net8.0'
+# - template: 'azure-pipelines-postbuild.yml'
+#   parameters:
+#     targetFramework: 'net8.0'
 
 # Create and "publish" nupkg artifacts.
 - task: DotNetCoreCLI@2
