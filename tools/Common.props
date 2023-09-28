@@ -8,10 +8,10 @@
     <DebugType>portable</DebugType>
     <Deterministic>true</Deterministic>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
-    
+
     <!-- All MonoMod projects (by default) target these frameworks -->
     <!-- Put .NET 6.0 as the first framework so that OmniSharp uses it for VS Code Intelisense -->
-    <TargetFrameworks>net6.0;net5.0;net7.0;netstandard2.0;net35;net452</TargetFrameworks>
+    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;netstandard2.0;net35;net452</TargetFrameworks>
     <!-- If a project wants to target some subset or other set, then they can just reassign TargetFrameworks in their project file -->
 
     <!-- Conditional compilation constants are used *everywhere*, make sure common ones are set -->
@@ -20,7 +20,7 @@
     <DisableImplicitFrameworkDefines>false</DisableImplicitFrameworkDefines>
 
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
-    
+
     <!-- Properties for the repository paths -->
     <MMToolsPath>$(MSBuildThisFileDirectory)</MMToolsPath>
     <MMRootPath>$(MMToolsPath)..\</MMRootPath>
@@ -34,17 +34,17 @@
     <BaseIntermediateOutputPath>$(MMArtifactsPath)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Configuration)\</IntermediateOutputPath>
     <BaseOutputPath>$(MMArtifactsPath)bin\$(MSBuildProjectName)\</BaseOutputPath>
-    
+
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    
+
     <!-- Assembly signing -->
     <AssemblyOriginatorKeyFile>$(MMRootPath)MonoMod.snk</AssemblyOriginatorKeyFile>
     <SignAssembly Condition="'$(SignAssembly)' == 'force'">true</SignAssembly>
     <SignAssembly Condition="'$(SignAssembly)' != 'skip'">false</SignAssembly> <!-- default -->
     <DelaySign>false</DelaySign>
   </PropertyGroup>
-  
+
   <!-- Debug -->
   <PropertyGroup Condition="$(Configuration.Contains('Debug'))">
     <DebugSymbols>true</DebugSymbols>
@@ -62,10 +62,10 @@
   <PropertyGroup Condition="$(Configuration.Contains('Trace'))">
     <DefineConstants>MONOMOD_DBGLOG;TRACE;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
-  
+
   <!-- NuGet Information -->
   <Import Project="$(MMToolsPath)NuGet.props" />
-  
+
   <!-- Project Language information -->
   <PropertyGroup>
     <MMProjectLanguage>Unknown</MMProjectLanguage>
@@ -75,9 +75,9 @@
     <MMLanguageProps>$(MMToolsPath)Common.$(MMProjectLanguage).props</MMLanguageProps>
     <MMLanguageTargets>$(MMToolsPath)Common.$(MMProjectLanguage).targets</MMLanguageTargets>
   </PropertyGroup>
-  
+
   <Import Project="$(MMLanguageProps)" Condition="Exists('$(MMLanguageProps)')" />
 
   <Import Project="$(MMImportAfterProps)" Condition="'$(MMImportAfterProps)' != '' and Exists('$(MMImportAfterProps)')" />
-  
+
 </Project>
