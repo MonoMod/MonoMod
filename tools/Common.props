@@ -11,7 +11,7 @@
 
     <!-- All MonoMod projects (by default) target these frameworks -->
     <!-- Put .NET 6.0 as the first framework so that OmniSharp uses it for VS Code Intelisense -->
-    <TargetFrameworks>net6.0;net5.0;net7.0;netstandard2.0;net35;net452</TargetFrameworks>
+    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;netstandard2.0;net35;net452</TargetFrameworks>
     <!-- If a project wants to target some subset or other set, then they can just reassign TargetFrameworks in their project file -->
 
     <!-- Conditional compilation constants are used *everywhere*, make sure common ones are set -->
