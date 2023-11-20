@@ -34,12 +34,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 case 7:
                     // .NET 7.0.x
-#if NO_NET7_RUNTIME
-                    throw new PlatformNotSupportedException(".NET 7 Support is not enabled");
-#else
                     return new Core70Runtime(system, arch);
-#endif
                 case 8:
+                    // .NET 8.0.x
                     return new Core80Runtime(system, arch);
 
                 // currently, we need to manually add support for new versions.
