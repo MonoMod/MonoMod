@@ -18,6 +18,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
 
+    <NuGetAudit>false</NuGetAudit> <!-- This just warns us for NETCoreApp 2.1.0 (which is wrong, anyway), and we're a compat-focused lib anyway. -->
     <MMIncludeTFMChecks>false</MMIncludeTFMChecks>
   </PropertyGroup>
 
