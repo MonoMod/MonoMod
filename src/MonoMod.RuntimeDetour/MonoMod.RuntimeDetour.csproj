@@ -9,7 +9,9 @@
 
     <RootNamespace>MonoMod.RuntimeDetour</RootNamespace>
 
-    <NoWarn>$([String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
+    <NoWarn>$([System.String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
+
+    <MMIncludeTFMChecks>true</MMIncludeTFMChecks>
 
     <VersionPrefix>25.0.2</VersionPrefix>
     <PackageValidationBaselineVersion>25.0.0</PackageValidationBaselineVersion>

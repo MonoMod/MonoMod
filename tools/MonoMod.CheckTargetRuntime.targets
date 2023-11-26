@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <!-- This file is included in buildTransitive in certain packages, to report compile-time errors when projects are built targeting unsupported runtimes -->
+  
+  <PropertyGroup>
+    <CoreCompileDependsOn>MonoMod_CheckTargetRuntime;MonoMod_SkippedCheckTargetRuntime;$(CoreCompileDependsOn)</CoreCompileDependsOn>
+    <_MonoMod_CheckTargetRuntimeIncluded>$(MSBuildThisFileDirectory)</_MonoMod_CheckTargetRuntimeIncluded>
+  </PropertyGroup>
+
+  <Target Name="MonoMod_SkippedCheckTargetRuntime" BeforeTargets="CoreCompile"
+          Condition="'$(MonoMod_ReallySkipCheckTargetRuntime)' == 'true'">
+    <Warning File="$(MSBuildProjectFullPath)"
+             Text="MonoMod_ReallySkipCheckTargetRuntime is set, the target runtime might be one which is not supported. Obscure runtime errors may occur." />
+  </Target>
+    
+  <Target Name="MonoMod_CheckTargetRuntime" BeforeTargets="CoreCompile"
+          Condition="'$(MonoMod_ReallySkipCheckTargetRuntime)' != 'true'">
+    <PropertyGroup>
+      <MonoMod_TFMKind>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</MonoMod_TFMKind>
+      <MonoMod_TFMVersion>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</MonoMod_TFMVersion>
+    </PropertyGroup>
+
+    <!-- Check the target framework as a conservative proxy for target runtime. -->
+    <Error Condition="'$(MonoMod_TFMKind)' == '.NETCoreApp' and $([MSBuild]::VersionGreaterThan('$(MonoMod_TFMVersion)', '8.0'))"
+           File="$(MSBuildProjectFullPath)"
+           Text="$(_MonoMod_ThisPackage) $(_MonoMod_DoForm) not support the $(TargetFramework) runtime. Please visit https://github.com/MonoMod/MonoMod/ to participate in discussion or contribute.
+                 If you REALLY know what you're doing, set MonoMod_CheckTargetRuntime to false to skip this check." />
+
+    <!-- Check RID. -->
+    <Warning Condition="'$(RuntimeIdentifier)' != '' 
+             and !$([System.String]::Copy('$(RuntimeIdentifier)').Contains('-x86'))
+             and !$([System.String]::Copy('$(RuntimeIdentifier)').Contains('-x64'))"
+             File="$(MSBuildProjectFullPath)"
+             Text="$(_MonoMod_ThisPackage) $(_MonoMod_DoForm) not support $(RuntimeIdentifier)." />
+    
+  </Target>
+
+  <Target Name="MonoMod_CheckPublishOptions" BeforeTargets="PrepareForPublish;Publish">
+
+    <Warning Condition="'$(PublishAot)' == 'true'"
+             File="$(MSBuildProjectFullPath)"
+             Text="$(_MonoMod_ThisPackage) $(_MonoMod_DoForm) not support AOT compilation. Expect runtime errors." />
+    
+    <Warning Condition="'$(PublishSingleFile)' == 'true'"
+             File="$(MSBuildProjectFullPath)"
+             Text="$(_MonoMod_ThisPackage) $(_MonoMod_DoForm) not support single-file applications. Expect runtime errors." />
+    
+  </Target>
+  
+</Project>

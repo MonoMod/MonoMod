@@ -233,3 +233,4 @@ ModelManifest.xml
 
 # Rider configuration files
 .idea/
+*.binlog
