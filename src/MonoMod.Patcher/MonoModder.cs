@@ -1197,6 +1197,17 @@ namespace MonoMod {
                 }
             }
 
+            if (type.IsSequentialLayout)
+                targetTypeDef.IsSequentialLayout = true;
+
+            if (type.IsExplicitLayout)
+                targetTypeDef.IsExplicitLayout = true;
+
+            if (type.HasLayoutInfo) {
+                targetTypeDef.PackingSize = type.PackingSize;
+                targetTypeDef.ClassSize = type.ClassSize;
+            }
+
             foreach (FieldDefinition field in type.Fields)
                 PatchField(targetTypeDef, field);
 
@@ -1423,6 +1434,12 @@ namespace MonoMod {
                     existingField.Constant = field.Constant;
                 targetType.Fields.Add(existingField);
             }
+
+            if (field.HasLayoutInfo)
+                existingField.Offset = field.Offset;
+
+            if (field.HasMarshalInfo)
+                existingField.MarshalInfo = field.MarshalInfo;
 
             foreach (CustomAttribute attrib in field.CustomAttributes)
                 existingField.CustomAttributes.Add(attrib.Clone());
