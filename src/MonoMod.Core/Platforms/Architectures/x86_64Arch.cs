@@ -188,6 +188,61 @@ namespace MonoMod.Core.Platforms.Architectures {
                             0xff, 0x25, 0xf8, 0x0f, 0x00, 0x00, // trigger_recomp: jmp [rip - 8 + 0x1000]
                         }),
 
+                    // https://github.com/dotnet/runtime/commit/11a0671c0b8d30740e5f507a077bed87c905acd0#diff-882d8e730c732d6a26346667e364c7c593da321c7c0045345c189d8cd8f82a17
+                    // .NET 8 bumped the fixup precode sizes from 4096 (0x1000) to 16384 (0x4000)
+
+                    // .NET 8 FixupPrecode main entry point (0x4000 page size)
+                    new(new(AddressKind.Rel32 | AddressKind.Indirect, 6), mustMatchAtStart: true,
+                        new byte[] { // mask
+                            0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                        },
+                        new byte[] { // pattern
+                            // we know the address will always be 0xfa, 0x3f, 0x00, 0x00, but it's not easy to make the matcher enforce that, so we just won't
+                            0xff, 0x25, Bd, Bd, Bd, Bd, // jmp [rip + 0xffa] -> real method body (or if the method hasn't been compiled yet, the next instruction)
+                            0x4c, 0x8b, 0x15, 0xfb, 0x3f, 0x00, 0x00, // mov r10, [rip + 0xffb] -> MethodDesc*
+                            0xff, 0x25, 0xfd, 0x3f, 0x00, 0x00, // jmp [rip + 0xffd] ; -> PrecodeFixupThunk
+                            // padding to fit 24 bytes
+                            //0x90, 0x66, 0x66, 0x66, 0x66 // I'm not actually sure if it's safe to match this padding, so I'm not going to
+                        }),
+
+                    // These two patterns represent the same CLR datastructure, just at different entry points.
+
+                    // .NET 8 FixupPrecode ThePreStub entry point (0x4000 page size)
+                    new(new(AddressKind.PrecodeFixupThunkRel32 | AddressKind.Indirect, 13), mustMatchAtStart: true,
+                        new byte[] { // mask
+                            //0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                            0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                        },
+                        new byte[] { // pattern
+                            // jmp [rip + 0x3ffa] -> real method body (or if the method hasn't been compiled yet, the next instruction)
+                            0x4c, 0x8b, 0x15, 0xfb, 0x3f, 0x00, 0x00, // mov r10, [rip + 0xffb] -> MethodDesc*
+                            // we know the address will always be 0xfd, 0x0f, 0x00, 0x00, but it's not easy to make the matcher enforce that, so we just won't
+                            0xff, 0x25, Bd, Bd, Bd, Bd, // jmp [rip + 0x3ffd] ; -> PrecodeFixupThunk
+                            // padding to fit 24 bytes
+                            //0x90, 0x66, 0x66, 0x66, 0x66 // I'm not actually sure if it's safe to match this padding, so I'm not going to
+                        }),
+
+                    // .NET 8 Call Counting stub (0x4000 page size)
+                    new(new(AddressKind.Rel32 | AddressKind.Indirect, 18), mustMatchAtStart: true,
+                        new byte[] { // mask
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                            0xff, 0xff, 0xff,
+                            0xff, 0xff,
+                            0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                        },
+                        new byte[] { // pattern
+                            0x48, 0x8b, 0x05, 0xf9, 0x3f, 0x00, 0x00,   // mov rax, qword [rip - 7 + 0x4000]
+                            0x66, 0xff, 0x08,                           // dec word [rax]
+                            0x74, 0x06,                                 // je +6 (trigger_recomp)
+                            // address will always be 0xf6, 0x3f, 0x00, 0x00
+                            0xff, 0x25, Bd, Bd, Bd, Bd,                 // jmp [rip - 10 + 0x4000]
+                            0xff, 0x25, 0xf8, 0x3f, 0x00, 0x00, // trigger_recomp: jmp [rip - 8 + 0x4000]
+                        }),
+
                     null
                 );
             } else {

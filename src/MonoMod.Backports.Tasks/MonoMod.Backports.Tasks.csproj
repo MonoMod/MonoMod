@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="$(MSBuildRequiredVersion)" />
-    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
+    <!--<PackageReference Include="System.Collections.Immutable" Version="6.0.0" />-->
   </ItemGroup>
 
 </Project>
