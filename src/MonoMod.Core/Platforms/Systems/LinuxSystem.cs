@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -49,7 +50,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public nint GetSizeOfReadableMemory(IntPtr start, nint guess) {
             var currentPage = allocator.RoundDownToPageBoundary(start);
-            if (!MmapPagedMemoryAllocator.PageAllocated(currentPage)) {
+            if (!MmapPagedMemoryAllocator.PageAllocated(currentPage, checkReadable: true)) {
                 return 0;
             }
             currentPage += PageSize;
@@ -57,7 +58,7 @@ namespace MonoMod.Core.Platforms.Systems {
             var known = currentPage - start;
 
             while (known < guess) {
-                if (!MmapPagedMemoryAllocator.PageAllocated(currentPage)) {
+                if (!MmapPagedMemoryAllocator.PageAllocated(currentPage, checkReadable: true)) {
                     return known;
                 }
                 known += PageSize;
@@ -109,29 +110,56 @@ namespace MonoMod.Core.Platforms.Systems {
                 : base(pageSize) {
             }
 
-            [SuppressMessage("Design", "CA1032:Implement standard exception constructors")]
-            [SuppressMessage("Design", "CA1064:Exceptions should be public",
-                Justification = "This is used exclusively internally as jank control flow because I'm lazy")]
-            private sealed class SyscallNotImplementedException : Exception { }
-
-            public static unsafe bool PageAllocated(nint page) {
+            public static unsafe bool PageAllocated(nint page, bool checkReadable = false) {
                 byte garbage;
-                // TODO: Mincore isn't implemented in WSL, and always gives ENOSYS
+
+                // First check if the page is allocated through the mincore syscall
+                var didMincoreCheck = true;
                 if (Unix.Mincore(page, 1, &garbage) == -1) {
                     var lastError = Unix.Errno;
                     if (lastError == 12) {  // ENOMEM, page is unallocated
                         return false;
+                    } else if (lastError == 38) { // ENOSYS Function not implemented
+                        didMincoreCheck = false;
+                    } else {
+                        throw new NotImplementedException($"Got unimplemented errno for mincore(2); errno = {lastError}");
                     }
-                    if (lastError == 38) { // ENOSYS Function not implemented
-                        // TODO: possibly implement /proc/self/maps parsing as a fallback
-                        throw new SyscallNotImplementedException();
-                    }
-                    throw new NotImplementedException($"Got unimplemented errno for mincore(2); errno = {lastError}");
                 }
+
+                // Parse /proc/self/maps and check if the memory region is readable
+                // Also parse when the mincore syscall is not available
+                if (checkReadable || !didMincoreCheck) {
+                    using StreamReader reader = new StreamReader("/proc/self/maps");
+                    while (reader.ReadLine() is string line) {
+                        var lineSpan = line.AsSpan();
+
+                        // Parse the range
+                        var addrSeparatorIndex = line.IndexOf('-', StringComparison.InvariantCulture);
+                        var permsSeparatorIndex = line.IndexOf(' ', StringComparison.InvariantCulture);
+
+                        var startAddr = nuint.Parse(lineSpan[..addrSeparatorIndex], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                        var endAddr = nuint.Parse(lineSpan[(addrSeparatorIndex+1)..permsSeparatorIndex], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                        var perms = lineSpan[(permsSeparatorIndex+1)..(permsSeparatorIndex+5)];
+
+                        // Check if the range contains the target page
+                        if (unchecked((nuint) page) < startAddr) {
+                            // We skipped over the target page, so no range contains it
+                            return false;
+                        }
+                        if (endAddr <= unchecked((nuint) page)) {
+                            continue;
+                        }
+
+                        // Check the permissions
+                        return !checkReadable || perms[0] == 'r';
+                    }
+
+                    // No range contained the target page
+                    return false;
+                }
+
                 return true;
             }
-
-            private bool canTestPageAllocation = true;
 
             protected override bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
                 var prot = request.Executable ? Unix.Protection.Execute : Unix.Protection.None;
@@ -169,11 +197,6 @@ namespace MonoMod.Core.Platforms.Systems {
                 nint targetPage, nint lowPageBound, nint highPageBound,
                 [MaybeNullWhen(false)] out IAllocatedMemory allocated
             ) {
-                if (!canTestPageAllocation) {
-                    allocated = null;
-                    return false;
-                }
-
                 var prot = request.Base.Executable ? Unix.Protection.Execute : Unix.Protection.None;
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
                 
@@ -185,40 +208,34 @@ namespace MonoMod.Core.Platforms.Systems {
                 var high = targetPage;
                 nint ptr = -1;
 
-                try {
-                    while (low >= lowPageBound || high <= highPageBound) {
+                while (low >= lowPageBound || high <= highPageBound) {
 
-                        // check above the target page first
-                        if (high <= highPageBound) {
-                            for (nint i = 0; i < numPages; i++) {
-                                if (PageAllocated(high + PageSize * i)) {
-                                    high += PageSize;
-                                    goto FailHigh;
-                                }
+                    // check above the target page first
+                    if (high <= highPageBound) {
+                        for (nint i = 0; i < numPages; i++) {
+                            if (PageAllocated(high + PageSize * i)) {
+                                high += PageSize;
+                                goto FailHigh;
                             }
-                            // all pages are unallocated, we're done
-                            ptr = high;
-                            break;
                         }
-                        FailHigh:
-                        if (low >= lowPageBound) {
-                            for (nint i = 0; i < numPages; i++) {
-                                if (PageAllocated(low + PageSize * i)) {
-                                    low -= PageSize;
-                                    goto FailLow;
-                                }
-                            }
-                            // all pages are unallocated, we're done
-                            ptr = low;
-                            break;
-                        }
-                        FailLow:
-                        { }
+                        // all pages are unallocated, we're done
+                        ptr = high;
+                        break;
                     }
-                } catch (SyscallNotImplementedException) {
-                    canTestPageAllocation = false;
-                    allocated = null;
-                    return false;
+                    FailHigh:
+                    if (low >= lowPageBound) {
+                        for (nint i = 0; i < numPages; i++) {
+                            if (PageAllocated(low + PageSize * i)) {
+                                low -= PageSize;
+                                goto FailLow;
+                            }
+                        }
+                        // all pages are unallocated, we're done
+                        ptr = low;
+                        break;
+                    }
+                    FailLow:
+                    { }
                 }
 
                 // unable to find a page within bounds
