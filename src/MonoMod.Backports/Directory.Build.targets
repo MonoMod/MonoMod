@@ -16,6 +16,16 @@
       <GeneratePathProperty>true</GeneratePathProperty>
       <Pack>false</Pack>
     </PackageReference>
+
+    <!-- S.C.Immutable pulls this in, but we only actually need it at compile-time, so override include properties to prevent NuGet warnings -->
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0">
+      <PrivateAssets>all;buildTransitive</PrivateAssets>
+      <ExcludeAssets>all;buildTransitive</ExcludeAssets>
+      <IncludeAssets>none</IncludeAssets>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <GeneratePathProperty>true</GeneratePathProperty>
+      <Pack>false</Pack>
+    </PackageReference>
   </ItemGroup>
 
   <UsingTask TaskName="FilterTfmsTask"
