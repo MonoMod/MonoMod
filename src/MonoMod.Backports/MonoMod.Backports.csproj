@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(TargetFrameworks);netstandard2.1;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>$(TargetFrameworks);net40;net47;netstandard2.1;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
     
     <!-- We're not going to be having any of the logic that would use the shared sources, so we'll just not include them -->
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
@@ -21,16 +21,29 @@
   <PropertyGroup>
     <MMTFKind>$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</MMTFKind>
     <MMTFVersion>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</MMTFVersion>
+
+    <BclHasOobImpls>false</BclHasOobImpls>
+    <BclHasOobImpls Condition="('$(MMTFKind)' == '.NETStandard' and $([MSBuild]::VersionGreaterThanOrEquals('$(MMTFVersion)','2.1')))
+                    or ('$(MMTFKind)' == '.NETCoreApp' and $([MSBuild]::VersionGreaterThanOrEquals('$(MMTFVersion)','2.1')))">true</BclHasOobImpls>
   </PropertyGroup>
 
+  <!-- We only actually want to take a dependency on the packages when they're necessary -->
   <ItemGroup Condition="!('$(MMTFKind)' == '.NETFramework' and $([MSBuild]::VersionLessThan('$(MMTFVersion)','4.5')))">
-    <PackageReference Include="System.Buffers" Version="4.5.1" /> <!-- ArrayPool<T> -->
-    <PackageReference Include="System.Memory" Version="4.5.5" /> <!-- The entire rest of System.Buffers and System.Memory -->
-    <PackageReference Include="System.ValueTuple" Version="4.5.0" /> <!-- System.ValueTuple`* -->
+    <!-- ArrayPool<T> -->
+    <PackageReference Include="System.Buffers" Version="4.5.1"
+                      Condition="!('$(MMTFKind)' == '.NETStandard' and $([MSBuild]::VersionGreaterThanOrEquals('$(MMTFVersion)','2.1'))) and !('$(MMTFKind)' == '.NETCoreApp')" />
+    <!-- The entire rest of System.Buffers and System.Memory -->
+    <PackageReference Include="System.Memory" Version="4.5.5" Condition="'$(BclHasOobImpls)' == 'false'" />
+    <!-- System.ValueTuple`* -->
+    <PackageReference Include="System.ValueTuple" Version="4.5.0"
+                      Condition="!('$(MMTFKind)' == '.NETStandard' and $([MSBuild]::VersionGreaterThanOrEquals('$(MMTFVersion)','2.0')))
+                      and !('$(MMTFKind)' == '.NETFramework' and $([MSBuild]::VersionGreaterThanOrEquals('$(MMTFVersion)','4.7')))
+                      and !('$(MMTFKind)' == '.NETCoreApp')"/>
   </ItemGroup>
 
-  <ItemGroup Condition="!('$(MMTFKind)' == '.NETFramework' and $([MSBuild]::VersionLessThan('$(MMTFVersion)','4.6.1')))">
+  <ItemGroup Condition="!('$(MMTFKind)' == '.NETFramework' and $([MSBuild]::VersionLessThan('$(MMTFVersion)','4.6.1'))) and '$(BclHasOobImpls)' == 'false'">
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" /> <!-- System.HashCode -->
   </ItemGroup>
 
 </Project>
+
