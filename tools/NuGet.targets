@@ -40,9 +40,6 @@
 
   <Choose>
     <When Condition="'$(MMIncludeTFMChecks)' == 'true'">
-      <PropertyGroup>
-        <GetPackageContentsDependsOn>$(GetPackageContentsDependsOn);_EmitCheckTargetRuntimeFiles</GetPackageContentsDependsOn>
-      </PropertyGroup>
       <ItemGroup>
         <PackageFile Include="$(MSBuildThisFileDirectory)MonoMod.CheckTargetRuntime.targets"
                      PackagePath="buildTransitive/MonoMod.CheckTargetRuntime.targets" />
@@ -50,7 +47,8 @@
     </When>
   </Choose>
 
-  <Target Name="_EmitCheckTargetRuntimeFiles"
+  <Target Name="_EmitCheckTargetRuntimeFiles" BeforeTargets="GetPackageContents"
+          Condition="'$(MMIncludeTFMChecks)' == 'true' and ('$(TargetFramework)' == '' or '$(TargetFrameworks)' == '')"
           Inputs="$(MSBuildProjectFile);$(MSBuildThisFile);$(MSBuildThisFileDirectory)CheckTargetRuntimeTemplate.targets"
           Outputs="$(IntermediateOutputPath)CheckTargetRuntime.targets">
     <ReadLinesFromFile File="$(MSBuildThisFileDirectory)CheckTargetRuntimeTemplate.targets">
@@ -70,8 +68,8 @@
 
     <ItemGroup>
       <FileWrites Include="$(IntermediateOutputPath)CheckTargetRuntime.targets" />
-      <PackageFile Include="$(IntermediateOutputPath)CheckTargetRuntime.targets"
-                   PackagePath="buildTransitive/$(PackageId).targets" />
+      <_PackageContent Include="$(IntermediateOutputPath)CheckTargetRuntime.targets"
+                       PackagePath="buildTransitive/$(PackageId).targets" />
     </ItemGroup>
     
   </Target>
