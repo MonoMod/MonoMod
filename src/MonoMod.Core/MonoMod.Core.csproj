@@ -12,8 +12,8 @@
     </Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
-    <VersionPrefix>1.0.1</VersionPrefix>
-    <PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion>
+    <VersionPrefix>1.1.0</VersionPrefix>
+    <PackageValidationBaselineVersion>1.0.1</PackageValidationBaselineVersion>
 
     <MMIncludeTFMChecks>true</MMIncludeTFMChecks>
 
