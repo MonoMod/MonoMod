@@ -9,15 +9,12 @@ namespace MonoMod.Utils {
     public partial class DynDll {
         private static readonly BackendImpl Backend = InitBackend();
 
-        private static BackendImpl InitBackend() {
 #if NETCOREAPP3_0_OR_GREATER
+        private static NativeLibraryBackend InitBackend() {
             return new NativeLibraryBackend();
-#else
-            return CreateCrossplatBackend();
-#endif
         }
-
-        private static BackendImpl CreateCrossplatBackend() {
+#else
+        private static BackendImpl InitBackend() {
             var os = PlatformDetection.OS;
             if (os.Is(OSKind.Windows)) {
                 return new WindowsBackend();
@@ -29,6 +26,7 @@ namespace MonoMod.Utils {
                 return new UnknownPosixBackend();
             }
         }
+#endif
 
         private abstract class BackendImpl {
             protected BackendImpl() { }
