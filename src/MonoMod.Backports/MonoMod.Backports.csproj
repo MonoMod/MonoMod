@@ -45,9 +45,11 @@
       and !('$(MMTFKind)' == '.NETFramework' and $([MSBuild]::VersionGreaterThanOrEquals('$(MMTFVersion)','4.7')))&#xA;                      and !('$(MMTFKind)' == '.NETCoreApp')" />
   </ItemGroup>
 
+  <!-- For some unknown reason, MS.BCL.HashCode causes compilation issues on older runtimes...
   <ItemGroup Condition="!('$(MMTFKind)' == '.NETFramework' and $([MSBuild]::VersionLessThan('$(MMTFVersion)','4.6.1'))) and '$(BclHasOobImpls)' == 'false'">
-    <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" /> <!-- System.HashCode -->
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" /> <!- System.HashCode ->
   </ItemGroup>
+  -->
 
 </Project>
 

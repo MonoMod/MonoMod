@@ -56,6 +56,18 @@
     <Right>ref/net452/MonoMod.Backports.dll</Right>
   </Suppression>
   <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:System.HashCode.AddBytes(System.ReadOnlySpan{System.Byte})</Target>
+    <Left>ref/netstandard2.0/MonoMod.Backports.dll</Left>
+    <Right>ref/netcoreapp2.1/MonoMod.Backports.dll</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:System.HashCode.AddBytes(System.ReadOnlySpan{System.Byte})</Target>
+    <Left>ref/netstandard2.0/MonoMod.Backports.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Backports.dll</Right>
+  </Suppression>
+  <Suppression>
     <DiagnosticId>CP0008</DiagnosticId>
     <Target>T:System.Runtime.CompilerServices.TupleElementNamesAttribute</Target>
     <Left>ref/net35/MonoMod.Backports.dll</Left>
