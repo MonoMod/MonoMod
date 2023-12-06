@@ -12,13 +12,14 @@
     
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     
     <ImplicitUsings>false</ImplicitUsings>
     
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisMode>All</AnalysisMode>
-    <AnalysisLevel>7.0</AnalysisLevel>
+    <AnalysisLevel>8.0</AnalysisLevel>
     
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
