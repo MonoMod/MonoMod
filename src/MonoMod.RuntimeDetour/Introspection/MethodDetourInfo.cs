@@ -81,7 +81,7 @@ namespace MonoMod.RuntimeDetour {
 
         internal DetourInfo GetDetourInfo(DetourManager.SingleManagedDetourState node) {
             var existingInfo = node.DetourInfo;
-            if (existingInfo is null || existingInfo.Method!= this) {
+            if (existingInfo is null || existingInfo.Method != this) {
                 return node.DetourInfo = new(this, node);
             }
 
@@ -90,7 +90,7 @@ namespace MonoMod.RuntimeDetour {
 
         internal ILHookInfo GetILHookInfo(DetourManager.SingleILHookState entry) {
             var existingInfo = entry.HookInfo;
-            if (existingInfo is null || existingInfo.Method!= this) {
+            if (existingInfo is null || existingInfo.Method != this) {
                 return entry.HookInfo = new(this, entry);
             }
 

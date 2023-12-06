@@ -179,7 +179,7 @@ namespace MonoMod.RuntimeDetour {
                 ListHead = dummy.Next;
             }
 
-            private void InsertListNode(ref DepListNode<TNode> nextHolder, DepGraphNode<TNode> node) {
+            private static void InsertListNode(ref DepListNode<TNode> nextHolder, DepGraphNode<TNode> node) {
                 if (node.Visiting) {
                     throw new InvalidOperationException("Cycle detected");
                 }

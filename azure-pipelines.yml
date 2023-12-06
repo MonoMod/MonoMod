@@ -104,7 +104,7 @@ steps:
   displayName: 'dotnet: Build'
   inputs:
     command: 'build'
-    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -p:VersionSuffix="daily.$(Build.BuildNumber)"'
+    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -p:VersionSuffix="daily.$(Build.BuildNumber)" -p:ContinuousIntegrationBuild=true'
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'
@@ -137,7 +137,7 @@ steps:
     #command: 'pack'
     command: 'custom' # if you use command: pack, then you *have* to set packagesToPack, despite not providing it doing the right thing
     custom: 'pack'
-    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -p:VersionSuffix="daily.$(Build.BuildNumber)"'
+    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -p:VersionSuffix="daily.$(Build.BuildNumber)" -p:ContinuousIntegrationBuild=true'
     nobuild: true
     configuration: '$(buildConfiguration)'
     versioningScheme: 'byBuildNumber'

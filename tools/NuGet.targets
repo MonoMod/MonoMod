@@ -37,6 +37,57 @@
       </ItemGroup>
     </When>
   </Choose>
+
+  <Choose>
+    <When Condition="'$(MMIncludeTFMChecks)' == 'true'">
+      <ItemGroup>
+        <PackageFile Include="$(MSBuildThisFileDirectory)MonoMod.CheckTargetRuntime.targets"
+                     PackagePath="buildTransitive/MonoMod.CheckTargetRuntime.targets" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <Target Name="_EmitCheckTargetRuntimeFiles" BeforeTargets="GetPackageContents"
+          Condition="'$(MMIncludeTFMChecks)' == 'true' and ('$(TargetFramework)' == '' or '$(TargetFrameworks)' == '')"
+          Inputs="$(MSBuildProjectFile);$(MSBuildThisFile);$(MSBuildThisFileDirectory)CheckTargetRuntimeTemplate.targets"
+          Outputs="$(IntermediateOutputPath)CheckTargetRuntime.targets">
+    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)CheckTargetRuntimeTemplate.targets">
+      <Output TaskParameter="Lines" ItemName="_CheckTargetRuntimeTemplate" />
+    </ReadLinesFromFile>
+
+    <ItemGroup>
+      <_CheckTargetRuntimeTemplate>
+        <Filled>$([System.String]::Copy('%(Identity)').Replace('[[PACKAGEID]]','$(PackageId)'))</Filled>
+      </_CheckTargetRuntimeTemplate>
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(IntermediateOutputPath)CheckTargetRuntime.targets"
+                      Lines="@(_CheckTargetRuntimeTemplate->'%(Filled)')"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)CheckTargetRuntime.targets" />
+      <_PackageContent Include="$(IntermediateOutputPath)CheckTargetRuntime.targets"
+                       PackagePath="buildTransitive/$(PackageId).targets" />
+    </ItemGroup>
+    
+  </Target>
+
+
+  <Choose>
+    <When Condition="'$(MMIncludeTFMChecks)' == 'true'">
+      <PropertyGroup>
+        <InferPackageContentsDependsOn>AddRefAssemblyToPackage;$(InferPackageContentsDependsOn)</InferPackageContentsDependsOn>
+      </PropertyGroup>
+    </When>
+  </Choose>
+  
+  <Target Name="AddRefAssemblyToPackage" BeforeTargets="InferPackageContents;_CollectInferenceCandidates" Condition="'$(ProduceReferenceAssembly)' == 'true'">
+    <ItemGroup>
+      <None Include="$(TargetRefPath)" Pack="true" PackFolder="ref" FrameworkSpecific="true" />
+    </ItemGroup>
+  </Target>
   
 </Project>
  

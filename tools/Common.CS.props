@@ -12,13 +12,14 @@
     
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     
     <ImplicitUsings>false</ImplicitUsings>
     
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisMode>All</AnalysisMode>
-    <AnalysisLevel>7.0</AnalysisLevel>
+    <AnalysisLevel>8.0</AnalysisLevel>
     
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
@@ -36,10 +37,10 @@
     <NoWarn>$(NoWarn);CA2020</NoWarn> <!-- Starting with .NET 7, conversions with IntPtr don't throw in an unchecked context -->
     <NoWarn>$(NoWarn);CA1303</NoWarn> <!-- Use resource tables for strings passed to Console.WriteLine -->
 
-    <NewCecilVersion>0.11.4</NewCecilVersion>
+    <NewCecilVersion>0.11.5</NewCecilVersion>
     <OldCecilVersion>0.10.4</OldCecilVersion>
     
-    <RoslynVersion>4.8.0-3.final</RoslynVersion>
+    <RoslynVersion>4.8.0</RoslynVersion>
     <MSBuildRequiredVersion>17.8.3</MSBuildRequiredVersion>
   </PropertyGroup>
 
