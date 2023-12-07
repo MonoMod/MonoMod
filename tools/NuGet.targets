@@ -15,8 +15,11 @@
   
     <!-- NuGetizer doesn't seem to play well with this (what with clearing the package cache), so until we fix that always clear it here. -->
     <!-- TODO: figure out how to make this play well with NuGetizer -->
-    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+    <!--<PackageValidationBaselineVersion></PackageValidationBaselineVersion>-->
   </PropertyGroup>
+  
+  <!-- Dummy target to force CleanCachedPackageId to run after package validation -->
+  <Target Name="_RunPackageValidationBeforeClean" BeforeTargets="CleanCachedPackageId" DependsOnTargets="RunPackageValidation" />
 
   <!-- Include the docs in the project listing -->
   <ItemGroup>

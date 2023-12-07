@@ -17,7 +17,21 @@
   <Suppression>
     <DiagnosticId>CP1002</DiagnosticId>
     <Target>System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=null</Target>
+    <Left>left</Left>
+    <Right>lib/net6.0/MonoMod.ILHelpers.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP1002</DiagnosticId>
+    <Target>System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=null</Target>
     <Left>lib/net6.0/MonoMod.ILHelpers.dll</Left>
     <Right>right</Right>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP1002</DiagnosticId>
+    <Target>System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=null</Target>
+    <Left>lib/net6.0/MonoMod.ILHelpers.dll</Left>
+    <Right>right</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
 </Suppressions>
