@@ -7,6 +7,15 @@ namespace MonoMod.Core.Interop {
         public const string LibC = "libc";
 
 
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "read")]
+        public static extern unsafe nint Read(int fd, IntPtr buf, nint count);
+
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "write")]
+        public static extern unsafe nint Write(int fd, IntPtr buf, nint count);
+
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "pipe2")]
+        public static extern unsafe int Pipe2(int* pipefd, PipeFlags flags);
+
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mmap")]
         public static extern unsafe nint Mmap(IntPtr addr, nuint length, Protection prot, MmapFlags flags, int fd, int offset);
 
@@ -29,6 +38,11 @@ namespace MonoMod.Core.Interop {
         public static extern unsafe int* __errno_location();
 
         public static unsafe int Errno => *__errno_location();
+
+        [Flags]
+        public enum PipeFlags : int {
+            CloseOnExec = 0x80000
+        }
 
         [Flags]
         public enum Protection : int {
