@@ -181,7 +181,7 @@ namespace MonoMod.Utils {
                         */
                         // For now, always assume [0...,0...,
                         // Array.CreateInstance only accepts lower bounds anyway.
-                        for (int i = 0; i < at.Rank; i++)
+                        for (var i = 0; i < at.Rank; i++)
                             at.Dimensions[i] = new ArrayDimension(0, null);
                     }
                     return CachedTypes[type] = at;
@@ -219,7 +219,7 @@ namespace MonoMod.Utils {
             return SetCachedType(type, typeRef, importKind);
         }
 
-        private static TypeReference ImportGenericParameter(Type type, IGenericParameterProvider? context) {
+        private static GenericParameter ImportGenericParameter(Type type, IGenericParameterProvider? context) {
             Helpers.ThrowIfArgumentNull(type);
             if (context is MethodReference ctxMethodRef) {
                 var dclMethod = type.DeclaringMethod;
@@ -230,9 +230,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            var dclType = type.DeclaringType;
-            if (dclType == null)
-                throw new InvalidOperationException();
+            var dclType = type.DeclaringType ?? throw new InvalidOperationException();
 
             if (context is TypeReference ctxTypeRef) {
                 while (ctxTypeRef != null) {

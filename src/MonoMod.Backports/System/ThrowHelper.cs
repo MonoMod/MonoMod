@@ -21,6 +21,8 @@ namespace System {
     // 3b. Older JITs will inline the throw itself and move to cold section; but not inline the non-inlinable exception
     //     factory methods - still maintaining advantages 1 & 2
     //
+    [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance",
+        Justification = "We don't call any virtual methods on Exception")]
     internal static partial class ThrowHelper {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void ThrowIfArgumentNull([NotNull] object? obj, ExceptionArgument argument) {
@@ -35,123 +37,123 @@ namespace System {
         }
 
         [DoesNotReturn]
-        internal static void ThrowArgumentNullException(ExceptionArgument argument) { throw CreateArgumentNullException(argument); }
+        internal static void ThrowArgumentNullException(ExceptionArgument argument) => throw CreateArgumentNullException(argument);
         [DoesNotReturn]
-        internal static void ThrowArgumentNullException(string argument, string? message = null) { throw CreateArgumentNullException(argument, message); }
+        internal static void ThrowArgumentNullException(string argument, string? message = null) => throw CreateArgumentNullException(argument, message);
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentNullException(ExceptionArgument argument) { return CreateArgumentNullException(argument.ToString()); }
+        private static Exception CreateArgumentNullException(ExceptionArgument argument) => CreateArgumentNullException(argument.ToString());
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentNullException(string argument, string? message = null) { return new ArgumentNullException(argument, message); }
+        private static Exception CreateArgumentNullException(string argument, string? message = null) => new ArgumentNullException(argument, message);
 
         [DoesNotReturn]
-        internal static void ThrowArrayTypeMismatchException() { throw CreateArrayTypeMismatchException(); }
+        internal static void ThrowArrayTypeMismatchException() => throw CreateArrayTypeMismatchException();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArrayTypeMismatchException() { return new ArrayTypeMismatchException(); }
+        private static Exception CreateArrayTypeMismatchException() => new ArrayTypeMismatchException();
 
         [DoesNotReturn]
-        internal static void ThrowArgumentException_InvalidTypeWithPointersNotSupported(Type type) { throw CreateArgumentException_InvalidTypeWithPointersNotSupported(type); }
+        internal static void ThrowArgumentException_InvalidTypeWithPointersNotSupported(Type type) => throw CreateArgumentException_InvalidTypeWithPointersNotSupported(type);
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentException_InvalidTypeWithPointersNotSupported(Type type) { return new ArgumentException($"Type {type} with managed pointers cannot be used in a Span"); }
+        private static Exception CreateArgumentException_InvalidTypeWithPointersNotSupported(Type type) => new ArgumentException($"Type {type} with managed pointers cannot be used in a Span");
 
         [DoesNotReturn]
-        internal static void ThrowArgumentException_DestinationTooShort() { throw CreateArgumentException_DestinationTooShort(); }
+        internal static void ThrowArgumentException_DestinationTooShort() => throw CreateArgumentException_DestinationTooShort();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentException_DestinationTooShort() { return new ArgumentException("Destination too short"); }
+        private static Exception CreateArgumentException_DestinationTooShort() => new ArgumentException("Destination too short");
 
 
         [DoesNotReturn]
-        internal static void ThrowArgumentException(string message, string? argument = null) { throw CreateArgumentException(message, argument); }
+        internal static void ThrowArgumentException(string message, string? argument = null) => throw CreateArgumentException(message, argument);
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentException(string message, string? argument) { return new ArgumentException(message, argument ?? ""); }
+        private static Exception CreateArgumentException(string message, string? argument) => new ArgumentException(message, argument ?? "");
 
         [DoesNotReturn]
-        internal static void ThrowIndexOutOfRangeException() { throw CreateIndexOutOfRangeException(); }
+        internal static void ThrowIndexOutOfRangeException() => throw CreateIndexOutOfRangeException();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateIndexOutOfRangeException() { return new IndexOutOfRangeException(); }
+        private static Exception CreateIndexOutOfRangeException() => new IndexOutOfRangeException();
 
         [DoesNotReturn]
-        internal static void ThrowArgumentOutOfRangeException() { throw CreateArgumentOutOfRangeException(); }
+        internal static void ThrowArgumentOutOfRangeException() => throw CreateArgumentOutOfRangeException();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentOutOfRangeException() { return new ArgumentOutOfRangeException(); }
+        private static Exception CreateArgumentOutOfRangeException() => new ArgumentOutOfRangeException();
 
         [DoesNotReturn]
-        internal static void ThrowArgumentOutOfRangeException(ExceptionArgument argument) { throw CreateArgumentOutOfRangeException(argument); }
+        internal static void ThrowArgumentOutOfRangeException(ExceptionArgument argument) => throw CreateArgumentOutOfRangeException(argument);
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentOutOfRangeException(ExceptionArgument argument) { return new ArgumentOutOfRangeException(argument.ToString()); }
+        private static Exception CreateArgumentOutOfRangeException(ExceptionArgument argument) => new ArgumentOutOfRangeException(argument.ToString());
 
         [DoesNotReturn]
-        internal static void ThrowArgumentOutOfRangeException_PrecisionTooLarge() { throw CreateArgumentOutOfRangeException_PrecisionTooLarge(); }
+        internal static void ThrowArgumentOutOfRangeException_PrecisionTooLarge() => throw CreateArgumentOutOfRangeException_PrecisionTooLarge();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentOutOfRangeException_PrecisionTooLarge() { return new ArgumentOutOfRangeException("precision", $"Precision too large (max: {StandardFormat.MaxPrecision})"); }
+        private static Exception CreateArgumentOutOfRangeException_PrecisionTooLarge() => new ArgumentOutOfRangeException("precision", $"Precision too large (max: {StandardFormat.MaxPrecision})");
 
         [DoesNotReturn]
-        internal static void ThrowArgumentOutOfRangeException_SymbolDoesNotFit() { throw CreateArgumentOutOfRangeException_SymbolDoesNotFit(); }
+        internal static void ThrowArgumentOutOfRangeException_SymbolDoesNotFit() => throw CreateArgumentOutOfRangeException_SymbolDoesNotFit();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentOutOfRangeException_SymbolDoesNotFit() { return new ArgumentOutOfRangeException("symbol", "Bad format specifier"); }
+        private static Exception CreateArgumentOutOfRangeException_SymbolDoesNotFit() => new ArgumentOutOfRangeException("symbol", "Bad format specifier");
 
         [DoesNotReturn]
-        internal static void ThrowInvalidOperationException() { throw CreateInvalidOperationException(); }
+        internal static void ThrowInvalidOperationException() => throw CreateInvalidOperationException();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateInvalidOperationException() { return new InvalidOperationException(); }
+        private static Exception CreateInvalidOperationException() => new InvalidOperationException();
 
         [DoesNotReturn]
-        internal static void ThrowInvalidOperationException_OutstandingReferences() { throw CreateInvalidOperationException_OutstandingReferences(); }
+        internal static void ThrowInvalidOperationException_OutstandingReferences() => throw CreateInvalidOperationException_OutstandingReferences();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateInvalidOperationException_OutstandingReferences() { return new InvalidOperationException("Outstanding references"); }
+        private static Exception CreateInvalidOperationException_OutstandingReferences() => new InvalidOperationException("Outstanding references");
 
         [DoesNotReturn]
-        internal static void ThrowInvalidOperationException_UnexpectedSegmentType() { throw CreateInvalidOperationException_UnexpectedSegmentType(); }
+        internal static void ThrowInvalidOperationException_UnexpectedSegmentType() => throw CreateInvalidOperationException_UnexpectedSegmentType();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateInvalidOperationException_UnexpectedSegmentType() { return new InvalidOperationException("Unexpected segment type"); }
+        private static Exception CreateInvalidOperationException_UnexpectedSegmentType() => new InvalidOperationException("Unexpected segment type");
 
         [DoesNotReturn]
-        internal static void ThrowInvalidOperationException_EndPositionNotReached() { throw CreateInvalidOperationException_EndPositionNotReached(); }
+        internal static void ThrowInvalidOperationException_EndPositionNotReached() => throw CreateInvalidOperationException_EndPositionNotReached();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateInvalidOperationException_EndPositionNotReached() { return new InvalidOperationException("End position not reached"); }
+        private static Exception CreateInvalidOperationException_EndPositionNotReached() => new InvalidOperationException("End position not reached");
 
         [DoesNotReturn]
-        internal static void ThrowArgumentOutOfRangeException_PositionOutOfRange() { throw CreateArgumentOutOfRangeException_PositionOutOfRange(); }
+        internal static void ThrowArgumentOutOfRangeException_PositionOutOfRange() => throw CreateArgumentOutOfRangeException_PositionOutOfRange();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentOutOfRangeException_PositionOutOfRange() { return new ArgumentOutOfRangeException("position"); }
+        private static Exception CreateArgumentOutOfRangeException_PositionOutOfRange() => new ArgumentOutOfRangeException("position");
 
         [DoesNotReturn]
-        internal static void ThrowArgumentOutOfRangeException_OffsetOutOfRange() { throw CreateArgumentOutOfRangeException_OffsetOutOfRange(); }
+        internal static void ThrowArgumentOutOfRangeException_OffsetOutOfRange() => throw CreateArgumentOutOfRangeException_OffsetOutOfRange();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentOutOfRangeException_OffsetOutOfRange() { return new ArgumentOutOfRangeException(nameof(ExceptionArgument.offset)); }
+        private static Exception CreateArgumentOutOfRangeException_OffsetOutOfRange() => new ArgumentOutOfRangeException(nameof(ExceptionArgument.offset));
 
         [DoesNotReturn]
-        internal static void ThrowObjectDisposedException_ArrayMemoryPoolBuffer() { throw CreateObjectDisposedException_ArrayMemoryPoolBuffer(); }
+        internal static void ThrowObjectDisposedException_ArrayMemoryPoolBuffer() => throw CreateObjectDisposedException_ArrayMemoryPoolBuffer();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateObjectDisposedException_ArrayMemoryPoolBuffer() { return new ObjectDisposedException("ArrayMemoryPoolBuffer"); }
+        private static Exception CreateObjectDisposedException_ArrayMemoryPoolBuffer() => new ObjectDisposedException("ArrayMemoryPoolBuffer");
 
         [DoesNotReturn]
-        internal static void ThrowFormatException_BadFormatSpecifier() { throw CreateFormatException_BadFormatSpecifier(); }
+        internal static void ThrowFormatException_BadFormatSpecifier() => throw CreateFormatException_BadFormatSpecifier();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateFormatException_BadFormatSpecifier() { return new FormatException("Bad format specifier"); }
+        private static Exception CreateFormatException_BadFormatSpecifier() => new FormatException("Bad format specifier");
 
         [DoesNotReturn]
-        internal static void ThrowArgumentException_OverlapAlignmentMismatch() { throw CreateArgumentException_OverlapAlignmentMismatch(); }
+        internal static void ThrowArgumentException_OverlapAlignmentMismatch() => throw CreateArgumentException_OverlapAlignmentMismatch();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateArgumentException_OverlapAlignmentMismatch() { return new ArgumentException("Overlap alignment mismatch"); }
+        private static Exception CreateArgumentException_OverlapAlignmentMismatch() => new ArgumentException("Overlap alignment mismatch");
 
         [DoesNotReturn]
-        internal static void ThrowNotSupportedException(string? msg = null) { throw CreateThrowNotSupportedException(msg); }
+        internal static void ThrowNotSupportedException(string? msg = null) => throw CreateThrowNotSupportedException(msg);
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateThrowNotSupportedException(string? msg) { return new NotSupportedException(); }
+        private static Exception CreateThrowNotSupportedException(string? msg) => new NotSupportedException();
 
         [DoesNotReturn]
-        internal static void ThrowKeyNullException() { ThrowArgumentNullException(ExceptionArgument.key); }
+        internal static void ThrowKeyNullException() => ThrowArgumentNullException(ExceptionArgument.key);
 
         [DoesNotReturn]
-        internal static void ThrowValueNullException() { throw CreateThrowValueNullException(); }
+        internal static void ThrowValueNullException() => throw CreateThrowValueNullException();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateThrowValueNullException() { return new ArgumentException("Value is null"); }
+        private static Exception CreateThrowValueNullException() => new ArgumentException("Value is null");
 
         [DoesNotReturn]
-        internal static void ThrowOutOfMemoryException() { throw CreateOutOfMemoryException(); }
+        internal static void ThrowOutOfMemoryException() => throw CreateOutOfMemoryException();
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Exception CreateOutOfMemoryException() { return new OutOfMemoryException(); }
+        private static Exception CreateOutOfMemoryException() => new OutOfMemoryException();
 
         //
         // Enable use of ThrowHelper from TryFormat() routines without introducing dozens of non-code-coveraged "bytesWritten = 0; return false" boilerplate.
@@ -206,9 +208,7 @@ namespace System {
         }
 
         [DoesNotReturn]
-        internal static void ThrowArgumentException_TupleIncorrectType(object other) {
-            throw new ArgumentException($"Value tuple of incorrect type (found {other.GetType()})", nameof(other));
-        }
+        internal static void ThrowArgumentException_TupleIncorrectType(object other) => throw new ArgumentException($"Value tuple of incorrect type (found {other.GetType()})", nameof(other));
 
         //
         // ReadOnlySequence Slice validation Throws coalesced to enable inlining of the Slice

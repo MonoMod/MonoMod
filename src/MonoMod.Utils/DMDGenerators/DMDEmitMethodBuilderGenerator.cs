@@ -53,13 +53,12 @@ namespace MonoMod.Utils {
                     dumpDir
                 );
 
-                ab.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_UnverifiableCodeAttribute, new object[] {
-                }));
+                ab.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_UnverifiableCodeAttribute, []));
 
                 if (dmd.Debug) {
-                    ab.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_DebuggableAttribute, new object[] {
+                    ab.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_DebuggableAttribute, [
                         DebuggableAttribute.DebuggingModes.DisableOptimizations | DebuggableAttribute.DebuggingModes.Default
-                    }));
+                    ]));
                 }
 
                 // Note: Debugging can fail on mono if Mono.CompilerServices.SymbolWriter.dll cannot be found,

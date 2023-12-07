@@ -2,6 +2,7 @@
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
+    [Serializable]
     public class RelinkTargetNotFoundException : RelinkFailedException {
 
         public new const string DefaultMessage = "MonoMod relinker failed finding";

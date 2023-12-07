@@ -61,6 +61,10 @@ namespace MonoMod.Cil {
              && CastParamsToRef(l).SequenceEqual(CastParamsToRef(r), ParameterRefEqualityComparer.Instance)
             );
 
+#if !NET35
+        [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance",
+            Justification = "This signature must be uniform across TFMs, and the lowest common denominator is IEnumerable")]
+#endif
         private static IEnumerable<ParameterReference> CastParamsToRef(IMethodSignature sig) {
 #if NET35
             return sig.Parameters.Cast<ParameterReference>();

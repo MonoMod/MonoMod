@@ -246,12 +246,14 @@ namespace MonoMod.Logs {
             instance.Write(source, DateTime.UtcNow, level, ref message);
         }
         #endregion
-        
+
+
+        private static readonly char[] listEnvSeparator = [' ', ';', ','];
         private static string[]? GetListEnvVar(string text) {
             var str = text.Trim();
             if (string.IsNullOrEmpty(str))
                 return null;
-            var list = str.Split(new[] { ' ', ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+            var list = str.Split(listEnvSeparator, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < list.Length; i++)
                 list[i] = list[i].Trim();
             return list;
@@ -527,6 +529,8 @@ namespace MonoMod.Logs {
 
         public static IDisposable Subscribe(LogLevelFilter filter, OnLogMessage value)
             => Instance.SubscribeCore(filter, value);
+        [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance",
+            Justification = "The return type is intended to be opaque, and Dispose() is not expected to be in a hot path.")]
         private IDisposable SubscribeCore(LogLevelFilter filter, OnLogMessage value) {
             LevelSubscriptions o, n;
             do {
@@ -559,6 +563,8 @@ namespace MonoMod.Logs {
 
         public static IDisposable Subscribe(LogLevelFilter filter, OnLogMessageDetailed value)
             => Instance.SubscribeCore(filter, value);
+        [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance",
+            Justification = "The return type is intended to be opaque, and Dispose() is not expected to be in a hot path.")]
         private IDisposable SubscribeCore(LogLevelFilter filter, OnLogMessageDetailed value) {
             LevelSubscriptions o, n;
             do {
@@ -569,7 +575,7 @@ namespace MonoMod.Logs {
             return new LogSubscriptionDetailed(this, value, filter);
         }
 
-        private sealed class LogSubscriptionDetailed: IDisposable {
+        private sealed class LogSubscriptionDetailed : IDisposable {
             private readonly DebugLog log;
             private readonly OnLogMessageDetailed del;
             private readonly LogLevelFilter filter;
@@ -590,6 +596,7 @@ namespace MonoMod.Logs {
         }
 
         private static readonly ConcurrentDictionary<OnLogMessage, IDisposable> simpleRegDict = new();
+
         [SuppressMessage("Design", "CA1030:Use events where appropriate", Justification = "I am. I'm not sure why this warning is being issued.")]
         public static event OnLogMessage OnLog {
             add {

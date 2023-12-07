@@ -118,7 +118,7 @@ namespace MonoMod.Utils {
 
             Instruction ResolveInstrOff(int off) {
                 // Can't check cloned instruction offsets directly, as those can change for some reason
-                for (int i = 0; i < bo.Instructions.Count; i++)
+                for (var i = 0; i < bo.Instructions.Count; i++)
                     if (bo.Instructions[i].Offset == off)
                         return bc.Instructions[i];
                 throw new ArgumentException($"Invalid instruction offset {off}");
@@ -126,7 +126,7 @@ namespace MonoMod.Utils {
 
             m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations.Select(o => {
                 if (o is AsyncMethodBodyDebugInformation ao) {
-                    AsyncMethodBodyDebugInformation c = new AsyncMethodBodyDebugInformation();
+                    var c = new AsyncMethodBodyDebugInformation();
                     if (ao.CatchHandler.Offset >= 0)
                         c.CatchHandler = ao.CatchHandler.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(ao.CatchHandler.Offset));
                     c.Yields.AddRange(ao.Yields.Select(off => off.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(off.Offset))));
@@ -134,7 +134,7 @@ namespace MonoMod.Utils {
                     c.ResumeMethods.AddRange(ao.ResumeMethods);
                     return c;
                 } else if (o is StateMachineScopeDebugInformation so) {
-                    StateMachineScopeDebugInformation c = new StateMachineScopeDebugInformation();
+                    var c = new StateMachineScopeDebugInformation();
                     c.Scopes.AddRange(so.Scopes.Select(s => new StateMachineScope(ResolveInstrOff(s.Start.Offset), s.End.IsEndOfMethod ? null : ResolveInstrOff(s.End.Offset))));
                     return c;
                 } else
@@ -292,9 +292,8 @@ namespace MonoMod.Utils {
             }
 
             if (type.IsGenericParameter && context != null) {
-                var genParam = context.ResolveGenericParameter((GenericParameter) type);
-                if (genParam == null)
-                    throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
+                var genParam = context.ResolveGenericParameter((GenericParameter) type)
+                    ?? throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
                 for (var i = 0; i < genParam.Constraints.Count; i++)
                     if (!genParam.Constraints[i].GetConstraintType().IsGenericInstance) // That is somehow possible and causes a stack overflow.
                         genParam.Constraints[i] = genParam.Constraints[i].Relink(relinker, context);

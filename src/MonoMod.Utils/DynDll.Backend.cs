@@ -7,16 +7,12 @@ using System.Runtime.InteropServices;
 
 namespace MonoMod.Utils {
     public partial class DynDll {
-        private static readonly BackendImpl Backend = InitBackend();
 
-        private static BackendImpl InitBackend() {
 #if NETCOREAPP3_0_OR_GREATER
-            return new NativeLibraryBackend();
+        private static readonly NativeLibraryBackend Backend = new();
 #else
-            return CreateCrossplatBackend();
+        private static readonly BackendImpl Backend = CreateCrossplatBackend();
 #endif
-        }
-
         private static BackendImpl CreateCrossplatBackend() {
             var os = PlatformDetection.OS;
             if (os.Is(OSKind.Windows)) {
@@ -135,7 +131,7 @@ namespace MonoMod.Utils {
         }
 #endif
 
-            private sealed class WindowsBackend : BackendImpl {
+        private sealed class WindowsBackend : BackendImpl {
             protected override void CheckAndThrowError() {
                 var lastError = Interop.Windows.GetLastError();
                 if (lastError != 0)

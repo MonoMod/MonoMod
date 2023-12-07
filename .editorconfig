@@ -112,3 +112,13 @@ dotnet_diagnostic.CA1032.severity = suggestion
 
 # CA1003: Use generic event handler instances
 dotnet_diagnostic.CA1003.severity = silent
+
+# All of the throw helpers only apply to new TFMs, so there's not a good way to use them.
+# CA1513: Use ObjectDisposedException throw helper
+dotnet_diagnostic.CA1513.severity = none
+# CA1512: Use ArgumentOutOfRangeException throw helper
+dotnet_diagnostic.CA1512.severity = none
+
+# CS9191: The 'ref' modifier for an argument corresponding to 'in' parameter is equivalent to 'in'. Consider using 'in' instead.
+# Some BCL versions use 'in', some use 'ref', even for the same APIs. They're source-compatible, so we don't really care.
+dotnet_diagnostic.CS9191.severity = suggestion
