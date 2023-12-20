@@ -129,7 +129,9 @@ namespace MonoMod.UnitTest {
             using var pin = triple.PinMethodIfNeeded(stacker);
             StackTrace stack = ((Func<StackTrace>) stacker.CreateDelegate(typeof(Func<StackTrace>)))();
             MethodBase stacked = stack.GetFrames().First(f => f.GetMethod()?.IsDynamicMethod() ?? false).GetMethod();
+#if !NET8_0_OR_GREATER // .NET 8 removes RTDynamicMethod, as it was a leftover from .NET Framework CAS: https://github.com/dotnet/runtime/pull/79427
             Assert.NotEqual(stacker, stacked);
+#endif
             Assert.Equal(stacker, triple.GetIdentifiable(stacked));
             Assert.Equal(triple.GetNativeMethodBody(stacker), triple.GetNativeMethodBody(stacked));
             // This will always be true on .NET and only be true on Mono if the method is still pinned.

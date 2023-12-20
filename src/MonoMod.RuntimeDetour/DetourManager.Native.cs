@@ -53,10 +53,8 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        internal class NativeDetourSyncInfo : DetourSyncInfo {
-
+        internal sealed class NativeDetourSyncInfo : DetourSyncInfo {
             public Delegate? FirstDelegate;
-
         }
 
         private static readonly FieldInfo NativeDetourSyncInfo_FirstDelegate = typeof(NativeDetourSyncInfo).GetField(nameof(NativeDetourSyncInfo.FirstDelegate))!;

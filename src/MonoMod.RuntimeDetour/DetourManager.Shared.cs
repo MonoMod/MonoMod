@@ -57,7 +57,8 @@ namespace MonoMod.RuntimeDetour {
                 for (var i = 0; i < list.Count; i++) {
                     var cur = list[i];
                     if (cur.Config.Priority is { } cPrio) {
-                        if (nPrio > cPrio) {
+                        // if the current node is the first node with lower or equal priority, insert here
+                        if (nPrio >= cPrio) {
                             insertIdx = i;
                             break;
                         }
@@ -70,6 +71,13 @@ namespace MonoMod.RuntimeDetour {
 
                 if (insertIdx < 0) {
                     insertIdx = list.Count;
+                } else {
+                    // ensure that nodes with higher sub-priority come first
+                    for (; insertIdx < list.Count; insertIdx++) {
+                        var cur = list[insertIdx];
+                        if (cur.Config.Priority != node.Config.Priority || cur.Config.SubPriority <= node.Config.SubPriority)
+                            break;
+                    }
                 }
                 list.Insert(insertIdx, node);
             }
@@ -86,9 +94,9 @@ namespace MonoMod.RuntimeDetour {
                     cur.Visited = false;
 
                     if (insertIdx < 0 && node.Config.Priority is { } nPrio) {
-                        // if the current node is the first node with lower priority, insert here
+                        // if the current node is the first node with lower or equal priority, insert here
                         if (cur.Config.Priority is { } cPrio) {
-                            if (nPrio > cPrio) {
+                            if (nPrio >= cPrio) {
                                 insertIdx = i;
                             }
                         } else {
@@ -131,6 +139,13 @@ namespace MonoMod.RuntimeDetour {
 
                 if (insertIdx < 0) {
                     insertIdx = nodes.Count;
+                } else {
+                    // ensure that nodes with higher sub-priority come first
+                    for (; insertIdx < nodes.Count; insertIdx++) {
+                        var cur = nodes[insertIdx];
+                        if (cur.Config.Priority != node.Config.Priority || cur.Config.SubPriority <= node.Config.SubPriority)
+                            break;
+                    }
                 }
                 nodes.Insert(insertIdx, node);
 
@@ -164,7 +179,7 @@ namespace MonoMod.RuntimeDetour {
                 ListHead = dummy.Next;
             }
 
-            private void InsertListNode(ref DepListNode<TNode> nextHolder, DepGraphNode<TNode> node) {
+            private static void InsertListNode(ref DepListNode<TNode> nextHolder, DepGraphNode<TNode> node) {
                 if (node.Visiting) {
                     throw new InvalidOperationException("Cycle detected");
                 }
@@ -217,7 +232,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread) {
-                int threadCallDepth = DetermineThreadCallDepth();
+                var threadCallDepth = DetermineThreadCallDepth();
                 hasActiveCallsFromThread = threadCallDepth > 0; 
 
                 // Wait for other threads to have returned from the function

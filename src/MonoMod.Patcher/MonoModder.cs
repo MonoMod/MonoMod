@@ -6,10 +6,8 @@ using Mono.Collections.Generic;
 using MonoMod.InlineRT;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using MonoMod.Utils;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
@@ -111,8 +109,8 @@ namespace MonoMod {
         public virtual IAssemblyResolver AssemblyResolver {
             get {
                 if (_assemblyResolver == null) {
-                    DefaultAssemblyResolver assemblyResolver = new DefaultAssemblyResolver();
-                    foreach (string dir in DependencyDirs)
+                    var assemblyResolver = new DefaultAssemblyResolver();
+                    foreach (var dir in DependencyDirs)
                         assemblyResolver.AddSearchDirectory(dir);
                     _assemblyResolver = assemblyResolver;
                 }
@@ -139,8 +137,8 @@ namespace MonoMod {
         public virtual WriterParameters WriterParameters {
             get {
                 if (_writerParameters == null) {
-                    bool pdb = DebugSymbolOutputFormat == DebugSymbolFormat.PDB;
-                    bool mdb = DebugSymbolOutputFormat == DebugSymbolFormat.MDB;
+                    var pdb = DebugSymbolOutputFormat == DebugSymbolFormat.PDB;
+                    var mdb = DebugSymbolOutputFormat == DebugSymbolFormat.MDB;
                     if (DebugSymbolOutputFormat == DebugSymbolFormat.Auto) {
                         if (PlatformDetection.OS.Is(OSKind.Windows))
                             pdb = true;
@@ -182,7 +180,7 @@ namespace MonoMod {
 
                 if (PlatformDetection.Runtime is not RuntimeKind.Mono) {
                     // C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Xml
-                    string path = Environment.GetEnvironmentVariable("windir");
+                    var path = Environment.GetEnvironmentVariable("windir");
                     if (string.IsNullOrEmpty(path))
                         return _GACPaths = _GACPathsNone;
 
@@ -195,8 +193,8 @@ namespace MonoMod {
                     };
 
                 } else {
-                    List<string> paths = new List<string>();
-                    string gac = Path.Combine(
+                    var paths = new List<string>();
+                    var gac = Path.Combine(
                         Path.GetDirectoryName(
                             Path.GetDirectoryName(typeof(object).Module.FullyQualifiedName)
                         ),
@@ -205,14 +203,14 @@ namespace MonoMod {
                     if (Directory.Exists(gac))
                         paths.Add(gac);
 
-                    string prefixesEnv = Environment.GetEnvironmentVariable("MONO_GAC_PREFIX");
+                    var prefixesEnv = Environment.GetEnvironmentVariable("MONO_GAC_PREFIX");
                     if (!string.IsNullOrEmpty(prefixesEnv)) {
-                        string[] prefixes = prefixesEnv.Split(Path.PathSeparator);
-                        foreach (string prefix in prefixes) {
+                        var prefixes = prefixesEnv.Split(Path.PathSeparator);
+                        foreach (var prefix in prefixes) {
                             if (string.IsNullOrEmpty(prefix))
                                 continue;
 
-                            string path = prefix;
+                            var path = prefix;
                             path = Path.Combine(path, "lib");
                             path = Path.Combine(path, "mono");
                             path = Path.Combine(path, "gac");
@@ -239,9 +237,9 @@ namespace MonoMod {
 
             PostProcessors += DefaultPostProcessor;
 
-            string dependencyDirsEnv = Environment.GetEnvironmentVariable("MONOMOD_DEPDIRS");
+            var dependencyDirsEnv = Environment.GetEnvironmentVariable("MONOMOD_DEPDIRS");
             if (!string.IsNullOrEmpty(dependencyDirsEnv)) {
-                foreach (string dir in dependencyDirsEnv.Split(Path.PathSeparator).Select(dir => dir.Trim())) {
+                foreach (var dir in dependencyDirsEnv.Split(Path.PathSeparator).Select(dir => dir.Trim())) {
                     (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(dir);
                     DependencyDirs.Add(dir);
                 }
@@ -254,7 +252,7 @@ namespace MonoMod {
             MissingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0";
             RemovePatchReferences = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_REMOVE_PATCH") != "0";
 
-            string envDebugSymbolFormat = Environment.GetEnvironmentVariable("MONOMOD_DEBUG_FORMAT");
+            var envDebugSymbolFormat = Environment.GetEnvironmentVariable("MONOMOD_DEBUG_FORMAT");
             if (envDebugSymbolFormat != null) {
                 envDebugSymbolFormat = envDebugSymbolFormat.ToLower(CultureInfo.InvariantCulture);
                 if (envDebugSymbolFormat == "pdb")
@@ -263,7 +261,7 @@ namespace MonoMod {
                     DebugSymbolOutputFormat = DebugSymbolFormat.MDB;
             }
 
-            string upgradeMSCORLIBStr = Environment.GetEnvironmentVariable("MONOMOD_MSCORLIB_UPGRADE");
+            var upgradeMSCORLIBStr = Environment.GetEnvironmentVariable("MONOMOD_MSCORLIB_UPGRADE");
             UpgradeMSCORLIB = string.IsNullOrEmpty(upgradeMSCORLIBStr) ? (bool?) null : (upgradeMSCORLIBStr != "0");
 
             GACEnabled =
@@ -376,9 +374,9 @@ namespace MonoMod {
                     Module = _ReadModule(InputPath, GenReaderParameters(true, InputPath));
                 }
 
-                string modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
+                var modsEnv = Environment.GetEnvironmentVariable("MONOMOD_MODS");
                 if (!string.IsNullOrEmpty(modsEnv)) {
-                    foreach (string path in modsEnv.Split(Path.PathSeparator).Select(path => path.Trim())) {
+                    foreach (var path in modsEnv.Split(Path.PathSeparator).Select(path => path.Trim())) {
                         ReadMod(path);
                     }
                 }
@@ -428,11 +426,11 @@ namespace MonoMod {
             }
 
             // Used to fix Mono.Cecil.pdb being loaded instead of Mono.Cecil.Pdb.dll
-            string ext = Path.GetExtension(name).ToLower(CultureInfo.InvariantCulture);
-            bool nameRisky = ext == "pdb" || ext == "mdb";
+            var ext = Path.GetExtension(name).ToLower(CultureInfo.InvariantCulture);
+            var nameRisky = ext == "pdb" || ext == "mdb";
 
             string path = null;
-            foreach (string depDir in DependencyDirs) {
+            foreach (var depDir in DependencyDirs) {
                 path = Path.Combine(depDir, name + ".dll");
                 if (!File.Exists(path))
                     path = Path.Combine(depDir, name + ".exe");
@@ -457,22 +455,22 @@ namespace MonoMod {
 
             // Manually check in GAC
             if (path == null) {
-                foreach (string gacpath in GACPaths) {
+                foreach (var gacpath in GACPaths) {
                     path = Path.Combine(gacpath, name);
 
                     if (Directory.Exists(path)) {
-                        string[] versions = Directory.GetDirectories(path);
-                        int highest = 0;
-                        int highestIndex = 0;
-                        for (int i = 0; i < versions.Length; i++) {
-                            string versionPath = versions[i];
+                        var versions = Directory.GetDirectories(path);
+                        var highest = 0;
+                        var highestIndex = 0;
+                        for (var i = 0; i < versions.Length; i++) {
+                            var versionPath = versions[i];
                             if (versionPath.StartsWith(path, StringComparison.Ordinal))
                                 versionPath = versionPath.Substring(path.Length + 1);
                             Match versionMatch = Regex.Match(versionPath, "\\d+");
                             if (!versionMatch.Success) {
                                 continue;
                             }
-                            int version = int.Parse(versionMatch.Value, CultureInfo.InvariantCulture);
+                            var version = int.Parse(versionMatch.Value, CultureInfo.InvariantCulture);
                             if (version > highest) {
                                 highest = version;
                                 highestIndex = i;
@@ -550,7 +548,7 @@ namespace MonoMod {
 
         public virtual ReaderParameters GenReaderParameters(bool mainModule, string path = null) {
             ReaderParameters _rp = ReaderParameters;
-            ReaderParameters rp = new ReaderParameters(_rp.ReadingMode);
+            var rp = new ReaderParameters(_rp.ReadingMode);
             rp.AssemblyResolver = _rp.AssemblyResolver;
             rp.MetadataResolver = _rp.MetadataResolver;
 #if !CECIL0_9
@@ -574,13 +572,13 @@ namespace MonoMod {
         public virtual void ReadMod(string path) {
             if (Directory.Exists(path)) {
                 Log($"[ReadMod] Loading mod dir: {path}");
-                string mainName = Module.Name.Substring(0, Module.Name.Length - 3);
-                string mainNameSpaceless = mainName.Replace(" ", "", StringComparison.Ordinal);
+                var mainName = Module.Name.Substring(0, Module.Name.Length - 3);
+                var mainNameSpaceless = mainName.Replace(" ", "", StringComparison.Ordinal);
                 if (!DependencyDirs.Contains(path)) {
                     (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(path);
                     DependencyDirs.Add(path);
                 }
-                foreach (string modFile in Directory.GetFiles(path))
+                foreach (var modFile in Directory.GetFiles(path))
                     if ((Path.GetFileName(modFile).StartsWith(mainName, StringComparison.Ordinal) ||
                         Path.GetFileName(modFile).StartsWith(mainNameSpaceless, StringComparison.Ordinal)) &&
                         modFile.ToLower(CultureInfo.InvariantCulture).EndsWith(".mm.dll", StringComparison.Ordinal))
@@ -590,7 +588,7 @@ namespace MonoMod {
 
             Log($"[ReadMod] Loading mod: {path}");
             ModuleDefinition mod = _ReadModule(path, GenReaderParameters(false, path));
-            string dir = Path.GetDirectoryName(path);
+            var dir = Path.GetDirectoryName(path);
             if (!DependencyDirs.Contains(dir)) {
                 (AssemblyResolver as BaseAssemblyResolver)?.AddSearchDirectory(dir);
                 DependencyDirs.Add(dir);
@@ -620,7 +618,7 @@ namespace MonoMod {
         }
 
         public virtual void ParseRulesInType(TypeDefinition type, Type rulesTypeMMILRT = null) {
-            string typeName = type.GetPatchFullName();
+            var typeName = type.GetPatchFullName();
 
             if (!MatchingConditionals(type, Module))
                 return;
@@ -639,7 +637,7 @@ namespace MonoMod {
                 System.Reflection.ParameterInfo[] argInfos = method.GetParameters();
                 if (argInfos.Length == 2 && argInfos[0].ParameterType.IsCompatible(typeof(ILContext))) {
                     CustomMethodAttributeHandlers[type.FullName] = (self, args) => {
-                        ILContext il = new ILContext((MethodDefinition) args[0]);
+                        var il = new ILContext((MethodDefinition) args[0]);
                         il.Invoke(_ => {
                             method.Invoke(self, new object[] {
                                 il,
@@ -712,7 +710,7 @@ namespace MonoMod {
         }
 
         public virtual void ParseLinkFrom(MemberReference target, CustomAttribute hook) {
-            string from = (string) hook.ConstructorArguments[0].Value;
+            var from = (string) hook.ConstructorArguments[0].Value;
 
             object to;
             if (target is TypeReference)
@@ -739,7 +737,7 @@ namespace MonoMod {
         }
 
         public virtual void ParseLinkTo(MemberReference from, CustomAttribute hook) {
-            string fromID = (from as MethodReference)?.GetID() ?? from.GetPatchFullName();
+            var fromID = (from as MethodReference)?.GetID() ?? from.GetPatchFullName();
             if (hook.ConstructorArguments.Count == 1)
                 RelinkMap[fromID] = (string) hook.ConstructorArguments[0].Value;
             else
@@ -796,7 +794,7 @@ namespace MonoMod {
 
             if (PostProcessors != null) {
                 Delegate[] pps = PostProcessors.GetInvocationList();
-                for (int i = 0; i < pps.Length; i++) {
+                for (var i = 0; i < pps.Length; i++) {
                     Log($"[PostProcessor] PostProcessor pass #{i + 1}");
                     ((PostProcessor) pps[i])?.Invoke(this);
                 }
@@ -875,7 +873,7 @@ namespace MonoMod {
                 return cached;
 
             if (relink && (
-                RelinkMap.TryGetValue(name, out object val) ||
+                RelinkMap.TryGetValue(name, out var val) ||
                 (nameAlt != null && RelinkMap.TryGetValue(nameAlt, out val))
             )) {
                 // If the value already is a mtp, import and cache the imported reference.
@@ -883,8 +881,8 @@ namespace MonoMod {
                     return RelinkMapCache[name] = Module.ImportReference((IMetadataTokenProvider) val);
 
                 if (val is RelinkMapEntry) {
-                    string typeName = ((RelinkMapEntry) val).Type as string;
-                    string findableID = ((RelinkMapEntry) val).FindableID as string;
+                    var typeName = ((RelinkMapEntry) val).Type as string;
+                    var findableID = ((RelinkMapEntry) val).FindableID as string;
 
                     TypeDefinition type = FindTypeDeep(typeName)?.SafeResolve();
                     if (type == null)
@@ -1011,7 +1009,7 @@ namespace MonoMod {
                 return type;
 
             // Check in the dependencies of the mod modules.
-            Stack<ModuleDefinition> crawled = new Stack<ModuleDefinition>();
+            var crawled = new Stack<ModuleDefinition>();
             // Set type to null so that an actual break condition exists
             type = null;
             foreach (ModuleDefinition mod in Mods)
@@ -1056,7 +1054,7 @@ namespace MonoMod {
         /// <param name="type">Type to patch into the input module.</param>
         /// <param name="forceAdd">Forcibly add the type, no matter if it already exists or if it's MonoModRules.</param>
         public virtual void PrePatchType(TypeDefinition type, bool forceAdd = false) {
-            string typeName = type.GetPatchFullName();
+            var typeName = type.GetPatchFullName();
 
             // Fix legacy issue: Copy / inline any used modifiers.
             if ((type.Namespace != "MonoMod" && type.HasCustomAttribute("MonoMod.MonoModIgnore")) || SkipList.Contains(typeName) || !MatchingConditionals(type, Module))
@@ -1085,7 +1083,7 @@ namespace MonoMod {
             // Add the type.
             LogVerbose($"[PrePatchType] Adding {typeName} to the target module.");
 
-            TypeDefinition newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType);
+            var newType = new TypeDefinition(type.Namespace, type.Name, type.Attributes, type.BaseType);
 
             foreach (GenericParameter genParam in type.GenericParameters)
                 newType.GenericParameters.Add(genParam.Clone());
@@ -1113,7 +1111,7 @@ namespace MonoMod {
         }
 
         protected virtual void PrePatchNested(TypeDefinition type) {
-            for (int i = 0; i < type.NestedTypes.Count; i++) {
+            for (var i = 0; i < type.NestedTypes.Count; i++) {
                 PrePatchType(type.NestedTypes[i]);
             }
         }
@@ -1145,7 +1143,7 @@ namespace MonoMod {
         /// </summary>
         /// <param name="type">Type to patch into the input module.</param>
         public virtual void PatchType(TypeDefinition type) {
-            string typeName = type.GetPatchFullName();
+            var typeName = type.GetPatchFullName();
 
             TypeReference targetType = Module.GetType(typeName, false);
             if (targetType == null) return; // Type should've been added or removed accordingly.
@@ -1176,11 +1174,11 @@ namespace MonoMod {
                 if (!targetTypeDef.HasCustomAttribute(attrib.AttributeType.FullName))
                     targetTypeDef.CustomAttributes.Add(attrib.Clone());
 
-            HashSet<MethodDefinition> propMethods = new HashSet<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
+            var propMethods = new HashSet<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
             foreach (PropertyDefinition prop in type.Properties)
                 PatchProperty(targetTypeDef, prop, propMethods);
 
-            HashSet<MethodDefinition> eventMethods = new HashSet<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
+            var eventMethods = new HashSet<MethodDefinition>(); // In the Patch pass, prop methods exist twice.
             foreach (EventDefinition eventdef in type.Events)
                 PatchEvent(targetTypeDef, eventdef, eventMethods);
 
@@ -1189,7 +1187,7 @@ namespace MonoMod {
                     PatchMethod(targetTypeDef, method);
 
             if (type.HasCustomAttribute("MonoMod.MonoModEnumReplace")) {
-                for (int ii = 0; ii < targetTypeDef.Fields.Count;) {
+                for (var ii = 0; ii < targetTypeDef.Fields.Count;) {
                     if (targetTypeDef.Fields[ii].Name == "value__") {
                         ii++;
                         continue;
@@ -1199,6 +1197,17 @@ namespace MonoMod {
                 }
             }
 
+            if (type.IsSequentialLayout)
+                targetTypeDef.IsSequentialLayout = true;
+
+            if (type.IsExplicitLayout)
+                targetTypeDef.IsExplicitLayout = true;
+
+            if (type.HasLayoutInfo) {
+                targetTypeDef.PackingSize = type.PackingSize;
+                targetTypeDef.ClassSize = type.ClassSize;
+            }
+
             foreach (FieldDefinition field in type.Fields)
                 PatchField(targetTypeDef, field);
 
@@ -1206,7 +1215,7 @@ namespace MonoMod {
         }
 
         protected virtual void PatchNested(TypeDefinition type) {
-            for (int i = 0; i < type.NestedTypes.Count; i++) {
+            for (var i = 0; i < type.NestedTypes.Count; i++) {
                 PatchType(type.NestedTypes[i]);
             }
         }
@@ -1220,7 +1229,7 @@ namespace MonoMod {
             MethodDefinition addMethod;
 
             PropertyDefinition targetProp = targetType.FindProperty(prop.Name);
-            string backingName = $"<{prop.Name}>__BackingField";
+            var backingName = $"<{prop.Name}>__BackingField";
             FieldDefinition backing = prop.DeclaringType.FindField(backingName);
             FieldDefinition targetBacking = targetType.FindField(backingName);
 
@@ -1303,7 +1312,7 @@ namespace MonoMod {
 
             MethodDefinition patched;
             EventDefinition targetEvent = targetType.FindEvent(srcEvent.Name);
-            string backingName = $"<{srcEvent.Name}>__BackingField";
+            var backingName = $"<{srcEvent.Name}>__BackingField";
             FieldDefinition backing = srcEvent.DeclaringType.FindField(backingName);
             FieldDefinition targetBacking = targetType.FindField(backingName);
 
@@ -1354,7 +1363,7 @@ namespace MonoMod {
                 targetType.Events.Add(newEvent);
 
                 if (backing != null) {
-                    FieldDefinition newBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
+                    var newBacking = new FieldDefinition(backingName, backing.Attributes, backing.FieldType);
                     targetType.Fields.Add(newBacking);
                 }
             }
@@ -1392,7 +1401,7 @@ namespace MonoMod {
 
 
         public virtual void PatchField(TypeDefinition targetType, FieldDefinition field) {
-            string typeName = field.DeclaringType.GetPatchFullName();
+            var typeName = field.DeclaringType.GetPatchFullName();
 
             if (field.HasCustomAttribute("MonoMod.MonoModNoNew") || SkipList.Contains(typeName + "::" + field.Name) || !MatchingConditionals(field, Module))
                 return;
@@ -1426,6 +1435,12 @@ namespace MonoMod {
                 targetType.Fields.Add(existingField);
             }
 
+            if (field.HasLayoutInfo)
+                existingField.Offset = field.Offset;
+
+            if (field.HasMarshalInfo)
+                existingField.MarshalInfo = field.MarshalInfo;
+
             foreach (CustomAttribute attrib in field.CustomAttributes)
                 existingField.CustomAttributes.Add(attrib.Clone());
         }
@@ -1439,7 +1454,7 @@ namespace MonoMod {
                 // Ignore ignored methods
                 return null;
 
-            string typeName = targetType.GetPatchFullName();
+            var typeName = targetType.GetPatchFullName();
 
             if (SkipList.Contains(method.GetID(type: typeName)))
                 return null;
@@ -1451,7 +1466,7 @@ namespace MonoMod {
             if (method.HasCustomAttribute("MonoMod.MonoModConstructor")) {
                 // Add MonoModOriginalName as the orig name data gets lost otherwise.
                 if (!method.IsSpecialName && !method.HasCustomAttribute("MonoMod.MonoModOriginalName")) {
-                    CustomAttribute origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
+                    var origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
                     origNameAttrib.ConstructorArguments.Add(new CustomAttributeArgument(Module.TypeSystem.String, "orig_" + method.Name));
                     method.CustomAttributes.Add(origNameAttrib);
                 }
@@ -1538,7 +1553,7 @@ namespace MonoMod {
                 method = existingMethod;
 
             } else {
-                MethodDefinition clone = new MethodDefinition(method.Name, method.Attributes, Module.TypeSystem.Void);
+                var clone = new MethodDefinition(method.Name, method.Attributes, Module.TypeSystem.Void);
                 clone.MetadataToken = GetMetadataToken(TokenType.Method);
                 clone.CallingConvention = method.CallingConvention;
                 clone.ExplicitThis = method.ExplicitThis;
@@ -1572,7 +1587,7 @@ namespace MonoMod {
             }
 
             if (origMethod != null) {
-                CustomAttribute origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
+                var origNameAttrib = new CustomAttribute(GetMonoModOriginalNameCtor());
                 origNameAttrib.ConstructorArguments.Add(new CustomAttributeArgument(Module.TypeSystem.String, origMethod.Name));
                 method.CustomAttributes.Add(origNameAttrib);
             }
@@ -1586,15 +1601,15 @@ namespace MonoMod {
             if (UpgradeMSCORLIB == null) {
                 // Check if the assembly depends on mscorlib 2.0.5.0, possibly Unity.
                 // If so, upgrade to that version (or away to an even higher version).
-                Version fckUnity = new Version(2, 0, 5, 0);
+                var fckUnity = new Version(2, 0, 5, 0);
                 UpgradeMSCORLIB = Module.AssemblyReferences.Any(x => x.Version == fckUnity);
             }
 
             if (UpgradeMSCORLIB.Value) {
                 // Attempt to remap and remove redundant mscorlib references.
                 // Subpass 1: Find newest referred version.
-                List<AssemblyNameReference> mscorlibDeps = new List<AssemblyNameReference>();
-                for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
+                var mscorlibDeps = new List<AssemblyNameReference>();
+                for (var i = 0; i < Module.AssemblyReferences.Count; i++) {
                     AssemblyNameReference dep = Module.AssemblyReferences[i];
                     if (dep.Name == "mscorlib") {
                         mscorlibDeps.Add(dep);
@@ -1604,7 +1619,7 @@ namespace MonoMod {
                     // Subpass 2: Apply changes if found.
                     AssemblyNameReference maxmscorlib = mscorlibDeps.OrderByDescending(x => x.Version).First();
                     if (DependencyCache.TryGetValue(maxmscorlib.FullName, out ModuleDefinition mscorlib)) {
-                        for (int i = 0; i < Module.AssemblyReferences.Count; i++) {
+                        for (var i = 0; i < Module.AssemblyReferences.Count; i++) {
                             AssemblyNameReference dep = Module.AssemblyReferences[i];
                             if (dep.Name == "mscorlib" && maxmscorlib.Version > dep.Version) {
                                 LogVerbose("[PatchRefs] Removing and relinking duplicate mscorlib: " + dep.Version);
@@ -1633,17 +1648,17 @@ namespace MonoMod {
                 type.BaseType = type.BaseType.Relink(Relinker, type);
 
             // Don't foreach when modifying the collection
-            for (int i = 0; i < type.GenericParameters.Count; i++) {
+            for (var i = 0; i < type.GenericParameters.Count; i++) {
                 type.GenericParameters[i] = type.GenericParameters[i].Relink(Relinker, type);
-                for (int j = 0; j < type.GenericParameters[i].CustomAttributes.Count; j++)
+                for (var j = 0; j < type.GenericParameters[i].CustomAttributes.Count; j++)
                     PatchRefsInCustomAttribute(type.GenericParameters[i].CustomAttributes[j], type);
             }
 
             // Don't foreach when modifying the collection
-            for (int i = 0; i < type.Interfaces.Count; i++) {
+            for (var i = 0; i < type.Interfaces.Count; i++) {
 #if !CECIL0_9
                 InterfaceImplementation interf = type.Interfaces[i];
-                InterfaceImplementation newInterf = new InterfaceImplementation(interf.InterfaceType.Relink(Relinker, type));
+                var newInterf = new InterfaceImplementation(interf.InterfaceType.Relink(Relinker, type));
                 foreach (CustomAttribute attrib in interf.CustomAttributes)
                     newInterf.CustomAttributes.Add(attrib.Relink(Relinker, type));
                 type.Interfaces[i] = newInterf;
@@ -1655,19 +1670,19 @@ namespace MonoMod {
             }
 
             // Don't foreach when modifying the collection
-            for (int i = 0; i < type.CustomAttributes.Count; i++)
+            for (var i = 0; i < type.CustomAttributes.Count; i++)
                 PatchRefsInCustomAttribute(type.CustomAttributes[i] = type.CustomAttributes[i].Relink(Relinker, type), type);
 
             foreach (PropertyDefinition prop in type.Properties) {
                 prop.PropertyType = prop.PropertyType.Relink(Relinker, type);
                 // Don't foreach when modifying the collection
-                for (int i = 0; i < prop.CustomAttributes.Count; i++)
+                for (var i = 0; i < prop.CustomAttributes.Count; i++)
                     prop.CustomAttributes[i] = prop.CustomAttributes[i].Relink(Relinker, type);
             }
 
             foreach (EventDefinition eventDef in type.Events) {
                 eventDef.EventType = eventDef.EventType.Relink(Relinker, type);
-                for (int i = 0; i < eventDef.CustomAttributes.Count; i++)
+                for (var i = 0; i < eventDef.CustomAttributes.Count; i++)
                     eventDef.CustomAttributes[i] = eventDef.CustomAttributes[i].Relink(Relinker, type);
             }
 
@@ -1677,11 +1692,11 @@ namespace MonoMod {
             foreach (FieldDefinition field in type.Fields) {
                 field.FieldType = field.FieldType.Relink(Relinker, type);
                 // Don't foreach when modifying the collection
-                for (int i = 0; i < field.CustomAttributes.Count; i++)
+                for (var i = 0; i < field.CustomAttributes.Count; i++)
                     field.CustomAttributes[i] = field.CustomAttributes[i].Relink(Relinker, type);
             }
 
-            for (int i = 0; i < type.NestedTypes.Count; i++)
+            for (var i = 0; i < type.NestedTypes.Count; i++)
                 PatchRefsInType(type.NestedTypes[i]);
         }
 
@@ -1689,29 +1704,29 @@ namespace MonoMod {
             LogVerbose($"[VERBOSE] [PatchRefsInMethod] Patching refs in {method}");
 
             // Don't foreach when modifying the collection
-            for (int i = 0; i < method.GenericParameters.Count; i++)
+            for (var i = 0; i < method.GenericParameters.Count; i++)
                 method.GenericParameters[i] = method.GenericParameters[i].Relink(Relinker, method);
 
             foreach (ParameterDefinition param in method.Parameters) {
                 param.ParameterType = param.ParameterType.Relink(Relinker, method);
-                for (int i = 0; i < param.CustomAttributes.Count; i++)
+                for (var i = 0; i < param.CustomAttributes.Count; i++)
                     PatchRefsInCustomAttribute(param.CustomAttributes[i] = param.CustomAttributes[i].Relink(Relinker, method), method);
             }
 
-            for (int i = 0; i < method.CustomAttributes.Count; i++)
+            for (var i = 0; i < method.CustomAttributes.Count; i++)
                 PatchRefsInCustomAttribute(method.CustomAttributes[i] = method.CustomAttributes[i].Relink(Relinker, method), method);
 
-            for (int i = 0; i < method.Overrides.Count; i++)
+            for (var i = 0; i < method.Overrides.Count; i++)
                 method.Overrides[i] = (MethodReference) method.Overrides[i].Relink(Relinker, method);
 
             method.ReturnType = method.ReturnType.Relink(Relinker, method);
 
-            for (int i = 0; i < method.MethodReturnType.CustomAttributes.Count; i++)
+            for (var i = 0; i < method.MethodReturnType.CustomAttributes.Count; i++)
                 PatchRefsInCustomAttribute(method.MethodReturnType.CustomAttributes[i] = method.MethodReturnType.CustomAttributes[i].Relink(Relinker, method), method);
 
             foreach (CustomDebugInformation dbgInfo in method.CustomDebugInformations)
                 if (dbgInfo is AsyncMethodBodyDebugInformation asyncDbgInfo)
-                    for (int i = 0; i < asyncDbgInfo.ResumeMethods.Count; i++)
+                    for (var i = 0; i < asyncDbgInfo.ResumeMethods.Count; i++)
                         asyncDbgInfo.ResumeMethods[i] = ((MethodReference) asyncDbgInfo.ResumeMethods[i].Relink(Relinker, method)).Resolve();
 
             if (method.Body == null) return;
@@ -1725,13 +1740,13 @@ namespace MonoMod {
 
             MethodRewriter?.Invoke(this, method);
 
-            Dictionary<TypeReference, VariableDefinition> tmpAddrLocMap = new Dictionary<TypeReference, VariableDefinition>();
+            var tmpAddrLocMap = new Dictionary<TypeReference, VariableDefinition>();
 
             MethodBody body = method.Body;
 
-            for (int instri = 0; method.HasBody && instri < body.Instructions.Count; instri++) {
+            for (var instri = 0; method.HasBody && instri < body.Instructions.Count; instri++) {
                 Instruction instr = body.Instructions[instri];
-                object operand = instr.Operand;
+                var operand = instr.Operand;
 
                 // MonoMod-specific in-code flag setting / ...
 
@@ -1742,7 +1757,7 @@ namespace MonoMod {
 
                 // Before relinking, check for an existing forced call opcode mapping.
                 OpCode forceCall = default;
-                bool hasForceCall = operand is MethodReference && (
+                var hasForceCall = operand is MethodReference && (
                     ForceCallMap.TryGetValue((operand as MethodReference).GetID(), out forceCall) ||
                     ForceCallMap.TryGetValue((operand as MethodReference).GetID(simple: true), out forceCall)
                 );
@@ -1753,7 +1768,7 @@ namespace MonoMod {
 
                 // Check again after relinking.
                 if (!hasForceCall && operand is MethodReference) {
-                    bool hasForceCallRelinked =
+                    var hasForceCallRelinked =
                         ForceCallMap.TryGetValue((operand as MethodReference).GetID(), out OpCode forceCallRelinked) ||
                         ForceCallMap.TryGetValue((operand as MethodReference).GetID(simple: true), out forceCallRelinked)
                     ;
@@ -1806,9 +1821,9 @@ namespace MonoMod {
                 } else if ((instr.OpCode == OpCodes.Callvirt || instr.OpCode == OpCodes.Call) && operand is FieldReference) {
                     // Setters don't return anything.
                     TypeReference returnType = ((MethodReference) instr.Operand).ReturnType;
-                    bool set = returnType == null || returnType.MetadataType == MetadataType.Void;
+                    var set = returnType == null || returnType.MetadataType == MetadataType.Void;
                     // This assumption is dangerous.
-                    bool instance = ((MethodReference) instr.Operand).HasThis;
+                    var instance = ((MethodReference) instr.Operand).HasThis;
                     if (instance)
                         instr.OpCode = set ? OpCodes.Stfld : OpCodes.Ldfld;
                     else
@@ -1844,14 +1859,14 @@ namespace MonoMod {
             }
 
             // Relink attribute arguments
-            for (int i = 0; i < attr.ConstructorArguments.Count; i++) {
+            for (var i = 0; i < attr.ConstructorArguments.Count; i++) {
                 CustomAttributeArgument arg = attr.ConstructorArguments[i];
                 if (arg.Value is IMetadataTokenProvider mtp) {
                     attr.ConstructorArguments[i] = new CustomAttributeArgument(arg.Type, mtp.Relink(Relinker, ctx));
                 }
             }
 
-            for (int i = 0; i < attr.Properties.Count; i++) {
+            for (var i = 0; i < attr.Properties.Count; i++) {
                 CustomAttributeNamedArgument arg = attr.Properties[i];
                 if (arg.Argument.Value is IMetadataTokenProvider mtp) {
                     attr.Properties[i] = new CustomAttributeNamedArgument(arg.Name, new CustomAttributeArgument(arg.Argument.Type, mtp.Relink(Relinker, ctx)));
@@ -1863,7 +1878,7 @@ namespace MonoMod {
 
 #region Cleanup Pass
         public virtual void Cleanup(bool all = false) {
-            for (int i = 0; i < Module.Types.Count; i++) {
+            for (var i = 0; i < Module.Types.Count; i++) {
                 TypeDefinition type = Module.Types[i];
                 if (all && (type.Namespace.StartsWith("MonoMod", StringComparison.Ordinal) || type.Name.StartsWith("MonoMod", StringComparison.Ordinal))) {
                     Log($"[Cleanup] Removing type {type.Name}");
@@ -1875,7 +1890,7 @@ namespace MonoMod {
             }
 
             Collection<AssemblyNameReference> deps = Module.AssemblyReferences;
-            for (int i = deps.Count - 1; i > -1; --i)
+            for (var i = deps.Count - 1; i > -1; --i)
                 if ((all && deps[i].Name.StartsWith("MonoMod", StringComparison.Ordinal)) ||
                     (RemovePatchReferences && deps[i].Name.EndsWith(".mm", StringComparison.Ordinal)))
                     deps.RemoveAt(i);
@@ -1904,7 +1919,7 @@ namespace MonoMod {
 
         public virtual void Cleanup(ICustomAttributeProvider cap, bool all = false) {
             Collection<CustomAttribute> attribs = cap.CustomAttributes;
-            for (int i = attribs.Count - 1; i > -1; --i) {
+            for (var i = attribs.Count - 1; i > -1; --i) {
                 TypeReference attribType = attribs[i].AttributeType;
                 if (ShouldCleanupAttrib?.Invoke(cap, attribType) ?? (
                     (attribType.Scope.Name == "MonoMod" || attribType.Scope.Name == "MonoMod.exe" || attribType.Scope.Name == "MonoMod.dll") ||
@@ -1986,14 +2001,14 @@ namespace MonoMod {
 
 #region MonoMod injected types
         public virtual TypeDefinition PatchWasHere() {
-            for (int ti = 0; ti < Module.Types.Count; ti++) {
+            for (var ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "WasHere") {
                     LogVerbose("[PatchWasHere] Type MonoMod.WasHere already existing");
                     return Module.Types[ti];
                 }
             }
             LogVerbose("[PatchWasHere] Adding type MonoMod.WasHere");
-            TypeDefinition wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
+            var wasHere = new TypeDefinition("MonoMod", "WasHere", TypeAttributes.Public | TypeAttributes.Class) {
                 BaseType = Module.TypeSystem.Object
             };
             Module.Types.Add(wasHere);
@@ -2010,10 +2025,10 @@ namespace MonoMod {
             }
 
             TypeDefinition attrType = null;
-            for (int ti = 0; ti < Module.Types.Count; ti++) {
+            for (var ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModOriginal") {
                     attrType = Module.Types[ti];
-                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                    for (var mi = 0; mi < attrType.Methods.Count; mi++) {
                         if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
@@ -2057,10 +2072,10 @@ namespace MonoMod {
             }
 
             TypeDefinition attrType = null;
-            for (int ti = 0; ti < Module.Types.Count; ti++) {
+            for (var ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModOriginalName") {
                     attrType = Module.Types[ti];
-                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                    for (var mi = 0; mi < attrType.Methods.Count; mi++) {
                         if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
@@ -2105,10 +2120,10 @@ namespace MonoMod {
             }
 
             TypeDefinition attrType = null;
-            for (int ti = 0; ti < Module.Types.Count; ti++) {
+            for (var ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModAdded") {
                     attrType = Module.Types[ti];
-                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                    for (var mi = 0; mi < attrType.Methods.Count; mi++) {
                         if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
@@ -2152,10 +2167,10 @@ namespace MonoMod {
             }
 
             TypeDefinition attrType = null;
-            for (int ti = 0; ti < Module.Types.Count; ti++) {
+            for (var ti = 0; ti < Module.Types.Count; ti++) {
                 if (Module.Types[ti].Namespace == "MonoMod" && Module.Types[ti].Name == "MonoModPatch") {
                     attrType = Module.Types[ti];
-                    for (int mi = 0; mi < attrType.Methods.Count; mi++) {
+                    for (var mi = 0; mi < attrType.Methods.Count; mi++) {
                         if (!attrType.Methods[mi].IsConstructor || attrType.Methods[mi].IsStatic) {
                             continue;
                         }
@@ -2272,11 +2287,11 @@ namespace MonoMod {
             if (!cap.HasCustomAttributes)
                 return true;
 
-            bool status = true;
+            var status = true;
             foreach (CustomAttribute attrib in cap.CustomAttributes) {
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModOnPlatform") {
-                    CustomAttributeArgument[] plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
-                    for (int i = 0; i < plats.Length; i++) {
+                    var plats = (CustomAttributeArgument[]) attrib.ConstructorArguments[0].Value;
+                    for (var i = 0; i < plats.Length; i++) {
                         if (PlatformDetection.OS.Is((OSKind) plats[i].Value)) {
                             // status &= true;
                             continue;
@@ -2287,9 +2302,9 @@ namespace MonoMod {
                 }
 
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModIfFlag") {
-                    string flag = (string) attrib.ConstructorArguments[0].Value;
+                    var flag = (string) attrib.ConstructorArguments[0].Value;
                     bool value;
-                    if (!SharedData.TryGetValue(flag, out object valueObj) || !(valueObj is bool))
+                    if (!SharedData.TryGetValue(flag, out var valueObj) || !(valueObj is bool))
                         if (attrib.ConstructorArguments.Count == 2)
                             value = (bool) attrib.ConstructorArguments[1].Value;
                         else
@@ -2301,7 +2316,7 @@ namespace MonoMod {
                 }
 
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModTargetModule") {
-                    string name = (string) attrib.ConstructorArguments[0].Value;
+                    var name = (string) attrib.ConstructorArguments[0].Value;
                     status &= asmName.Name == name || asmName.FullName == name;
                     continue;
                 }

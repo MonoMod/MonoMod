@@ -3,6 +3,7 @@ using System.Text;
 using Mono.Cecil;
 
 namespace MonoMod.Utils {
+    [Serializable]
     public class RelinkFailedException : Exception {
 
         public const string DefaultMessage = "MonoMod failed relinking";
@@ -47,6 +48,5 @@ namespace MonoMod.Utils {
 
             return builder.ToString();
         }
-
     }
 }

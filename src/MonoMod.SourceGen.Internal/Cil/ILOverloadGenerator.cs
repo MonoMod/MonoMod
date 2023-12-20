@@ -376,10 +376,10 @@ namespace MonoMod.SourceGen.Internal.Cil {
 
                     static void EmitMethodWithArg(CodeBuilder builder, string selfFqName, OpcodeDef op, string doc, string argType, string targetType, string argExpr) {
                         _ = builder
-                            .WriteLine($"/// <summary>Emits a {doc} opcode with a <see cref=\"{argType}\"/> operand to the current cursor position.</summary>")
+                            .WriteLine($"/// <summary>Emits a {doc} opcode with a <see cref=\"T:{argType}\"/> operand to the current cursor position.</summary>")
                             .Write("""/// <param name="operand">The emitted instruction's operand.""");
                         if (argType != targetType) {
-                            _ = builder.Write($$""" Will be automatically converted to a <see cref="{{targetType}}" />.""");
+                            _ = builder.Write($$""" Will be automatically converted to a <see cref="T:{{targetType}}" />.""");
                         }
                         _ = builder
                             .WriteLine("</param>")
@@ -480,7 +480,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
                             .WriteLine();
 
                         if (conversion.FromType == "Type") {
-                            // generic variant
+                            // generic + full name variant
                             _ = builder
                                 .WriteLine($"/// <summary>Matches an instruction with opcode {doc}.</summary>")
                                 .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
@@ -491,10 +491,23 @@ namespace MonoMod.SourceGen.Internal.Cil {
                                 .WriteLine($"=> Match{op.Formatted}(instr, typeof(T));")
                                 .DecreaseIndent()
                                 .WriteLine();
+
+                            if (op.ArgumentType is not "IMetadataTokenProvider") {
+                                _ = builder
+                                    .WriteLine($"/// <summary>Matches an instruction with opcode {doc}.</summary>")
+                                    .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                                    .WriteLine("/// <param name=\"typeFullName\">The full name of the type that must be the instruction operand for the instruction to match.</param>")
+                                    .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
+                                    .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, string typeFullName)")
+                                    .IncreaseIndent()
+                                    .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && v.Is(typeFullName);")
+                                    .DecreaseIndent()
+                                    .WriteLine();
+                            }
                         }
 
                         if (conversion.FromType is "FieldInfo" or "MethodBase" or "MethodInfo" && op.ArgumentType is not "IMetadataTokenProvider") {
-                            // generic variant
+                            // generic + full name variant
                             _ = builder
                                 .WriteLine($"/// <summary>Matches an instruction with opcode {doc}.</summary>")
                                 .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
@@ -514,6 +527,16 @@ namespace MonoMod.SourceGen.Internal.Cil {
                                 .WriteLine($"public static bool Match{op.Formatted}<T>(this Instruction instr, string name)")
                                 .IncreaseIndent()
                                 .WriteLine($"=> Match{op.Formatted}(instr, typeof(T), name);")
+                                .DecreaseIndent()
+                                .WriteLine()
+                                .WriteLine($"/// <summary>Matches an instruction with opcode {doc}.</summary>")
+                                .WriteLine("/// <param name=\"instr\">The instruction to try to match.</param>")
+                                .WriteLine("/// <param name=\"typeFullName\">The full name of the type the operand member must be defined on for the instruction to match.</param>")
+                                .WriteLine("/// <param name=\"name\">The name that the operand member must have for the instruction to match.</param>")
+                                .WriteLine("/// <returns><see langword=\"true\"/> if the instruction matches; <see langword=\"false\"/> otherwise.</returns>")
+                                .WriteLine($"public static bool Match{op.Formatted}(this Instruction instr, string typeFullName, string name)")
+                                .IncreaseIndent()
+                                .WriteLine($"=> Match{op.Formatted}(instr, out {op.ArgumentType}{suffix} v) && v.Is(typeFullName, name);")
                                 .DecreaseIndent()
                                 .WriteLine();
                         }

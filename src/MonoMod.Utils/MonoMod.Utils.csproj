@@ -9,8 +9,8 @@
     <Nullable>enable</Nullable>
     <MMReferenceUtils>false</MMReferenceUtils>
 
-    <VersionPrefix>25.0.0</VersionPrefix>
-    <PackageValidationBaselineVersion>25.0.0-prerelease.1</PackageValidationBaselineVersion>
+    <VersionPrefix>25.0.3</VersionPrefix>
+    <PackageValidationBaselineVersion>25.0.3</PackageValidationBaselineVersion>
   </PropertyGroup>
   
   <!-- Dependencies -->

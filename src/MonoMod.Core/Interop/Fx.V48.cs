@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace MonoMod.Core.Interop {
     internal static partial class Fx {
-        public unsafe partial class V48 {
+        public unsafe static partial class V48 {
 
             // Note: Currently, all of this information is pulled from dotnet/coreclr tag v1.0.0, along with my own experimentation
 

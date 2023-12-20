@@ -547,6 +547,8 @@ namespace System.Runtime.CompilerServices {
         /// <param name="format">The format string.</param>
         /// <typeparam name="T">The type of the value to write.</typeparam>
         [MethodImpl(MethodImplOptions.NoInlining)]
+        [Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
+            Justification = "Extra guard protects against null in release, where the asserts aren't present")]
         private void AppendCustomFormatter<T>(T value, string? format) {
             // This case is very rare, but we need to handle it prior to the other checks in case
             // a provider was used that supplied an ICustomFormatter which wanted to intercept the particular value.
@@ -558,7 +560,7 @@ namespace System.Runtime.CompilerServices {
             ICustomFormatter? formatter = (ICustomFormatter?) _provider!.GetFormat(typeof(ICustomFormatter));
             Debug.Assert(formatter != null, "An incorrectly written provider said it implemented ICustomFormatter, and then didn't");
 
-            if (formatter is not null && formatter.Format(format, value, _provider) is string customFormatted) {
+            if (formatter is not null && formatter.Format(format, value, _provider) is { } customFormatted) {
                 AppendStringDirect(customFormatted);
             }
         }

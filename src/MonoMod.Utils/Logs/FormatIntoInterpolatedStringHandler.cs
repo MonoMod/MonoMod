@@ -164,35 +164,43 @@ namespace MonoMod.Logs {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private bool AppendFormatted(IntPtr value) {
-            if (IntPtr.Size == 4) {
-                return AppendFormatted((int) value);
-            } else {
-                return AppendFormatted((long) value);
+            unchecked {
+                if (IntPtr.Size == 4) {
+                    return AppendFormatted((int) value);
+                } else {
+                    return AppendFormatted((long) value);
+                }
             }
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private bool AppendFormatted(IntPtr value, string? format) {
-            if (IntPtr.Size == 4) {
-                return AppendFormatted((int) value, format);
-            } else {
-                return AppendFormatted((long) value, format);
+            unchecked {
+                if (IntPtr.Size == 4) {
+                    return AppendFormatted((int) value, format);
+                } else {
+                    return AppendFormatted((long) value, format);
+                }
             }
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private bool AppendFormatted(UIntPtr value) {
-            if (UIntPtr.Size == 4) {
-                return AppendFormatted((uint) value);
-            } else {
-                return AppendFormatted((ulong) value);
+            unchecked {
+                if (UIntPtr.Size == 4) {
+                    return AppendFormatted((uint) value);
+                } else {
+                    return AppendFormatted((ulong) value);
+                }
             }
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private bool AppendFormatted(UIntPtr value, string? format) {
-            if (UIntPtr.Size == 4) {
-                return AppendFormatted((uint) value, format);
-            } else {
-                return AppendFormatted((ulong) value, format);
+            unchecked {
+                if (UIntPtr.Size == 4) {
+                    return AppendFormatted((uint) value, format);
+                } else {
+                    return AppendFormatted((ulong) value, format);
+                }
             }
         }
 

@@ -107,7 +107,7 @@ namespace MonoMod.RuntimeDetour {
             protected override void ReturnStolenTrampolineInner() => Detour.NextTrampoline.ReturnTrampolineOwnership();
         }
 
-        internal class ManagedDetourSyncInfo : DetourSyncInfo {
+        internal sealed class ManagedDetourSyncInfo : DetourSyncInfo {
 
             public int HasStolenTrampolines;
             public readonly ConcurrentQueue<ManagedChainNode> TrampolineStealers = new ConcurrentQueue<ManagedChainNode>();
@@ -192,7 +192,7 @@ namespace MonoMod.RuntimeDetour {
         #endregion
 
         #region ILHook chain
-        internal class ILHookEntry {
+        internal sealed class ILHookEntry {
             public readonly SingleILHookState Hook;
 
             public IDetourFactory Factory => Hook.Factory;

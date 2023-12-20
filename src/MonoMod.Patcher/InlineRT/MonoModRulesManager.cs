@@ -4,11 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
 
 namespace MonoMod.InlineRT {
     public static class MonoModRulesManager {
@@ -21,8 +18,8 @@ namespace MonoMod.InlineRT {
 
         public static MonoModder Modder {
             get {
-                StackTrace st = new StackTrace();
-                for (int i = 1; i < st.FrameCount; i++) {
+                var st = new StackTrace();
+                for (var i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
                     Assembly asm = method.DeclaringType.Assembly;
@@ -38,8 +35,8 @@ namespace MonoMod.InlineRT {
 
         public static Type RuleType {
             get {
-                StackTrace st = new StackTrace();
-                for (int i = 1; i < st.FrameCount; i++) {
+                var st = new StackTrace();
+                for (var i = 1; i < st.FrameCount; i++) {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
                     Assembly asm = method.DeclaringType.Assembly;
@@ -51,28 +48,28 @@ namespace MonoMod.InlineRT {
     }
 
     public static void Register(MonoModder self) {
-            WeakReference weak = new WeakReference(self);
+            var weak = new WeakReference(self);
             if (IDMap.ContainsKey(weak))
                 throw new InvalidOperationException("MonoModder instance already registered in MMILProxyManager");
-            long id = IDMap[weak] = PrevID++;
+            var id = IDMap[weak] = PrevID++;
             ModderMap[id] = weak;
         }
 
         public static long GetId(MonoModder self) {
-            WeakReference weak = new WeakReference(self);
-            if (!IDMap.TryGetValue(weak, out long id))
+            var weak = new WeakReference(self);
+            if (!IDMap.TryGetValue(weak, out var id))
                 throw new InvalidOperationException("MonoModder instance wasn't registered in MMILProxyManager");
             return id;
         }
 
         public static MonoModder GetModder(string asmName) {
-            string idString = asmName;
-            int idIndex = idString.IndexOf("[MMILRT, ID:", StringComparison.Ordinal);
+            var idString = asmName;
+            var idIndex = idString.IndexOf("[MMILRT, ID:", StringComparison.Ordinal);
             if (idIndex == -1)
                 return null;
             idString = idString.Substring(idIndex + 12);
             idString = idString.Substring(0, idString.IndexOf(']', StringComparison.Ordinal));
-            if (!long.TryParse(idString, out long id))
+            if (!long.TryParse(idString, out var id))
                 throw new InvalidOperationException($"Cannot get MonoModder ID from assembly name {asmName}");
             if (!ModderMap.TryGetValue(id, out WeakReference modder) || !modder.IsAlive)
                 return null;
@@ -80,7 +77,7 @@ namespace MonoMod.InlineRT {
         }
 
         public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
-            ModuleDefinition scope = (ModuleDefinition) orig.Scope;
+            var scope = (ModuleDefinition) orig.Scope;
             if (!self.DependencyMap.ContainsKey(scope)) {
                 // Runtime relinkers can parse rules by passing the "rule module" directly.
                 // Unfortunately, it bypasses the "MonoMod split upgrade hack."
@@ -89,7 +86,7 @@ namespace MonoMod.InlineRT {
                 // Don't add scope to Mods, as that'd affect any further patching passes.
             }
 
-            ModuleDefinition wrapper = ModuleDefinition.CreateModule(
+            var wrapper = ModuleDefinition.CreateModule(
                 $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules [MMILRT, ID:{GetId(self)}]",
                 new ModuleParameters() {
                     Architecture = orig.Module.Architecture,
@@ -111,7 +108,7 @@ namespace MonoMod.InlineRT {
             wrapperMod.WriterParameters.WriteSymbols = false;
             wrapperMod.WriterParameters.SymbolWriterProvider = null;
 
-            bool missingDependencyThrow = self.MissingDependencyThrow;
+            var missingDependencyThrow = self.MissingDependencyThrow;
             self.MissingDependencyThrow = false;
 
             // Copy all dependencies.
@@ -135,7 +132,7 @@ namespace MonoMod.InlineRT {
             wrapperMod.PatchRefs(); // Runs any special passes in-between, f.e. upgrading from pre-split to post-split.
 
             Assembly asm;
-            using (MemoryStream asmStream = new MemoryStream()) {
+            using (var asmStream = new MemoryStream()) {
                 wrapperMod.Write(asmStream);
                 asmStream.Seek(0, SeekOrigin.Begin);
                 asm = ReflectionHelper.Load(asmStream);

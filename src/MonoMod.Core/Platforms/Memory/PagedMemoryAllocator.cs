@@ -40,7 +40,7 @@ namespace MonoMod.Core.Platforms.Memory {
             }
 
             /// <inheritdoc/>
-            public IntPtr BaseAddress => (IntPtr) ((nint) owner.BaseAddr + offset);
+            public IntPtr BaseAddress => owner.BaseAddr + (nint)offset;
 
             /// <inheritdoc/>
             public int Size { get; }

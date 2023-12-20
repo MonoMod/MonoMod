@@ -17,6 +17,9 @@
 
     <PackageIcon>icon.png</PackageIcon>
     <PackageIconUrl>https://user-images.githubusercontent.com/1200380/47308180-28242880-d631-11e8-89d2-14d86f3db113.png</PackageIconUrl>
+
+    <NuGetAudit>false</NuGetAudit> <!-- This just warns us for NETCoreApp 2.1.0 (which is wrong, anyway), and we're a compat-focused lib anyway. -->
+    <MMIncludeTFMChecks>false</MMIncludeTFMChecks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,12 +37,12 @@
   
   <ItemGroup>
     <!-- SourceLink -->
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <!-- NuGetizer for better control over NuGet package generation with dotnet pack -->
-    <PackageReference Include="UnNuGetizer" Version="1.0.6">
+    <PackageReference Include="UnNuGetizer" Version="1.1.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

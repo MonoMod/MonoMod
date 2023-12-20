@@ -2,7 +2,7 @@ using Mono.Cecil;
 using System;
 
 namespace MonoMod.InlineRT {
-    internal class MonoModRulesModder : MonoModder {
+    internal sealed class MonoModRulesModder : MonoModder {
 
         public TypeDefinition Orig;
 

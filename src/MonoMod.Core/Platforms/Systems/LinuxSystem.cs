@@ -15,7 +15,7 @@ using System.Reflection;
 using System.Text;
 
 namespace MonoMod.Core.Platforms.Systems {
-    internal class LinuxSystem : ISystem, IInitialize<IArchitecture> {
+    internal sealed class LinuxSystem : ISystem, IInitialize<IArchitecture> {
         public OSKind Target => OSKind.Linux;
 
         public SystemFeature Features => SystemFeature.RWXPages | SystemFeature.RXPages;
@@ -49,7 +49,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public nint GetSizeOfReadableMemory(IntPtr start, nint guess) {
             var currentPage = allocator.RoundDownToPageBoundary(start);
-            if (!MmapPagedMemoryAllocator.PageAllocated(currentPage)) {
+            if (!MmapPagedMemoryAllocator.PageReadable(currentPage)) {
                 return 0;
             }
             currentPage += PageSize;
@@ -57,7 +57,7 @@ namespace MonoMod.Core.Platforms.Systems {
             var known = currentPage - start;
 
             while (known < guess) {
-                if (!MmapPagedMemoryAllocator.PageAllocated(currentPage)) {
+                if (!MmapPagedMemoryAllocator.PageReadable(currentPage)) {
                     return known;
                 }
                 known += PageSize;
@@ -114,6 +114,20 @@ namespace MonoMod.Core.Platforms.Systems {
                 Justification = "This is used exclusively internally as jank control flow because I'm lazy")]
             private sealed class SyscallNotImplementedException : Exception { }
 
+            private static int PageProbePipeReadFD, PageProbePipeWriteFD;
+
+            static unsafe MmapPagedMemoryAllocator() {
+                // Open a temporary pipe for page probes
+                // This pipe gets leaked, but eh
+                int* pipefd = stackalloc int[2];
+                if (Unix.Pipe2(pipefd, Unix.PipeFlags.CloseOnExec) == -1) {
+                    throw new Win32Exception(Unix.Errno, "Failed to create pipe for page probes");
+                }
+
+                PageProbePipeReadFD = pipefd[0];
+                PageProbePipeWriteFD = pipefd[1];
+            }
+
             public static unsafe bool PageAllocated(nint page) {
                 byte garbage;
                 // TODO: Mincore isn't implemented in WSL, and always gives ENOSYS
@@ -122,12 +136,31 @@ namespace MonoMod.Core.Platforms.Systems {
                     if (lastError == 12) {  // ENOMEM, page is unallocated
                         return false;
                     }
-                    if (lastError == 38) { // ENOSYS Function not implemented
+                    if (lastError == 38) { // ENOSYS, function not implemented
                         // TODO: possibly implement /proc/self/maps parsing as a fallback
                         throw new SyscallNotImplementedException();
                     }
                     throw new NotImplementedException($"Got unimplemented errno for mincore(2); errno = {lastError}");
                 }
+                return true;
+            }
+
+            public static unsafe bool PageReadable(nint page) {
+                // Try to write into a pipe using the page as the source buffer
+                if (Unix.Write(PageProbePipeWriteFD, page, 1) == -1) {
+                    var lastError = Unix.Errno;
+                    if (lastError == 14) {  // EFAULT, buf is not readable
+                        return false;
+                    }
+                    throw new NotImplementedException($"Got unimplemented errno for write(2); errno = {lastError}");
+                }
+
+                // Success - clean up the pipe
+                byte garbage;
+                if (Unix.Read(PageProbePipeReadFD, new IntPtr(&garbage), 1) == -1) {
+                    throw new Win32Exception("Failed to clean up page probe pipe after successful page probe");
+                }
+
                 return true;
             }
 
@@ -293,7 +326,7 @@ namespace MonoMod.Core.Platforms.Systems {
             int fd;
             string fname;
             try {
-                templ.AsSpan().Fill(0);
+                templ.AsSpan().Clear();
                 NEHTempl.CopyTo(templ);
 
                 fixed (byte* pTmpl = templ)

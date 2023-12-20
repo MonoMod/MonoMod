@@ -3,7 +3,7 @@
 
   <!-- C#-specific properties -->
   <PropertyGroup>
-    <LangVersion>preview</LangVersion> <!-- Use preview so that we have UTF-8 string literals -->
+    <LangVersion>12</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable> <!-- C# projects should have nullability enabled. -->
     <WarningsAsErrors>$(WarningsAsErrors);nullable</WarningsAsErrors> <!-- Nullability warnings should be errors. -->
@@ -12,13 +12,14 @@
     
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     
     <ImplicitUsings>false</ImplicitUsings>
     
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisMode>All</AnalysisMode>
-    <AnalysisLevel>6.0</AnalysisLevel>
+    <AnalysisLevel>8.0</AnalysisLevel>
     
     <MMReferenceILHelpers>true</MMReferenceILHelpers>
     <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
@@ -33,25 +34,19 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- XML documentation warning. TODO: We should probably remove this at some point and ensure that MM is fully documented. -->
     <NoWarn>$(NoWarn);CA1716</NoWarn> <!-- Members have name shared with primitive type. -->
     <NoWarn>$(NoWarn);CA1003</NoWarn> <!-- Change event to use EventHandler<EventArgs> -->
+    <NoWarn>$(NoWarn);CA2020</NoWarn> <!-- Starting with .NET 7, conversions with IntPtr don't throw in an unchecked context -->
+    <NoWarn>$(NoWarn);CA1303</NoWarn> <!-- Use resource tables for strings passed to Console.WriteLine -->
 
-    <NewCecilVersion>0.11.4</NewCecilVersion>
+    <NewCecilVersion>0.11.5</NewCecilVersion>
     <OldCecilVersion>0.10.4</OldCecilVersion>
     
-    <RoslynVersion>4.4.0</RoslynVersion>
-    <MSBuildRequiredVersion>17.5.0</MSBuildRequiredVersion>
+    <RoslynVersion>4.8.0</RoslynVersion>
+    <MSBuildRequiredVersion>17.8.3</MSBuildRequiredVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- We want to remove JSImportGenerator by default, becuase it takes a good deal of compilation time -->
     <RemoveAnalyzer Include="Microsoft.Interop.JavaScript.JSImportGenerator" />
-  </ItemGroup>
-
-  <!-- For our C# projects, we want to pull in the code analyzers -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   
   <ItemGroup Condition="'$(MMReferenceSourcePkgs)' == 'true'">

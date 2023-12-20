@@ -265,7 +265,7 @@ namespace MonoMod.Core.Platforms {
                 }
             }
 
-            private class RelatedDetourBag {
+            private sealed class RelatedDetourBag {
                 public readonly MethodBase Method;
                 public readonly List<ManagedDetourBox> RelatedDetours = new();
                 public bool IsValid = true;

@@ -354,7 +354,7 @@ namespace MonoMod.Utils {
                 }
 
                 // find the next dash or space, if any, because everything up to that should be the version
-                var space = fxDesc.IndexOfAny(new[] { ' ', '-' }, prefixLength);
+                var space = fxDesc.IndexOfAny([' ', '-'], prefixLength);
                 if (space < 0)
                     space = fxDesc.Length;
 

@@ -45,6 +45,8 @@ namespace System {
             _ = new Gen2GcCallback(callback, targetObj);
         }
 
+#pragma warning disable CA1031 // Do not catch general exception types
+        // We don't want to be crashing the finalizer thread
         ~Gen2GcCallback() {
             if (_weakTargetObj.IsAllocated) {
                 // Check to see if the target object is still alive.
@@ -90,5 +92,6 @@ namespace System {
             // Resurrect ourselves by re-registering for finalization.
             GC.ReRegisterForFinalize(this);
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 }

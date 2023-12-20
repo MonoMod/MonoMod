@@ -225,10 +225,10 @@ namespace MonoMod.Utils.Cil {
         }
 
         public override void Emit(SRE.OpCode opcode, Label[] labels) {
-            IEnumerable<LabelInfo> labelInfos = labels.Distinct().Select(_)!;
-            Instruction ins = IL.Create(CecilILGenerator._(opcode), labelInfos.Select(labelInfo => labelInfo.Instruction).ToArray());
-            foreach (LabelInfo labelInfo in labelInfos)
-                labelInfo.Branches.Add(ins);
+            var labelInfos = labels.Distinct().Select(_).Where(x => x is not null)!.ToArray();
+            Instruction ins = IL.Create(CecilILGenerator._(opcode), labelInfos.Select(labelInfo => labelInfo!.Instruction).ToArray());
+            foreach (var labelInfo in labelInfos)
+                labelInfo!.Branches.Add(ins);
             Emit(ProcessLabels(ins));
         }
 

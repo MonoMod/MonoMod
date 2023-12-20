@@ -1,14 +1,9 @@
 ﻿using Mono.Cecil;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using MonoMod.Utils;
-using System.Reflection;
 
 namespace MonoMod.RuntimeDetour.HookGen {
-    class Program {
+    public sealed class Program {
         static void Main(string[] args) {
             Console.WriteLine("MonoMod.RuntimeDetour.HookGen " + typeof(Program).Assembly.GetName().Version);
             Console.WriteLine("using MonoMod " + typeof(MonoModder).Assembly.GetName().Version);
@@ -24,9 +19,9 @@ namespace MonoMod.RuntimeDetour.HookGen {
             string pathIn;
             string pathOut;
 
-            int pathInI = 0;
+            var pathInI = 0;
 
-            for (int i = 0; i < args.Length; i++) {
+            for (var i = 0; i < args.Length; i++) {
                 if (args[i] == "--namespace" && i + 2 < args.Length) {
                     i++;
                     Environment.SetEnvironmentVariable("MONOMOD_HOOKGEN_NAMESPACE", args[i]);
@@ -47,7 +42,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
             }
 
-            string missingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW");
+            var missingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW");
             if (string.IsNullOrEmpty(missingDependencyThrow))
                 Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "0");
 
@@ -64,7 +59,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             pathOut = pathOut ?? Path.Combine(Path.GetDirectoryName(pathIn), "MMHOOK_" + Path.ChangeExtension(Path.GetFileName(pathIn), "dll"));
 
-            using (MonoModder mm = new MonoModder() {
+            using (var mm = new MonoModder() {
                 InputPath = pathIn,
                 OutputPath = pathOut,
                 ReadingMode = ReadingMode.Deferred
@@ -79,7 +74,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 }
 
                 mm.Log("[HookGen] Starting HookGenerator");
-                HookGenerator gen = new HookGenerator(mm, Path.GetFileName(pathOut));
+                var gen = new HookGenerator(mm, Path.GetFileName(pathOut));
 #if !CECIL0_9
                 using (ModuleDefinition mOut = gen.OutputModule) {
 #else

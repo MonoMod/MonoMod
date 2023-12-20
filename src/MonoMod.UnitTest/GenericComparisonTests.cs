@@ -187,7 +187,7 @@ namespace MonoMod.UnitTest {
         [InlineData(typeof(ValueGenericA<int>), "G", typeof(int?), typeof(ValueGenericA<int>), "G", typeof(int?))]
         [InlineData(typeof(ValueGenericA<int?>), "G", typeof(int?), typeof(ValueGenericA<int?>), "G", typeof(int?))]
         // TODO: add cases that mix GenericA and ValueGenericA
-        public void MethodsCompareEqual(Type aDecl, string aName, Type aParam, Type bDecl, string bName, Type bParam) {
+        public void MethodsCompareEqual(Type aDecl, string aName, Type? aParam, Type bDecl, string bName, Type? bParam) {
             MethodInfo Method(Type decl, string name, Type genParam) {
                 MethodInfo info = Helpers.ThrowIfNull(decl).GetMethods().First(m => m.Name == name);
                 if (genParam != null)

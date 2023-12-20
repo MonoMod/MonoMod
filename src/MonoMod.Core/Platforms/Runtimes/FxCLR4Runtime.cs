@@ -4,7 +4,7 @@ using System.Reflection;
 using static MonoMod.Core.Interop.Fx;
 
 namespace MonoMod.Core.Platforms.Runtimes {
-    internal class FxCLR4Runtime : FxBaseRuntime {
+    internal sealed class FxCLR4Runtime : FxBaseRuntime {
 
         private ISystem system;
 

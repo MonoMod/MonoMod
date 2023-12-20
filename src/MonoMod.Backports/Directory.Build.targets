@@ -41,11 +41,11 @@
     <CompileRemovedItem></CompileRemovedItem>
   </PropertyGroup>
 
-  <Import Project="$(_MSBPropsFile)" Condition="Exists('$(_MSBPropsFile)') and ('$(DesignTimeBuild)' == 'true' OR '$(BuildingProject)' != 'true')"/>
+  <Import Project="$(_MSBPropsFile)" Condition="Exists('$(_MSBPropsFile)') and ('$(DesignTimeBuild)' == 'true')"/>
 
   <Target Name="EmitTFMFilterPropsFile"
           BeforeTargets="_GenerateCompileDependencyCache;_GenerateCompileInputs"
-          Condition="'$(DesignTimeBuild)' == 'true' OR '$(BuildingProject)' != 'true'">
+          Condition="'$(DesignTimeBuild)' == 'true'">
     <ItemGroup>
       <_CompileUnfiltered Include="@(Compile)" />
       <_CompileUnfiltered Include="@($(CompileRemovedItem))" Condition="'$(CompileRemovedItem)' != ''" />

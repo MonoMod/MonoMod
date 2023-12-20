@@ -322,8 +322,8 @@ namespace MonoMod.Utils {
                 return;
             }
 
-            if (!expectType.IsValueType) {
-                // we explicitly allow null for reference types
+            if (!expectType.IsValueType || Nullable.GetUnderlyingType(expectType) is not null) {
+                // we explicitly allow null for reference types and Nullable<T>
                 var doCheck = il.DefineLabel();
                 var val = new VariableDefinition(il.Module.TypeSystem.Object);
                 il.Context.Body.Variables.Add(val);

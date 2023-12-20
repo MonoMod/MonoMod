@@ -2,6 +2,9 @@
 <Project>
 
   <!-- C#-specific targets -->
+  <PropertyGroup>
+    <NoWarn Condition="'$(IsPackable)' == 'false'">$(NoWarn);NG0101</NoWarn>
+  </PropertyGroup>
   
   <!-- Roslyn references -->
   <ItemGroup>

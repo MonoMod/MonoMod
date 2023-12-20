@@ -44,7 +44,7 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private class Scope {
+        private sealed class Scope {
             public readonly DetourContext Context;
             public readonly Scope? Prev;
 
@@ -77,6 +77,7 @@ namespace MonoMod.RuntimeDetour {
         /// which can be used in a <see langword="using"/> block to automatically pop it from the context stack.
         /// </summary>
         /// <returns>A <see cref="DataScope"/> which manages the lifetime of this context on the context stack.</returns>
+        [CLSCompliant(false)]
         public DataScope Use() => PushContext(this);
 
         /// <summary>

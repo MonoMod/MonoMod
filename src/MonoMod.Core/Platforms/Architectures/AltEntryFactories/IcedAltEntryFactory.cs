@@ -4,7 +4,7 @@ using System;
 using System.Buffers;
 
 namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
-    internal class IcedAltEntryFactory : IAltEntryFactory {
+    internal sealed class IcedAltEntryFactory : IAltEntryFactory {
         private readonly ISystem system;
         private readonly IMemoryAllocator alloc;
         private readonly int bitness;

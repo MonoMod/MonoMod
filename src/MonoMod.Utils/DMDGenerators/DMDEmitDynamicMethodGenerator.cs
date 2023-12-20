@@ -9,8 +9,9 @@ namespace MonoMod.Utils {
 
         private static readonly FieldInfo _DynamicMethod_returnType =
             typeof(DynamicMethod).GetField("returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
+            typeof(DynamicMethod).GetField("_returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
             typeof(DynamicMethod).GetField("m_returnType", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Cannot find returnType fieeld on DynamicMethod");
+            ?? throw new InvalidOperationException("Cannot find returnType field on DynamicMethod");
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
             var orig = dmd.OriginalMethod;
@@ -56,26 +57,12 @@ namespace MonoMod.Utils {
                 MMDbgLog.Trace($"orig: {orig}");
             MMDbgLog.Trace($"mdef: {def.ReturnType?.ToString() ?? "NULL"} {name}({string.Join(",", def.Parameters.Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
 
-            var associatedType = orig?.DeclaringType;
-
-            DynamicMethod dm;
-            if (associatedType is not null || PlatformDetection.Runtime is RuntimeKind.Framework) {
-                // If we're running on .NET Framework, the overload without associatedType is a CAS overload
-                // that was introduced in 3.5, which quite reliably causes VerificationExceptions when the DM
-                // is executed. In that case, we have to use the overload with associatedType.
-                dm = new DynamicMethod(
-                    name,
-                    typeof(void), argTypes,
-                    associatedType ?? typeof(DynamicMethodDefinition),
-                    true
-                );
-            } else {
-                dm = new DynamicMethod(
-                    name,
-                    typeof(void), argTypes,
-                    true
-                );
-            }
+            var dm = new DynamicMethod(
+                name,
+                typeof(void), argTypes,
+                orig?.DeclaringType ?? typeof(DynamicMethodDefinition),
+                true // If any random errors pop up, try setting this to false first.
+            );
 
             // DynamicMethods don't officially "support" certain return types, such as ByRef types.
             _DynamicMethod_returnType.SetValue(dm, retType);

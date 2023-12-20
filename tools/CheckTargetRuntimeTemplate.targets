@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <PropertyGroup>
+    <_MonoMod_CurrentPackage>[[PACKAGEID]]</_MonoMod_CurrentPackage>
+    <_MonoMod_DoForm Condition="'$(_MonoMod_DoForm)' == ''">does</_MonoMod_DoForm>
+    <_MonoMod_DoForm Condition="'$(_MonoMod_ThisPackage)' != ''">do</_MonoMod_DoForm>
+    <_MonoMod_ThisPackage Condition="'$(_MonoMod_ThisPackage)' != ''">$(_MonoMod_ThisPackage) and $(_MonoMod_CurrentPackage)</_MonoMod_ThisPackage>
+    <_MonoMod_ThisPackage Condition="'$(_MonoMod_ThisPackage)' == ''">$(_MonoMod_CurrentPackage)</_MonoMod_ThisPackage>
+  </PropertyGroup>
+
+  <Import Condition="'$(_MonoMod_CheckTargetRuntimeIncluded)' == ''" Project="$(MSBuildThisFileDirectory)MonoMod.CheckTargetRuntime.targets" />
+
+</Project>

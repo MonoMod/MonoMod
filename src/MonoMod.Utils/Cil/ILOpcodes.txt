@@ -65,6 +65,8 @@ CallOrCallvirt MethodReference
 # instead only generating the variants that check for specific operands.
 [SkipBase ILMatcher]
 Ldarg int
+Starg int
+Ldarga int
 Ldc_I4 int
 Ldloc int
 Stloc int
@@ -73,7 +75,10 @@ Ldloca int
 CallOrCallvirt MethodReference
 
 [Skip ILMatcher]
-# We cannot reliably get a VariableReference, so we won't try
+# We cannot reliably get a ParameterReference / VariableReference, so we won't try
+Ldarg ParameterReference
+Ldarga ParameterReference
+Starg ParameterReference
 Ldloc VariableReference
 Ldloca VariableReference
 Stloc VariableReference
@@ -81,11 +86,15 @@ Stloc VariableReference
 # S-Form list
 [SForm]
 Ldarg int
+Ldarg ParameterReference
 Ldarga int
+Ldarga ParameterReference
+Starg int
+Starg ParameterReference
 Ldloc int
 Ldloc VariableReference
 Ldloca int
-Ldloca variableReference
+Ldloca VariableReference
 Stloc int
 Stloc VariableReference
 Br ILLabel
@@ -187,8 +196,14 @@ Initblk
 Initobj TypeReference
 Isinst TypeReference
 Jmp MethodReference
+Ldarg_0
+Ldarg_1
+Ldarg_2
+Ldarg_3
 Ldarg int
+Ldarg ParameterReference
 Ldarga int
+Ldarga ParameterReference
 Ldc_I4 int
 Ldc_I8 long
 Ldc_R4 float
@@ -221,6 +236,10 @@ Ldind_U1
 Ldind_U2
 Ldind_U4
 Ldlen
+Ldloc_0
+Ldloc_1
+Ldloc_2
+Ldloc_3
 Ldloc int
 Ldloc VariableReference
 Ldloca int
@@ -257,6 +276,7 @@ Shr
 Shr_Un
 Sizeof TypeReference
 Starg int
+Starg ParameterReference
 Stelem_Any TypeReference
 Stelem_I
 Stelem_I1
@@ -275,6 +295,10 @@ Stind_I8
 Stind_R4
 Stind_R8
 Stind_Ref
+Stloc_0
+Stloc_1
+Stloc_2
+Stloc_3
 Stloc int
 Stloc VariableReference
 Stobj TypeReference

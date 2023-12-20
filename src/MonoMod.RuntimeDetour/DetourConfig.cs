@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace MonoMod.RuntimeDetour {
@@ -37,17 +38,39 @@ namespace MonoMod.RuntimeDetour {
         public IEnumerable<string> After { get; }
 
         /// <summary>
+        /// Gets the sub-priority of the detours represented by this config, which controls the order of hooks with the same priority.
+        /// </summary>
+        /// <remarks>
+        /// This is only intended to be used for advanced applications - you should use <see cref="Priority"/> for almost all regular use cases.
+        /// </remarks>
+        [Browsable(false), EditorBrowsable(EditorBrowsableState.Never)]
+        public int SubPriority { get; }
+
+        /// <summary>
         /// Constructs a <see cref="DetourConfig"/> with a specific ID, and any of the ordering options.
         /// </summary>
         /// <param name="id">The ID of the detour config.</param>
         /// <param name="priority">The priority of the detour config. Refer to <see cref="Priority"/> for details.</param>
         /// <param name="before">An enumerable containing the list of IDs of detours to run before detours with this config.</param>
         /// <param name="after">An enumerable containing the list of IDs of detours to run after detours with this config.</param>
-        public DetourConfig(string id, int? priority = null, IEnumerable<string>? before = null, IEnumerable<string>? after = null) {
+        public DetourConfig(string id, int? priority = null, IEnumerable<string>? before = null, IEnumerable<string>? after = null)
+            : this(id, priority, before, after, 0) {}
+
+        /// <summary>
+        /// Constructs a <see cref="DetourConfig"/> with a specific ID, and any of the ordering options (including advanced options).
+        /// </summary>
+        /// <param name="id">The ID of the detour config.</param>
+        /// <param name="priority">The priority of the detour config. Refer to <see cref="Priority"/> for details.</param>
+        /// <param name="before">An enumerable containing the list of IDs of detours to run before detours with this config.</param>
+        /// <param name="after">An enumerable containing the list of IDs of detours to run after detours with this config.</param>
+        /// <param name="subPriority">The sub-priority of the detour config. Refer to <see cref="SubPriority"/> for details.</param>
+        [Browsable(false), EditorBrowsable(EditorBrowsableState.Never)]
+        public DetourConfig(string id, int? priority, IEnumerable<string>? before, IEnumerable<string>? after, int subPriority) {
             Id = id;
             Priority = priority;
             Before = AsFixedSize(before ?? Enumerable.Empty<string>());
             After = AsFixedSize(after ?? Enumerable.Empty<string>());
+            SubPriority = subPriority;
         }
 
         private static IEnumerable<string> AsFixedSize(IEnumerable<string> enumerable) {
@@ -63,13 +86,13 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         /// <param name="priority">The priority of the new <see cref="DetourConfig"/>.</param>
         /// <returns>A <see cref="DetourConfig"/> identical to this one, but with <see cref="Priority"/> equal to <paramref name="priority"/>.</returns>
-        public DetourConfig WithPriority(int? priority) => new(Id, priority, Before, After);
+        public DetourConfig WithPriority(int? priority) => new(Id, priority, Before, After, SubPriority);
         /// <summary>
         /// Creates a new <see cref="DetourConfig"/> which is identical to this one, but with <see cref="Before"/> equal to <paramref name="before"/>.
         /// </summary>
         /// <param name="before">The <see cref="Before"/> list for the new <see cref="DetourConfig"/>.</param>
         /// <returns>A <see cref="DetourConfig"/> identical to this one, but with <see cref="Before"/> equal to <paramref name="before"/>.</returns>
-        public DetourConfig WithBefore(IEnumerable<string> before) => new(Id, Priority, before, After);
+        public DetourConfig WithBefore(IEnumerable<string> before) => new(Id, Priority, before, After, SubPriority);
         /// <summary>
         /// Creates a new <see cref="DetourConfig"/> which is identical to this one, but with <see cref="Before"/> equal to <paramref name="before"/>.
         /// </summary>
@@ -81,7 +104,7 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         /// <param name="after">The <see cref="After"/> list for the new <see cref="DetourConfig"/>.</param>
         /// <returns>A <see cref="DetourConfig"/> identical to this one, but with <see cref="After"/> equal to <paramref name="after"/>.</returns>
-        public DetourConfig WithAfter(IEnumerable<string> after) => new(Id, Priority, Before, after);
+        public DetourConfig WithAfter(IEnumerable<string> after) => new(Id, Priority, Before, after, SubPriority);
         /// <summary>
         /// Creates a new <see cref="DetourConfig"/> which is identical to this one, but with <see cref="After"/> equal to <paramref name="after"/>.
         /// </summary>

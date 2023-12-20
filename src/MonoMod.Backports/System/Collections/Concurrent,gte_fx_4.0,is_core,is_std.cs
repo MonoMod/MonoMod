@@ -10,4 +10,3 @@ using System.Runtime.CompilerServices;
 [assembly: TypeForwardedTo(typeof(OrderablePartitioner<>))]
 [assembly: TypeForwardedTo(typeof(Partitioner))]
 [assembly: TypeForwardedTo(typeof(Partitioner<>))]
-[assembly: TypeForwardedTo(typeof(EnumerablePartitionerOptions))]

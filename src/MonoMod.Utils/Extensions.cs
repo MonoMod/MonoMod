@@ -33,6 +33,13 @@ namespace MonoMod.Utils {
             if (type == other)
                 return true;
 
+            // before we check IsAssignableFrom, we need to make sure that it isn't one of the funky special types
+            // these types are actually boxed, non-value-types, despite being the bases of Enum and ValueType respectively
+            if (other.IsEnum && type == typeof(Enum))
+                return false;
+            if (other.IsValueType && type == typeof(ValueType))
+                return false;
+
             if (type.IsAssignableFrom(other))
                 return true;
 

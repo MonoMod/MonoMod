@@ -18,7 +18,7 @@ namespace MonoMod.SourceGen.Internal {
         private static readonly DiagnosticDescriptor WRN_CouldNotGetVersion = new(
             "MM0002",
             "Could not get version to write in assembly info",
-            "Could not get vsrion to write in assembly info.",
+            "Could not get version to write in assembly info",
             "Build",
             DiagnosticSeverity.Warning, true);
 

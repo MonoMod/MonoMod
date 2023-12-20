@@ -36,6 +36,7 @@ namespace MonoMod.Core.Interop {
             Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
             "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
             "needing duplicates.")]
+        [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 8.")]
         public class V70 : V60 {
             public static class ICorJitInfoVtable {
 
