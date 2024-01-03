@@ -24,6 +24,14 @@ namespace MonoMod.Utils.Interop {
         public static extern unsafe int Uname(byte* buf);
 #endif
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct LinuxAuxvEntry {
+            public nint Key;
+            public nint Value;
+        }
+
+        public const int AT_PLATFORM = 0xf;
+
         public enum DlopenFlags : int {
             RTLD_LAZY = 0x0001,
             RTLD_NOW = 0x0002,

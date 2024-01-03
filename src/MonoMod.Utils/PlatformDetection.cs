@@ -128,6 +128,8 @@ namespace MonoMod.Utils {
                 // Unfortunately for us, the size of the utsname struct depends heavily on the platform. Fortunately for us,
                 // the returned data is all null-terminated strings. Hopefully, the unused data in the fields are filled with
                 // zeroes or untouched, which will allow us to easily scan for the strings.
+                // This last condition is *not* always true on Linux, depending on how the hostname is set.
+                // See https://github.com/tModLoader/tModLoader/issues/3766
 
                 // Because the amount of space required for this syscall is unknown, we'll just allocate 6*513 bytes for it, and scan.
 
@@ -149,22 +151,7 @@ namespace MonoMod.Utils {
                 var kernelName = GetCString(buffer, out var nullByteOffs).ToUpperInvariant();
                 buffer = buffer.Slice(nullByteOffs);
 
-                for (var i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
-                    if (i != 0) {
-                        // skip a string
-                        nullByteOffs = buffer.IndexOf((byte)0);
-                        buffer = buffer.Slice(nullByteOffs);
-                    }
-                    // then advance to the next one
-                    var j = 0;
-                    for (; j < buffer.Length && buffer[j] == 0; j++) { }
-                    buffer = buffer.Slice(j);
-                }
-
-                // and here we find the machine field
-                var machineName = GetCString(buffer, out _).ToUpperInvariant();
-
-                MMDbgLog.Trace($"uname() call returned {kernelName} {machineName}");
+                MMDbgLog.Trace($"uname() call returned {kernelName}");
 
                 // now we want to inspect the fields and select something useful from them
                 if (kernelName.Contains("LINUX", StringComparison.Ordinal)) { // A Linux kernel
@@ -176,6 +163,51 @@ namespace MonoMod.Utils {
                     os = OSKind.BSD;
                 }
                 // TODO: fill in other known kernel names
+
+                string machineName;
+                if (os == OSKind.Linux) {
+                    // we know the kernel is linux, use /proc/self/auxv (present since Linux 2.6.0, which released in 2004)
+
+                    var auxvBytes = File.ReadAllBytes("/proc/self/auxv").AsSpan();
+                    var auxv = MemoryMarshal.Cast<byte, Interop.Unix.LinuxAuxvEntry>(auxvBytes);
+                    machineName = string.Empty;
+                    foreach (var entry in auxv) {
+                        if (entry.Key != Interop.Unix.AT_PLATFORM) {
+                            continue;
+                        }
+
+                        machineName = Marshal.PtrToStringAnsi(entry.Value);
+                        break;
+                    }
+
+                    if (machineName.Length == 0) {
+                        MMDbgLog.Warning($"Auxv table did not inlcude useful AT_PLATFORM (0x{Interop.Unix.AT_PLATFORM:x}) entry");
+                        foreach (var entry in auxv) {
+                            MMDbgLog.Trace($"{entry.Key:x16} = {entry.Value:x16}");
+                        }
+                    } else {
+                        MMDbgLog.Trace($"Got architecture name {machineName} from /proc/self/auxv");
+                    }
+                } else {
+                    // this is a non-unix kernel, lets hope their uname buffers are more well maintained...
+                    for (var i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
+                        if (i != 0) {
+                            // skip a string
+                            nullByteOffs = buffer.IndexOf((byte) 0);
+                            buffer = buffer.Slice(nullByteOffs);
+                        }
+                        // then advance to the next one
+                        var j = 0;
+                        for (; j < buffer.Length && buffer[j] == 0; j++) { }
+                        buffer = buffer.Slice(j);
+                    }
+
+                    // and here we find the machine field
+                    machineName = GetCString(buffer, out _);
+                    MMDbgLog.Trace($"Got architecture name {machineName} from uname()");
+                }
+
+                machineName = machineName.ToUpperInvariant();
 
                 if (machineName.Contains("X86_64", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.x86_64;
