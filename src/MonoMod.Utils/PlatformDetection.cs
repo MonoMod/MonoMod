@@ -176,7 +176,7 @@ namespace MonoMod.Utils {
                             continue;
                         }
 
-                        machineName = Marshal.PtrToStringAnsi(entry.Value);
+                        machineName = Marshal.PtrToStringAnsi(entry.Value) ?? string.Empty;
                         break;
                     }
 
