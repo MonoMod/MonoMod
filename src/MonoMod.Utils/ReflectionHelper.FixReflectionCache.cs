@@ -128,13 +128,20 @@ namespace MonoMod.Utils {
             if (orig is null)
                 return;
             // Sort using a short-lived list.
-            var list = new List<T>(orig.Length);
-            for (int i = 0; i < orig.Length; i++)
-                list.Add((T) orig.GetValue(i)!);
+            var list = new List<T?>(orig.Length);
+            for (var i = 0; i < orig.Length; i++)
+                list.Add((T?) orig.GetValue(i)!);
 
-            list.Sort((a, b) => a.MetadataToken - b.MetadataToken);
+            list.Sort((a, b) => {
+                if (a == b) return 0;
+                if (a is null)
+                    return 1;
+                if (b is null)
+                    return -1;
+                return a.MetadataToken - b.MetadataToken;
+            });
 
-            for (int i = orig.Length - 1; i >= 0; --i)
+            for (var i = orig.Length - 1; i >= 0; --i)
                 orig.SetValue(list[i], i);
         }
 
