@@ -22,6 +22,7 @@ using (new Hook(typeof(ReadOnlyMemory<char>).GetMethod("ToString")!, (ReadOnlyMe
     return orig(ref mem) + " lol";
 })) {
     var str2 = str.ToString();
+    Console.WriteLine(str2);
 }
 
 #if NETCOREAPP1_0_OR_GREATER

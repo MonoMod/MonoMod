@@ -63,7 +63,7 @@ namespace System
             }
 
             oldHandle.Free();
-            try
+            /*try
             {
                 oldHandle.Free();
             }
@@ -72,7 +72,7 @@ namespace System
                 // The handle was freed or never initialized.
                 // Nothing to do.
                 _ = exception;
-            }
+            }*/
         }
 
         [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
