@@ -1,7 +1,5 @@
 ### **THIS IS PROBABLY NOT THE LIBRARY YOU WANT TO BE USING.** You probably want `RuntimeDetour` instead.
 
-You have been warned.
-
 ---
 
 ## Notable APIs
@@ -20,6 +18,9 @@ It is therefore **highly recommended** to use a higher-level detouring API (like
 `MonoMod.RuntimeDetour` or `Harmony`) to perform detours. Those higher level APIs also provide solutions to many of
 the limitations to `Core`'s detour abstraction, such as the ability to call the original, unmodified method, or
 modify the IL of the method. (See their documentation for how this is actually done.)
+
+Additionally, interfaces in this package may have members added across minor version updates. Other version-based
+compatability guarantees are retained.
 
 ## Other potentially useful APIs
 
