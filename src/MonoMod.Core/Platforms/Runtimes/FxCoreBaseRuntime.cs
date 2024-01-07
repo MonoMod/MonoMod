@@ -175,7 +175,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             var module = dmd.Module!;
             var il = dmd.GetILProcessor();
 
-            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarga_S, (byte)0);
             if (_RuntimeHelpers__CompileMethod_TakesIntPtr) {
                 il.Emit(OpCodes.Call, module.ImportReference(_RuntimeMethodHandle_get_Value));
                 il.Emit(OpCodes.Call, module.ImportReference(_RuntimeHelpers__CompileMethod));
