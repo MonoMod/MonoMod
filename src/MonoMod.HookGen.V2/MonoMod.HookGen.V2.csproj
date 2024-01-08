@@ -23,6 +23,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    
+    <!-- TODO: emit this ref and the RuntimeDetour ref into consuming projects -->
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1">
       <PrivateAssets>none</PrivateAssets>
       <ExcludeAssets>all</ExcludeAssets>

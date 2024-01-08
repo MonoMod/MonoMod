@@ -12,11 +12,13 @@ using System.Threading;
 
 namespace MonoMod.HookGen.V2 {
     [Generator]
-    internal class HookHelperGenerator : IIncrementalGenerator {
+    public sealed class HookHelperGenerator : IIncrementalGenerator {
 
         private const string GenHelperForTypeAttributeFqn = "MonoMod.HookGen.GenerateHookHelpersAttribute";
         private const string ILHookParameterType = "global::MonoMod.Cil.ILContext.Manipulator";
-        private const string GenHelperForTypeAttributeSource =
+        public const string GenHelperForTypeAttrFile = "GenerateHookHelpersAttribute.g.cs";
+        public const string DelegateTypesFile = "DelegateTypes.g.cs";
+        public const string GenHelperForTypeAttributeSource =
             """
             #nullable enable
             using System;
@@ -112,7 +114,7 @@ namespace MonoMod.HookGen.V2 {
         public void Initialize(IncrementalGeneratorInitializationContext context) {
 
             context.RegisterPostInitializationOutput(ctx => {
-                ctx.AddSource("GenerateHookHelpersAttribute.g.cs", GenHelperForTypeAttributeSource);
+                ctx.AddSource(GenHelperForTypeAttrFile, GenHelperForTypeAttributeSource);
             });
 
             var attributes = context.SyntaxProvider.ForAttributeWithMetadataName(
@@ -275,6 +277,10 @@ namespace MonoMod.HookGen.V2 {
         }
 
         private void EmitDelegateTypes(SourceProductionContext context, ImmutableArray<MethodSignature> signatures) {
+            if (signatures.IsEmpty) {
+                return;
+            }
+
             var sb = new StringBuilder();
             var cb = new CodeBuilder(sb);
 
@@ -332,7 +338,7 @@ namespace MonoMod.HookGen.V2 {
                     .WriteLine("(")
                     .IncreaseIndent()
                     .Write(origName)
-                    .WriteLine(" orig");
+                    .Write(" orig");
 
                 if (sig.ThisType is { } thisType2) {
                     _ = cb
@@ -355,6 +361,8 @@ namespace MonoMod.HookGen.V2 {
 
                 cb.WriteLine(");").DecreaseIndent();
             }
+
+            context.AddSource(DelegateTypesFile, sb.ToString());
         }
 
         private void EmitHelperTypes(SourceProductionContext context, GeneratableTypeModel type) {
@@ -368,6 +376,17 @@ namespace MonoMod.HookGen.V2 {
             type.Type.AppendEnterContext(cb, "internal static");
 
             EmitTypeMembers(type, cb, il: false);
+
+            type.Type.AppendExitContext(cb);
+
+            cb.CloseBlock()
+                .WriteLine()
+                .WriteLine("namespace IL")
+                .OpenBlock();
+
+            type.Type.AppendEnterContext(cb, "internal static");
+
+            EmitTypeMembers(type, cb, il: true);
 
             type.Type.AppendExitContext(cb);
 
@@ -413,7 +432,7 @@ namespace MonoMod.HookGen.V2 {
                     .Write(member.Name)
                     .Write("\", (global::System.Reflection.BindingFlags)")
                     .Write(((int) bindingFlags).ToString(CultureInfo.InvariantCulture))
-                    .WriteLine(", new Type[]")
+                    .WriteLine(", new global::System.Type[]")
                     .OpenBlock();
 
                 foreach (var param in member.Signature.ParameterTypes.AsImmutableArray()) {
