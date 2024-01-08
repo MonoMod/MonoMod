@@ -301,6 +301,7 @@ steps:
     script: |
       dotnet test --no-build -c Release -l:"trx;LogFileName=testresults.roslyn.trx" src/MonoMod.Roslyn.UnitTests/MonoMod.Roslyn.UnitTests.csproj
 - task: PublishTestResults@2
+  condition: always()
   displayName: 'Test: Publish: Roslyn extension tests'
   inputs:
     testResultsFormat: 'VSTest'
