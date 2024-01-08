@@ -311,7 +311,7 @@ namespace MonoMod.Core.Platforms.Memory {
         protected void InsertAllocatedPage(Page page) {
             if (pageCount == allocationList.Length) {
                 // we need to expand the allocationList
-                var newSize = (int) BitOperations.RoundUpToPowerOf2((uint) allocationList.Length);
+                var newSize = (int) BitOperations.RoundUpToPowerOf2((uint) allocationList.Length + 1);
                 Array.Resize(ref allocationList, newSize);
             }
 
@@ -327,7 +327,9 @@ namespace MonoMod.Core.Platforms.Memory {
             }
 
             // insertAt is the index of the next item larger, which is the index we want the page to be at
-            list.Slice(insertAt, pageCount - insertAt).CopyTo(list.Slice(insertAt + 1));
+            if (insertAt + 1 < list.Length) {
+                list.Slice(insertAt, pageCount - insertAt).CopyTo(list.Slice(insertAt + 1));
+            }
             list[insertAt] = page;
             pageCount++;
         }
