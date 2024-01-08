@@ -1,9 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 
 namespace MonoMod.HookGen.V2 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
