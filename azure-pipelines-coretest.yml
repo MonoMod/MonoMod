@@ -17,6 +17,9 @@ parameters:
 - name: pgoTimeout
   type: string
   default: 5
+- name: testProj
+  type: string
+  default: src/MonoMod.UnitTests/MonoMod.UnitTests.csproj
 
 steps:
 - ${{ if eq(length('${{parameters.arch}}'), 0) }}:
@@ -25,7 +28,7 @@ steps:
     displayName: 'Test: core: ${{parameters.targetFramework}}'
     inputs:
       script: |
-        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}.trx"
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}.trx" ${{parameters.testProj}}
   - task: PublishTestResults@2
     condition: and(always(), ${{parameters.condition}})
     displayName: 'Test: Publish: core: ${{parameters.targetFramework}}'
@@ -40,7 +43,7 @@ steps:
     displayName: 'Test: core: ${{parameters.targetFramework}}-${{parameters.arch}}'
     inputs:
       script: |
-        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} --arch '${{parameters.arch}}' -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx"
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} --arch '${{parameters.arch}}' -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx" ${{parameters.testProj}}
   - task: PublishTestResults@2
     condition: and(always(), ${{parameters.condition}})
     displayName: 'Test: Publish: core: ${{parameters.targetFramework}}-${{parameters.arch}}'
@@ -60,7 +63,7 @@ steps:
       DOTNET_TieredPGO: 1
     inputs:
       script: |
-        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}.trx"
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}.trx" ${{parameters.testProj}}
   - task: PublishTestResults@2
     condition: and(always(), ${{parameters.condition}})
     displayName: 'Test: Publish: core: ${{parameters.targetFramework}}'
@@ -80,7 +83,7 @@ steps:
       DOTNET_TieredPGO: 1
     inputs:
       script: |
-        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} --arch '${{parameters.arch}}' -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx"
+        dotnet test --no-build -c ${{parameters.buildConfiguration}} -f ${{parameters.targetFramework}} --arch '${{parameters.arch}}' -l:"trx;LogFileName=testresults.core.${{parameters.targetFramework}}-${{parameters.arch}}.trx" ${{parameters.testProj}}
   - task: PublishTestResults@2
     condition: and(always(), ${{parameters.condition}})
     displayName: 'Test: Publish: core: ${{parameters.targetFramework}}-${{parameters.arch}}'
