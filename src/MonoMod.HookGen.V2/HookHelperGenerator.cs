@@ -4,7 +4,10 @@ using MonoMod.SourceGen.Internal.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Threading;
 
 namespace MonoMod.HookGen.V2 {
@@ -12,6 +15,7 @@ namespace MonoMod.HookGen.V2 {
     internal class HookHelperGenerator : IIncrementalGenerator {
 
         private const string GenHelperForTypeAttributeFqn = "MonoMod.HookGen.GenerateHookHelpersAttribute";
+        private const string ILHookParameterType = "global::MonoMod.Cil.ILContext.Manipulator";
         private const string GenHelperForTypeAttributeSource =
             """
             #nullable enable
@@ -248,7 +252,266 @@ namespace MonoMod.HookGen.V2 {
 
             var generatableAssemblies = mappedAssemblies.Select(GetAllMembersToGenerate!);
 
-            var neededSignatures = generatableAssemblies.SelectMany(ExtractSignatures);
+            var neededSignaturesWithDupes = generatableAssemblies.SelectMany(ExtractSignatures);
+
+            var neededSignaturesWithoutDupes = neededSignaturesWithDupes.Collect().SelectMany((arr, ct) => {
+                var set = methodSigHashSetPool.Allocate();
+
+                foreach (var method in arr) {
+                    _ = set.Add(method);
+                }
+
+                var result = set.ToImmutableArray();
+                set.Clear();
+                methodSigHashSetPool.Free(set);
+                return result;
+            });
+
+            context.RegisterSourceOutput(neededSignaturesWithoutDupes.Collect(), EmitDelegateTypes);
+
+            var generatableTypes = generatableAssemblies.SelectMany((ass, ct) => ass.Types);
+
+            context.RegisterSourceOutput(generatableTypes, EmitHelperTypes);
+        }
+
+        private void EmitDelegateTypes(SourceProductionContext context, ImmutableArray<MethodSignature> signatures) {
+            var sb = new StringBuilder();
+            var cb = new CodeBuilder(sb);
+
+            cb.WriteHeader()
+                .WriteLine("namespace MonoMod.HookGen;")
+                .WriteLine();
+
+            foreach (var sig in signatures) {
+                var origName = GetOrigDelegateName(sig);
+
+                var parameters = sig.ParameterTypes.AsImmutableArray();
+
+                // first, emit the orig delelgate
+                cb.Write("internal delegate ")
+                    .Write(sig.ReturnType.Refness)
+                    .Write(sig.ReturnType.FqName)
+                    .Write(" ")
+                    .Write(origName)
+                    .WriteLine("(")
+                    .IncreaseIndent();
+
+                if (sig.ThisType is { } thisType) {
+                    _ = cb
+                        .Write(thisType.Refness)
+                        .Write(thisType.FqName)
+                        .Write(" @this");
+
+                    if (parameters.Length != 0) {
+                        cb.WriteLine(",");
+                    }
+                }
+
+                for (var i = 0; i < parameters.Length; i++) {
+                    var param = parameters[i];
+
+                    _ = cb
+                        .Write(param.Refness)
+                        .Write(param.FqName)
+                        .Write(" arg")
+                        .Write(i.ToString(CultureInfo.InvariantCulture));
+
+                    if (i != parameters.Length - 1) {
+                        cb.WriteLine(",");
+                    }
+                }
+
+                cb.WriteLine(");").DecreaseIndent();
+
+                // then, emit the hook delegate
+                cb.Write("internal delegate ")
+                    .Write(sig.ReturnType.Refness)
+                    .Write(sig.ReturnType.FqName)
+                    .Write(" ")
+                    .Write(GetHookDelegateName(sig))
+                    .WriteLine("(")
+                    .IncreaseIndent()
+                    .Write(origName)
+                    .WriteLine(" orig");
+
+                if (sig.ThisType is { } thisType2) {
+                    _ = cb
+                        .WriteLine(",")
+                        .Write(thisType2.Refness)
+                        .Write(thisType2.FqName)
+                        .Write(" @this");
+                }
+
+                for (var i = 0; i < parameters.Length; i++) {
+                    var param = parameters[i];
+
+                    _ = cb
+                        .WriteLine(",")
+                        .Write(param.Refness)
+                        .Write(param.FqName)
+                        .Write(" arg")
+                        .Write(i.ToString(CultureInfo.InvariantCulture));
+                }
+
+                cb.WriteLine(");").DecreaseIndent();
+            }
+        }
+
+        private void EmitHelperTypes(SourceProductionContext context, GeneratableTypeModel type) {
+            var sb = new StringBuilder();
+            var cb = new CodeBuilder(sb);
+
+            cb.WriteHeader()
+                .WriteLine("namespace On")
+                .OpenBlock();
+
+            type.Type.AppendEnterContext(cb, "internal static");
+
+            EmitTypeMembers(type, cb, il: false);
+
+            type.Type.AppendExitContext(cb);
+
+            cb.CloseBlock();
+
+            context.AddSource($"{type.AssemblyIdentity.Name}_{type.Type.FullContextName}.g.cs", sb.ToString());
+        }
+
+        private static void EmitTypeMembers(GeneratableTypeModel type, CodeBuilder cb, bool il) {
+            foreach (var member in type.Members) {
+
+                var bindingFlags = member.Accessibility switch {
+                    Accessibility.NotApplicable => BindingFlags.NonPublic,
+                    Accessibility.Private => BindingFlags.NonPublic,
+                    Accessibility.ProtectedAndInternal => BindingFlags.NonPublic,
+                    Accessibility.Protected => BindingFlags.NonPublic,
+                    Accessibility.Internal => BindingFlags.NonPublic,
+                    Accessibility.ProtectedOrInternal => BindingFlags.NonPublic,
+                    Accessibility.Public => BindingFlags.Public,
+                    _ => BindingFlags.NonPublic,
+                };
+
+                bindingFlags |= member.Signature.ThisType is not null ? BindingFlags.Static : BindingFlags.Instance;
+
+                var hookType = il ? "global::MonoMod.RuntimeDetour.ILHook" : "global::MonoMod.RuntimeDetour.Hook";
+                var parameterType = il ? ILHookParameterType : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
+
+                cb.Write("public static ")
+                    .Write(hookType)
+                    .Write(" ")
+                    .Write(member.Name);
+                if (il || member.DistinguishByName) {
+                    AppendSignatureIdentifier(cb, member.Signature);
+                }
+                cb.Write("(")
+                    .Write(parameterType)
+                    .WriteLine(" hook, bool applyByDefault = true)")
+                    .OpenBlock()
+                    .Write("var type = typeof(")
+                    .Write(type.Type.InnermostType.FqName)
+                    .WriteLine(");")
+                    .Write("var method = type.GetMethod(\"")
+                    .Write(member.Name)
+                    .Write("\", (global::System.Reflection.BindingFlags)")
+                    .Write(((int) bindingFlags).ToString(CultureInfo.InvariantCulture))
+                    .WriteLine(", new Type[]")
+                    .OpenBlock();
+
+                foreach (var param in member.Signature.ParameterTypes.AsImmutableArray()) {
+                    cb.Write("typeof(")
+                        .Write(param.FqName)
+                        .Write(")");
+                    if (!string.IsNullOrWhiteSpace(param.Refness)) {
+                        cb.Write(".MakeByRefType()");
+                    }
+                    cb.WriteLine(",");
+                }
+
+                cb.CloseBlock()
+                    .WriteLine(");")
+                    .Write("if (method is null) throw new global::System.MissingMethodException(\"")
+                    .Write(type.Type.InnermostType.MdName)
+                    .Write("\", \"")
+                    .Write(member.Name)
+                    .WriteLine("\");")
+                    .WriteLine("return new(method, hook, applyByDefault: applyByDefault);")
+                    .CloseBlock()
+                    .WriteLine();
+                ;
+            }
+
+            foreach (var nested in type.NestedTypes) {
+                cb.Write("internal static ")
+                    .Write(nested.Type.ContainingTypeDecls[0])
+                    .OpenBlock();
+
+                EmitTypeMembers(nested, cb, il);
+
+                cb.CloseBlock();
+            }
+        }
+
+        private static string GetOrigDelegateName(MethodSignature sig) {
+            return "Orig" + GetHookDelegateName(sig);
+        }
+
+        private static readonly ObjectPool<StringBuilder> stringBuilderPool = new(() => new());
+
+        private static string GetHookDelegateName(MethodSignature sig) {
+            var sb = stringBuilderPool.Allocate();
+
+            var parameters = sig.ParameterTypes.AsImmutableArray();
+            sb.Append("HookSig_")
+                .Append(sig.ReturnType.Refness.Replace(" ", "_"))
+                .Append(sig.ReturnType.MdName.Replace(".", "_").Replace("`", "_"))
+                .Append('_')
+                .Append(parameters.Length);
+
+            if (sig.ThisType is { } thisType) {
+                _ = sb
+                    .Append('_')
+                    .Append(thisType.Refness.Replace(" ", "_"))
+                    .Append(thisType.MdName.Replace(".", "_").Replace("`", "_"));
+            }
+
+            for (var i = 0; i < parameters.Length; i++) {
+                var param = parameters[i];
+
+                _ = sb
+                    .Append('_')
+                    .Append(param.Refness.Replace(" ", "_"))
+                    .Append(param.MdName.Replace(".", "_").Replace("`", "_"));
+            }
+
+            var result = sb.ToString();
+            sb.Clear();
+            stringBuilderPool.Free(sb);
+            return result;
+        }
+
+        private static void AppendSignatureIdentifier(CodeBuilder cb, MethodSignature sig) {
+            var parameters = sig.ParameterTypes.AsImmutableArray();
+            cb.Write("_")
+                .Write(sig.ReturnType.Refness.Replace(" ", "_"))
+                .Write(sig.ReturnType.MdName.Replace(".", "_").Replace("`", "_"))
+                .Write('_')
+                .Write(parameters.Length.ToString(CultureInfo.InvariantCulture));
+
+            if (sig.ThisType is { } thisType) {
+                _ = cb
+                    .Write('_')
+                    .Write(thisType.Refness.Replace(" ", "_"))
+                    .Write(thisType.MdName.Replace(".", "_").Replace("`", "_"));
+            }
+
+
+            for (var i = 0; i < parameters.Length; i++) {
+                var param = parameters[i];
+
+                _ = cb
+                    .Write('_')
+                    .Write(param.Refness.Replace(" ", "_"))
+                    .Write(param.MdName.Replace(".", "_").Replace("`", "_"));
+            }
         }
 
         private static ImmutableArray<MethodSignature> ExtractSignatures(GeneratableAssembly assembly, CancellationToken token) {
@@ -399,13 +662,14 @@ namespace MonoMod.HookGen.V2 {
 
         private sealed record GeneratableAssembly(EquatableArray<GeneratableTypeModel> Types);
 
-        private sealed record GeneratableTypeModel(TypeContext Type,
+        private sealed record GeneratableTypeModel(
+            AssemblyIdentity AssemblyIdentity, TypeContext Type,
             EquatableArray<GeneratableTypeModel> NestedTypes,
             EquatableArray<GeneratableMemberModel> Members);
 
-        private sealed record MethodSignature(EquatableArray<TypeRef> ParameterTypes, TypeRef ReturnType);
+        private sealed record MethodSignature(TypeRef? ThisType, EquatableArray<TypeRef> ParameterTypes, TypeRef ReturnType);
 
-        private sealed record GeneratableMemberModel(string Name, MethodSignature Signature, bool DistinguishByName);
+        private sealed record GeneratableMemberModel(string Name, MethodSignature Signature, bool DistinguishByName, Accessibility Accessibility);
 
         // I'm OK putting this in the pipeline, because the IAssemblySymbol here will always represent a metadata reference.
         // The symbols for those are reused when possible, as far as I can tell.
@@ -443,6 +707,15 @@ namespace MonoMod.HookGen.V2 {
 
             // ignore generic types, they can't be patched reliably
             if (type.IsGenericType) {
+                return null;
+            }
+
+            if (type.IsAnonymousType) {
+                return null;
+            }
+
+            if (type.IsImplicitlyDeclared) {
+                // TODO: maybe not this?
                 return null;
             }
 
@@ -560,12 +833,16 @@ namespace MonoMod.HookGen.V2 {
                 }
             }
 
-            return new(typeContext, typesBuilder.ToImmutable(), membersBuilder.ToImmutable());
+            return new(type.ContainingAssembly.Identity, typeContext, typesBuilder.ToImmutable(), membersBuilder.ToImmutable());
         }
 
         private static GeneratableMemberModel? GetModelForMember(IMethodSymbol method, bool distingushByName, CancellationToken token) {
             // skip generic methods
             if (method.IsGenericMethod) {
+                return null;
+            }
+
+            if (method.IsAbstract) {
                 return null;
             }
 
@@ -577,9 +854,18 @@ namespace MonoMod.HookGen.V2 {
 
             var returnType = GenHelpers.CreateRef(method.ReturnType, GenHelpers.GetRefString(method.RefKind, isReturn: true));
 
-            var sig = new MethodSignature(paramTypeBuilder.ToImmutable(), returnType);
+            TypeRef? thisType = null;
+            if (!method.IsStatic) {
+                var refKind = method.ContainingType.IsValueType
+                    ? (method.IsReadOnly ? RefKind.RefReadOnly : RefKind.Ref)
+                    : RefKind.None;
 
-            return new(method.Name, sig, distingushByName);
+                thisType = GenHelpers.CreateRef(method.ContainingType, GenHelpers.GetRefString(refKind, false));
+            }
+
+            var sig = new MethodSignature(thisType, paramTypeBuilder.ToImmutable(), returnType);
+
+            return new(method.Name, sig, distingushByName, method.DeclaredAccessibility);
         }
 
     }
