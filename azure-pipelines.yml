@@ -97,6 +97,7 @@ steps:
   displayName: 'dotnet: Restore'
   inputs:
     command: 'restore'
+    feedsToUse: config
     nugetConfigPath: nuget.config
     arguments: '-p:XunitVersion="$(xunitVer)"'
 
