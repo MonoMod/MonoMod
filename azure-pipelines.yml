@@ -296,14 +296,14 @@ steps:
 
 # Run Roslyn unit tests
 - task: CmdLine@2
-displayName: 'Test: Roslyn extension tests'
-inputs:
+  displayName: 'Test: Roslyn extension tests'
+  inputs:
     script: |
-        dotnet test --no-build -c Release -l:"trx;LogFileName=testresults.roslyn.trx" src/MonoMod.Roslyn.UnitTests/MonoMod.Roslyn.UnitTests.csproj
+      dotnet test --no-build -c Release -l:"trx;LogFileName=testresults.roslyn.trx" src/MonoMod.Roslyn.UnitTests/MonoMod.Roslyn.UnitTests.csproj
 - task: PublishTestResults@2
-condition: and(always(), ${{parameters.condition}})
-displayName: 'Test: Publish: Roslyn extension tests'
-inputs:
+  condition: and(always(), ${{parameters.condition}})
+  displayName: 'Test: Publish: Roslyn extension tests'
+  inputs:
     testResultsFormat: 'VSTest'
     testResultsFiles: '**/testresults.roslyn.trx'
     testRunTitle: 'Tests @ $(jobArchName) roslyn'
