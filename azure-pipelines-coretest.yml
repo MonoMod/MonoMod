@@ -19,7 +19,7 @@ parameters:
   default: 5
 - name: testProj
   type: string
-  default: src/MonoMod.UnitTests/MonoMod.UnitTests.csproj
+  default: src/MonoMod.UnitTest/MonoMod.UnitTest.csproj
 
 steps:
 - ${{ if eq(length('${{parameters.arch}}'), 0) }}:
