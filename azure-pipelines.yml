@@ -97,6 +97,7 @@ steps:
   displayName: 'dotnet: Restore'
   inputs:
     command: 'restore'
+    nugetConfigPath: nuget.config
     arguments: '-p:XunitVersion="$(xunitVer)"'
 
 # Build using core. Mono's msbuild started to cause too many issues.
