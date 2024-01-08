@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+
+    <MMSharedSourceFiles>false</MMSharedSourceFiles>
+    <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>
+    <MMReferenceUtils>false</MMReferenceUtils>
+    <MMReferenceBackports>false</MMReferenceBackports>
+    <MMReferenceILHelpers>false</MMReferenceILHelpers>
+    <MMUseSourceGen>false</MMUseSourceGen>
+
+    <IsPackable>true</IsPackable>
+
+    <DefineConstants Condition="$([MSBuild]::VersionGreaterThanOrEquals($(RoslynVersion), 4.3.1))">$(DefineConstants);ROSLYN_4_3_1_OR_GREATER</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynVersion)" PrivateAssets="all" />
+    <PackageReference Include="PolySharp" Version="1.13.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1">
+      <PrivateAssets>none</PrivateAssets>
+      <ExcludeAssets>all</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MonoMod.SourceGen.Internal\Extensions\**\*" Link="Extensions\%(RecursiveDirectory)%(Filename)%(Extension)" />
+    <Compile Include="..\MonoMod.SourceGen.Internal\Helpers\**\*" Link="Helpers\%(RecursiveDirectory)%(Filename)%(Extension)" />
+    <Compile Include="..\MonoMod.SourceGen.Internal\CodeBuilder.cs" Link="%(RecursiveDirectory)%(Filename)%(Extension)" />
+    <Compile Include="..\MonoMod.SourceGen.Internal\GenHelpers.cs" Link="%(RecursiveDirectory)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

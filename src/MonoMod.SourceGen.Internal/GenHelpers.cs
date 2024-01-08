@@ -42,13 +42,17 @@ namespace MonoMod.SourceGen.Internal {
             return CreateRef(symbol.Type, GetRefString(symbol));
         }
 
-        public static string GetRefString(IParameterSymbol param)
-            => param.RefKind switch {
+        public static string GetRefString(IParameterSymbol param, bool isReturn = false)
+            => GetRefString(param.RefKind, isReturn);
+
+        public static string GetRefString(RefKind refKind, bool isReturn)
+            => refKind switch {
                 RefKind.None => "",
                 RefKind.Ref => "ref ",
                 RefKind.Out => "out ",
-                RefKind.In => "in ",
-                _ => "/*unknown ref kind*/ ",
+                RefKind.In => isReturn ? "ref readonly " : "in ",
+                RefKind.RefReadOnlyParameter => "ref readonly ",
+                _ => $"/*unknown ref kind {refKind}*/ ",
             };
 
         public static TypeContext CreateTypeContext(INamedTypeSymbol type) {
