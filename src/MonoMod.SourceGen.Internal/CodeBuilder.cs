@@ -60,20 +60,20 @@ namespace MonoMod.SourceGen.Internal {
 
         public CodeBuilder WriteLine(string s) {
             WriteIndentIfNeeded();
-            sb.AppendLine(s);
+            sb.Append(s).Append("\r\n");
             didWriteIndent = false;
             return this;
         }
 
         public CodeBuilder WriteLine(char c) {
             WriteIndentIfNeeded();
-            sb.Append(c).AppendLine();
+            sb.Append(c).Append("\r\n");
             didWriteIndent = false;
             return this;
         }
 
         public CodeBuilder WriteLine() {
-            sb.AppendLine();
+            sb.Append("\r\n");
             didWriteIndent = false;
             return this;
         }
