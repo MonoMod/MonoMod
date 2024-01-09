@@ -66,27 +66,7 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                     }
                 }
 
-                namespace IL
-                {
-                    namespace MonoMod.Roslyn.UnitTests.HookGen.V2
-                    {
-                        internal static partial class  HelperGeneratorTests
-                        {
-                            public static global::MonoMod.RuntimeDetour.ILHook NoAttributesNoGen_System_Threading_Tasks_Task_0_MonoMod_Roslyn_UnitTests_HookGen_V2_HelperGeneratorTests(global::MonoMod.Cil.ILContext.Manipulator hook, bool applyByDefault = true)
-                            {
-                                var type = typeof(global::MonoMod.Roslyn.UnitTests.HookGen.V2.HelperGeneratorTests);
-                                var method = type.GetMethod("NoAttributesNoGen", (global::System.Reflection.BindingFlags)24, new global::System.Type[]
-                                {
-                                }
-                                );
-                                if (method is null) throw new global::System.MissingMethodException("MonoMod.Roslyn.UnitTests.HookGen.V2.HelperGeneratorTests", "NoAttributesNoGen");
-                                return new(method, hook, applyByDefault: applyByDefault);
-                            }
 
-                        }
-                    }
-                }
-                
                 """;
 
         [Fact]
