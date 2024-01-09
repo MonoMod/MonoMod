@@ -484,7 +484,7 @@ namespace MonoMod.HookGen.V2 {
                     .Write(hookType)
                     .Write(" ")
                     .Write(member.Name);
-                if (il || member.DistinguishByName) {
+                if ((il && member.HasOverloads) || member.DistinguishByName) {
                     AppendSignatureIdentifier(cb, member.Signature);
                 }
                 cb.Write("(")
@@ -803,7 +803,7 @@ namespace MonoMod.HookGen.V2 {
 
         private sealed record MethodSignature(TypeRef? ThisType, EquatableArray<TypeRef> ParameterTypes, TypeRef ReturnType);
 
-        private sealed record GeneratableMemberModel(string Name, MethodSignature Signature, bool DistinguishByName, Accessibility Accessibility, DetourKind Kind);
+        private sealed record GeneratableMemberModel(string Name, MethodSignature Signature, bool DistinguishByName, bool HasOverloads, Accessibility Accessibility, DetourKind Kind);
 
         // I'm OK putting this in the pipeline, because the IAssemblySymbol here will always represent a metadata reference.
         // The symbols for those are reused when possible, as far as I can tell.
@@ -971,7 +971,7 @@ namespace MonoMod.HookGen.V2 {
 
             var sig = new MethodSignature(thisType, paramTypeBuilder.ToImmutable(), returnType);
 
-            return new(method.Name, sig, options.DistinguishOverloads && hasOverloads, method.DeclaredAccessibility, options.Kind);
+            return new(method.Name, sig, options.DistinguishOverloads && hasOverloads, hasOverloads, method.DeclaredAccessibility, options.Kind);
         }
 
     }

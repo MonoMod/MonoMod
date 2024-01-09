@@ -320,7 +320,7 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                         {
                             internal static partial class  TestClass
                             {
-                                public static global::MonoMod.RuntimeDetour.ILHook Single_System_Void_0(global::MonoMod.Cil.ILContext.Manipulator hook, bool applyByDefault = true)
+                                public static global::MonoMod.RuntimeDetour.ILHook Single(global::MonoMod.Cil.ILContext.Manipulator hook, bool applyByDefault = true)
                                 {
                                     var type = typeof(global::MonoMod.Roslyn.UnitTests.HookGen.V2.HelperGeneratorTests.TestClass);
                                     var method = type.GetMethod("Single", (global::System.Reflection.BindingFlags)20, new global::System.Type[]
