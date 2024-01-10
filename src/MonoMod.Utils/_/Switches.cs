@@ -188,7 +188,7 @@ namespace MonoMod {
         private static Func<string, object?> MakeGetDataDelegate() {
             var miGetData = tAppContext?.GetMethod("GetData",
             BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { typeof(string) }, null);
-            var del = miGetData?.TryCreateDelegate<Func<string, object>>();
+            var del = miGetData?.TryCreateDelegate<Func<string, object?>>();
 
             if (del is not null) {
                 // on some platforms, AppContext.GetData is present, but always throws
