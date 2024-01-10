@@ -15,6 +15,7 @@ using System.Globalization;
 using MonoMod.Utils;
 #if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 #endif
 
 namespace MonoMod {
@@ -170,7 +171,7 @@ namespace MonoMod {
         }
 #pragma warning restore CA1200 // Avoid using cref tags with a prefix
 
-#if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH
+#if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH || NETFRAMEWORK
         private static readonly Type? tAppContext =
 #if HAS_APPCONTEXT
             typeof(AppContext);
@@ -179,10 +180,32 @@ namespace MonoMod {
 #endif
 
 #endif
-#if !HAS_APPCONTEXT_GETDATA
-        private static readonly MethodInfo? miGetData = tAppContext?.GetMethod("GetData",
+#if !HAS_APPCONTEXT_GETDATA || NETFRAMEWORK
+        private static readonly Func<string, object?> dGetData = MakeGetDataDelegate();
+
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "GetData should never actually throw when passed a non-null argument. If it does, that likely means it always throws, and thus cannot be used.")]
+        private static Func<string, object?> MakeGetDataDelegate() {
+            var miGetData = tAppContext?.GetMethod("GetData",
             BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { typeof(string) }, null);
-        private static readonly Func<string, object?>? dGetData = miGetData?.TryCreateDelegate<Func<string, object?>>();
+            var del = miGetData?.TryCreateDelegate<Func<string, object>>();
+
+            if (del is not null) {
+                // on some platforms, AppContext.GetData is present, but always throws
+                // if this is the case, we don't want to use it
+                try {
+                    _ = del("MonoMod.LogToFile"); // GetData will not throw even when passed an unexpected name
+                } catch {
+                    // it threw when it shouldn't, don't use it
+                    del = null;
+                }
+            }
+
+            // use AppDomain.CurrentDomain.GetData in failure case
+            del ??= AppDomain.CurrentDomain.GetData;
+
+            return del;
+        }
 #endif
 #if !HAS_APPCONTEXT_GETSWITCH
         private delegate bool TryGetSwitchFunc(string @switch, out bool isEnabled);
@@ -204,7 +227,7 @@ namespace MonoMod {
                 var appCtxSwitchName = "MonoMod." + @switch;
 
                 object? res;
-#if HAS_APPCONTEXT_GETDATA
+#if HAS_APPCONTEXT_GETDATA && !NETFRAMEWORK
                 res = AppContext.GetData(appCtxSwitchName);
 #else
                 res = dGetData?.Invoke(appCtxSwitchName);
@@ -256,7 +279,7 @@ namespace MonoMod {
                 }
 
                 object? res;
-#if HAS_APPCONTEXT_GETDATA
+#if HAS_APPCONTEXT_GETDATA && !NETFRAMEWORK
                 res = AppContext.GetData(appCtxSwitchName);
 #else
                 res = dGetData?.Invoke(appCtxSwitchName);
