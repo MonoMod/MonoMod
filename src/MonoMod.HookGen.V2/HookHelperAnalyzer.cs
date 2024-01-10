@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace MonoMod.HookGen.V2 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    internal sealed class HookHelperAnalyzer : DiagnosticAnalyzer {
+    public sealed class HookHelperAnalyzer : DiagnosticAnalyzer {
 
         private const string Category = "MonoMod.HookGen";
 
@@ -60,6 +60,11 @@ namespace MonoMod.HookGen.V2 {
                 var assembliesToReport = new ConcurrentDictionary<IAssemblySymbol, int>(SymbolEqualityComparer.Default);
 
                 context.RegisterCompilationEndAction(context => {
+                    if (assembliesToReport.IsEmpty) {
+                        // no types were referenced, we shouldn't report this analyzer
+                        return;
+                    }
+
                     if (!context.Compilation.ReferencedAssemblyNames.Any(id => id.Name == "MonoMod.RuntimeDetour")) {
                         context.ReportDiagnostic(Diagnostic.Create(ProjectDoesNotReferenceRuntimeDetour, null, context.Compilation.AssemblyName));
                     }
