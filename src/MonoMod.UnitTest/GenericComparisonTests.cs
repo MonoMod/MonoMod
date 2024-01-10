@@ -1,6 +1,5 @@
 ﻿using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Xunit;
@@ -50,7 +49,7 @@ namespace MonoMod.UnitTest {
         [InlineData(typeof(ValueGenericA<GenericA<int>>), typeof(ValueGenericA<GenericA<int?>>))]
         [InlineData(typeof(ValueGenericA<GenericA<int?>>), typeof(ValueGenericA<GenericA<int>>))]
         public void TypesCompareEqual(Type a, Type b) {
-            IEqualityComparer<Type> comparer = new GenericTypeInstantiationComparer();
+            var comparer = new GenericTypeInstantiationComparer();
             Assert.True(comparer.Equals(a, b));
             Assert.Equal(comparer.GetHashCode(a), comparer.GetHashCode(b));
         }
@@ -81,7 +80,7 @@ namespace MonoMod.UnitTest {
         [InlineData(typeof(GenericA<ValueGenericA<int>>), typeof(GenericA<ValueGenericA<int?>>))]
         [InlineData(typeof(GenericA<ValueGenericA<int?>>), typeof(GenericA<ValueGenericA<int>>))]
         public void TypesCompareInequal(Type a, Type b) {
-            IEqualityComparer<Type> comparer = new GenericTypeInstantiationComparer();
+            var comparer = new GenericTypeInstantiationComparer();
             Assert.False(comparer.Equals(a, b));
         }
 
@@ -198,7 +197,7 @@ namespace MonoMod.UnitTest {
             MethodBase a = Method(aDecl, aName, aParam);
             MethodBase b = Method(bDecl, bName, bParam);
 
-            IEqualityComparer<MethodBase> comparer = new GenericMethodInstantiationComparer();
+            var comparer = new GenericMethodInstantiationComparer();
             Assert.True(comparer.Equals(a, b));
             Assert.Equal(comparer.GetHashCode(a), comparer.GetHashCode(b));
         }

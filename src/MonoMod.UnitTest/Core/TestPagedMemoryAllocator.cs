@@ -3,9 +3,6 @@ using MonoMod.Core.Platforms.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,17 +13,6 @@ namespace MonoMod.UnitTest.Core {
 
         private sealed class DummyMemoryAllocator : PagedMemoryAllocator {
             public DummyMemoryAllocator() : base(0x1000) {
-            }
-
-            private sealed class DummyAllocatedMemory(bool executable, IntPtr address, int size) : IAllocatedMemory {
-                public bool IsExecutable => executable;
-                public IntPtr BaseAddress => address;
-
-                public int Size => size;
-
-                public Span<byte> Memory => throw new NotImplementedException();
-
-                public void Dispose() { }
             }
 
             private nint addr;

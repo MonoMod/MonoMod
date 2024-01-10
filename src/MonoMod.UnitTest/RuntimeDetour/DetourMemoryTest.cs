@@ -73,7 +73,7 @@ namespace MonoMod.UnitTest {
                 b += new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current?.GetHashCode() ?? 0;
 
                 var list = new List<string>();
-                list.AddRange(new string[] { "A", "B", "C" });
+                list.AddRange([ "A", "B", "C" ]);
 
                 var array2d1 = new string[][] { new string[] { "A" } };
                 var array2d2 = new string[,] { { "B" } };

@@ -116,10 +116,14 @@ namespace MonoMod.Core.Platforms.Systems {
 
             private static int PageProbePipeReadFD, PageProbePipeWriteFD;
 
+            [SuppressMessage("Design", "CA1065:Do not raise exceptions in unexpected locations",
+                Justification = "If the exception is thrown, the application is in an unrecoverable state. Methods on this type will not behave well.")]
+            [SuppressMessage("Performance", "CA1810:Initialize reference type static fields inline",
+                Justification = "There is no good way to inline the initialization here, and we want to make sure that the cctor runs before anything is done with the type.")]
             static unsafe MmapPagedMemoryAllocator() {
                 // Open a temporary pipe for page probes
                 // This pipe gets leaked, but eh
-                int* pipefd = stackalloc int[2];
+                var pipefd = stackalloc int[2];
                 if (Unix.Pipe2(pipefd, Unix.PipeFlags.CloseOnExec) == -1) {
                     throw new Win32Exception(Unix.Errno, "Failed to create pipe for page probes");
                 }
