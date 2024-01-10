@@ -21,7 +21,7 @@ namespace MonoMod.HookGen.V2 {
             Both = 2,
         }
 
-        private const string GenHelperForTypeAttributeFqn = "MonoMod.HookGen.GenerateHookHelpersAttribute";
+        public const string GenHelperForTypeAttributeFqn = "MonoMod.HookGen.GenerateHookHelpersAttribute";
         private const string ILHookParameterType = "global::MonoMod.Cil.ILContext.Manipulator";
         public const string GenHelperForTypeAttrFile = "GenerateHookHelpersAttribute.g.cs";
         public const string DelegateTypesFile = "DelegateTypes.g.cs";
