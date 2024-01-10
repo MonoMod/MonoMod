@@ -37,11 +37,29 @@ namespace MonoMod.HookGen.V2 {
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true);
 
+        private static readonly DiagnosticDescriptor CannotPatchNonClassOrStruct = new(
+            "HookGen0004",
+            "Cannot create hook helpers for type which is not a class or struct",
+            "Cannot create hook helpers for '{0}' because it is not a class or struct type",
+            Category,
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        private static readonly DiagnosticDescriptor CannotPatchGenericTypes = new(
+            "HookGen0005",
+            "Cannot create hook helpers for generic type because generic types cannot be patched",
+            "Cannot create hook helpers for '{0}' because it is generic, and generic types cannot be patched",
+            Category,
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; }
             = ImmutableArray.Create<DiagnosticDescriptor>(
                 ProjectDoesNotReferenceRuntimeDetour,
                 ReferencedTypeIsInThisAssembly,
-                TargetAssemblyIsNotPublicized
+                TargetAssemblyIsNotPublicized,
+                CannotPatchNonClassOrStruct,
+                CannotPatchGenericTypes
             );
 
         public override void Initialize(AnalysisContext context) {
@@ -123,7 +141,13 @@ namespace MonoMod.HookGen.V2 {
                         }
                     }
 
-                    // TODO: report diagnostics for when the attribute will not cause anything to be generated?
+                    if (targetType is not INamedTypeSymbol namedType) {
+                        context.ReportDiagnostic(Diagnostic.Create(CannotPatchNonClassOrStruct, typeofOp.Syntax.GetLocation(), targetType));
+                    } else {
+                        if (namedType.IsGenericType) {
+                            context.ReportDiagnostic(Diagnostic.Create(CannotPatchGenericTypes, typeofOp.Syntax.GetLocation(), targetType));
+                        }
+                    }
 
                 }, OperationKind.Attribute);
             });
