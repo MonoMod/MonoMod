@@ -104,7 +104,7 @@ steps:
   displayName: 'dotnet: Build'
   inputs:
     command: 'build'
-    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -p:VersionSuffix="daily.$(Build.BuildNumber)" -p:ContinuousIntegrationBuild=true'
+    arguments: '-c $(buildConfiguration) -p:XunitVersion="$(xunitVer)" -p:VersionSuffix="daily.$(Build.BuildNumber)" -p:ContinuousIntegrationBuild=true -tl:off'
 
 # Create and "publish" main artifacts.
 - template: 'azure-pipelines-postbuild.yml'

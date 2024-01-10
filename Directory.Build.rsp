@@ -1,0 +1,2 @@
+-binaryLogger:LogFile=msbuild.binlog
+-tl
