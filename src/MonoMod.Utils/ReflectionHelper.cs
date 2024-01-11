@@ -2,16 +2,16 @@
 #define HAS_UNMANAGED_METHODSIGHELPER
 #endif
 
+using Mono.Cecil;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Generic;
-using Mono.Cecil;
-using System.Linq;
-using System.IO;
 using System.Text;
 using AssemblyHashAlgorithm = Mono.Cecil.AssemblyHashAlgorithm;
-using System.Diagnostics.CodeAnalysis;
 using ManagedCC = System.Reflection.CallingConventions;
 using UnmanagedCC = System.Runtime.InteropServices.CallingConvention;
 
@@ -28,7 +28,7 @@ namespace MonoMod.Utils {
         public readonly static byte[] AssemblyHashPrefix = new UTF8Encoding(false).GetBytes("MonoModRefl").Concat(new byte[1]).ToArray();
         public readonly static string AssemblyHashNameTag = "@#";
 
-        private const BindingFlags _BindingFlagsAll = (BindingFlags) (-1);
+        private const BindingFlags _BindingFlagsAll = (BindingFlags)(-1);
 
         private static MemberInfo _Cache(string cacheKey, MemberInfo value) {
             if (cacheKey != null && value == null) {
@@ -79,7 +79,7 @@ namespace MonoMod.Utils {
             if (type != null)
                 return type;
 
-            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies()) {
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()) {
                 type = asm.GetType(name);
                 if (type != null)
                     return type;
@@ -95,7 +95,7 @@ namespace MonoMod.Utils {
             var hash = new byte[AssemblyHashPrefix.Length + 4];
             Array.Copy(AssemblyHashPrefix, 0, hash, 0, AssemblyHashPrefix.Length);
             Array.Copy(BitConverter.GetBytes(asm.GetHashCode()), 0, hash, AssemblyHashPrefix.Length, 4);
-            asmRef.HashAlgorithm = unchecked((AssemblyHashAlgorithm) (-1));
+            asmRef.HashAlgorithm = unchecked((AssemblyHashAlgorithm)(-1));
             asmRef.Hash = hash;
         }
 
@@ -106,7 +106,7 @@ namespace MonoMod.Utils {
 
         public static string GetRuntimeHashedFullName(this AssemblyNameReference asm) {
             Helpers.ThrowIfArgumentNull(asm);
-            if (asm.HashAlgorithm != unchecked((AssemblyHashAlgorithm) (-1)))
+            if (asm.HashAlgorithm != unchecked((AssemblyHashAlgorithm)(-1)))
                 return asm.FullName;
 
             var hash = asm.Hash;
@@ -121,15 +121,15 @@ namespace MonoMod.Utils {
         }
 
         public static Type ResolveReflection(this TypeReference mref)
-            => (Type) _ResolveReflection(mref, null);
+            => (Type)_ResolveReflection(mref, null);
         public static MethodBase ResolveReflection(this MethodReference mref)
-            => (MethodBase) _ResolveReflection(mref, null);
+            => (MethodBase)_ResolveReflection(mref, null);
         public static FieldInfo ResolveReflection(this FieldReference mref)
-            => (FieldInfo) _ResolveReflection(mref, null);
+            => (FieldInfo)_ResolveReflection(mref, null);
         public static PropertyInfo ResolveReflection(this PropertyReference mref)
-            => (PropertyInfo) _ResolveReflection(mref, null);
+            => (PropertyInfo)_ResolveReflection(mref, null);
         public static EventInfo ResolveReflection(this EventReference mref)
-            => (EventInfo) _ResolveReflection(mref, null);
+            => (EventInfo)_ResolveReflection(mref, null);
 
         public static MemberInfo ResolveReflection(this MemberReference mref)
             => _ResolveReflection(mref, null);
@@ -212,7 +212,7 @@ namespace MonoMod.Utils {
                 // ... but all of the methods have the same MetadataToken. We couldn't compare it anyway.
 
                 var methodID = method.GetID(withType: false);
-                var found = 
+                var found =
                     type.GetMethods(_BindingFlagsAll).Cast<MethodBase>()
                     .Concat(type.GetConstructors(_BindingFlagsAll))
                     .FirstOrDefault(m => m.GetID(withType: false) == methodID);
@@ -319,7 +319,7 @@ namespace MonoMod.Utils {
                     throw new ArgumentException("Type <Module> cannot be resolved to a runtime reflection type");
 
                 if (mref is TypeSpecification ts) {
-                    type = (Type) _ResolveReflection(ts.ElementType, null);
+                    type = (Type)_ResolveReflection(ts.ElementType, null);
 
                     if (ts.IsByReference)
                         return _Cache(cacheKey, type.MakeByRefType());
@@ -368,14 +368,14 @@ namespace MonoMod.Utils {
                     throw new NotSupportedException($"Unsupported <Module> member type {mref.GetType().FullName}");
 
             } else {
-                var declType = (Type?) _ResolveReflection(mref.DeclaringType, modules);
+                var declType = (Type?)_ResolveReflection(mref.DeclaringType, modules);
 
                 if (mref is MethodReference)
                     member = declType!
                         .GetMethods(_BindingFlagsAll).Cast<MethodBase>()
                         .Concat(declType.GetConstructors(_BindingFlagsAll))
                         .FirstOrDefault(m => mref.Is(m));
-                else if (mref is FieldReference) 
+                else if (mref is FieldReference)
                     member = declType!
                         .GetFields(_BindingFlagsAll)
                         .FirstOrDefault(m => mref.Is(m));
@@ -444,7 +444,7 @@ namespace MonoMod.Utils {
                 var modReq = new List<Type>();
                 var modOpt = new List<Type>();
 
-                foreach (ParameterDefinition param in csite.Parameters) {
+                foreach (var param in csite.Parameters) {
                     if (param.ParameterType.IsSentinel)
                         shelper.AddSentinel();
 
@@ -457,7 +457,7 @@ namespace MonoMod.Utils {
                     modReq.Clear();
 
                     for (
-                        TypeReference paramTypeRef = param.ParameterType;
+                        var paramTypeRef = param.ParameterType;
                         paramTypeRef is TypeSpecification paramTypeSpec;
                         paramTypeRef = paramTypeSpec.ElementType
                     ) {
@@ -476,7 +476,7 @@ namespace MonoMod.Utils {
                 }
 
             } else {
-                foreach (ParameterDefinition param in csite.Parameters) {
+                foreach (var param in csite.Parameters) {
                     shelper.AddArgument(param.ParameterType.ResolveReflection());
                 }
             }

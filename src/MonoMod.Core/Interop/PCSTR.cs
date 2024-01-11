@@ -20,7 +20,7 @@ namespace MonoMod.Core.Interop {
 
         public override bool Equals(object? obj) => obj is PCSTR other && Equals(other);
 
-        public override int GetHashCode() => unchecked((int) Value);
+        public override int GetHashCode() => unchecked((int)Value);
 
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace MonoMod.Core.Interop {
                     return 0;
                 while (*p != 0)
                     p++;
-                return checked((int) (p - Value));
+                return checked((int)(p - Value));
             }
         }
 
@@ -42,7 +42,7 @@ namespace MonoMod.Core.Interop {
         /// Returns a <see langword="string"/> with a copy of this character array, decoding as UTF-8.
         /// </summary>
         /// <returns>A <see langword="string"/>, or <see langword="null"/> if <see cref="Value"/> is <see langword="null"/>.</returns>
-        public override string? ToString() => Value is null ? null : new string((sbyte*) Value, 0, Length, System.Text.Encoding.UTF8);
+        public override string? ToString() => Value is null ? null : new string((sbyte*)Value, 0, Length, System.Text.Encoding.UTF8);
 
 
         private string? DebuggerDisplay => ToString();

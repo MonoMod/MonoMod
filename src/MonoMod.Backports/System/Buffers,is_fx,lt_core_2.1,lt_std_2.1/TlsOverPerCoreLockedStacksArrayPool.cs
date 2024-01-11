@@ -56,7 +56,7 @@ namespace System.Buffers {
 
             // First, try to get an array from TLS if possible.
             ThreadLocalArray[]? tlsBuckets = t_tlsBuckets;
-            if (tlsBuckets is not null && (uint) bucketIndex < (uint) tlsBuckets.Length) {
+            if (tlsBuckets is not null && (uint)bucketIndex < (uint)tlsBuckets.Length) {
                 buffer = tlsBuckets[bucketIndex].Array;
                 if (buffer is not null) {
                     tlsBuckets[bucketIndex].Array = null;
@@ -66,7 +66,7 @@ namespace System.Buffers {
 
             // Next, try to get an array from one of the per-core stacks.
             PerCoreLockedStacks?[] perCoreBuckets = _buckets;
-            if ((uint) bucketIndex < (uint) perCoreBuckets.Length) {
+            if ((uint)bucketIndex < (uint)perCoreBuckets.Length) {
                 PerCoreLockedStacks? b = perCoreBuckets[bucketIndex];
                 if (b is not null) {
                     buffer = b.TryPop();
@@ -106,7 +106,7 @@ namespace System.Buffers {
             // rare, given a max size of 1B elements.
             ThreadLocalArray[] tlsBuckets = t_tlsBuckets ?? InitializeTlsBucketsAndTrimming();
 
-            if ((uint) bucketIndex < (uint) tlsBuckets.Length) {
+            if ((uint)bucketIndex < (uint)tlsBuckets.Length) {
 
                 // Clear the array if the user requested it.
                 if (clearArray) {
@@ -193,7 +193,7 @@ namespace System.Buffers {
 
             _allTlsBuckets.Add(tlsBuckets, null);
             if (Interlocked.Exchange(ref _trimCallbackCreated, 1) == 0) {
-                Gen2GcCallback.Register(s => ((TlsOverPerCoreLockedStacksArrayPool<T>) s).Trim(), this);
+                Gen2GcCallback.Register(s => ((TlsOverPerCoreLockedStacksArrayPool<T>)s).Trim(), this);
             }
 
             return tlsBuckets;
@@ -224,7 +224,7 @@ namespace System.Buffers {
                 // Try to push on to the associated stack first.  If that fails,
                 // round-robin through the other stacks.
                 LockedStack[] stacks = _perCoreStacks;
-                int index = (int) ((uint) EnvironmentEx.CurrentManagedThreadId % (uint) s_lockedStackCount); // mod by constant in tier 1
+                int index = (int)((uint)EnvironmentEx.CurrentManagedThreadId % (uint)s_lockedStackCount); // mod by constant in tier 1
                 for (int i = 0; i < stacks.Length; i++) {
                     if (stacks[index].TryPush(array))
                         return true;
@@ -241,7 +241,7 @@ namespace System.Buffers {
                 // Try to pop from the associated stack first.  If that fails, round-robin through the other stacks.
                 T[]? arr;
                 LockedStack[] stacks = _perCoreStacks;
-                int index = (int) ((uint) EnvironmentEx.CurrentManagedThreadId % (uint) s_lockedStackCount); // mod by constant in tier 1
+                int index = (int)((uint)EnvironmentEx.CurrentManagedThreadId % (uint)s_lockedStackCount); // mod by constant in tier 1
                 for (int i = 0; i < stacks.Length; i++) {
                     if ((arr = stacks[index].TryPop()) is not null)
                         return arr;
@@ -274,7 +274,7 @@ namespace System.Buffers {
                 Monitor.Enter(this);
                 T[]?[] arrays = _arrays;
                 int count = _count;
-                if ((uint) count < (uint) arrays.Length) {
+                if ((uint)count < (uint)arrays.Length) {
                     if (count == 0) {
                         // Reset the time stamp now that we're transitioning from empty to non-empty.
                         // Trim will see this as 0 and initialize it to the current time when Trim is called.
@@ -295,7 +295,7 @@ namespace System.Buffers {
                 Monitor.Enter(this);
                 T[]?[] arrays = _arrays;
                 int count = _count - 1;
-                if ((uint) count < (uint) arrays.Length) {
+                if ((uint)count < (uint)arrays.Length) {
                     arr = arrays[count];
                     arrays[count] = null;
                     _count = count;

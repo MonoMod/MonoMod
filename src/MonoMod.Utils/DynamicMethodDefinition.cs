@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Diagnostics;
 using System.Security;
-using System.Diagnostics.CodeAnalysis;
-using System.Collections.Concurrent;
 #if NETFRAMEWORK
 using System.Linq;
 #endif
@@ -31,14 +31,14 @@ namespace MonoMod.Utils {
                 // Unity pre 2018
                 !_IsOldMonoSRE
             )) ||
-                
+
             (PlatformDetection.Runtime is not RuntimeKind.Mono && (
                 // .NET
                 typeof(ILGenerator).Assembly
                 .GetType("System.Reflection.Emit.DynamicILGenerator")
                 ?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance) == null
             )) ||
-                
+
             false;
 
         public static bool IsDynamicILAvailable => !_PreferCecil;
@@ -122,14 +122,14 @@ namespace MonoMod.Utils {
                 Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
                 returnType != null ? module.ImportReference(returnType) : module.TypeSystem.Void
             );
-            foreach (Type paramType in parameterTypes)
+            foreach (var paramType in parameterTypes)
                 def.Parameters.Add(new ParameterDefinition(module.ImportReference(paramType)));
             type.Methods.Add(def);
         }
 
         private void LoadFromMethod(MethodBase orig, out ModuleDefinition Module, out MethodDefinition def) {
             Type[] argTypes;
-            ParameterInfo[] args = orig.GetParameters();
+            var args = orig.GetParameters();
             var offs = 0;
             if (!orig.IsStatic) {
                 offs++;
@@ -179,7 +179,7 @@ namespace MonoMod.Utils {
                 if (type != null) {
                     if (!t__IDMDGenerator.IsCompatible(type))
                         throw new ArgumentException($"Invalid DMDGenerator type: {dmdType}");
-                    var gen = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator) Activator.CreateInstance(type)!);
+                    var gen = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator)Activator.CreateInstance(type)!);
                     return gen.Generate(this, context);
                 }
             }

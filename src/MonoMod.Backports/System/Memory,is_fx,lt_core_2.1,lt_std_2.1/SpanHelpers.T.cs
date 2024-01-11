@@ -94,21 +94,21 @@ namespace System {
             return -1;
 
             Found: // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            return (int) (byte*) index;
+            return (int)(byte*)index;
             Found1:
-            return (int) (byte*) (index + 1);
+            return (int)(byte*)(index + 1);
             Found2:
-            return (int) (byte*) (index + 2);
+            return (int)(byte*)(index + 2);
             Found3:
-            return (int) (byte*) (index + 3);
+            return (int)(byte*)(index + 3);
             Found4:
-            return (int) (byte*) (index + 4);
+            return (int)(byte*)(index + 4);
             Found5:
-            return (int) (byte*) (index + 5);
+            return (int)(byte*)(index + 5);
             Found6:
-            return (int) (byte*) (index + 6);
+            return (int)(byte*)(index + 6);
             Found7:
-            return (int) (byte*) (index + 7);
+            return (int)(byte*)(index + 7);
         }
 
         public static int IndexOfAny<T>(ref T searchSpace, T value0, T value1, int length)
@@ -280,7 +280,7 @@ namespace System {
             int index = -1;
             for (int i = 0; i < valueLength; i++) {
                 var tempIndex = IndexOf(ref searchSpace, Unsafe.Add(ref value, i), searchSpaceLength);
-                if ((uint) tempIndex < (uint) index) {
+                if ((uint)tempIndex < (uint)index) {
                     index = tempIndex;
                     // Reduce space for search, cause we don't care if we find the search value after the index of a previously found value
                     searchSpaceLength = tempIndex;

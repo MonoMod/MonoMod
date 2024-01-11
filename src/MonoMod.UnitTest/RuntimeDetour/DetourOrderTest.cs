@@ -2,13 +2,11 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
-
-using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
@@ -22,7 +20,7 @@ namespace MonoMod.UnitTest {
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.
 
-            MethodInfo original = typeof(DetourOrderTest).GetMethod("TestMethod");
+            var original = typeof(DetourOrderTest).GetMethod("TestMethod");
 
             // Hooks behave as if they were "stacked" on top of each other.
             // In other words, the default "hook order" is reverse of the running order.

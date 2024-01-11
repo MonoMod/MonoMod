@@ -2,11 +2,10 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
-
-using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
@@ -87,6 +86,6 @@ namespace MonoMod.UnitTest {
 
         public void DoNothing() {
         }
-        
+
     }
 }

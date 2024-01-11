@@ -1,6 +1,6 @@
-﻿using System;
+﻿using MonoMod.Utils;
+using System;
 using System.Diagnostics.CodeAnalysis;
-using MonoMod.Utils;
 
 namespace MonoMod.Core.Platforms {
     /// <summary>
@@ -130,7 +130,7 @@ namespace MonoMod.Core.Platforms {
                 disposedValue = true;
             }
         }
-        
+
         /// <summary>
         /// Undoes and cleans up this detour.
         /// </summary>

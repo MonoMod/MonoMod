@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Runtime.CompilerServices;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace System {
     //
@@ -188,7 +188,7 @@ namespace System {
                 return CreateArgumentNullException(ExceptionArgument.endSegment);
             else if (startSegment != endSegment && startSegment.RunningIndex > endSegment.RunningIndex)
                 return CreateArgumentOutOfRangeException(ExceptionArgument.endSegment);
-            else if ((uint) startSegment.Memory.Length < (uint) startIndex)
+            else if ((uint)startSegment.Memory.Length < (uint)startIndex)
                 return CreateArgumentOutOfRangeException(ExceptionArgument.startIndex);
             else
                 return CreateArgumentOutOfRangeException(ExceptionArgument.endIndex);
@@ -201,7 +201,7 @@ namespace System {
         private static Exception CreateArgumentValidationException(Array? array, int start) {
             if (array == null)
                 return CreateArgumentNullException(ExceptionArgument.array);
-            else if ((uint) start > (uint) array.Length)
+            else if ((uint)start > (uint)array.Length)
                 return CreateArgumentOutOfRangeException(ExceptionArgument.start);
             else
                 return CreateArgumentOutOfRangeException(ExceptionArgument.length);

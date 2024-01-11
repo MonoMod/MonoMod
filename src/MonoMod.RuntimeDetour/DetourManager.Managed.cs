@@ -128,7 +128,7 @@ namespace MonoMod.RuntimeDetour {
                     return;
                 }
 
-                while (TrampolineStealers.TryDequeue(out ManagedChainNode? node)) {
+                while (TrampolineStealers.TryDequeue(out var node)) {
                     node.ReturnStolenTrampoline();
                 }
             }
@@ -283,7 +283,7 @@ namespace MonoMod.RuntimeDetour {
 
                         case DepGraphNode<ManagedChainNode> gn:
                             RemoveGraphDetour(detour, gn);
-                            cnode = (ManagedDetourChainNode) gn.ListNode.ChainNode;
+                            cnode = (ManagedDetourChainNode)gn.ListNode.ChainNode;
                             break;
 
                         case ManagedDetourChainNode cn:

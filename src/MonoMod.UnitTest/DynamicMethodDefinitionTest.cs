@@ -1,19 +1,17 @@
 ﻿extern alias New;
-
-using Xunit;
-using Mono.Cecil.Cil;
-using New::MonoMod.RuntimeDetour;
-using MonoMod.Utils;
-using System;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Collections.Generic;
 using MonoMod.Cil;
-using OpCodes = Mono.Cecil.Cil.OpCodes;
+using MonoMod.Core.Platforms;
+using MonoMod.Utils;
+using New::MonoMod.RuntimeDetour;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using MonoMod.Core.Platforms;
+using System.Reflection;
+using System.Reflection.Emit;
+using Xunit;
 using Xunit.Abstractions;
+using OpCodes = Mono.Cecil.Cil.OpCodes;
 
 namespace MonoMod.UnitTest {
     public class DynamicMethodDefinitionTest : TestBase {
@@ -30,7 +28,7 @@ namespace MonoMod.UnitTest {
                 Assert.Equal("i", dmd.Definition.Parameters[0].Name);
 
                 // Modify the MethodDefinition.
-                foreach (Instruction instr in dmd.Definition.Body.Instructions) {
+                foreach (var instr in dmd.Definition.Body.Instructions) {
                     if (instr.Operand as string == StringOriginal)
                         instr.Operand = StringPatched;
                     else if (instr.MatchCallOrCallvirt<DynamicMethodDefinitionTest>(nameof(ExampleMethod)))
@@ -54,12 +52,12 @@ namespace MonoMod.UnitTest {
                             c.Emit(OpCodes.Nop);
                         c.Emit(OpCodes.Ret);
                     });
-                stacker = (DynamicMethod) DMDEmitDynamicMethodGenerator.Generate(dmd, null);
+                stacker = (DynamicMethod)DMDEmitDynamicMethodGenerator.Generate(dmd, null);
             }
 
             using (var dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
-                Assert.Equal(0, ((Func<int>) dmd.Generate().CreateDelegate(typeof(Func<int>)))());
-                Assert.Equal(0, ((Func<int>) DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
+                Assert.Equal(0, ((Func<int>)dmd.Generate().CreateDelegate(typeof(Func<int>)))());
+                Assert.Equal(0, ((Func<int>)DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
                 // no
                 //Assert.Equal(dmd.Name = "SomeManualDMDName", dmd.Generate().Name);
                 Counter -= 2;
@@ -68,31 +66,31 @@ namespace MonoMod.UnitTest {
                 // Microsoft.GeneratedCode can be loaded multiple times and have different contents.
                 // This tries to recreate that scenario... and this is the best place to test it at the time of writing.
 #if NETFRAMEWORK && true
-                AssemblyBuilder abDupeA = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                var abDupeA = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
                         Name = "MonoMod.UnitTest.AssemblyDupe"
                     },
                     AssemblyBuilderAccess.RunAndSave
                 );
-                ModuleBuilder mbDupeA = abDupeA.DefineDynamicModule($"{abDupeA.GetName().Name}.dll");
-                TypeBuilder tbDupeA = mbDupeA.DefineType(
+                var mbDupeA = abDupeA.DefineDynamicModule($"{abDupeA.GetName().Name}.dll");
+                var tbDupeA = mbDupeA.DefineType(
                     "DupeA",
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
                 );
-                Type tDupeA = tbDupeA.CreateType();
+                var tDupeA = tbDupeA.CreateType();
 
-                AssemblyBuilder abDupeB = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                var abDupeB = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
                         Name = abDupeA.GetName().Name
                     },
                     AssemblyBuilderAccess.RunAndSave
                 );
-                ModuleBuilder mbDupeB = abDupeB.DefineDynamicModule($"{abDupeB.GetName().Name}.dll");
-                TypeBuilder tbDupeB = mbDupeB.DefineType(
+                var mbDupeB = abDupeB.DefineDynamicModule($"{abDupeB.GetName().Name}.dll");
+                var tbDupeB = mbDupeB.DefineType(
                     "DupeB",
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
                 );
-                Type tDupeB = tbDupeB.CreateType();
+                var tDupeB = tbDupeB.CreateType();
 
                 Assert.Equal(tDupeA.Assembly.FullName, tDupeB.Assembly.FullName);
                 Assert.NotEqual(tDupeA.Assembly, tDupeB.Assembly);
@@ -127,8 +125,8 @@ namespace MonoMod.UnitTest {
             // Mono uses RuntimeMethodInfo without any link to the original DynamicMethod.
             var triple = PlatformTriple.Current;
             using var pin = triple.PinMethodIfNeeded(stacker);
-            StackTrace stack = ((Func<StackTrace>) stacker.CreateDelegate(typeof(Func<StackTrace>)))();
-            MethodBase stacked = stack.GetFrames().First(f => f.GetMethod()?.IsDynamicMethod() ?? false).GetMethod();
+            var stack = ((Func<StackTrace>)stacker.CreateDelegate(typeof(Func<StackTrace>)))();
+            var stacked = stack.GetFrames().First(f => f.GetMethod()?.IsDynamicMethod() ?? false).GetMethod();
 #if !NET8_0_OR_GREATER // .NET 8 removes RTDynamicMethod, as it was a leftover from .NET Framework CAS: https://github.com/dotnet/runtime/pull/79427
             Assert.NotEqual(stacker, stacked);
 #endif
@@ -164,7 +162,7 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
 
                 var list = new List<string>();
-                list.AddRange(new string[] { "A", "B", "C" });
+                list.AddRange(["A", "B", "C"]);
 
                 var array2d1 = new string[][] { new string[] { "A" } };
                 var array2d2 = new string[,] { { "B" } };

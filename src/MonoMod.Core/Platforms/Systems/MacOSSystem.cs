@@ -126,13 +126,13 @@ namespace MonoMod.Core.Platforms.Systems {
             // at this point, we know our data to be writable
 
             // now we copy target to backup, then data to target
-            var target = new Span<byte>((void*) patchTarget, data.Length);
+            var target = new Span<byte>((void*)patchTarget, data.Length);
             _ = target.TryCopyTo(backup);
             data.CopyTo(target);
 
             // if we got here when executable (either because the memory was already writable or we were able to make it writable) we need to flush the icache
             if (memIsExec) {
-                sys_icache_invalidate((void*) patchTarget, (nuint) data.Length);
+                sys_icache_invalidate((void*)patchTarget, (nuint)data.Length);
             }
         }
 
@@ -148,7 +148,7 @@ namespace MonoMod.Core.Platforms.Systems {
             var selfTask = mach_task_self();
 
             if (allocMaxProt.Has(vm_prot_t.Write)) {
-                kr = mach_vm_protect(selfTask, (ulong) allocStart, (ulong) allocSize, false, allocProt | vm_prot_t.Write);
+                kr = mach_vm_protect(selfTask, (ulong)allocStart, (ulong)allocSize, false, allocProt | vm_prot_t.Write);
                 if (!kr) {
                     MMDbgLog.Error($"Could not vm_protect page 0x{allocStart:x16}+0x{allocSize:x} " +
                         $"from {P(allocProt)} to {P(allocProt | vm_prot_t.Write)} (max prot {P(allocMaxProt)}): kr = {kr.Value}");
@@ -167,7 +167,7 @@ namespace MonoMod.Core.Platforms.Systems {
                     MMDbgLog.Error($"Requested 0x{allocStart:x16}+0x{allocSize:x} (max: {P(allocMaxProt)}) to be made writable, but its not readable!");
                     throw new NotSupportedException("Cannot make page writable because its not readable");
                 }
-                kr = mach_vm_protect(selfTask, (ulong) allocStart, (ulong) allocSize, false, allocProt | vm_prot_t.Read);
+                kr = mach_vm_protect(selfTask, (ulong)allocStart, (ulong)allocSize, false, allocProt | vm_prot_t.Read);
                 if (!kr) {
                     MMDbgLog.Error($"vm_protect of 0x{allocStart:x16}+0x{allocSize:x} (max: {P(allocMaxProt)}) to become readable failed: kr = {kr.Value}");
                     throw new NotSupportedException("Could not make page readable for remap");
@@ -181,7 +181,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
             // first, alloc a new page
             ulong newAddr;
-            kr = mach_vm_map(selfTask, &newAddr, (ulong) allocSize, 0, vm_flags.Anywhere, 0, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
+            kr = mach_vm_map(selfTask, &newAddr, (ulong)allocSize, 0, vm_flags.Anywhere, 0, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
             if (!kr) {
                 MMDbgLog.Error($"Could not allocate new memory! kr = {kr.Value}");
 #pragma warning disable CA2201 // Do not raise reserved exception types
@@ -191,18 +191,18 @@ namespace MonoMod.Core.Platforms.Systems {
 
             try {
                 // then copy data from the map into it
-                new Span<byte>((void*) allocStart, (int) allocSize).CopyTo(new Span<byte>((void*) newAddr, (int) allocSize));
+                new Span<byte>((void*)allocStart, (int)allocSize).CopyTo(new Span<byte>((void*)newAddr, (int)allocSize));
                 // then create an object for that memory
                 int obj;
-                var memSize = (ulong) allocSize;
+                var memSize = (ulong)allocSize;
                 kr = mach_make_memory_entry_64(selfTask, &memSize, newAddr, wantMaxProt, &obj, 0);
                 if (!kr) {
                     MMDbgLog.Error($"make_memory_entry(task_self(), size: 0x{memSize:x}, addr: {newAddr:x16}, prot: {P(wantMaxProt)}, &obj, 0) failed: kr = {kr.Value}");
                     throw new NotSupportedException("make_memory_entry() failed");
                 }
                 // then map it over the old memory segment
-                var targetAddr = (ulong) allocStart;
-                kr = mach_vm_map(selfTask, &targetAddr, (ulong) allocSize, 0, vm_flags.Fixed | vm_flags.Overwrite, obj, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
+                var targetAddr = (ulong)allocStart;
+                kr = mach_vm_map(selfTask, &targetAddr, (ulong)allocSize, 0, vm_flags.Fixed | vm_flags.Overwrite, obj, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
                 if (!kr) {
                     MMDbgLog.Error($"vm_map() failed to map over target range: 0x{targetAddr:x16}+0x{allocSize:x} ({P(allocProt)}/{P(allocMaxProt)})" +
                         $" <- (obj {obj}) 0x{newAddr:x16}+0x{allocSize:x} ({P(wantProt)}/{P(wantMaxProt)}), kr = {kr.Value}");
@@ -210,7 +210,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
             } finally {
                 // then unmap the created memory
-                kr = mach_vm_deallocate(selfTask, newAddr, (ulong) allocSize);
+                kr = mach_vm_deallocate(selfTask, newAddr, (ulong)allocSize);
                 if (!kr) {
                     MMDbgLog.Error($"Could not deallocate created memory page 0x{newAddr:x16}+0x{allocSize:x}! kr = {kr.Value}");
                 }
@@ -218,8 +218,8 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         private static unsafe bool TryGetProtForMem(nint addr, int length, out vm_prot_t maxProt, out vm_prot_t prot, out bool crossesAllocBoundary, out bool notAllocated) {
-            maxProt = (vm_prot_t) (-1);
-            prot = (vm_prot_t) (-1);
+            maxProt = (vm_prot_t)(-1);
+            prot = (vm_prot_t)(-1);
 
             crossesAllocBoundary = false;
             notAllocated = false;
@@ -277,7 +277,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
             vm_region_submap_short_info_64 info;
             var count = vm_region_submap_short_info_64.Count;
-            var addr = (ulong) origAddr;
+            var addr = (ulong)origAddr;
             kr = mach_vm_region_recurse(mach_task_self(), &addr, &size, &depth, &info, &count);
             if (!kr) {
                 startAddr = default;
@@ -288,8 +288,8 @@ namespace MonoMod.Core.Platforms.Systems {
             }
 
             Helpers.Assert(!info.is_submap);
-            startAddr = (nint) addr;
-            outSize = (nint) size;
+            startAddr = (nint)addr;
+            outSize = (nint)size;
             prot = info.protection;
             maxProt = info.max_protection;
             return kr;
@@ -301,7 +301,7 @@ namespace MonoMod.Core.Platforms.Systems {
             public override uint PageSize { get; }
 
             public MacOsQueryingAllocator() {
-                PageSize = (uint) GetPageSize();
+                PageSize = (uint)GetPageSize();
             }
 
             public override unsafe bool TryAllocatePage(nint size, bool executable, out IntPtr allocated) {
@@ -312,7 +312,7 @@ namespace MonoMod.Core.Platforms.Systems {
 
                 // map the page
                 var addr = 0uL;
-                var kr = mach_vm_map(mach_task_self(), &addr, (ulong) size, 0, vm_flags.Anywhere, 
+                var kr = mach_vm_map(mach_task_self(), &addr, (ulong)size, 0, vm_flags.Anywhere,
                     0, 0, true, prot, prot, vm_inherit_t.Default);
                 if (!kr) {
                     MMDbgLog.Error($"Error creating allocation anywhere! kr = {kr.Value}");
@@ -320,7 +320,7 @@ namespace MonoMod.Core.Platforms.Systems {
                     return false;
                 }
 
-                allocated = (IntPtr) addr;
+                allocated = (IntPtr)addr;
                 return true;
             }
 
@@ -331,8 +331,8 @@ namespace MonoMod.Core.Platforms.Systems {
                 prot |= vm_prot_t.Read | vm_prot_t.Write;
 
                 // map the page
-                var addr = (ulong) pageAddr;
-                var kr = mach_vm_map(mach_task_self(), &addr, (ulong) size, 0, vm_flags.Fixed,
+                var addr = (ulong)pageAddr;
+                var kr = mach_vm_map(mach_task_self(), &addr, (ulong)size, 0, vm_flags.Fixed,
                     0, 0, true, prot, prot, vm_inherit_t.Default);
                 if (!kr) {
                     MMDbgLog.Spam($"Error creating allocation at 0x{addr:x16}: kr = {kr.Value}");
@@ -340,12 +340,12 @@ namespace MonoMod.Core.Platforms.Systems {
                     return false;
                 }
 
-                allocated = (IntPtr) addr;
+                allocated = (IntPtr)addr;
                 return true;
             }
 
             public override bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg) {
-                var kr = mach_vm_deallocate(mach_task_self(), (ulong) pageAddr, PageSize);
+                var kr = mach_vm_deallocate(mach_task_self(), (ulong)pageAddr, PageSize);
                 if (!kr) {
                     errorMsg = $"Could not deallocate page: kr = {kr.Value}";
                     return false;
@@ -357,8 +357,8 @@ namespace MonoMod.Core.Platforms.Systems {
             public override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize) {
                 var kr = GetLocalRegionInfo(pageAddr, out allocBase, out allocSize, out _, out _);
                 if (kr) {
-                    if (allocBase > (nint) pageAddr) {
-                        allocSize = allocBase - (nint) pageAddr;
+                    if (allocBase > (nint)pageAddr) {
+                        allocSize = allocBase - (nint)pageAddr;
                         allocBase = pageAddr;
                         isFree = true;
                         return true;
@@ -418,7 +418,7 @@ namespace MonoMod.Core.Platforms.Systems {
             }
 
 
-            using (var fh = new SafeFileHandle((IntPtr) fd, true))
+            using (var fh = new SafeFileHandle((IntPtr)fd, true))
             using (var fs = new FileStream(fh, FileAccess.Write)) {
                 using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname);
                 Helpers.Assert(embedded is not null);

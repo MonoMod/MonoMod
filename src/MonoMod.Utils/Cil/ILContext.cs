@@ -1,14 +1,14 @@
-﻿using System;
-using System.Reflection;
-using System.Collections.Generic;
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
-using System.Linq;
-using System.Collections.ObjectModel;
-using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 using MonoMod.Utils;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Reflection;
 using System.Text;
+using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
 
 namespace MonoMod.Cil {
     /// <summary>
@@ -76,7 +76,7 @@ namespace MonoMod.Cil {
             if (IsReadOnly)
                 throw new InvalidOperationException();
 
-            foreach (Instruction instr in Instrs) {
+            foreach (var instr in Instrs) {
                 if (instr.Operand is Instruction target)
                     instr.Operand = new ILLabel(this, target);
                 else if (instr.Operand is Instruction[] targets)
@@ -88,7 +88,7 @@ namespace MonoMod.Cil {
             if (IsReadOnly)
                 return;
 
-            foreach (Instruction instr in Instrs) {
+            foreach (var instr in Instrs) {
                 if (instr.Operand is ILLabel label)
                     instr.Operand = label.Target;
                 else if (instr.Operand is ILLabel[] targets)
@@ -115,13 +115,13 @@ namespace MonoMod.Cil {
         }
 
         [Obsolete("Use new ILCursor(il).Goto(index)")]
-        public ILCursor At(int index) => 
+        public ILCursor At(int index) =>
             new ILCursor(this).Goto(index);
         [Obsolete("Use new ILCursor(il).Goto(index)")]
-        public ILCursor At(ILLabel label) => 
+        public ILCursor At(ILLabel label) =>
             new ILCursor(this).GotoLabel(label);
         [Obsolete("Use new ILCursor(il).Goto(index)")]
-        public ILCursor At(Instruction instr) => 
+        public ILCursor At(Instruction instr) =>
             new ILCursor(this).Goto(instr);
 
         /// <summary>
@@ -219,7 +219,7 @@ namespace MonoMod.Cil {
             // Some of our targets don't have IFormatProvider-taking overloads.
             _ = builder.AppendLine($"// ILContext: {Method}");
 #pragma warning restore CA1305 // Specify IFormatProvider
-            foreach (Instruction instr in Instrs)
+            foreach (var instr in Instrs)
                 ToString(builder, instr);
 
             return builder.ToString();
@@ -257,8 +257,7 @@ namespace MonoMod.Cil {
             }
         }
 
-        ~ILContext()
-        {
+        ~ILContext() {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }

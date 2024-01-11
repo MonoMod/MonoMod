@@ -98,7 +98,7 @@ namespace MonoMod.Core.Platforms {
                         DetourBox.IsApplying = true;
                         DetourBox.IsApplied = true;
 
-                        ReplaceDetourInLock(DetourBox, CreateDetour(), out SimpleNativeDetour? oldDetour);
+                        ReplaceDetourInLock(DetourBox, CreateDetour(), out var oldDetour);
                         Helpers.DAssert(oldDetour is null);
                     } catch {
                         DetourBox.IsApplied = false;
@@ -223,7 +223,7 @@ namespace MonoMod.Core.Platforms {
                                 to = Triple.Runtime.GetMethodHandle(target).GetFunctionPointer();
                             }
 
-                            var newDetour = Triple.CreateSimpleDetour(from, to, detourMaxSize: (int) codeSize, fromRw: fromRw);
+                            var newDetour = Triple.CreateSimpleDetour(from, to, detourMaxSize: (int)codeSize, fromRw: fromRw);
                             ReplaceDetourInLock(this, newDetour, out _);
                         } finally {
                             IsApplying = false;
@@ -276,7 +276,7 @@ namespace MonoMod.Core.Platforms {
 
             private static readonly ConcurrentDictionary<MethodBase, RelatedDetourBag> relatedDetours = new();
             private static void AddRelatedDetour(MethodBase m, ManagedDetourBox cmh) {
-            Retry:
+                Retry:
                 var related = relatedDetours.GetOrAdd(m, static m => new(m));
                 lock (related) {
                     if (!related.IsValid)

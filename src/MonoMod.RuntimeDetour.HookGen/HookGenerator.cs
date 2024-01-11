@@ -14,7 +14,7 @@ using System.Text;
 
 namespace MonoMod.RuntimeDetour.HookGen {
     public class HookGenerator {
-        static readonly Dictionary<Type, string> ReflTypeNameMap = new Dictionary<Type, string> () {
+        static readonly Dictionary<Type, string> ReflTypeNameMap = new Dictionary<Type, string>() {
             { typeof(string), "string" },
             { typeof(object), "object" },
             { typeof(bool), "bool" },
@@ -35,7 +35,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         static readonly Dictionary<string, string> TypeNameMap = new Dictionary<string, string>();
 
         static HookGenerator() {
-            foreach (KeyValuePair<Type, string> pair in ReflTypeNameMap)
+            foreach (var pair in ReflTypeNameMap)
                 TypeNameMap[pair.Key.FullName] = pair.Value;
         }
 
@@ -111,7 +111,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             t_RuntimeMethodHandle = OutputModule.ImportReference(modder.FindType("System.RuntimeMethodHandle"));
             t_EditorBrowsableState = OutputModule.ImportReference(modder.FindType("System.ComponentModel.EditorBrowsableState"));
 
-            TypeDefinition td_HookEndpointManager = module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpointManager");
+            var td_HookEndpointManager = module_RuntimeDetour.GetType("MonoMod.RuntimeDetour.HookGen.HookEndpointManager");
 
             t_ILManipulator = OutputModule.ImportReference(
                 module_Utils.GetType("MonoMod.Cil.ILContext/Manipulator")
@@ -136,8 +136,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         public void Generate() {
-            foreach (TypeDefinition type in Modder.Module.Types) {
-                GenerateFor(type, out TypeDefinition hookType, out TypeDefinition hookILType);
+            foreach (var type in Modder.Module.Types) {
+                GenerateFor(type, out var hookType, out var hookILType);
                 if (hookType == null || hookILType == null || hookType.IsNested)
                     continue;
                 OutputModule.Types.Add(hookType);
@@ -174,11 +174,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             var add = false;
 
-            foreach (MethodDefinition method in type.Methods)
+            foreach (var method in type.Methods)
                 add |= GenerateFor(hookType, hookILType, method);
 
-            foreach (TypeDefinition nested in type.NestedTypes) {
-                GenerateFor(nested, out TypeDefinition hookNestedType, out TypeDefinition hookNestedILType);
+            foreach (var nested in type.NestedTypes) {
+                GenerateFor(nested, out var hookNestedType, out var hookNestedILType);
                 if (hookNestedType == null || hookNestedILType == null)
                     continue;
                 add = true;
@@ -219,12 +219,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
             if (suffix) {
                 var builder = new StringBuilder();
                 for (var parami = 0; parami < method.Parameters.Count; parami++) {
-                    ParameterDefinition param = method.Parameters[parami];
+                    var param = method.Parameters[parami];
                     if (!TypeNameMap.TryGetValue(param.ParameterType.FullName, out var typeName))
                         typeName = GetFriendlyName(param.ParameterType, false);
 
                     if (overloads.Any(other => {
-                        ParameterDefinition otherParam = other.Parameters.ElementAtOrDefault(parami);
+                        var otherParam = other.Parameters.ElementAtOrDefault(parami);
                         return
                             otherParam != null &&
                             GetFriendlyName(otherParam.ParameterType, false) == typeName &&
@@ -244,22 +244,23 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     var i = 1;
                     hookType.FindEvent(nameTmp = name + "_" + i) != null;
                     i++
-                );
+                )
+                    ;
                 name = nameTmp;
             }
 
             // TODO: Fix possible conflict when other members with the same names exist.
 
-            TypeDefinition delOrig = GenerateDelegateFor(method);
+            var delOrig = GenerateDelegateFor(method);
             delOrig.Name = "orig_" + name;
             delOrig.CustomAttributes.Add(GenerateEditorBrowsable(EditorBrowsableState.Never));
             hookType.NestedTypes.Add(delOrig);
 
-            TypeDefinition delHook = GenerateDelegateFor(method);
+            var delHook = GenerateDelegateFor(method);
             delHook.Name = "hook_" + name;
-            MethodDefinition delHookInvoke = delHook.FindMethod("Invoke");
+            var delHookInvoke = delHook.FindMethod("Invoke");
             delHookInvoke.Parameters.Insert(0, new ParameterDefinition("orig", ParameterAttributes.None, delOrig));
-            MethodDefinition delHookBeginInvoke = delHook.FindMethod("BeginInvoke");
+            var delHookBeginInvoke = delHook.FindMethod("BeginInvoke");
             delHookBeginInvoke.Parameters.Insert(0, new ParameterDefinition("orig", ParameterAttributes.None, delOrig));
             delHook.CustomAttributes.Add(GenerateEditorBrowsable(EditorBrowsableState.Never));
             hookType.NestedTypes.Add(delHook);
@@ -267,7 +268,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             ILProcessor il;
             GenericInstanceMethod endpointMethod;
 
-            MethodReference methodRef = OutputModule.ImportReference(method);
+            var methodRef = OutputModule.ImportReference(method);
 
             #region Hook
 
@@ -399,12 +400,12 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 HasThis = true
             };
             if (!method.IsStatic) {
-                TypeReference selfType = ImportVisible(method.DeclaringType);
+                var selfType = ImportVisible(method.DeclaringType);
                 if (method.DeclaringType.IsValueType)
                     selfType = new ByReferenceType(selfType);
                 invoke.Parameters.Add(new ParameterDefinition("self", ParameterAttributes.None, selfType));
             }
-            foreach (ParameterDefinition param in method.Parameters)
+            foreach (var param in method.Parameters)
                 invoke.Parameters.Add(new ParameterDefinition(
                     param.Name,
                     param.Attributes & ~ParameterAttributes.Optional & ~ParameterAttributes.HasDefault,
@@ -421,7 +422,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 ImplAttributes = MethodImplAttributes.Runtime | MethodImplAttributes.Managed,
                 HasThis = true
             };
-            foreach (ParameterDefinition param in invoke.Parameters)
+            foreach (var param in invoke.Parameters)
                 invokeBegin.Parameters.Add(new ParameterDefinition(param.Name, param.Attributes, param.ParameterType));
             invokeBegin.Parameters.Add(new ParameterDefinition("callback", ParameterAttributes.None, t_AsyncCallback));
             invokeBegin.Parameters.Add(new ParameterDefinition(null, ParameterAttributes.None, OutputModule.TypeSystem.Object));
@@ -472,7 +473,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 builder.Append("ptr");
             }
 
-            BuildFriendlyName(builder, ((TypeSpecification) type).ElementType, full);
+            BuildFriendlyName(builder, ((TypeSpecification)type).ElementType, full);
 
             if (type.IsArray) {
                 builder.Append("Array");
@@ -484,7 +485,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         }
 
         bool HasPublicArgs(GenericInstanceType typeGen) {
-            foreach (TypeReference arg in typeGen.GenericArguments) {
+            foreach (var arg in typeGen.GenericArguments) {
                 // Generic parameter references are local.
                 if (arg.IsGenericParameter)
                     return false;
@@ -503,7 +504,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
             // Check if the declaring type is accessible.
             // If not, use its base type instead.
             // Note: This will break down with type specifications!
-            TypeDefinition type = typeRef?.SafeResolve();
+            var type = typeRef?.SafeResolve();
             goto Try;
 
             Retry:
@@ -520,11 +521,11 @@ namespace MonoMod.RuntimeDetour.HookGen {
 
             // Check if the type and all of its parents are public.
             // Generic return / param types are too complicated at the moment and will be simplified.
-            for (TypeDefinition parent = type; parent != null; parent = parent.DeclaringType) {
+            for (var parent = type; parent != null; parent = parent.DeclaringType) {
                 if (HookGenerator.IsPublic(parent) && (parent == type || !parent.HasGenericParameters))
                     continue;
                 // If it isn't public, ...
-                
+
                 if (type.IsEnum) {
                     // ... try the enum's underlying type.
                     typeRef = type.FindField("value__").FieldType;

@@ -170,7 +170,7 @@ namespace MonoMod.Utils {
                     }
                 case ValueTypeCell: {
                         Helpers.Assert(default(T) != null);
-                        var c = (ValueCell<T>) cell;
+                        var c = (ValueCell<T>)cell;
                         return ref c.Value;
                     }
                 default:
@@ -264,7 +264,7 @@ namespace MonoMod.Utils {
             il.Emit(ROpCodes.Call, Self_GetValueT_ii.MakeGenericMethod(type));
         }
 
-        internal static void EmitLoadTypedReferenceUnsafe(this ILProcessor il, DynamicReferenceCell cellRef, Type type){
+        internal static void EmitLoadTypedReferenceUnsafe(this ILProcessor il, DynamicReferenceCell cellRef, Type type) {
             Helpers.ThrowIfArgumentNull(il);
 
             il.Emit(COpCodes.Ldc_I4, cellRef.Index);

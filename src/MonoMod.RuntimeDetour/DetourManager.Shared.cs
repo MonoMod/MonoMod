@@ -233,7 +233,7 @@ namespace MonoMod.RuntimeDetour {
 
             public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread) {
                 var threadCallDepth = DetermineThreadCallDepth();
-                hasActiveCallsFromThread = threadCallDepth > 0; 
+                hasActiveCallsFromThread = threadCallDepth > 0;
 
                 // Wait for other threads to have returned from the function
                 var spin = new SpinWait();
@@ -247,8 +247,8 @@ namespace MonoMod.RuntimeDetour {
                     return 0;
 
                 // Determine active call depth of the current thread
-                StackFrame[] stackFrames = new StackTrace().GetFrames();
-                MethodBase syncProxyIdentif = PlatformTriple.Current.GetIdentifiable(SyncProxy);
+                var stackFrames = new StackTrace().GetFrames();
+                var syncProxyIdentif = PlatformTriple.Current.GetIdentifiable(SyncProxy);
                 return stackFrames.Count(f => f.GetMethod() is { } m && PlatformTriple.Current.GetIdentifiable(m) == syncProxyIdentif);
             }
         }
@@ -379,7 +379,7 @@ namespace MonoMod.RuntimeDetour {
                 IsValid = true;
             }
         }
-        
+
         private static MethodInfo GenerateRemovedStub(MethodSignature trampolineSig) {
             using var dmd = trampolineSig.CreateDmd(DebugFormatter.Format($"RemovedStub<{trampolineSig}>"));
             Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);

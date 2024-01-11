@@ -1,5 +1,4 @@
-﻿using Mono.Cecil;
-using Mono.Cecil.Cil;
+﻿using Mono.Cecil.Cil;
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
@@ -34,14 +33,14 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private static readonly ConstructorInfo Exception_ctor
-            = typeof(Exception).GetConstructor(new Type[] { typeof(string) })?? throw new InvalidOperationException();
+            = typeof(Exception).GetConstructor(new Type[] { typeof(string) }) ?? throw new InvalidOperationException();
 
         /// <summary>
         /// Fill the DynamicMethodDefinition with a throw.
         /// </summary>
         public static DynamicMethodDefinition StubCriticalDetour(this DynamicMethodDefinition dm) {
-            ILProcessor il = dm.GetILProcessor();
-            ModuleDefinition ilModule = il.Body.Method.Module;
+            var il = dm.GetILProcessor();
+            var ilModule = il.Body.Method.Module;
             for (var i = 0; i < 32; i++) {
                 // Prevent mono from inlining the DynamicMethod.
                 il.Emit(OpCodes.Nop);

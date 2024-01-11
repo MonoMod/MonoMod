@@ -76,7 +76,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 mm.Log("[HookGen] Starting HookGenerator");
                 var gen = new HookGenerator(mm, Path.GetFileName(pathOut));
 #if !CECIL0_9
-                using (ModuleDefinition mOut = gen.OutputModule) {
+                using (var mOut = gen.OutputModule) {
 #else
                 ModuleDefinition mOut = gen.OutputModule;
                 {

@@ -1,14 +1,14 @@
-﻿using System;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using MonoMod.SourceGen.Attributes;
+using MonoMod.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using MonoMod.SourceGen.Attributes;
-using MonoMod.Utils;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
 
 // Certain paramaters are self-explanatory (f.e. predicates in Goto*), while others are not (f.e. cursors in Find*).
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
@@ -280,7 +280,7 @@ namespace MonoMod.Cil {
         public bool TryGotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
             Helpers.ThrowIfArgumentNull(predicates);
 
-            InstrList instrs = Instrs;
+            var instrs = Instrs;
             var i = Index;
             if (SearchTarget == SearchTarget.Next)
                 i++;
@@ -319,7 +319,7 @@ namespace MonoMod.Cil {
         /// <returns>True if a match was found</returns>
         public bool TryGotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
             Helpers.ThrowIfArgumentNull(predicates);
-            InstrList instrs = Instrs;
+            var instrs = Instrs;
             var i = Index - 1;
             if (SearchTarget == SearchTarget.Prev)
                 i--;
@@ -367,7 +367,7 @@ namespace MonoMod.Cil {
         public bool TryFindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             Helpers.ThrowIfArgumentNull(predicates);
             cursors = new ILCursor[predicates.Length];
-            ILCursor c = this;
+            var c = this;
             for (var i = 0; i < predicates.Length; i++) {
                 c = c.Clone();
                 if (!c.TryGotoNext(predicates[i]))
@@ -396,7 +396,7 @@ namespace MonoMod.Cil {
         public bool TryFindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
             Helpers.ThrowIfArgumentNull(predicates);
             cursors = new ILCursor[predicates.Length];
-            ILCursor c = this;
+            var c = this;
             for (var i = predicates.Length - 1; i >= 0; i--) {
                 c = c.Clone();
                 if (!c.TryGotoPrev(predicates[i]))
@@ -421,10 +421,9 @@ namespace MonoMod.Cil {
 
             label.Target = Next;
             if (_afterLabels != null) {
-                Array.Resize(ref _afterLabels, _afterLabels.Length+1);
-                _afterLabels[_afterLabels.Length-1] = label;
-            }
-            else {
+                Array.Resize(ref _afterLabels, _afterLabels.Length + 1);
+                _afterLabels[_afterLabels.Length - 1] = label;
+            } else {
                 _afterLabels = new[] { label };
             }
         }
@@ -435,7 +434,7 @@ namespace MonoMod.Cil {
         /// <param name="inst">The instruction to target</param>
         /// <returns>The created label</returns>
         public ILLabel MarkLabel(Instruction inst) {
-            ILLabel label = Context.DefineLabel();
+            var label = Context.DefineLabel();
             if (inst == Next) {
                 MarkLabel(label);
                 return label;
@@ -449,7 +448,7 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <returns>The newly created label</returns>
         public ILLabel MarkLabel() {
-            ILLabel label = DefineLabel();
+            var label = DefineLabel();
             MarkLabel(label);
             return label;
         }
@@ -492,7 +491,7 @@ namespace MonoMod.Cil {
         /// </summary>
         private void _Retarget(Instruction? next, MoveType moveType) {
             if (_afterLabels != null)
-                foreach (ILLabel label in _afterLabels)
+                foreach (var label in _afterLabels)
                     label.Target = next;
             Goto(next, moveType);
         }
@@ -665,7 +664,7 @@ namespace MonoMod.Cil {
         /// <param name="memberName">The accessed member name.</param>
         /// <returns>this</returns>
         public ILCursor Emit<T>(OpCode opcode, string memberName)
-            => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).First()));
+            => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags)(-1)).First()));
 
         #endregion
 

@@ -1,8 +1,8 @@
-﻿using System;
-using System.Reflection;
-using System.Linq;
-using Mono.Cecil.Cil;
+﻿using Mono.Cecil.Cil;
 using MonoMod.Utils;
+using System;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Cil {
@@ -103,7 +103,7 @@ namespace MonoMod.Cil {
                     $"MMIL:Invoke<{delInvoke.DeclaringType?.FullName}>",
                     delInvoke.ReturnType, argTypes
                 )) {
-                    ILProcessor il = dmdInvoke.GetILProcessor();
+                    var il = dmdInvoke.GetILProcessor();
 
                     // Load the delegate reference first.
                     il.Emit(OpCodes.Ldarg, sig.ParameterCount);

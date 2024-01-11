@@ -1,11 +1,9 @@
-﻿using System;
-using System.Reflection;
+﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
 using System.Diagnostics;
 using System.IO;
-using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
+using System.Reflection;
 
 namespace MonoMod.Utils {
     /// <summary>
@@ -14,7 +12,7 @@ namespace MonoMod.Utils {
     public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator> {
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
-            MethodDefinition def = dmd.Definition ?? throw new InvalidOperationException();
+            var def = dmd.Definition ?? throw new InvalidOperationException();
             var typeDef = context as TypeDefinition;
 
             var moduleIsTemporary = false;
@@ -84,7 +82,7 @@ namespace MonoMod.Utils {
                     NoInlining = true
                 };
 
-                foreach (ParameterDefinition param in def.Parameters)
+                foreach (var param in def.Parameters)
                     clone.Parameters.Add(param.Clone().Relink(relinker, clone));
 
                 clone.ReturnType = def.ReturnType.Relink(relinker, clone);
@@ -92,17 +90,17 @@ namespace MonoMod.Utils {
                 typeDef.Methods.Add(clone);
 
                 clone.HasThis = def.HasThis;
-                Mono.Cecil.Cil.MethodBody body = clone.Body = def.Body.Clone(clone);
+                var body = clone.Body = def.Body.Clone(clone);
 
-                foreach (VariableDefinition var in clone.Body.Variables)
+                foreach (var var in clone.Body.Variables)
                     var.VariableType = var.VariableType.Relink(relinker, clone);
 
-                foreach (ExceptionHandler handler in clone.Body.ExceptionHandlers)
+                foreach (var handler in clone.Body.ExceptionHandlers)
                     if (handler.CatchType != null)
                         handler.CatchType = handler.CatchType.Relink(relinker, clone);
 
                 for (var instri = 0; instri < body.Instructions.Count; instri++) {
-                    Instruction instr = body.Instructions[instri];
+                    var instr = body.Instructions[instri];
                     var operand = instr.Operand;
 
                     // Import references.
@@ -134,7 +132,7 @@ namespace MonoMod.Utils {
                     }
 
                     if (accessChecksIgnored != null && operand is MemberReference mref) {
-                        IMetadataScope asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
+                        var asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
                         if (!accessChecksIgnored.Contains(asmRef.Name)) {
                             var caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
                             caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
@@ -172,7 +170,7 @@ namespace MonoMod.Utils {
                         module.Write(fileStream);
                 }
 
-                Assembly asm = ReflectionHelper.Load(module);
+                var asm = ReflectionHelper.Load(module);
 
                 return asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false)!
                     .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)

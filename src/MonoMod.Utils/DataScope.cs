@@ -26,7 +26,7 @@ namespace MonoMod.Utils {
     }
 
     public abstract class ScopeHandlerBase<T> : ScopeHandlerBase {
-        public sealed override void EndScope(object? data) => EndScope((T) data!);
+        public sealed override void EndScope(object? data) => EndScope((T)data!);
         public abstract void EndScope(T data);
     }
 

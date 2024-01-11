@@ -92,9 +92,9 @@ namespace System {
                     }
 
                     // uppercase both chars - notice that we need just one compare per char
-                    if ((uint) (charA - 'a') <= 'z' - 'a')
+                    if ((uint)(charA - 'a') <= 'z' - 'a')
                         charA -= 0x20;
-                    if ((uint) (charB - 'a') <= 'z' - 'a')
+                    if ((uint)(charB - 'a') <= 'z' - 'a')
                         charB -= 0x20;
 
                     // Return the (case-insensitive) difference between them.
@@ -269,7 +269,7 @@ namespace System {
                     ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
                 return default;
             }
-            if ((uint) start > (uint) text.Length)
+            if ((uint)start > (uint)text.Length)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             return new ReadOnlySpan<char>(Unsafe.As<Pinnable<char>>(text), StringAdjustment + start * sizeof(char), text.Length - start);
@@ -292,7 +292,7 @@ namespace System {
                     ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
                 return default;
             }
-            if ((uint) start > (uint) text.Length || (uint) length > (uint) (text.Length - start))
+            if ((uint)start > (uint)text.Length || (uint)length > (uint)(text.Length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             return new ReadOnlySpan<char>(Unsafe.As<Pinnable<char>>(text), StringAdjustment + start * sizeof(char), length);
@@ -321,7 +321,7 @@ namespace System {
                     ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
                 return default;
             }
-            if ((uint) start > (uint) text.Length)
+            if ((uint)start > (uint)text.Length)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             return new ReadOnlyMemory<char>(text, start, text.Length - start);
@@ -341,7 +341,7 @@ namespace System {
                     ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
                 return default;
             }
-            if ((uint) start > (uint) text.Length || (uint) length > (uint) (text.Length - start))
+            if ((uint)start > (uint)text.Length || (uint)length > (uint)(text.Length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             return new ReadOnlyMemory<char>(text, start, length);

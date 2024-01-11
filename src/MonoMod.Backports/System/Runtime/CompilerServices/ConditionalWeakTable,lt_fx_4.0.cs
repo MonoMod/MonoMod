@@ -230,7 +230,7 @@ namespace System.Runtime.CompilerServices {
             lock (_lock) {
                 Container c = _container;
                 return c is null || c.FirstFreeEntry == 0 ?
-                    ((IEnumerable<KeyValuePair<TKey, TValue>>) ArrayEx.Empty<KeyValuePair<TKey, TValue>>()).GetEnumerator() :
+                    ((IEnumerable<KeyValuePair<TKey, TValue>>)ArrayEx.Empty<KeyValuePair<TKey, TValue>>()).GetEnumerator() :
                     new Enumerator(this);
             }
         }

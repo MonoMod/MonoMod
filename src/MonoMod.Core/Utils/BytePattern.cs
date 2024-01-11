@@ -126,12 +126,12 @@ namespace MonoMod.Core.Utils {
             var bitmaskData = patternAlloc.Slice(pattern.Length);
             for (var i = 0; i < pattern.Length; i++) {
                 var @byte = pattern.Span[i];
-                var mask = (byte) ((@byte & MaskMask) >> 8);
-                var data = (byte) (@byte & ~MaskMask);
+                var mask = (byte)((@byte & MaskMask) >> 8);
+                var data = (byte)(@byte & ~MaskMask);
                 if (mask is 0x00 or 0xFF)
                     mask = (byte)~mask;
 
-                patternData.Span[i] = (byte) (data & mask);
+                patternData.Span[i] = (byte)(data & mask);
                 bitmaskData.Span[i] = mask;
             }
 
@@ -317,7 +317,7 @@ namespace MonoMod.Core.Utils {
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            ReadOnlySpan<byte> patternSpan = pattern.Span;
+            var patternSpan = pattern.Span;
             // set up address buffer
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
             var result = TryMatchAtImpl(patternSpan, data, addr, out length, 0);
@@ -338,7 +338,7 @@ namespace MonoMod.Core.Utils {
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            ReadOnlySpan<byte> patternSpan = pattern.Span;
+            var patternSpan = pattern.Span;
             return TryMatchAtImpl(patternSpan, data, addrBuf, out length, 0);
         }
 
@@ -347,14 +347,14 @@ namespace MonoMod.Core.Utils {
             var segmentIdx = startAtSegment;
 
             while (segmentIdx < segments.Length) {
-                PatternSegment segment = segments[segmentIdx];
+                var segment = segments[segmentIdx];
                 switch (segment.Kind) {
                     case SegmentKind.Literal: {
                             if (data.Length - pos < segment.Length)
                                 goto NoMatch; // if we don't have enough space left for the match, then just fail out
 
-                            ReadOnlySpan<byte> pattern = segment.SliceOf(patternSpan);
-                            
+                            var pattern = segment.SliceOf(patternSpan);
+
                             if (!pattern.SequenceEqual(data.Slice(pos, pattern.Length)))
                                 goto NoMatch; // the literal didn't match here, oopsie
 
@@ -442,7 +442,7 @@ namespace MonoMod.Core.Utils {
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            ReadOnlySpan<byte> patternSpan = pattern.Span;
+            var patternSpan = pattern.Span;
 
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
             bool result;
@@ -470,7 +470,7 @@ namespace MonoMod.Core.Utils {
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
-            ReadOnlySpan<byte> patternSpan = pattern.Span;
+            var patternSpan = pattern.Span;
             if (MustMatchAtStart) {
                 offset = 0;
                 return TryMatchAtImpl(patternSpan, data, addrBuf, out length, 0);
@@ -526,7 +526,7 @@ namespace MonoMod.Core.Utils {
 
             var litOffset = 0;
             for (; segmentIndexId < segments.Length; segmentIndexId++) {
-                PatternSegment segment = segments[segmentIndexId];
+                var segment = segments[segmentIndexId];
                 if (segment.Kind is SegmentKind.Literal) {
                     return (segment, litOffset);
                 } else if (segment.Kind is SegmentKind.Any or SegmentKind.Address or SegmentKind.MaskedLiteral) { // TODO: enable indexing MaskedLiterals

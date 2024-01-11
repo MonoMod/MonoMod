@@ -1,5 +1,5 @@
-﻿using System.Reflection;
-using System;
+﻿using System;
+using System.Reflection;
 
 namespace MonoMod.Utils {
     public static partial class DynDll {

@@ -125,7 +125,7 @@ namespace MonoMod.Core.Interop {
         /// for further consistency.]
         /// </summary>
         [DllImport(LibSystem, EntryPoint = "mach_vm_map")]
-        public static extern kern_return_t mach_vm_map(int targetTask, [In, Out] ulong* address, ulong size, ulong mask, vm_flags flags, 
+        public static extern kern_return_t mach_vm_map(int targetTask, [In, Out] ulong* address, ulong size, ulong mask, vm_flags flags,
             int @object, ulong offset, boolean_t copy, vm_prot_t curProt, vm_prot_t maxProt, vm_inherit_t inheritance);
 
         /*
@@ -190,7 +190,7 @@ namespace MonoMod.Core.Interop {
             if (ptr is null) {
                 var lib = DynDll.OpenLibrary(LibSystem);
                 try {
-                    mach_task_self_ = ptr = (int*) DynDll.GetExport(lib, "mach_task_self_");
+                    mach_task_self_ = ptr = (int*)DynDll.GetExport(lib, "mach_task_self_");
                 } finally {
                     DynDll.CloseLibrary(lib);
                 }
@@ -256,7 +256,7 @@ namespace MonoMod.Core.Interop {
             public ulong all_image_info_size; // mach_vm_size_t
             public task_dyld_all_image_info_format all_image_info_format;
 
-            public unsafe dyld_all_image_infos* all_image_infos => (dyld_all_image_infos*) (nuint) all_image_info_addr;
+            public unsafe dyld_all_image_infos* all_image_infos => (dyld_all_image_infos*)(nuint)all_image_info_addr;
             public static unsafe int Count => sizeof(task_dyld_info) / sizeof(int);
         }
 

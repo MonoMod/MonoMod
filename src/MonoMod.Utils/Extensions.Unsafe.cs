@@ -1,9 +1,9 @@
-﻿using System;
-using System.Reflection;
-using System.Collections.Generic;
-using Mono.Cecil.Cil;
-using System.Collections.Concurrent;
+﻿using Mono.Cecil.Cil;
 using MonoMod.Logs;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -41,7 +41,7 @@ namespace MonoMod.Utils {
         /// <param name="method">The method to obtain the "this" parameter type from.</param>
         /// <returns>The "this" parameter type.</returns>
         public static Type GetThisParamType(this MethodBase method) {
-            Type type = Helpers.ThrowIfNull(method).DeclaringType!;
+            var type = Helpers.ThrowIfNull(method).DeclaringType!;
             if (type.IsValueType)
                 type = type.MakeByRefType();
             return type;
@@ -68,7 +68,7 @@ namespace MonoMod.Utils {
                 typeof(IntPtr), Type.EmptyTypes
             );
 
-            ILProcessor il = dmd.GetILProcessor();
+            var il = dmd.GetILProcessor();
             il.Emit(OpCodes.Ldftn, dmd.Definition.Module.ImportReference(m));
             il.Emit(OpCodes.Ret);
 

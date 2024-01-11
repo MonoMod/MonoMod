@@ -21,10 +21,10 @@ namespace MonoMod.UnitTest.Core {
                     new(new(AddressKind.Rel32, 5), 0xe9, Ad, Ad, Ad, Ad, 0x5f),
                     // text rcx, rcx; je ...; mov rax, [rcx]; cmp rax, r10; je ...; mov {target}
                     new(new(AddressKind.Abs64),
-                        0x48, 0x85, 0xc9, 0x74, An, 
-                        0x48, 0x8b, 0x01, 0x49, An, An, An, An, An, An, An, An, An, 
+                        0x48, 0x85, 0xc9, 0x74, An,
+                        0x48, 0x8b, 0x01, 0x49, An, An, An, An, An, An, An, An, An,
                         0x49, 0x3b, 0xc2, 0x74, An, 0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad)
-                    // TODO: other examples
+                // TODO: other examples
                 );
 
             var result = collection.TryMatchAt(new byte[] { 0xe9, 0x01, 0x23, 0x45, 0x67, 0x5f }.AsSpan(), out var addr1, out var matchingPattern1, out var len1);

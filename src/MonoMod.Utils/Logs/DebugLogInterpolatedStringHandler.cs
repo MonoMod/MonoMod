@@ -116,9 +116,9 @@ namespace MonoMod.Logs {
             Justification = "The value.Length cases are expected to be JIT-time constants due to inlining, and doing argument verification may interfere with that.")]
         public void AppendLiteral(string value) {
             if (value.Length == 1) {
-                Span<char> chars = _chars;
+                var chars = _chars;
                 var pos = _pos;
-                if ((uint) pos < (uint) chars.Length) {
+                if ((uint)pos < (uint)chars.Length) {
                     chars[pos] = value[0];
                     _pos = pos + 1;
                 } else {
@@ -128,9 +128,9 @@ namespace MonoMod.Logs {
             }
 
             if (value.Length == 2) {
-                Span<char> chars = _chars;
+                var chars = _chars;
                 var pos = _pos;
-                if ((uint) pos < chars.Length - 1) {
+                if ((uint)pos < chars.Length - 1) {
                     value.AsSpan().CopyTo(chars.Slice(pos));
                     _pos = pos + 2;
                 } else {
@@ -256,7 +256,7 @@ namespace MonoMod.Logs {
                 _pos += wrote;
                 return;
             } else if (value is IFormattable) {
-                s = ((IFormattable) value).ToString(format: null, null); // constrained call avoiding boxing for value types (though it might box later anyway
+                s = ((IFormattable)value).ToString(format: null, null); // constrained call avoiding boxing for value types (though it might box later anyway
             } else {
                 s = value?.ToString();
             }
@@ -272,9 +272,9 @@ namespace MonoMod.Logs {
         private void AppendFormatted(IntPtr value) {
             unchecked {
                 if (IntPtr.Size == 4) {
-                    AppendFormatted((int) value);
+                    AppendFormatted((int)value);
                 } else {
-                    AppendFormatted((long) value);
+                    AppendFormatted((long)value);
                 }
             }
         }
@@ -282,9 +282,9 @@ namespace MonoMod.Logs {
         private void AppendFormatted(IntPtr value, string? format) {
             unchecked {
                 if (IntPtr.Size == 4) {
-                    AppendFormatted((int) value, format);
+                    AppendFormatted((int)value, format);
                 } else {
-                    AppendFormatted((long) value, format);
+                    AppendFormatted((long)value, format);
                 }
             }
         }
@@ -293,9 +293,9 @@ namespace MonoMod.Logs {
         private void AppendFormatted(UIntPtr value) {
             unchecked {
                 if (UIntPtr.Size == 4) {
-                    AppendFormatted((uint) value);
+                    AppendFormatted((uint)value);
                 } else {
-                    AppendFormatted((ulong) value);
+                    AppendFormatted((ulong)value);
                 }
             }
         }
@@ -303,9 +303,9 @@ namespace MonoMod.Logs {
         private void AppendFormatted(UIntPtr value, string? format) {
             unchecked {
                 if (UIntPtr.Size == 4) {
-                    AppendFormatted((uint) value, format);
+                    AppendFormatted((uint)value, format);
                 } else {
-                    AppendFormatted((ulong) value, format);
+                    AppendFormatted((ulong)value, format);
                 }
             }
         }
@@ -354,7 +354,7 @@ namespace MonoMod.Logs {
                     return;
                 }*/
 
-                s = ((IFormattable) value).ToString(format, null); // constrained call avoiding boxing for value types
+                s = ((IFormattable)value).ToString(format, null); // constrained call avoiding boxing for value types
             } else {
                 s = value?.ToString();
             }
@@ -438,16 +438,16 @@ namespace MonoMod.Logs {
             // need to grow to at least that new total. GrowCore will handle growing by more
             // than that if possible.
             Helpers.DAssert(additionalChars > _chars.Length - _pos);
-            GrowCore((uint) _pos + (uint) additionalChars);
+            GrowCore((uint)_pos + (uint)additionalChars);
         }
-        
+
         /// <summary>Grows the size of <see cref="_chars"/>.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)] // keep consumers as streamlined as possible
         private void Grow() {
             // This method is called when the remaining space in _chars isn't sufficient to continue
             // the operation.  Thus, we need at least one character beyond _chars.Length.  GrowCore
             // will handle growing by more than that if possible.
-            GrowCore((uint) _chars.Length + 1);
+            GrowCore((uint)_chars.Length + 1);
         }
 
         /// <summary>Grow the size of <see cref="_chars"/> to at least the specified <paramref name="requiredMinCapacity"/>.</summary>
@@ -458,8 +458,8 @@ namespace MonoMod.Logs {
             // ints that could technically overflow if someone tried to, for example, append a huge string to a huge string, we also clamp to int.MaxValue.
             // Even if the array creation fails in such a case, we may later fail in ToStringAndClear.
 
-            var newCapacity = Math.Max(requiredMinCapacity, Math.Min((uint) _chars.Length * 2, uint.MaxValue));
-            var arraySize = (int) MathEx.Clamp(newCapacity, MinimumArrayPoolLength, int.MaxValue);
+            var newCapacity = Math.Max(requiredMinCapacity, Math.Min((uint)_chars.Length * 2, uint.MaxValue));
+            var arraySize = (int)MathEx.Clamp(newCapacity, MinimumArrayPoolLength, int.MaxValue);
 
             var newArray = ArrayPool<char>.Shared.Rent(arraySize);
             _chars.Slice(0, _pos).CopyTo(newArray);

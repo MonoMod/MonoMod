@@ -1,8 +1,8 @@
+using MonoMod.Backports;
+using MonoMod.Utils;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Backports;
-using MonoMod.Utils;
 
 namespace MonoMod.Logs {
     public static class DebugFormatter {
@@ -30,7 +30,7 @@ namespace MonoMod.Logs {
 
             if (typeof(T) == typeof(IDebugFormattable))
                 return true;
-            
+
             // then object instance matches
             if (value
                 is Type
@@ -97,7 +97,7 @@ namespace MonoMod.Logs {
 #pragma warning disable IDE0038 // Use pattern matching
             // This is to coerce either Roslyn or the JIT into doing a constrained call if T is a value type
             if (value is IDebugFormattable)
-                return ((IDebugFormattable) value).TryFormatInto(into, out wrote);
+                return ((IDebugFormattable)value).TryFormatInto(into, out wrote);
 #pragma warning restore IDE0038 // Use pattern matching
 
             Helpers.Assert(false, $"Called TryFormatInto with value of unknown type {value.GetType()}");

@@ -14,10 +14,9 @@ namespace MonoMod.SourceGen.Internal.Interop {
             var fields = context.SyntaxProvider
                 .ForAttributeWithMetadataName(AttributeName, (n, ct) => true,
                 (ctx, ct) => {
-                    if (ctx.Attributes is [{ ConstructorArguments: [{ Value: int depth }, { Value: INamedTypeSymbol type }] }])
-                    {
+                    if (ctx.Attributes is [{ ConstructorArguments: [{ Value: int depth }, { Value: INamedTypeSymbol type }] }]) {
                         return new GenerationInfo(GenHelpers.CreateTypeContext(ctx.TargetSymbol.ContainingType), ctx.TargetSymbol.MetadataName,
-                            ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), depth, type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                            ((MethodDeclarationSyntax)ctx.TargetNode).Modifiers.ToString(), depth, type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
                     }
                     return null;
                 }).Where(i => i is not null);
@@ -72,7 +71,7 @@ namespace MonoMod.SourceGen.Internal.Interop {
             value = (value & c2) + ((value >> 2) & c2);
             value = (((value + (value >> 4)) & c3) * c4) >> 24;
 
-            return (int) value;
+            return (int)value;
         }
     }
 }

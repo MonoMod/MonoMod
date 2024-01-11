@@ -1,8 +1,8 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading;
-using System.Diagnostics.CodeAnalysis;
-using System.ComponentModel;
 
 namespace MonoMod.RuntimeDetour {
     /// <summary>

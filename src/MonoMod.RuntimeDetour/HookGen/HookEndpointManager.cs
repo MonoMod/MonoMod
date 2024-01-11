@@ -90,7 +90,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
         /// <param name="callback">The hook delegate which was used.</param>
         [Obsolete(ObsoleteMessage, true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public static void Unmodify<T>(MethodBase method, Delegate callback)  => Unmodify(method, callback);
+        public static void Unmodify<T>(MethodBase method, Delegate callback) => Unmodify(method, callback);
         /// <summary>
         /// Removes the IL hook implemented by <paramref name="callback"/> from <paramref name="method"/>.
         /// </summary>

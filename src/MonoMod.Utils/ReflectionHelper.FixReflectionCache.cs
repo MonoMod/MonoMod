@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Reflection;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace MonoMod.Utils {
@@ -119,7 +119,7 @@ namespace MonoMod.Utils {
             if (getter.ReturnType is { Namespace: "System.Reflection", Name: "CerArrayList`1" } cerArrayListType) {
                 var m_array = cerArrayListType.GetField("m_array", _BindingFlagsAll)!;
                 // TODO: assert m_array is non-null
-                return (Array) m_array.GetValue(obj)!;
+                return (Array)m_array.GetValue(obj)!;
             }
             throw new InvalidOperationException($"Unknown reflection cache type {obj.GetType()}");
         }
@@ -130,10 +130,11 @@ namespace MonoMod.Utils {
             // Sort using a short-lived list.
             var list = new List<T?>(orig.Length);
             for (var i = 0; i < orig.Length; i++)
-                list.Add((T?) orig.GetValue(i)!);
+                list.Add((T?)orig.GetValue(i)!);
 
             list.Sort((a, b) => {
-                if (a == b) return 0;
+                if (a == b)
+                    return 0;
                 if (a is null)
                     return 1;
                 if (b is null)

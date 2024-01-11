@@ -73,7 +73,7 @@ internal struct ImmutableArrayBuilder<T> : IDisposable {
 
     /// <inheritdoc cref="ImmutableArray{T}.Builder.ToImmutable"/>
     public readonly ImmutableArray<T> ToImmutable() {
-        T[] array = writer!.WrittenSpan.ToArray();
+        var array = writer!.WrittenSpan.ToArray();
 
         return Unsafe.As<T[], ImmutableArray<T>>(ref array);
     }
@@ -90,7 +90,7 @@ internal struct ImmutableArrayBuilder<T> : IDisposable {
 
     /// <inheritdoc/>
     public void Dispose() {
-        Writer? writer = this.writer;
+        var writer = this.writer;
 
         this.writer = null;
 

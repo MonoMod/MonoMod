@@ -244,7 +244,7 @@ namespace System {
                 SpanHelpers.SequenceEqual(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(other)),
-                    ((nuint) length) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
+                    ((nuint)length) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
 
             return length == other.Length && SpanHelpers.SequenceEqual(ref MemoryMarshal.GetReference(span), ref MemoryMarshal.GetReference(other), length);
         }
@@ -595,7 +595,7 @@ namespace System {
                 SpanHelpers.SequenceEqual(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(other)),
-                    ((nuint) length) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
+                    ((nuint)length) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
 
             return length == other.Length && SpanHelpers.SequenceEqual(ref MemoryMarshal.GetReference(span), ref MemoryMarshal.GetReference(other), length);
         }
@@ -635,7 +635,7 @@ namespace System {
                 SpanHelpers.SequenceEqual(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(value)),
-                    ((nuint) valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
+                    ((nuint)valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
 
             return valueLength <= span.Length && SpanHelpers.SequenceEqual(ref MemoryMarshal.GetReference(span), ref MemoryMarshal.GetReference(value), valueLength);
         }
@@ -652,7 +652,7 @@ namespace System {
                 SpanHelpers.SequenceEqual(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(value)),
-                    ((nuint) valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
+                    ((nuint)valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
 
             return valueLength <= span.Length && SpanHelpers.SequenceEqual(ref MemoryMarshal.GetReference(span), ref MemoryMarshal.GetReference(value), valueLength);
         }
@@ -670,7 +670,7 @@ namespace System {
                 SpanHelpers.SequenceEqual(
                     ref Unsafe.As<T, byte>(ref Unsafe.Add(ref MemoryMarshal.GetReference(span), spanLength - valueLength)),
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(value)),
-                    ((nuint) valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
+                    ((nuint)valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
 
             return valueLength <= spanLength &&
                 SpanHelpers.SequenceEqual(
@@ -692,7 +692,7 @@ namespace System {
                 SpanHelpers.SequenceEqual(
                     ref Unsafe.As<T, byte>(ref Unsafe.Add(ref MemoryMarshal.GetReference(span), spanLength - valueLength)),
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(value)),
-                    ((nuint) valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
+                    ((nuint)valueLength) * size);  // If this multiplication overflows, the Span we got overflows the entire address range. There's no happy outcome for this api in such a case so we choose not to take the overhead of checking.
 
             return valueLength <= spanLength &&
                 SpanHelpers.SequenceEqual(
@@ -766,7 +766,7 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Span<T> AsSpan<T>(this ArraySegment<T> segment, int start) {
-            if (((uint) start) > segment.Count)
+            if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             return new Span<T>(segment.Array, segment.Offset + start, segment.Count - start);
@@ -786,9 +786,9 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Span<T> AsSpan<T>(this ArraySegment<T> segment, int start, int length) {
-            if (((uint) start) > segment.Count)
+            if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
-            if (((uint) length) > segment.Count - start)
+            if (((uint)length) > segment.Count - start)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.length);
 
             return new Span<T>(segment.Array, segment.Offset + start, length);
@@ -843,7 +843,7 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=segment.Count).
         /// </exception>
         public static Memory<T> AsMemory<T>(this ArraySegment<T> segment, int start) {
-            if (((uint) start) > segment.Count)
+            if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             return new Memory<T>(segment.Array, segment.Offset + start, segment.Count - start);
@@ -862,9 +862,9 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=segment.Count).
         /// </exception>
         public static Memory<T> AsMemory<T>(this ArraySegment<T> segment, int start, int length) {
-            if (((uint) start) > segment.Count)
+            if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
-            if (((uint) length) > segment.Count - start)
+            if (((uint)length) > segment.Count - start)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.length);
 
             return new Memory<T>(segment.Array, segment.Offset + start, length);
@@ -1035,7 +1035,7 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Overlaps<T>(this Span<T> span, ReadOnlySpan<T> other) {
-            return Overlaps((ReadOnlySpan<T>) span, other);
+            return Overlaps((ReadOnlySpan<T>)span, other);
         }
 
         /// <summary>
@@ -1043,7 +1043,7 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Overlaps<T>(this Span<T> span, ReadOnlySpan<T> other, out int elementOffset) {
-            return Overlaps((ReadOnlySpan<T>) span, other, out elementOffset);
+            return Overlaps((ReadOnlySpan<T>)span, other, out elementOffset);
         }
 
         /// <summary>
@@ -1059,11 +1059,11 @@ namespace System {
                 ref MemoryMarshal.GetReference(other));
 
             if (Unsafe.SizeOf<IntPtr>() == sizeof(int)) {
-                return (uint) byteOffset < (uint) (span.Length * Unsafe.SizeOf<T>()) ||
-                       (uint) byteOffset > (uint) -(other.Length * Unsafe.SizeOf<T>());
+                return (uint)byteOffset < (uint)(span.Length * Unsafe.SizeOf<T>()) ||
+                       (uint)byteOffset > (uint)-(other.Length * Unsafe.SizeOf<T>());
             } else {
-                return (ulong) byteOffset < (ulong) ((long) span.Length * Unsafe.SizeOf<T>()) ||
-                       (ulong) byteOffset > (ulong) -((long) other.Length * Unsafe.SizeOf<T>());
+                return (ulong)byteOffset < (ulong)((long)span.Length * Unsafe.SizeOf<T>()) ||
+                       (ulong)byteOffset > (ulong)-((long)other.Length * Unsafe.SizeOf<T>());
             }
         }
 
@@ -1081,24 +1081,24 @@ namespace System {
                 ref MemoryMarshal.GetReference(other));
 
             if (Unsafe.SizeOf<IntPtr>() == sizeof(int)) {
-                if ((uint) byteOffset < (uint) (span.Length * Unsafe.SizeOf<T>()) ||
-                    (uint) byteOffset > (uint) -(other.Length * Unsafe.SizeOf<T>())) {
-                    if ((int) byteOffset % Unsafe.SizeOf<T>() != 0)
+                if ((uint)byteOffset < (uint)(span.Length * Unsafe.SizeOf<T>()) ||
+                    (uint)byteOffset > (uint)-(other.Length * Unsafe.SizeOf<T>())) {
+                    if ((int)byteOffset % Unsafe.SizeOf<T>() != 0)
                         ThrowHelper.ThrowArgumentException_OverlapAlignmentMismatch();
 
-                    elementOffset = (int) byteOffset / Unsafe.SizeOf<T>();
+                    elementOffset = (int)byteOffset / Unsafe.SizeOf<T>();
                     return true;
                 } else {
                     elementOffset = 0;
                     return false;
                 }
             } else {
-                if ((ulong) byteOffset < (ulong) ((long) span.Length * Unsafe.SizeOf<T>()) ||
-                    (ulong) byteOffset > (ulong) -((long) other.Length * Unsafe.SizeOf<T>())) {
-                    if ((long) byteOffset % Unsafe.SizeOf<T>() != 0)
+                if ((ulong)byteOffset < (ulong)((long)span.Length * Unsafe.SizeOf<T>()) ||
+                    (ulong)byteOffset > (ulong)-((long)other.Length * Unsafe.SizeOf<T>())) {
+                    if ((long)byteOffset % Unsafe.SizeOf<T>() != 0)
                         ThrowHelper.ThrowArgumentException_OverlapAlignmentMismatch();
 
-                    elementOffset = (int) ((long) byteOffset / Unsafe.SizeOf<T>());
+                    elementOffset = (int)((long)byteOffset / Unsafe.SizeOf<T>());
                     return true;
                 } else {
                     elementOffset = 0;
@@ -1150,7 +1150,7 @@ namespace System {
         public static int BinarySearch<T, TComparable>(
             this Span<T> span, TComparable comparable)
             where TComparable : IComparable<T> {
-            return BinarySearch((ReadOnlySpan<T>) span, comparable);
+            return BinarySearch((ReadOnlySpan<T>)span, comparable);
         }
 
         /// <summary>
@@ -1175,7 +1175,7 @@ namespace System {
         public static int BinarySearch<T, TComparer>(
             this Span<T> span, T value, TComparer comparer)
             where TComparer : IComparer<T> {
-            return BinarySearch((ReadOnlySpan<T>) span, value, comparer);
+            return BinarySearch((ReadOnlySpan<T>)span, value, comparer);
         }
 
         /// <summary>
@@ -1258,22 +1258,22 @@ namespace System {
         private static bool IsTypeComparableAsBytes<T>(out nuint size) {
             if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte)) {
                 // The cast to nuint is not redundant on netstandard. Do not remove it.
-                size = (nuint) sizeof(byte);
+                size = (nuint)sizeof(byte);
                 return true;
             }
 
             if (typeof(T) == typeof(char) || typeof(T) == typeof(short) || typeof(T) == typeof(ushort)) {
-                size = (nuint) sizeof(char);
+                size = (nuint)sizeof(char);
                 return true;
             }
 
             if (typeof(T) == typeof(int) || typeof(T) == typeof(uint)) {
-                size = (nuint) sizeof(int);
+                size = (nuint)sizeof(int);
                 return true;
             }
 
             if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong)) {
-                size = (nuint) sizeof(long);
+                size = (nuint)sizeof(long);
                 return true;
             }
 

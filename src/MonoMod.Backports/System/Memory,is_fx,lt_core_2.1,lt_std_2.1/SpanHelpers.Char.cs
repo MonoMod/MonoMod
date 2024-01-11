@@ -15,12 +15,12 @@ namespace System {
             if (Unsafe.AreSame(ref first, ref second))
                 goto Equal;
 
-            nint minLength = (nint) ((firstLength < secondLength) ? firstLength : secondLength);
+            nint minLength = (nint)((firstLength < secondLength) ? firstLength : secondLength);
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
 
-            if ((byte*) minLength >= (byte*) (sizeof(UIntPtr) / sizeof(char))) {
+            if ((byte*)minLength >= (byte*)(sizeof(UIntPtr) / sizeof(char))) {
 
-                while ((byte*) minLength >= (byte*) (i + sizeof(UIntPtr) / sizeof(char))) {
+                while ((byte*)minLength >= (byte*)(i + sizeof(UIntPtr) / sizeof(char))) {
                     if (Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref first, i))) !=
                         Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref second, i)))) {
                         break;
@@ -29,14 +29,14 @@ namespace System {
                 }
             }
 
-            if (sizeof(UIntPtr) > sizeof(int) && (byte*) minLength >= (byte*) (i + sizeof(int) / sizeof(char))) {
+            if (sizeof(UIntPtr) > sizeof(int) && (byte*)minLength >= (byte*)(i + sizeof(int) / sizeof(char))) {
                 if (Unsafe.ReadUnaligned<int>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref first, i))) ==
                     Unsafe.ReadUnaligned<int>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref second, i)))) {
                     i += sizeof(int) / sizeof(char);
                 }
             }
 
-            while ((byte*) i < (byte*) minLength) {
+            while ((byte*)i < (byte*)minLength) {
                 int result = Unsafe.Add(ref first, i).CompareTo(Unsafe.Add(ref second, i));
                 if (result != 0)
                     return result;
@@ -85,7 +85,7 @@ namespace System {
                 Found1:
                 pCh++;
                 Found:
-                return (int) (pCh - pChars);
+                return (int)(pCh - pChars);
             }
         }
 
@@ -118,13 +118,13 @@ namespace System {
                 }
                 return -1;
                 Found:
-                return (int) (pCh - pEndCh);
+                return (int)(pCh - pEndCh);
                 Found1:
-                return (int) (pCh - pEndCh) + 1;
+                return (int)(pCh - pEndCh) + 1;
                 Found2:
-                return (int) (pCh - pEndCh) + 2;
+                return (int)(pCh - pEndCh) + 2;
                 Found3:
-                return (int) (pCh - pEndCh) + 3;
+                return (int)(pCh - pEndCh) + 3;
             }
         }
     }

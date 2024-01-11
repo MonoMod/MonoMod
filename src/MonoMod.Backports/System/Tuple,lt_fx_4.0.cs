@@ -870,7 +870,7 @@ namespace System {
         }
 
         int IComparable.CompareTo(object? obj) {
-            return ((IStructuralComparable) this).CompareTo(obj, Comparer<object>.Default);
+            return ((IStructuralComparable)this).CompareTo(obj, Comparer<object>.Default);
         }
 
         int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
@@ -1101,7 +1101,7 @@ namespace System {
 
         private int GetHashCode(IEqualityComparer comparer) {
             // We want to have a limited hash in this case.  We'll use the last 8 elements of the tuple
-            ITupleInternal t = (ITupleInternal) m_Rest;
+            ITupleInternal t = (ITupleInternal)m_Rest;
             if (t.Length >= 8) { return t.GetHashCode(comparer); }
 
             // In this case, the m_Rest member has fewer than 8 elements so we need to combine our elements with the elements in m_Rest.
@@ -1155,13 +1155,13 @@ namespace System {
             sb.Append(", ");
             sb.Append(m_Item7);
             sb.Append(", ");
-            return ((ITupleInternal) m_Rest).ToString(sb);
+            return ((ITupleInternal)m_Rest).ToString(sb);
         }
 
         /// <summary>
         /// The number of positions in this data structure.
         /// </summary>
-        int ITuple.Length => 7 + ((ITupleInternal) Rest).Length;
+        int ITuple.Length => 7 + ((ITupleInternal)Rest).Length;
 
         /// <summary>
         /// Get the element at position <param name="index"/>.
@@ -1176,7 +1176,7 @@ namespace System {
                 5 => Item6,
                 6 => Item7,
 
-                _ => ((ITupleInternal) Rest)[index - 7],
+                _ => ((ITupleInternal)Rest)[index - 7],
             };
     }
 }

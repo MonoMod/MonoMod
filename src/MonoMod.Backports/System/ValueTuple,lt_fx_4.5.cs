@@ -5,8 +5,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 #pragma warning disable CA1141 // explicitly not using tuple syntax in tuple implementation
 
@@ -1970,7 +1970,7 @@ namespace System {
                                         Item7?.GetHashCode() ?? 0);
             }
 
-            int size = ((IValueTupleInternal) Rest).Length;
+            int size = ((IValueTupleInternal)Rest).Length;
             int restHashCode = Rest.GetHashCode();
             if (size >= 8) {
                 return restHashCode;
@@ -2112,7 +2112,7 @@ namespace System {
         /// </remarks>
         public override string ToString() {
             if (Rest is IValueTupleInternal) {
-                return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + ((IValueTupleInternal) Rest).ToStringEnd();
+                return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + ((IValueTupleInternal)Rest).ToStringEnd();
             }
 
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + Rest.ToString() + ")";
@@ -2120,7 +2120,7 @@ namespace System {
 
         string IValueTupleInternal.ToStringEnd() {
             if (Rest is IValueTupleInternal) {
-                return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + ((IValueTupleInternal) Rest).ToStringEnd();
+                return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + ((IValueTupleInternal)Rest).ToStringEnd();
             }
 
             return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + Rest.ToString() + ")";
@@ -2129,7 +2129,7 @@ namespace System {
         /// <summary>
         /// The number of positions in this data structure.
         /// </summary>
-        int ITuple.Length => Rest is IValueTupleInternal ? 7 + ((IValueTupleInternal) Rest).Length : 8;
+        int ITuple.Length => Rest is IValueTupleInternal ? 7 + ((IValueTupleInternal)Rest).Length : 8;
 
         /// <summary>
         /// Get the element at position <param name="index"/>.
@@ -2154,7 +2154,7 @@ namespace System {
                 }
 
                 if (Rest is IValueTupleInternal) {
-                    return ((IValueTupleInternal) Rest)[index - 7];
+                    return ((IValueTupleInternal)Rest)[index - 7];
                 }
 
 

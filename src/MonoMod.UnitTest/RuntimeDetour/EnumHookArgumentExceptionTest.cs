@@ -1,7 +1,6 @@
 ﻿extern alias New;
-
-using System;
 using New::MonoMod.RuntimeDetour;
+using System;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,8 +34,8 @@ namespace MonoMod.UnitTest.RuntimeDetour {
             None,
         }
 
-        private struct TestStruct { 
-            
+        private struct TestStruct {
+
         }
 
         private static void HookTarget(TestEnum @enum) {

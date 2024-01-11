@@ -20,7 +20,7 @@
 
     public static class OSKindExtensions {
         public static bool Is(this OSKind operatingSystem, OSKind test) => operatingSystem.Has(test);
-        public static OSKind GetKernel(this OSKind operatingSystem) => (OSKind) ((int) operatingSystem & 0b11111);
-        public static int GetSubtypeId(this OSKind operatingSystem) => (int) operatingSystem >> 5;
+        public static OSKind GetKernel(this OSKind operatingSystem) => (OSKind)((int)operatingSystem & 0b11111);
+        public static int GetSubtypeId(this OSKind operatingSystem) => (int)operatingSystem >> 5;
     }
 }

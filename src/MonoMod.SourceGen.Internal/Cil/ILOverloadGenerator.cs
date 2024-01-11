@@ -54,7 +54,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
                     static (n, _) => n.IsKind(SyntaxKind.ClassDeclaration),
                     static (ctx, ct) => {
                         using var b = ImmutableArrayBuilder<TypeWithEmitOverloads>.Rent();
-                        var type = GenHelpers.CreateTypeContext((INamedTypeSymbol) ctx.TargetSymbol);
+                        var type = GenHelpers.CreateTypeContext((INamedTypeSymbol)ctx.TargetSymbol);
                         var sourceFile = ctx.TargetNode.SyntaxTree.FilePath;
                         foreach (var attr in ctx.Attributes) {
                             if (attr is { ConstructorArguments: [{ Value: string fname }, { Value: string kind }] }) {
@@ -93,7 +93,7 @@ namespace MonoMod.SourceGen.Internal.Cil {
             var emitInfoWithMatchedSourceProvider = overloadsWithValidKind
                 .Combine(parsedSourceTextsProvider.Collect())
                 .Select(static (t, ct)
-                    => (Info: t.Left, Defs: t.Right.FirstOrDefault(x => x.Path == t.Left.ReadFromFile).Defs 
+                    => (Info: t.Left, Defs: t.Right.FirstOrDefault(x => x.Path == t.Left.ReadFromFile).Defs
                             ?? t.Right.FirstOrDefault(x => Path.GetFileName(x.Path) == t.Left.ReadFromFile).Defs));
 
             var overloadsWithNoFile = emitInfoWithMatchedSourceProvider
@@ -351,7 +351,8 @@ namespace MonoMod.SourceGen.Internal.Cil {
             GetConversionsAndSkips(type, defs, out var conversions, out var skips, out _);
 
             foreach (var (op, doc) in defs.Opcodes) {
-                if (skips.Contains(op)) continue;
+                if (skips.Contains(op))
+                    continue;
                 if (op.ArgumentType is null) {
                     _ = builder
                         .WriteLine($"""/// <summary>Emits a {doc} opcode to the current cursor position.</summary>""")

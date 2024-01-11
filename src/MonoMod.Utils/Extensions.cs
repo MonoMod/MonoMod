@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Reflection;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 
 namespace MonoMod.Utils {
@@ -67,9 +67,9 @@ namespace MonoMod.Utils {
 
             if (member.DeclaringType is not null) {
                 var mt = member.MetadataToken;
-                foreach (MemberInfo other in member.DeclaringType.GetMembers((BindingFlags) (-1))) {
+                foreach (var other in member.DeclaringType.GetMembers((BindingFlags)(-1))) {
                     if (other.MetadataToken == mt)
-                        return (T) other;
+                        return (T)other;
                 }
             }
 
@@ -94,7 +94,7 @@ namespace MonoMod.Utils {
             // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection/RuntimeAssembly.cs#L59
             // https://github.com/mono/mono/blob/cf69b4725976e51416bfdff22f3e1834006af00a/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L247
             // https://github.com/mono/mono/blob/ee3a669dc30689af8c8919afc61d226683a1aaa3/mcs/class/corlib/System.Reflection.Emit/AssemblyBuilder.cs#L258
-            
+
             var asmType = asm.GetType();
             if (asmType == null)
                 return;
@@ -124,18 +124,18 @@ namespace MonoMod.Utils {
                     ReflectionHelper.AssemblyCache[name.Name] = asmRef;
                 }
             }
-            
+
             var asmPtr = 0L;
             // For AssemblyBuilders, dynamic_assembly is of type UIntPtr which doesn't cast to IntPtr
             switch (f_mono_assembly.GetValue(asm)) {
                 case IntPtr i:
-                    asmPtr = (long) i;
+                    asmPtr = (long)i;
                     break;
                 case UIntPtr u:
-                    asmPtr = (long) u;
+                    asmPtr = (long)u;
                     break;
             }
-            
+
             var offs =
                 // ref_count (4 + padding)
                 IntPtr.Size +
@@ -183,8 +183,8 @@ namespace MonoMod.Utils {
                 1 +
                 // dynamic
                 1;
-            var corlibInternalPtr = (byte*) (asmPtr + offs);
-            *corlibInternalPtr = value ? (byte) 1 : (byte) 0;
+            var corlibInternalPtr = (byte*)(asmPtr + offs);
+            *corlibInternalPtr = value ? (byte)1 : (byte)0;
         }
 
         public static bool IsDynamicMethod(this MethodBase method) {
@@ -208,7 +208,7 @@ namespace MonoMod.Utils {
             // Fake DynamicMethods aren't part of their declaring type.
             // Sounds obvious, but seems like the only real method to verify that it's a fake DynamicMethod.
             if (method.DeclaringType is not null) {
-                foreach (MethodInfo other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                foreach (var other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                     if (method == other)
                         return false;
             }

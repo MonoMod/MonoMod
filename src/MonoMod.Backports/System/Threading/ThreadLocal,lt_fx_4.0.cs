@@ -397,9 +397,7 @@ namespace System.Threading {
                     throw new InvalidOperationException("ThreadLocal values not available");
                 }
 
-                List<T>? list = GetValuesAsList(); // returns null if disposed
-                if (list == null)
-                    throw new ObjectDisposedException("ThreadLocal disposed");
+                List<T>? list = GetValuesAsList() ?? throw new ObjectDisposedException("ThreadLocal disposed"); // returns null if disposed
                 return list;
             }
         }
@@ -504,7 +502,7 @@ namespace System.Threading {
         /// Chooses the next larger table size
         /// </summary>
         private static int GetNewTableSize(int minSize) {
-            if ((uint) minSize > ArrayEx.MaxLength) {
+            if ((uint)minSize > ArrayEx.MaxLength) {
                 // Intentionally return a value that will result in an OutOfMemoryException
                 return int.MaxValue;
             }
@@ -538,7 +536,7 @@ namespace System.Threading {
             newSize++;
 
             // Don't set newSize to more than Array.MaxArrayLength
-            if ((uint) newSize > ArrayEx.MaxLength) {
+            if ((uint)newSize > ArrayEx.MaxLength) {
                 newSize = ArrayEx.MaxLength;
             }
 

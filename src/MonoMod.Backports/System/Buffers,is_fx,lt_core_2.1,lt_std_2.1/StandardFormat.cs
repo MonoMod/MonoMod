@@ -26,7 +26,7 @@ namespace System.Buffers {
         /// <summary>
         /// The character component of the format.
         /// </summary>
-        public char Symbol => (char) _format;
+        public char Symbol => (char)_format;
 
         /// <summary>
         /// The precision component of the format. Ranges from 0..9 or the special value NoPrecision.
@@ -51,10 +51,10 @@ namespace System.Buffers {
         public StandardFormat(char symbol, byte precision = NoPrecision) {
             if (precision != NoPrecision && precision > MaxPrecision)
                 ThrowHelper.ThrowArgumentOutOfRangeException_PrecisionTooLarge();
-            if (symbol != (byte) symbol)
+            if (symbol != (byte)symbol)
                 ThrowHelper.ThrowArgumentOutOfRangeException_SymbolDoesNotFit();
 
-            _format = (byte) symbol;
+            _format = (byte)symbol;
             _precision = precision;
         }
 
@@ -86,7 +86,7 @@ namespace System.Buffers {
                         throw new FormatException($"Precision is larger than the maximum {MaxPrecision}");
                 }
 
-                precision = (byte) parsedPrecision;
+                precision = (byte)parsedPrecision;
             }
 
             return new StandardFormat(symbol, precision);
@@ -128,16 +128,16 @@ namespace System.Buffers {
                     byte precision = Precision;
                     if (precision != NoPrecision) {
                         if (precision >= 100) {
-                            pBuffer[dstIndex++] = (char) ('0' + (precision / 100) % 10);
-                            precision = (byte) (precision % 100);
+                            pBuffer[dstIndex++] = (char)('0' + (precision / 100) % 10);
+                            precision = (byte)(precision % 100);
                         }
 
                         if (precision >= 10) {
-                            pBuffer[dstIndex++] = (char) ('0' + (precision / 10) % 10);
-                            precision = (byte) (precision % 10);
+                            pBuffer[dstIndex++] = (char)('0' + (precision / 10) % 10);
+                            precision = (byte)(precision % 10);
                         }
 
-                        pBuffer[dstIndex++] = (char) ('0' + precision);
+                        pBuffer[dstIndex++] = (char)('0' + precision);
                     }
                 }
 

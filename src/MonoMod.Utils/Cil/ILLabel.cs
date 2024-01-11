@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Mono.Cecil.Cil;
+using System.Collections.Generic;
 using System.Linq;
-using Mono.Cecil.Cil;
 
 namespace MonoMod.Cil {
     /// <summary>
@@ -13,7 +13,7 @@ namespace MonoMod.Cil {
         /// The target instruction this label points at.
         /// </summary>
         public Instruction? Target { get; set; }
-        
+
         /// <summary>
         /// All instructions using this label.
         /// </summary>

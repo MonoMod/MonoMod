@@ -3,7 +3,6 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Collections.Generic;
-using Mono.Cecil;
 using System.Diagnostics;
 using System.IO;
 using MonoMod.Logs;
@@ -15,9 +14,9 @@ namespace MonoMod.Utils {
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
             var typeBuilder = context as TypeBuilder;
-            MethodBuilder method = GenerateMethodBuilder(dmd, typeBuilder);
+            var method = GenerateMethodBuilder(dmd, typeBuilder);
             typeBuilder = (TypeBuilder) method.DeclaringType;
-            Type type = typeBuilder.CreateType();
+            var type = typeBuilder.CreateType();
             var dumpPath = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
             if (!string.IsNullOrEmpty(dumpPath)) {
                 var path = method.Module.FullyQualifiedName;
@@ -34,8 +33,8 @@ namespace MonoMod.Utils {
 
         public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder) {
             Helpers.ThrowIfArgumentNull(dmd);
-            MethodBase? orig = dmd.OriginalMethod;
-            MethodDefinition def = dmd.Definition;
+            var orig = dmd.OriginalMethod;
+            var def = dmd.Definition;
 
             if (typeBuilder == null) {
                 var dumpDir = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
@@ -45,7 +44,7 @@ namespace MonoMod.Utils {
                     dumpDir = Path.GetFullPath(dumpDir);
                 }
                 var collect = string.IsNullOrEmpty(dumpDir) && _MBCanRunAndCollect;
-                AssemblyBuilder ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                var ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName() {
                         Name = dmd.GetDumpName("MethodBuilder")
                     },
@@ -64,7 +63,7 @@ namespace MonoMod.Utils {
                 // Note: Debugging can fail on mono if Mono.CompilerServices.SymbolWriter.dll cannot be found,
                 // or if Mono.CompilerServices.SymbolWriter.SymbolWriterImpl can't be found inside of that.
                 // https://github.com/mono/mono/blob/f879e35e3ed7496d819bd766deb8be6992d068ed/mcs/class/corlib/System.Reflection.Emit/ModuleBuilder.cs#L146
-                ModuleBuilder module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", dmd.Debug);
+                var module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", dmd.Debug);
                 typeBuilder = module.DefineType(
                     DebugFormatter.Format($"DMD<{orig}>?{dmd.GetHashCode()}"),
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
@@ -76,7 +75,7 @@ namespace MonoMod.Utils {
             Type[][] argTypesModOpt;
 
             if (orig != null) {
-                ParameterInfo[] args = orig.GetParameters();
+                var args = orig.GetParameters();
                 var offs = 0;
                 if (!orig.IsStatic) {
                     offs++;
@@ -105,7 +104,7 @@ namespace MonoMod.Utils {
                     argTypes = new Type[def.Parameters.Count + 1];
                     argTypesModReq = new Type[def.Parameters.Count + 1][];
                     argTypesModOpt = new Type[def.Parameters.Count + 1][];
-                    Type type = def.DeclaringType.ResolveReflection();
+                    var type = def.DeclaringType.ResolveReflection();
                     if (type.IsValueType)
                         type = type.MakeByRefType();
                     argTypes[0] = type;
@@ -121,7 +120,7 @@ namespace MonoMod.Utils {
                 var modOpt = new List<Type>();
 
                 for (var i = 0; i < def.Parameters.Count; i++) {
-                    _DMDEmit.ResolveWithModifiers(def.Parameters[i].ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
+                    _DMDEmit.ResolveWithModifiers(def.Parameters[i].ParameterType, out var paramType, out var paramTypeModReq, out var paramTypeModOpt, modReq, modOpt);
                     argTypes[i + offs] = paramType;
                     argTypesModReq[i + offs] = paramTypeModReq;
                     argTypesModOpt[i + offs] = paramTypeModOpt;
@@ -129,16 +128,16 @@ namespace MonoMod.Utils {
             }
 
             // Required because the return type modifiers aren't easily accessible via reflection.
-            _DMDEmit.ResolveWithModifiers(def.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt);
+            _DMDEmit.ResolveWithModifiers(def.ReturnType, out var returnType, out var returnTypeModReq, out var returnTypeModOpt);
 
-            MethodBuilder mb = typeBuilder.DefineMethod(
+            var mb = typeBuilder.DefineMethod(
                 dmd.Name ?? (orig?.Name ?? def.Name).Replace('.', '_'),
                 System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
                 CallingConventions.Standard,
                 returnType, returnTypeModReq, returnTypeModOpt,
                 argTypes, argTypesModReq, argTypesModOpt
             );
-            ILGenerator il = mb.GetILGenerator();
+            var il = mb.GetILGenerator();
 
             _DMDEmit.Generate(dmd, mb, il);
 

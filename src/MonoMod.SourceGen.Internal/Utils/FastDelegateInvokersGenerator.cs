@@ -1,8 +1,8 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.SourceGen.Internal.Utils {
     [Generator]
@@ -18,7 +18,7 @@ namespace MonoMod.SourceGen.Internal.Utils {
                             .Select(a
                                 => a.ConstructorArguments is [{ Value: int maxArgs }]
                                     ? new GeneratorMethod(GenHelpers.CreateTypeContext(ctx.TargetSymbol.ContainingType), ctx.TargetSymbol.Name,
-                                        ((MethodDeclarationSyntax) ctx.TargetNode).Modifiers.ToString(), maxArgs)
+                                        ((MethodDeclarationSyntax)ctx.TargetNode).Modifiers.ToString(), maxArgs)
                                     : null).Where(d => d is not null))
                 .SelectMany((e, _) => e);
 

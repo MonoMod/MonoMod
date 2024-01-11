@@ -47,7 +47,7 @@ namespace MonoMod.Core.Interop {
 
             [StructLayout(LayoutKind.Sequential)]
             public struct MethodDesc {
-                public static readonly nuint Alignment = IntPtr.Size == 8 ? ((nuint) 1 << 3) : ((nuint) 1 << 2);
+                public static readonly nuint Alignment = IntPtr.Size == 8 ? ((nuint)1 << 3) : ((nuint)1 << 2);
 
                 [Flags]
                 public enum Flags3 : ushort {
@@ -84,20 +84,20 @@ namespace MonoMod.Core.Interop {
 
                 public MethodDescClassification m_wFlags;
 
-                public ushort SlotNumber => m_wFlags.Has(MethodDescClassification.RequiresFullSlotNumber) ? m_wSlotNumber : (ushort) (m_wSlotNumber & PackedSlot_SlotMask);
-                public MethodClassification Classification => (MethodClassification) (m_wFlags & MethodDescClassification.ClassificationMask);
+                public ushort SlotNumber => m_wFlags.Has(MethodDescClassification.RequiresFullSlotNumber) ? m_wSlotNumber : (ushort)(m_wSlotNumber & PackedSlot_SlotMask);
+                public MethodClassification Classification => (MethodClassification)(m_wFlags & MethodDescClassification.ClassificationMask);
 
                 public MethodDescChunk* MethodDescChunk
-                    => (MethodDescChunk*) Unsafe.AsPointer(ref Unsafe.SubtractByteOffset(ref this, (nuint) sizeof(MethodDescChunk) + (m_chunkIndex * Alignment)));
+                    => (MethodDescChunk*)Unsafe.AsPointer(ref Unsafe.SubtractByteOffset(ref this, (nuint)sizeof(MethodDescChunk) + (m_chunkIndex * Alignment)));
 
                 public MethodTable* MethodTable => MethodDescChunk->MethodTable;
 
                 public void* GetMethodEntryPoint() {
                     if (HasNonVtableSlot) {
                         var size = GetBaseSize();
-                        var pSlot = ((byte*) Unsafe.AsPointer(ref this)) + size;
+                        var pSlot = ((byte*)Unsafe.AsPointer(ref this)) + size;
 
-                        return *(void**) pSlot;
+                        return *(void**)pSlot;
                     }
 
                     return MethodTable->GetSlot(SlotNumber);
@@ -105,7 +105,7 @@ namespace MonoMod.Core.Interop {
 
                 public bool TryAsInstantiated(out InstantiatedMethodDesc* md) {
                     if (Classification == MethodClassification.Instantiated) {
-                        md = (InstantiatedMethodDesc*) Unsafe.AsPointer(ref this);
+                        md = (InstantiatedMethodDesc*)Unsafe.AsPointer(ref this);
                         return true;
                     } else {
                         md = default;
@@ -129,8 +129,8 @@ namespace MonoMod.Core.Interop {
                 public nuint SizeOf(bool includeNonVtable = true, bool includeMethodImpl = true, bool includeComPlus = true, bool includeNativeCode = true) {
                     var size = GetBaseSize()
                         // All of the extra fields are just one pointer size
-                        + (includeNonVtable && m_wFlags.Has(MethodDescClassification.HasNonVtableSlot) ? (nuint) sizeof(void*) : 0)
-                        + (includeMethodImpl && m_wFlags.Has(MethodDescClassification.MethodImpl) ? (nuint) sizeof(MethodImpl) : 0);
+                        + (includeNonVtable && m_wFlags.Has(MethodDescClassification.HasNonVtableSlot) ? (nuint)sizeof(void*) : 0)
+                        + (includeMethodImpl && m_wFlags.Has(MethodDescClassification.MethodImpl) ? (nuint)sizeof(MethodImpl) : 0);
 
                     /*
                     if (HasNativeCodeSlot())
@@ -149,7 +149,7 @@ namespace MonoMod.Core.Interop {
 
                     //#ifdef FEATURE_PREJIT
                     if (includeNativeCode && HasNativeCodeSlot) {
-                        size += (uint) ((Unsafe.As<MethodDesc, nuint>(ref Unsafe.AddByteOffset(ref this, size)) & 1u) != 0 // 1u = FIXUP_LIST_MASK
+                        size += (uint)((Unsafe.As<MethodDesc, nuint>(ref Unsafe.AddByteOffset(ref this, size)) & 1u) != 0 // 1u = FIXUP_LIST_MASK
                             ? (sizeof(void*) + sizeof(void*))
                             : sizeof(void*));
                     }
@@ -157,7 +157,7 @@ namespace MonoMod.Core.Interop {
 
                     //#ifdef FEATURE_COMINTEROP
                     if (includeComPlus && IsGenericComPlusCall) {
-                        size += (uint) ComPlusCallInfoPtr.CurrentSize;
+                        size += (uint)ComPlusCallInfoPtr.CurrentSize;
                     }
                     //#endif
 
@@ -175,7 +175,7 @@ namespace MonoMod.Core.Interop {
                                     pCode |= THUMB_CODE;
                         #endif
                         */
-                        var pCode = (nuint) ((RelativePointer*) GetAddrOfNativeCodeSlot())->Value & ~(nuint) 1u;
+                        var pCode = (nuint)((RelativePointer*)GetAddrOfNativeCodeSlot())->Value & ~(nuint)1u;
                         if (pCode is not 0)
                             return (void*)pCode;
                     }
@@ -251,11 +251,11 @@ namespace MonoMod.Core.Interop {
                 public static MethodDesc* GetNextIntroducedMethod(MethodDesc* pMD) {
                     var pChunk = pMD->MethodDescChunk;
 
-                    var pNext = (nuint) pMD + pMD->SizeOf();
-                    var pEnd = (nuint) pChunk + pChunk->SizeOf;
+                    var pNext = (nuint)pMD + pMD->SizeOf();
+                    var pEnd = (nuint)pChunk + pChunk->SizeOf;
 
                     if (pNext < pEnd) {
-                        return (MethodDesc*) pNext;
+                        return (MethodDesc*)pNext;
                     } else {
                         Helpers.DAssert(pNext == pEnd);
 
@@ -278,7 +278,7 @@ namespace MonoMod.Core.Interop {
                 public nuint GetBaseSize() => GetBaseSize(Classification);
 
                 public static nuint GetBaseSize(MethodClassification classification) {
-                    return s_ClassificationSizeTable[(int) classification];
+                    return s_ClassificationSizeTable[(int)classification];
                 }
             }
 
@@ -416,7 +416,7 @@ namespace MonoMod.Core.Interop {
                 // THIS ONLY EXISTS IN 32-BIT
                 //public uint m_dwExtendedFlags;
 
-                private DynamicMethodDesc_ExtendedFlags GetFlags() => (DynamicMethodDesc_ExtendedFlags) @base.m_dwExtendedFlags;
+                private DynamicMethodDesc_ExtendedFlags GetFlags() => (DynamicMethodDesc_ExtendedFlags)@base.m_dwExtendedFlags;
                 public DynamicMethodDesc_ExtendedFlags Flags => GetFlags();
             }
 
@@ -430,7 +430,7 @@ namespace MonoMod.Core.Interop {
                 // THIS ONLY EXISTS IN 32-BIT
                 public uint m_dwExtendedFlags;
 
-                private DynamicMethodDesc_ExtendedFlags GetFlags() => (DynamicMethodDesc_ExtendedFlags) m_dwExtendedFlags;
+                private DynamicMethodDesc_ExtendedFlags GetFlags() => (DynamicMethodDesc_ExtendedFlags)m_dwExtendedFlags;
                 public DynamicMethodDesc_ExtendedFlags Flags => GetFlags();
             }
 
@@ -672,13 +672,12 @@ namespace MonoMod.Core.Interop {
 
                 public MethodDesc* IMD_GetWrappedMethodDesc() {
                     Helpers.Assert(IMD_IsWrapperStubWithInstantiations);
-                    return (MethodDesc*) union_pDictLayout_pWrappedMethodDesc;
+                    return (MethodDesc*)union_pDictLayout_pWrappedMethodDesc;
                 }
             }
 
             [StructLayout(LayoutKind.Sequential)]
-            public struct RelativeFixupPointer
-            {
+            public struct RelativeFixupPointer {
                 private readonly nint value;
 
                 public void* Value {
@@ -688,8 +687,8 @@ namespace MonoMod.Core.Interop {
                             return null;
                         var addr = ((nint)Unsafe.AsPointer(ref this)) + delta;
                         if ((addr & 1) != 0)
-                            addr = *(nint*) (addr - 1);
-                        return (void*) addr;
+                            addr = *(nint*)(addr - 1);
+                        return (void*)addr;
                     }
                 }
             }
@@ -711,11 +710,11 @@ namespace MonoMod.Core.Interop {
                 public Flags m_flagsAndTokenRange;
                 // this is followed by an array of MethodDescs
 
-                public MethodTable* MethodTable => (MethodTable*) m_methodTable.Value;
-                public MethodDesc* FirstMethodDesc => (MethodDesc*) ((byte*) Unsafe.AsPointer(ref this) + sizeof(MethodDescChunk));
+                public MethodTable* MethodTable => (MethodTable*)m_methodTable.Value;
+                public MethodDesc* FirstMethodDesc => (MethodDesc*)((byte*)Unsafe.AsPointer(ref this) + sizeof(MethodDescChunk));
                 public uint Size => m_size + 1u;
                 public uint Count => m_count + 1u;
-                public nuint SizeOf => (nuint) sizeof(MethodDescChunk) + (Size * MethodDesc.Alignment);
+                public nuint SizeOf => (nuint)sizeof(MethodDescChunk) + (Size * MethodDesc.Alignment);
             }
 
             [StructLayout(LayoutKind.Sequential)]
@@ -776,8 +775,8 @@ namespace MonoMod.Core.Interop {
                     HasDefaultCtor = 0x00000200,
                     HasPreciseInitCctors = 0x00000400,   // Do we need to run class constructors at allocation time? (Not perf important, could be moved to EEClass
 
-                    IsHFA_IsRegStructPassed                     = 0x00000800,   // This type is an HFA (Homogenous Floating-point Aggregate)
-                    
+                    IsHFA_IsRegStructPassed = 0x00000800,   // This type is an HFA (Homogenous Floating-point Aggregate)
+
                     IsByRefLike = 0x00001000,
 
                     // In a perfect world we would fill these flags using other flags that we already have
@@ -794,10 +793,10 @@ namespace MonoMod.Core.Interop {
                     StringArrayValues = (StaticsMask_NonDynamic) |
                                                   //SET_FALSE(NotInPZM) |
                                                   (GenericsMask_NonGeneric) | 0
-                                                  //SET_FALSE(ContextStatic) |
-                                                  //SET_FALSE(HasVariance) |
-                                                  //SET_FALSE(HasDefaultCtor) |
-                                                  //SET_FALSE(HasPreciseInitCctors),
+                    //SET_FALSE(ContextStatic) |
+                    //SET_FALSE(HasVariance) |
+                    //SET_FALSE(HasDefaultCtor) |
+                    //SET_FALSE(HasPreciseInitCctors),
                 }
 
                 [Flags]
@@ -858,7 +857,7 @@ namespace MonoMod.Core.Interop {
                     HasCriticalFinalizer = 0x08000000, // finalizer must be run on Appdomain Unload
                     Collectible = 0x10000000,
                     ContainsGenericVariables = 0x20000000,   // we cache this flag to help detect these efficiently and
-                                                                       // to detect this condition when restoring
+                                                             // to detect this condition when restoring
 
                     ComObject = 0x40000000, // class is a com object
 
@@ -873,11 +872,11 @@ namespace MonoMod.Core.Interop {
                 private uint m_dwFlags;
                 public uint m_BaseSize;
 
-                public WFlagsHigh FlagsHigh => (WFlagsHigh) (m_dwFlags & 0xffff0000);
+                public WFlagsHigh FlagsHigh => (WFlagsHigh)(m_dwFlags & 0xffff0000);
                 public WFlagsLow FlagsLow => FlagsHigh.Has(WFlagsHigh.HasComponentSize)
                     ? WFlagsLow.StringArrayValues
-                    : (WFlagsLow) (m_dwFlags & 0x0000ffff);
-                public int ComponentSize => FlagsHigh.Has(WFlagsHigh.HasComponentSize) ? (int) (m_dwFlags & 0x0000ffff) : 0;
+                    : (WFlagsLow)(m_dwFlags & 0x0000ffff);
+                public int ComponentSize => FlagsHigh.Has(WFlagsHigh.HasComponentSize) ? (int)(m_dwFlags & 0x0000ffff) : 0;
 
 
                 [Flags]
@@ -924,12 +923,12 @@ namespace MonoMod.Core.Interop {
                 // then vtable/nonvirutal slots, overflow multipurpose slots, optional members, generic dict pointers, interface map, generic inst dict
 
                 public MethodTable* GetCanonicalMethodTable() {
-                    var addr = (nuint) union_pEEClass_pCanonMT;
+                    var addr = (nuint)union_pEEClass_pCanonMT;
                     if ((addr & 2) == 0)
-                        return (MethodTable*) addr;
+                        return (MethodTable*)addr;
                     if ((addr & 1) != 0)
-                        return *(MethodTable**) (addr - 3);
-                    return (MethodTable*) (addr - 2);
+                        return *(MethodTable**)(addr - 3);
+                    return (MethodTable*)(addr - 2);
                 }
 
                 public MethodDesc* GetParallelMethodDesc(MethodDesc* pDefMD) {
@@ -951,7 +950,7 @@ namespace MonoMod.Core.Interop {
                 }
 
                 public void* GetRestoredSlot(uint slotNumber) {
-                    var pMT = (MethodTable*) Unsafe.AsPointer(ref this);
+                    var pMT = (MethodTable*)Unsafe.AsPointer(ref this);
 
                     while (true) {
                         pMT = pMT->GetCanonicalMethodTable();
@@ -960,7 +959,7 @@ namespace MonoMod.Core.Interop {
                         var slot = pMT->GetSlot(slotNumber);
 
                         if (slot != null // I'm still not sure if FEATURE_PREJIT is set for our stuff
-                            // it is
+                                         // it is
                         /*#ifdef FEATURE_PREJIT
                                     && !pMT->GetLoaderModule()->IsVirtualImportThunk(slot)
                         #endif*/
@@ -987,28 +986,28 @@ namespace MonoMod.Core.Interop {
                     get {
                         var ptr = m_pParentMethodTable;
                         if (HasIndirectParent) {
-                            return (MethodTable*) ((MethodTable*) ptr)->m_pParentMethodTable;
+                            return (MethodTable*)((MethodTable*)ptr)->m_pParentMethodTable;
                         } else {
-                            return (MethodTable*) ptr;
+                            return (MethodTable*)ptr;
                         }
                     }
                 }
 
                 public void* GetSlot(uint slotNumber) {
                     var pSlot = GetSlotPtrRaw(slotNumber);
-                    return *(void**) pSlot;
+                    return *(void**)pSlot;
                 }
 
                 public nint GetSlotPtrRaw(uint slotNum) {
                     if (slotNum < GetNumVirtuals()) {
                         var index = GetIndexOfVtableIndirection(slotNum);
-                        var @base = (void**) ((GetVtableIndirections()[index]));
+                        var @base = (void**)((GetVtableIndirections()[index]));
                         var baseAfterInd = @base + GetIndexAfterVtableIndirection(slotNum);
-                        return (nint) baseAfterInd;
+                        return (nint)baseAfterInd;
                     } else if (HasSingleNonVirtualSlot) {
                         return GetNonVirtualSlotsPtr();
                     } else {
-                        return (nint) (GetNonVirtualSlotsArray() + (slotNum - GetNumVirtuals()));
+                        return (nint)(GetNonVirtualSlotsArray() + (slotNum - GetNumVirtuals()));
                     }
                 }
 
@@ -1024,7 +1023,7 @@ namespace MonoMod.Core.Interop {
                 }
 
                 public void** GetVtableIndirections() {
-                    return (void**) ((byte*) Unsafe.AsPointer(ref this) + sizeof(MethodTable));
+                    return (void**)((byte*)Unsafe.AsPointer(ref this) + sizeof(MethodTable));
                 }
 
                 public static uint GetIndexAfterVtableIndirection(uint slotNum) {
@@ -1040,14 +1039,14 @@ namespace MonoMod.Core.Interop {
                 private static class MultipurposeSlotHelpers {
                     public static byte OffsetOfMp1() {
                         MethodTable t = default;
-                        return (byte) ((byte*) &t.union_pPerInstInfo_ElementTypeHnd_pMultipurposeSlot1 - (byte*) &t);
+                        return (byte)((byte*)&t.union_pPerInstInfo_ElementTypeHnd_pMultipurposeSlot1 - (byte*)&t);
                     }
                     public static byte OffsetOfMp2() {
                         MethodTable t = default;
-                        return (byte) ((byte*) &t.union_p_InterfaceMap_pMultipurposeSlot2 - (byte*) &t);
+                        return (byte)((byte*)&t.union_p_InterfaceMap_pMultipurposeSlot2 - (byte*)&t);
                     }
                     public static byte RegularOffset(int index) {
-                        return (byte) (sizeof(MethodTable) + index * IntPtr.Size - 2 * IntPtr.Size);
+                        return (byte)(sizeof(MethodTable) + index * IntPtr.Size - 2 * IntPtr.Size);
                     }
                 }
 
@@ -1058,15 +1057,15 @@ namespace MonoMod.Core.Interop {
                 }
 
                 public nint GetMultipurposeSlotPtr(Flags2 flag, byte[] offsets) {
-                    nint offset = offsets[(ushort) m_wFlags2 & ((ushort) flag - 1)];
+                    nint offset = offsets[(ushort)m_wFlags2 & ((ushort)flag - 1)];
                     if (offset >= sizeof(MethodTable)) {
-                        offset += (nint) GetNumVTableIndirections() * sizeof(void**);
+                        offset += (nint)GetNumVTableIndirections() * sizeof(void**);
                     }
-                    return (nint) Unsafe.AsPointer(ref this) + offset;
+                    return (nint)Unsafe.AsPointer(ref this) + offset;
                 }
 
                 public void** GetNonVirtualSlotsArray() {
-                    return (void**) ((RelativePointer*)GetNonVirtualSlotsPtr())->Value;
+                    return (void**)((RelativePointer*)GetNonVirtualSlotsPtr())->Value;
                 }
 
                 public uint GetNumVTableIndirections() {

@@ -69,7 +69,7 @@ namespace MonoMod.Core.Utils {
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         private static (HomogenousPatternCollection[], BytePattern[]?) ComputeLut(
-            ReadOnlyMemory<BytePattern?> patterns, 
+            ReadOnlyMemory<BytePattern?> patterns,
             out int minLength, out int maxMinLength, out int maxAddrLength) {
             if (patterns.Length == 0) {
                 minLength = 0;
@@ -95,7 +95,7 @@ namespace MonoMod.Core.Utils {
             var distinctOffsetCount = 0; // starts at 1 because of the zero offset
 
             for (var i = 0; i < patterns.Length; i++) {
-                BytePattern? pattern = patterns.Span[i];
+                var pattern = patterns.Span[i];
                 if (pattern is null)
                     continue;
 
@@ -109,7 +109,7 @@ namespace MonoMod.Core.Utils {
                 if (pattern.AddressBytes > maxAddrLength) {
                     maxAddrLength = pattern.AddressBytes;
                 }
-                
+
                 // TODO: index masked segments
 
                 // figure out where to put its first segment
@@ -146,7 +146,7 @@ namespace MonoMod.Core.Utils {
 
             // now we can begin to allocate our arrays
             // first our empty pattern array
-            BytePattern[]? emptyPatterns = emptyPatternCount > 0 ? new BytePattern[emptyPatternCount] : null;
+            var emptyPatterns = emptyPatternCount > 0 ? new BytePattern[emptyPatternCount] : null;
             var savedEmptyPatterns = 0;
             // then our list of homogenous pattern collections
             var homoPatterns = new HomogenousPatternCollection[distinctOffsetCount];
@@ -155,7 +155,7 @@ namespace MonoMod.Core.Utils {
 
             // now iterate through our input pattern list again, and add them to their relevant collections
             for (var i = 0; i < patterns.Length; i++) {
-                BytePattern? pattern = patterns.Span[i];
+                var pattern = patterns.Span[i];
                 if (pattern is null)
                     continue;
 
@@ -211,7 +211,7 @@ namespace MonoMod.Core.Utils {
 
                 Helpers.DAssert(collection.Offset == offs);
 
-                BytePattern?[]? targetArray = collection.Lut[seg.Span[0]];
+                var targetArray = collection.Lut[seg.Span[0]];
                 Helpers.DAssert(targetArray is not null);
                 var targetIndex = Array.IndexOf(targetArray, null);
                 Helpers.DAssert(targetIndex >= 0);
@@ -234,7 +234,7 @@ namespace MonoMod.Core.Utils {
             public void AddFirstBytes(ref FirstByteCollection bytes) {
                 for (var i = 0; i < Lut.Length; i++) {
                     if (Lut[i] is not null) {
-                        bytes.Add((byte) i);
+                        bytes.Add((byte)i);
                     }
                 }
             }
@@ -306,7 +306,7 @@ namespace MonoMod.Core.Utils {
 
             // then through the empty patterns, if any
             if (emptyPatterns is not null) {
-                foreach(var pattern in emptyPatterns) {
+                foreach (var pattern in emptyPatterns) {
                     if (pattern.TryMatchAt(data, addrBuf, out length)) {
                         matchingPattern = pattern;
                         return true;
@@ -457,7 +457,7 @@ namespace MonoMod.Core.Utils {
             public void Add(byte value) {
                 ref var index = ref byteIndicies[value];
                 if (index == 255) {
-                    index = (byte) firstBytesRecorded;
+                    index = (byte)firstBytesRecorded;
                     firstByteStore[index] = value;
                     firstBytesRecorded = Math.Min(firstBytesRecorded + 1, 256);
                 }

@@ -34,7 +34,7 @@ namespace MonoMod.Utils {
                     var module = mi.Module;
                     if (module is null)
                         return mi;
-                    Assembly asm = module.Assembly; // Let's hope that this doesn't get optimized into a call.
+                    var asm = module.Assembly; // Let's hope that this doesn't get optimized into a call.
                     var asmType = asm.GetType();
                     if (asmType is null)
                         return mi;

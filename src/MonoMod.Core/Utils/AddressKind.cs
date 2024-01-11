@@ -59,19 +59,19 @@ namespace MonoMod.Core.Utils {
         /// <summary>
         /// The <see cref="AddressKind"/> flag indicating that the kind is absolute.
         /// </summary>
-        public const AddressKind IsAbsoluteField = (AddressKind) 0b01;
+        public const AddressKind IsAbsoluteField = (AddressKind)0b01;
         /// <summary>
         /// The <see cref="AddressKind"/> flag indicating that the kind is 64-bit.
         /// </summary>
-        public const AddressKind Is64BitField = (AddressKind) 0b10;
+        public const AddressKind Is64BitField = (AddressKind)0b10;
         /// <summary>
         /// The <see cref="AddressKind"/> flag indicating that the kind is a <c>PrecodeFixupThunk</c> address.
         /// </summary>
-        public const AddressKind IsPrecodeFixupField = (AddressKind) 0b100;
+        public const AddressKind IsPrecodeFixupField = (AddressKind)0b100;
         /// <summary>
         /// The <see cref="AddressKind"/> flag indicating that the kind is indirect.
         /// </summary>
-        public const AddressKind IsIndirectField = (AddressKind) 0b1000;
+        public const AddressKind IsIndirectField = (AddressKind)0b1000;
 
         /// <summary>
         /// Gets whether or not this <see cref="AddressKind"/> is relative.

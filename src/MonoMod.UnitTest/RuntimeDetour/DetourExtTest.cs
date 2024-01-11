@@ -4,17 +4,16 @@
 #pragma warning disable CA1031 // Do not catch general exception types
 
 extern alias New;
-
-using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.IO;
-using System.Diagnostics;
-using System.Globalization;
-using System.Collections.Generic;
+using Xunit;
 using Xunit.Abstractions;
 #if NETFRAMEWORK
 using System.Data.SqlClient;
@@ -274,7 +273,7 @@ namespace MonoMod.UnitTest {
                 using (var h = new Hook(
                     typeof(DetourExtTest).GetMethod("DummyTwoInts", BindingFlags.NonPublic | BindingFlags.Instance),
                     new Func<Func<DetourExtTest, TwoInts>, DetourExtTest, TwoInts>((orig, self) => {
-                        TwoInts rv = orig(self);
+                        var rv = orig(self);
                         rv.A *= 2;
                         rv.B *= 3;
                         return rv;
@@ -352,7 +351,7 @@ namespace MonoMod.UnitTest {
                     typeof(TwoInts).GetMethod("get_Magic", BindingFlags.Public | BindingFlags.Instance),
                     new Func<Func<IntPtr, int>, IntPtr, int>((orig, self) => {
                         var rv = orig(self);
-                        rv = rv * 2 + ((TwoInts*) self)->B;
+                        rv = rv * 2 + ((TwoInts*)self)->B;
                         return rv;
                     })
                 )) {
@@ -398,12 +397,12 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
+        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions)512))]
         internal static int DummyA(int a, int b) {
             return a * b * 2;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
+        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions)512))]
         internal static int DummyB(int a, int b) {
             return a * b * 2;
         }
@@ -431,7 +430,7 @@ namespace MonoMod.UnitTest {
         }
 
         private delegate KeyValuePair<int, int> orig_DictionaryEnumeratorCurrentIntInt(ref Dictionary<int, int>.Enumerator self);
-        private delegate KeyValuePair<int, int> hook_DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self); 
+        private delegate KeyValuePair<int, int> hook_DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self);
         private static KeyValuePair<int, int> DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self) {
             return new KeyValuePair<int, int>(1, 1);
         }

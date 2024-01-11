@@ -29,7 +29,7 @@ namespace MonoMod.Core.Interop {
                     IntPtr, // ICorJitInfo* this
                     V70.AllocMemArgs*, // request
                     void
-                >) methodPtr;
+                >)methodPtr;
         }
 
         [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
@@ -269,7 +269,7 @@ namespace MonoMod.Core.Interop {
                         IntPtr, // ICorJitInfo* this
                         V70.AllocMemArgs*, // request
                         void
-                    >) functionPtr;
+                    >)functionPtr;
                 fnPtr(thisPtr, args);
             }
 

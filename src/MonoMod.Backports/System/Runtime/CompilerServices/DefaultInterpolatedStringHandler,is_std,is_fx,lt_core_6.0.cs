@@ -149,7 +149,7 @@ namespace System.Runtime.CompilerServices {
             if (value.Length == 1) {
                 Span<char> chars = _chars;
                 int pos = _pos;
-                if ((uint) pos < (uint) chars.Length) {
+                if ((uint)pos < (uint)chars.Length) {
                     chars[pos] = value[0];
                     _pos = pos + 1;
                 } else {
@@ -161,7 +161,7 @@ namespace System.Runtime.CompilerServices {
             if (value.Length == 2) {
                 Span<char> chars = _chars;
                 int pos = _pos;
-                if ((uint) pos < chars.Length - 1) {
+                if ((uint)pos < chars.Length - 1) {
                     value.AsSpan().CopyTo(chars.Slice(pos));
                     _pos = pos + 2;
                 } else {
@@ -303,7 +303,7 @@ namespace System.Runtime.CompilerServices {
                     return;
                 }*/
 
-                s = ((IFormattable) value).ToString(format: null, _provider); // constrained call avoiding boxing for value types
+                s = ((IFormattable)value).ToString(format: null, _provider); // constrained call avoiding boxing for value types
             } else {
                 s = value?.ToString();
             }
@@ -353,7 +353,7 @@ namespace System.Runtime.CompilerServices {
                     return;
                 }*/
 
-                s = ((IFormattable) value).ToString(format, _provider); // constrained call avoiding boxing for value types
+                s = ((IFormattable)value).ToString(format, _provider); // constrained call avoiding boxing for value types
             } else {
                 s = value?.ToString();
             }
@@ -398,34 +398,34 @@ namespace System.Runtime.CompilerServices {
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(IntPtr value) {
             if (IntPtr.Size == 4) {
-                AppendFormatted((int) value);
+                AppendFormatted((int)value);
             } else {
-                AppendFormatted((long) value);
+                AppendFormatted((long)value);
             }
         }
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(IntPtr value, string? format) {
             if (IntPtr.Size == 4) {
-                AppendFormatted((int) value, format);
+                AppendFormatted((int)value, format);
             } else {
-                AppendFormatted((long) value, format);
+                AppendFormatted((long)value, format);
             }
         }
 
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(UIntPtr value) {
             if (UIntPtr.Size == 4) {
-                AppendFormatted((uint) value);
+                AppendFormatted((uint)value);
             } else {
-                AppendFormatted((ulong) value);
+                AppendFormatted((ulong)value);
             }
         }
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
         private void AppendFormatted(UIntPtr value, string? format) {
             if (UIntPtr.Size == 4) {
-                AppendFormatted((uint) value, format);
+                AppendFormatted((uint)value, format);
             } else {
-                AppendFormatted((ulong) value, format);
+                AppendFormatted((ulong)value, format);
             }
         }
         #endregion
@@ -557,7 +557,7 @@ namespace System.Runtime.CompilerServices {
             Debug.Assert(_hasCustomFormatter);
             Debug.Assert(_provider != null);
 
-            ICustomFormatter? formatter = (ICustomFormatter?) _provider!.GetFormat(typeof(ICustomFormatter));
+            ICustomFormatter? formatter = (ICustomFormatter?)_provider!.GetFormat(typeof(ICustomFormatter));
             Debug.Assert(formatter != null, "An incorrectly written provider said it implemented ICustomFormatter, and then didn't");
 
             if (formatter is not null && formatter.Format(format, value, _provider) is { } customFormatted) {
@@ -629,7 +629,7 @@ namespace System.Runtime.CompilerServices {
             // need to grow to at least that new total. GrowCore will handle growing by more
             // than that if possible.
             Debug.Assert(additionalChars > _chars.Length - _pos);
-            GrowCore((uint) _pos + (uint) additionalChars);
+            GrowCore((uint)_pos + (uint)additionalChars);
         }
 
         /// <summary>Grows the size of <see cref="_chars"/>.</summary>
@@ -638,7 +638,7 @@ namespace System.Runtime.CompilerServices {
             // This method is called when the remaining space in _chars isn't sufficient to continue
             // the operation.  Thus, we need at least one character beyond _chars.Length.  GrowCore
             // will handle growing by more than that if possible.
-            GrowCore((uint) _chars.Length + 1);
+            GrowCore((uint)_chars.Length + 1);
         }
 
         /// <summary>Grow the size of <see cref="_chars"/> to at least the specified <paramref name="requiredMinCapacity"/>.</summary>
@@ -649,8 +649,8 @@ namespace System.Runtime.CompilerServices {
             // ints that could technically overflow if someone tried to, for example, append a huge string to a huge string, we also clamp to int.MaxValue.
             // Even if the array creation fails in such a case, we may later fail in ToStringAndClear.
 
-            uint newCapacity = Math.Max(requiredMinCapacity, Math.Min((uint) _chars.Length * 2, uint.MaxValue));
-            int arraySize = (int) MathEx.Clamp(newCapacity, MinimumArrayPoolLength, int.MaxValue);
+            uint newCapacity = Math.Max(requiredMinCapacity, Math.Min((uint)_chars.Length * 2, uint.MaxValue));
+            int arraySize = (int)MathEx.Clamp(newCapacity, MinimumArrayPoolLength, int.MaxValue);
 
             char[] newArray = ArrayPool<char>.Shared.Rent(arraySize);
             _chars.Slice(0, _pos).CopyTo(newArray);

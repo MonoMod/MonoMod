@@ -37,7 +37,7 @@ namespace MonoMod.RuntimeDetour {
             }
 
             /// <inheritdoc/>
-            public DetourInfo Current => mdi.GetDetourInfo(((DetourManager.ManagedDetourChainNode) curNode!).Detour);
+            public DetourInfo Current => mdi.GetDetourInfo(((DetourManager.ManagedDetourChainNode)curNode!).Detour);
 
             object IEnumerator.Current => Current;
 

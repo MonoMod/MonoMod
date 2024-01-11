@@ -1,8 +1,8 @@
-﻿using System;
+﻿using MonoMod.Logs;
+using System;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq;
-using MonoMod.Logs;
 
 namespace MonoMod.Utils {
     public sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
@@ -20,7 +20,7 @@ namespace MonoMod.Utils {
             Type[] argTypes;
 
             if (orig != null) {
-                ParameterInfo[] args = orig.GetParameters();
+                var args = orig.GetParameters();
                 var offs = 0;
                 if (!orig.IsStatic) {
                     offs++;
@@ -37,7 +37,7 @@ namespace MonoMod.Utils {
                 if (def.HasThis) {
                     offs++;
                     argTypes = new Type[def.Parameters.Count + 1];
-                    Type type = def.DeclaringType.ResolveReflection();
+                    var type = def.DeclaringType.ResolveReflection();
                     if (type.IsValueType)
                         type = type.MakeByRefType();
                     argTypes[0] = type;
@@ -49,8 +49,8 @@ namespace MonoMod.Utils {
             }
 
             // we do the (object?) dance using DebugFormatter to avoid internal StringBuilders in the ToString (and GetID) implementations which may cause problems
-            var name = dmd.Name ?? DebugFormatter.Format($"DMD<{(object?) orig ?? def.GetID(simple: true)}>");
-            Type retType = (orig as MethodInfo)?.ReturnType ?? def.ReturnType.ResolveReflection();
+            var name = dmd.Name ?? DebugFormatter.Format($"DMD<{(object?)orig ?? def.GetID(simple: true)}>");
+            var retType = (orig as MethodInfo)?.ReturnType ?? def.ReturnType.ResolveReflection();
 
             MMDbgLog.Trace($"new DynamicMethod: {retType} {name}({string.Join(",", argTypes.Select(type => type?.ToString()).ToArray())})");
             if (orig != null)
@@ -67,7 +67,7 @@ namespace MonoMod.Utils {
             // DynamicMethods don't officially "support" certain return types, such as ByRef types.
             _DynamicMethod_returnType.SetValue(dm, retType);
 
-            ILGenerator il = dm.GetILGenerator();
+            var il = dm.GetILGenerator();
 
             _DMDEmit.Generate(dmd, dm, il);
 

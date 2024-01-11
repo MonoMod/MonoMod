@@ -3,15 +3,14 @@
 #pragma warning disable CA1825 // Avoid zero-length array allocations
 
 extern alias New;
-
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
 using New::MonoMod.RuntimeDetour;
 using System;
-using System.Runtime.CompilerServices;
-using MonoMod.Cil;
-using Xunit;
-using Mono.Cecil.Cil;
-using Xunit.Abstractions;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed",

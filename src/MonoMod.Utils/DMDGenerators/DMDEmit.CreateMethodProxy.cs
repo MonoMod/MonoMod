@@ -1,8 +1,8 @@
 ﻿#if !NETSTANDARD
 using System;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq;
 using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace MonoMod.Utils {
@@ -15,7 +15,7 @@ namespace MonoMod.Utils {
         )!;
 
         private static MethodBuilder _CreateMethodProxy(MethodBuilder context, MethodInfo target) {
-            var tb = (TypeBuilder) context.DeclaringType!;
+            var tb = (TypeBuilder)context.DeclaringType!;
             var name = $".dmdproxy<{target.Name.Replace('.', '_')}>?{target.GetHashCode()}";
             MethodBuilder mb;
 
@@ -26,7 +26,7 @@ namespace MonoMod.Utils {
                 return mb;
             */
 
-            Type[] args = target.GetParameters().Select(param => param.ParameterType).ToArray();
+            var args = target.GetParameters().Select(param => param.ParameterType).ToArray();
             mb = tb.DefineMethod(
                 name,
                 MethodAttributes.HideBySig | MethodAttributes.Private | MethodAttributes.Static,
@@ -34,7 +34,7 @@ namespace MonoMod.Utils {
                 target.ReturnType,
                 args
             );
-            ILGenerator il = mb.GetILGenerator();
+            var il = mb.GetILGenerator();
 
             // Load the DynamicMethod reference first.
             _ = il.EmitNewTypedReference(target, out _);
@@ -51,7 +51,7 @@ namespace MonoMod.Utils {
 
                 il.Emit(OpCodes.Ldarg, i);
 
-                Type argType = args[i];
+                var argType = args[i];
                 var argIsByRef = argType.IsByRef;
                 if (argIsByRef)
                     argType = argType.GetElementType() ?? argType;

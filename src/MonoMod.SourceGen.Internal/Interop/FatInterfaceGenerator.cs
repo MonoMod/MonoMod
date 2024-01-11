@@ -45,7 +45,7 @@ namespace MonoMod.SourceGen.Internal.Interop {
             var interfaces = context.SyntaxProvider.ForAttributeWithMetadataName(FatInterfaceAttribute,
                 (n, ct) => n is StructDeclarationSyntax,
                 (ctx, ct) => {
-                    var sym = (INamedTypeSymbol) ctx.TargetSymbol;
+                    var sym = (INamedTypeSymbol)ctx.TargetSymbol;
                     var methods = GetIfaceTypeMethods(sym);
                     return new FatInterfaceGenInfo(GenHelpers.CreateTypeContext(sym), methods);
                 });
@@ -57,7 +57,7 @@ namespace MonoMod.SourceGen.Internal.Interop {
                         return null;
                     }
 
-                    return new FatIfaceImplInfo(GenHelpers.CreateTypeContext((INamedTypeSymbol) ctx.TargetSymbol),
+                    return new FatIfaceImplInfo(GenHelpers.CreateTypeContext((INamedTypeSymbol)ctx.TargetSymbol),
                         GenHelpers.CreateRef(ifaceType),
                         ifaceType.HasAttributeWithFullyQualifiedMetadataName(FatInterfaceAttribute),
                         GetIfaceTypeMethods(ifaceType));

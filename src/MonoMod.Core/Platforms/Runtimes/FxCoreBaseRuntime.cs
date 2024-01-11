@@ -11,8 +11,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         public abstract RuntimeKind Target { get; }
 
-        public virtual RuntimeFeature Features => 
-            RuntimeFeature.RequiresMethodIdentification | 
+        public virtual RuntimeFeature Features =>
+            RuntimeFeature.RequiresMethodIdentification |
             RuntimeFeature.DisableInlining |
             RuntimeFeature.PreciseGC |
             RuntimeFeature.RequiresBodyThunkWalking |
@@ -27,7 +27,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private static TypeClassification ClassifyRyuJitX86(Type type, bool isReturn) {
 
             while (!type.IsPrimitive || type.IsEnum) {
-                FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 if (fields == null || fields.Length != 1) {
                     // zero-size empty or too large struct, passed byref
                     break;
@@ -107,7 +107,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         public virtual MethodBase GetIdentifiable(MethodBase method) {
             if (RTDynamicMethod_m_owner != null && method.GetType() == RTDynamicMethod)
-                return (MethodBase) RTDynamicMethod_m_owner.GetValue(method)!;
+                return (MethodBase)RTDynamicMethod_m_owner.GetValue(method)!;
             return method;
         }
 
@@ -132,7 +132,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 if (TryGetDMHandle(dm, out handle))
                     return handle;
                 if (_DynamicMethod_m_method != null) // TODO: is this for Mono? Is there *any* .NET Framework/Core where this is the case?
-                    return (RuntimeMethodHandle) _DynamicMethod_m_method.GetValue(method)!;
+                    return (RuntimeMethodHandle)_DynamicMethod_m_method.GetValue(method)!;
             }
 
             return method.MethodHandle;
@@ -223,7 +223,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             handle = default;
             if (_DynamicMethod_GetMethodDescriptor is null)
                 return false;
-            handle = (RuntimeMethodHandle) _DynamicMethod_GetMethodDescriptor.Invoke(dm, null)!;
+            handle = (RuntimeMethodHandle)_DynamicMethod_GetMethodDescriptor.Invoke(dm, null)!;
             return true;
         }
 
@@ -315,7 +315,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
               + 2 // WORD m_wSlotNumber
               ;
 
-            var m_wFlags = (ushort*) (((byte*) handle.Value) + offset);
+            var m_wFlags = (ushort*)(((byte*)handle.Value) + offset);
             *m_wFlags |= 0x2000;
         }
 
@@ -384,7 +384,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 // means of uniquely identifying P/Invoke targets.
                 // https://github.com/dotnet/runtime/blob/c7f926c69725369545671305a3b1c4d4391d80f4/docs/design/coreclr/botr/clr-abi.md#hidden-parameters
                 if (method is null) {
-                    foreach (var meth in declType.GetMethods((BindingFlags) (-1))) {
+                    foreach (var meth in declType.GetMethods((BindingFlags)(-1))) {
                         if (meth.MethodHandle.Value == methodHandle.Value) {
                             method = meth;
                             break;

@@ -33,11 +33,11 @@ namespace MonoMod.Utils {
             args_[0] = val;
             Array.Copy(args, 0, args_, 1, args.Length);
 
-            Delegate[] ds = md.GetInvocationList();
+            var ds = md.GetInvocationList();
             for (var i = 0; i < ds.Length; i++)
                 args_[0] = ds[i].DynamicInvoke(args_);
 
-            return (T?) args_[0];
+            return (T?)args_[0];
         }
 
         /// <summary>
@@ -48,9 +48,9 @@ namespace MonoMod.Utils {
                 return true;
 
             Helpers.ThrowIfArgumentNull(args);
-            Delegate[] ds = md.GetInvocationList();
+            var ds = md.GetInvocationList();
             for (var i = 0; i < ds.Length; i++)
-                if (!(bool) ds[i].DynamicInvoke(args)!)
+                if (!(bool)ds[i].DynamicInvoke(args)!)
                     return false;
 
             return true;
@@ -64,9 +64,9 @@ namespace MonoMod.Utils {
                 return false;
 
             Helpers.ThrowIfArgumentNull(args);
-            Delegate[] ds = md.GetInvocationList();
+            var ds = md.GetInvocationList();
             for (var i = 0; i < ds.Length; i++)
-                if ((bool) ds[i].DynamicInvoke(args)!)
+                if ((bool)ds[i].DynamicInvoke(args)!)
                     return true;
 
             return false;
@@ -80,9 +80,9 @@ namespace MonoMod.Utils {
                 return null;
 
             Helpers.ThrowIfArgumentNull(args);
-            Delegate[] ds = md.GetInvocationList();
+            var ds = md.GetInvocationList();
             for (var i = 0; i < ds.Length; i++) {
-                var result = (T?) ds[i].DynamicInvoke(args);
+                var result = (T?)ds[i].DynamicInvoke(args);
                 if (result != null)
                     return result;
             }
@@ -97,9 +97,9 @@ namespace MonoMod.Utils {
         /// <returns>Pascal Case String</returns>
         public static string SpacedPascalCase(this string input) {
             Helpers.ThrowIfArgumentNull(input);
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < input.Length; i++) {
-                char c = input[i];
+            var builder = new StringBuilder();
+            for (var i = 0; i < input.Length; i++) {
+                var c = input[i];
                 if (i > 0 && char.IsUpper(c))
                     builder.Append(' ');
                 builder.Append(c);
@@ -114,7 +114,7 @@ namespace MonoMod.Utils {
         /// <returns>The output string.</returns>
         public static string ReadNullTerminatedString(this BinaryReader stream) {
             Helpers.ThrowIfArgumentNull(stream);
-            string text = "";
+            var text = "";
             char c;
             while ((c = stream.ReadChar()) != '\0') {
                 text += c.ToString();
@@ -131,8 +131,8 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(stream);
             Helpers.ThrowIfArgumentNull(text);
             if (text != null) {
-                for (int i = 0; i < text.Length; i++) {
-                    char c = text[i];
+                for (var i = 0; i < text.Length; i++) {
+                    var c = text[i];
                     stream.Write(c);
                 }
             }
@@ -148,7 +148,7 @@ namespace MonoMod.Utils {
 
         private static MethodBase GetRealMethod(MethodBase method) {
             if (RTDynamicMethod_m_owner is not null && method.GetType() == RTDynamicMethod)
-                return (MethodBase) RTDynamicMethod_m_owner.GetValue(method)!;
+                return (MethodBase)RTDynamicMethod_m_owner.GetValue(method)!;
             return method;
         }
 
@@ -199,7 +199,7 @@ namespace MonoMod.Utils {
 
 
             var rv = source.TryCastDelegate(typeof(T), out var resultDel);
-            result = (T?) resultDel;
+            result = (T?)resultDel;
             return rv;
         }
 
@@ -252,7 +252,7 @@ namespace MonoMod.Utils {
         /// <returns>The original method definition, with no generic arguments filled in.</returns>
         public static MethodBase GetActualGenericMethodDefinition(this MethodInfo method) {
             Helpers.ThrowIfArgumentNull(method);
-            MethodInfo genericDefinition = method.IsGenericMethod ? method.GetGenericMethodDefinition()
+            var genericDefinition = method.IsGenericMethod ? method.GetGenericMethodDefinition()
                                                                   : method;
             return genericDefinition.GetUnfilledMethodOnGenericType();
         }
@@ -260,8 +260,8 @@ namespace MonoMod.Utils {
         public static MethodBase GetUnfilledMethodOnGenericType(this MethodBase method) {
             Helpers.ThrowIfArgumentNull(method);
             if (method.DeclaringType != null && method.DeclaringType.IsGenericType) {
-                Type type = method.DeclaringType.GetGenericTypeDefinition();
-                RuntimeMethodHandle handle = method.MethodHandle;
+                var type = method.DeclaringType.GetGenericTypeDefinition();
+                var handle = method.MethodHandle;
                 method = MethodBase.GetMethodFromHandle(handle, type.TypeHandle)!;
             }
 

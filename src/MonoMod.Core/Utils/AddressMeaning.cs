@@ -49,15 +49,15 @@ namespace MonoMod.Core.Utils {
         private static unsafe nint DoProcessAddress(AddressKind kind, nint basePtr, int offset, ulong address) {
             nint addr;
             if (kind.IsAbsolute()) {
-                addr = (nint) address;
+                addr = (nint)address;
             } else { // IsRelative
                 var offs = kind.Is32Bit()
                     ? Unsafe.As<ulong, int>(ref address)
                     : Unsafe.As<ulong, long>(ref address);
-                addr = (nint) (basePtr + offset + offs);
+                addr = (nint)(basePtr + offset + offs);
             }
             if (kind.IsIndirect()) {
-                addr = *(nint*) addr;
+                addr = *(nint*)addr;
             }
             return addr;
         }

@@ -210,7 +210,7 @@ namespace MonoMod.UnitTest {
                         h2Run = true;
                     }),
                     applyByDefault: true
-                );                
+                );
                 h1Run = false;
                 h2Run = false;
                 hILRun = false;

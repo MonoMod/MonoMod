@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Reflection;
-using Mono.Cecil;
 using System.Text;
-using Mono.Collections.Generic;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -40,7 +39,7 @@ namespace MonoMod.Utils {
 
             if (method is GenericInstanceMethod gim && gim.GenericArguments.Count != 0) {
                 builder.Append('<');
-                Collection<TypeReference> arguments = gim.GenericArguments;
+                var arguments = gim.GenericArguments;
                 for (var i = 0; i < arguments.Count; i++) {
                     if (i > 0)
                         builder.Append(',');
@@ -50,7 +49,7 @@ namespace MonoMod.Utils {
 
             } else if (method.GenericParameters.Count != 0) {
                 builder.Append('<');
-                Collection<GenericParameter> arguments = method.GenericParameters;
+                var arguments = method.GenericParameters;
                 for (var i = 0; i < arguments.Count; i++) {
                     if (i > 0)
                         builder.Append(',');
@@ -62,9 +61,9 @@ namespace MonoMod.Utils {
             builder.Append('(');
 
             if (method.HasParameters) {
-                Collection<ParameterDefinition> parameters = method.Parameters;
+                var parameters = method.Parameters;
                 for (var i = 0; i < parameters.Count; i++) {
-                    ParameterDefinition parameter = parameters[i];
+                    var parameter = parameters[i];
                     if (i > 0)
                         builder.Append(',');
 
@@ -96,9 +95,9 @@ namespace MonoMod.Utils {
             builder.Append('(');
 
             if (method.HasParameters) {
-                Collection<ParameterDefinition> parameters = method.Parameters;
+                var parameters = method.Parameters;
                 for (var i = 0; i < parameters.Count; i++) {
-                    ParameterDefinition parameter = parameters[i];
+                    var parameter = parameters[i];
                     if (i > 0)
                         builder.Append(',');
 
@@ -151,7 +150,7 @@ namespace MonoMod.Utils {
 
             if (method.ContainsGenericParameters) {
                 builder.Append('<');
-                Type[] arguments = method.GetGenericArguments();
+                var arguments = method.GetGenericArguments();
                 for (var i = 0; i < arguments.Length; i++) {
                     if (i > 0)
                         builder.Append(',');
@@ -162,9 +161,9 @@ namespace MonoMod.Utils {
 
             builder.Append('(');
 
-            ParameterInfo[] parameters = method.GetParameters();
+            var parameters = method.GetParameters();
             for (var i = proxyMethod ? 1 : 0; i < parameters.Length; i++) {
-                ParameterInfo parameter = parameters[i];
+                var parameter = parameters[i];
                 if (i > (proxyMethod ? 1 : 0))
                     builder.Append(',');
 

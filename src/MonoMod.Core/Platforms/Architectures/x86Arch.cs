@@ -23,7 +23,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                 return new BytePatternCollection(
                     // .NET Framework
                     new(new(AddressKind.Rel32, 0x10), // UNKNOWN mustMatchAtStart
-                        // mov ... (mscorlib_ni!???)
+                                                      // mov ... (mscorlib_ni!???)
                         0xb8, An, An, An, An,
                         // nop
                         0x90,

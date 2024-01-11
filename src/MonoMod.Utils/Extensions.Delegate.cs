@@ -12,7 +12,7 @@ namespace MonoMod.Utils {
         /// <typeparam name="T">The type of the delegate to create.</typeparam>
         /// <returns>The delegate for this method.</returns>
         public static T CreateDelegate<T>(this MethodBase method) where T : Delegate
-            => (T) CreateDelegate(method, typeof(T), null);
+            => (T)CreateDelegate(method, typeof(T), null);
         /// <summary>
         /// Creates a delegate of the specified type with the specified target from this method.
         /// </summary>
@@ -21,7 +21,7 @@ namespace MonoMod.Utils {
         /// <param name="target">The object targeted by the delegate.</param>
         /// <returns>The delegate for this method.</returns>
         public static T CreateDelegate<T>(this MethodBase method, object? target) where T : Delegate
-            => (T) CreateDelegate(method, typeof(T), target);
+            => (T)CreateDelegate(method, typeof(T), target);
         /// <summary>
         /// Creates a delegate of the specified type from this method.
         /// </summary>
@@ -48,10 +48,10 @@ namespace MonoMod.Utils {
             if (method is MethodInfo mi)
                 return Delegate.CreateDelegate(delegateType, target, mi);
 
-            RuntimeMethodHandle handle = method.MethodHandle;
+            var handle = method.MethodHandle;
             RuntimeHelpers.PrepareMethod(handle);
             var ptr = handle.GetFunctionPointer();
-            return (Delegate) Activator.CreateInstance(delegateType, target, ptr)!;
+            return (Delegate)Activator.CreateInstance(delegateType, target, ptr)!;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",

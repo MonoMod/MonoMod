@@ -41,8 +41,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="source">The source method.</param>
         /// <param name="target">The target method.</param>
         public Hook(Expression source, Expression target)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>.
@@ -70,8 +70,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="target">The target method.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public Hook(Expression source, Expression target, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, applyByDefault) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method, applyByDefault) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>.
@@ -100,8 +100,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="target">The target method.</param>
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="Hook"/>.</param>
         public Hook(Expression source, Expression target, DetourConfig? config)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method, config) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>, using the provided <see cref="DetourConfig"/>.
@@ -132,8 +132,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="Hook"/>.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public Hook(Expression source, Expression target, DetourConfig? config, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, config, applyByDefault) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method, config, applyByDefault) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>, using the provided <see cref="DetourConfig"/>.
@@ -176,8 +176,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="target">The target method.</param>
         /// <param name="targetObj">The <see langword="this"/> object to call the target method on.</param>
         public Hook(Expression source, Expression target, object? targetObj)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method, targetObj) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>, calling <paramref name="target"/> on <paramref name="targetObj"/>.
@@ -208,8 +208,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="targetObj">The <see langword="this"/> object to call the target method on.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public Hook(Expression source, Expression target, object? targetObj, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj, applyByDefault) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method, targetObj, applyByDefault) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>, calling <paramref name="target"/> on <paramref name="targetObj"/>.
@@ -241,8 +241,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="targetObj">The <see langword="this"/> object to call the target method on.</param>
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="Hook"/>.</param>
         public Hook(Expression source, Expression target, object? targetObj, DetourConfig? config)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj, config) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method, targetObj, config) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>, calling <paramref name="target"/> on <paramref name="targetObj"/>,
@@ -277,8 +277,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="Hook"/>.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public Hook(Expression source, Expression target, object? targetObj, DetourConfig? config, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
-                  ((MethodCallExpression) Helpers.ThrowIfNull(target)).Method, targetObj, config, applyByDefault) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
+                  ((MethodCallExpression)Helpers.ThrowIfNull(target)).Method, targetObj, config, applyByDefault) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring <paramref name="source"/> to <paramref name="target"/>, calling <paramref name="target"/> on <paramref name="targetObj"/>,
@@ -309,7 +309,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="source">The method to detour.</param>
         /// <param name="target">The target delegate.</param>
         public Hook(Expression source, Delegate target)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method, target) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring the provided method to the provided delegate.
@@ -337,7 +337,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="target">The target delegate.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public Hook(Expression source, Delegate target, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target, applyByDefault) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method, target, applyByDefault) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring the provided method to the provided delegate.
@@ -366,7 +366,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="target">The target delegate.</param>
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="Hook"/>.</param>
         public Hook(Expression source, Delegate target, DetourConfig? config)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target, config) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method, target, config) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring the provided method to the provided delegate, using the provided <see cref="DetourConfig"/>.
@@ -397,7 +397,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="Hook"/>.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public Hook(Expression source, Delegate target, DetourConfig? config, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, target, config, applyByDefault) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method, target, config, applyByDefault) { }
 
         /// <summary>
         /// Constructs a <see cref="Hook"/> detouring the provided method to the provided delegate, using the provided <see cref="DetourConfig"/>.
@@ -635,7 +635,7 @@ namespace MonoMod.RuntimeDetour {
                         }
                     }
                 }
-                
+
                 // then load the delegate, if needed
                 if (nextDelegateType is not null) {
                     il.Emit(OpCodes.Ldloc, dataLoc);
@@ -730,8 +730,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Cleans up and undoes the hook, if needed.
         /// </summary>
-        ~Hook()
-        {
+        ~Hook() {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }

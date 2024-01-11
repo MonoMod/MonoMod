@@ -1,7 +1,7 @@
-﻿using System;
-using System.Reflection;
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
+using System;
+using System.Reflection;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -88,7 +88,7 @@ namespace MonoMod.Utils {
 
         public static void ReplaceOperands(this ILProcessor il, object? from, object? to) {
             Helpers.ThrowIfArgumentNull(il);
-            foreach (Instruction instr in il.Body.Instructions)
+            foreach (var instr in il.Body.Instructions)
                 if (instr.Operand?.Equals(from) ?? from == null)
                     instr.Operand = to;
         }
@@ -123,13 +123,13 @@ namespace MonoMod.Utils {
         public static Instruction Create(this ILProcessor il, OpCode opcode, MethodBase method) {
             Helpers.ThrowIfArgumentNull(il);
             if (method is System.Reflection.Emit.DynamicMethod)
-                return il.Create(opcode, (object) method);
+                return il.Create(opcode, (object)method);
             return il.Create(opcode, il.Import(method));
         }
         public static Instruction Create(this ILProcessor il, OpCode opcode, Type type)
             => Helpers.ThrowIfNull(il).Create(opcode, il.Import(type));
         public static Instruction Create(this ILProcessor il, OpCode opcode, object operand) {
-            Instruction instr = Helpers.ThrowIfNull(il).Create(OpCodes.Nop);
+            var instr = Helpers.ThrowIfNull(il).Create(OpCodes.Nop);
             instr.OpCode = opcode;
             instr.Operand = operand;
             return instr;
@@ -155,7 +155,7 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(il);
             Helpers.ThrowIfArgumentNull(method);
             if (method is System.Reflection.Emit.DynamicMethod) {
-                il.Emit(opcode, (object) method);
+                il.Emit(opcode, (object)method);
                 return;
             }
             il.Emit(opcode, il.Import(method));
@@ -183,6 +183,6 @@ namespace MonoMod.Utils {
             => Helpers.ThrowIfNull(il).Append(il.Create(opcode, operand));
 
         #endregion
-        
+
     }
 }

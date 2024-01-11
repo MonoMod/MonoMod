@@ -1,7 +1,7 @@
-﻿using Mono.Cecil.Cil;
-using Mono.Cecil;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
 
-namespace MonoMod.Utils { 
+namespace MonoMod.Utils {
     public static partial class Extensions {
 
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -66,7 +66,7 @@ namespace MonoMod.Utils {
         public static CustomAttribute? GetCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
             if (cap == null || !cap.HasCustomAttributes)
                 return null;
-            foreach (CustomAttribute attrib in cap.CustomAttributes)
+            foreach (var attrib in cap.CustomAttributes)
                 if (attrib.AttributeType.FullName == attribute)
                     return attrib;
             return null;
@@ -88,7 +88,7 @@ namespace MonoMod.Utils {
         /// <returns>The pushed integer value.</returns>
         public static int GetInt(this Instruction instr) {
             Helpers.ThrowIfArgumentNull(instr);
-            OpCode op = instr.OpCode;
+            var op = instr.OpCode;
             if (op == OpCodes.Ldc_I4_M1)
                 return -1;
             if (op == OpCodes.Ldc_I4_0)
@@ -110,8 +110,8 @@ namespace MonoMod.Utils {
             if (op == OpCodes.Ldc_I4_8)
                 return 8;
             if (op == OpCodes.Ldc_I4_S)
-                return (sbyte) instr.Operand;
-            return (int) instr.Operand;
+                return (sbyte)instr.Operand;
+            return (int)instr.Operand;
         }
         /// <summary>
         /// Get the integer value pushed onto the stack with this instruction.
@@ -120,7 +120,7 @@ namespace MonoMod.Utils {
         /// <returns>The pushed integer value or null.</returns>
         public static int? GetIntOrNull(this Instruction instr) {
             Helpers.ThrowIfArgumentNull(instr);
-            OpCode op = instr.OpCode;
+            var op = instr.OpCode;
             if (op == OpCodes.Ldc_I4_M1)
                 return -1;
             if (op == OpCodes.Ldc_I4_0)
@@ -142,9 +142,9 @@ namespace MonoMod.Utils {
             if (op == OpCodes.Ldc_I4_8)
                 return 8;
             if (op == OpCodes.Ldc_I4_S)
-                return (sbyte) instr.Operand;
+                return (sbyte)instr.Operand;
             if (op == OpCodes.Ldc_I4)
-                return (int) instr.Operand;
+                return (int)instr.Operand;
             return null;
         }
 
@@ -156,17 +156,17 @@ namespace MonoMod.Utils {
         /// <returns>True if the called method is a base method of the caller method, false otherwise.</returns>
         public static bool IsBaseMethodCall(this MethodBody body, MethodReference? called) {
             Helpers.ThrowIfArgumentNull(body);
-            MethodDefinition caller = body.Method;
+            var caller = body.Method;
             if (called is null)
                 return false;
-            TypeReference calledType = called.DeclaringType;
+            var calledType = called.DeclaringType;
             while (calledType is TypeSpecification typeSpec)
                 calledType = typeSpec.ElementType;
             var calledTypeName = calledType.GetPatchFullName();
 
             var callingBaseType = false;
             try {
-                TypeDefinition? baseType = caller.DeclaringType;
+                var baseType = caller.DeclaringType;
                 while ((baseType = baseType.BaseType?.SafeResolve()) != null) {
                     if (baseType.GetPatchFullName() == calledTypeName) {
                         callingBaseType = true;

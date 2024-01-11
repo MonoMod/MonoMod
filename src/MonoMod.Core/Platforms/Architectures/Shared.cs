@@ -24,7 +24,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                 stubData.CopyTo(mainAllocBuf.Slice(i * stubData.Length));
             }
 
-            ref var vtblBase = ref Unsafe.AsRef<IntPtr>((void*) vtableBase);
+            ref var vtblBase = ref Unsafe.AsRef<IntPtr>((void*)vtableBase);
 
             // now we want to start making our allocations and filling the input vtable pointer
             // we will be using the same alloc request for all of them
@@ -67,9 +67,9 @@ namespace MonoMod.Core.Platforms.Architectures {
             static void FillBufferIndicies(int stubSize, int indexOffs, int numPerAlloc, int i, Span<byte> mainAllocBuf, bool premul) {
                 for (var j = 0; j < numPerAlloc; j++) {
                     ref var indexBase = ref mainAllocBuf[j * stubSize + indexOffs];
-                    var index = (uint) (numPerAlloc * i + j);
+                    var index = (uint)(numPerAlloc * i + j);
                     if (premul) {
-                        index *= (uint) IntPtr.Size;
+                        index *= (uint)IntPtr.Size;
                     }
                     Unsafe.WriteUnaligned(ref indexBase, index);
                 }

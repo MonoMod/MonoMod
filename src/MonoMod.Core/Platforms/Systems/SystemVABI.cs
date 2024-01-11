@@ -26,8 +26,8 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         private static bool AnyFieldsNotFloat(Type type) {
-            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)) {
-                Type fieldType = field.FieldType;
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)) {
+                var fieldType = field.FieldType;
                 if (fieldType is { IsPrimitive: false, IsValueType: true } && AnyFieldsNotFloat(fieldType))
                     return true;
                 if (Type.GetTypeCode(fieldType) is not TypeCode.Single and not TypeCode.Double)

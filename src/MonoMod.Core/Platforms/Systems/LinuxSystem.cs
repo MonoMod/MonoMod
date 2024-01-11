@@ -53,7 +53,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 return 0;
             }
             currentPage += PageSize;
-            
+
             var known = currentPage - start;
 
             while (known < guess) {
@@ -78,7 +78,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 ProtectRW(patchTarget, data.Length);
             }
 
-            var target = new Span<byte>((void*) patchTarget, data.Length);
+            var target = new Span<byte>((void*)patchTarget, data.Length);
             // now we copy target to backup, then data to target, then flush the instruction cache
             _ = target.TryCopyTo(backup);
             data.CopyTo(target);
@@ -92,14 +92,14 @@ namespace MonoMod.Core.Platforms.Systems {
 
         private void ProtectRW(IntPtr addr, nint size) {
             RoundToPageBoundary(ref addr, ref size);
-            if (Unix.Mprotect(addr, (nuint) size, Unix.Protection.Read | Unix.Protection.Write) != 0) {
+            if (Unix.Mprotect(addr, (nuint)size, Unix.Protection.Read | Unix.Protection.Write) != 0) {
                 throw new Win32Exception(Unix.Errno);
             }
         }
 
         private void ProtectRWX(IntPtr addr, nint size) {
             RoundToPageBoundary(ref addr, ref size);
-            if (Unix.Mprotect(addr, (nuint) size, Unix.Protection.Read | Unix.Protection.Write | Unix.Protection.Execute) != 0) {
+            if (Unix.Mprotect(addr, (nuint)size, Unix.Protection.Read | Unix.Protection.Write | Unix.Protection.Execute) != 0) {
                 throw new Win32Exception(Unix.Errno);
             }
         }
@@ -116,10 +116,14 @@ namespace MonoMod.Core.Platforms.Systems {
 
             private static int PageProbePipeReadFD, PageProbePipeWriteFD;
 
+            [SuppressMessage("Design", "CA1065:Do not raise exceptions in unexpected locations",
+                Justification = "If the exception is thrown, the application is in an unrecoverable state. Methods on this type will not behave well.")]
+            [SuppressMessage("Performance", "CA1810:Initialize reference type static fields inline",
+                Justification = "There is no good way to inline the initialization here, and we want to make sure that the cctor runs before anything is done with the type.")]
             static unsafe MmapPagedMemoryAllocator() {
                 // Open a temporary pipe for page probes
                 // This pipe gets leaked, but eh
-                int* pipefd = stackalloc int[2];
+                var pipefd = stackalloc int[2];
                 if (Unix.Pipe2(pipefd, Unix.PipeFlags.CloseOnExec) == -1) {
                     throw new Win32Exception(Unix.Errno, "Failed to create pipe for page probes");
                 }
@@ -171,7 +175,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
 
                 // mmap the page we found
-                var mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint) PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous, -1, 0);
+                var mmapPtr = Unix.Mmap(IntPtr.Zero, (nuint)PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous, -1, 0);
                 if (mmapPtr is 0 or -1) {
                     // fuck
                     var errno = Unix.Errno;
@@ -181,11 +185,11 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
 
                 // create a Page object for the newly mapped memory, even before deciding whether we succeeded or not
-                var page = new Page(this, mmapPtr, (uint) PageSize, request.Executable);
+                var page = new Page(this, mmapPtr, (uint)PageSize, request.Executable);
                 InsertAllocatedPage(page);
 
                 // for simplicity, we'll try to allocate out of the page before checking bounds
-                if (!page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var pageAlloc)) {
+                if (!page.TryAllocate((uint)request.Size, (uint)request.Alignment, out var pageAlloc)) {
                     // huh???
                     RegisterForCleanup(page);
                     allocated = null;
@@ -209,10 +213,10 @@ namespace MonoMod.Core.Platforms.Systems {
 
                 var prot = request.Base.Executable ? Unix.Protection.Execute : Unix.Protection.None;
                 prot |= Unix.Protection.Read | Unix.Protection.Write;
-                
+
                 // number of pages needed to satisfy length requirements
                 var numPages = request.Base.Size / PageSize + 1;
-                
+
                 // find the nearest unallocated page within our bounds
                 var low = targetPage - PageSize;
                 var high = targetPage;
@@ -259,9 +263,9 @@ namespace MonoMod.Core.Platforms.Systems {
                     allocated = null;
                     return false;
                 }
-                
+
                 // mmap the page we found
-                var mmapPtr = Unix.Mmap(ptr, (nuint) PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
+                var mmapPtr = Unix.Mmap(ptr, (nuint)PageSize, prot, Unix.MmapFlags.Private | Unix.MmapFlags.Anonymous | Unix.MmapFlags.FixedNoReplace, -1, 0);
                 if (mmapPtr is 0 or -1) {
                     // fuck
                     allocated = null;
@@ -269,18 +273,18 @@ namespace MonoMod.Core.Platforms.Systems {
                 }
 
                 // create a Page object for the newly mapped memory, even before deciding whether we succeeded or not
-                var page = new Page(this, mmapPtr, (uint) PageSize, request.Base.Executable);
+                var page = new Page(this, mmapPtr, (uint)PageSize, request.Base.Executable);
                 InsertAllocatedPage(page);
 
                 // for simplicity, we'll try to allocate out of the page before checking bounds
-                if (!page.TryAllocate((uint) request.Base.Size, (uint) request.Base.Alignment, out var pageAlloc)) {
+                if (!page.TryAllocate((uint)request.Base.Size, (uint)request.Base.Alignment, out var pageAlloc)) {
                     // huh???
                     RegisterForCleanup(page);
                     allocated = null;
                     return false;
                 }
 
-                if ((nint) pageAlloc.BaseAddress < request.LowBound || (nint) pageAlloc.BaseAddress + pageAlloc.Size >= request.HighBound) {
+                if ((nint)pageAlloc.BaseAddress < request.LowBound || (nint)pageAlloc.BaseAddress + pageAlloc.Size >= request.HighBound) {
                     // the allocation didn't land in bounds, fail out
                     pageAlloc.Dispose(); // because this is the only allocation in the page, this auto-registers it for cleanup
                     allocated = null;
@@ -344,7 +348,7 @@ namespace MonoMod.Core.Platforms.Systems {
                 ArrayPool<byte>.Shared.Return(templ);
             }
 
-            using (var fh = new SafeFileHandle((IntPtr) fd, true))
+            using (var fh = new SafeFileHandle((IntPtr)fd, true))
             using (var fs = new FileStream(fh, FileAccess.Write)) {
                 using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname);
                 Helpers.Assert(embedded is not null);

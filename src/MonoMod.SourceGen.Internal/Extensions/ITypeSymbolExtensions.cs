@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using MonoMod.SourceGen.Internal.Helpers;
+using System;
+using System.Linq;
 
 namespace MonoMod.SourceGen.Internal.Extensions;
 
@@ -20,7 +20,7 @@ internal static class ITypeSymbolExtensions {
     /// <param name="name">The full name of the type to check for inheritance.</param>
     /// <returns>Whether or not <paramref name="typeSymbol"/> is or inherits from <paramref name="name"/>.</returns>
     public static bool HasOrInheritsFromFullyQualifiedMetadataName(this ITypeSymbol typeSymbol, string name) {
-        for (ITypeSymbol? currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
+        for (var currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
             if (currentType.HasFullyQualifiedMetadataName(name)) {
                 return true;
             }
@@ -36,7 +36,7 @@ internal static class ITypeSymbolExtensions {
     /// <param name="name">The full name of the type to check for inheritance.</param>
     /// <returns>Whether or not <paramref name="typeSymbol"/> inherits from <paramref name="name"/>.</returns>
     public static bool InheritsFromFullyQualifiedMetadataName(this ITypeSymbol typeSymbol, string name) {
-        INamedTypeSymbol? baseType = typeSymbol.BaseType;
+        var baseType = typeSymbol.BaseType;
 
         while (baseType is not null) {
             if (baseType.HasFullyQualifiedMetadataName(name)) {
@@ -56,7 +56,7 @@ internal static class ITypeSymbolExtensions {
     /// <param name="baseTypeSymbol">The <see cref="ITypeSymbol"/> instane to check for inheritance from.</param>
     /// <returns>Whether or not <paramref name="typeSymbol"/> inherits from <paramref name="baseTypeSymbol"/>.</returns>
     public static bool InheritsFromType(this ITypeSymbol typeSymbol, ITypeSymbol baseTypeSymbol) {
-        INamedTypeSymbol? currentBaseTypeSymbol = typeSymbol.BaseType;
+        var currentBaseTypeSymbol = typeSymbol.BaseType;
 
         while (currentBaseTypeSymbol is not null) {
             if (SymbolEqualityComparer.Default.Equals(currentBaseTypeSymbol, baseTypeSymbol)) {
@@ -76,7 +76,7 @@ internal static class ITypeSymbolExtensions {
     /// <param name="name">The full name of the type to check for interface implementation.</param>
     /// <returns>Whether or not <paramref name="typeSymbol"/> has an interface with the specified name.</returns>
     public static bool HasInterfaceWithFullyQualifiedMetadataName(this ITypeSymbol typeSymbol, string name) {
-        foreach (INamedTypeSymbol interfaceType in typeSymbol.AllInterfaces) {
+        foreach (var interfaceType in typeSymbol.AllInterfaces) {
             if (interfaceType.HasFullyQualifiedMetadataName(name)) {
                 return true;
             }
@@ -92,7 +92,7 @@ internal static class ITypeSymbolExtensions {
     /// <param name="predicate">The predicate used to match available attributes.</param>
     /// <returns>Whether or not <paramref name="typeSymbol"/> has an attribute matching <paramref name="predicate"/>.</returns>
     public static bool HasOrInheritsAttribute(this ITypeSymbol typeSymbol, Func<AttributeData, bool> predicate) {
-        for (ITypeSymbol? currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
+        for (var currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
             if (currentType.GetAttributes().Any(predicate)) {
                 return true;
             }
@@ -108,7 +108,7 @@ internal static class ITypeSymbolExtensions {
     /// <param name="name">The name of the attribute to look for.</param>
     /// <returns>Whether or not <paramref name="typeSymbol"/> has an attribute with the specified type name.</returns>
     public static bool HasOrInheritsAttributeWithFullyQualifiedMetadataName(this ITypeSymbol typeSymbol, string name) {
-        for (ITypeSymbol? currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
+        for (var currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
             if (currentType.HasAttributeWithFullyQualifiedMetadataName(name)) {
                 return true;
             }
@@ -124,7 +124,7 @@ internal static class ITypeSymbolExtensions {
     /// <param name="baseTypeSymbol">The <see cref="ITypeSymbol"/> instane to check for inheritance from.</param>
     /// <returns>Whether or not <paramref name="typeSymbol"/> has or inherits an attribute of type <paramref name="baseTypeSymbol"/>.</returns>
     public static bool HasOrInheritsAttributeWithType(this ITypeSymbol typeSymbol, ITypeSymbol baseTypeSymbol) {
-        for (ITypeSymbol? currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
+        for (var currentType = typeSymbol; currentType is not null; currentType = currentType.BaseType) {
             if (currentType.HasAttributeWithType(baseTypeSymbol)) {
                 return true;
             }

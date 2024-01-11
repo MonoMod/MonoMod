@@ -48,7 +48,7 @@ internal static class ISymbolExtensions {
     /// <param name="name">The attribute name to look for.</param>
     /// <returns>Whether or not <paramref name="symbol"/> has an attribute with the specified name.</returns>
     public static bool HasAttributeWithFullyQualifiedMetadataName(this ISymbol symbol, string name) {
-        foreach (AttributeData attribute in symbol.GetAttributes()) {
+        foreach (var attribute in symbol.GetAttributes()) {
             if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(name) == true) {
                 return true;
             }
@@ -64,7 +64,7 @@ internal static class ISymbolExtensions {
     /// <param name="typeSymbol">The <see cref="ITypeSymbol"/> instance for the attribute type to look for.</param>
     /// <returns>Whether or not <paramref name="symbol"/> has an attribute with the specified type.</returns>
     public static bool HasAttributeWithType(this ISymbol symbol, ITypeSymbol typeSymbol) {
-        foreach (AttributeData attribute in symbol.GetAttributes()) {
+        foreach (var attribute in symbol.GetAttributes()) {
             if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, typeSymbol)) {
                 return true;
             }
@@ -103,7 +103,7 @@ internal static class ISymbolExtensions {
     /// <returns>The effective accessibility for <paramref name="symbol"/>.</returns>
     public static Accessibility GetEffectiveAccessibility(this ISymbol symbol) {
         // Start by assuming it's visible
-        Accessibility visibility = Accessibility.Public;
+        var visibility = Accessibility.Public;
 
         // Handle special cases
         switch (symbol.Kind) {
@@ -140,7 +140,7 @@ internal static class ISymbolExtensions {
     /// <param name="assembly">The assembly to check the accessibility of <paramref name="symbol"/> for.</param>
     /// <returns>Whether <paramref name="assembly"/> can access <paramref name="symbol"/>.</returns>
     public static bool CanBeAccessedFrom(this ISymbol symbol, IAssemblySymbol assembly) {
-        Accessibility accessibility = symbol.GetEffectiveAccessibility();
+        var accessibility = symbol.GetEffectiveAccessibility();
 
         return
             accessibility == Accessibility.Public ||

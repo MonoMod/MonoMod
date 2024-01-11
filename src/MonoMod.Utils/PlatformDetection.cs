@@ -42,13 +42,13 @@ namespace MonoMod.Utils {
         }
 
         private static (OSKind OS, ArchitectureKind Arch) DetectPlatformInfo() {
-            OSKind os = OSKind.Unknown;
-            ArchitectureKind arch = ArchitectureKind.Unknown;
+            var os = OSKind.Unknown;
+            var arch = ArchitectureKind.Unknown;
 
             {
                 // For old Mono, get from a private property to accurately get the platform.
                 // static extern PlatformID Platform
-                PropertyInfo? p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
+                var p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
                 string? platID;
                 if (p_Platform != null) {
                     platID = p_Platform.GetValue(null, null)?.ToString();
@@ -193,7 +193,7 @@ namespace MonoMod.Utils {
                     for (var i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
                         if (i != 0) {
                             // skip a string
-                            nullByteOffs = buffer.IndexOf((byte) 0);
+                            nullByteOffs = buffer.IndexOf((byte)0);
                             buffer = buffer.Slice(nullByteOffs);
                         }
                         // then advance to the next one
@@ -351,8 +351,8 @@ namespace MonoMod.Utils {
             rti ??= Type.GetType("System.Runtime.InteropServices.RuntimeInformation, System.Runtime.InteropServices.RuntimeInformation");
 
             // FrameworkDescription is a string which (is supposed to) describe the runtime
-            var fxDesc = (string?) rti?.GetProperty("FrameworkDescription")?.GetValue(null, null);
-            MMDbgLog.Trace($"FrameworkDescription: {fxDesc??"(null)"}");
+            var fxDesc = (string?)rti?.GetProperty("FrameworkDescription")?.GetValue(null, null);
+            MMDbgLog.Trace($"FrameworkDescription: {fxDesc ?? "(null)"}");
 
             if (fxDesc is not null) {
                 // Example values:
@@ -407,7 +407,7 @@ namespace MonoMod.Utils {
 
             // TODO: map strange (read: Framework) versions correctly
 
-            MMDbgLog.Info($"Detected runtime: {runtime} {version?.ToString()??"(null)"}");
+            MMDbgLog.Info($"Detected runtime: {runtime} {version?.ToString() ?? "(null)"}");
 
             return (runtime, version ?? new Version(0, 0));
         }

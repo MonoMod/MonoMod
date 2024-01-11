@@ -88,7 +88,7 @@ namespace System.Collections.Concurrent {
             if (collection is ICollection<T> c) {
                 int count = c.Count;
                 if (count > length) {
-                    length = (int) Math.Min(BitOperationsEx.RoundUpToPowerOf2((uint) count), MaxSegmentLength);
+                    length = (int)Math.Min(BitOperationsEx.RoundUpToPowerOf2((uint)count), MaxSegmentLength);
                 }
             }
 
@@ -158,7 +158,7 @@ namespace System.Collections.Concurrent {
 
         /// <summary>Returns an enumerator that iterates through a collection.</summary>
         /// <returns>An <see cref="IEnumerator"/> that can be used to iterate through the collection.</returns>
-        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<T>) this).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<T>)this).GetEnumerator();
 
         /// <summary>
         /// Attempts to add an object to the <see cref="Concurrent.IProducerConsumerCollection{T}"/>.
