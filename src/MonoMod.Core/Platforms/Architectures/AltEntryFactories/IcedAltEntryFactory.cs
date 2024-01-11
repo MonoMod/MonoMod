@@ -26,7 +26,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
             public int Position { get; private set; }
 
             public override unsafe int ReadByte() {
-                return *(byte*) ((nint) Base + (Position++));
+                return *(byte*)((nint)Base + (Position++));
             }
         }
 
@@ -73,7 +73,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
 
         public IntPtr CreateAlternateEntrypoint(IntPtr entrypoint, int minLength, out IDisposable? handle) {
             var codeReader = new PtrCodeReader(entrypoint);
-            var decoder = Decoder.Create(bitness, codeReader, (ulong) entrypoint, DecoderOptions.NoInvalidCheck | DecoderOptions.AMD);
+            var decoder = Decoder.Create(bitness, codeReader, (ulong)entrypoint, DecoderOptions.NoInvalidCheck | DecoderOptions.AMD);
 
             var insns = new InstructionList();
             while (codeReader.Position < minLength) {
@@ -109,17 +109,17 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
                     Code.Call_ptr1632 => Code.Jmp_ptr1632,
                     _ => throw new InvalidOperationException($"Unrecognized call opcode {lastInsn.Code}")
                 };
-                jmpInsn.Length = (int) enc.Encode(jmpInsn, jmpInsn.IP);
+                jmpInsn.Length = (int)enc.Encode(jmpInsn, jmpInsn.IP);
 
                 var retAddr = lastInsn.NextIP;
 
                 bool useQword;
                 Instruction pushInsn, qword;
                 if (bitness == 32) {
-                    pushInsn = Instruction.Create(Code.Pushd_imm32, (uint) retAddr);
-                    pushInsn.Length = (int) enc.Encode(pushInsn, jmpInsn.IP);
+                    pushInsn = Instruction.Create(Code.Pushd_imm32, (uint)retAddr);
+                    pushInsn.Length = (int)enc.Encode(pushInsn, jmpInsn.IP);
                     pushInsn.IP = jmpInsn.IP;
-                    jmpInsn.IP += (ulong) pushInsn.Length;
+                    jmpInsn.IP += (ulong)pushInsn.Length;
                     useQword = false;
                     qword = default;
                 } else {
@@ -128,9 +128,9 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
                     qword = Instruction.CreateDeclareQword(retAddr);
 
                     pushInsn = Instruction.Create(Code.Push_rm64, new MemoryOperand(Register.RIP, (long)jmpInsn.NextIP));
-                    pushInsn.Length = (int) enc.Encode(pushInsn, jmpInsn.IP);
+                    pushInsn.Length = (int)enc.Encode(pushInsn, jmpInsn.IP);
                     pushInsn.IP = jmpInsn.IP;
-                    jmpInsn.IP += (ulong) pushInsn.Length;
+                    jmpInsn.IP += (ulong)pushInsn.Length;
                     qword.IP = jmpInsn.NextIP;
                     pushInsn.MemoryDisplacement64 = qword.IP;
                 }
@@ -164,7 +164,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories {
                 if (hasRipRelAddress) {
                     // if we have an RIP relative address (that wasn't created by us) try to allocate close to the original location
                     Helpers.Assert(alloc.TryAllocateInRange(
-                        new(entrypoint, (nint) entrypoint + int.MinValue, (nint) entrypoint + int.MaxValue,
+                        new(entrypoint, (nint)entrypoint + int.MinValue, (nint)entrypoint + int.MaxValue,
                         new(estTotalSize) { Executable = true }), out allocated));
                 } else {
                     Helpers.Assert(alloc.TryAllocate(new(estTotalSize) { Executable = true }, out allocated));

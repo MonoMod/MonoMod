@@ -33,7 +33,7 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private static readonly ConstructorInfo Exception_ctor
-            = typeof(Exception).GetConstructor(new Type[] { typeof(string) })?? throw new InvalidOperationException();
+            = typeof(Exception).GetConstructor(new Type[] { typeof(string) }) ?? throw new InvalidOperationException();
 
         /// <summary>
         /// Fill the DynamicMethodDefinition with a throw.

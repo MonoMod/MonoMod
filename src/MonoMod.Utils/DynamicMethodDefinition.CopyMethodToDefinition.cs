@@ -17,7 +17,7 @@ namespace MonoMod.Utils {
             _CecilOpCodes2X = new OpCode[0x1f];
 
             foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                var opcode = (OpCode) field.GetValue(null)!;
+                var opcode = (OpCode)field.GetValue(null)!;
                 if (opcode.OpCodeType == OpCodeType.Nternal)
                     continue;
 
@@ -54,7 +54,7 @@ namespace MonoMod.Utils {
 
             using (var reader = new BinaryReader(new MemoryStream(data))) {
                 for (Instruction? instr = null, prev = null; reader.BaseStream.Position < reader.BaseStream.Length; prev = instr) {
-                    var offset = (int) reader.BaseStream.Position;
+                    var offset = (int)reader.BaseStream.Position;
                     instr = Instruction.Create(OpCodes.Nop);
                     var op = reader.ReadByte();
                     instr.OpCode = op != 0xfe ? _CecilOpCodes1X[op] : _CecilOpCodes2X[reader.ReadByte()];
@@ -71,11 +71,11 @@ namespace MonoMod.Utils {
                 switch (instr.OpCode.OperandType) {
                     case OperandType.ShortInlineBrTarget:
                     case OperandType.InlineBrTarget:
-                        instr.Operand = GetInstruction((int) instr.Operand!);
+                        instr.Operand = GetInstruction((int)instr.Operand!);
                         break;
 
                     case OperandType.InlineSwitch:
-                        var offsets = (int[]) instr.Operand!;
+                        var offsets = (int[])instr.Operand!;
                         var targets = new Instruction[offsets.Length];
                         for (var i = 0; i < offsets.Length; i++)
                             targets[i] = GetInstruction(offsets[i])!;
@@ -85,7 +85,7 @@ namespace MonoMod.Utils {
             }
 
             foreach (var clause in bodyFrom.ExceptionHandlingClauses) {
-                var handler = new ExceptionHandler((ExceptionHandlerType) clause.Flags);
+                var handler = new ExceptionHandler((ExceptionHandlerType)clause.Flags);
                 bodyTo.ExceptionHandlers.Add(handler);
 
                 handler.TryStart = GetInstruction(clause.TryOffset);
@@ -107,7 +107,7 @@ namespace MonoMod.Utils {
 
                     case OperandType.InlineSwitch:
                         length = reader.ReadInt32();
-                        offs = (int) reader.BaseStream.Position + (4 * length);
+                        offs = (int)reader.BaseStream.Position + (4 * length);
                         var targets = new int[length];
                         for (var i = 0; i < length; i++)
                             targets[i] = reader.ReadInt32() + offs;
@@ -116,16 +116,16 @@ namespace MonoMod.Utils {
 
                     case OperandType.ShortInlineBrTarget:
                         offs = reader.ReadSByte();
-                        instr.Operand = (int) reader.BaseStream.Position + offs;
+                        instr.Operand = (int)reader.BaseStream.Position + offs;
                         break;
 
                     case OperandType.InlineBrTarget:
                         offs = reader.ReadInt32();
-                        instr.Operand = (int) reader.BaseStream.Position + offs;
+                        instr.Operand = (int)reader.BaseStream.Position + offs;
                         break;
 
                     case OperandType.ShortInlineI:
-                        instr.Operand = instr.OpCode == OpCodes.Ldc_I4_S ? reader.ReadSByte() : (object) reader.ReadByte();
+                        instr.Operand = instr.OpCode == OpCodes.Ldc_I4_S ? reader.ReadSByte() : (object)reader.ReadByte();
                         break;
 
                     case OperandType.InlineI:
@@ -242,18 +242,18 @@ namespace MonoMod.Utils {
                     })) {
                         var module = assembly.Modules.First(m => m.Name == moduleFrom.Name);
                         // this should only fail if the token itself is somehow wrong
-                        var reference = (MemberReference) module.LookupToken(token);
+                        var reference = (MemberReference)module.LookupToken(token);
                         // the explicit casts here are to throw if they are incorrect
                         // normally the references would need to be imported, but moduleTo isn't written to anywhere
                         switch (resolveMode) {
                             case TokenResolutionMode.Type:
-                                return (TypeReference) reference;
+                                return (TypeReference)reference;
 
                             case TokenResolutionMode.Method:
-                                return (MethodReference) reference;
+                                return (MethodReference)reference;
 
                             case TokenResolutionMode.Field:
-                                return (FieldReference) reference;
+                                return (FieldReference)reference;
 
                             case TokenResolutionMode.Any:
                                 return reference;
@@ -290,7 +290,7 @@ namespace MonoMod.Utils {
 
         }
 
-        private enum TokenResolutionMode { 
+        private enum TokenResolutionMode {
             Any,
             Type,
             Method,

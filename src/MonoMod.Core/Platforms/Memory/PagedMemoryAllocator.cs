@@ -46,14 +46,14 @@ namespace MonoMod.Core.Platforms.Memory {
             public int Size { get; }
 
             /// <inheritdoc/>
-            public unsafe Span<byte> Memory => new((void*) BaseAddress, Size);
+            public unsafe Span<byte> Memory => new((void*)BaseAddress, Size);
 
             #region IDisposable implementation
             private bool disposedValue;
 
             private void Dispose(bool disposing) {
                 if (!disposedValue) {
-                    owner.FreeMem(offset, (uint) Size);
+                    owner.FreeMem(offset, (uint)Size);
                     disposedValue = true;
                 }
             }
@@ -103,7 +103,7 @@ namespace MonoMod.Core.Platforms.Memory {
             /// Gets whether or not this page is executable.
             /// </summary>
             public bool IsExecutable { get; }
-            
+
             /// <summary>
             /// Constructs a <see cref="Page"/> object associated with the specified <see cref="PagedMemoryAllocator"/>.
             /// </summary>
@@ -187,7 +187,7 @@ namespace MonoMod.Core.Platforms.Memory {
                     NormalizeFreeList();
 
                     // and can now actually create the allocation object
-                    alloc = new PageAllocation(this, offs, (int) size);
+                    alloc = new PageAllocation(this, offs, (int)size);
 
                     return true;
                 }
@@ -259,7 +259,7 @@ namespace MonoMod.Core.Platforms.Memory {
             this.pageSize = pageSize;
 
             pageSizeIsPow2 = BitOperations.IsPow2(pageSize);
-            pageBaseMask = ~(nint) 0 << BitOperations.TrailingZeroCount(pageSize);
+            pageBaseMask = ~(nint)0 << BitOperations.TrailingZeroCount(pageSize);
         }
 
         /// <summary>
@@ -286,7 +286,7 @@ namespace MonoMod.Core.Platforms.Memory {
                 if (y is null)
                     return -1;
 
-                return ((long) x.BaseAddr).CompareTo((long) y.BaseAddr);
+                return ((long)x.BaseAddr).CompareTo((long)y.BaseAddr);
             }
         }
 
@@ -297,7 +297,7 @@ namespace MonoMod.Core.Platforms.Memory {
                 if (other is null)
                     return 1;
 
-                return ((long) addr).CompareTo((long) other.BaseAddr);
+                return ((long)addr).CompareTo((long)other.BaseAddr);
             }
         }
 
@@ -311,7 +311,7 @@ namespace MonoMod.Core.Platforms.Memory {
         protected void InsertAllocatedPage(Page page) {
             if (pageCount == allocationList.Length) {
                 // we need to expand the allocationList
-                var newSize = (int) BitOperations.RoundUpToPowerOf2((uint) allocationList.Length + 1);
+                var newSize = (int)BitOperations.RoundUpToPowerOf2((uint)allocationList.Length + 1);
                 Array.Resize(ref allocationList, newSize);
             }
 
@@ -416,11 +416,11 @@ namespace MonoMod.Core.Platforms.Memory {
         private readonly object sync = new();
 
         /// <inheritdoc/>
-        public int MaxSize => (int) pageSize;
+        public int MaxSize => (int)pageSize;
 
         /// <inheritdoc/>
         public bool TryAllocateInRange(PositionedAllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
-            if ((nint) request.Target < request.LowBound || (nint) request.Target > request.HighBound)
+            if ((nint)request.Target < request.LowBound || (nint)request.Target > request.HighBound)
                 throw new ArgumentException("Target not between low and high", nameof(request));
 
             if (request.Base.Size < 0)
@@ -438,7 +438,7 @@ namespace MonoMod.Core.Platforms.Memory {
 
             var targetPage = RoundDownToPageBoundary(request.Target);
 
-            var target = (nint) request.Target;
+            var target = (nint)request.Target;
 
             lock (sync) {
                 var lowIdxBound = GetBoundIndex(lowPageBound);
@@ -454,11 +454,11 @@ namespace MonoMod.Core.Platforms.Memory {
                     var lowIdx = targetIndex - 1;
                     var highIdx = targetIndex;
 
-                    while ((uint) highIdx <= AllocList.Length && (uint) lowIdx < AllocList.Length
+                    while ((uint)highIdx <= AllocList.Length && (uint)lowIdx < AllocList.Length
                         && (lowIdx >= lowIdxBound || highIdx < highIdxBound)) {
                         // try high pages, while they're closer than low pages
                         while (
-                            (uint) highIdx < AllocList.Length &&
+                            (uint)highIdx < AllocList.Length &&
                             highIdx < highIdxBound &&
                             (lowIdx < lowIdxBound || target - AllocList[lowIdx].BaseAddr > AllocList[highIdx].BaseAddr - target)
                         ) {
@@ -469,7 +469,7 @@ namespace MonoMod.Core.Platforms.Memory {
 
                         // then try low pages, while they're closer than high pages
                         while (
-                            (uint) lowIdx < AllocList.Length &&
+                            (uint)lowIdx < AllocList.Length &&
                             lowIdx >= lowIdxBound &&
                             (highIdx >= highIdxBound || target - AllocList[lowIdx].BaseAddr < AllocList[highIdx].BaseAddr - target)
                         ) {
@@ -489,9 +489,9 @@ namespace MonoMod.Core.Platforms.Memory {
         }
 
         private static bool TryAllocWithPage(Page page, PositionedAllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated) {
-            if (page.IsExecutable == request.Base.Executable && page.BaseAddr >= (nint) request.LowBound && page.BaseAddr < (nint) request.HighBound) {
-                if (page.TryAllocate((uint) request.Base.Size, (uint) request.Base.Alignment, out var pageAlloc)) {
-                    if ((nint) pageAlloc.BaseAddress >= request.LowBound && (nint) pageAlloc.BaseAddress < request.HighBound) {
+            if (page.IsExecutable == request.Base.Executable && page.BaseAddr >= (nint)request.LowBound && page.BaseAddr < (nint)request.HighBound) {
+                if (page.TryAllocate((uint)request.Base.Size, (uint)request.Base.Alignment, out var pageAlloc)) {
+                    if ((nint)pageAlloc.BaseAddress >= request.LowBound && (nint)pageAlloc.BaseAddress < request.HighBound) {
                         // we've found a valid allocation, we're done
                         allocated = pageAlloc;
                         return true;
@@ -519,7 +519,7 @@ namespace MonoMod.Core.Platforms.Memory {
 
             lock (sync) {
                 foreach (var page in AllocList) {
-                    if (page.IsExecutable == request.Executable && page.TryAllocate((uint) request.Size, (uint) request.Alignment, out var alloc)) {
+                    if (page.IsExecutable == request.Executable && page.TryAllocate((uint)request.Size, (uint)request.Alignment, out var alloc)) {
                         allocated = alloc;
                         return true;
                     }

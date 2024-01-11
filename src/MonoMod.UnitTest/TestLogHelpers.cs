@@ -11,7 +11,8 @@ namespace MonoMod.UnitTest {
         private static int isInitialized;
 
         private static void EnsureSubscribedToDebugLog() {
-            if (Interlocked.CompareExchange(ref isInitialized, 1, 0) != 0) return;
+            if (Interlocked.CompareExchange(ref isInitialized, 1, 0) != 0)
+                return;
             DebugLog.OnLog += static (source, time, level, message) => {
                 if (currentOutputHelper.Value is not { } helper) {
                     helper = singleOutputHelper;

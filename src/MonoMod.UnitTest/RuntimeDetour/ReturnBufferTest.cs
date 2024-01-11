@@ -19,7 +19,7 @@ namespace MonoMod.UnitTest {
                 typeof(ReturnBufferSysVTest).GetMethod("Target", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!,
                 true
             );
-            
+
             Assert.True(Source(0, 0, 0, 0) is { f1: 4, f2: 5, f3: 6 });
         }
 

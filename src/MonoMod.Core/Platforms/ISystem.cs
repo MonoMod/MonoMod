@@ -25,7 +25,7 @@ namespace MonoMod.Core.Platforms {
         /// Gets the <see cref="IMemoryAllocator"/> for this OS.
         /// </summary>
         IMemoryAllocator MemoryAllocator { get; }
-        
+
         /// <summary>
         /// Gets the <see cref="INativeExceptionHelper"/> for this OS, if it is needed.
         /// </summary>

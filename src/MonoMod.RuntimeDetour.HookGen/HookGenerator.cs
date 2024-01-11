@@ -14,7 +14,7 @@ using System.Text;
 
 namespace MonoMod.RuntimeDetour.HookGen {
     public class HookGenerator {
-        static readonly Dictionary<Type, string> ReflTypeNameMap = new Dictionary<Type, string> () {
+        static readonly Dictionary<Type, string> ReflTypeNameMap = new Dictionary<Type, string>() {
             { typeof(string), "string" },
             { typeof(object), "object" },
             { typeof(bool), "bool" },
@@ -244,7 +244,8 @@ namespace MonoMod.RuntimeDetour.HookGen {
                     var i = 1;
                     hookType.FindEvent(nameTmp = name + "_" + i) != null;
                     i++
-                );
+                )
+                    ;
                 name = nameTmp;
             }
 
@@ -472,7 +473,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 builder.Append("ptr");
             }
 
-            BuildFriendlyName(builder, ((TypeSpecification) type).ElementType, full);
+            BuildFriendlyName(builder, ((TypeSpecification)type).ElementType, full);
 
             if (type.IsArray) {
                 builder.Append("Array");
@@ -524,7 +525,7 @@ namespace MonoMod.RuntimeDetour.HookGen {
                 if (HookGenerator.IsPublic(parent) && (parent == type || !parent.HasGenericParameters))
                     continue;
                 // If it isn't public, ...
-                
+
                 if (type.IsEnum) {
                     // ... try the enum's underlying type.
                     typeRef = type.FindField("value__").FieldType;

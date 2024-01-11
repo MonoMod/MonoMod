@@ -274,17 +274,17 @@ namespace MonoMod.Core.Platforms {
 
                 if (method.DeclaringType is null) {
                     // the method lives on the module, get it from there
-                    var got = method.Module.GetMethod(method.Name, (BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
+                    var got = method.Module.GetMethod(method.Name, (BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
                     Helpers.Assert(got is not null, $"orig: {method}, module: {method.Module}");
                     method = got;
                 } else {
                     // the method has a declaring type, get it there
                     if (method.IsConstructor) {
-                        var got = method.DeclaringType.GetConstructor((BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
+                        var got = method.DeclaringType.GetConstructor((BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
                         Helpers.Assert(got is not null, $"orig: {method}");
                         method = got;
                     } else {
-                        var got = method.DeclaringType.GetMethod(method.Name, (BindingFlags) (-1), null, method.CallingConvention, paramTypes, null);
+                        var got = method.DeclaringType.GetMethod(method.Name, (BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
                         Helpers.Assert(got is not null, $"orig: {method}");
                         method = got;
                     }
@@ -410,7 +410,7 @@ namespace MonoMod.Core.Platforms {
 
             // these should be the same
             Helpers.DAssert(size == detourInfo.Size);
-            
+
             // now that we have the detour size, we'll try to allocate an alternate entry point
             var altEntry = IntPtr.Zero;
             IDisposable? altHandle = null;
@@ -429,7 +429,7 @@ namespace MonoMod.Core.Platforms {
             // and now we just create the NativeDetour object
             return new NativeDetour(new(this, detourInfo, backup, allocHandle), altEntry, altHandle);
         }
-        
+
         /// <summary>
         /// Gets the native method body for a method.
         /// </summary>
@@ -455,7 +455,7 @@ namespace MonoMod.Core.Platforms {
             nint prevEntry = -1;
 
             ReloadFuncPtr:
-            var entry = (nint) Runtime.GetMethodEntryPoint(method);
+            var entry = (nint)Runtime.GetMethodEntryPoint(method);
             MMDbgLog.Trace($"Starting entry point = 0x{entry:x16}");
             do {
                 if (iters++ > 20) {
@@ -476,7 +476,7 @@ namespace MonoMod.Core.Platforms {
 
                 // we still have to limit it like this because otherwise it'll scan and find *other* stubs
                 // if we want to, we could scan for an arch-specific padding pattern and use that to limit instead
-                var span = new ReadOnlySpan<byte>((void*) entry, Math.Min((int) readableLen, archMatchCollection.MaxMinLength));
+                var span = new ReadOnlySpan<byte>((void*)entry, Math.Min((int)readableLen, archMatchCollection.MaxMinLength));
 
                 // TODO: be more limiting with which patterns can be scanned forward and which cannot
                 if (!archMatchCollection.TryFindMatch(span, out var addr, out var match, out var offset, out _))
@@ -525,7 +525,7 @@ namespace MonoMod.Core.Platforms {
         // TODO: make this something actually runtime-dependent
         private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed, out bool wasPreStub) {
             if (ThePreStub == IntPtr.Zero) {
-                ThePreStub = (IntPtr) (-2);
+                ThePreStub = (IntPtr)(-2);
 
                 // FIXME: Find a better less likely called NGEN'd candidate that points to ThePreStub.
                 // This was "found" by tModLoader.
@@ -537,7 +537,7 @@ namespace MonoMod.Core.Platforms {
                     ?.GetMethods()
                     .GroupBy(m => GetNativeMethodBodyWalk(m, reloadPtr: false))
                     .First(g => g.Count() > 1)
-                    .Key ?? (nint) (-1);
+                    .Key ?? (nint)(-1);
 
                 ThePreStub = pre;
                 MMDbgLog.Trace($"ThePreStub: 0x{ThePreStub:X16}");
@@ -590,7 +590,7 @@ namespace MonoMod.Core.Platforms {
                     var order = Abi.ArgumentOrder.Span;
                     for (var i = 0; i < order.Length; i++) {
                         var kind = order[i];
-                        
+
                         if (kind == SpecialArgumentKind.ThisPointer) {
                             thisPos = argTypes.Count;
                             argTypes.Add(thisType);
@@ -616,7 +616,7 @@ namespace MonoMod.Core.Platforms {
                     )) {
                         // TODO: make DMD apply attributes to the generated DynamicMethod, when possible
                         dmd.Definition!.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining |
-                            (Mono.Cecil.MethodImplAttributes) (int) MethodImplOptionsEx.AggressiveOptimization;
+                            (Mono.Cecil.MethodImplAttributes)(int)MethodImplOptionsEx.AggressiveOptimization;
 
                         var il = dmd.GetILProcessor();
 

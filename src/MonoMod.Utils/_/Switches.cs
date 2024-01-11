@@ -29,7 +29,7 @@ namespace MonoMod {
                 var key = (string)envVar.Key;
                 if (key.StartsWith(Prefix, StringComparison.Ordinal) && envVar.Value is not null) {
                     var sw = key.Substring(Prefix.Length);
-                    _ = switchValues.TryAdd(sw, BestEffortParseEnvVar((string) envVar.Value));
+                    _ = switchValues.TryAdd(sw, BestEffortParseEnvVar((string)envVar.Value));
                 }
             }
         }
@@ -251,7 +251,7 @@ namespace MonoMod {
             value = null;
             return false;
         }
-        
+
         // TODO: how do I want to handle setting and caching of this stuff?
 
         public static bool TryGetSwitchEnabled(string @switch, out bool isEnabled) {

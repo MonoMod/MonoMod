@@ -106,7 +106,7 @@ namespace System.Runtime.InteropServices {
             if (SpanHelpers.IsReferenceOrContainsReferences<TTo>())
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(TTo));
 
-            int newLength = checked((int) ((long) span.Length * Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>()));
+            int newLength = checked((int)((long)span.Length * Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>()));
             return new Span<TTo>(Unsafe.As<Pinnable<TTo>>(span.Pinnable), span.ByteOffset, newLength);
         }
 
@@ -130,7 +130,7 @@ namespace System.Runtime.InteropServices {
             if (SpanHelpers.IsReferenceOrContainsReferences<TTo>())
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(TTo));
 
-            int newLength = checked((int) ((long) span.Length * Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>()));
+            int newLength = checked((int)((long)span.Length * Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>()));
             return new ReadOnlySpan<TTo>(Unsafe.As<Pinnable<TTo>>(span.Pinnable), span.ByteOffset, newLength);
         }
     }

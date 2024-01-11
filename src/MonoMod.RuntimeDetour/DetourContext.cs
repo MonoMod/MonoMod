@@ -59,7 +59,7 @@ namespace MonoMod.RuntimeDetour {
         private sealed class ContextScopeHandler : ScopeHandlerBase {
             public static readonly ContextScopeHandler Instance = new();
             public override void EndScope(object? data) {
-                var scope = (Scope) data!;
+                var scope = (Scope)data!;
                 scope.Active = false;
 
                 while (current is { Active: false })

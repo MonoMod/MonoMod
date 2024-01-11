@@ -1,7 +1,7 @@
 ﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace MonoMod.Utils { 
+namespace MonoMod.Utils {
     public static partial class Extensions {
 
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -110,8 +110,8 @@ namespace MonoMod.Utils {
             if (op == OpCodes.Ldc_I4_8)
                 return 8;
             if (op == OpCodes.Ldc_I4_S)
-                return (sbyte) instr.Operand;
-            return (int) instr.Operand;
+                return (sbyte)instr.Operand;
+            return (int)instr.Operand;
         }
         /// <summary>
         /// Get the integer value pushed onto the stack with this instruction.
@@ -142,9 +142,9 @@ namespace MonoMod.Utils {
             if (op == OpCodes.Ldc_I4_8)
                 return 8;
             if (op == OpCodes.Ldc_I4_S)
-                return (sbyte) instr.Operand;
+                return (sbyte)instr.Operand;
             if (op == OpCodes.Ldc_I4)
-                return (int) instr.Operand;
+                return (int)instr.Operand;
             return null;
         }
 

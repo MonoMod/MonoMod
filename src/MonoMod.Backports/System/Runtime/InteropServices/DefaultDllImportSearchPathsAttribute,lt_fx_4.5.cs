@@ -1,11 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace System.Runtime.InteropServices
-{
+namespace System.Runtime.InteropServices {
     [Flags]
-    public enum DllImportSearchPath
-    {
+    public enum DllImportSearchPath {
         UseDllDirectoryForDependencies = 0x100,
         ApplicationDirectory = 0x200,
         UserDirectories = 0x400,
@@ -16,10 +14,8 @@ namespace System.Runtime.InteropServices
     }
 
     [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Method, AllowMultiple = false)]
-    public sealed class DefaultDllImportSearchPathsAttribute : Attribute
-    {
-        public DefaultDllImportSearchPathsAttribute(DllImportSearchPath paths)
-        {
+    public sealed class DefaultDllImportSearchPathsAttribute : Attribute {
+        public DefaultDllImportSearchPathsAttribute(DllImportSearchPath paths) {
             Paths = paths;
         }
 

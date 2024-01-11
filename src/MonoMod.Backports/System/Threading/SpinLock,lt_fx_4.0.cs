@@ -68,7 +68,7 @@ namespace System.Threading {
         private const int TIMEOUT_CHECK_FREQUENCY = 10;
 
         // Thr thread tracking disabled mask
-        private const int LOCK_ID_DISABLE_MASK = unchecked((int) 0x80000000);        // 1000 0000 0000 0000 0000 0000 0000 0000
+        private const int LOCK_ID_DISABLE_MASK = unchecked((int)0x80000000);        // 1000 0000 0000 0000 0000 0000 0000 0000
 
         // the lock is held by some thread, but we don't know which
         private const int LOCK_ANONYMOUS_OWNED = 0x1;                               // 0000 0000 0000 0000 0000 0000 0000 0001
@@ -77,7 +77,7 @@ namespace System.Threading {
         private const int WAITERS_MASK = ~(LOCK_ID_DISABLE_MASK | 1);               // 0111 1111 1111 1111 1111 1111 1111 1110
 
         // The Thread tacking is disabled and the lock bit is set, used in Enter fast path to make sure the id is disabled and lock is available
-        private const int ID_DISABLED_AND_ANONYMOUS_OWNED = unchecked((int) 0x80000001); // 1000 0000 0000 0000 0000 0000 0000 0001
+        private const int ID_DISABLED_AND_ANONYMOUS_OWNED = unchecked((int)0x80000001); // 1000 0000 0000 0000 0000 0000 0000 0001
 
         // If the thread is unowned if:
         // m_owner zero and the thread tracking is enabled
@@ -209,14 +209,14 @@ namespace System.Threading {
         /// </exception>
         public void TryEnter(TimeSpan timeout, ref bool lockTaken) {
             // Validate the timeout
-            long totalMilliseconds = (long) timeout.TotalMilliseconds;
+            long totalMilliseconds = (long)timeout.TotalMilliseconds;
             if (totalMilliseconds < -1 || totalMilliseconds > int.MaxValue) {
                 throw new System.ArgumentOutOfRangeException(
                     nameof(timeout), timeout, "Timeout was too long!");
             }
 
             // Call reliable enter with the int-based timeout milliseconds
-            TryEnter((int) timeout.TotalMilliseconds, ref lockTaken);
+            TryEnter((int)timeout.TotalMilliseconds, ref lockTaken);
         }
 
         /// <summary>
@@ -823,14 +823,14 @@ namespace System.Threading {
         /// <see cref="int.MaxValue"/>.</exception>
         public static bool SpinUntil(Func<bool> condition, TimeSpan timeout) {
             // Validate the timeout
-            long totalMilliseconds = (long) timeout.TotalMilliseconds;
+            long totalMilliseconds = (long)timeout.TotalMilliseconds;
             if (totalMilliseconds < -1 || totalMilliseconds > int.MaxValue) {
                 throw new System.ArgumentOutOfRangeException(
                     nameof(timeout), timeout, "Timeout out of range");
             }
 
             // Call wait with the timeout milliseconds
-            return SpinUntil(condition, (int) totalMilliseconds);
+            return SpinUntil(condition, (int)totalMilliseconds);
         }
 
         /// <summary>
@@ -885,7 +885,7 @@ namespace System.Threading {
         /// <see cref="uint"/> is used to ignore the sign and double the range to 50 days.
         /// </summary>
         public static uint GetTime() {
-            return (uint) Environment.TickCount;
+            return (uint)Environment.TickCount;
         }
 
         /// <summary>
@@ -906,7 +906,7 @@ namespace System.Threading {
             }
 
             // Subtract the elapsed time from the current wait time
-            int currentWaitTimeout = originalWaitMillisecondsTimeout - (int) elapsedMilliseconds;
+            int currentWaitTimeout = originalWaitMillisecondsTimeout - (int)elapsedMilliseconds;
             if (currentWaitTimeout <= 0) {
                 return 0;
             }

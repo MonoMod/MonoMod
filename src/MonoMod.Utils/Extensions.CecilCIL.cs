@@ -20,9 +20,9 @@ namespace MonoMod.Utils {
             if (name is null || !name.EndsWith("_S", StringComparison.Ordinal))
                 return op;
             lock (_ToLongOp) {
-                if (_ToLongOp.TryGetValue((int) op.Code, out var found))
+                if (_ToLongOp.TryGetValue((int)op.Code, out var found))
                     return found;
-                return _ToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
+                return _ToLongOp[(int)op.Code] = (OpCode?)t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
             }
         }
 
@@ -37,9 +37,9 @@ namespace MonoMod.Utils {
             if (name is null || name.EndsWith("_S", StringComparison.Ordinal))
                 return op;
             lock (_ToShortOp) {
-                if (_ToShortOp.TryGetValue((int) op.Code, out var found))
+                if (_ToShortOp.TryGetValue((int)op.Code, out var found))
                     return found;
-                return _ToShortOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
+                return _ToShortOp[(int)op.Code] = (OpCode?)t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
             }
         }
 
@@ -90,7 +90,7 @@ namespace MonoMod.Utils {
                     if (instr.Operand is Instruction target) {
                         // Thanks to Chicken Bones for helping out with this!
                         var distance = target.Offset - (instr.Offset + instr.GetSize());
-                        if (distance == (sbyte) distance) {
+                        if (distance == (sbyte)distance) {
                             var prev = instr.OpCode;
                             instr.OpCode = instr.OpCode.ToShortOp();
                             optimized = prev != instr.OpCode;

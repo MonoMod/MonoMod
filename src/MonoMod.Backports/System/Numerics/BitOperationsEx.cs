@@ -160,9 +160,9 @@ namespace System.Numerics {
 #else
         {
             if (IntPtr.Size == 8) {
-                return (nuint) RoundUpToPowerOf2((ulong) value);
+                return (nuint)RoundUpToPowerOf2((ulong)value);
             } else {
-                return (nuint) RoundUpToPowerOf2((uint) value);
+                return (nuint)RoundUpToPowerOf2((uint)value);
             }
         }
 #endif
@@ -200,9 +200,9 @@ namespace System.Numerics {
 #else
         {
             if (IntPtr.Size == 8) {
-                return LeadingZeroCount((ulong) value);
+                return LeadingZeroCount((ulong)value);
             } else {
-                return LeadingZeroCount((uint) value);
+                return LeadingZeroCount((uint)value);
             }
         }
 #endif
@@ -234,15 +234,15 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int Log2(nuint value) 
+        public static int Log2(nuint value)
 #if HAS_NINT_VARIANTS
             => BitOperations.LeadingZeroCount(value);
 #else
         {
             if (IntPtr.Size == 8) {
-                return Log2((ulong) value);
+                return Log2((ulong)value);
             } else {
-                return Log2((uint) value);
+                return Log2((uint)value);
             }
         }
 #endif
@@ -280,9 +280,9 @@ namespace System.Numerics {
 #else
         {
             if (IntPtr.Size == 8) {
-                return PopCount((ulong) value);
+                return PopCount((ulong)value);
             } else {
-                return PopCount((uint) value);
+                return PopCount((uint)value);
             }
         }
 #endif
@@ -335,9 +335,9 @@ namespace System.Numerics {
 #else
         {
             if (IntPtr.Size == 8) {
-                return TrailingZeroCount((long) value);
+                return TrailingZeroCount((long)value);
             } else {
-                return TrailingZeroCount((int) value);
+                return TrailingZeroCount((int)value);
             }
         }
 #endif
@@ -355,9 +355,9 @@ namespace System.Numerics {
 #else
         {
             if (IntPtr.Size == 8) {
-                return TrailingZeroCount((ulong) value);
+                return TrailingZeroCount((ulong)value);
             } else {
-                return TrailingZeroCount((uint) value);
+                return TrailingZeroCount((uint)value);
             }
         }
 #endif
@@ -405,9 +405,9 @@ namespace System.Numerics {
 #else
         {
             if (IntPtr.Size == 8) {
-                return (nuint) RotateLeft((ulong) value, offset);
+                return (nuint)RotateLeft((ulong)value, offset);
             } else {
-                return (nuint) RotateLeft((uint) value, offset);
+                return (nuint)RotateLeft((uint)value, offset);
             }
         }
 #endif
@@ -455,9 +455,9 @@ namespace System.Numerics {
 #else
         {
             if (IntPtr.Size == 8) {
-                return (nuint) RotateRight((ulong) value, offset);
+                return (nuint)RotateRight((ulong)value, offset);
             } else {
-                return (nuint) RotateRight((uint) value, offset);
+                return (nuint)RotateRight((uint)value, offset);
             }
         }
 #endif

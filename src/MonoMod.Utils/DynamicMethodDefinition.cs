@@ -31,14 +31,14 @@ namespace MonoMod.Utils {
                 // Unity pre 2018
                 !_IsOldMonoSRE
             )) ||
-                
+
             (PlatformDetection.Runtime is not RuntimeKind.Mono && (
                 // .NET
                 typeof(ILGenerator).Assembly
                 .GetType("System.Reflection.Emit.DynamicILGenerator")
                 ?.GetField("m_scope", BindingFlags.NonPublic | BindingFlags.Instance) == null
             )) ||
-                
+
             false;
 
         public static bool IsDynamicILAvailable => !_PreferCecil;
@@ -179,7 +179,7 @@ namespace MonoMod.Utils {
                 if (type != null) {
                     if (!t__IDMDGenerator.IsCompatible(type))
                         throw new ArgumentException($"Invalid DMDGenerator type: {dmdType}");
-                    var gen = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator) Activator.CreateInstance(type)!);
+                    var gen = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator)Activator.CreateInstance(type)!);
                     return gen.Generate(this, context);
                 }
             }

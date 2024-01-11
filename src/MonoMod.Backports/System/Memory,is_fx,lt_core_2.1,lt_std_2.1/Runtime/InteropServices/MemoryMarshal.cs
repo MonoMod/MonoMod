@@ -21,7 +21,7 @@ namespace System.Runtime.InteropServices {
             object? obj = memory.GetObjectStartLength(out int index, out int length);
             if (index < 0) {
                 Debug.Assert(length >= 0);
-                if (((MemoryManager<T>) obj!).TryGetArray(out ArraySegment<T> arraySegment)) {
+                if (((MemoryManager<T>)obj!).TryGetArray(out ArraySegment<T> arraySegment)) {
                     segment = new ArraySegment<T>(arraySegment.Array!, arraySegment.Offset + (index & ReadOnlyMemory<T>.RemoveFlagsBitMask), length);
                     return true;
                 }
@@ -122,8 +122,7 @@ namespace System.Runtime.InteropServices {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Read<T>(ReadOnlySpan<byte> source)
             where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
-            {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
             if (Unsafe.SizeOf<T>() > source.Length) {
@@ -139,11 +138,10 @@ namespace System.Runtime.InteropServices {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryRead<T>(ReadOnlySpan<byte> source, out T value)
             where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
-            {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
-            if (Unsafe.SizeOf<T>() > (uint) source.Length) {
+            if (Unsafe.SizeOf<T>() > (uint)source.Length) {
                 value = default;
                 return false;
             }
@@ -157,11 +155,10 @@ namespace System.Runtime.InteropServices {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Write<T>(Span<byte> destination, ref T value)
             where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
-            {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
-            if ((uint) Unsafe.SizeOf<T>() > (uint) destination.Length) {
+            if ((uint)Unsafe.SizeOf<T>() > (uint)destination.Length) {
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.length);
             }
             Unsafe.WriteUnaligned<T>(ref GetReference(destination), value);
@@ -174,11 +171,10 @@ namespace System.Runtime.InteropServices {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryWrite<T>(Span<byte> destination, ref T value)
             where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
-            {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
-            if (Unsafe.SizeOf<T>() > (uint) destination.Length) {
+            if (Unsafe.SizeOf<T>() > (uint)destination.Length) {
                 return false;
             }
             Unsafe.WriteUnaligned<T>(ref GetReference(destination), value);
@@ -209,11 +205,11 @@ namespace System.Runtime.InteropServices {
             }
             if (default(T) == null && array.GetType() != typeof(T[]))
                 ThrowHelper.ThrowArrayTypeMismatchException();
-            if ((uint) start > (uint) array.Length || (uint) length > (uint) (array.Length - start))
+            if ((uint)start > (uint)array.Length || (uint)length > (uint)(array.Length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException();
 
             // Before using _length, check if _length < 0, then 'and' it with RemoveFlagsBitMask
-            return new Memory<T>((object) array, start, length | (1 << 31));
+            return new Memory<T>((object)array, start, length | (1 << 31));
         }
     }
 }

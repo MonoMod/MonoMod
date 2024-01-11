@@ -146,43 +146,43 @@ namespace MonoMod.Utils.Interop {
 
             public static implicit operator BOOL(byte value) => new BOOL(value);
 
-            public static explicit operator byte(BOOL value) => (byte) (value.Value);
+            public static explicit operator byte(BOOL value) => (byte)(value.Value);
 
             public static implicit operator BOOL(short value) => new BOOL(value);
 
-            public static explicit operator short(BOOL value) => (short) (value.Value);
+            public static explicit operator short(BOOL value) => (short)(value.Value);
 
             public static implicit operator BOOL(int value) => new BOOL(value);
 
             public static implicit operator int(BOOL value) => value.Value;
 
-            public static explicit operator BOOL(long value) => new BOOL(unchecked((int) (value)));
+            public static explicit operator BOOL(long value) => new BOOL(unchecked((int)(value)));
 
             public static implicit operator long(BOOL value) => value.Value;
 
-            public static explicit operator BOOL(nint value) => new BOOL(unchecked((int) (value)));
+            public static explicit operator BOOL(nint value) => new BOOL(unchecked((int)(value)));
 
             public static implicit operator nint(BOOL value) => value.Value;
 
             public static implicit operator BOOL(sbyte value) => new BOOL(value);
 
-            public static explicit operator sbyte(BOOL value) => (sbyte) (value.Value);
+            public static explicit operator sbyte(BOOL value) => (sbyte)(value.Value);
 
             public static implicit operator BOOL(ushort value) => new BOOL(value);
 
-            public static explicit operator ushort(BOOL value) => (ushort) (value.Value);
+            public static explicit operator ushort(BOOL value) => (ushort)(value.Value);
 
-            public static explicit operator BOOL(uint value) => new BOOL(unchecked((int) (value)));
+            public static explicit operator BOOL(uint value) => new BOOL(unchecked((int)(value)));
 
-            public static explicit operator uint(BOOL value) => (uint) (value.Value);
+            public static explicit operator uint(BOOL value) => (uint)(value.Value);
 
-            public static explicit operator BOOL(ulong value) => new BOOL(unchecked((int) (value)));
+            public static explicit operator BOOL(ulong value) => new BOOL(unchecked((int)(value)));
 
-            public static explicit operator ulong(BOOL value) => (ulong) (value.Value);
+            public static explicit operator ulong(BOOL value) => (ulong)(value.Value);
 
-            public static explicit operator BOOL(nuint value) => new BOOL(unchecked((int) (value)));
+            public static explicit operator BOOL(nuint value) => new BOOL(unchecked((int)(value)));
 
-            public static explicit operator nuint(BOOL value) => (nuint) (value.Value);
+            public static explicit operator nuint(BOOL value) => (nuint)(value.Value);
 
             public int CompareTo(object? obj) {
                 if (obj is BOOL other) {
@@ -212,7 +212,7 @@ namespace MonoMod.Utils.Interop {
                 Value = value;
             }
 
-            public static HANDLE INVALID_VALUE => new HANDLE((void*) (-1));
+            public static HANDLE INVALID_VALUE => new HANDLE((void*)(-1));
 
             public static HANDLE NULL => new HANDLE(null);
 
@@ -232,45 +232,45 @@ namespace MonoMod.Utils.Interop {
 
             public static implicit operator void*(HANDLE value) => value.Value;
 
-            public static explicit operator HANDLE(byte value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(byte value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator byte(HANDLE value) => (byte) (value.Value);
+            public static explicit operator byte(HANDLE value) => (byte)(value.Value);
 
-            public static explicit operator HANDLE(short value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(short value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator short(HANDLE value) => (short) (value.Value);
+            public static explicit operator short(HANDLE value) => (short)(value.Value);
 
-            public static explicit operator HANDLE(int value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(int value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator int(HANDLE value) => (int) (value.Value);
+            public static explicit operator int(HANDLE value) => (int)(value.Value);
 
-            public static explicit operator HANDLE(long value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(long value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator long(HANDLE value) => (long) (value.Value);
+            public static explicit operator long(HANDLE value) => (long)(value.Value);
 
-            public static explicit operator HANDLE(nint value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(nint value) => new HANDLE(unchecked((void*)(value)));
 
-            public static implicit operator nint(HANDLE value) => (nint) (value.Value);
+            public static implicit operator nint(HANDLE value) => (nint)(value.Value);
 
-            public static explicit operator HANDLE(sbyte value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(sbyte value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator sbyte(HANDLE value) => (sbyte) (value.Value);
+            public static explicit operator sbyte(HANDLE value) => (sbyte)(value.Value);
 
-            public static explicit operator HANDLE(ushort value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(ushort value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator ushort(HANDLE value) => (ushort) (value.Value);
+            public static explicit operator ushort(HANDLE value) => (ushort)(value.Value);
 
-            public static explicit operator HANDLE(uint value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(uint value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator uint(HANDLE value) => (uint) (value.Value);
+            public static explicit operator uint(HANDLE value) => (uint)(value.Value);
 
-            public static explicit operator HANDLE(ulong value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(ulong value) => new HANDLE(unchecked((void*)(value)));
 
-            public static explicit operator ulong(HANDLE value) => (ulong) (value.Value);
+            public static explicit operator ulong(HANDLE value) => (ulong)(value.Value);
 
-            public static explicit operator HANDLE(nuint value) => new HANDLE(unchecked((void*) (value)));
+            public static explicit operator HANDLE(nuint value) => new HANDLE(unchecked((void*)(value)));
 
-            public static implicit operator nuint(HANDLE value) => (nuint) (value.Value);
+            public static implicit operator nuint(HANDLE value) => (nuint)(value.Value);
 
             public int CompareTo(object? obj) {
                 if (obj is HANDLE other) {
@@ -282,24 +282,24 @@ namespace MonoMod.Utils.Interop {
 
             public int CompareTo(HANDLE other)
                 => sizeof(nint) == 4
-                    ? ((uint) (Value)).CompareTo((uint) (other.Value))
-                    : ((ulong) (Value)).CompareTo((ulong) (other.Value));
+                    ? ((uint)(Value)).CompareTo((uint)(other.Value))
+                    : ((ulong)(Value)).CompareTo((ulong)(other.Value));
 
             public override bool Equals(object? obj) => (obj is HANDLE other) && Equals(other);
 
-            public bool Equals(HANDLE other) => ((nuint) (Value)).Equals((nuint) (other.Value));
+            public bool Equals(HANDLE other) => ((nuint)(Value)).Equals((nuint)(other.Value));
 
-            public override int GetHashCode() => ((nuint) (Value)).GetHashCode();
+            public override int GetHashCode() => ((nuint)(Value)).GetHashCode();
 
             public override string ToString()
                 => sizeof(nuint) == 4
-                    ? ((uint) (Value)).ToString("X8", null)
-                    : ((ulong) (Value)).ToString("X16", null);
+                    ? ((uint)(Value)).ToString("X8", null)
+                    : ((ulong)(Value)).ToString("X16", null);
 
             public string ToString(string? format, IFormatProvider? formatProvider)
                 => sizeof(nint) == 4
-                    ? ((uint) (Value)).ToString(format, formatProvider)
-                    : ((ulong) (Value)).ToString(format, formatProvider);
+                    ? ((uint)(Value)).ToString(format, formatProvider)
+                    : ((ulong)(Value)).ToString(format, formatProvider);
         }
 
         public readonly unsafe partial struct HMODULE : IComparable, IComparable<HMODULE>, IEquatable<HMODULE>, IFormattable {
@@ -309,7 +309,7 @@ namespace MonoMod.Utils.Interop {
                 Value = value;
             }
 
-            public static HMODULE INVALID_VALUE => new HMODULE((void*) (-1));
+            public static HMODULE INVALID_VALUE => new HMODULE((void*)(-1));
 
             public static HMODULE NULL => new HMODULE(null);
 
@@ -333,45 +333,45 @@ namespace MonoMod.Utils.Interop {
 
             public static implicit operator HANDLE(HMODULE value) => new HANDLE(value.Value);
 
-            public static explicit operator HMODULE(byte value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(byte value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator byte(HMODULE value) => (byte) (value.Value);
+            public static explicit operator byte(HMODULE value) => (byte)(value.Value);
 
-            public static explicit operator HMODULE(short value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(short value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator short(HMODULE value) => (short) (value.Value);
+            public static explicit operator short(HMODULE value) => (short)(value.Value);
 
-            public static explicit operator HMODULE(int value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(int value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator int(HMODULE value) => (int) (value.Value);
+            public static explicit operator int(HMODULE value) => (int)(value.Value);
 
-            public static explicit operator HMODULE(long value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(long value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator long(HMODULE value) => (long) (value.Value);
+            public static explicit operator long(HMODULE value) => (long)(value.Value);
 
-            public static explicit operator HMODULE(nint value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(nint value) => new HMODULE(unchecked((void*)(value)));
 
-            public static implicit operator nint(HMODULE value) => (nint) (value.Value);
+            public static implicit operator nint(HMODULE value) => (nint)(value.Value);
 
-            public static explicit operator HMODULE(sbyte value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(sbyte value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator sbyte(HMODULE value) => (sbyte) (value.Value);
+            public static explicit operator sbyte(HMODULE value) => (sbyte)(value.Value);
 
-            public static explicit operator HMODULE(ushort value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(ushort value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator ushort(HMODULE value) => (ushort) (value.Value);
+            public static explicit operator ushort(HMODULE value) => (ushort)(value.Value);
 
-            public static explicit operator HMODULE(uint value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(uint value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator uint(HMODULE value) => (uint) (value.Value);
+            public static explicit operator uint(HMODULE value) => (uint)(value.Value);
 
-            public static explicit operator HMODULE(ulong value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(ulong value) => new HMODULE(unchecked((void*)(value)));
 
-            public static explicit operator ulong(HMODULE value) => (ulong) (value.Value);
+            public static explicit operator ulong(HMODULE value) => (ulong)(value.Value);
 
-            public static explicit operator HMODULE(nuint value) => new HMODULE(unchecked((void*) (value)));
+            public static explicit operator HMODULE(nuint value) => new HMODULE(unchecked((void*)(value)));
 
-            public static implicit operator nuint(HMODULE value) => (nuint) (value.Value);
+            public static implicit operator nuint(HMODULE value) => (nuint)(value.Value);
 
             public int CompareTo(object? obj) {
                 if (obj is HMODULE other) {
@@ -382,24 +382,24 @@ namespace MonoMod.Utils.Interop {
             }
             public int CompareTo(HMODULE other)
                 => sizeof(nint) == 4
-                    ? ((uint) (Value)).CompareTo((uint) (other.Value))
-                    : ((ulong) (Value)).CompareTo((ulong) (other.Value));
+                    ? ((uint)(Value)).CompareTo((uint)(other.Value))
+                    : ((ulong)(Value)).CompareTo((ulong)(other.Value));
 
             public override bool Equals(object? obj) => (obj is HMODULE other) && Equals(other);
 
-            public bool Equals(HMODULE other) => ((nuint) (Value)).Equals((nuint) (other.Value));
+            public bool Equals(HMODULE other) => ((nuint)(Value)).Equals((nuint)(other.Value));
 
-            public override int GetHashCode() => ((nuint) (Value)).GetHashCode();
+            public override int GetHashCode() => ((nuint)(Value)).GetHashCode();
 
             public override string ToString()
                 => sizeof(nuint) == 4
-                    ? ((uint) (Value)).ToString("X8", null)
-                    : ((ulong) (Value)).ToString("X16", null);
+                    ? ((uint)(Value)).ToString("X8", null)
+                    : ((ulong)(Value)).ToString("X16", null);
 
             public string ToString(string? format, IFormatProvider? formatProvider)
                 => sizeof(nint) == 4
-                    ? ((uint) (Value)).ToString(format, formatProvider)
-                    : ((ulong) (Value)).ToString(format, formatProvider);
+                    ? ((uint)(Value)).ToString(format, formatProvider)
+                    : ((ulong)(Value)).ToString(format, formatProvider);
         }
 
         [NativeTypeName("#define PROCESSOR_ARCHITECTURE_INTEL 0")]

@@ -147,8 +147,8 @@ namespace System.Collections.Concurrent {
         public static OrderablePartitioner<Tuple<long, long>> Create(long fromInclusive, long toExclusive) {
             if (toExclusive <= fromInclusive)
                 throw new ArgumentOutOfRangeException(nameof(toExclusive));
-            decimal range = (decimal) toExclusive - fromInclusive;
-            long rangeSize = (long) (range / (Environment.ProcessorCount * CoreOversubscriptionRate));
+            decimal range = (decimal)toExclusive - fromInclusive;
+            long rangeSize = (long)(range / (Environment.ProcessorCount * CoreOversubscriptionRate));
             if (rangeSize == 0)
                 rangeSize = 1;
             return Partitioner.Create(CreateRanges(fromInclusive, toExclusive, rangeSize), EnumerablePartitionerOptions.NoBuffering); // chunk one range at a time
@@ -200,8 +200,8 @@ namespace System.Collections.Concurrent {
         public static OrderablePartitioner<Tuple<int, int>> Create(int fromInclusive, int toExclusive) {
             if (toExclusive <= fromInclusive)
                 throw new ArgumentOutOfRangeException(nameof(toExclusive));
-            long range = (long) toExclusive - fromInclusive;
-            int rangeSize = (int) (range / (Environment.ProcessorCount * CoreOversubscriptionRate));
+            long range = (long)toExclusive - fromInclusive;
+            int rangeSize = (int)(range / (Environment.ProcessorCount * CoreOversubscriptionRate));
             if (rangeSize == 0)
                 rangeSize = 1;
             return Partitioner.Create(CreateRanges(fromInclusive, toExclusive, rangeSize), EnumerablePartitionerOptions.NoBuffering); // chunk one range at a time
@@ -353,7 +353,7 @@ namespace System.Collections.Concurrent {
             /// </summary>
             object? IEnumerator.Current {
                 get {
-                    return ((DynamicPartitionEnumerator_Abstract<TSource, TSourceReader>) this).Current;
+                    return ((DynamicPartitionEnumerator_Abstract<TSource, TSourceReader>)this).Current;
                 }
             }
 
@@ -550,7 +550,7 @@ namespace System.Collections.Concurrent {
 
 
                 IEnumerator IEnumerable.GetEnumerator() {
-                    return ((InternalPartitionEnumerable) this).GetEnumerator();
+                    return ((InternalPartitionEnumerable)this).GetEnumerator();
                 }
 
                 ///////////////////
@@ -995,9 +995,9 @@ namespace System.Collections.Concurrent {
                         //set up local indexes.
                         //_currentChunkSize is always set to requestedChunkSize when source data had
                         //enough elements of what we requested
-                        _currentChunkSize!.Value = (int) (newSharedIndex - oldSharedIndex);
+                        _currentChunkSize!.Value = (int)(newSharedIndex - oldSharedIndex);
                         _localOffset!.Value = -1;
-                        _startIndex = (int) (oldSharedIndex + 1);
+                        _startIndex = (int)(oldSharedIndex + 1);
                         return true;
                     }
                 }
@@ -1061,7 +1061,7 @@ namespace System.Collections.Concurrent {
                 }
 
                 IEnumerator IEnumerable.GetEnumerator() {
-                    return ((InternalPartitionEnumerable) this).GetEnumerator();
+                    return ((InternalPartitionEnumerable)this).GetEnumerator();
                 }
             }
 
@@ -1129,7 +1129,7 @@ namespace System.Collections.Concurrent {
                 }
 
                 IEnumerator IEnumerable.GetEnumerator() {
-                    return ((InternalPartitionEnumerable) this).GetEnumerator();
+                    return ((InternalPartitionEnumerable)this).GetEnumerator();
                 }
 
 
@@ -1311,7 +1311,7 @@ namespace System.Collections.Concurrent {
 
             object? IEnumerator.Current {
                 get {
-                    return ((StaticIndexRangePartition<TSource>) this).Current;
+                    return ((StaticIndexRangePartition<TSource>)this).Current;
                 }
             }
         }

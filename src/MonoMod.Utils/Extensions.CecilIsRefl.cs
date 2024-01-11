@@ -32,7 +32,7 @@ namespace MonoMod.Utils {
             if (mref is GenericParameter genParamRef) {
                 if (minfo is not Type genParamInfo)
                     return false;
-                
+
                 if (!genParamInfo.IsGenericParameter) {
                     if (genParamRef.Owner is IGenericInstance genParamRefOwner)
                         return genParamRefOwner.GenericArguments[genParamRef.Position].Is(genParamInfo);

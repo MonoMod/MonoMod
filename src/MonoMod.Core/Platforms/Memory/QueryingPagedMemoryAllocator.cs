@@ -56,7 +56,7 @@ namespace MonoMod.Core.Platforms.Memory {
         /// </summary>
         /// <param name="alloc">The page allocator to use.</param>
         public QueryingPagedMemoryAllocator(QueryingMemoryPageAllocatorBase alloc)
-            : base((nint) Helpers.ThrowIfNull(alloc).PageSize) {
+            : base((nint)Helpers.ThrowIfNull(alloc).PageSize) {
             pageAlloc = alloc;
         }
 
@@ -67,12 +67,12 @@ namespace MonoMod.Core.Platforms.Memory {
                 return false;
             }
 
-            var pageObj = new Page(this, allocBase, (uint) PageSize, request.Executable);
+            var pageObj = new Page(this, allocBase, (uint)PageSize, request.Executable);
             InsertAllocatedPage(pageObj);
 
             // now that we have a page, we'll try to allocate out of it
             // if that fails, immediately register for cleanup
-            if (!pageObj.TryAllocate((uint) request.Size, (uint) request.Alignment, out var alloc)) {
+            if (!pageObj.TryAllocate((uint)request.Size, (uint)request.Alignment, out var alloc)) {
                 RegisterForCleanup(pageObj);
                 allocated = null;
                 return false;
@@ -124,12 +124,12 @@ namespace MonoMod.Core.Platforms.Memory {
                 if (!pageAlloc.TryAllocatePage(page, PageSize, request.Base.Executable, out var allocBase)) // allocation failed
                     goto Fail;
 
-                var pageObj = new Page(this, allocBase, (uint) PageSize, request.Base.Executable);
+                var pageObj = new Page(this, allocBase, (uint)PageSize, request.Base.Executable);
                 InsertAllocatedPage(pageObj);
 
                 // now that we have a page, we'll try to allocate out of it
                 // if that fails, immediately register for cleanup
-                if (!pageObj.TryAllocate((uint) request.Base.Size, (uint) request.Base.Alignment, out var alloc)) {
+                if (!pageObj.TryAllocate((uint)request.Base.Size, (uint)request.Base.Alignment, out var alloc)) {
                     RegisterForCleanup(pageObj);
                     goto Fail;
                 }

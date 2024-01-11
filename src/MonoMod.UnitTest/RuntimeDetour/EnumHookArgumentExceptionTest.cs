@@ -34,8 +34,8 @@ namespace MonoMod.UnitTest.RuntimeDetour {
             None,
         }
 
-        private struct TestStruct { 
-            
+        private struct TestStruct {
+
         }
 
         private static void HookTarget(TestEnum @enum) {

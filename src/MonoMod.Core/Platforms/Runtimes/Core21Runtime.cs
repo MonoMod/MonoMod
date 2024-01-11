@@ -63,12 +63,12 @@ namespace MonoMod.Core.Platforms.Runtimes {
             => del.CastDelegate<V21.CompileMethodDelegate>();
 
         protected static unsafe IntPtr* GetVTableEntry(IntPtr @object, int index)
-            => (*(IntPtr**) @object) + index;
+            => (*(IntPtr**)@object) + index;
         protected static unsafe IntPtr ReadObjectVTable(IntPtr @object, int index)
             => *GetVTableEntry(@object, index);
 
         private unsafe void CheckVersionGuid(IntPtr jit) {
-            var getVersionIdentPtr = (delegate* unmanaged[Thiscall]<IntPtr, Guid*, void>) ReadObjectVTable(jit, VtableIndexICorJitCompilerGetVersionGuid);
+            var getVersionIdentPtr = (delegate* unmanaged[Thiscall]<IntPtr, Guid*, void>)ReadObjectVTable(jit, VtableIndexICorJitCompilerGetVersionGuid);
             Guid guid;
             getVersionIdentPtr(jit, &guid);
             Helpers.Assert(guid == ExpectedJitVersion,
@@ -100,7 +100,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             Span<byte> ptrData = stackalloc byte[sizeof(IntPtr)];
             MemoryMarshal.Write(ptrData, ref ourCompileMethodPtr);
 
-            System.PatchData(PatchTargetKind.ReadOnly, (IntPtr) compileMethodSlot, ptrData, default);
+            System.PatchData(PatchTargetKind.ReadOnly, (IntPtr)compileMethodSlot, ptrData, default);
         }
 
         protected unsafe virtual void InvokeCompileMethodToPrepare(IntPtr method) {
@@ -212,7 +212,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             var method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
 
                             // codeStart and codeStartRw are the same because this runtime doesn't distinguish them at this point in the JIT
-                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) (*pNativeEntry), (IntPtr) (*pNativeEntry), *pNativeSizeOfCode);
+                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr)(*pNativeEntry), (IntPtr)(*pNativeEntry), *pNativeSizeOfCode);
                         } catch {
                             // eat the exception so we don't accidentally bubble up to native code
                         }
@@ -350,7 +350,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             /// <returns></returns>
             private static MethodInfo GetOrCreateGetTypeFromHandleUnsafe(Core21Runtime runtime) {
                 const string MethodName = "GetTypeFromHandleUnsafe";
-                var method = typeof(Type).GetMethod(MethodName, (BindingFlags) (-1));
+                var method = typeof(Type).GetMethod(MethodName, (BindingFlags)(-1));
 
                 if (method is not null)
                     return method;
@@ -388,7 +388,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 var type = assembly.GetType("System.Type");
                 Helpers.DAssert(type is not null);
-                method = type.GetMethod(MethodName, (BindingFlags) (-1));
+                method = type.GetMethod(MethodName, (BindingFlags)(-1));
                 Helpers.DAssert(method is not null);
                 return method;
             }
@@ -406,7 +406,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             const int PEFILE_SYSTEM = 0x01;
 
-            var domAssembly = (IntPtr) RuntimeAssemblyPtrField.GetValue(assembly)!;
+            var domAssembly = (IntPtr)RuntimeAssemblyPtrField.GetValue(assembly)!;
 
             // DomainAssembly in src/coreclr/src/vm/domainfile.h
             var domOffset =
@@ -425,7 +425,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 IntPtr.Size + // class UMThunkHash *m_pUMThunkHash;
                 sizeof(int) + // BOOL m_bDisableActivationCheck;
                 sizeof(int) + // DWORD m_dwReasonForRejectingNativeImage;
-                // #ifdef FEATURE_PREJIT Volatile<DomainFile*> m_pNextDomainFileWithNativeImage;
+                              // #ifdef FEATURE_PREJIT Volatile<DomainFile*> m_pNextDomainFileWithNativeImage;
                               // DomainAssembly
                 IntPtr.Size + // LOADERHANDLE                            m_hExposedAssemblyObject;
                 0; // here is our Assembly*
@@ -435,7 +435,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     sizeof(int); // padding to align the next TADDR (which is a void*) (m_hExposedModuleObject)
             }
 
-            var pAssembly = *(IntPtr*) (((byte*) domAssembly) + domOffset);
+            var pAssembly = *(IntPtr*)(((byte*)domAssembly) + domOffset);
 
             // Assembly in src/coreclr/src/vm/assembly.hpp
             var pAssemOffset =
@@ -445,7 +445,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 IntPtr.Size + // PTR_Module            m_pManifest;
                 0; // here is out PEAssembly* (m_pManifestFile)
 
-            var peAssembly = *(IntPtr*) (((byte*) pAssembly) + pAssemOffset);
+            var peAssembly = *(IntPtr*)(((byte*)pAssembly) + pAssemOffset);
 
             // PEAssembly in src/coreclr/src/vm/pefile.h
             var peAssemOffset =
@@ -457,12 +457,12 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     sizeof(int) + // COUNT_T             m_size; // COUNT_T is a typedef of uint32_t
                     sizeof(int) + // COUNT_T             m_allocation;
                     sizeof(int) + // UINT32              m_flags;
-                    //sizeof(int) + // padding to 8 bytes
+                                  //sizeof(int) + // padding to 8 bytes
                     IntPtr.Size + // union { BYTE* m_buffer; WCHAR* m_asStr; };
                     sizeof(int) + // int                 m_revision
                                   // SString (itself empty, only base type SBuffer has data)
                                   // SString             m_debugName; // src/coreclr/vm/sstring.h
-                    //sizeof(int) + // padding to 8 bytes
+                                  //sizeof(int) + // padding to 8 bytes
                 0 : 0) +          // #endif
                 IntPtr.Size + // PTR_PEImage              m_identity;
                 IntPtr.Size + // PTR_PEImage              m_openedILimage;
@@ -479,7 +479,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 peAssemOffset += 2 * sizeof(int); // filled in padding
             }
 
-            var flags = (int*) (((byte*) peAssembly) + peAssemOffset);
+            var flags = (int*)(((byte*)peAssembly) + peAssemOffset);
             *flags |= PEFILE_SYSTEM;
         }
     }

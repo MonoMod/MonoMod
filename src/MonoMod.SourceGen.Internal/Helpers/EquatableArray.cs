@@ -77,11 +77,13 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
 
     /// <sinheritdoc/>
     public override int GetHashCode() {
-        if (this.array is not T[] array)             return 0;
+        if (this.array is not T[] array)
+            return 0;
 
         HashCode hashCode = default;
 
-        foreach (var item in array)             hashCode.Add(item);
+        foreach (var item in array)
+            hashCode.Add(item);
 
         return hashCode.ToHashCode();
     }
@@ -130,12 +132,12 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
 
     /// <sinheritdoc/>
     IEnumerator<T> IEnumerable<T>.GetEnumerator() {
-        return ((IEnumerable<T>) AsImmutableArray()).GetEnumerator();
+        return ((IEnumerable<T>)AsImmutableArray()).GetEnumerator();
     }
 
     /// <sinheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() {
-        return ((IEnumerable) AsImmutableArray()).GetEnumerator();
+        return ((IEnumerable)AsImmutableArray()).GetEnumerator();
     }
 
     /// <summary>

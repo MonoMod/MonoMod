@@ -3,33 +3,27 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 
-namespace System
-{
+namespace System {
     [Serializable]
     public sealed class WeakReference<T> : ISerializable
-        where T : class
-    {
+        where T : class {
         private readonly bool _trackResurrection;
 
         [NonSerialized]
         private GCHandle _handle;
 
         public WeakReference(T? target)
-            : this(target, trackResurrection: false)
-        {
+            : this(target, trackResurrection: false) {
             // Empty
         }
 
-        public WeakReference(T? target, bool trackResurrection)
-        {
+        public WeakReference(T? target, bool trackResurrection) {
             _trackResurrection = trackResurrection;
             SetTarget(target);
         }
 
-        private WeakReference(SerializationInfo info, StreamingContext context)
-        {
-            if (info == null)
-            {
+        private WeakReference(SerializationInfo info, StreamingContext context) {
+            if (info == null) {
                 throw new ArgumentNullException(nameof(info));
             }
 
@@ -40,10 +34,8 @@ namespace System
         }
 
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            if (info == null)
-            {
+        public void GetObjectData(SerializationInfo info, StreamingContext context) {
+            if (info == null) {
                 throw new ArgumentNullException(nameof(info));
             }
 
@@ -53,12 +45,10 @@ namespace System
         }
 
         [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
-        public void SetTarget(T? value)
-        {
+        public void SetTarget(T? value) {
             var oldHandle = _handle;
             _handle = GetNewHandle(value, _trackResurrection);
-            if (!oldHandle.IsAllocated)
-            {
+            if (!oldHandle.IsAllocated) {
                 return;
             }
 
@@ -76,34 +66,27 @@ namespace System
         }
 
         [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
-        public bool TryGetTarget([NotNullWhen(true)] out T? target)
-        {
+        public bool TryGetTarget([NotNullWhen(true)] out T? target) {
             target = default;
-            if (!_handle.IsAllocated)
-            {
+            if (!_handle.IsAllocated) {
                 return false;
             }
 
-            try
-            {
+            try {
                 var obj = _handle.Target;
-                if (obj == null)
-                {
+                if (obj == null) {
                     return false;
                 }
 
                 target = obj as T;
                 return target != null;
-            }
-            catch (InvalidOperationException)
-            {
+            } catch (InvalidOperationException) {
                 return false;
             }
         }
 
         [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
-        private static GCHandle GetNewHandle(T? value, bool trackResurrection)
-        {
+        private static GCHandle GetNewHandle(T? value, bool trackResurrection) {
             return GCHandle.Alloc(value, trackResurrection ? GCHandleType.WeakTrackResurrection : GCHandleType.Weak);
         }
     }

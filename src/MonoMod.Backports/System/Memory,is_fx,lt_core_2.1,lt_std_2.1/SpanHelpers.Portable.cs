@@ -27,27 +27,27 @@ namespace System {
             IntPtr diff = Unsafe.ByteOffset(ref src, ref dst);
 
             bool isOverlapped = (sizeof(IntPtr) == sizeof(int))
-                ? (uint) diff < (uint) srcByteCount || (uint) diff > (uint) -(int) dstByteCount
-                : (ulong) diff < (ulong) srcByteCount || (ulong) diff > (ulong) -(long) dstByteCount;
+                ? (uint)diff < (uint)srcByteCount || (uint)diff > (uint)-(int)dstByteCount
+                : (ulong)diff < (ulong)srcByteCount || (ulong)diff > (ulong)-(long)dstByteCount;
 
             if (!isOverlapped && !SpanHelpers.IsReferenceOrContainsReferences<T>()) {
                 ref byte dstBytes = ref Unsafe.As<T, byte>(ref dst);
                 ref byte srcBytes = ref Unsafe.As<T, byte>(ref src);
-                ulong byteCount = (ulong) srcByteCount;
+                ulong byteCount = (ulong)srcByteCount;
                 ulong index = 0;
 
                 while (index < byteCount) {
-                    uint blockSize = (byteCount - index) > uint.MaxValue ? uint.MaxValue : (uint) (byteCount - index);
+                    uint blockSize = (byteCount - index) > uint.MaxValue ? uint.MaxValue : (uint)(byteCount - index);
                     Unsafe.CopyBlock(
-                        ref Unsafe.Add(ref dstBytes, (IntPtr) index),
-                        ref Unsafe.Add(ref srcBytes, (IntPtr) index),
+                        ref Unsafe.Add(ref dstBytes, (IntPtr)index),
+                        ref Unsafe.Add(ref srcBytes, (IntPtr)index),
                         blockSize);
                     index += blockSize;
                 }
             } else {
                 bool srcGreaterThanDst = (sizeof(IntPtr) == sizeof(int))
-                    ? (uint) diff > (uint) -(int) dstByteCount
-                    : (ulong) diff > (ulong) -(long) dstByteCount;
+                    ? (uint)diff > (uint)-(int)dstByteCount
+                    : (ulong)diff > (ulong)-(long)dstByteCount;
 
                 int direction = srcGreaterThanDst ? 1 : -1;
                 int runCount = srcGreaterThanDst ? 0 : srcLength - 1;
@@ -97,12 +97,12 @@ namespace System {
             unsafe {
                 if (sizeof(IntPtr) == sizeof(int)) {
                     // 32-bit path.
-                    uint byteLength = (uint) index * (uint) Unsafe.SizeOf<T>();
-                    return (IntPtr) (((byte*) start) + byteLength);
+                    uint byteLength = (uint)index * (uint)Unsafe.SizeOf<T>();
+                    return (IntPtr)(((byte*)start) + byteLength);
                 } else {
                     // 64-bit path.
-                    ulong byteLength = (ulong) index * (ulong) Unsafe.SizeOf<T>();
-                    return (IntPtr) (((byte*) start) + byteLength);
+                    ulong byteLength = (ulong)index * (ulong)Unsafe.SizeOf<T>();
+                    return (IntPtr)(((byte*)start) + byteLength);
                 }
             }
         }
@@ -139,17 +139,17 @@ namespace System {
 
         public unsafe static void ClearLessThanPointerSized(byte* ptr, UIntPtr byteLength) {
             if (sizeof(UIntPtr) == sizeof(uint)) {
-                Unsafe.InitBlockUnaligned(ptr, 0, (uint) byteLength);
+                Unsafe.InitBlockUnaligned(ptr, 0, (uint)byteLength);
             } else {
                 // PERF: Optimize for common case of length <= uint.MaxValue
-                ulong bytesRemaining = (ulong) byteLength;
-                uint bytesToClear = (uint) (bytesRemaining & uint.MaxValue);
+                ulong bytesRemaining = (ulong)byteLength;
+                uint bytesToClear = (uint)(bytesRemaining & uint.MaxValue);
                 Unsafe.InitBlockUnaligned(ptr, 0, bytesToClear);
                 bytesRemaining -= bytesToClear;
                 ptr += bytesToClear;
                 // Clear any bytes > uint.MaxValue
                 while (bytesRemaining > 0) {
-                    bytesToClear = (bytesRemaining >= uint.MaxValue) ? uint.MaxValue : (uint) bytesRemaining;
+                    bytesToClear = (bytesRemaining >= uint.MaxValue) ? uint.MaxValue : (uint)bytesRemaining;
                     Unsafe.InitBlockUnaligned(ptr, 0, bytesToClear);
                     ptr += bytesToClear;
                     bytesRemaining -= bytesToClear;
@@ -159,18 +159,18 @@ namespace System {
 
         public static unsafe void ClearLessThanPointerSized(ref byte b, UIntPtr byteLength) {
             if (sizeof(UIntPtr) == sizeof(uint)) {
-                Unsafe.InitBlockUnaligned(ref b, 0, (uint) byteLength);
+                Unsafe.InitBlockUnaligned(ref b, 0, (uint)byteLength);
             } else {
                 // PERF: Optimize for common case of length <= uint.MaxValue
-                ulong bytesRemaining = (ulong) byteLength;
-                uint bytesToClear = (uint) (bytesRemaining & uint.MaxValue);
+                ulong bytesRemaining = (ulong)byteLength;
+                uint bytesToClear = (uint)(bytesRemaining & uint.MaxValue);
                 Unsafe.InitBlockUnaligned(ref b, 0, bytesToClear);
                 bytesRemaining -= bytesToClear;
                 long byteOffset = bytesToClear;
                 // Clear any bytes > uint.MaxValue
                 while (bytesRemaining > 0) {
-                    bytesToClear = (bytesRemaining >= uint.MaxValue) ? uint.MaxValue : (uint) bytesRemaining;
-                    ref byte bOffset = ref Unsafe.Add(ref b, (IntPtr) byteOffset);
+                    bytesToClear = (bytesRemaining >= uint.MaxValue) ? uint.MaxValue : (uint)bytesRemaining;
+                    ref byte bOffset = ref Unsafe.Add(ref b, (IntPtr)byteOffset);
                     Unsafe.InitBlockUnaligned(ref bOffset, 0, bytesToClear);
                     byteOffset += bytesToClear;
                     bytesRemaining -= bytesToClear;
@@ -182,19 +182,19 @@ namespace System {
             // TODO: Perhaps do switch casing to improve small size perf
 
             nint i = 0;
-            while (i.LessThanEqual(byteLength - (nuint) sizeof(Reg64))) {
+            while (i.LessThanEqual(byteLength - (nuint)sizeof(Reg64))) {
                 Unsafe.As<byte, Reg64>(ref Unsafe.Add<byte>(ref b, i)) = default;
                 i += sizeof(Reg64);
             }
-            if (i.LessThanEqual(byteLength - (nuint) sizeof(Reg32))) {
+            if (i.LessThanEqual(byteLength - (nuint)sizeof(Reg32))) {
                 Unsafe.As<byte, Reg32>(ref Unsafe.Add<byte>(ref b, i)) = default;
                 i += sizeof(Reg32);
             }
-            if (i.LessThanEqual(byteLength - (nuint) sizeof(Reg16))) {
+            if (i.LessThanEqual(byteLength - (nuint)sizeof(Reg16))) {
                 Unsafe.As<byte, Reg16>(ref Unsafe.Add<byte>(ref b, i)) = default;
                 i += sizeof(Reg16);
             }
-            if (i.LessThanEqual(byteLength - (nuint) sizeof(long))) {
+            if (i.LessThanEqual(byteLength - (nuint)sizeof(long))) {
                 Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, i)) = 0;
                 i += sizeof(long);
             }
@@ -243,8 +243,8 @@ namespace System {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe static bool LessThanEqual(this IntPtr index, UIntPtr length) {
             return (sizeof(UIntPtr) == sizeof(uint))
-                ? (int) index <= (int) length
-                : (long) index <= (long) length;
+                ? (int)index <= (int)length
+                : (long)index <= (long)length;
         }
 
         [StructLayout(LayoutKind.Sequential, Size = 64)]

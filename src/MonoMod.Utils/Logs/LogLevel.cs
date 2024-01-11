@@ -35,7 +35,7 @@ namespace MonoMod.Logs {
                 LogLevel.Warning => nameof(LogLevel.Warning),
                 LogLevel.Error => nameof(LogLevel.Error),
                 LogLevel.Assert => nameof(LogLevel.Assert),
-                var x => ((int) x).ToString(provider)
+                var x => ((int)x).ToString(provider)
             };
     }
 }

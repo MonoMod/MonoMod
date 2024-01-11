@@ -64,7 +64,7 @@ namespace System {
             }
             if (default(T) == null && array.GetType() != typeof(T[]))
                 ThrowHelper.ThrowArrayTypeMismatchException();
-            if ((uint) start > (uint) array.Length)
+            if ((uint)start > (uint)array.Length)
                 ThrowHelper.ThrowArgumentOutOfRangeException();
 
             _object = array;
@@ -94,7 +94,7 @@ namespace System {
             }
             if (default(T) == null && array.GetType() != typeof(T[]))
                 ThrowHelper.ThrowArrayTypeMismatchException();
-            if ((uint) start > (uint) array.Length || (uint) length > (uint) (array.Length - start))
+            if ((uint)start > (uint)array.Length || (uint)length > (uint)(array.Length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException();
 
             _object = array;
@@ -211,7 +211,7 @@ namespace System {
             // Used to maintain the high-bit which indicates whether the Memory has been pre-pinned or not.
             int capturedLength = _length;
             int actualLength = capturedLength & RemoveFlagsBitMask;
-            if ((uint) start > (uint) actualLength) {
+            if ((uint)start > (uint)actualLength) {
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
             }
 
@@ -232,7 +232,7 @@ namespace System {
             // Used to maintain the high-bit which indicates whether the Memory has been pre-pinned or not.
             int capturedLength = _length;
             int actualLength = capturedLength & RemoveFlagsBitMask;
-            if ((uint) start > (uint) actualLength || (uint) length > (uint) (actualLength - start)) {
+            if ((uint)start > (uint)actualLength || (uint)length > (uint)(actualLength - start)) {
                 ThrowHelper.ThrowArgumentOutOfRangeException();
             }
 
@@ -249,7 +249,7 @@ namespace System {
                 if (_index < 0) {
                     Debug.Assert(_length >= 0);
                     Debug.Assert(_object != null);
-                    return ((MemoryManager<T>) _object!).GetSpan().Slice(_index & RemoveFlagsBitMask, _length);
+                    return ((MemoryManager<T>)_object!).GetSpan().Slice(_index & RemoveFlagsBitMask, _length);
                 } else if (typeof(T) == typeof(char) && _object is string s) {
                     Debug.Assert(_length >= 0);
                     // This is dangerous, returning a writable span for a string that should be immutable.
@@ -259,7 +259,7 @@ namespace System {
                     // suit here to make it work as best as possible.
                     return new Span<T>(Unsafe.As<Pinnable<T>>(s), MemoryExtensions.StringAdjustment, s.Length).Slice(_index, _length);
                 } else if (_object != null) {
-                    return new Span<T>((T[]) _object, _index, _length & RemoveFlagsBitMask);
+                    return new Span<T>((T[])_object, _index, _length & RemoveFlagsBitMask);
                 } else {
                     return default;
                 }
@@ -300,7 +300,7 @@ namespace System {
         public unsafe MemoryHandle Pin() {
             if (_index < 0) {
                 Debug.Assert(_object != null);
-                return ((MemoryManager<T>) _object!).Pin((_index & RemoveFlagsBitMask));
+                return ((MemoryManager<T>)_object!).Pin((_index & RemoveFlagsBitMask));
             } else if (typeof(T) == typeof(char) && _object is string s) {
                 // This case can only happen if a ReadOnlyMemory<char> was created around a string
                 // and then that was cast to a Memory<char> using unsafe / marshaling code.  This needs

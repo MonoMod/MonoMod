@@ -120,7 +120,7 @@ namespace MonoMod.Utils {
                     _DataMap.Add(key, data);
                 }
                 _Data = data;
-                
+
                 Weak = weak;
                 if (keepAlive)
                     KeepAlive = obj;
@@ -133,7 +133,7 @@ namespace MonoMod.Utils {
         }
 
         public T? Get<T>(string name)
-            => (T?) this[name];
+            => (T?)this[name];
 
         public void Set<T>(string name, T value)
             => this[name] = value;

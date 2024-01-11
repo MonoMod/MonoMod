@@ -130,7 +130,7 @@ namespace MonoMod.Core.Platforms {
                 disposedValue = true;
             }
         }
-        
+
         /// <summary>
         /// Undoes and cleans up this detour.
         /// </summary>

@@ -351,7 +351,7 @@ namespace MonoMod.UnitTest {
                     typeof(TwoInts).GetMethod("get_Magic", BindingFlags.Public | BindingFlags.Instance),
                     new Func<Func<IntPtr, int>, IntPtr, int>((orig, self) => {
                         var rv = orig(self);
-                        rv = rv * 2 + ((TwoInts*) self)->B;
+                        rv = rv * 2 + ((TwoInts*)self)->B;
                         return rv;
                     })
                 )) {
@@ -397,12 +397,12 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
+        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions)512))]
         internal static int DummyA(int a, int b) {
             return a * b * 2;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions) 512))]
+        [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions)512))]
         internal static int DummyB(int a, int b) {
             return a * b * 2;
         }
@@ -430,7 +430,7 @@ namespace MonoMod.UnitTest {
         }
 
         private delegate KeyValuePair<int, int> orig_DictionaryEnumeratorCurrentIntInt(ref Dictionary<int, int>.Enumerator self);
-        private delegate KeyValuePair<int, int> hook_DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self); 
+        private delegate KeyValuePair<int, int> hook_DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self);
         private static KeyValuePair<int, int> DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self) {
             return new KeyValuePair<int, int>(1, 1);
         }

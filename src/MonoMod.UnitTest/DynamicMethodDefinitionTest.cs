@@ -52,12 +52,12 @@ namespace MonoMod.UnitTest {
                             c.Emit(OpCodes.Nop);
                         c.Emit(OpCodes.Ret);
                     });
-                stacker = (DynamicMethod) DMDEmitDynamicMethodGenerator.Generate(dmd, null);
+                stacker = (DynamicMethod)DMDEmitDynamicMethodGenerator.Generate(dmd, null);
             }
 
             using (var dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
-                Assert.Equal(0, ((Func<int>) dmd.Generate().CreateDelegate(typeof(Func<int>)))());
-                Assert.Equal(0, ((Func<int>) DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
+                Assert.Equal(0, ((Func<int>)dmd.Generate().CreateDelegate(typeof(Func<int>)))());
+                Assert.Equal(0, ((Func<int>)DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
                 // no
                 //Assert.Equal(dmd.Name = "SomeManualDMDName", dmd.Generate().Name);
                 Counter -= 2;
@@ -125,7 +125,7 @@ namespace MonoMod.UnitTest {
             // Mono uses RuntimeMethodInfo without any link to the original DynamicMethod.
             var triple = PlatformTriple.Current;
             using var pin = triple.PinMethodIfNeeded(stacker);
-            var stack = ((Func<StackTrace>) stacker.CreateDelegate(typeof(Func<StackTrace>)))();
+            var stack = ((Func<StackTrace>)stacker.CreateDelegate(typeof(Func<StackTrace>)))();
             var stacked = stack.GetFrames().First(f => f.GetMethod()?.IsDynamicMethod() ?? false).GetMethod();
 #if !NET8_0_OR_GREATER // .NET 8 removes RTDynamicMethod, as it was a leftover from .NET Framework CAS: https://github.com/dotnet/runtime/pull/79427
             Assert.NotEqual(stacker, stacked);
@@ -162,7 +162,7 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine(new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current);
 
                 var list = new List<string>();
-                list.AddRange([ "A", "B", "C" ]);
+                list.AddRange(["A", "B", "C"]);
 
                 var array2d1 = new string[][] { new string[] { "A" } };
                 var array2d2 = new string[,] { { "B" } };

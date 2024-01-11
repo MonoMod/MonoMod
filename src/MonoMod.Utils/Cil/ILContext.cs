@@ -115,13 +115,13 @@ namespace MonoMod.Cil {
         }
 
         [Obsolete("Use new ILCursor(il).Goto(index)")]
-        public ILCursor At(int index) => 
+        public ILCursor At(int index) =>
             new ILCursor(this).Goto(index);
         [Obsolete("Use new ILCursor(il).Goto(index)")]
-        public ILCursor At(ILLabel label) => 
+        public ILCursor At(ILLabel label) =>
             new ILCursor(this).GotoLabel(label);
         [Obsolete("Use new ILCursor(il).Goto(index)")]
-        public ILCursor At(Instruction instr) => 
+        public ILCursor At(Instruction instr) =>
             new ILCursor(this).Goto(instr);
 
         /// <summary>
@@ -257,8 +257,7 @@ namespace MonoMod.Cil {
             }
         }
 
-        ~ILContext()
-        {
+        ~ILContext() {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }

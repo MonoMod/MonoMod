@@ -43,7 +43,7 @@ namespace MonoMod.UnitTest {
             HookTarget(null, false); // This should be caught by the newly created before-hook
 
             // Test adding a hook *after* our own while already in an active call
-            using (var h = new Hook(m_HookTarget, new Action<Hook, bool>(static (_, _) => {}),
+            using (var h = new Hook(m_HookTarget, new Action<Hook, bool>(static (_, _) => { }),
                 new DetourConfig("AfterHook", after: new string[] { hook.Config.Id })
             ))
                 orig(hook, false); // This should be caught by the newly created after-hook

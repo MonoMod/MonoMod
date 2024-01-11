@@ -83,7 +83,7 @@ namespace MonoMod.Utils {
                 return obj.GetHashCode();
 
             unchecked {
-                var code = unchecked((int) 0xdeadbeef);
+                var code = unchecked((int)0xdeadbeef);
                 // ok lets do some magic
                 if (obj.DeclaringType != null) { // yes, DeclaringType can be null
                     code ^= obj.DeclaringType.Assembly.GetHashCode();

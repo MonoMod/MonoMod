@@ -47,7 +47,7 @@ namespace System {
             }
             if (default(T) == null && array.GetType() != typeof(T[]))
                 ThrowHelper.ThrowArrayTypeMismatchException();
-            if ((uint) start > (uint) array.Length)
+            if ((uint)start > (uint)array.Length)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             IntPtr byteOffset = SpanHelpers.PerTypeValues<T>.ArrayAdjustment.Add<T>(start);
@@ -77,7 +77,7 @@ namespace System {
             }
             if (default(T) == null && array.GetType() != typeof(T[]))
                 ThrowHelper.ThrowArrayTypeMismatchException();
-            if ((uint) start > (uint) array.Length || (uint) length > (uint) (array.Length - start))
+            if ((uint)start > (uint)array.Length || (uint)length > (uint)(array.Length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             _length = length;
@@ -133,7 +133,7 @@ namespace System {
         public ref T this[int index] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if ((uint) index >= ((uint) _length))
+                if ((uint)index >= ((uint)_length))
                     ThrowHelper.ThrowIndexOutOfRangeException();
 
                 if (_pinnable == null)
@@ -167,11 +167,11 @@ namespace System {
             if (length == 0)
                 return;
 
-            var byteLength = (UIntPtr) ((uint) length * Unsafe.SizeOf<T>());
+            var byteLength = (UIntPtr)((uint)length * Unsafe.SizeOf<T>());
 
             if ((Unsafe.SizeOf<T>() & (sizeof(IntPtr) - 1)) != 0) {
                 if (_pinnable == null) {
-                    var ptr = (byte*) _byteOffset.ToPointer();
+                    var ptr = (byte*)_byteOffset.ToPointer();
 
                     SpanHelpers.ClearLessThanPointerSized(ptr, byteLength);
                 } else {
@@ -181,7 +181,7 @@ namespace System {
                 }
             } else {
                 if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
-                    UIntPtr pointerSizedLength = (UIntPtr) ((length * Unsafe.SizeOf<T>()) / sizeof(IntPtr));
+                    UIntPtr pointerSizedLength = (UIntPtr)((length * Unsafe.SizeOf<T>()) / sizeof(IntPtr));
 
                     ref IntPtr ip = ref Unsafe.As<T, IntPtr>(ref DangerousGetPinnableReference());
 
@@ -206,10 +206,10 @@ namespace System {
             if (Unsafe.SizeOf<T>() == 1) {
                 byte fill = Unsafe.As<T, byte>(ref value);
                 if (_pinnable == null) {
-                    Unsafe.InitBlockUnaligned(_byteOffset.ToPointer(), fill, (uint) length);
+                    Unsafe.InitBlockUnaligned(_byteOffset.ToPointer(), fill, (uint)length);
                 } else {
                     ref byte r = ref Unsafe.As<T, byte>(ref Unsafe.AddByteOffset<T>(ref _pinnable.Data, _byteOffset));
-                    Unsafe.InitBlockUnaligned(ref r, fill, (uint) length);
+                    Unsafe.InitBlockUnaligned(ref r, fill, (uint)length);
                 }
             } else {
                 ref T r = ref DangerousGetPinnableReference();
@@ -269,10 +269,10 @@ namespace System {
             int length = _length;
             int destLength = destination._length;
 
-            if ((uint) length == 0)
+            if ((uint)length == 0)
                 return true;
 
-            if ((uint) length > (uint) destLength)
+            if ((uint)length > (uint)destLength)
                 return false;
 
             ref T src = ref DangerousGetPinnableReference();
@@ -317,7 +317,7 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> Slice(int start) {
-            if ((uint) start > (uint) _length)
+            if ((uint)start > (uint)_length)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             IntPtr newOffset = _byteOffset.Add<T>(start);
@@ -335,7 +335,7 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> Slice(int start, int length) {
-            if ((uint) start > (uint) _length || (uint) length > (uint) (_length - start))
+            if ((uint)start > (uint)_length || (uint)length > (uint)(_length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             IntPtr newOffset = _byteOffset.Add<T>(start);

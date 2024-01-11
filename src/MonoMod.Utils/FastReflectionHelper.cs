@@ -28,8 +28,7 @@ namespace MonoMod.Utils {
 
         // Takes a FastStructInvoker and implements a FastInvoker for it, assuming that it takes a non-nullable valuetype
         private static object? FastInvokerForStructInvokerVT<T>(FastStructInvoker invoker, object? target, params object?[]? args)
-            where T : struct
-        {
+            where T : struct {
             object result = default(T);
             invoker(target, result, args);
             return result;
@@ -44,8 +43,7 @@ namespace MonoMod.Utils {
         // Takes a FastStructInvoker and implements a FastInvoker for it, using a StrongBox as the result type.
         // Suitable for Nullable<T>.
         private static object? FastInvokerForStructInvokerNullable<T>(FastStructInvoker invoker, object? target, params object?[]? args)
-            where T : struct
-        {
+            where T : struct {
             var result = TypedCache<T>.NullableStrongBox ??= new(null);
             invoker(target, result, args);
             return result.Value;
@@ -110,7 +108,7 @@ namespace MonoMod.Utils {
                 => new(CreateMethodInvoker(method, out var rtc, out var rt), rtc, rt));
         }
 
-        
+
         private static FSITuple GetFSITuple(FieldInfo field) {
             return fastStructInvokers.GetValue(field, _
                 => new(CreateFieldInvoker(field, out var rtc, out var rt), rtc, rt));
@@ -122,7 +120,7 @@ namespace MonoMod.Utils {
                 FieldInfo fi => GetFSITuple(fi),
                 _ => throw new NotSupportedException($"Member type {member.GetType()} is not supported")
             };
-        
+
         private static ConditionalWeakTable<FSITuple, FastInvoker> fastInvokers = new();
 
         private static FastInvoker GetFastInvoker(FSITuple tuple)
@@ -142,7 +140,7 @@ namespace MonoMod.Utils {
         #region Emit FastStructInvoker helpers
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private static void CheckArgs(
-            bool isStatic, object? target, 
+            bool isStatic, object? target,
             int retTypeClass, object? result,
             int expectLen, object?[]? args
         ) {
@@ -150,7 +148,7 @@ namespace MonoMod.Utils {
                 Helpers.ThrowIfArgumentNull(target);
             }
 
-            switch ((ReturnTypeClass) retTypeClass) {
+            switch ((ReturnTypeClass)retTypeClass) {
                 case ReturnTypeClass.Void:
                     // we don't need to ensure anything about the result
                     break;
@@ -235,7 +233,7 @@ namespace MonoMod.Utils {
             // see signature of CheckArgs above
             il.Emit(OpCodes.Ldc_I4, isStatic ? 1 : 0);
             il.Emit(OpCodes.Ldarg_0); // target
-            il.Emit(OpCodes.Ldc_I4, (int) rtc);
+            il.Emit(OpCodes.Ldc_I4, (int)rtc);
             il.Emit(OpCodes.Ldarg_1); // result
             il.Emit(OpCodes.Ldc_I4, expectParams);
             il.Emit(OpCodes.Ldarg_2); // args
@@ -370,7 +368,7 @@ namespace MonoMod.Utils {
                     // for reference types, we expect a WeakBox
                     expectType = typeof(WeakBox);
                     goto EmitTypeCheck;
-                EmitTypeCheck:
+                    EmitTypeCheck:
                     EmitCheckType(il, argId, expectType, badArgLbl);
                     break;
             }

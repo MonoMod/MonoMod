@@ -17,7 +17,7 @@ namespace MonoMod.Utils {
             if (f_SignatureHelper_module == null)
                 throw new InvalidOperationException("Unable to find module field for SignatureHelper");
 
-            return (Module) f_SignatureHelper_module.GetValue(signature)!;
+            return (Module)f_SignatureHelper_module.GetValue(signature)!;
         }
 
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, ICallSiteGenerator signature)
@@ -44,15 +44,15 @@ namespace MonoMod.Utils {
 
                     if ((callConv & 0x20) != 0) {
                         method.HasThis = true;
-                        callConv = (byte) (callConv & ~0x20);
+                        callConv = (byte)(callConv & ~0x20);
                     }
 
                     if ((callConv & 0x40) != 0) {
                         method.ExplicitThis = true;
-                        callConv = (byte) (callConv & ~0x40);
+                        callConv = (byte)(callConv & ~0x40);
                     }
 
-                    method.CallingConvention = (MethodCallingConvention) callConv;
+                    method.CallingConvention = (MethodCallingConvention)callConv;
 
                     if ((callConv & 0x10) != 0) {
                         var arity = ReadCompressedUInt32();
@@ -73,19 +73,19 @@ namespace MonoMod.Utils {
                         return first;
 
                     if ((first & 0x40) == 0)
-                        return ((uint) (first & ~0x80) << 8)
+                        return ((uint)(first & ~0x80) << 8)
                             | reader.ReadByte();
 
-                    return ((uint) (first & ~0xc0) << 24)
-                        | (uint) reader.ReadByte() << 16
-                        | (uint) reader.ReadByte() << 8
+                    return ((uint)(first & ~0xc0) << 24)
+                        | (uint)reader.ReadByte() << 16
+                        | (uint)reader.ReadByte() << 8
                         | reader.ReadByte();
                 }
 
                 int ReadCompressedInt32() {
                     var b = reader.ReadByte();
                     reader.BaseStream.Seek(-1, SeekOrigin.Current);
-                    var u = (int) ReadCompressedUInt32();
+                    var u = (int)ReadCompressedUInt32();
                     var v = u >> 1;
                     if ((u & 1) == 0)
                         return v;
@@ -110,15 +110,15 @@ namespace MonoMod.Utils {
                     uint token;
                     switch (tokenData & 3) {
                         case 0:
-                            token = (uint) TokenType.TypeDef | rid;
+                            token = (uint)TokenType.TypeDef | rid;
                             break;
 
                         case 1:
-                            token = (uint) TokenType.TypeRef | rid;
+                            token = (uint)TokenType.TypeRef | rid;
                             break;
 
                         case 2:
-                            token = (uint) TokenType.TypeSpec | rid;
+                            token = (uint)TokenType.TypeSpec | rid;
                             break;
 
                         default:
@@ -126,11 +126,11 @@ namespace MonoMod.Utils {
                             break;
                     }
 
-                    return moduleTo.ImportReference(moduleFrom.ResolveType((int) token));
+                    return moduleTo.ImportReference(moduleFrom.ResolveType((int)token));
                 }
 
                 TypeReference ReadTypeSignature() {
-                    var etype = (MetadataType) reader.ReadByte();
+                    var etype = (MetadataType)reader.ReadByte();
                     switch (etype) {
                         case MetadataType.ValueType:
                         case MetadataType.Class:
@@ -150,7 +150,7 @@ namespace MonoMod.Utils {
                         case MetadataType.Pinned:
                             return new PinnedType(ReadTypeSignature());
 
-                        case (MetadataType) 0x1d: // SzArray
+                        case (MetadataType)0x1d: // SzArray
                             return new ArrayType(ReadTypeSignature());
 
                         case MetadataType.Array:
@@ -175,7 +175,7 @@ namespace MonoMod.Utils {
                                     lower = lowBounds[i];
 
                                 if (i < sizes.Length)
-                                    upper = lower + (int) sizes[i] - 1;
+                                    upper = lower + (int)sizes[i] - 1;
 
                                 array.Dimensions.Add(new ArrayDimension(lower, upper));
                             }

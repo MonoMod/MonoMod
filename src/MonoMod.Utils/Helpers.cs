@@ -56,7 +56,7 @@ namespace MonoMod.Utils {
             T newDel;
             do {
                 orig = evt;
-                newDel = (T) Delegate.Combine(orig, del);
+                newDel = (T)Delegate.Combine(orig, del);
             } while (Interlocked.CompareExchange(ref evt, newDel, orig) != orig);
             return newDel;
         }
@@ -66,7 +66,7 @@ namespace MonoMod.Utils {
             T? newDel;
             do {
                 orig = evt;
-                newDel = (T?) Delegate.Remove(orig, del);
+                newDel = (T?)Delegate.Remove(orig, del);
             } while (Interlocked.CompareExchange(ref evt, newDel, orig) != orig);
             return newDel;
         }
@@ -82,8 +82,8 @@ namespace MonoMod.Utils {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         [Conditional("DEBUG")]
-        public static void DAssert([DoesNotReturnIf(false)] bool value, 
-            string? message = null, 
+        public static void DAssert([DoesNotReturnIf(false)] bool value,
+            string? message = null,
             [CallerArgumentExpression("value")] string expr = ""
         ) {
             if (!value)
@@ -149,7 +149,7 @@ namespace MonoMod.Utils {
         public unsafe static T GetOrInit<T>(ref T? location, delegate*<T> init) where T : class {
             if (location is not null)
                 return location;
-            return InitializeValue(ref location, &ILHelpers.TailCallDelegatePtr<T>, (IntPtr) init);
+            return InitializeValue(ref location, &ILHelpers.TailCallDelegatePtr<T>, (IntPtr)init);
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
@@ -199,7 +199,7 @@ namespace MonoMod.Utils {
                     ref MemoryMarshal.GetReference(first),
                     ref MemoryMarshal.GetReference(second),
                     ref MemoryMarshal.GetReference(mask),
-                    (nuint) first.Length);
+                    (nuint)first.Length);
         }
 
         [DoesNotReturn]
@@ -216,12 +216,12 @@ namespace MonoMod.Utils {
                 goto Equal;
 
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
-            var n = (nint) (void*) length;
+            var n = (nint)(void*)length;
 
-            if ((byte*) n >= (byte*) sizeof(nuint)) {
+            if ((byte*)n >= (byte*)sizeof(nuint)) {
                 nuint mask;
                 n -= sizeof(nuint);
-                while ((byte*) n > (byte*) i) {
+                while ((byte*)n > (byte*)i) {
                     mask = Unsafe.ReadUnaligned<nuint>(ref Unsafe.AddByteOffset(ref maskBytes, i));
                     if ((Unsafe.ReadUnaligned<nuint>(ref Unsafe.AddByteOffset(ref first, i)) & mask) !=
                         (Unsafe.ReadUnaligned<nuint>(ref Unsafe.AddByteOffset(ref second, i)) & mask)) {
@@ -234,7 +234,7 @@ namespace MonoMod.Utils {
                        (Unsafe.ReadUnaligned<nuint>(ref Unsafe.AddByteOffset(ref second, n)) & mask);
             }
 
-            while ((byte*) n > (byte*) i) {
+            while ((byte*)n > (byte*)i) {
                 var mask = Unsafe.AddByteOffset(ref maskBytes, i);
                 if ((Unsafe.AddByteOffset(ref first, i) & mask) != (Unsafe.AddByteOffset(ref second, i) & mask))
                     goto NotEqual;

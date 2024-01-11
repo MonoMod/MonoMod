@@ -748,7 +748,7 @@ namespace System.Collections.Concurrent {
                         Debug.Assert(buckets != null);
 
                         int i = ++_i;
-                        if ((uint) i < (uint) buckets!.Length) {
+                        if ((uint)i < (uint)buckets!.Length) {
                             // The Volatile.Read ensures that we have a copy of the reference to buckets[i]:
                             // this protects us from reading fields ('_key', '_value' and '_next') of different instances.
                             _node = Volatile.Read(ref buckets[i]);
@@ -1308,7 +1308,7 @@ namespace System.Collections.Concurrent {
         /// contains too many elements.</exception>
         /// <exception cref="ArgumentException">An element with the same key already exists in the
         /// <see cref="Dictionary{TKey,TValue}"/></exception>
-        void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> keyValuePair) => ((IDictionary<TKey, TValue>) this).Add(keyValuePair.Key, keyValuePair.Value);
+        void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> keyValuePair) => ((IDictionary<TKey, TValue>)this).Add(keyValuePair.Key, keyValuePair.Value);
 
         /// <summary>
         /// Determines whether the <see cref="ICollection{T}"/>
@@ -1362,7 +1362,7 @@ namespace System.Collections.Concurrent {
         /// of the dictionary.  The contents exposed through the enumerator may contain modifications
         /// made to the dictionary after <see cref="GetEnumerator"/> was called.
         /// </remarks>
-        IEnumerator IEnumerable.GetEnumerator() => ((ConcurrentDictionary<TKey, TValue>) this).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => ((ConcurrentDictionary<TKey, TValue>)this).GetEnumerator();
 
         #endregion
 
@@ -1396,7 +1396,7 @@ namespace System.Collections.Concurrent {
 
             ThrowIfInvalidObjectValue(value);
 
-            ((IDictionary<TKey, TValue>) this).Add((TKey) key, (TValue) value!);
+            ((IDictionary<TKey, TValue>)this).Add((TKey)key, (TValue)value!);
         }
 
         /// <summary>
@@ -1517,7 +1517,7 @@ namespace System.Collections.Concurrent {
 
                 ThrowIfInvalidObjectValue(value);
 
-                ((ConcurrentDictionary<TKey, TValue>) this)[(TKey) key] = (TValue) value!;
+                ((ConcurrentDictionary<TKey, TValue>)this)[(TKey)key] = (TValue)value!;
             }
         }
 
@@ -1898,7 +1898,7 @@ namespace System.Collections.Concurrent {
                 _locks = locks;
                 _countPerLock = countPerLock;
                 if (IntPtr.Size == 8) {
-                    _fastModBucketsMultiplier = HashHelpers.GetFastModMultiplier((uint) buckets.Length);
+                    _fastModBucketsMultiplier = HashHelpers.GetFastModMultiplier((uint)buckets.Length);
                 }
             }
 
@@ -1907,9 +1907,9 @@ namespace System.Collections.Concurrent {
             internal ref Node? GetBucket(int hashcode) {
                 Node?[] buckets = _buckets;
                 if (IntPtr.Size == 8) {
-                    return ref buckets[HashHelpers.FastMod((uint) hashcode, (uint) buckets.Length, _fastModBucketsMultiplier)];
+                    return ref buckets[HashHelpers.FastMod((uint)hashcode, (uint)buckets.Length, _fastModBucketsMultiplier)];
                 } else {
-                    return ref buckets[(uint) hashcode % (uint) buckets.Length];
+                    return ref buckets[(uint)hashcode % (uint)buckets.Length];
                 }
             }
 
@@ -1919,11 +1919,11 @@ namespace System.Collections.Concurrent {
                 Node?[] buckets = _buckets;
                 uint bucketNo;
                 if (IntPtr.Size == 8) {
-                    bucketNo = HashHelpers.FastMod((uint) hashcode, (uint) buckets.Length, _fastModBucketsMultiplier);
+                    bucketNo = HashHelpers.FastMod((uint)hashcode, (uint)buckets.Length, _fastModBucketsMultiplier);
                 } else {
-                    bucketNo = (uint) hashcode % (uint) buckets.Length;
+                    bucketNo = (uint)hashcode % (uint)buckets.Length;
                 }
-                lockNo = bucketNo % (uint) _locks.Length; // doesn't use FastMod, as it would require maintaining a different multiplier
+                lockNo = bucketNo % (uint)_locks.Length; // doesn't use FastMod, as it would require maintaining a different multiplier
                 return ref buckets[bucketNo];
             }
         }

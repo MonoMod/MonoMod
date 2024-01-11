@@ -14,15 +14,15 @@ namespace MonoMod.UnitTest {
             typeof(UtilsD).ModInterop();
 
             typeof(UtilsA).ModInterop();
-            Assert.Equal(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
-            Assert.Equal(UtilsA.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
+            Assert.Equal(UtilsA.Something(2, 3), UtilsC.Something(2, 3));
+            Assert.Equal(UtilsA.AnotherThing(2, 3), UtilsC.AnotherThing(2, 3));
 
             typeof(UtilsB).ModInterop();
-            Assert.Equal(UtilsA.Something(2, 3),     UtilsC.Something(2, 3));
-            Assert.Equal(UtilsB.AnotherThing(2, 3),  UtilsC.AnotherThing(2, 3));
+            Assert.Equal(UtilsA.Something(2, 3), UtilsC.Something(2, 3));
+            Assert.Equal(UtilsB.AnotherThing(2, 3), UtilsC.AnotherThing(2, 3));
 
-            Assert.Equal(UtilsB.Something(2, 3),     UtilsD.Something(2, 3));
-            Assert.Equal(UtilsB.AnotherThing(2, 3),  UtilsD.AnotherThing(2, 3));
+            Assert.Equal(UtilsB.Something(2, 3), UtilsD.Something(2, 3));
+            Assert.Equal(UtilsB.AnotherThing(2, 3), UtilsD.AnotherThing(2, 3));
         }
 
         [ModExportName("ModA")]

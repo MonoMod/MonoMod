@@ -49,7 +49,7 @@ namespace MonoMod.Utils {
             }
 
             // we do the (object?) dance using DebugFormatter to avoid internal StringBuilders in the ToString (and GetID) implementations which may cause problems
-            var name = dmd.Name ?? DebugFormatter.Format($"DMD<{(object?) orig ?? def.GetID(simple: true)}>");
+            var name = dmd.Name ?? DebugFormatter.Format($"DMD<{(object?)orig ?? def.GetID(simple: true)}>");
             var retType = (orig as MethodInfo)?.ReturnType ?? def.ReturnType.ResolveReflection();
 
             MMDbgLog.Trace($"new DynamicMethod: {retType} {name}({string.Join(",", argTypes.Select(type => type?.ToString()).ToArray())})");

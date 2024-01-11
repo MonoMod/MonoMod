@@ -37,7 +37,7 @@ namespace MonoMod.Utils {
             for (var i = 0; i < ds.Length; i++)
                 args_[0] = ds[i].DynamicInvoke(args_);
 
-            return (T?) args_[0];
+            return (T?)args_[0];
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(args);
             var ds = md.GetInvocationList();
             for (var i = 0; i < ds.Length; i++)
-                if (!(bool) ds[i].DynamicInvoke(args)!)
+                if (!(bool)ds[i].DynamicInvoke(args)!)
                     return false;
 
             return true;
@@ -66,7 +66,7 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(args);
             var ds = md.GetInvocationList();
             for (var i = 0; i < ds.Length; i++)
-                if ((bool) ds[i].DynamicInvoke(args)!)
+                if ((bool)ds[i].DynamicInvoke(args)!)
                     return true;
 
             return false;
@@ -82,7 +82,7 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(args);
             var ds = md.GetInvocationList();
             for (var i = 0; i < ds.Length; i++) {
-                var result = (T?) ds[i].DynamicInvoke(args);
+                var result = (T?)ds[i].DynamicInvoke(args);
                 if (result != null)
                     return result;
             }
@@ -148,7 +148,7 @@ namespace MonoMod.Utils {
 
         private static MethodBase GetRealMethod(MethodBase method) {
             if (RTDynamicMethod_m_owner is not null && method.GetType() == RTDynamicMethod)
-                return (MethodBase) RTDynamicMethod_m_owner.GetValue(method)!;
+                return (MethodBase)RTDynamicMethod_m_owner.GetValue(method)!;
             return method;
         }
 
@@ -199,7 +199,7 @@ namespace MonoMod.Utils {
 
 
             var rv = source.TryCastDelegate(typeof(T), out var resultDel);
-            result = (T?) resultDel;
+            result = (T?)resultDel;
             return rv;
         }
 

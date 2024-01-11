@@ -162,7 +162,7 @@ namespace MonoMod.Utils {
                     }
                     _Data = data;
                 }
-                
+
                 Weak = new WeakReference(obj);
                 if (keepAlive)
                     KeepAlive = obj;
@@ -191,7 +191,7 @@ namespace MonoMod.Utils {
         }
 
         public static Func<object, T?> New<T>(params object[] args) where T : notnull {
-            var target = (T) Activator.CreateInstance(typeof(T), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null)!;
+            var target = (T)Activator.CreateInstance(typeof(T), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null)!;
             return other => Set(target, other);
         }
 
@@ -201,7 +201,7 @@ namespace MonoMod.Utils {
         }
 
         public static Func<object, dynamic> NewWrap<T>(params object[] args) {
-            var target = (T) Activator.CreateInstance(typeof(T), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null)!;
+            var target = (T)Activator.CreateInstance(typeof(T), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, args, null)!;
             return other => Wrap(target, other);
         }
 
@@ -217,7 +217,7 @@ namespace MonoMod.Utils {
         }
 
         public static T? Set<T>(T target, object? other = null) where T : notnull {
-            return (T?) Set((object) target, other);
+            return (T?)Set((object)target, other);
         }
 
         public static object? Set(object target, object? other = null) {
@@ -277,12 +277,12 @@ namespace MonoMod.Utils {
         }
 
         public T? Get<T>(string name) {
-            return (T?) Get(name);
+            return (T?)Get(name);
         }
 
         public bool TryGet<T>(string name, [MaybeNullWhen(false)] out T value) {
             var rv = TryGet(name, out var _value);
-            value = (T?) _value;
+            value = (T?)_value;
             return rv;
         }
 
@@ -331,12 +331,12 @@ namespace MonoMod.Utils {
         }
 
         public T? Invoke<T>(string name, params object[] args) {
-            return (T?) Invoke(name, args);
+            return (T?)Invoke(name, args);
         }
 
         public bool TryInvoke<T>(string name, object[] args, [MaybeNullWhen(false)] out T result) {
             var rv = TryInvoke(name, args, out var _result);
-            result = (T?) _result;
+            result = (T?)_result;
             return rv;
         }
 

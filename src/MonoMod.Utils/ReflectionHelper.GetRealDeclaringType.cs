@@ -31,12 +31,12 @@ namespace MonoMod.Utils {
 
             // .NET
             if (p_RuntimeModule_RuntimeType != null)
-                return (Type) p_RuntimeModule_RuntimeType.GetValue(module, ArrayEx.Empty<object?>())!;
+                return (Type)p_RuntimeModule_RuntimeType.GetValue(module, ArrayEx.Empty<object?>())!;
 
             // Mono
             if (f_RuntimeModule__impl != null &&
                 m_RuntimeModule_GetGlobalType != null)
-                return (Type) m_RuntimeModule_GetGlobalType.Invoke(null, new object?[] { f_RuntimeModule__impl.GetValue(module) })!;
+                return (Type)m_RuntimeModule_GetGlobalType.Invoke(null, new object?[] { f_RuntimeModule__impl.GetValue(module) })!;
 
             return null;
         }

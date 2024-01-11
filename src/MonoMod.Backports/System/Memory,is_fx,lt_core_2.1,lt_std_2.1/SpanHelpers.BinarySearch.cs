@@ -31,7 +31,7 @@ namespace System {
                 //       and thus cannot overflow an uint. 
                 //       Saves one subtraction per loop compared to 
                 //       `int i = lo + ((hi - lo) >> 1);`
-                int i = (int) (((uint) hi + (uint) lo) >> 1);
+                int i = (int)(((uint)hi + (uint)lo) >> 1);
 
                 int c = comparable.CompareTo(Unsafe.Add(ref spanStart, i));
                 if (c == 0) {

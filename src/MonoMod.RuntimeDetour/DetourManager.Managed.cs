@@ -283,7 +283,7 @@ namespace MonoMod.RuntimeDetour {
 
                         case DepGraphNode<ManagedChainNode> gn:
                             RemoveGraphDetour(detour, gn);
-                            cnode = (ManagedDetourChainNode) gn.ListNode.ChainNode;
+                            cnode = (ManagedDetourChainNode)gn.ListNode.ChainNode;
                             break;
 
                         case ManagedDetourChainNode cn:

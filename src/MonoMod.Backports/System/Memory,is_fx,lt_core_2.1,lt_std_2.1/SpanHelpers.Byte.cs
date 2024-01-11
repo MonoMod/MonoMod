@@ -50,7 +50,7 @@ namespace System {
             int index = -1;
             for (int i = 0; i < valueLength; i++) {
                 var tempIndex = IndexOf(ref searchSpace, Unsafe.Add(ref value, i), searchSpaceLength);
-                if ((uint) tempIndex < (uint) index) {
+                if ((uint)tempIndex < (uint)index) {
                     index = tempIndex;
                     // Reduce space for search, cause we don't care if we find the search value after the index of a previously found value
                     searchSpaceLength = tempIndex;
@@ -84,7 +84,7 @@ namespace System {
             uint uValue = value; // Use uint for comparisons to avoid unnecessary 8->32 extensions
             nint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
-            while ((byte*) nLength >= (byte*) 8) {
+            while ((byte*)nLength >= (byte*)8) {
                 nLength -= 8;
 
                 if (uValue == Unsafe.AddByteOffset(ref searchSpace, index))
@@ -107,7 +107,7 @@ namespace System {
                 index += 8;
             }
 
-            if ((byte*) nLength >= (byte*) 4) {
+            if ((byte*)nLength >= (byte*)4) {
                 nLength -= 4;
 
                 if (uValue == Unsafe.AddByteOffset(ref searchSpace, index))
@@ -122,7 +122,7 @@ namespace System {
                 index += 4;
             }
 
-            while ((byte*) nLength > (byte*) 0) {
+            while ((byte*)nLength > (byte*)0) {
                 nLength -= 1;
 
                 if (uValue == Unsafe.AddByteOffset(ref searchSpace, index))
@@ -132,21 +132,21 @@ namespace System {
             }
             return -1;
             Found: // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            return (int) (byte*) index;
+            return (int)(byte*)index;
             Found1:
-            return (int) (byte*) (index + 1);
+            return (int)(byte*)(index + 1);
             Found2:
-            return (int) (byte*) (index + 2);
+            return (int)(byte*)(index + 2);
             Found3:
-            return (int) (byte*) (index + 3);
+            return (int)(byte*)(index + 3);
             Found4:
-            return (int) (byte*) (index + 4);
+            return (int)(byte*)(index + 4);
             Found5:
-            return (int) (byte*) (index + 5);
+            return (int)(byte*)(index + 5);
             Found6:
-            return (int) (byte*) (index + 6);
+            return (int)(byte*)(index + 6);
             Found7:
-            return (int) (byte*) (index + 7);
+            return (int)(byte*)(index + 7);
         }
 
         public static int LastIndexOf(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength) {
@@ -188,7 +188,7 @@ namespace System {
             uint uValue = value; // Use uint for comparisons to avoid unnecessary 8->32 extensions
             nint index = length; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
-            while ((byte*) nLength >= (byte*) 8) {
+            while ((byte*)nLength >= (byte*)8) {
                 nLength -= 8;
                 index -= 8;
 
@@ -210,7 +210,7 @@ namespace System {
                     goto Found;
             }
 
-            if ((byte*) nLength >= (byte*) 4) {
+            if ((byte*)nLength >= (byte*)4) {
                 nLength -= 4;
                 index -= 4;
 
@@ -224,7 +224,7 @@ namespace System {
                     goto Found;
             }
 
-            while ((byte*) nLength > (byte*) 0) {
+            while ((byte*)nLength > (byte*)0) {
                 nLength -= 1;
                 index -= 1;
 
@@ -233,21 +233,21 @@ namespace System {
             }
             return -1;
             Found: // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            return (int) (byte*) index;
+            return (int)(byte*)index;
             Found1:
-            return (int) (byte*) (index + 1);
+            return (int)(byte*)(index + 1);
             Found2:
-            return (int) (byte*) (index + 2);
+            return (int)(byte*)(index + 2);
             Found3:
-            return (int) (byte*) (index + 3);
+            return (int)(byte*)(index + 3);
             Found4:
-            return (int) (byte*) (index + 4);
+            return (int)(byte*)(index + 4);
             Found5:
-            return (int) (byte*) (index + 5);
+            return (int)(byte*)(index + 5);
             Found6:
-            return (int) (byte*) (index + 6);
+            return (int)(byte*)(index + 6);
             Found7:
-            return (int) (byte*) (index + 7);
+            return (int)(byte*)(index + 7);
         }
 
         public static unsafe int IndexOfAny(ref byte searchSpace, byte value0, byte value1, int length) {
@@ -258,7 +258,7 @@ namespace System {
             nint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
             uint lookUp;
-            while ((byte*) nLength >= (byte*) 8) {
+            while ((byte*)nLength >= (byte*)8) {
                 nLength -= 8;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -289,7 +289,7 @@ namespace System {
                 index += 8;
             }
 
-            if ((byte*) nLength >= (byte*) 4) {
+            if ((byte*)nLength >= (byte*)4) {
                 nLength -= 4;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -308,7 +308,7 @@ namespace System {
                 index += 4;
             }
 
-            while ((byte*) nLength > (byte*) 0) {
+            while ((byte*)nLength > (byte*)0) {
                 nLength -= 1;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -319,21 +319,21 @@ namespace System {
             }
             return -1;
             Found: // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            return (int) (byte*) index;
+            return (int)(byte*)index;
             Found1:
-            return (int) (byte*) (index + 1);
+            return (int)(byte*)(index + 1);
             Found2:
-            return (int) (byte*) (index + 2);
+            return (int)(byte*)(index + 2);
             Found3:
-            return (int) (byte*) (index + 3);
+            return (int)(byte*)(index + 3);
             Found4:
-            return (int) (byte*) (index + 4);
+            return (int)(byte*)(index + 4);
             Found5:
-            return (int) (byte*) (index + 5);
+            return (int)(byte*)(index + 5);
             Found6:
-            return (int) (byte*) (index + 6);
+            return (int)(byte*)(index + 6);
             Found7:
-            return (int) (byte*) (index + 7);
+            return (int)(byte*)(index + 7);
         }
 
         public static unsafe int IndexOfAny(ref byte searchSpace, byte value0, byte value1, byte value2, int length) {
@@ -345,7 +345,7 @@ namespace System {
             nint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
             uint lookUp;
-            while ((byte*) nLength >= (byte*) 8) {
+            while ((byte*)nLength >= (byte*)8) {
                 nLength -= 8;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -376,7 +376,7 @@ namespace System {
                 index += 8;
             }
 
-            if ((byte*) nLength >= (byte*) 4) {
+            if ((byte*)nLength >= (byte*)4) {
                 nLength -= 4;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -395,7 +395,7 @@ namespace System {
                 index += 4;
             }
 
-            while ((byte*) nLength > (byte*) 0) {
+            while ((byte*)nLength > (byte*)0) {
                 nLength -= 1;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -406,21 +406,21 @@ namespace System {
             }
             return -1;
             Found: // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            return (int) (byte*) index;
+            return (int)(byte*)index;
             Found1:
-            return (int) (byte*) (index + 1);
+            return (int)(byte*)(index + 1);
             Found2:
-            return (int) (byte*) (index + 2);
+            return (int)(byte*)(index + 2);
             Found3:
-            return (int) (byte*) (index + 3);
+            return (int)(byte*)(index + 3);
             Found4:
-            return (int) (byte*) (index + 4);
+            return (int)(byte*)(index + 4);
             Found5:
-            return (int) (byte*) (index + 5);
+            return (int)(byte*)(index + 5);
             Found6:
-            return (int) (byte*) (index + 6);
+            return (int)(byte*)(index + 6);
             Found7:
-            return (int) (byte*) (index + 7);
+            return (int)(byte*)(index + 7);
         }
 
         public static unsafe int LastIndexOfAny(ref byte searchSpace, byte value0, byte value1, int length) {
@@ -431,7 +431,7 @@ namespace System {
             nint index = length; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
             uint lookUp;
-            while ((byte*) nLength >= (byte*) 8) {
+            while ((byte*)nLength >= (byte*)8) {
                 nLength -= 8;
                 index -= 8;
 
@@ -461,7 +461,7 @@ namespace System {
                     goto Found;
             }
 
-            if ((byte*) nLength >= (byte*) 4) {
+            if ((byte*)nLength >= (byte*)4) {
                 nLength -= 4;
                 index -= 4;
 
@@ -479,7 +479,7 @@ namespace System {
                     goto Found;
             }
 
-            while ((byte*) nLength > (byte*) 0) {
+            while ((byte*)nLength > (byte*)0) {
                 nLength -= 1;
                 index -= 1;
 
@@ -489,21 +489,21 @@ namespace System {
             }
             return -1;
             Found: // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            return (int) (byte*) index;
+            return (int)(byte*)index;
             Found1:
-            return (int) (byte*) (index + 1);
+            return (int)(byte*)(index + 1);
             Found2:
-            return (int) (byte*) (index + 2);
+            return (int)(byte*)(index + 2);
             Found3:
-            return (int) (byte*) (index + 3);
+            return (int)(byte*)(index + 3);
             Found4:
-            return (int) (byte*) (index + 4);
+            return (int)(byte*)(index + 4);
             Found5:
-            return (int) (byte*) (index + 5);
+            return (int)(byte*)(index + 5);
             Found6:
-            return (int) (byte*) (index + 6);
+            return (int)(byte*)(index + 6);
             Found7:
-            return (int) (byte*) (index + 7);
+            return (int)(byte*)(index + 7);
         }
 
         public static unsafe int LastIndexOfAny(ref byte searchSpace, byte value0, byte value1, byte value2, int length) {
@@ -516,7 +516,7 @@ namespace System {
             nint nLength = length;
 
             uint lookUp;
-            while ((byte*) nLength >= (byte*) 8) {
+            while ((byte*)nLength >= (byte*)8) {
                 nLength -= 8;
                 index -= 8;
 
@@ -546,7 +546,7 @@ namespace System {
                     goto Found;
             }
 
-            if ((byte*) nLength >= (byte*) 4) {
+            if ((byte*)nLength >= (byte*)4) {
                 nLength -= 4;
                 index -= 4;
 
@@ -564,7 +564,7 @@ namespace System {
                     goto Found;
             }
 
-            while ((byte*) nLength > (byte*) 0) {
+            while ((byte*)nLength > (byte*)0) {
                 nLength -= 1;
                 index -= 1;
 
@@ -575,21 +575,21 @@ namespace System {
 
             return -1;
             Found: // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            return (int) (byte*) index;
+            return (int)(byte*)index;
             Found1:
-            return (int) (byte*) (index + 1);
+            return (int)(byte*)(index + 1);
             Found2:
-            return (int) (byte*) (index + 2);
+            return (int)(byte*)(index + 2);
             Found3:
-            return (int) (byte*) (index + 3);
+            return (int)(byte*)(index + 3);
             Found4:
-            return (int) (byte*) (index + 4);
+            return (int)(byte*)(index + 4);
             Found5:
-            return (int) (byte*) (index + 5);
+            return (int)(byte*)(index + 5);
             Found6:
-            return (int) (byte*) (index + 6);
+            return (int)(byte*)(index + 6);
             Found7:
-            return (int) (byte*) (index + 7);
+            return (int)(byte*)(index + 7);
         }
 
         // Optimized byte-based SequenceEquals. The "length" parameter for this one is declared a nuint rather than int as we also use it for types other than byte
@@ -599,11 +599,11 @@ namespace System {
                 goto Equal;
 
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
-            nint n = (nint) (void*) length;
+            nint n = (nint)(void*)length;
 
-            if ((byte*) n >= (byte*) sizeof(UIntPtr)) {
+            if ((byte*)n >= (byte*)sizeof(UIntPtr)) {
                 n -= sizeof(UIntPtr);
-                while ((byte*) n > (byte*) i) {
+                while ((byte*)n > (byte*)i) {
                     if (Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref first, i)) !=
                         Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, i))) {
                         goto NotEqual;
@@ -614,7 +614,7 @@ namespace System {
                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, n));
             }
 
-            while ((byte*) n > (byte*) i) {
+            while ((byte*)n > (byte*)i) {
                 if (Unsafe.AddByteOffset(ref first, i) != Unsafe.AddByteOffset(ref second, i))
                     goto NotEqual;
                 i += 1;
@@ -637,11 +637,11 @@ namespace System {
             nint minLength = ((firstLength < secondLength) ? firstLength : secondLength);
 
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
-            nint n = (nint) (void*) minLength;
+            nint n = (nint)(void*)minLength;
 
-            if ((byte*) n > (byte*) sizeof(UIntPtr)) {
+            if ((byte*)n > (byte*)sizeof(UIntPtr)) {
                 n -= sizeof(UIntPtr);
-                while ((byte*) n > (byte*) i) {
+                while ((byte*)n > (byte*)i) {
                     if (Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref first, i)) !=
                         Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, i))) {
                         goto NotEqual;
@@ -651,7 +651,7 @@ namespace System {
             }
 
             NotEqual:  // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            while ((byte*) minLength > (byte*) i) {
+            while ((byte*)minLength > (byte*)i) {
                 int result = Unsafe.AddByteOffset(ref first, i).CompareTo(Unsafe.AddByteOffset(ref second, i));
                 if (result != 0)
                     return result;

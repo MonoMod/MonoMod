@@ -15,7 +15,7 @@ namespace MonoMod.UnitTest {
             var dict = new Dictionary<string, int>();
             using dynamic data = new DynamicData(dict);
 
-            Assert.Equal(dict, (Dictionary<string, int>) data);
+            Assert.Equal(dict, (Dictionary<string, int>)data);
 
             dict.Add("s", 5);
             Assert.True(dict.TryGetValue("s", out var addedVal1));
@@ -33,7 +33,7 @@ namespace MonoMod.UnitTest {
             var dict = new Dictionary<string, int?>();
             using dynamic data = new DynamicData(dict);
 
-            Assert.Equal(dict, (Dictionary<string, int?>) data);
+            Assert.Equal(dict, (Dictionary<string, int?>)data);
 
             dict.Add("s", 5);
             Assert.True(dict.TryGetValue("s", out var addedVal1));
@@ -52,7 +52,7 @@ namespace MonoMod.UnitTest {
             var dict = new Dictionary<string, string>();
             using dynamic data = new DynamicData(dict);
 
-            Assert.Equal(dict, (Dictionary<string, string>) data);
+            Assert.Equal(dict, (Dictionary<string, string>)data);
 
             dict.Add("s", "5");
             Assert.True(dict.TryGetValue("s", out var addedVal1));
@@ -70,7 +70,7 @@ namespace MonoMod.UnitTest {
             var dummy = new Dummy();
             using dynamic data = new DynamicData(dummy);
 
-            Assert.Equal(dummy, (Dummy) data);
+            Assert.Equal(dummy, (Dummy)data);
 
             Assert.Equal(69, data.A);
             Assert.Equal(420L, data.B);
@@ -86,7 +86,7 @@ namespace MonoMod.UnitTest {
             Assert.Equal("789", dummy._C);
             Assert.Equal("ABC", data.New);
 
-            data.RegisterMethod("NewMethod", new Func<object, object[], object>((target, args) => (int) args[0] * (int) args[1]));
+            data.RegisterMethod("NewMethod", new Func<object, object[], object>((target, args) => (int)args[0] * (int)args[1]));
             Assert.Equal(6, data.PublicMethod(4, 2));
             Assert.Equal(2, data.PrivateMethod(4, 2));
             Assert.Equal(16, data.PrivateBaseMethod(4, 2));

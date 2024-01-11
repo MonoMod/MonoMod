@@ -86,6 +86,6 @@ namespace MonoMod.UnitTest {
 
         public void DoNothing() {
         }
-        
+
     }
 }

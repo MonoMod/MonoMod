@@ -233,7 +233,7 @@ namespace MonoMod.RuntimeDetour {
 
             public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread) {
                 var threadCallDepth = DetermineThreadCallDepth();
-                hasActiveCallsFromThread = threadCallDepth > 0; 
+                hasActiveCallsFromThread = threadCallDepth > 0;
 
                 // Wait for other threads to have returned from the function
                 var spin = new SpinWait();
@@ -379,7 +379,7 @@ namespace MonoMod.RuntimeDetour {
                 IsValid = true;
             }
         }
-        
+
         private static MethodInfo GenerateRemovedStub(MethodSignature trampolineSig) {
             using var dmd = trampolineSig.CreateDmd(DebugFormatter.Format($"RemovedStub<{trampolineSig}>"));
             Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);

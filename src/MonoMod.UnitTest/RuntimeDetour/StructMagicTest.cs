@@ -43,7 +43,7 @@ namespace MonoMod.UnitTest {
 
             IsHook = false;
             GetStructCounter = 0;
-            GetStruct((IntPtr) 100);
+            GetStruct((IntPtr)100);
             Assert.Equal(100, GetStructCounter);
 
             using (new Hook(
@@ -52,7 +52,7 @@ namespace MonoMod.UnitTest {
             )) {
                 IsHook = true;
                 GetStructCounter = 600;
-                GetStruct((IntPtr) 100);
+                GetStruct((IntPtr)100);
                 Assert.Equal(1100, GetStructCounter);
             }
         }
@@ -108,7 +108,7 @@ namespace MonoMod.UnitTest {
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal SomeOtherStruct GetStruct(IntPtr x) {
-            GetStructCounter += (int) x;
+            GetStructCounter += (int)x;
             return new SomeOtherStruct();
         }
 
@@ -165,23 +165,23 @@ namespace MonoMod.UnitTest {
             private uint packedValue;
 
             public byte B {
-                get => (byte) (packedValue >> 16);
-                set => packedValue = (packedValue & 0xff00ffff) | ((uint) value << 16);
+                get => (byte)(packedValue >> 16);
+                set => packedValue = (packedValue & 0xff00ffff) | ((uint)value << 16);
             }
 
             public byte G {
-                get => (byte) (packedValue >> 8);
-                set => packedValue = (packedValue & 0xffff00ff) | ((uint) value << 8);
+                get => (byte)(packedValue >> 8);
+                set => packedValue = (packedValue & 0xffff00ff) | ((uint)value << 8);
             }
 
             public byte R {
-                get => (byte) (packedValue);
+                get => (byte)(packedValue);
                 set => packedValue = (packedValue & 0xffffff00) | value;
             }
 
             public byte A {
-                get => (byte) (packedValue >> 24);
-                set => packedValue = (packedValue & 0x00ffffff) | ((uint) value << 24);
+                get => (byte)(packedValue >> 24);
+                set => packedValue = (packedValue & 0x00ffffff) | ((uint)value << 24);
             }
 
             public uint PackedValue {

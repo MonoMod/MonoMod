@@ -11,7 +11,7 @@ namespace MonoMod.SourceGen.Internal {
             if (Namespace is not null) {
                 builder.Write("namespace ").WriteLine(Namespace).OpenBlock();
             }
-            for (var i = ContainingTypeDecls.AsImmutableArray().Length - 1; i >= 0 ; i--) {
+            for (var i = ContainingTypeDecls.AsImmutableArray().Length - 1; i >= 0; i--) {
                 if (!string.IsNullOrEmpty(additionalModifiers)) {
                     _ = builder
                         .Write(additionalModifiers)
@@ -72,7 +72,7 @@ namespace MonoMod.SourceGen.Internal {
             var typeCtx = "";
             innermostType = type;
             while (innermostType is not null) {
-                typeCtx = innermostType.Name + typeCtx; 
+                typeCtx = innermostType.Name + typeCtx;
                 innermostType = innermostType.ContainingType;
                 if (innermostType is not null)
                     typeCtx = "." + typeCtx;

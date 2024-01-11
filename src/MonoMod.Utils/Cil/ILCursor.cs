@@ -421,10 +421,9 @@ namespace MonoMod.Cil {
 
             label.Target = Next;
             if (_afterLabels != null) {
-                Array.Resize(ref _afterLabels, _afterLabels.Length+1);
-                _afterLabels[_afterLabels.Length-1] = label;
-            }
-            else {
+                Array.Resize(ref _afterLabels, _afterLabels.Length + 1);
+                _afterLabels[_afterLabels.Length - 1] = label;
+            } else {
                 _afterLabels = new[] { label };
             }
         }
@@ -665,7 +664,7 @@ namespace MonoMod.Cil {
         /// <param name="memberName">The accessed member name.</param>
         /// <returns>this</returns>
         public ILCursor Emit<T>(OpCode opcode, string memberName)
-            => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags) (-1)).First()));
+            => _Insert(IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags)(-1)).First()));
 
         #endregion
 

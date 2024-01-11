@@ -24,14 +24,14 @@ namespace MonoMod.UnitTest {
             var il = dmd.GetILProcessor();
             var module = dmd.Module!;
             var method = dmd.Definition;
-            
+
             // we'll load a nonexistent field
             var typeref = module.ImportReference(typeof(JitExceptionTest));
             var fieldref = new FieldReference("NonExistentField", typeref, typeref);
             il.Emit(OpCodes.Ldsfld, fieldref);
             il.Emit(OpCodes.Pop);
             il.Emit(OpCodes.Ret);
-            
+
             // it'll throw in here
             try {
                 // to generate, we need to NOT use the DynamicMethod backend, because that will fail in generation
@@ -39,7 +39,7 @@ namespace MonoMod.UnitTest {
             } catch (MissingFieldException) {
                 // all is good :)
             }
-            
+
             // if the test fails, the runtime crashes...
         }
     }

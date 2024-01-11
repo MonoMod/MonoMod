@@ -52,7 +52,7 @@ namespace MonoMod.Utils {
 
             // TODO: use HashCode
             unchecked {
-                var code = unchecked((int) 0xdeadbeef);
+                var code = unchecked((int)0xdeadbeef);
                 code ^= obj.Assembly.GetHashCode();
                 code ^= (code << 16) | (code >> 16);
 

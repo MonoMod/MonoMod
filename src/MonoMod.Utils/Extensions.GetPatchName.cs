@@ -31,7 +31,7 @@ namespace MonoMod.Utils {
 
             var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
             if (patchAttrib != null) {
-                name = (string) patchAttrib.ConstructorArguments[0].Value;
+                name = (string)patchAttrib.ConstructorArguments[0].Value;
                 var dotIndex = name.LastIndexOf('.');
                 if (dotIndex != -1 && dotIndex != name.Length - 1) {
                     name = name.Substring(dotIndex + 1);
@@ -40,7 +40,7 @@ namespace MonoMod.Utils {
             }
 
             // Backwards-compatibility: Check for patch_
-            name = ((MemberReference) cap).Name;
+            name = ((MemberReference)cap).Name;
             return name.StartsWith("patch_", StringComparison.Ordinal) ? name.Substring(6) : name;
         }
         private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
@@ -51,10 +51,10 @@ namespace MonoMod.Utils {
                 string name;
 
                 if (patchAttrib != null) {
-                    name = (string) patchAttrib.ConstructorArguments[0].Value;
+                    name = (string)patchAttrib.ConstructorArguments[0].Value;
                 } else {
                     // Backwards-compatibility: Check for patch_
-                    name = ((MemberReference) cap).Name;
+                    name = ((MemberReference)cap).Name;
                     name = name.StartsWith("patch_", StringComparison.Ordinal) ? name.Substring(6) : name;
                 }
 
@@ -86,7 +86,7 @@ namespace MonoMod.Utils {
                         else if (ts.IsPinned) { } // FullName not overriden.
                         else if (ts.IsSentinel) { } // FullName not overriden.
                         else if (ts.IsArray) {
-                            var array = (ArrayType) ts;
+                            var array = (ArrayType)ts;
                             if (array.IsVector)
                                 builder.Append("[]");
                             else {
@@ -99,11 +99,11 @@ namespace MonoMod.Utils {
                                 builder.Append(']');
                             }
                         } else if (ts.IsRequiredModifier)
-                            builder.Append("modreq(").Append(((RequiredModifierType) ts).ModifierType).Append(')');
+                            builder.Append("modreq(").Append(((RequiredModifierType)ts).ModifierType).Append(')');
                         else if (ts.IsOptionalModifier)
-                            builder.Append("modopt(").Append(((OptionalModifierType) ts).ModifierType).Append(')');
+                            builder.Append("modopt(").Append(((OptionalModifierType)ts).ModifierType).Append(')');
                         else if (ts.IsGenericInstance) {
-                            var gen = (GenericInstanceType) ts;
+                            var gen = (GenericInstanceType)ts;
                             builder.Append('<');
                             for (var i = 0; i < gen.GenericArguments.Count; i++) {
                                 if (i > 0)
@@ -112,7 +112,7 @@ namespace MonoMod.Utils {
                             }
                             builder.Append('>');
                         } else if (ts.IsFunctionPointer) {
-                            var fpt = (FunctionPointerType) ts;
+                            var fpt = (FunctionPointerType)ts;
                             builder.Append(' ').Append(fpt.ReturnType.GetPatchFullName()).Append(" *(");
                             if (fpt.HasParameters)
                                 for (var i = 0; i < fpt.Parameters.Count; i++) {

@@ -45,10 +45,10 @@ unsafe {
     };
 
     var msvcrt = DynDll.OpenLibrary(clib);
-    var msvcrand = (delegate* unmanaged[Cdecl]<int>) DynDll.GetExport(msvcrt, "rand");
+    var msvcrand = (delegate* unmanaged[Cdecl]<int>)DynDll.GetExport(msvcrt, "rand");
 
-    var get1del = (Get1Delegate) Get1;
-    var get1ptr = (delegate* unmanaged[Cdecl]<int>) Marshal.GetFunctionPointerForDelegate(get1del);
+    var get1del = (Get1Delegate)Get1;
+    var get1ptr = (delegate* unmanaged[Cdecl]<int>)Marshal.GetFunctionPointerForDelegate(get1del);
 
     var rand1 = msvcrand();
     Console.WriteLine(rand1);
@@ -67,7 +67,7 @@ unsafe {
     }
     */
 
-    using (new NativeHook((IntPtr) msvcrand, get1del)) {
+    using (new NativeHook((IntPtr)msvcrand, get1del)) {
         Helpers.Assert(msvcrand() == 1);
     }
 
@@ -75,7 +75,7 @@ unsafe {
         Console.WriteLine(msvcrand());
     }
 
-    using (new NativeHook((IntPtr) msvcrand, (RandHook) MixRand)) {
+    using (new NativeHook((IntPtr)msvcrand, (RandHook)MixRand)) {
         for (var i = 0; i < 10; i++) {
             Console.WriteLine(msvcrand());
         }

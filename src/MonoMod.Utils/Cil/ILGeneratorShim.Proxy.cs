@@ -17,7 +17,7 @@ namespace MonoMod.Utils.Cil {
         /// </summary>
         /// <returns>A "real" ILGenerator.</returns>
         public System.Reflection.Emit.ILGenerator GetProxy() {
-            return (System.Reflection.Emit.ILGenerator) ILGeneratorBuilder
+            return (System.Reflection.Emit.ILGenerator)ILGeneratorBuilder
                 .GenerateProxy()
                 .MakeGenericType(GetType())
                 .GetConstructors()[0]
@@ -64,8 +64,7 @@ namespace MonoMod.Utils.Cil {
                             Kind = ModuleKind.Dll,
                             ReflectionImporterProvider = MMReflectionImporter.Provider
                         }
-                    ))
-                {
+                    )) {
                     var ca_IACTA = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
                     ca_IACTA.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.String, typeof(ILGeneratorShim).Assembly.GetName().Name));
                     module.Assembly.CustomAttributes.Add(ca_IACTA);
@@ -232,7 +231,7 @@ namespace MonoMod.Utils.Cil {
         }
 
         public static ILGeneratorShim GetProxiedShim(this System.Reflection.Emit.ILGenerator il)
-            => (ILGeneratorShim) Helpers.ThrowIfNull(il).GetType().GetField(
+            => (ILGeneratorShim)Helpers.ThrowIfNull(il).GetType().GetField(
                 ILGeneratorShim.ILGeneratorBuilder.TargetName,
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
             )?.GetValue(il)!;
@@ -247,7 +246,7 @@ namespace MonoMod.Utils.Cil {
             Helpers.ThrowIfArgumentNull(emitArgs);
             var operandType = emitArgs[1].GetType();
 
-            var target = il.GetProxiedShim() ?? (object) il;
+            var target = il.GetProxiedShim() ?? (object)il;
             var emitters = target is ILGeneratorShim ? _EmittersShim : _Emitters;
 
             if (!emitters.TryGetValue(operandType, out var emit))

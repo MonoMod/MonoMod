@@ -40,7 +40,7 @@ namespace MonoMod.Utils.Cil {
             Justification = "The performance penalty for cctor checks is not worth caring about here. We already do some high-level shenanigans to get calls here.")]
         static CecilILGenerator() {
             foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                var cecilOpCode = (OpCode) field.GetValue(null)!;
+                var cecilOpCode = (OpCode)field.GetValue(null)!;
                 _MCCOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
 
@@ -105,7 +105,7 @@ namespace MonoMod.Utils.Cil {
                     labelInfo.Emitted = true;
                     labelInfo.Instruction = ins;
                 }
-                
+
                 _LabelsToMark.Clear();
             }
 
@@ -129,7 +129,7 @@ namespace MonoMod.Utils.Cil {
         public override unsafe Label DefineLabel() {
             Label handle = default;
             // The label struct holds a single int field on .NET Framework, .NET Core and Mono.
-            *(int*) &handle = labelCounter++;
+            *(int*)&handle = labelCounter++;
             _LabelInfos[handle] = new LabelInfo();
             return handle;
         }
@@ -145,7 +145,7 @@ namespace MonoMod.Utils.Cil {
         public override LocalBuilder DeclareLocal(Type localType, bool pinned) {
             // The handle itself is out of sync with the "backing" VariableDefinition.
             var index = IL.Body.Variables.Count;
-            var handle = (LocalBuilder) (
+            var handle = (LocalBuilder)(
                 c_LocalBuilder_params == 4 ? c_LocalBuilder.Invoke(new object?[] { index, localType, null, pinned }) :
                 c_LocalBuilder_params == 3 ? c_LocalBuilder.Invoke(new object?[] { index, localType, null }) :
                 c_LocalBuilder_params == 2 ? c_LocalBuilder.Invoke(new object?[] { localType, null }) :
@@ -153,7 +153,7 @@ namespace MonoMod.Utils.Cil {
                 throw new NotSupportedException()
             );
 
-            f_LocalBuilder_position?.SetValue(handle, (ushort) index);
+            f_LocalBuilder_position?.SetValue(handle, (ushort)index);
             f_LocalBuilder_is_pinned?.SetValue(handle, pinned);
 
             var typeRef = _(localType);
@@ -203,7 +203,7 @@ namespace MonoMod.Utils.Cil {
                 opcode.OperandType == SRE.OperandType.InlineVar)
                 _EmitInlineVar(CecilILGenerator._(opcode), arg);
             else if (opcode.Name?.EndsWith(".s", StringComparison.Ordinal) ?? false)
-                Emit(IL.Create(CecilILGenerator._(opcode), (sbyte) arg));
+                Emit(IL.Create(CecilILGenerator._(opcode), (sbyte)arg));
             else
                 Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
@@ -374,9 +374,9 @@ namespace MonoMod.Utils.Cil {
                 IL.MarkLabel(handlerStart);
 
                 var next = _Handler = new LabelledExceptionHandler {
-                    TryStart = _Start, 
-                    TryEnd = handlerStart, 
-                    HandlerType = type, 
+                    TryStart = _Start,
+                    TryEnd = handlerStart,
+                    HandlerType = type,
                     HandlerEnd = _SkipHandler
                 };
                 if (type == ExceptionHandlerType.Filter)

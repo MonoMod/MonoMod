@@ -36,7 +36,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="source">The method to modify the IL of.</param>
         /// <param name="manip">The manipulator to use to modify the method's IL.</param>
         public ILHook(Expression source, ILContext.Manipulator manip)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, manip) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method, manip) { }
 
         /// <summary>
         /// Constructs an <see cref="ILHook"/> for the provided method using the provided manipulator.
@@ -62,7 +62,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="manip">The manipulator to use to modify the method's IL.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public ILHook(Expression source, ILContext.Manipulator manip, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, manip, applyByDefault) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method, manip, applyByDefault) { }
 
         /// <summary>
         /// Constructs an <see cref="ILHook"/> for the provided method using the provided manipulator.
@@ -90,7 +90,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="manip">The manipulator to use to modify the method's IL.</param>
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="ILHook"/>.</param>
         public ILHook(Expression source, ILContext.Manipulator manip, DetourConfig? config)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method, manip, config) { }
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method, manip, config) { }
 
         /// <summary>
         /// Constructs an <see cref="ILHook"/> for the provided method using the provided manipulator and <see cref="DetourConfig"/>
@@ -121,7 +121,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="ILHook"/>.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public ILHook(Expression source, ILContext.Manipulator manip, DetourConfig? config, bool applyByDefault)
-            : this(((MethodCallExpression) Helpers.ThrowIfNull(source)).Method,
+            : this(((MethodCallExpression)Helpers.ThrowIfNull(source)).Method,
                   manip, config, applyByDefault) { }
 
         /// <summary>
@@ -258,8 +258,7 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Cleans up and undoes the hook, if needed.
         /// </summary>
-        ~ILHook()
-        {
+        ~ILHook() {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }

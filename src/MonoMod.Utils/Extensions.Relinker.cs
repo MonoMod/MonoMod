@@ -13,7 +13,7 @@ namespace MonoMod.Utils {
     /// <param name="context">The generic context provided to relink generic references.</param>
     /// <returns>A relinked reference.</returns>
     public delegate IMetadataTokenProvider Relinker(IMetadataTokenProvider mtp, IGenericParameterProvider? context);
-    
+
     public static partial class Extensions {
 
         /// <summary>
@@ -260,28 +260,28 @@ namespace MonoMod.Utils {
                     return new PinnedType(relinkedElem);
 
                 if (type.IsArray) {
-                    var at = new ArrayType(relinkedElem, ((ArrayType) type).Rank);
+                    var at = new ArrayType(relinkedElem, ((ArrayType)type).Rank);
                     for (var i = 0; i < at.Rank; i++)
                         // It's a struct.
-                        at.Dimensions[i] = ((ArrayType) type).Dimensions[i];
+                        at.Dimensions[i] = ((ArrayType)type).Dimensions[i];
                     return at;
                 }
 
                 if (type.IsRequiredModifier)
-                    return new RequiredModifierType(((RequiredModifierType) type).ModifierType.Relink(relinker, context), relinkedElem);
+                    return new RequiredModifierType(((RequiredModifierType)type).ModifierType.Relink(relinker, context), relinkedElem);
 
                 if (type.IsOptionalModifier)
-                    return new OptionalModifierType(((OptionalModifierType) type).ModifierType.Relink(relinker, context), relinkedElem);
+                    return new OptionalModifierType(((OptionalModifierType)type).ModifierType.Relink(relinker, context), relinkedElem);
 
                 if (type.IsGenericInstance) {
                     var git = new GenericInstanceType(relinkedElem);
-                    foreach (var genArg in ((GenericInstanceType) type).GenericArguments)
+                    foreach (var genArg in ((GenericInstanceType)type).GenericArguments)
                         git.GenericArguments.Add(genArg?.Relink(relinker, context));
                     return git;
                 }
 
                 if (type.IsFunctionPointer) {
-                    var fp = (FunctionPointerType) type;
+                    var fp = (FunctionPointerType)type;
                     fp.ReturnType = fp.ReturnType.Relink(relinker, context);
                     for (var i = 0; i < fp.Parameters.Count; i++)
                         fp.Parameters[i].ParameterType = fp.Parameters[i].ParameterType.Relink(relinker, context);
@@ -292,7 +292,7 @@ namespace MonoMod.Utils {
             }
 
             if (type.IsGenericParameter && context != null) {
-                var genParam = context.ResolveGenericParameter((GenericParameter) type)
+                var genParam = context.ResolveGenericParameter((GenericParameter)type)
                     ?? throw new RelinkTargetNotFoundException($"{RelinkTargetNotFoundException.DefaultMessage} {type.FullName} (context: {context})", type, context);
                 for (var i = 0; i < genParam.Constraints.Count; i++)
                     if (!genParam.Constraints[i].GetConstraintType().IsGenericInstance) // That is somehow possible and causes a stack overflow.
@@ -300,7 +300,7 @@ namespace MonoMod.Utils {
                 return genParam;
             }
 
-            return (TypeReference) relinker(type, context);
+            return (TypeReference)relinker(type, context);
         }
 
 #if !CECIL0_10
@@ -337,13 +337,13 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(relinker);
 
             if (method.IsGenericInstance) {
-                var methodg = (GenericInstanceMethod) method;
-                var gim = new GenericInstanceMethod((MethodReference) methodg.ElementMethod.Relink(relinker, context));
+                var methodg = (GenericInstanceMethod)method;
+                var gim = new GenericInstanceMethod((MethodReference)methodg.ElementMethod.Relink(relinker, context));
                 foreach (var arg in methodg.GenericArguments)
                     // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(arg.Relink(relinker, context));
 
-                return (MethodReference) relinker(gim, context);
+                return (MethodReference)relinker(gim, context);
             }
 
             var relink = new MethodReference(method.Name, method.ReturnType, method.DeclaringType.Relink(relinker, context));
@@ -362,7 +362,7 @@ namespace MonoMod.Utils {
                 relink.Parameters.Add(param);
             }
 
-            return (MethodReference) relinker(relink, context);
+            return (MethodReference)relinker(relink, context);
         }
 
         /// <summary>
@@ -388,7 +388,7 @@ namespace MonoMod.Utils {
                 relink.Parameters.Add(param);
             }
 
-            return (CallSite) relinker(relink, context);
+            return (CallSite)relinker(relink, context);
         }
 
         /// <summary>
@@ -461,7 +461,7 @@ namespace MonoMod.Utils {
         public static CustomAttribute Relink(this CustomAttribute attrib, Relinker relinker, IGenericParameterProvider context) {
             Helpers.ThrowIfArgumentNull(attrib);
             Helpers.ThrowIfArgumentNull(relinker);
-            var newAttrib = new CustomAttribute((MethodReference) attrib.Constructor.Relink(relinker, context));
+            var newAttrib = new CustomAttribute((MethodReference)attrib.Constructor.Relink(relinker, context));
             foreach (var attribArg in attrib.ConstructorArguments)
                 newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type.Relink(relinker, context), attribArg.Value));
             foreach (var attribArg in attrib.Fields)

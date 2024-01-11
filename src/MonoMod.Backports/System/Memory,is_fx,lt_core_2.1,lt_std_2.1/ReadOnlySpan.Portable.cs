@@ -53,7 +53,7 @@ namespace System {
                 this = default;
                 return; // returns default
             }
-            if ((uint) start > (uint) array.Length || (uint) length > (uint) (array.Length - start))
+            if ((uint)start > (uint)array.Length || (uint)length > (uint)(array.Length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             _length = length;
@@ -109,7 +109,7 @@ namespace System {
         public ref readonly T this[int index] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if ((uint) index >= ((uint) _length))
+                if ((uint)index >= ((uint)_length))
                     ThrowHelper.ThrowIndexOutOfRangeException();
 
                 if (_pinnable == null)
@@ -160,10 +160,10 @@ namespace System {
             int length = _length;
             int destLength = destination.Length;
 
-            if ((uint) length == 0)
+            if ((uint)length == 0)
                 return true;
 
-            if ((uint) length > (uint) destLength)
+            if ((uint)length > (uint)destLength)
                 return false;
 
             ref T src = ref DangerousGetPinnableReference();
@@ -212,7 +212,7 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<T> Slice(int start) {
-            if ((uint) start > (uint) _length)
+            if ((uint)start > (uint)_length)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             IntPtr newOffset = _byteOffset.Add<T>(start);
@@ -230,7 +230,7 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<T> Slice(int start, int length) {
-            if ((uint) start > (uint) _length || (uint) length > (uint) (_length - start))
+            if ((uint)start > (uint)_length || (uint)length > (uint)(_length - start))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
             IntPtr newOffset = _byteOffset.Add<T>(start);

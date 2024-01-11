@@ -69,7 +69,7 @@ namespace MonoMod.RuntimeDetour {
                         // state stays as 1
                         goto CheckEnumeratingLL;
 
-                    CheckEnumeratingLL:
+                        CheckEnumeratingLL:
                         // we need to check the value of listEntry for null, and if it's null switch to enumerating the list enumerator
                         if (listEntry is not null) {
                             // we have a list entry, we have a value to return

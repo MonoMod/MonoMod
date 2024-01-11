@@ -82,7 +82,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 iCorJitInfoWrapperVtbl = Marshal.AllocHGlobal(IntPtr.Size * runtime.ICorJitInfoFullVtableCount);
                 iCorJitInfoWrapperAllocs = Runtime.arch.CreateNativeVtableProxyStubs(iCorJitInfoWrapperVtbl, runtime.ICorJitInfoFullVtableCount);
-                unsafe { Runtime.PatchWrapperVtable((IntPtr*) iCorJitInfoWrapperVtbl); }
+                unsafe { Runtime.PatchWrapperVtable((IntPtr*)iCorJitInfoWrapperVtbl); }
                 MMDbgLog.Trace($"Allocated ICorJitInfo wrapper vtable at 0x{iCorJitInfoWrapperVtbl:x16}");
 
                 // eagerly call ICMP to ensure that it's JITted before installing the hook
@@ -146,12 +146,12 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             }
                             // we still need to check if we were able to create it, because not creating it should not be a hard error
                             if (corJitWrapper is not null) {
-                                var wrapper = (ICorJitInfoWrapper*) corJitWrapper.BaseAddress;
+                                var wrapper = (ICorJitInfoWrapper*)corJitWrapper.BaseAddress;
                                 wrapper->Vtbl = iCorJitInfoWrapperVtbl;
-                                wrapper->Wrapped = (IntPtr**) corJitInfo;
+                                wrapper->Wrapped = (IntPtr**)corJitInfo;
                                 (*wrapper)[ICorJitInfoWrapper.HotCodeRW] = IntPtr.Zero;
                                 (*wrapper)[ICorJitInfoWrapper.ColdCodeRW] = IntPtr.Zero;
-                                corJitInfo = (IntPtr) wrapper;
+                                corJitInfo = (IntPtr)wrapper;
                             }
                         } catch (Exception e) {
                             try {
@@ -177,7 +177,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             if (corJitWrapper is null)
                                 return result;
 
-                            ref var wrapper = ref *(ICorJitInfoWrapper*) corJitWrapper.BaseAddress;
+                            ref var wrapper = ref *(ICorJitInfoWrapper*)corJitWrapper.BaseAddress;
                             var rwEntry = wrapper[ICorJitInfoWrapper.HotCodeRW];
 
                             // This is the top level JIT entry point, do our custom stuff
@@ -200,7 +200,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             var declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
                             var method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
 
-                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) (*nativeEntry), rwEntry, *nativeSizeOfCode);
+                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr)(*nativeEntry), rwEntry, *nativeSizeOfCode);
                         } catch {
                             // eat the exception so we don't accidentally bubble up to native code
                         }
@@ -262,9 +262,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             }
 
             public unsafe void AllocMemHook(IntPtr thisPtr, V70.AllocMemArgs* args) {
-                var wrap = (ICorJitInfoWrapper*) thisPtr;
+                var wrap = (ICorJitInfoWrapper*)thisPtr;
                 var wrapped = wrap->Wrapped;
-                InvokeAllocMemPtr.InvokeAllocMem(GetRealInvokePtr((*wrapped)[ICorJitInfoAllocMemIdx]), (IntPtr) wrapped, args);
+                InvokeAllocMemPtr.InvokeAllocMem(GetRealInvokePtr((*wrapped)[ICorJitInfoAllocMemIdx]), (IntPtr)wrapped, args);
                 if (GetNativeExceptionSlot is { } neh && (nint)(*neh()) is not 0) {
                     return;
                 }

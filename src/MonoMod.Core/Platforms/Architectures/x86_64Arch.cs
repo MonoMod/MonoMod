@@ -15,8 +15,7 @@ namespace MonoMod.Core.Platforms.Architectures {
 
         public IAltEntryFactory AltEntryFactory { get; }
 
-        private static BytePatternCollection CreateKnownMethodThunks()
-        {
+        private static BytePatternCollection CreateKnownMethodThunks() {
             const ushort An = BytePattern.SAnyValue;
             const ushort Ad = BytePattern.SAddressValue;
             const byte Bn = BytePattern.BAnyValue;
@@ -80,8 +79,8 @@ namespace MonoMod.Core.Platforms.Architectures {
                     // .NET Core Tiered Compilation thunk
                     new(new(AddressKind.Rel32, 19), mustMatchAtStart: false,
                         new byte[] { // mask
-                            0xf0, 0xff, 00, 00, 00, 00, 00, 00, 00, 00, 
-                            0xff, 0xff, 0xf0, 
+                            0xf0, 0xff, 00, 00, 00, 00, 00, 00, 00, 00,
+                            0xff, 0xff, 0xf0,
                             0xff, 0xff, 00, 00, 00, 00
                         },
                         new byte[] { // pattern
@@ -151,7 +150,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                             // padding to fit 24 bytes
                             //0x90, 0x66, 0x66, 0x66, 0x66 // I'm not actually sure if it's safe to match this padding, so I'm not going to
                         }),
-                    
+
                     // These two patterns represent the same CLR datastructure, just at different entry points.
 
                     // .NET 7 FixupPrecode ThePreStub entry point (0x1000 page size)
@@ -259,8 +258,8 @@ namespace MonoMod.Core.Platforms.Architectures {
             public override int GetBytes(IntPtr from, IntPtr to, Span<byte> buffer, object? data, out IDisposable? allocHandle) {
                 buffer[0] = 0xff;
                 buffer[1] = 0x25;
-                Unsafe.WriteUnaligned(ref buffer[2], (int) 0);
-                Unsafe.WriteUnaligned(ref buffer[6], (long) to);
+                Unsafe.WriteUnaligned(ref buffer[2], (int)0);
+                Unsafe.WriteUnaligned(ref buffer[6], (long)to);
                 allocHandle = null;
                 return Size;
             }
@@ -289,11 +288,11 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             public override int GetBytes(IntPtr from, IntPtr to, Span<byte> buffer, object? data, out IDisposable? allocHandle) {
                 Helpers.ThrowIfArgumentNull(data);
-                var alloc = (IAllocatedMemory) data;
+                var alloc = (IAllocatedMemory)data;
 
                 buffer[0] = 0xff;
                 buffer[1] = 0x25;
-                Unsafe.WriteUnaligned(ref buffer[2], (int) (alloc.BaseAddress - ((nint) from + 6)));
+                Unsafe.WriteUnaligned(ref buffer[2], (int)(alloc.BaseAddress - ((nint)from + 6)));
 
                 Unsafe.WriteUnaligned(ref alloc.Memory[0], to);
 
@@ -315,7 +314,7 @@ namespace MonoMod.Core.Platforms.Architectures {
                     disposeOldAlloc = false;
                     // retarget logic here is trivial, as we will simply be writing the new to into the existing memory allocation
                     Helpers.ThrowIfArgumentNull(data);
-                    var alloc = (IAllocatedMemory) data;
+                    var alloc = (IAllocatedMemory)data;
 
                     Unsafe.WriteUnaligned(ref alloc.Memory[0], to);
 
@@ -347,9 +346,11 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             var target = from + 6;
             var lowBound = target + int.MinValue;
-            if ((nuint) lowBound > (nuint) target) lowBound = 0;
+            if ((nuint)lowBound > (nuint)target)
+                lowBound = 0;
             var highBound = target + int.MaxValue;
-            if ((nuint) highBound < (nuint) target) highBound = -1;
+            if ((nuint)highBound < (nuint)target)
+                highBound = -1;
             var memRequest = new PositionedAllocationRequest((nint)target, (nint)lowBound, (nint)highBound, new(IntPtr.Size));
             if (sizeHint >= Rel32Ind64Kind.Instance.Size && system.MemoryAllocator.TryAllocateInRange(memRequest, out var allocated)) {
                 return new(from, to, Rel32Ind64Kind.Instance, allocated);

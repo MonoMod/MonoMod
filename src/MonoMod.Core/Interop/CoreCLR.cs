@@ -23,7 +23,7 @@ namespace MonoMod.Core.Interop {
                     CorJitResult
                 > ptr
             ) {
-                methodPtr = (IntPtr) ptr;
+                methodPtr = (IntPtr)ptr;
             }
 
             public delegate*<
@@ -35,7 +35,7 @@ namespace MonoMod.Core.Interop {
                     byte**,
                     uint*,
                     CorJitResult
-                > InvokeCompileMethod 
+                > InvokeCompileMethod
                 => (delegate*<
                     IntPtr, // method
                     IntPtr, // ICorJitCompiler*
@@ -45,7 +45,7 @@ namespace MonoMod.Core.Interop {
                     byte**,
                     uint*,
                     CorJitResult
-                >) methodPtr;
+                >)methodPtr;
         }
 
         public class V21 {
@@ -121,7 +121,7 @@ namespace MonoMod.Core.Interop {
                         IntPtr, IntPtr, CORINFO_METHOD_INFO*,
                         uint, byte**, uint*,
                         CorJitResult
-                    >) functionPtr;
+                    >)functionPtr;
 
                 return fnPtr(thisPtr, corJitInfo, methodInfo, flags, pNativeEntry, pNativeSizeOfCode);
             }

@@ -126,12 +126,12 @@ namespace MonoMod.Core.Utils {
             var bitmaskData = patternAlloc.Slice(pattern.Length);
             for (var i = 0; i < pattern.Length; i++) {
                 var @byte = pattern.Span[i];
-                var mask = (byte) ((@byte & MaskMask) >> 8);
-                var data = (byte) (@byte & ~MaskMask);
+                var mask = (byte)((@byte & MaskMask) >> 8);
+                var data = (byte)(@byte & ~MaskMask);
                 if (mask is 0x00 or 0xFF)
                     mask = (byte)~mask;
 
-                patternData.Span[i] = (byte) (data & mask);
+                patternData.Span[i] = (byte)(data & mask);
                 bitmaskData.Span[i] = mask;
             }
 
@@ -354,7 +354,7 @@ namespace MonoMod.Core.Utils {
                                 goto NoMatch; // if we don't have enough space left for the match, then just fail out
 
                             var pattern = segment.SliceOf(patternSpan);
-                            
+
                             if (!pattern.SequenceEqual(data.Slice(pos, pattern.Length)))
                                 goto NoMatch; // the literal didn't match here, oopsie
 

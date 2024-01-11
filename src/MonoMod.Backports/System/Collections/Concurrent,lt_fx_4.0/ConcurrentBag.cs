@@ -547,10 +547,10 @@ namespace System.Collections.Concurrent {
 
             // Finally, wait for all unsynchronized operations on each queue to be done.
             for (WorkStealingQueue? queue = head; queue != null; queue = queue._nextQueue) {
-                if (queue._currentOp != (int) Operation.None) {
+                if (queue._currentOp != (int)Operation.None) {
                     SpinWait spinner = default;
                     do { spinner.SpinOnce(); }
-                    while (queue._currentOp != (int) Operation.None);
+                    while (queue._currentOp != (int)Operation.None);
                 }
             }
         }
@@ -634,13 +634,13 @@ namespace System.Collections.Concurrent {
                 bool lockTaken = false;
                 try {
                     // Full fence to ensure subsequent reads don't get reordered before this
-                    Interlocked.Exchange(ref _currentOp, (int) Operation.Add);
+                    Interlocked.Exchange(ref _currentOp, (int)Operation.Add);
                     int tail = _tailIndex;
 
                     // Rare corner case (at most once every 2 billion pushes on this thread):
                     // We're going to increment the tail; if we'll overflow, then we need to reset our counts
                     if (tail == int.MaxValue) {
-                        _currentOp = (int) Operation.None; // set back to None temporarily to avoid a deadlock
+                        _currentOp = (int)Operation.None; // set back to None temporarily to avoid a deadlock
                         lock (this) {
                             Debug.Assert(_tailIndex == tail, "No other thread should be changing _tailIndex");
 
@@ -655,7 +655,7 @@ namespace System.Collections.Concurrent {
                             _tailIndex = tail = tail & _mask;
                             Debug.Assert(_headIndex - _tailIndex <= 0);
 
-                            Interlocked.Exchange(ref _currentOp, (int) Operation.Add); // ensure subsequent reads aren't reordered before this
+                            Interlocked.Exchange(ref _currentOp, (int)Operation.Add); // ensure subsequent reads aren't reordered before this
                         }
                     }
 
@@ -681,7 +681,7 @@ namespace System.Collections.Concurrent {
                         _tailIndex = tail + 1;
                     } else {
                         // We need to contend with foreign operations (e.g. steals, enumeration, etc.), so we lock.
-                        _currentOp = (int) Operation.None; // set back to None to avoid a deadlock
+                        _currentOp = (int)Operation.None; // set back to None to avoid a deadlock
                         MonitorEx.Enter(this, ref lockTaken);
 
                         head = _headIndex;
@@ -726,7 +726,7 @@ namespace System.Collections.Concurrent {
                     // Increment the count from the add/take perspective
                     checked { _addTakeCount++; }
                 } finally {
-                    _currentOp = (int) Operation.None;
+                    _currentOp = (int)Operation.None;
                     if (lockTaken) {
                         Monitor.Exit(this);
                     }
@@ -764,7 +764,7 @@ namespace System.Collections.Concurrent {
                     // If the read of _headIndex moved before this write to _tailIndex, we could erroneously end up
                     // popping an element that's concurrently being stolen, leading to the same element being
                     // dequeued from the bag twice.
-                    _currentOp = (int) Operation.Take;
+                    _currentOp = (int)Operation.Take;
                     Interlocked.Exchange(ref _tailIndex, --tail);
 
                     // If there is no interaction with a steal, we can head down the fast path.
@@ -775,20 +775,20 @@ namespace System.Collections.Concurrent {
                         int idx = tail & _mask;
                         result = _array[idx];
                         //if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
-                            _array[idx] = default!;
+                        _array[idx] = default!;
                         //}
                         _addTakeCount--;
                         return true;
                     } else {
                         // Interaction with steals: 0 or 1 elements left.
-                        _currentOp = (int) Operation.None; // set back to None to avoid a deadlock
+                        _currentOp = (int)Operation.None; // set back to None to avoid a deadlock
                         MonitorEx.Enter(this, ref lockTaken);
                         if (_headIndex - tail <= 0) {
                             // Element still available. Take it.
                             int idx = tail & _mask;
                             result = _array[idx];
                             //if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
-                                _array[idx] = default!;
+                            _array[idx] = default!;
                             //}
                             _addTakeCount--;
                             return true;
@@ -800,7 +800,7 @@ namespace System.Collections.Concurrent {
                         }
                     }
                 } finally {
-                    _currentOp = (int) Operation.None;
+                    _currentOp = (int)Operation.None;
                     if (lockTaken) {
                         Monitor.Exit(this);
                     }
@@ -850,12 +850,12 @@ namespace System.Collections.Concurrent {
                         // is in progress, as add operations need to accurately count transitions
                         // from empty to non-empty, and they can only do that if there are no concurrent
                         // steal operations happening at the time.
-                        if ((head - (_tailIndex - 2) >= 0) && _currentOp == (int) Operation.Add) {
+                        if ((head - (_tailIndex - 2) >= 0) && _currentOp == (int)Operation.Add) {
                             SpinWait spinner = default;
                             do {
                                 spinner.SpinOnce();
                             }
-                            while (_currentOp == (int) Operation.Add);
+                            while (_currentOp == (int)Operation.Add);
                         }
 
                         // Increment head to tentatively take an element: a full fence is used to ensure the read
@@ -868,7 +868,7 @@ namespace System.Collections.Concurrent {
                             int idx = head & _mask;
                             result = _array[idx];
                             //if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
-                                _array[idx] = default!;
+                            _array[idx] = default!;
                             //}
                             _stealCount++;
                             return true;

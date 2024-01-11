@@ -37,11 +37,11 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         public unsafe IntPtr NativeException {
-            get => *((delegate* unmanaged[Cdecl]<IntPtr*>) eh_get_exception_ptr)();
-            set => *((delegate* unmanaged[Cdecl]<IntPtr*>) eh_get_exception_ptr)() = value;
+            get => *((delegate* unmanaged[Cdecl]<IntPtr*>)eh_get_exception_ptr)();
+            set => *((delegate* unmanaged[Cdecl]<IntPtr*>)eh_get_exception_ptr)() = value;
         }
 
-        public unsafe GetExceptionSlot GetExceptionSlot => () => ((delegate* unmanaged[Cdecl]<IntPtr*>) eh_get_exception_ptr)();
+        public unsafe GetExceptionSlot GetExceptionSlot => () => ((delegate* unmanaged[Cdecl]<IntPtr*>)eh_get_exception_ptr)();
 
         public IntPtr CreateManagedToNativeHelper(IntPtr target, out IDisposable? handle) {
             var alloc = arch.CreateSpecialEntryStub(eh_managed_to_native, target);

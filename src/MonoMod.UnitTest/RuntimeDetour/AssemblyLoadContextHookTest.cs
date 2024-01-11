@@ -125,13 +125,13 @@ namespace MonoMod.UnitTest {
             LastID2 = id2;
             verify.Invoke(loader, argsEmpty);
 
-            ((Action<Action<object, int, int>, object, int, int>) ((orig, hloader, hid1, hid2) => TestStaticMethodTarget(orig, hloader, hid1, hid2)))
+            ((Action<Action<object, int, int>, object, int, int>)((orig, hloader, hid1, hid2) => TestStaticMethodTarget(orig, hloader, hid1, hid2)))
                 .Invoke((oloader, oid1, oid2) => method.Invoke(null, new object[] { oloader, oid1, oid2 }), null, -1, -1);
             verify.Invoke(loader, argsSet);
 
             using (new Hook(
                 method,
-                (Action<Action<object, int, int>, object, int, int>) ((orig, hloader, hid1, hid2) => TestStaticMethodTarget(orig, hloader, hid1, hid2))
+                (Action<Action<object, int, int>, object, int, int>)((orig, hloader, hid1, hid2) => TestStaticMethodTarget(orig, hloader, hid1, hid2))
             )) {
                 method.Invoke(null, new object[] { null, -1, -1 });
             }
@@ -147,7 +147,7 @@ namespace MonoMod.UnitTest {
 
             using (new Hook(
                 method,
-                (Action<Action<object, int, int>, object, int, int>) TestStaticMethodTarget
+                (Action<Action<object, int, int>, object, int, int>)TestStaticMethodTarget
             )) {
                 method.Invoke(null, new object[] { null, -1, -1 });
             }

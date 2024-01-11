@@ -92,7 +92,7 @@ internal struct HashCode {
     }
 
     private void Add(int value) {
-        var val = (uint) value;
+        var val = (uint)value;
         var previousLength = length++;
         var position = previousLength % 4;
 
@@ -139,7 +139,7 @@ internal struct HashCode {
 
         hash = MixFinal(hash);
 
-        return (int) hash;
+        return (int)hash;
     }
 
     /// <inheritdoc/>

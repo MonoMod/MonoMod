@@ -69,7 +69,7 @@ namespace MonoMod.Core.Utils {
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         private static (HomogenousPatternCollection[], BytePattern[]?) ComputeLut(
-            ReadOnlyMemory<BytePattern?> patterns, 
+            ReadOnlyMemory<BytePattern?> patterns,
             out int minLength, out int maxMinLength, out int maxAddrLength) {
             if (patterns.Length == 0) {
                 minLength = 0;
@@ -109,7 +109,7 @@ namespace MonoMod.Core.Utils {
                 if (pattern.AddressBytes > maxAddrLength) {
                     maxAddrLength = pattern.AddressBytes;
                 }
-                
+
                 // TODO: index masked segments
 
                 // figure out where to put its first segment
@@ -234,7 +234,7 @@ namespace MonoMod.Core.Utils {
             public void AddFirstBytes(ref FirstByteCollection bytes) {
                 for (var i = 0; i < Lut.Length; i++) {
                     if (Lut[i] is not null) {
-                        bytes.Add((byte) i);
+                        bytes.Add((byte)i);
                     }
                 }
             }
@@ -306,7 +306,7 @@ namespace MonoMod.Core.Utils {
 
             // then through the empty patterns, if any
             if (emptyPatterns is not null) {
-                foreach(var pattern in emptyPatterns) {
+                foreach (var pattern in emptyPatterns) {
                     if (pattern.TryMatchAt(data, addrBuf, out length)) {
                         matchingPattern = pattern;
                         return true;
@@ -457,7 +457,7 @@ namespace MonoMod.Core.Utils {
             public void Add(byte value) {
                 ref var index = ref byteIndicies[value];
                 if (index == 255) {
-                    index = (byte) firstBytesRecorded;
+                    index = (byte)firstBytesRecorded;
                     firstByteStore[index] = value;
                     firstBytesRecorded = Math.Min(firstBytesRecorded + 1, 256);
                 }

@@ -213,7 +213,7 @@ namespace System.Collections.Concurrent {
                 return new EnumeratorDropIndices(_source.GetEnumerator());
             }
             IEnumerator IEnumerable.GetEnumerator() {
-                return ((EnumerableDropIndices) this).GetEnumerator();
+                return ((EnumerableDropIndices)this).GetEnumerator();
             }
             public void Dispose() {
                 if (_source is IDisposable d) {
@@ -237,7 +237,7 @@ namespace System.Collections.Concurrent {
             }
             object? IEnumerator.Current {
                 get {
-                    return ((EnumeratorDropIndices) this).Current;
+                    return ((EnumeratorDropIndices)this).Current;
                 }
             }
             public void Dispose() {

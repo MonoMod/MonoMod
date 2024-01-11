@@ -17,7 +17,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             RuntimeFeature.RequiresMethodPinning |
             RuntimeFeature.RequiresMethodIdentification |
             RuntimeFeature.PreciseGC | // some builds use SGen, which is a precise GC, while
-                                    // others, such as Unity, use Boehm, which is a conservative GC.
+                                       // others, such as Unity, use Boehm, which is a conservative GC.
             RuntimeFeature.GenericSharing;
 
         public Abi Abi { get; }
@@ -178,8 +178,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
         public unsafe void DisableInlining(MethodBase method) {
             var handle = GetMethodHandle(method);
             // https://github.com/mono/mono/blob/34dee0ea4e969d6d5b37cb842fc3b9f73f2dc2ae/mono/metadata/class-internals.h#L64
-            var iflags = (ushort*) ((long) handle.Value + 2);
-            *iflags |= (ushort) MethodImplOptionsEx.NoInlining;
+            var iflags = (ushort*)((long)handle.Value + 2);
+            *iflags |= (ushort)MethodImplOptionsEx.NoInlining;
         }
 
         private static readonly MethodInfo _DynamicMethod_CreateDynMethod =
@@ -195,7 +195,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             if (method is DynamicMethod) {
                 _DynamicMethod_CreateDynMethod?.Invoke(method, ArrayEx.Empty<object?>());
                 if (_DynamicMethod_mhandle != null)
-                    return (RuntimeMethodHandle) _DynamicMethod_mhandle.GetValue(method)!;
+                    return (RuntimeMethodHandle)_DynamicMethod_mhandle.GetValue(method)!;
             }
 
             return method.MethodHandle;
@@ -230,8 +230,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 }
             }
 
-            ~PinHandle()
-            {
+            ~PinHandle() {
                 // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
                 Dispose(disposing: false);
             }
@@ -249,7 +248,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public RuntimeMethodHandle Handle;
 
             public override string ToString() {
-                return $"(MethodPinInfo: {Count}, {Method}, 0x{(long) Handle.Value:X})";
+                return $"(MethodPinInfo: {Count}, {Method}, 0x{(long)Handle.Value:X})";
             }
         }
 

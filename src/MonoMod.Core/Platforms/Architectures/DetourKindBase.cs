@@ -12,14 +12,14 @@ namespace MonoMod.Core.Platforms.Architectures {
             if (buffer.Length < info.Size)
                 throw new ArgumentException("Buffer too short", nameof(buffer));
 
-            var kind = (DetourKindBase) info.InternalKind;
+            var kind = (DetourKindBase)info.InternalKind;
             return kind.GetBytes(info.From, info.To, buffer, info.InternalData, out allocHandle);
         }
 
         public abstract bool TryGetRetargetInfo(NativeDetourInfo orig, IntPtr to, int maxSize, out NativeDetourInfo retargetInfo);
         public static bool TryFindRetargetInfo(NativeDetourInfo info, IntPtr to, int maxSize, out NativeDetourInfo retargetInfo) {
             Helpers.ThrowIfArgumentNull(info.InternalKind);
-            var kind = (DetourKindBase) info.InternalKind;
+            var kind = (DetourKindBase)info.InternalKind;
             return kind.TryGetRetargetInfo(info, to, maxSize, out retargetInfo);
         }
 
@@ -32,7 +32,7 @@ namespace MonoMod.Core.Platforms.Architectures {
             if (buffer.Length < info.Size)
                 throw new ArgumentException("Buffer too short", nameof(buffer));
 
-            var kind = (DetourKindBase) info.InternalKind;
+            var kind = (DetourKindBase)info.InternalKind;
             return kind.DoRetarget(orig, info.To, buffer, info.InternalData, out allocationHandle, out needsRepatch, out disposeOldAlloc);
         }
     }

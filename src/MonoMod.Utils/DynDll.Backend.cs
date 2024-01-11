@@ -135,7 +135,7 @@ namespace MonoMod.Utils {
             protected override void CheckAndThrowError() {
                 var lastError = Interop.Windows.GetLastError();
                 if (lastError != 0)
-                    throw new Win32Exception((int) lastError);
+                    throw new Win32Exception((int)lastError);
             }
 
             protected override unsafe bool TryOpenLibraryCore(string? name, Assembly assembly, out IntPtr handle) {
@@ -144,7 +144,7 @@ namespace MonoMod.Utils {
                     handle = result = Interop.Windows.GetModuleHandleW(null);
                 } else {
                     fixed (char* pName = name) {
-                        handle = result = Interop.Windows.LoadLibraryW((ushort*) pName);
+                        handle = result = Interop.Windows.LoadLibraryW((ushort*)pName);
                     }
                 }
                 return result != IntPtr.Zero;
@@ -158,7 +158,7 @@ namespace MonoMod.Utils {
                 var arr = Interop.Unix.MarshalToUtf8(name);
                 IntPtr result;
                 fixed (byte* pName = arr) {
-                    ptr = result = Interop.Windows.GetProcAddress(new((void*) handle), (sbyte*) pName);
+                    ptr = result = Interop.Windows.GetProcAddress(new((void*)handle), (sbyte*)pName);
                 }
                 Interop.Unix.FreeMarshalledArray(arr);
                 return result != IntPtr.Zero;

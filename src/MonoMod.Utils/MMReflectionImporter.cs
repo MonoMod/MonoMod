@@ -17,7 +17,7 @@ namespace MonoMod.Utils {
                 return importer;
             }
         }
-        
+
         // Not all generics are equal: in some cases a type with a generic parameter should be 
         // considered as a TypeReference with GenericParameters. For instance Bar<T> in
         //
@@ -187,7 +187,7 @@ namespace MonoMod.Utils {
                     return CachedTypes[type] = at;
                 }
             }
-            
+
             if (_IsGenericInstance(type, importKind)) {
                 return _ImportGenericInstance(type, context,
                     _ImportReference(type.GetGenericTypeDefinition(), context, GenericImportKind.Definition));
@@ -200,10 +200,10 @@ namespace MonoMod.Utils {
                 return SetCachedType(type, typeRef, importKind);
 
             typeRef = new TypeReference(
-				string.Empty,
-				type.Name,
-				Module,
-				ImportReference(type.Assembly),
+                string.Empty,
+                type.Name,
+                Module,
+                ImportReference(type.Assembly),
                 type.IsValueType
             );
 
@@ -345,7 +345,7 @@ namespace MonoMod.Utils {
             foreach (var param in method.GetParameters())
                 methodRef.Parameters.Add(new ParameterDefinition(
                     param.Name,
-                    (Mono.Cecil.ParameterAttributes) param.Attributes,
+                    (Mono.Cecil.ParameterAttributes)param.Attributes,
                     _ImportReference(param.ParameterType, methodRef)
                 ));
 

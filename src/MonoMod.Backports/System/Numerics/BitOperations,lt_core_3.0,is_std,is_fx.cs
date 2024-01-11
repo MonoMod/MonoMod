@@ -60,10 +60,10 @@ namespace System.Numerics {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
         public static int LeadingZeroCount(ulong value) {
-            uint hi = (uint) (value >> 32);
+            uint hi = (uint)(value >> 32);
 
             if (hi == 0) {
-                return 32 + LeadingZeroCount((uint) value);
+                return 32 + LeadingZeroCount((uint)value);
             }
 
             return LeadingZeroCount(hi);
@@ -95,10 +95,10 @@ namespace System.Numerics {
         public static int Log2(ulong value) {
             value |= 1;
 
-            uint hi = (uint) (value >> 32);
+            uint hi = (uint)(value >> 32);
 
             if (hi == 0) {
-                return Log2((uint) value);
+                return Log2((uint)value);
             }
 
             return 32 + Log2(hi);
@@ -126,7 +126,7 @@ namespace System.Numerics {
                 // Using deBruijn sequence, k=2, n=5 (2^5=32) : 0b_0000_0111_1100_0100_1010_1100_1101_1101u
                 ref MemoryMarshal.GetReference(Log2DeBruijn),
                 // uint|long -> IntPtr cast on 32-bit platforms does expensive overflow checks not needed here
-                (IntPtr) (int) ((value * 0x07C4ACDDu) >> 27));
+                (IntPtr)(int)((value * 0x07C4ACDDu) >> 27));
         }
 
         /// <summary>Returns the integer (ceiling) log of the specified value, base 2.</summary>
@@ -171,7 +171,7 @@ namespace System.Numerics {
                 value = (value & c2) + ((value >> 2) & c2);
                 value = (((value + (value >> 4)) & c3) * c4) >> 24;
 
-                return (int) value;
+                return (int)value;
             }
         }
 
@@ -184,8 +184,8 @@ namespace System.Numerics {
         [CLSCompliant(false)]
         public static int PopCount(ulong value) {
             if (IntPtr.Size == 8) {
-                return PopCount((uint) value) // lo
-                    + PopCount((uint) (value >> 32)); // hi
+                return PopCount((uint)value) // lo
+                    + PopCount((uint)(value >> 32)); // hi
             } else {
                 return SoftwareFallback(value);
             }
@@ -200,7 +200,7 @@ namespace System.Numerics {
                 value = (value & c2) + ((value >> 2) & c2);
                 value = (((value + (value >> 4)) & c3) * c4) >> 56;
 
-                return (int) value;
+                return (int)value;
             }
         }
 
@@ -211,7 +211,7 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int TrailingZeroCount(int value)
-            => TrailingZeroCount((uint) value);
+            => TrailingZeroCount((uint)value);
 
         /// <summary>
         /// Count the number of trailing zero bits in an integer value.
@@ -231,7 +231,7 @@ namespace System.Numerics {
                 // Using deBruijn sequence, k=2, n=5 (2^5=32) : 0b_0000_0111_0111_1100_1011_0101_0011_0001u
                 ref MemoryMarshal.GetReference(TrailingZeroCountDeBruijn),
                 // uint|long -> IntPtr cast on 32-bit platforms does expensive overflow checks not needed here
-                (IntPtr) (int) (((value & (uint) -(int) value) * 0x077CB531u) >> 27)); // Multi-cast mitigates redundant conv.u8
+                (IntPtr)(int)(((value & (uint)-(int)value) * 0x077CB531u) >> 27)); // Multi-cast mitigates redundant conv.u8
         }
 
         /// <summary>
@@ -241,7 +241,7 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int TrailingZeroCount(long value)
-            => TrailingZeroCount((ulong) value);
+            => TrailingZeroCount((ulong)value);
 
         /// <summary>
         /// Count the number of trailing zero bits in a mask.
@@ -251,10 +251,10 @@ namespace System.Numerics {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
         public static int TrailingZeroCount(ulong value) {
-            uint lo = (uint) value;
+            uint lo = (uint)value;
 
             if (lo == 0) {
-                return 32 + TrailingZeroCount((uint) (value >> 32));
+                return 32 + TrailingZeroCount((uint)(value >> 32));
             }
 
             return TrailingZeroCount(lo);
@@ -327,7 +327,7 @@ namespace System.Numerics {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static uint ResetBit(uint value, int bitPos) {
             // TODO: Recognize BTR on x86 and LSL+BIC on ARM
-            return value & ~(uint) (1 << bitPos);
+            return value & ~(uint)(1 << bitPos);
         }
     }
 }

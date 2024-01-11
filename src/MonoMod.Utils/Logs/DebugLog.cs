@@ -153,7 +153,7 @@ namespace MonoMod.Logs {
                     //  1. It avoids the allocation of the message string when it wouldn't be used
                     //  2. Debugger.Log is implemented as a QCall (on CoreCLR, and probably Framework) which pulls in all of the P/Invoke machinery, and necessitates a GC transition.
                     //     Debugger.IsAttached, on the other hand, is an FCall (MethodImplOptions.InternalCall) and likely elides the helper frames entirely, making it much faster.
-                    Debugger.Log((int) message.Level, message.Source,
+                    Debugger.Log((int)message.Level, message.Source,
                         DebugFormatter.Format($"[{message.Source}] {message.Level.FastToString(null)}: {message.FormattedMessage}\n")); // the VS output window doesn't automatically add a newline
                 } catch {
                     // We want to completely swallow exceptions that happen here, because logging errors shouldn't cause problems for the callers.
@@ -162,7 +162,7 @@ namespace MonoMod.Logs {
 
             try {
                 var sub = subscriptions;
-                var idx = (int) message.Level;
+                var idx = (int)message.Level;
                 if (sub.SimpleRegs[idx] is { } simple)
                     message.ReportTo(simple);
                 if (sub.DetailedRegs[idx] is { } detailed)
@@ -185,11 +185,11 @@ namespace MonoMod.Logs {
 
         #region Log functions
         internal bool ShouldLogLevel(LogLevel level) // check AlwaysLog last because it's more complex
-            => ((1 << (int) level) & (int) subscriptions.ActiveLevels) is not 0
+            => ((1 << (int)level) & (int)subscriptions.ActiveLevels) is not 0
             // if we're falling through to AlwaysLog, we only want to always log stuff in the global filter
-            || (((1 << (int) level) & (int) globalFilter) is not 0 && AlwaysLog);
+            || (((1 << (int)level) & (int)globalFilter) is not 0 && AlwaysLog);
         internal bool ShouldLevelRecordHoles(LogLevel level)
-            => recordHoles || ((1 << (int) level) & (int) subscriptions.DetailLevels) is not 0;
+            => recordHoles || ((1 << (int)level) & (int)subscriptions.DetailLevels) is not 0;
 
         public void Write(string source, DateTime time, LogLevel level, string message) {
             if (!ShouldLogLevel(level)) {
@@ -198,7 +198,7 @@ namespace MonoMod.Logs {
             PostMessage(MakeMessage(source, time, level, message, default));
         }
 
-        public void Write(string source, DateTime time, LogLevel level, 
+        public void Write(string source, DateTime time, LogLevel level,
             [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message) {
             // we check the handler's enabled field instead of our own HasHandlers because the handler may not have been recording anything in the first place
             if (!message.enabled)
@@ -226,7 +226,7 @@ namespace MonoMod.Logs {
             }
             Write(source, DateTime.UtcNow, level, ref message);
         }
-        
+
         public static void Log(string source, LogLevel level, string message) {
             var instance = Instance;
             if (!instance.ShouldLogLevel(level)) {
@@ -355,12 +355,12 @@ namespace MonoMod.Logs {
 
                 var encoding = Encoding.UTF8;
                 _ = SubscribeCore(filter, (source, time, level, msg) => {
-                    var blevel = (byte) (int) level;
+                    var blevel = (byte)(int)level;
                     var ticks = time.Ticks;
 
                     if (source.Length > 255) // if your source is this long, you're doing something wrong
                         source = source.Substring(0, 255);
-                    var bSourceLen = (byte) source.Length;
+                    var bSourceLen = (byte)source.Length;
                     var msgLen = msg.Length;
 
                     var totalMsgLen = sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(int) + (bSourceLen * 2) + (msgLen * 2);
@@ -386,7 +386,7 @@ namespace MonoMod.Logs {
                         pos += bSourceLen * 2;
                         Unsafe.WriteUnaligned(ref Unsafe.Add(ref msgBase, pos), msgLen);
                         pos += sizeof(int);
-                        Unsafe.CopyBlock(ref Unsafe.Add(ref msgBase, pos), ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(msg.AsSpan())), (uint) msgLen * 2u);
+                        Unsafe.CopyBlock(ref Unsafe.Add(ref msgBase, pos), ref Unsafe.As<char, byte>(ref MemoryMarshal.GetReference(msg.AsSpan())), (uint)msgLen * 2u);
                         pos += msgLen * 2;
                         memlogPos += pos;
                     }
@@ -402,7 +402,7 @@ namespace MonoMod.Logs {
             public readonly OnLogMessage?[] SimpleRegs;
             public readonly OnLogMessageDetailed?[] DetailedRegs;
 
-            private const LogLevelFilter ValidFilter = (LogLevelFilter) ((1 << ((int) LogLevelExtensions.MaxLevel + 1)) - 1);
+            private const LogLevelFilter ValidFilter = (LogLevelFilter)((1 << ((int)LogLevelExtensions.MaxLevel + 1)) - 1);
 
             private LevelSubscriptions(LogLevelFilter active, LogLevelFilter detail, OnLogMessage?[] simple, OnLogMessageDetailed?[] detailed) {
                 ActiveLevels = active | detail; // detail is by definition a subset of active
@@ -414,7 +414,7 @@ namespace MonoMod.Logs {
             private LevelSubscriptions() {
                 ActiveLevels = LogLevelFilter.None;
                 DetailLevels = LogLevelFilter.None;
-                SimpleRegs = new OnLogMessage?[(int) LogLevelExtensions.MaxLevel + 1];
+                SimpleRegs = new OnLogMessage?[(int)LogLevelExtensions.MaxLevel + 1];
                 DetailedRegs = new OnLogMessageDetailed?[SimpleRegs.Length];
             }
 
@@ -442,7 +442,7 @@ namespace MonoMod.Logs {
             public LevelSubscriptions AddSimple(LogLevelFilter filter, OnLogMessage del) {
                 var clone = Clone(false);
                 clone.ActiveLevels |= filter;
-                var ifilter = (int) filter;
+                var ifilter = (int)filter;
                 for (var i = 0; i < clone.SimpleRegs.Length; i++) {
                     if ((ifilter & (1 << i)) == 0)
                         continue;
@@ -454,13 +454,13 @@ namespace MonoMod.Logs {
 
             public LevelSubscriptions RemoveSimple(LogLevelFilter filter, OnLogMessage del) {
                 var clone = Clone(false);
-                var ifilter = (int) filter;
+                var ifilter = (int)filter;
                 for (var i = 0; i < clone.SimpleRegs.Length; i++) {
                     if ((ifilter & (1 << i)) == 0)
                         continue;
                     var result = Helpers.EventRemove(ref clone.SimpleRegs[i], del);
                     if (result is null)
-                        clone.ActiveLevels &= (LogLevelFilter) ~(1 << i);
+                        clone.ActiveLevels &= (LogLevelFilter)~(1 << i);
                 }
                 clone.ActiveLevels |= clone.DetailLevels;
                 clone.FixFilters();
@@ -470,7 +470,7 @@ namespace MonoMod.Logs {
             public LevelSubscriptions AddDetailed(LogLevelFilter filter, OnLogMessageDetailed del) {
                 var clone = Clone(true);
                 clone.DetailLevels |= filter;
-                var ifilter = (int) filter;
+                var ifilter = (int)filter;
                 for (var i = 0; i < clone.DetailedRegs.Length; i++) {
                     if ((ifilter & (1 << i)) == 0)
                         continue;
@@ -483,13 +483,13 @@ namespace MonoMod.Logs {
 
             public LevelSubscriptions RemoveDetailed(LogLevelFilter filter, OnLogMessageDetailed del) {
                 var clone = Clone(true);
-                var ifilter = (int) filter;
+                var ifilter = (int)filter;
                 for (var i = 0; i < clone.DetailedRegs.Length; i++) {
                     if ((ifilter & (1 << i)) == 0)
                         continue;
                     var result = Helpers.EventRemove(ref clone.DetailedRegs[i], del);
                     if (result is null)
-                        clone.DetailLevels &= (LogLevelFilter) ~(1 << i);
+                        clone.DetailLevels &= (LogLevelFilter)~(1 << i);
                 }
                 clone.ActiveLevels |= clone.DetailLevels;
                 clone.FixFilters();
@@ -508,7 +508,7 @@ namespace MonoMod.Logs {
             var msgs = replayQueue.ToArray();
             // if we're recording message replays, we don't bother reusing message objects, so this is safe
             foreach (var msg in msgs) {
-                if (((1 << (int) msg.Level) & (int) filter) is 0)
+                if (((1 << (int)msg.Level) & (int)filter) is 0)
                     continue;
                 msg.ReportTo(del);
             }
@@ -521,7 +521,7 @@ namespace MonoMod.Logs {
             var msgs = replayQueue.ToArray();
             // if we're recording message replays, we don't bother reusing message objects, so this is safe
             foreach (var msg in msgs) {
-                if (((1 << (int) msg.Level) & (int) filter) is 0)
+                if (((1 << (int)msg.Level) & (int)filter) is 0)
                     continue;
                 msg.ReportTo(del);
             }

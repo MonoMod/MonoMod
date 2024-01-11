@@ -43,7 +43,7 @@ namespace MonoMod.RuntimeDetour {
         internal DetourManager.ManagedDetourChainNode? ChainNode
             => detour.ManagerData switch {
                 DetourManager.ManagedDetourChainNode cn => cn,
-                DetourManager.DepGraphNode<DetourManager.ManagedChainNode> gn => (DetourManager.ManagedDetourChainNode) gn.ListNode.ChainNode,
+                DetourManager.DepGraphNode<DetourManager.ManagedChainNode> gn => (DetourManager.ManagedDetourChainNode)gn.ListNode.ChainNode,
                 _ => null,
             };
 

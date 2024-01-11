@@ -18,12 +18,12 @@ namespace MonoMod.Utils {
 
         static _DMDEmit() {
             foreach (var field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                var reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null)!;
+                var reflOpCode = (System.Reflection.Emit.OpCode)field.GetValue(null)!;
                 _ReflOpCodes[reflOpCode.Value] = reflOpCode;
             }
 
             foreach (var field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
-                var cecilOpCode = (Mono.Cecil.Cil.OpCode) field.GetValue(null)!;
+                var cecilOpCode = (Mono.Cecil.Cil.OpCode)field.GetValue(null)!;
                 _CecilOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
         }
@@ -48,7 +48,7 @@ namespace MonoMod.Utils {
 
             if (dm != null) {
                 foreach (var param in def.Parameters) {
-                    dm.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
+                    dm.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes)param.Attributes, param.Name);
                 }
             }
 #if NETFRAMEWORK

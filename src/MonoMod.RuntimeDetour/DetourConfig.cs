@@ -54,7 +54,7 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="before">An enumerable containing the list of IDs of detours to run before detours with this config.</param>
         /// <param name="after">An enumerable containing the list of IDs of detours to run after detours with this config.</param>
         public DetourConfig(string id, int? priority = null, IEnumerable<string>? before = null, IEnumerable<string>? after = null)
-            : this(id, priority, before, after, 0) {}
+            : this(id, priority, before, after, 0) { }
 
         /// <summary>
         /// Constructs a <see cref="DetourConfig"/> with a specific ID, and any of the ordering options (including advanced options).

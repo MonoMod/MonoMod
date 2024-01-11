@@ -94,7 +94,7 @@ namespace MonoMod.Utils {
             var sizeLoc = -1;
 
             // This expects a MdSigCallingConvention
-            AddData((byte) csite.CallingConvention);
+            AddData((byte)csite.CallingConvention);
             sizeLoc = currSig++;
 
             var modReq = new List<Type>();
@@ -212,15 +212,15 @@ namespace MonoMod.Utils {
                 }
 
                 if (data <= 0x7F) {
-                    signature[currSig++] = (byte) (data & 0xFF);
+                    signature[currSig++] = (byte)(data & 0xFF);
                 } else if (data <= 0x3FFF) {
-                    signature[currSig++] = (byte) ((data >> 8) | 0x80);
-                    signature[currSig++] = (byte) (data & 0xFF);
+                    signature[currSig++] = (byte)((data >> 8) | 0x80);
+                    signature[currSig++] = (byte)(data & 0xFF);
                 } else if (data <= 0x1FFFFFFF) {
-                    signature[currSig++] = (byte) ((data >> 24) | 0xC0);
-                    signature[currSig++] = (byte) ((data >> 16) & 0xFF);
-                    signature[currSig++] = (byte) ((data >> 8) & 0xFF);
-                    signature[currSig++] = (byte) ((data) & 0xFF);
+                    signature[currSig++] = (byte)((data >> 24) | 0xC0);
+                    signature[currSig++] = (byte)((data >> 16) & 0xFF);
+                    signature[currSig++] = (byte)((data >> 8) & 0xFF);
+                    signature[currSig++] = (byte)((data) & 0xFF);
                 } else {
                     throw new ArgumentException("Integer or token was too large to be encoded.");
                 }
@@ -249,7 +249,7 @@ namespace MonoMod.Utils {
                 // to the token and then adds this to the signature.
 
                 var rid = (token & 0x00FFFFFF); //This is RidFromToken;
-                var type = (token & unchecked((int) 0xFF000000)); //This is TypeFromToken;
+                var type = (token & unchecked((int)0xFF000000)); //This is TypeFromToken;
 
                 if (rid > 0x3FFFFFF) {
                     // token is too big to be compressed    
@@ -325,7 +325,7 @@ namespace MonoMod.Utils {
 
                     for (var i = 0; i < CorElementTypes.Length; i++) {
                         if (clsArgument == CorElementTypes[i]) {
-                            type = (byte) i;
+                            type = (byte)i;
                             break;
                         }
                     }

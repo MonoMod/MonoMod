@@ -19,7 +19,7 @@ namespace MonoMod.RuntimeDetour {
             public abstract Delegate EntryDelegate { get; }
 
             public abstract void UpdateChain(IDetourFactory factory, Delegate? fallback);
-            public virtual void Remove() {}
+            public virtual void Remove() { }
 
         }
 
@@ -277,7 +277,7 @@ namespace MonoMod.RuntimeDetour {
 
                         case DepGraphNode<NativeChainNode> gn:
                             RemoveGraphDetour(detour, gn);
-                            cnode = (NativeDetourChainNode) gn.ListNode.ChainNode;
+                            cnode = (NativeDetourChainNode)gn.ListNode.ChainNode;
                             break;
 
                         case NativeDetourChainNode cn:

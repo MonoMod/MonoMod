@@ -1,4 +1,11 @@
 [*.cs]
+#csharp_new_line_before_catch = true
+#csharp_new_line_before_else = true
+#csharp_new_line_before_finally = true
+#csharp_new_line_before_members_in_anonymous_types = true
+#csharp_new_line_before_members_in_object_initializers = true
+#csharp_new_line_before_open_brace = all
+
 # Configure null check validation functions so the compiler does not complain
 dotnet_code_quality.CA1062.null_check_validation_methods = ThrowIfArgumentNull
 

@@ -42,7 +42,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 // currently, we need to manually add support for new versions.
                 // TODO: possibly fall back to a JIT GUID check if we can?
 
-                default: throw new PlatformNotSupportedException($"CoreCLR version {version} is not supported");
+                default:
+                    throw new PlatformNotSupportedException($"CoreCLR version {version} is not supported");
             }
 
             throw new NotImplementedException();
@@ -103,7 +104,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 throw new PlatformNotSupportedException("Could not open clrjit library");
 
             try {
-                return ((delegate* unmanaged[Stdcall]<IntPtr>) DynDll.GetExport(clrjit, "getJit"))();
+                return ((delegate* unmanaged[Stdcall]<IntPtr>)DynDll.GetExport(clrjit, "getJit"))();
             } catch {
                 DynDll.CloseLibrary(clrjit);
                 throw;
