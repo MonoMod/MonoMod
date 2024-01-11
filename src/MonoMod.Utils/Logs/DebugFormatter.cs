@@ -1,8 +1,8 @@
+using MonoMod.Backports;
+using MonoMod.Utils;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Backports;
-using MonoMod.Utils;
 
 namespace MonoMod.Logs {
     public static class DebugFormatter {

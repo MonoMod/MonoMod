@@ -1,12 +1,11 @@
-﻿using System;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using MonoMod.Utils.Cil;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Generic;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Linq;
-using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
-using MonoMod.Utils.Cil;
 #if NETFRAMEWORK
 using System.Diagnostics.SymbolStore;
 #endif
@@ -18,19 +17,19 @@ namespace MonoMod.Utils {
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
 
         static _DMDEmit() {
-            foreach (FieldInfo field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 var reflOpCode = (System.Reflection.Emit.OpCode) field.GetValue(null)!;
                 _ReflOpCodes[reflOpCode.Value] = reflOpCode;
             }
 
-            foreach (FieldInfo field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 var cecilOpCode = (Mono.Cecil.Cil.OpCode) field.GetValue(null)!;
                 _CecilOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
         }
 
         public static void Generate(DynamicMethodDefinition dmd, MethodBase _mb, ILGenerator il) {
-            MethodDefinition def = dmd.Definition ?? throw new InvalidOperationException();
+            var def = dmd.Definition ?? throw new InvalidOperationException();
             var dm = _mb as DynamicMethod;
 #if NETFRAMEWORK
             var mb = _mb as MethodBuilder;
@@ -48,21 +47,21 @@ namespace MonoMod.Utils {
 #endif
 
             if (dm != null) {
-                foreach (ParameterDefinition param in def.Parameters) {
+                foreach (var param in def.Parameters) {
                     dm.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
                 }
             }
 #if NETFRAMEWORK
             if (mb != null) {
-                foreach (ParameterDefinition param in def.Parameters) {
+                foreach (var param in def.Parameters) {
                     mb.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
                 }
             }
 #endif
 
-            LocalBuilder[] locals = def.Body.Variables.Select(
+            var locals = def.Body.Variables.Select(
                 var => {
-                    LocalBuilder local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
+                    var local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
 #if NETFRAMEWORK && !CECIL0_9
                     if (mb != null && defInfo != null && defInfo.TryGetName(var, out var name)) {
                         local.SetLocalSymInfo(name);
@@ -74,9 +73,9 @@ namespace MonoMod.Utils {
 
             // Pre-pass - Set up label map.
             var labelMap = new Dictionary<Instruction, Label>();
-            foreach (Instruction instr in def.Body.Instructions) {
+            foreach (var instr in def.Body.Instructions) {
                 if (instr.Operand is Instruction[] targets) {
-                    foreach (Instruction target in targets)
+                    foreach (var target in targets)
                         if (!labelMap.ContainsKey(target))
                             labelMap[target] = il.DefineLabel();
 
@@ -93,14 +92,14 @@ namespace MonoMod.Utils {
             var paramOffs = def.HasThis ? 1 : 0;
             var emitArgs = new object?[2];
             var checkTryEndEarly = false;
-            foreach (Instruction instr in def.Body.Instructions) {
-                if (labelMap.TryGetValue(instr, out Label label))
+            foreach (var instr in def.Body.Instructions) {
+                if (labelMap.TryGetValue(instr, out var label))
                     il.MarkLabel(label);
 
 #if NETFRAMEWORK
                 var instrInfo = defInfo?.GetSequencePoint(instr);
                 if (mb is not null && instrInfo is not null && infoDocCache is not null && moduleBuilder is not null) {
-                    if (!infoDocCache.TryGetValue(instrInfo.Document, out ISymbolDocumentWriter infoDoc)) {
+                    if (!infoDocCache.TryGetValue(instrInfo.Document, out var infoDoc)) {
                         infoDocCache[instrInfo.Document] = infoDoc = moduleBuilder.DefineDocument(
                             instrInfo.Document.Url,
                             instrInfo.Document.LanguageGuid,
@@ -112,7 +111,7 @@ namespace MonoMod.Utils {
                 }
 #endif
 
-                foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
+                foreach (var handler in def.Body.ExceptionHandlers) {
                     if (checkTryEndEarly && handler.HandlerEnd == instr) {
                         il.EndExceptionBlock();
                     }
@@ -176,7 +175,7 @@ namespace MonoMod.Utils {
                         operand = param.Index + paramOffs;
 
                     } else if (operand is MemberReference mref) {
-                        MemberInfo member = mref == def ? _mb : mref.ResolveReflection();
+                        var member = mref == def ? _mb : mref.ResolveReflection();
                         operand = member;
 #if NETFRAMEWORK
                         if (mb != null && member != null) {
@@ -221,7 +220,7 @@ namespace MonoMod.Utils {
                                 operand = _CreateMethodProxy(mb, target);
                                 // TODO: replace this with allocation of a reference and FastDelegateInvokers call, or similar invocation sequence
                             } else {
-                                IntPtr ptr = called.GetLdftnPointer();
+                                var ptr = called.GetLdftnPointer();
                                 if (IntPtr.Size == 4)
                                     il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, (int) ptr);
                                 else
@@ -243,7 +242,7 @@ namespace MonoMod.Utils {
                 }
 
                 if (!checkTryEndEarly) {
-                    foreach (ExceptionHandler handler in def.Body.ExceptionHandlers) {
+                    foreach (var handler in def.Body.ExceptionHandlers) {
                         if (handler.HandlerEnd == instr.Next) {
                             il.EndExceptionBlock();
                         }
@@ -271,7 +270,7 @@ namespace MonoMod.Utils {
                 modOpt.Clear();
 
             for (
-                TypeReference mod = typeRef;
+                var mod = typeRef;
                 mod is TypeSpecification modSpec;
                 mod = modSpec.ElementType
             ) {

@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
-using Mono.Collections.Generic;
+﻿using Mono.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -10,7 +10,7 @@ namespace MonoMod.Utils {
         /// </summary>
         public static void AddRange<T>(this Collection<T> list, IEnumerable<T> other) {
             Helpers.ThrowIfArgumentNull(list);
-            foreach (T entry in Helpers.ThrowIfNull(other))
+            foreach (var entry in Helpers.ThrowIfNull(other))
                 list.Add(entry);
         }
         /// <summary>
@@ -26,7 +26,7 @@ namespace MonoMod.Utils {
         /// </summary>
         public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> dict, IDictionary<TKey, TValue> other) {
             Helpers.ThrowIfArgumentNull(dict);
-            foreach (KeyValuePair<TKey, TValue> entry in Helpers.ThrowIfNull(other))
+            foreach (var entry in Helpers.ThrowIfNull(other))
                 dict.Add(entry.Key, entry.Value);
         }
         /// <summary>
@@ -34,7 +34,7 @@ namespace MonoMod.Utils {
         /// </summary>
         public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> dict, Dictionary<TKey, TValue> other) where TKey : notnull {
             Helpers.ThrowIfArgumentNull(dict);
-            foreach (KeyValuePair<TKey, TValue> entry in Helpers.ThrowIfNull(other))
+            foreach (var entry in Helpers.ThrowIfNull(other))
                 dict.Add(entry.Key, entry.Value);
         }
 
@@ -43,7 +43,7 @@ namespace MonoMod.Utils {
         /// </summary>
         public static void InsertRange<T>(this Collection<T> list, int index, IEnumerable<T> other) {
             Helpers.ThrowIfArgumentNull(list);
-            foreach (T entry in Helpers.ThrowIfNull(other))
+            foreach (var entry in Helpers.ThrowIfNull(other))
                 list.Insert(index++, entry);
         }
 

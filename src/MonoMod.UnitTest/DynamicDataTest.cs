@@ -1,9 +1,9 @@
-﻿using Xunit;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
-using Xunit.Abstractions;
 using System.Runtime.CompilerServices;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     public class DynamicDataTest : TestBase {
@@ -137,7 +137,7 @@ namespace MonoMod.UnitTest {
             using var dataTo = DynamicData.For(dummyTo);
             Assert.Equal(dataTo, DynamicData.For(dummyTo));
             using (var dyndata = new DynamicData(dummy)) {
-                foreach (KeyValuePair<string, object> kvp in dyndata)
+                foreach (var kvp in dyndata)
                     dataTo.Set(kvp.Key, kvp.Value);
             }
             Assert.Equal(30, dummyTo.A);

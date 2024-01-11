@@ -95,7 +95,7 @@ namespace MonoMod.Core.Utils {
             var distinctOffsetCount = 0; // starts at 1 because of the zero offset
 
             for (var i = 0; i < patterns.Length; i++) {
-                BytePattern? pattern = patterns.Span[i];
+                var pattern = patterns.Span[i];
                 if (pattern is null)
                     continue;
 
@@ -146,7 +146,7 @@ namespace MonoMod.Core.Utils {
 
             // now we can begin to allocate our arrays
             // first our empty pattern array
-            BytePattern[]? emptyPatterns = emptyPatternCount > 0 ? new BytePattern[emptyPatternCount] : null;
+            var emptyPatterns = emptyPatternCount > 0 ? new BytePattern[emptyPatternCount] : null;
             var savedEmptyPatterns = 0;
             // then our list of homogenous pattern collections
             var homoPatterns = new HomogenousPatternCollection[distinctOffsetCount];
@@ -155,7 +155,7 @@ namespace MonoMod.Core.Utils {
 
             // now iterate through our input pattern list again, and add them to their relevant collections
             for (var i = 0; i < patterns.Length; i++) {
-                BytePattern? pattern = patterns.Span[i];
+                var pattern = patterns.Span[i];
                 if (pattern is null)
                     continue;
 
@@ -211,7 +211,7 @@ namespace MonoMod.Core.Utils {
 
                 Helpers.DAssert(collection.Offset == offs);
 
-                BytePattern?[]? targetArray = collection.Lut[seg.Span[0]];
+                var targetArray = collection.Lut[seg.Span[0]];
                 Helpers.DAssert(targetArray is not null);
                 var targetIndex = Array.IndexOf(targetArray, null);
                 Helpers.DAssert(targetIndex >= 0);

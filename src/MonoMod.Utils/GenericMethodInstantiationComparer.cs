@@ -49,19 +49,19 @@ namespace MonoMod.Utils {
             if (xDef.Name != yDef.Name)
                 return false;
 
-            ParameterInfo[] xParams = x.GetParameters();
-            ParameterInfo[] yParams = y.GetParameters();
+            var xParams = x.GetParameters();
+            var yParams = y.GetParameters();
 
             if (xParams.Length != yParams.Length)
                 return false;
 
             // these should be identical
-            ParameterInfo[] xDefParams = xDef.GetParameters();
+            var xDefParams = xDef.GetParameters();
             //ParameterInfo[] yDefParams = yDef.GetParameters();
 
             for (var i = 0; i < xParams.Length; i++) {
-                Type xType = xParams[i].ParameterType;
-                Type yType = yParams[i].ParameterType;
+                var xType = xParams[i].ParameterType;
+                var yType = yParams[i].ParameterType;
                 if (xDefParams[i].ParameterType.IsGenericParameter) {
                     if (!xType.IsValueType) {
                         xType = CannonicalFillType ?? typeof(object); // for some sanity
@@ -90,7 +90,7 @@ namespace MonoMod.Utils {
                     code ^= genericTypeComparer.GetHashCode(obj.DeclaringType);
                 }
                 code ^= obj.Name.GetHashCode(StringComparison.Ordinal);
-                ParameterInfo[] parameters = obj.GetParameters();
+                var parameters = obj.GetParameters();
                 var paramCount = parameters.Length;
                 paramCount ^= paramCount << 4;
                 paramCount ^= paramCount << 8;
@@ -99,10 +99,10 @@ namespace MonoMod.Utils {
 
                 if (obj.IsGenericMethod) { // we can get here if only the type is generic
                     // type arguments, and here is where we do special treatment
-                    Type[] typeArgs = obj.GetGenericArguments();
+                    var typeArgs = obj.GetGenericArguments();
                     for (var i = 0; i < typeArgs.Length; i++) {
                         var offs = i % 32;
-                        Type type = typeArgs[i];
+                        var type = typeArgs[i];
                         // this magic is to treat all reference types like System.__Canon, because that's what we care about
                         var typeCode = type.IsValueType ? genericTypeComparer.GetHashCode(type)
                                                         : CannonicalFillType?.GetHashCode() ?? 0x55555555;
@@ -120,11 +120,11 @@ namespace MonoMod.Utils {
                     definition = obj.GetUnfilledMethodOnGenericType();
                 }
 
-                ParameterInfo[] definitionParams = definition.GetParameters();
+                var definitionParams = definition.GetParameters();
                 // amusingly, this requires the actual definition to behave
                 for (var i = 0; i < parameters.Length; i++) {
                     var offs = i % 32;
-                    Type type = parameters[i].ParameterType;
+                    var type = parameters[i].ParameterType;
                     var typeCode = genericTypeComparer.GetHashCode(type);
                     // we only normalize when the parameter in question is a generic parameter
                     if (definitionParams[i].ParameterType.IsGenericParameter && !type.IsValueType) {

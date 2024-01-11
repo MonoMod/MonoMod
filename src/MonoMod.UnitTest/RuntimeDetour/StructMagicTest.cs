@@ -2,11 +2,10 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
-
-using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Runtime.CompilerServices;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
@@ -116,7 +115,7 @@ namespace MonoMod.UnitTest {
         internal static SomeOtherStruct GetStructHook(Func<StructMagicTest, IntPtr, SomeOtherStruct> orig, StructMagicTest self, IntPtr x) {
             Assert.True(IsHook);
             IsHook = false;
-            SomeOtherStruct s = orig(self, x);
+            var s = orig(self, x);
             IsHook = true;
 
             self.GetStructCounter += 400;

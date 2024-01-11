@@ -1,8 +1,8 @@
-﻿using System;
-using System.Reflection;
+﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
-using Mono.Cecil;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace MonoMod.Utils {
     public sealed class MMReflectionImporter : IReflectionImporter {
@@ -143,7 +143,7 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(type);
             Helpers.ThrowIfArgumentNull(typeRef);
             var git = new GenericInstanceType(typeRef);
-            foreach (Type arg in type.GetGenericArguments())
+            foreach (var arg in type.GetGenericArguments())
                 git.GenericArguments.Add(_ImportReference(arg, context));
             return git;
         }
@@ -213,7 +213,7 @@ namespace MonoMod.Utils {
                 typeRef.Namespace = type.Namespace;
 
             if (type.IsGenericType)
-                foreach (Type param in type.GetGenericArguments())
+                foreach (var param in type.GetGenericArguments())
                     typeRef.GenericParameters.Add(new GenericParameter(param.Name, typeRef));
 
             return SetCachedType(type, typeRef, importKind);
@@ -234,7 +234,7 @@ namespace MonoMod.Utils {
 
             if (context is TypeReference ctxTypeRef) {
                 while (ctxTypeRef != null) {
-                    TypeReference ctxTypeRefEl = ctxTypeRef.GetElementType();
+                    var ctxTypeRefEl = ctxTypeRef.GetElementType();
                     if (ctxTypeRefEl.Is(dclType))
                         return ctxTypeRefEl.GenericParameters[type.GenericParameterPosition];
 
@@ -258,9 +258,9 @@ namespace MonoMod.Utils {
                 return CachedFields[field] = Default.ImportReference(field, context);
 
             var declType = field.DeclaringType;
-            TypeReference declaringType = declType != null ? ImportReference(declType, context) : ImportModuleType(field.Module, context);
+            var declaringType = declType != null ? ImportReference(declType, context) : ImportModuleType(field.Module, context);
 
-            FieldInfo fieldOrig = field;
+            var fieldOrig = field;
             if (declType != null && declType.IsGenericType) {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
@@ -309,7 +309,7 @@ namespace MonoMod.Utils {
             if (method.IsGenericMethod && !method.IsGenericMethodDefinition ||
                 method.IsGenericMethod && method.IsGenericMethodDefinition && importKind == GenericImportKind.Open) {
                 var gim = new GenericInstanceMethod(_ImportReference(((MethodInfo)method).GetGenericMethodDefinition(), context, GenericImportKind.Definition));
-                foreach (Type arg in method.GetGenericArguments())
+                foreach (var arg in method.GetGenericArguments())
                     // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(_ImportReference(arg, context));
 
@@ -328,7 +328,7 @@ namespace MonoMod.Utils {
             if ((method.CallingConvention & CallingConventions.VarArgs) != 0)
                 methodRef.CallingConvention = MethodCallingConvention.VarArg;
 
-            MethodBase methodOrig = method;
+            var methodOrig = method;
             if (declType != null && declType.IsGenericType) {
                 // In methods of generic types, all generic parameters are already filled in.
                 // Meanwhile, cecil requires generic parameter references.
@@ -337,12 +337,12 @@ namespace MonoMod.Utils {
             }
 
             if (method.IsGenericMethodDefinition)
-                foreach (Type param in method.GetGenericArguments())
+                foreach (var param in method.GetGenericArguments())
                     methodRef.GenericParameters.Add(new GenericParameter(param.Name, methodRef));
 
             methodRef.ReturnType = _ImportReference((method as MethodInfo)?.ReturnType ?? typeof(void), methodRef);
 
-            foreach (ParameterInfo param in method.GetParameters())
+            foreach (var param in method.GetParameters())
                 methodRef.Parameters.Add(new ParameterDefinition(
                     param.Name,
                     (Mono.Cecil.ParameterAttributes) param.Attributes,

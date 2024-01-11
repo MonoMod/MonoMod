@@ -2,13 +2,12 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
-
-using Xunit;
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
 using New::MonoMod.RuntimeDetour;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using MonoMod.Cil;
-using Mono.Cecil.Cil;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {

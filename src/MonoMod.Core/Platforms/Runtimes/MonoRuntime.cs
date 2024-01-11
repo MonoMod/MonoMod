@@ -263,7 +263,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 var pin = new PrivateMethodPin(this);
 
                 pin.Pin.Method = m;
-                RuntimeMethodHandle handle = pin.Pin.Handle = GetMethodHandle(m);
+                var handle = pin.Pin.Handle = GetMethodHandle(m);
                 pinnedHandles[handle] = pin;
 
                 DisableInlining(method);

@@ -197,8 +197,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                                 }
                             }
 
-                            RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
-                            RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
+                            var declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
+                            var method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
 
                             Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) (*nativeEntry), rwEntry, *nativeSizeOfCode);
                         } catch {

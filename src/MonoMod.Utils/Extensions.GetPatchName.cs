@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Collections.Generic;
-using Mono.Cecil;
 using System.Text;
 
 namespace MonoMod.Utils {
@@ -69,7 +69,7 @@ namespace MonoMod.Utils {
                 if (mr is TypeSpecification specification) {
                     // Collect TypeSpecifications and append formats back to front.
                     var formats = new List<TypeSpecification>();
-                    TypeSpecification? ts = specification;
+                    var ts = specification;
                     do {
                         formats.Add(ts);
                     } while ((ts = (ts.ElementType as TypeSpecification)) != null);
@@ -116,7 +116,7 @@ namespace MonoMod.Utils {
                             builder.Append(' ').Append(fpt.ReturnType.GetPatchFullName()).Append(" *(");
                             if (fpt.HasParameters)
                                 for (var i = 0; i < fpt.Parameters.Count; i++) {
-                                    ParameterDefinition parameter = fpt.Parameters[i];
+                                    var parameter = fpt.Parameters[i];
                                     if (i > 0)
                                         builder.Append(',');
 

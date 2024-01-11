@@ -1,7 +1,6 @@
 ﻿extern alias New;
-
-using System;
 using New::MonoMod.RuntimeDetour;
+using System;
 using Xunit;
 using Xunit.Abstractions;
 

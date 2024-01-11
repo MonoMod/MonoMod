@@ -1,7 +1,7 @@
-﻿using System;
-using System.Runtime.CompilerServices;
-using MonoMod.Backports;
+﻿using MonoMod.Backports;
 using MonoMod.Utils;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod.Logs {
     [InterpolatedStringHandler]
@@ -28,7 +28,7 @@ namespace MonoMod.Logs {
             Justification = "The value.Length cases are expected to be JIT-time constants due to inlining, and doing argument verification may interfere with that.")]
         public bool AppendLiteral(string value) {
             if (value.Length == 1) {
-                Span<char> chars = _chars;
+                var chars = _chars;
                 var pos = this.pos;
                 if ((uint) pos < (uint) chars.Length) {
                     chars[pos] = value[0];
@@ -41,7 +41,7 @@ namespace MonoMod.Logs {
             }
 
             if (value.Length == 2) {
-                Span<char> chars = _chars;
+                var chars = _chars;
                 var pos = this.pos;
                 if ((uint) pos < chars.Length - 1) {
                     value.AsSpan().CopyTo(chars.Slice(pos));

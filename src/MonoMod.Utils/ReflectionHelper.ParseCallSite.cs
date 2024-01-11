@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
+using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
-using Mono.Cecil;
-using System.IO;
 
 namespace MonoMod.Utils {
     public static partial class ReflectionHelper {
@@ -34,13 +34,13 @@ namespace MonoMod.Utils {
 
             // Based on https://github.com/jbevain/cecil/blob/96026325ee1cb6627a3e4a32b924ab2905f02553/Mono.Cecil/AssemblyReader.cs#L3448
 
-            using (MemoryStream stream = new MemoryStream(data, false))
-            using (BinaryReader reader = new BinaryReader(stream)) {
+            using (var stream = new MemoryStream(data, false))
+            using (var reader = new BinaryReader(stream)) {
                 ReadMethodSignature(callsite);
                 return callsite;
 
                 void ReadMethodSignature(IMethodSignature method) {
-                    byte callConv = reader.ReadByte();
+                    var callConv = reader.ReadByte();
 
                     if ((callConv & 0x20) != 0) {
                         method.HasThis = true;
@@ -55,20 +55,20 @@ namespace MonoMod.Utils {
                     method.CallingConvention = (MethodCallingConvention) callConv;
 
                     if ((callConv & 0x10) != 0) {
-                        uint arity = ReadCompressedUInt32();
+                        var arity = ReadCompressedUInt32();
                         // Shouldn't apply to CallSites.
                     }
 
-                    uint paramCount = ReadCompressedUInt32();
+                    var paramCount = ReadCompressedUInt32();
 
                     method.MethodReturnType.ReturnType = ReadTypeSignature();
 
-                    for (int i = 0; i < paramCount; i++)
+                    for (var i = 0; i < paramCount; i++)
                         method.Parameters.Add(new ParameterDefinition(ReadTypeSignature()));
                 }
 
                 uint ReadCompressedUInt32() {
-                    byte first = reader.ReadByte();
+                    var first = reader!.ReadByte();
                     if ((first & 0x80) == 0)
                         return first;
 
@@ -83,10 +83,10 @@ namespace MonoMod.Utils {
                 }
 
                 int ReadCompressedInt32() {
-                    byte b = reader.ReadByte();
+                    var b = reader.ReadByte();
                     reader.BaseStream.Seek(-1, SeekOrigin.Current);
-                    int u = (int) ReadCompressedUInt32();
-                    int v = u >> 1;
+                    var u = (int) ReadCompressedUInt32();
+                    var v = u >> 1;
                     if ((u & 1) == 0)
                         return v;
 
@@ -104,9 +104,9 @@ namespace MonoMod.Utils {
                 }
 
                 TypeReference GetTypeDefOrRef() {
-                    uint tokenData = ReadCompressedUInt32();
+                    var tokenData = ReadCompressedUInt32();
 
-                    uint rid = tokenData >> 2;
+                    var rid = tokenData >> 2;
                     uint token;
                     switch (tokenData & 3) {
                         case 0:
@@ -130,7 +130,7 @@ namespace MonoMod.Utils {
                 }
 
                 TypeReference ReadTypeSignature() {
-                    MetadataType etype = (MetadataType) reader.ReadByte();
+                    var etype = (MetadataType) reader.ReadByte();
                     switch (etype) {
                         case MetadataType.ValueType:
                         case MetadataType.Class:
@@ -140,7 +140,7 @@ namespace MonoMod.Utils {
                             return new PointerType(ReadTypeSignature());
 
                         case MetadataType.FunctionPointer:
-                            FunctionPointerType fptr = new FunctionPointerType();
+                            var fptr = new FunctionPointerType();
                             ReadMethodSignature(fptr);
                             return fptr;
 
@@ -154,21 +154,21 @@ namespace MonoMod.Utils {
                             return new ArrayType(ReadTypeSignature());
 
                         case MetadataType.Array:
-                            ArrayType array = new ArrayType(ReadTypeSignature());
+                            var array = new ArrayType(ReadTypeSignature());
 
-                            uint rank = ReadCompressedUInt32();
+                            var rank = ReadCompressedUInt32();
 
-                            uint[] sizes = new uint[ReadCompressedUInt32()];
-                            for (int i = 0; i < sizes.Length; i++)
+                            var sizes = new uint[ReadCompressedUInt32()];
+                            for (var i = 0; i < sizes.Length; i++)
                                 sizes[i] = ReadCompressedUInt32();
 
-                            int[] lowBounds = new int[ReadCompressedUInt32()];
-                            for (int i = 0; i < lowBounds.Length; i++)
+                            var lowBounds = new int[ReadCompressedUInt32()];
+                            for (var i = 0; i < lowBounds.Length; i++)
                                 lowBounds[i] = ReadCompressedInt32();
 
                             array.Dimensions.Clear();
 
-                            for (int i = 0; i < rank; i++) {
+                            for (var i = 0; i < rank; i++) {
                                 int? lower = null, upper = null;
 
                                 if (i < lowBounds.Length)

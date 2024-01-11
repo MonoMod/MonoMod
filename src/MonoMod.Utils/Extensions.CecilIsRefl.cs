@@ -1,7 +1,6 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Reflection;
-using Mono.Cecil;
-using Mono.Collections.Generic;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -26,7 +25,7 @@ namespace MonoMod.Utils {
             if (minfo is null)
                 return false;
 
-            TypeReference? mrefDecl = mref.DeclaringType;
+            var mrefDecl = mref.DeclaringType;
             if (mrefDecl?.FullName == "<Module>")
                 mrefDecl = null;
 
@@ -53,7 +52,7 @@ namespace MonoMod.Utils {
                 if (mrefDecl == null)
                     return false;
 
-                Type declType = minfo.DeclaringType;
+                var declType = minfo.DeclaringType;
 
                 if (minfo is Type) {
                     // Note: type.DeclaringType is supposed to == type.DeclaringType.GetGenericTypeDefinition()
@@ -84,12 +83,12 @@ namespace MonoMod.Utils {
                     if (!typeInfo.IsGenericType)
                         return false;
 
-                    Collection<TypeReference> gparamRefs = genTypeRef.GenericArguments;
-                    Type[] gparamInfos = typeInfo.GetGenericArguments();
+                    var gparamRefs = genTypeRef.GenericArguments;
+                    var gparamInfos = typeInfo.GetGenericArguments();
                     if (gparamRefs.Count != gparamInfos.Length)
                         return false;
 
-                    for (int i = 0; i < gparamRefs.Count; i++) {
+                    for (var i = 0; i < gparamRefs.Count; i++) {
                         if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
@@ -100,12 +99,12 @@ namespace MonoMod.Utils {
                     if (!typeInfo.IsGenericType)
                         return false;
 
-                    Collection<GenericParameter> gparamRefs = typeRef.GenericParameters;
-                    Type[] gparamInfos = typeInfo.GetGenericArguments();
+                    var gparamRefs = typeRef.GenericParameters;
+                    var gparamInfos = typeInfo.GetGenericArguments();
                     if (gparamRefs.Count != gparamInfos.Length)
                         return false;
 
-                    for (int i = 0; i < gparamRefs.Count; i++) {
+                    for (var i = 0; i < gparamRefs.Count; i++) {
                         if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
@@ -151,8 +150,8 @@ namespace MonoMod.Utils {
                 if (minfo is not MethodBase methodInfo)
                     return false;
 
-                Collection<ParameterDefinition> paramRefs = methodRef.Parameters;
-                ParameterInfo[] paramInfos = methodInfo.GetParameters();
+                var paramRefs = methodRef.Parameters;
+                var paramInfos = methodInfo.GetParameters();
                 if (paramRefs.Count != paramInfos.Length)
                     return false;
 
@@ -160,12 +159,12 @@ namespace MonoMod.Utils {
                     if (!methodInfo.IsGenericMethod)
                         return false;
 
-                    Collection<TypeReference> gparamRefs = genMethodRef.GenericArguments;
-                    Type[] gparamInfos = methodInfo.GetGenericArguments();
+                    var gparamRefs = genMethodRef.GenericArguments;
+                    var gparamInfos = methodInfo.GetGenericArguments();
                     if (gparamRefs.Count != gparamInfos.Length)
                         return false;
 
-                    for (int i = 0; i < gparamRefs.Count; i++) {
+                    for (var i = 0; i < gparamRefs.Count; i++) {
                         if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
@@ -176,12 +175,12 @@ namespace MonoMod.Utils {
                     if (!methodInfo.IsGenericMethod)
                         return false;
 
-                    Collection<GenericParameter> gparamRefs = methodRef.GenericParameters;
-                    Type[] gparamInfos = methodInfo.GetGenericArguments();
+                    var gparamRefs = methodRef.GenericParameters;
+                    var gparamInfos = methodInfo.GetGenericArguments();
                     if (gparamRefs.Count != gparamInfos.Length)
                         return false;
 
-                    for (int i = 0; i < gparamRefs.Count; i++) {
+                    for (var i = 0; i < gparamRefs.Count; i++) {
                         if (!gparamRefs[i].Is(gparamInfos[i]))
                             return false;
                     }
@@ -213,7 +212,7 @@ namespace MonoMod.Utils {
                     !methodRef.ReturnType.Is(((methodInfo as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void))))
                     return false;
 
-                for (int i = 0; i < paramRefs.Count; i++)
+                for (var i = 0; i < paramRefs.Count; i++)
                     if (!paramRefs[i].ParameterType.Relink(resolver, null).Is(paramInfos[i].ParameterType) &&
                         !paramRefs[i].ParameterType.Is(paramInfos[i].ParameterType))
                         return false;

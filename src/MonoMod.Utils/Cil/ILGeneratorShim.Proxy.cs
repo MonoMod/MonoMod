@@ -56,8 +56,8 @@ namespace MonoMod.Utils.Cil {
                     return ProxyType;
                 Assembly asm;
 
-                Type t_ILGenerator = typeof(System.Reflection.Emit.ILGenerator);
-                Type t_ILGeneratorProxyTarget = typeof(ILGeneratorShim);
+                var t_ILGenerator = typeof(System.Reflection.Emit.ILGenerator);
+                var t_ILGeneratorProxyTarget = typeof(ILGeneratorShim);
 
                 using (var module = ModuleDefinition.CreateModule(FullName,
                         new ModuleParameters() {
@@ -79,7 +79,7 @@ namespace MonoMod.Utils.Cil {
                     };
                     module.Types.Add(type);
 
-                    TypeReference tr_ILGeneratorProxyTarget = module.ImportReference(t_ILGeneratorProxyTarget);
+                    var tr_ILGeneratorProxyTarget = module.ImportReference(t_ILGeneratorProxyTarget);
 
                     var g_TTarget = new GenericParameter("TTarget", type);
 #if CECIL0_10
@@ -109,13 +109,13 @@ namespace MonoMod.Utils.Cil {
                     ctor.Parameters.Add(new ParameterDefinition(g_TTarget));
                     type.Methods.Add(ctor);
 
-                    ILProcessor il = ctor.Body.GetILProcessor();
+                    var il = ctor.Body.GetILProcessor();
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Stfld, fr_Target);
                     il.Emit(OpCodes.Ret);
 
-                    foreach (MethodInfo orig in t_ILGenerator.GetMethods(BindingFlags.Public | BindingFlags.Instance)) {
+                    foreach (var orig in t_ILGenerator.GetMethods(BindingFlags.Public | BindingFlags.Instance)) {
                         var target = t_ILGeneratorProxyTarget.GetMethod(orig.Name, orig.GetParameters().Select(p => p.ParameterType).ToArray());
                         if (target == null)
                             continue;
@@ -127,14 +127,14 @@ namespace MonoMod.Utils.Cil {
                         ) {
                             HasThis = true
                         };
-                        foreach (ParameterInfo param in orig.GetParameters())
+                        foreach (var param in orig.GetParameters())
                             proxy.Parameters.Add(new ParameterDefinition(module.ImportReference(param.ParameterType)));
                         type.Methods.Add(proxy);
 
                         il = proxy.Body.GetILProcessor();
                         il.Emit(OpCodes.Ldarg_0);
                         il.Emit(OpCodes.Ldfld, fr_Target);
-                        foreach (ParameterDefinition param in proxy.Parameters)
+                        foreach (var param in proxy.Parameters)
                             il.Emit(OpCodes.Ldarg, param);
                         il.Emit(target.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, il.Body.Method.Module.ImportReference(target));
                         il.Emit(OpCodes.Ret);
@@ -204,11 +204,11 @@ namespace MonoMod.Utils.Cil {
         private static readonly Dictionary<Type, MethodInfo> _EmittersShim = new Dictionary<Type, MethodInfo>();
 
         static ILGeneratorShimExt() {
-            foreach (MethodInfo method in typeof(System.Reflection.Emit.ILGenerator).GetMethods()) {
+            foreach (var method in typeof(System.Reflection.Emit.ILGenerator).GetMethods()) {
                 if (method.Name != "Emit")
                     continue;
 
-                ParameterInfo[] args = method.GetParameters();
+                var args = method.GetParameters();
                 if (args.Length != 2)
                     continue;
 
@@ -217,11 +217,11 @@ namespace MonoMod.Utils.Cil {
                 _Emitters[args[1].ParameterType] = method;
             }
 
-            foreach (MethodInfo method in typeof(ILGeneratorShim).GetMethods()) {
+            foreach (var method in typeof(ILGeneratorShim).GetMethods()) {
                 if (method.Name != "Emit")
                     continue;
 
-                ParameterInfo[] args = method.GetParameters();
+                var args = method.GetParameters();
                 if (args.Length != 2)
                     continue;
 
@@ -245,10 +245,10 @@ namespace MonoMod.Utils.Cil {
 
         public static object? DynEmit(this System.Reflection.Emit.ILGenerator il, object[] emitArgs) {
             Helpers.ThrowIfArgumentNull(emitArgs);
-            Type operandType = emitArgs[1].GetType();
+            var operandType = emitArgs[1].GetType();
 
             var target = il.GetProxiedShim() ?? (object) il;
-            Dictionary<Type, MethodInfo> emitters = target is ILGeneratorShim ? _EmittersShim : _Emitters;
+            var emitters = target is ILGeneratorShim ? _EmittersShim : _Emitters;
 
             if (!emitters.TryGetValue(operandType, out var emit))
                 emit = emitters.FirstOrDefault(kvp => kvp.Key.IsAssignableFrom(operandType)).Value;

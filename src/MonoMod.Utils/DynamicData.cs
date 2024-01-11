@@ -35,7 +35,7 @@ namespace MonoMod.Utils {
             public _Cache_(Type? targetType) {
                 var first = true;
                 for (; targetType != null && targetType != targetType.BaseType; targetType = targetType.BaseType) {
-                    foreach (FieldInfo field in targetType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                    foreach (var field in targetType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                         var name = field.Name;
                         if (!Getters.ContainsKey(name) && !Setters.ContainsKey(name)) {
                             try {
@@ -50,7 +50,7 @@ namespace MonoMod.Utils {
                         }
                     }
 
-                    foreach (PropertyInfo prop in targetType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                    foreach (var prop in targetType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                         var name = prop.Name;
 
                         var get = prop.GetGetMethod(true);
@@ -77,7 +77,7 @@ namespace MonoMod.Utils {
                     }
 
                     var methods = new Dictionary<string, MethodInfo?>();
-                    foreach (MethodInfo method in targetType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                    foreach (var method in targetType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
                         var name = method.Name;
                         if (first || !Methods.ContainsKey(name)) {
                             if (methods.ContainsKey(name)) {
@@ -247,7 +247,7 @@ namespace MonoMod.Utils {
         public void CopyFrom(object? other) {
             if (other is null)
                 return;
-            foreach (PropertyInfo prop in other.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (var prop in other.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 Set(prop.Name, prop.GetValue(other, null));
         }
 

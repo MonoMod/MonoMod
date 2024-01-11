@@ -4,17 +4,16 @@
 #pragma warning disable CA1031 // Do not catch general exception types
 
 extern alias New;
-
-using Xunit;
 using New::MonoMod.RuntimeDetour;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.IO;
-using System.Diagnostics;
-using System.Globalization;
-using System.Collections.Generic;
+using Xunit;
 using Xunit.Abstractions;
 #if NETFRAMEWORK
 using System.Data.SqlClient;
@@ -274,7 +273,7 @@ namespace MonoMod.UnitTest {
                 using (var h = new Hook(
                     typeof(DetourExtTest).GetMethod("DummyTwoInts", BindingFlags.NonPublic | BindingFlags.Instance),
                     new Func<Func<DetourExtTest, TwoInts>, DetourExtTest, TwoInts>((orig, self) => {
-                        TwoInts rv = orig(self);
+                        var rv = orig(self);
                         rv.A *= 2;
                         rv.B *= 3;
                         return rv;

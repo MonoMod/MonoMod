@@ -42,13 +42,13 @@ namespace MonoMod.Utils {
         }
 
         private static (OSKind OS, ArchitectureKind Arch) DetectPlatformInfo() {
-            OSKind os = OSKind.Unknown;
-            ArchitectureKind arch = ArchitectureKind.Unknown;
+            var os = OSKind.Unknown;
+            var arch = ArchitectureKind.Unknown;
 
             {
                 // For old Mono, get from a private property to accurately get the platform.
                 // static extern PlatformID Platform
-                PropertyInfo? p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
+                var p_Platform = typeof(Environment).GetProperty("Platform", BindingFlags.NonPublic | BindingFlags.Static);
                 string? platID;
                 if (p_Platform != null) {
                     platID = p_Platform.GetValue(null, null)?.ToString();

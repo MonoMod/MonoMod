@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Buffers;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace System.Runtime.InteropServices {
     /// <summary>

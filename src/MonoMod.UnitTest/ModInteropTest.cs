@@ -1,6 +1,6 @@
-﻿using Xunit;
-using MonoMod.ModInterop;
+﻿using MonoMod.ModInterop;
 using System;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {

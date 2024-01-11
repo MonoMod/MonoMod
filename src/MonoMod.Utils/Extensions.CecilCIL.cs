@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Mono.Cecil;
+using System;
+using System.Collections.Generic;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -20,7 +20,7 @@ namespace MonoMod.Utils {
             if (name is null || !name.EndsWith("_S", StringComparison.Ordinal))
                 return op;
             lock (_ToLongOp) {
-                if (_ToLongOp.TryGetValue((int) op.Code, out OpCode found))
+                if (_ToLongOp.TryGetValue((int) op.Code, out var found))
                     return found;
                 return _ToLongOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name.Substring(0, name.Length - 2))?.GetValue(null) ?? op;
             }
@@ -37,7 +37,7 @@ namespace MonoMod.Utils {
             if (name is null || name.EndsWith("_S", StringComparison.Ordinal))
                 return op;
             lock (_ToShortOp) {
-                if (_ToShortOp.TryGetValue((int) op.Code, out OpCode found))
+                if (_ToShortOp.TryGetValue((int) op.Code, out var found))
                     return found;
                 return _ToShortOp[(int) op.Code] = (OpCode?) t_OpCodes.GetField(name + "_S")?.GetValue(null) ?? op;
             }
@@ -55,7 +55,7 @@ namespace MonoMod.Utils {
 
             var offs = 0;
             for (var i = 0; i < method.Body.Instructions.Count; i++) {
-                Instruction instr = method.Body.Instructions[i];
+                var instr = method.Body.Instructions[i];
                 instr.Offset = offs;
                 offs += instr.GetSize();
             }
@@ -72,7 +72,7 @@ namespace MonoMod.Utils {
 
             // Convert short to long ops.
             for (var i = 0; i < method.Body.Instructions.Count; i++) {
-                Instruction instr = method.Body.Instructions[i];
+                var instr = method.Body.Instructions[i];
                 if (instr.Operand is Instruction) {
                     instr.OpCode = instr.OpCode.ToLongOp();
                 }
@@ -85,13 +85,13 @@ namespace MonoMod.Utils {
             do {
                 optimized = false;
                 for (var i = 0; i < method.Body.Instructions.Count; i++) {
-                    Instruction instr = method.Body.Instructions[i];
+                    var instr = method.Body.Instructions[i];
                     // Change short <-> long operations as the method grows / shrinks.
                     if (instr.Operand is Instruction target) {
                         // Thanks to Chicken Bones for helping out with this!
                         var distance = target.Offset - (instr.Offset + instr.GetSize());
                         if (distance == (sbyte) distance) {
-                            OpCode prev = instr.OpCode;
+                            var prev = instr.OpCode;
                             instr.OpCode = instr.OpCode.ToShortOp();
                             optimized = prev != instr.OpCode;
                         }

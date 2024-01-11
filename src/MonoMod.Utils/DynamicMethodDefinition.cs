@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using System.Diagnostics;
 using System.Security;
-using System.Diagnostics.CodeAnalysis;
-using System.Collections.Concurrent;
 #if NETFRAMEWORK
 using System.Linq;
 #endif
@@ -122,14 +122,14 @@ namespace MonoMod.Utils {
                 Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
                 returnType != null ? module.ImportReference(returnType) : module.TypeSystem.Void
             );
-            foreach (Type paramType in parameterTypes)
+            foreach (var paramType in parameterTypes)
                 def.Parameters.Add(new ParameterDefinition(module.ImportReference(paramType)));
             type.Methods.Add(def);
         }
 
         private void LoadFromMethod(MethodBase orig, out ModuleDefinition Module, out MethodDefinition def) {
             Type[] argTypes;
-            ParameterInfo[] args = orig.GetParameters();
+            var args = orig.GetParameters();
             var offs = 0;
             if (!orig.IsStatic) {
                 offs++;

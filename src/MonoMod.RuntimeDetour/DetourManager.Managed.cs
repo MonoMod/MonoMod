@@ -128,7 +128,7 @@ namespace MonoMod.RuntimeDetour {
                     return;
                 }
 
-                while (TrampolineStealers.TryDequeue(out ManagedChainNode? node)) {
+                while (TrampolineStealers.TryDequeue(out var node)) {
                     node.ReturnStolenTrampoline();
                 }
             }

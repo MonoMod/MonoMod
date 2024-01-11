@@ -188,7 +188,7 @@ namespace MonoMod.UnitTest {
         // TODO: add cases that mix GenericA and ValueGenericA
         public void MethodsCompareEqual(Type aDecl, string aName, Type? aParam, Type bDecl, string bName, Type? bParam) {
             MethodInfo Method(Type decl, string name, Type genParam) {
-                MethodInfo info = Helpers.ThrowIfNull(decl).GetMethods().First(m => m.Name == name);
+                var info = Helpers.ThrowIfNull(decl).GetMethods().First(m => m.Name == name);
                 if (genParam != null)
                     info = info.MakeGenericMethod(genParam);
                 return info;

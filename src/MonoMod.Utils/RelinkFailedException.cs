@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Text;
-using Mono.Cecil;
 
 namespace MonoMod.Utils {
     [Serializable]

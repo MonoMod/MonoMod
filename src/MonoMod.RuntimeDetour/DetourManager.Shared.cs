@@ -247,8 +247,8 @@ namespace MonoMod.RuntimeDetour {
                     return 0;
 
                 // Determine active call depth of the current thread
-                StackFrame[] stackFrames = new StackTrace().GetFrames();
-                MethodBase syncProxyIdentif = PlatformTriple.Current.GetIdentifiable(SyncProxy);
+                var stackFrames = new StackTrace().GetFrames();
+                var syncProxyIdentif = PlatformTriple.Current.GetIdentifiable(SyncProxy);
                 return stackFrames.Count(f => f.GetMethod() is { } m && PlatformTriple.Current.GetIdentifiable(m) == syncProxyIdentif);
             }
         }

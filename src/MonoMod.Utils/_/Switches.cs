@@ -8,11 +8,11 @@
 #define HAS_APPCONTEXT
 #endif
 
-using System;
-using System.Collections.Concurrent;
-using System.Collections;
-using System.Globalization;
 using MonoMod.Utils;
+using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Globalization;
 #if !HAS_APPCONTEXT_GETDATA || !HAS_APPCONTEXT_GETSWITCH
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;

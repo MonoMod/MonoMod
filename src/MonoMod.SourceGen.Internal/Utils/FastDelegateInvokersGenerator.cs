@@ -1,8 +1,8 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.SourceGen.Internal.Utils {
     [Generator]

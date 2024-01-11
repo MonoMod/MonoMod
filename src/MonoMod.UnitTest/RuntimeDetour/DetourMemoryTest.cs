@@ -2,12 +2,11 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
-
-using Xunit;
+using MonoMod.Utils;
 using New::MonoMod.RuntimeDetour;
 using System;
-using MonoMod.Utils;
 using System.Collections.Generic;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
@@ -50,7 +49,7 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine($"After - Before: {memPost - memPre}");
 
             } finally {
-                foreach (Hook h in hooks)
+                foreach (var h in hooks)
                     h.Dispose();
                 hooks.Clear();
             }
@@ -93,7 +92,7 @@ namespace MonoMod.UnitTest {
 #pragma warning restore CA1814 // Prefer jagged arrays over multidimensional
 
         internal static Counter<int> TestStaticMethodHook(Func<int, int, Counter<int>> orig, int a, int b) {
-            Counter<int> c = orig(a, b);
+            var c = orig(a, b);
             c.Count++;
             return c;
         }

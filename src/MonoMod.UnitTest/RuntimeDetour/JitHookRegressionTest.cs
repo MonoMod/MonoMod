@@ -1,15 +1,15 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
-using Xunit;
-using System;
-using System.Reflection;
-using MonoMod.Utils;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using MC = Mono.Cecil;
 using MonoMod.Core.Platforms;
+using MonoMod.Utils;
+using System;
+using System.Reflection;
+using Xunit;
 using Xunit.Abstractions;
+using MC = Mono.Cecil;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -59,7 +59,7 @@ namespace MonoMod.UnitTest {
                 );
                 type.Methods.Add(method);
 
-                ILProcessor il = method.Body.GetILProcessor();
+                var il = method.Body.GetILProcessor();
                 il.Emit(OpCodes.Call, module.ImportReference(
                     new MethodReference(
                         "MissingMethod" + id,

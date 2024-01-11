@@ -27,7 +27,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private static TypeClassification ClassifyRyuJitX86(Type type, bool isReturn) {
 
             while (!type.IsPrimitive || type.IsEnum) {
-                FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 if (fields == null || fields.Length != 1) {
                     // zero-size empty or too large struct, passed byref
                     break;

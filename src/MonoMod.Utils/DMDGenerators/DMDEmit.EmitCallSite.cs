@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Generic;
-using Mono.Cecil;
 
 namespace MonoMod.Utils {
     // The following mostly qualifies as r/badcode material.
@@ -89,21 +89,21 @@ namespace MonoMod.Utils {
             int GetTokenForSig(byte[] v) => _GetTokenForSig(v);
 #endif
 
-            byte[] signature = new byte[32];
-            int currSig = 0;
-            int sizeLoc = -1;
+            var signature = new byte[32];
+            var currSig = 0;
+            var sizeLoc = -1;
 
             // This expects a MdSigCallingConvention
             AddData((byte) csite.CallingConvention);
             sizeLoc = currSig++;
 
-            List<Type> modReq = new List<Type>();
-            List<Type> modOpt = new List<Type>();
+            var modReq = new List<Type>();
+            var modOpt = new List<Type>();
 
-            ResolveWithModifiers(csite.ReturnType, out Type returnType, out Type[] returnTypeModReq, out Type[] returnTypeModOpt, modReq, modOpt);
+            ResolveWithModifiers(csite.ReturnType, out var returnType, out var returnTypeModReq, out var returnTypeModOpt, modReq, modOpt);
             AddArgument(returnType, returnTypeModReq, returnTypeModOpt);
 
-            foreach (ParameterDefinition param in csite.Parameters) {
+            foreach (var param in csite.Parameters) {
                 if (param.ParameterType.IsSentinel)
                     AddElementType(0x41 /* CorElementType.Sentinel */);
 
@@ -113,7 +113,7 @@ namespace MonoMod.Utils {
                     // continue;
                 }
 
-                ResolveWithModifiers(param.ParameterType, out Type paramType, out Type[] paramTypeModReq, out Type[] paramTypeModOpt, modReq, modOpt);
+                ResolveWithModifiers(param.ParameterType, out var paramType, out var paramTypeModReq, out var paramTypeModOpt, modReq, modOpt);
                 AddArgument(paramType, paramTypeModReq, paramTypeModOpt);
             }
 
@@ -130,7 +130,7 @@ namespace MonoMod.Utils {
 
             byte[] temp;
             int newSigSize;
-            int currSigHolder = currSig;
+            var currSigHolder = currSig;
 
             // We need to have more bytes for the size.  Figure out how many bytes here.
             // Since we need to copy anyway, we're just going to take the cost of doing a
@@ -194,11 +194,11 @@ namespace MonoMod.Utils {
 
             void AddArgument(Type clsArgument, Type[] requiredCustomModifiers, Type[] optionalCustomModifiers) {
                 if (optionalCustomModifiers != null)
-                    foreach (Type t in optionalCustomModifiers)
+                    foreach (var t in optionalCustomModifiers)
                         InternalAddTypeToken(GetTokenForType(t), 0x20 /* CorElementType.CModOpt */);
 
                 if (requiredCustomModifiers != null)
-                    foreach (Type t in requiredCustomModifiers)
+                    foreach (var t in requiredCustomModifiers)
                         InternalAddTypeToken(GetTokenForType(t), 0x1F /* CorElementType.CModReqd */);
 
                 AddOneArgTypeHelper(clsArgument);
@@ -207,7 +207,7 @@ namespace MonoMod.Utils {
             void AddData(int data) {
                 // A managed representation of CorSigCompressData; 
 
-                if (currSig + 4 > signature.Length) {
+                if (currSig + 4 > signature!.Length) {
                     signature = ExpandArray(signature);
                 }
 
@@ -230,7 +230,7 @@ namespace MonoMod.Utils {
                 if (requiredLength < inArray.Length)
                     requiredLength = inArray.Length * 2;
 
-                byte[] outArray = new byte[requiredLength];
+                var outArray = new byte[requiredLength];
                 Buffer.BlockCopy(inArray, 0, outArray, 0, inArray.Length);
                 return outArray;
             }
@@ -248,8 +248,8 @@ namespace MonoMod.Utils {
                 // Pulls the token appart to get a rid, adds some appropriate bits
                 // to the token and then adds this to the signature.
 
-                int rid = (token & 0x00FFFFFF); //This is RidFromToken;
-                int type = (token & unchecked((int) 0xFF000000)); //This is TypeFromToken;
+                var rid = (token & 0x00FFFFFF); //This is RidFromToken;
+                var type = (token & unchecked((int) 0xFF000000)); //This is TypeFromToken;
 
                 if (rid > 0x3FFFFFF) {
                     // token is too big to be compressed    
@@ -285,11 +285,11 @@ namespace MonoMod.Utils {
 
                     AddOneArgTypeHelperWorker(clsArgument.GetGenericTypeDefinition(), true);
 
-                    Type[] genargs = clsArgument.GetGenericArguments();
+                    var genargs = clsArgument.GetGenericArguments();
 
                     AddData(genargs.Length);
 
-                    foreach (Type t in genargs)
+                    foreach (var t in genargs)
                         AddOneArgTypeHelper(t);
                 } else if (clsArgument.IsByRef) {
                     AddElementType(0x10 /* CorElementType.ByRef */);
@@ -312,18 +312,18 @@ namespace MonoMod.Utils {
                         AddOneArgTypeHelper(clsArgument.GetElementType() ?? clsArgument);
 
                         // put the rank information
-                        int rank = clsArgument.GetArrayRank();
+                        var rank = clsArgument.GetArrayRank();
                         AddData(rank);     // rank
                         AddData(0);     // upper bounds
                         AddData(rank);  // lower bound
-                        for (int i = 0; i < rank; i++)
+                        for (var i = 0; i < rank; i++)
                             AddData(0);
                     }
                 } else {
                     // This isn't 100% accurate, but... oh well.
                     byte type = 0; // 0 is reserved anyway.
 
-                    for (int i = 0; i < CorElementTypes.Length; i++) {
+                    for (var i = 0; i < CorElementTypes.Length; i++) {
                         if (clsArgument == CorElementTypes[i]) {
                             type = (byte) i;
                             break;

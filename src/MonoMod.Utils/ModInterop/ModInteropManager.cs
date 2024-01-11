@@ -26,25 +26,25 @@ namespace MonoMod.ModInterop {
             }
 
             // Collect fields and methods in the type.
-            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 if (!typeof(Delegate).IsAssignableFrom(field.FieldType))
                     continue;
                 Fields.Add(field);
             }
-            foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
                 method.RegisterModExport();
                 method.RegisterModExport(prefix);
             }
 
             // Refresh all existing fields and methods.
-            foreach (FieldInfo field in Fields) {
+            foreach (var field in Fields) {
                 if (!Methods.TryGetValue(field.GetModImportName(), out var methods)) {
                     field.SetValue(null, null);
                     continue;
                 }
                 // Set the field to the first matching method, or null.
                 var matched = false;
-                foreach (MethodInfo method in methods) {
+                foreach (var method in methods) {
                     try {
                         field.SetValue(null, Delegate.CreateDelegate(field.FieldType, null, method));
                         matched = true;

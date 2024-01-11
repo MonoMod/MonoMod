@@ -421,8 +421,8 @@ namespace MonoMod.Logs {
             public static readonly LevelSubscriptions None = new();
 
             private LevelSubscriptions Clone(bool changingDetail) {
-                OnLogMessage?[] simple = SimpleRegs;
-                OnLogMessageDetailed?[] detailed = DetailedRegs;
+                var simple = SimpleRegs;
+                var detailed = DetailedRegs;
 
                 if (!changingDetail) {
                     simple = new OnLogMessage?[SimpleRegs.Length];

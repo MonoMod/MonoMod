@@ -2,16 +2,16 @@
 #define HAS_UNMANAGED_METHODSIGHELPER
 #endif
 
+using Mono.Cecil;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Generic;
-using Mono.Cecil;
-using System.Linq;
-using System.IO;
 using System.Text;
 using AssemblyHashAlgorithm = Mono.Cecil.AssemblyHashAlgorithm;
-using System.Diagnostics.CodeAnalysis;
 using ManagedCC = System.Reflection.CallingConventions;
 using UnmanagedCC = System.Runtime.InteropServices.CallingConvention;
 
@@ -79,7 +79,7 @@ namespace MonoMod.Utils {
             if (type != null)
                 return type;
 
-            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies()) {
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()) {
                 type = asm.GetType(name);
                 if (type != null)
                     return type;
@@ -444,7 +444,7 @@ namespace MonoMod.Utils {
                 var modReq = new List<Type>();
                 var modOpt = new List<Type>();
 
-                foreach (ParameterDefinition param in csite.Parameters) {
+                foreach (var param in csite.Parameters) {
                     if (param.ParameterType.IsSentinel)
                         shelper.AddSentinel();
 
@@ -457,7 +457,7 @@ namespace MonoMod.Utils {
                     modReq.Clear();
 
                     for (
-                        TypeReference paramTypeRef = param.ParameterType;
+                        var paramTypeRef = param.ParameterType;
                         paramTypeRef is TypeSpecification paramTypeSpec;
                         paramTypeRef = paramTypeSpec.ElementType
                     ) {
@@ -476,7 +476,7 @@ namespace MonoMod.Utils {
                 }
 
             } else {
-                foreach (ParameterDefinition param in csite.Parameters) {
+                foreach (var param in csite.Parameters) {
                     shelper.AddArgument(param.ParameterType.ResolveReflection());
                 }
             }

@@ -52,14 +52,14 @@ namespace MonoMod.Utils {
 
         static DynData() {
 
-            foreach (FieldInfo field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
-                string name = field.Name;
+            foreach (var field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                var name = field.Name;
                 _SpecialGetters[name] = (obj) => field.GetValue(obj);
                 _SpecialSetters[name] = (obj, value) => field.SetValue(obj, value);
             }
 
-            foreach (PropertyInfo prop in typeof(TTarget).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
-                string name = prop.Name;
+            foreach (var prop in typeof(TTarget).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+                var name = prop.Name;
 
                 var get = prop.GetGetMethod(true);
                 if (get != null) {

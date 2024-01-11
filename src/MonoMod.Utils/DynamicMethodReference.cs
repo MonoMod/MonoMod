@@ -1,5 +1,5 @@
-﻿using System.Reflection;
-using Mono.Cecil;
+﻿using Mono.Cecil;
+using System.Reflection;
 
 namespace MonoMod.Utils {
     public class DynamicMethodReference : MethodReference {

@@ -1,14 +1,14 @@
 ﻿#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
-using Xunit;
-using System;
 using Mono.Cecil;
-using System.IO;
 using MonoMod.RuntimeDetour.HookGen;
+using System;
 using System.Collections.Generic;
-using Xunit.Abstractions;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest {
     [Collection("HookGen")]

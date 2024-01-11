@@ -1,13 +1,13 @@
 ﻿using Mono.Cecil;
 using MonoMod.Utils;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using static MonoMod.Core.Interop.CoreCLR;
 using System.Runtime.InteropServices;
+using static MonoMod.Core.Interop.CoreCLR;
 using MC = Mono.Cecil;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Platforms.Runtimes {
     internal class Core21Runtime : CoreBaseRuntime {
@@ -208,8 +208,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                                 }
                             }
 
-                            RuntimeTypeHandle declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
-                            RuntimeMethodHandle method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
+                            var declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
+                            var method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
 
                             // codeStart and codeStartRw are the same because this runtime doesn't distinguish them at this point in the JIT
                             Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr) (*pNativeEntry), (IntPtr) (*pNativeEntry), *pNativeSizeOfCode);
@@ -273,7 +273,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 }
 
                 { // set up GetTypeFromNativeHandle
-                    MethodInfo getTypeFromHandleUnsafe = GetOrCreateGetTypeFromHandleUnsafe(runtime);
+                    var getTypeFromHandleUnsafe = GetOrCreateGetTypeFromHandleUnsafe(runtime);
                     GetTypeFromNativeHandle = getTypeFromHandleUnsafe.CreateDelegate<GetTypeFromNativeHandleD>();
                 }
 
@@ -312,7 +312,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     using (var dmd = new DynamicMethodDefinition(
                             "new RuntimeMethodInfoStub", runtimeMethodInfoStub, runtimeMethodInfoStubCtorArgs
                         )) {
-                        ILGenerator il = dmd.GetILGenerator();
+                        var il = dmd.GetILGenerator();
                         il.Emit(OpCodes.Ldarg_0);
                         il.Emit(OpCodes.Ldarg_1);
                         il.Emit(OpCodes.Newobj, runtimeMethodInfoStubCtor);
@@ -325,13 +325,13 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 }
 
                 { // set up CreateRuntimeMethodHandle
-                    ConstructorInfo ctor = typeof(RuntimeMethodHandle).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).First();
+                    var ctor = typeof(RuntimeMethodHandle).GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).First();
 
                     MethodInfo ctorWrapper;
                     using (var dmd = new DynamicMethodDefinition(
                             "new RuntimeMethodHandle", typeof(RuntimeMethodHandle), new Type[] { typeof(object) }
                         )) {
-                        ILGenerator il = dmd.GetILGenerator();
+                        var il = dmd.GetILGenerator();
                         il.Emit(OpCodes.Ldarg_0);
                         il.Emit(OpCodes.Newobj, ctor);
                         il.Emit(OpCodes.Ret);

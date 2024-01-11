@@ -1,9 +1,9 @@
-﻿using System;
-using System.Reflection;
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System.Linq;
+using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
 namespace MonoMod.Utils {
@@ -16,7 +16,7 @@ namespace MonoMod.Utils {
             _CecilOpCodes1X = new OpCode[0xe1];
             _CecilOpCodes2X = new OpCode[0x1f];
 
-            foreach (FieldInfo field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
                 var opcode = (OpCode) field.GetValue(null)!;
                 if (opcode.OpCodeType == OpCodeType.Nternal)
                     continue;
@@ -29,13 +29,13 @@ namespace MonoMod.Utils {
         }
 
         private static void _CopyMethodToDefinition(MethodBase from, MethodDefinition into) {
-            Module moduleFrom = from.Module;
-            System.Reflection.MethodBody bodyFrom = from.GetMethodBody() ?? throw new NotSupportedException("Body-less method");
+            var moduleFrom = from.Module;
+            var bodyFrom = from.GetMethodBody() ?? throw new NotSupportedException("Body-less method");
             var data = bodyFrom.GetILAsByteArray() ?? throw new InvalidOperationException();
 
-            ModuleDefinition moduleTo = into.Module;
-            Mono.Cecil.Cil.MethodBody bodyTo = into.Body;
-            ILProcessor processor = bodyTo.GetILProcessor();
+            var moduleTo = into.Module;
+            var bodyTo = into.Body;
+            var processor = bodyTo.GetILProcessor();
 
             Type[]? typeArguments = null;
             if (from.DeclaringType?.IsGenericType ?? false)
@@ -45,8 +45,8 @@ namespace MonoMod.Utils {
             if (from.IsGenericMethod)
                 methodArguments = from.GetGenericArguments();
 
-            foreach (LocalVariableInfo info in bodyFrom.LocalVariables) {
-                TypeReference type = moduleTo.ImportReference(info.LocalType);
+            foreach (var info in bodyFrom.LocalVariables) {
+                var type = moduleTo.ImportReference(info.LocalType);
                 if (info.IsPinned)
                     type = new PinnedType(type);
                 bodyTo.Variables.Add(new VariableDefinition(type));
@@ -67,7 +67,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            foreach (Instruction instr in bodyTo.Instructions) {
+            foreach (var instr in bodyTo.Instructions) {
                 switch (instr.OpCode.OperandType) {
                     case OperandType.ShortInlineBrTarget:
                     case OperandType.InlineBrTarget:
@@ -84,7 +84,7 @@ namespace MonoMod.Utils {
                 }
             }
 
-            foreach (ExceptionHandlingClause clause in bodyFrom.ExceptionHandlingClauses) {
+            foreach (var clause in bodyFrom.ExceptionHandlingClauses) {
                 var handler = new ExceptionHandler((ExceptionHandlerType) clause.Flags);
                 bodyTo.ExceptionHandlers.Add(handler);
 
@@ -190,7 +190,7 @@ namespace MonoMod.Utils {
                 try {
                     switch (resolveMode) {
                         case TokenResolutionMode.Type:
-                            Type resolvedType = moduleFrom.ResolveType(token, typeArguments, methodArguments);
+                            var resolvedType = moduleFrom.ResolveType(token, typeArguments, methodArguments);
                             resolvedType.FixReflectionCacheAuto();
                             return moduleTo.ImportReference(resolvedType);
 
@@ -240,7 +240,7 @@ namespace MonoMod.Utils {
                     using (var assembly = AssemblyDefinition.ReadAssembly(filePath, new ReaderParameters {
                         ReadingMode = ReadingMode.Deferred
                     })) {
-                        ModuleDefinition module = assembly.Modules.First(m => m.Name == moduleFrom.Name);
+                        var module = assembly.Modules.First(m => m.Name == moduleFrom.Name);
                         // this should only fail if the token itself is somehow wrong
                         var reference = (MemberReference) module.LookupToken(token);
                         // the explicit casts here are to throw if they are incorrect
@@ -274,7 +274,7 @@ namespace MonoMod.Utils {
                 var max = last;
                 while (min <= max) {
                     var mid = min + ((max - min) / 2);
-                    Instruction instr = bodyTo.Instructions[mid];
+                    var instr = bodyTo.Instructions[mid];
 
                     if (offset == instr.Offset)
                         return instr;

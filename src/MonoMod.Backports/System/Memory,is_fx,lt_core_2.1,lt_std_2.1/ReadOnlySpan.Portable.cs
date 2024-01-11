@@ -4,8 +4,8 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using EditorBrowsableState = System.ComponentModel.EditorBrowsableState;
 using EditorBrowsableAttribute = System.ComponentModel.EditorBrowsableAttribute;
+using EditorBrowsableState = System.ComponentModel.EditorBrowsableState;
 
 #pragma warning disable 0809  //warning CS0809: Obsolete member 'Span<T>.Equals(object)' overrides non-obsolete member 'object.Equals(object)'
 

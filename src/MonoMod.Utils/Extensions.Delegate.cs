@@ -48,7 +48,7 @@ namespace MonoMod.Utils {
             if (method is MethodInfo mi)
                 return Delegate.CreateDelegate(delegateType, target, mi);
 
-            RuntimeMethodHandle handle = method.MethodHandle;
+            var handle = method.MethodHandle;
             RuntimeHelpers.PrepareMethod(handle);
             var ptr = handle.GetFunctionPointer();
             return (Delegate) Activator.CreateInstance(delegateType, target, ptr)!;

@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Mono.Cecil;
+using System;
 using System.Reflection;
-using Mono.Cecil;
 
 namespace MonoMod.Utils {
     public static partial class Extensions {
@@ -17,21 +17,21 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(id);
             if (simple && !id.Contains(' ', StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
-                foreach (MethodDefinition method in type.Methods)
+                foreach (var method in type.Methods)
                     if (method.GetID(simple: true) == id)
                         return method;
                 // Second simple pass: Without type name (basically name only)
-                foreach (MethodDefinition method in type.Methods)
+                foreach (var method in type.Methods)
                     if (method.GetID(withType: false, simple: true) == id)
                         return method;
             }
 
             // First pass: With type name (f.e. global searches)
-            foreach (MethodDefinition method in type.Methods)
+            foreach (var method in type.Methods)
                 if (method.GetID() == id)
                     return method;
             // Second pass: Without type name (f.e. LinkTo)
-            foreach (MethodDefinition method in type.Methods)
+            foreach (var method in type.Methods)
                 if (method.GetID(withType: false) == id)
                     return method;
 
@@ -59,28 +59,28 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(type);
             Helpers.ThrowIfArgumentNull(id);
 
-            MethodInfo[] methods = type.GetMethods(
+            var methods = type.GetMethods(
                 BindingFlags.Instance | BindingFlags.Static |
                 BindingFlags.Public | BindingFlags.NonPublic
             );
 
             if (simple && !id.Contains(' ', StringComparison.Ordinal)) {
                 // First simple pass: With type name (just "Namespace.Type::MethodName")
-                foreach (MethodInfo method in methods)
+                foreach (var method in methods)
                     if (method.GetID(simple: true) == id)
                         return method;
                 // Second simple pass: Without type name (basically name only)
-                foreach (MethodInfo method in methods)
+                foreach (var method in methods)
                     if (method.GetID(withType: false, simple: true) == id)
                         return method;
             }
 
             // First pass: With type name (f.e. global searches)
-            foreach (MethodInfo method in methods)
+            foreach (var method in methods)
                 if (method.GetID() == id)
                     return method;
             // Second pass: Without type name (f.e. LinkTo)
-            foreach (MethodInfo method in methods)
+            foreach (var method in methods)
                 if (method.GetID(withType: false) == id)
                     return method;
 
@@ -105,7 +105,7 @@ namespace MonoMod.Utils {
         /// <returns>The first matching property or null.</returns>
         public static PropertyDefinition? FindProperty(this TypeDefinition type, string name) {
             Helpers.ThrowIfArgumentNull(type);
-            foreach (PropertyDefinition prop in type.Properties)
+            foreach (var prop in type.Properties)
                 if (prop.Name == name)
                     return prop;
             return null;
@@ -129,7 +129,7 @@ namespace MonoMod.Utils {
         /// <returns>The first matching field or null.</returns>
         public static FieldDefinition? FindField(this TypeDefinition type, string name) {
             Helpers.ThrowIfArgumentNull(type);
-            foreach (FieldDefinition field in type.Fields)
+            foreach (var field in type.Fields)
                 if (field.Name == name)
                     return field;
             return null;
@@ -153,7 +153,7 @@ namespace MonoMod.Utils {
         /// <returns>The first matching event or null.</returns>
         public static EventDefinition? FindEvent(this TypeDefinition type, string name) {
             Helpers.ThrowIfArgumentNull(type);
-            foreach (EventDefinition eventDef in type.Events)
+            foreach (var eventDef in type.Events)
                 if (eventDef.Name == name)
                     return eventDef;
             return null;

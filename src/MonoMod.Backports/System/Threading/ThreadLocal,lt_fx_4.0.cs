@@ -397,9 +397,7 @@ namespace System.Threading {
                     throw new InvalidOperationException("ThreadLocal values not available");
                 }
 
-                List<T>? list = GetValuesAsList(); // returns null if disposed
-                if (list == null)
-                    throw new ObjectDisposedException("ThreadLocal disposed");
+                List<T>? list = GetValuesAsList() ?? throw new ObjectDisposedException("ThreadLocal disposed"); // returns null if disposed
                 return list;
             }
         }

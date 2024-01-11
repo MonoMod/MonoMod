@@ -81,7 +81,7 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
 
         HashCode hashCode = default;
 
-        foreach (T item in array)             hashCode.Add(item);
+        foreach (var item in array)             hashCode.Add(item);
 
         return hashCode.ToHashCode();
     }

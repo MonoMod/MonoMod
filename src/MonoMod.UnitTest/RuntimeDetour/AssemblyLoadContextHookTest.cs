@@ -4,14 +4,13 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
-
-using Xunit;
+using MonoMod.Utils;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
 using System.Runtime.Loader;
+using Xunit;
 using Xunit.Abstractions;
-using MonoMod.Utils;
 
 namespace MonoMod.UnitTest {
     [Collection("RuntimeDetour")]
@@ -60,9 +59,9 @@ namespace MonoMod.UnitTest {
         private WeakReference TestAssemblyLoadContextHookStep(int id1, int id2) {
             AssemblyLoadContext alc = new TestAssemblyLoadContext($"Test Context #{id1}");
 
-            Assembly asm = alc.LoadFromAssemblyPath(Assembly.GetExecutingAssembly().Location);
-            Type typeOrig = typeof(AssemblyLoadContextHookTest);
-            Type type = asm.GetType(typeOrig.FullName);
+            var asm = alc.LoadFromAssemblyPath(Assembly.GetExecutingAssembly().Location);
+            var typeOrig = typeof(AssemblyLoadContextHookTest);
+            var type = asm.GetType(typeOrig.FullName);
             Assert.NotEqual(typeOrig, type);
 
             Verify(null, -1, -1);
@@ -92,8 +91,8 @@ namespace MonoMod.UnitTest {
         // This method runs in the loaded ALC.
         public static void TestAssemblyLoadContextHookLoaded(object loader, int id1, int id2) {
             Assert.NotEqual(typeof(AssemblyLoadContextHookTest), loader.GetType());
-            MethodInfo method = loader.GetType().GetMethod("TestStaticMethod");
-            MethodInfo verify = loader.GetType().GetMethod("Verify", BindingFlags.Instance | BindingFlags.NonPublic);
+            var method = loader.GetType().GetMethod("TestStaticMethod");
+            var verify = loader.GetType().GetMethod("Verify", BindingFlags.Instance | BindingFlags.NonPublic);
 
             object[] argsEmpty = { null, -1, -1 };
             object[] argsSet = { loader, id1, id2 };

@@ -1,14 +1,14 @@
 ﻿#pragma warning disable IDE0008 // Use explicit type
 
-using System;
-using System.Reflection;
-using MonoMod.Utils;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System.Linq;
 using MonoMod.SourceGen.Attributes;
-using System.Diagnostics.CodeAnalysis;
+using MonoMod.Utils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Reflection;
 
 namespace MonoMod.Cil {
     [EmitILOverloads("ILOpcodes.txt", ILOverloadKind.Matcher)]
@@ -139,7 +139,7 @@ namespace MonoMod.Cil {
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
         [Obsolete("Leftover from legacy MonoMod, use MatchLeave instead")]
         public static bool MatchLeaveS(this Instruction instr, ILLabel value)
-            => instr.MatchLeaveS(out ILLabel? v) && v == value;
+            => instr.MatchLeaveS(out var v) && v == value;
 
         /// <summary>Matches an instruction with opcode <see cref="OpCodes.Leave_S"/>.</summary>
         /// <param name="instr">The instruction to try to match.</param>
@@ -351,7 +351,7 @@ namespace MonoMod.Cil {
         /// <param name="type">The type the operand member must be defined on for the instruction to match.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
         public static bool MatchNewobj(this Instruction instr, Type type)
-            => MatchNewobj(instr, out MethodReference? v) && v.DeclaringType.Is(type);
+            => MatchNewobj(instr, out var v) && v.DeclaringType.Is(type);
 
         /// <summary>Matches an instruction with opcode <see cref="OpCodes.Newobj"/>.</summary>
         /// <param name="instr">The instruction to try to match.</param>
@@ -365,6 +365,6 @@ namespace MonoMod.Cil {
         /// <param name="typeFullName">The full name of the type the operand member must be defined on for the instruction to match.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
         public static bool MatchNewobj(this Instruction instr, string typeFullName)
-            => MatchNewobj(instr, out MethodReference? v) && v.DeclaringType.Is(typeFullName);
+            => MatchNewobj(instr, out var v) && v.DeclaringType.Is(typeFullName);
     }
 }

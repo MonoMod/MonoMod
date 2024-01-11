@@ -40,21 +40,21 @@ namespace MonoMod.Utils {
             c.IsPreserveSig = o.IsPreserveSig;
             c.IsPInvokeImpl = o.IsPInvokeImpl;
 
-            foreach (GenericParameter genParam in o.GenericParameters)
+            foreach (var genParam in o.GenericParameters)
                 c.GenericParameters.Add(genParam.Clone());
 
-            foreach (ParameterDefinition param in o.Parameters)
+            foreach (var param in o.Parameters)
                 c.Parameters.Add(param.Clone());
 
-            foreach (CustomAttribute attrib in o.CustomAttributes)
+            foreach (var attrib in o.CustomAttributes)
                 c.CustomAttributes.Add(attrib.Clone());
 
-            foreach (MethodReference @override in o.Overrides)
+            foreach (var @override in o.Overrides)
                 c.Overrides.Add(@override);
 
             if (c.Body != null) {
                 int foundIndex;
-                foreach (Instruction ci in c.Body.Instructions) {
+                foreach (var ci in c.Body.Instructions) {
                     if (ci.Operand is GenericParameter genParam && (foundIndex = o.GenericParameters.IndexOf(genParam)) != -1) {
                         ci.Operand = c.GenericParameters[foundIndex];
                     } else if (ci.Operand is ParameterDefinition param && (foundIndex = o.Parameters.IndexOf(param)) != -1) {
@@ -92,7 +92,7 @@ namespace MonoMod.Utils {
                 return c;
             }));
 
-            foreach (Instruction c in bc.Instructions) {
+            foreach (var c in bc.Instructions) {
                 if (c.Operand is Instruction target) {
                     c.Operand = bc.Instructions[bo.Instructions.IndexOf(target)];
                 } else if (c.Operand is Instruction[] targets) {
@@ -185,7 +185,7 @@ namespace MonoMod.Utils {
             if (provider is GenericParameter genericParam && genericParam.Name == orig.Name)
                 return genericParam;
 
-            foreach (GenericParameter param in provider.GenericParameters)
+            foreach (var param in provider.GenericParameters)
                 if (param.Name == orig.Name)
                     return param;
 
@@ -245,7 +245,7 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(relinker);
 
             if (type is TypeSpecification ts) {
-                TypeReference relinkedElem = ts.ElementType.Relink(relinker, context);
+                var relinkedElem = ts.ElementType.Relink(relinker, context);
 
                 if (type.IsSentinel)
                     return new SentinelType(relinkedElem);
@@ -275,7 +275,7 @@ namespace MonoMod.Utils {
 
                 if (type.IsGenericInstance) {
                     var git = new GenericInstanceType(relinkedElem);
-                    foreach (TypeReference genArg in ((GenericInstanceType) type).GenericArguments)
+                    foreach (var genArg in ((GenericInstanceType) type).GenericArguments)
                         git.GenericArguments.Add(genArg?.Relink(relinker, context));
                     return git;
                 }
@@ -318,7 +318,7 @@ namespace MonoMod.Utils {
 
             var relink = new GenericParameterConstraint(constraint.ConstraintType.Relink(relinker, context));
 
-            foreach (CustomAttribute attrib in constraint.CustomAttributes)
+            foreach (var attrib in constraint.CustomAttributes)
                 relink.CustomAttributes.Add(attrib.Relink(relinker, context));
 
             return relink;
@@ -339,7 +339,7 @@ namespace MonoMod.Utils {
             if (method.IsGenericInstance) {
                 var methodg = (GenericInstanceMethod) method;
                 var gim = new GenericInstanceMethod((MethodReference) methodg.ElementMethod.Relink(relinker, context));
-                foreach (TypeReference arg in methodg.GenericArguments)
+                foreach (var arg in methodg.GenericArguments)
                     // Generic arguments for the generic instance are often given by the next higher provider.
                     gim.GenericArguments.Add(arg.Relink(relinker, context));
 
@@ -352,12 +352,12 @@ namespace MonoMod.Utils {
             relink.ExplicitThis = method.ExplicitThis;
             relink.HasThis = method.HasThis;
 
-            foreach (GenericParameter param in method.GenericParameters)
+            foreach (var param in method.GenericParameters)
                 relink.GenericParameters.Add(param.Relink(relinker, context));
 
             relink.ReturnType = relink.ReturnType?.Relink(relinker, relink);
 
-            foreach (ParameterDefinition param in method.Parameters) {
+            foreach (var param in method.Parameters) {
                 param.ParameterType = param.ParameterType.Relink(relinker, method);
                 relink.Parameters.Add(param);
             }
@@ -383,7 +383,7 @@ namespace MonoMod.Utils {
 
             relink.ReturnType = relink.ReturnType?.Relink(relinker, context);
 
-            foreach (ParameterDefinition param in method.Parameters) {
+            foreach (var param in method.Parameters) {
                 param.ParameterType = param.ParameterType.Relink(relinker, context);
                 relink.Parameters.Add(param);
             }
@@ -401,7 +401,7 @@ namespace MonoMod.Utils {
         public static IMetadataTokenProvider Relink(this FieldReference field, Relinker relinker, IGenericParameterProvider context) {
             Helpers.ThrowIfArgumentNull(field);
             Helpers.ThrowIfArgumentNull(relinker);
-            TypeReference declaringType = field.DeclaringType.Relink(relinker, context);
+            var declaringType = field.DeclaringType.Relink(relinker, context);
             return relinker(new FieldReference(field.Name, field.FieldType.Relink(relinker, declaringType), declaringType), context);
         }
 
@@ -446,7 +446,7 @@ namespace MonoMod.Utils {
             };
             if (param.HasConstant)
                 newParam.Constant = param.Constant;
-            foreach (CustomAttribute attrib in param.CustomAttributes)
+            foreach (var attrib in param.CustomAttributes)
                 newParam.CustomAttributes.Add(attrib.Clone());
             return newParam;
         }
@@ -462,13 +462,13 @@ namespace MonoMod.Utils {
             Helpers.ThrowIfArgumentNull(attrib);
             Helpers.ThrowIfArgumentNull(relinker);
             var newAttrib = new CustomAttribute((MethodReference) attrib.Constructor.Relink(relinker, context));
-            foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
+            foreach (var attribArg in attrib.ConstructorArguments)
                 newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type.Relink(relinker, context), attribArg.Value));
-            foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
+            foreach (var attribArg in attrib.Fields)
                 newAttrib.Fields.Add(new CustomAttributeNamedArgument(attribArg.Name,
                     new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value))
                 );
-            foreach (CustomAttributeNamedArgument attribArg in attrib.Properties)
+            foreach (var attribArg in attrib.Properties)
                 newAttrib.Properties.Add(new CustomAttributeNamedArgument(attribArg.Name,
                     new CustomAttributeArgument(attribArg.Argument.Type.Relink(relinker, context), attribArg.Argument.Value))
                 );
@@ -483,13 +483,13 @@ namespace MonoMod.Utils {
         public static CustomAttribute Clone(this CustomAttribute attrib) {
             Helpers.ThrowIfArgumentNull(attrib);
             var newAttrib = new CustomAttribute(attrib.Constructor);
-            foreach (CustomAttributeArgument attribArg in attrib.ConstructorArguments)
+            foreach (var attribArg in attrib.ConstructorArguments)
                 newAttrib.ConstructorArguments.Add(new CustomAttributeArgument(attribArg.Type, attribArg.Value));
-            foreach (CustomAttributeNamedArgument attribArg in attrib.Fields)
+            foreach (var attribArg in attrib.Fields)
                 newAttrib.Fields.Add(new CustomAttributeNamedArgument(attribArg.Name,
                     new CustomAttributeArgument(attribArg.Argument.Type, attribArg.Argument.Value))
                 );
-            foreach (CustomAttributeNamedArgument attribArg in attrib.Properties)
+            foreach (var attribArg in attrib.Properties)
                 newAttrib.Properties.Add(new CustomAttributeNamedArgument(attribArg.Name,
                     new CustomAttributeArgument(attribArg.Argument.Type, attribArg.Argument.Value))
                 );
@@ -506,10 +506,10 @@ namespace MonoMod.Utils {
         public static GenericParameter Relink(this GenericParameter param, Relinker relinker, IGenericParameterProvider context) {
             Helpers.ThrowIfArgumentNull(param);
             Helpers.ThrowIfArgumentNull(relinker);
-            GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
+            var newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);
-            foreach (CustomAttribute attr in param.CustomAttributes)
+            foreach (var attr in param.CustomAttributes)
                 newParam.CustomAttributes.Add(attr.Relink(relinker, context));
 #pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
             foreach (var constraint in param.Constraints)
@@ -525,10 +525,10 @@ namespace MonoMod.Utils {
         /// <returns>A clone of the original generic parameter.</returns>
         public static GenericParameter Clone(this GenericParameter param) {
             Helpers.ThrowIfArgumentNull(param);
-            GenericParameter newParam = new GenericParameter(param.Name, param.Owner) {
+            var newParam = new GenericParameter(param.Name, param.Owner) {
                 Attributes = param.Attributes
             }.Update(param.Position, param.Type);
-            foreach (CustomAttribute attr in param.CustomAttributes)
+            foreach (var attr in param.CustomAttributes)
                 newParam.CustomAttributes.Add(attr.Clone());
 #pragma warning disable IDE0008 // TypeReference in cecil 0.10, GenericParameterConstraint in cecil 0.11
             foreach (var constraint in param.Constraints)

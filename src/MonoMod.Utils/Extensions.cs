@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Reflection;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 
 namespace MonoMod.Utils {
@@ -67,7 +67,7 @@ namespace MonoMod.Utils {
 
             if (member.DeclaringType is not null) {
                 var mt = member.MetadataToken;
-                foreach (MemberInfo other in member.DeclaringType.GetMembers((BindingFlags) (-1))) {
+                foreach (var other in member.DeclaringType.GetMembers((BindingFlags) (-1))) {
                     if (other.MetadataToken == mt)
                         return (T) other;
                 }
@@ -208,7 +208,7 @@ namespace MonoMod.Utils {
             // Fake DynamicMethods aren't part of their declaring type.
             // Sounds obvious, but seems like the only real method to verify that it's a fake DynamicMethod.
             if (method.DeclaringType is not null) {
-                foreach (MethodInfo other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                foreach (var other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                     if (method == other)
                         return false;
             }

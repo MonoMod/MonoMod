@@ -1,5 +1,5 @@
-﻿using System;
-using Mono.Cecil;
+﻿using Mono.Cecil;
+using System;
 
 [assembly: CLSCompliant(false)]
 

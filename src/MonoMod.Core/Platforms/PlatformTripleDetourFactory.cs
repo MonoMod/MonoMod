@@ -98,7 +98,7 @@ namespace MonoMod.Core.Platforms {
                         DetourBox.IsApplying = true;
                         DetourBox.IsApplied = true;
 
-                        ReplaceDetourInLock(DetourBox, CreateDetour(), out SimpleNativeDetour? oldDetour);
+                        ReplaceDetourInLock(DetourBox, CreateDetour(), out var oldDetour);
                         Helpers.DAssert(oldDetour is null);
                     } catch {
                         DetourBox.IsApplied = false;
