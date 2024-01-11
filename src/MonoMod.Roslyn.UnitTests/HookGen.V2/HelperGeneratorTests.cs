@@ -45,7 +45,7 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                 {
                     namespace MonoMod.Roslyn.UnitTests.HookGen.V2
                     {
-                        internal static partial class  HelperGeneratorTests
+                        internal static partial class HelperGeneratorTests
                         {
                             public static global::MonoMod.RuntimeDetour.Hook NoAttributesNoGen(global::MonoMod.HookGen.HookSig_System_Threading_Tasks_Task_0_MonoMod_Roslyn_UnitTests_HookGen_V2_HelperGeneratorTests hook, bool applyByDefault = true)
                             {
@@ -167,7 +167,7 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                 {
                     namespace MonoMod.Roslyn.UnitTests.HookGen.V2
                     {
-                        internal static partial class  HelperGeneratorTests
+                        internal static partial class HelperGeneratorTests
                         {
                             public static global::MonoMod.RuntimeDetour.Hook CanGenerateWithExactName(global::MonoMod.HookGen.HookSig_System_Threading_Tasks_Task_0_MonoMod_Roslyn_UnitTests_HookGen_V2_HelperGeneratorTests hook, bool applyByDefault = true)
                             {
@@ -269,9 +269,9 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                 {
                     namespace MonoMod.Roslyn.UnitTests.HookGen.V2
                     {
-                        internal static partial class  HelperGeneratorTests
+                        internal static partial class HelperGeneratorTests
                         {
-                            internal static partial class  TestClass
+                            internal static partial class TestClass
                             {
                                 public static global::MonoMod.RuntimeDetour.Hook Single(global::MonoMod.HookGen.HookSig_System_Void_0 hook, bool applyByDefault = true)
                                 {
@@ -316,9 +316,9 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                 {
                     namespace MonoMod.Roslyn.UnitTests.HookGen.V2
                     {
-                        internal static partial class  HelperGeneratorTests
+                        internal static partial class HelperGeneratorTests
                         {
-                            internal static partial class  TestClass
+                            internal static partial class TestClass
                             {
                                 public static global::MonoMod.RuntimeDetour.ILHook Single(global::MonoMod.Cil.ILContext.Manipulator hook, bool applyByDefault = true)
                                 {
@@ -390,9 +390,9 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                 {
                     namespace MonoMod.Roslyn.UnitTests.HookGen.V2
                     {
-                        internal static partial class  HelperGeneratorTests
+                        internal static partial class HelperGeneratorTests
                         {
-                            internal static partial class  TestClass
+                            internal static partial class TestClass
                             {
                                 public static global::MonoMod.RuntimeDetour.Hook Single(global::MonoMod.HookGen.HookSig_System_Void_0 hook, bool applyByDefault = true)
                                 {

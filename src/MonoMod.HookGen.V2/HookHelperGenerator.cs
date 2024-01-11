@@ -788,7 +788,7 @@ namespace MonoMod.HookGen.V2 {
             }
 
             return new(mr,
-                GenHelpers.CreateTypeContext(targetType),
+                GenHelpers.CreateTypeContext(targetType, "class"),
                 new(kind, includeNested, distinguishOverloads,
                     explicitMembers, memberPrefixes, memberSuffixes));
         }
@@ -930,7 +930,7 @@ namespace MonoMod.HookGen.V2 {
                         continue;
                     }
 
-                    var typeModel = GetTypeModel(GenHelpers.CreateTypeContext(nested), ImmutableArray.Create(attr), nested, token);
+                    var typeModel = GetTypeModel(GenHelpers.CreateTypeContext(nested, "class"), ImmutableArray.Create(attr), nested, token);
                     if (typeModel is not null) {
                         typesBuilder.Add(typeModel);
                         hasHook |= typeModel.HasHook;

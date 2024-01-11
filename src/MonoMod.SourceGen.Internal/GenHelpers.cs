@@ -55,7 +55,7 @@ namespace MonoMod.SourceGen.Internal {
                 _ => $"/*unknown ref kind {refKind}*/ ",
             };
 
-        public static TypeContext CreateTypeContext(INamedTypeSymbol type) {
+        public static TypeContext CreateTypeContext(INamedTypeSymbol type, string? forceTypeKind = null) {
             var innermostType = type;
 
             using var builder = ImmutableArrayBuilder<string>.Rent();
@@ -66,7 +66,8 @@ namespace MonoMod.SourceGen.Internal {
                 var isRec = innermostType.IsRecord;
                 var isStruct = innermostType.IsValueType;
                 var isRef = innermostType.IsReferenceType;
-                builder.Add($"partial {(isRec ? "record" : "")}{(isRef && !isRec ? "class" : "")} {(isStruct ? "struct" : "")} {innermostType.Name}");
+                var typeKind = forceTypeKind ?? $"{(isRec ? "record" : "")}{(isRef && !isRec ? "class" : "")} {(isStruct ? "struct" : "")}";
+                builder.Add($"partial {typeKind} {innermostType.Name}");
 
                 innermostType = innermostType.ContainingType;
             }
