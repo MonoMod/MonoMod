@@ -15,15 +15,15 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
     using Test = CSharpSourceGeneratorTest<Verifiers.Adapter<HookHelperGenerator>, XUnitVerifier>;
 #pragma warning restore IDE0065
 
-    public class HelperGeneratorTests {
+    public partial class HelperGeneratorTests {
 
         private static readonly Type generatorType = typeof(Verifiers.Adapter<HookHelperGenerator>);
         private static readonly (Type, string, string) attributesSource = (generatorType,
             HookHelperGenerator.GenHelperForTypeAttrFile, HookHelperGenerator.GenHelperForTypeAttributeSource);
 
-        private static readonly MetadataReference SelfMetadataReference = MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location);
-        private static readonly MetadataReference RuntimeDetourMetadataReference = MetadataReference.CreateFromFile(typeof(Hook).Assembly.Location);
-        private static readonly MetadataReference UtilsMetadataReference = MetadataReference.CreateFromFile(typeof(Cil.ILContext).Assembly.Location);
+        internal static readonly MetadataReference SelfMetadataReference = MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location);
+        internal static readonly MetadataReference RuntimeDetourMetadataReference = MetadataReference.CreateFromFile(typeof(Hook).Assembly.Location);
+        internal static readonly MetadataReference UtilsMetadataReference = MetadataReference.CreateFromFile(typeof(Cil.ILContext).Assembly.Location);
 
         const string ThisTypeFile = "MonoMod.Roslyn.UnitTests_MonoMod.Roslyn.UnitTests.HookGen.V2.HelperGeneratorTests.g.cs";
         const string ThisTypeHelperDelegates = """
@@ -221,20 +221,6 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                 },
                 ExpectedDiagnostics = { }
             }.RunAsync().ConfigureAwait(false);
-        }
-
-        public static class TestClass {
-            public static void Single() {
-
-            }
-
-            public static void Overloaded() {
-
-            }
-
-            public static void Overloaded(int i) {
-
-            }
         }
 
         private const string TestClassFile = "MonoMod.Roslyn.UnitTests_MonoMod.Roslyn.UnitTests.HookGen.V2.HelperGeneratorTests.TestClass.g.cs";

@@ -11,7 +11,7 @@ namespace MonoMod.HookGen.V2 {
 
         private const string Category = "MonoMod.HookGen";
 
-        private static readonly DiagnosticDescriptor ProjectDoesNotReferenceRuntimeDetour = new(
+        public static readonly DiagnosticDescriptor ProjectDoesNotReferenceRuntimeDetour = new(
             "HookGen0001",
             "Assembly does not reference MonoMod.RuntimeDetour",
             "Assembly '{0}' does not reference MonoMod.RuntimeDetour, generated helpers will not compile",
@@ -20,7 +20,7 @@ namespace MonoMod.HookGen.V2 {
             isEnabledByDefault: true,
             customTags: ["CompilationEnd"]);
 
-        private static readonly DiagnosticDescriptor ReferencedTypeIsInThisAssembly = new(
+        public static readonly DiagnosticDescriptor ReferencedTypeIsInThisAssembly = new(
             "HookGen0002",
             "Referenced type is defined in this assembly",
             "Type '{0}' is declared in this assembly. Helpers will not be generated for it.",
@@ -28,7 +28,7 @@ namespace MonoMod.HookGen.V2 {
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true);
 
-        private static readonly DiagnosticDescriptor TargetAssemblyIsNotPublicized = new(
+        public static readonly DiagnosticDescriptor TargetAssemblyIsNotPublicized = new(
             "HookGen0003",
             "Referenced type is in an assembly that is not publicized",
             "The referenced assembly '{0}' does not appear publicized. Set Publicize=\"true\" metadata on the reference item, " +
@@ -37,7 +37,7 @@ namespace MonoMod.HookGen.V2 {
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true);
 
-        private static readonly DiagnosticDescriptor CannotPatchNonClassOrStruct = new(
+        public static readonly DiagnosticDescriptor CannotPatchNonClassOrStruct = new(
             "HookGen0004",
             "Cannot create hook helpers for type which is not a class or struct",
             "Cannot create hook helpers for '{0}' because it is not a class or struct type",
@@ -45,7 +45,7 @@ namespace MonoMod.HookGen.V2 {
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);
 
-        private static readonly DiagnosticDescriptor CannotPatchGenericTypes = new(
+        public static readonly DiagnosticDescriptor CannotPatchGenericTypes = new(
             "HookGen0005",
             "Cannot create hook helpers for generic type because generic types cannot be patched",
             "Cannot create hook helpers for '{0}' because it is generic, and generic types cannot be patched",
@@ -130,7 +130,7 @@ namespace MonoMod.HookGen.V2 {
                     }
 
                     // queue the assemblies to be checked for publicisation
-                    if (assembliesToReport.TryAdd(targetAssembly, 0)) {
+                    if (targetAssembly is not null && assembliesToReport.TryAdd(targetAssembly, 0)) {
                         // we are the first to get to this assembly, analyzer it
 
                         // look for BepInEx.AssemblyPublicizer's marker attribute in the assembly

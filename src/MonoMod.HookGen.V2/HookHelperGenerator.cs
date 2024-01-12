@@ -48,7 +48,7 @@ namespace MonoMod.HookGen.V2 {
                 /// Non-public members of the type may or may not be included. It is recommended to use a publicizer with this generator.
                 /// </remarks>
             #endif
-                [AttributeUsage(AttributeTargets.Assembly)]
+                [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
                 [Conditional("SOURCE_GENERATOR_ONLY")]
                 internal sealed class GenerateHookHelpersAttribute : Attribute {
             #if DEBUG
