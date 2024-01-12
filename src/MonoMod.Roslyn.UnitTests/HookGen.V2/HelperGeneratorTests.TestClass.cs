@@ -7,7 +7,9 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
 #pragma warning restore IDE0065
 
     public partial class HelperGeneratorTests {
-        public static class TestClass {
+        public class TestClass {
+            public TestClass() { }
+
             public static void Single() {
 
             }

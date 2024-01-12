@@ -11,6 +11,10 @@ using System.Text;
 using System.Threading;
 
 namespace MonoMod.HookGen.V2 {
+
+    // TODO: finish support for unnameable types
+    // TODO: generate correct code for constructors
+
     [Generator]
     public sealed class HookHelperGenerator : IIncrementalGenerator {
 
@@ -475,7 +479,7 @@ namespace MonoMod.HookGen.V2 {
                     _ => BindingFlags.NonPublic,
                 };
 
-                bindingFlags |= member.Signature.ThisType is not null ? BindingFlags.Static : BindingFlags.Instance;
+                bindingFlags |= member.Signature.ThisType is null ? BindingFlags.Static : BindingFlags.Instance;
 
                 var hookType = il ? "global::MonoMod.RuntimeDetour.ILHook" : "global::MonoMod.RuntimeDetour.Hook";
                 var parameterType = il ? ILHookParameterType : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
@@ -483,7 +487,7 @@ namespace MonoMod.HookGen.V2 {
                 cb.Write("public static ")
                     .Write(hookType)
                     .Write(" ")
-                    .Write(member.Name);
+                    .Write(SanitizeName(member.Name));
                 if ((il && member.HasOverloads) || member.DistinguishByName) {
                     AppendSignatureIdentifier(cb, member.Signature);
                 }
@@ -551,21 +555,27 @@ namespace MonoMod.HookGen.V2 {
 
         private static readonly ObjectPool<StringBuilder> stringBuilderPool = new(() => new());
 
+        private static string SanitizeRefness(string v)
+            => v.Replace(" ", "_");
+        private static string SanitizeMdName(string v)
+            => v.Replace(".", "_").Replace("`", "_").Replace("+", "_");
+
         private static string GetHookDelegateName(MethodSignature sig) {
+
             var sb = stringBuilderPool.Allocate();
 
             var parameters = sig.ParameterTypes.AsImmutableArray();
             sb.Append("HookSig_")
-                .Append(sig.ReturnType.Refness.Replace(" ", "_"))
-                .Append(sig.ReturnType.MdName.Replace(".", "_").Replace("`", "_"))
+                .Append(SanitizeRefness(sig.ReturnType.Refness))
+                .Append(SanitizeMdName(sig.ReturnType.MdName))
                 .Append('_')
                 .Append(parameters.Length);
 
             if (sig.ThisType is { } thisType) {
                 _ = sb
                     .Append('_')
-                    .Append(thisType.Refness.Replace(" ", "_"))
-                    .Append(thisType.MdName.Replace(".", "_").Replace("`", "_"));
+                    .Append(SanitizeRefness(thisType.Refness))
+                    .Append(SanitizeMdName(thisType.MdName));
             }
 
             for (var i = 0; i < parameters.Length; i++) {
@@ -573,8 +583,8 @@ namespace MonoMod.HookGen.V2 {
 
                 _ = sb
                     .Append('_')
-                    .Append(param.Refness.Replace(" ", "_"))
-                    .Append(param.MdName.Replace(".", "_").Replace("`", "_"));
+                    .Append(SanitizeRefness(param.Refness))
+                    .Append(SanitizeMdName(param.MdName));
             }
 
             var result = sb.ToString();
@@ -586,16 +596,16 @@ namespace MonoMod.HookGen.V2 {
         private static void AppendSignatureIdentifier(CodeBuilder cb, MethodSignature sig) {
             var parameters = sig.ParameterTypes.AsImmutableArray();
             cb.Write("_")
-                .Write(sig.ReturnType.Refness.Replace(" ", "_"))
-                .Write(sig.ReturnType.MdName.Replace(".", "_").Replace("`", "_"))
+                .Write(SanitizeRefness(sig.ReturnType.Refness))
+                .Write(SanitizeMdName(sig.ReturnType.MdName))
                 .Write('_')
                 .Write(parameters.Length.ToString(CultureInfo.InvariantCulture));
 
             if (sig.ThisType is { } thisType) {
                 _ = cb
                     .Write('_')
-                    .Write(thisType.Refness.Replace(" ", "_"))
-                    .Write(thisType.MdName.Replace(".", "_").Replace("`", "_"));
+                    .Write(SanitizeRefness(thisType.Refness))
+                    .Write(SanitizeMdName(thisType.MdName));
             }
 
 
@@ -604,8 +614,8 @@ namespace MonoMod.HookGen.V2 {
 
                 _ = cb
                     .Write('_')
-                    .Write(param.Refness.Replace(" ", "_"))
-                    .Write(param.MdName.Replace(".", "_").Replace("`", "_"));
+                    .Write(SanitizeRefness(param.Refness))
+                    .Write(SanitizeMdName(param.MdName));
             }
         }
 
@@ -971,7 +981,7 @@ namespace MonoMod.HookGen.V2 {
 
             var sig = new MethodSignature(thisType, paramTypeBuilder.ToImmutable(), returnType);
 
-            return new(SanitizeName(method.Name), sig, options.DistinguishOverloads && hasOverloads, hasOverloads, method.DeclaredAccessibility, options.Kind);
+            return new(method.Name, sig, options.DistinguishOverloads && hasOverloads, hasOverloads, method.DeclaredAccessibility, options.Kind);
         }
 
         private static string SanitizeName(string name) {
@@ -979,13 +989,19 @@ namespace MonoMod.HookGen.V2 {
                 return string.Empty;
 
             var result = name
+                .Replace('.', '_')
+                .Replace('/', '_')
+                .Replace('`', '_')
+                .Replace('+', '_')
                 .Replace('<', '_')
                 .Replace('>', '_')
                 .Replace('$', '_');
 
+            /*
             if (result != name) {
                 result = "_S_" + result;
             }
+            */
 
             if (result[0] is >= '0' and <= '9') {
                 result = "@" + result;
