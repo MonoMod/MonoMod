@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using MonoMod.SourceGen.Internal.Extensions;
 using MonoMod.SourceGen.Internal.Helpers;
+using System;
 
 namespace MonoMod.SourceGen.Internal {
     internal sealed record TypeRef(string MdName, string FqName, string Name, string Refness);
@@ -55,7 +56,7 @@ namespace MonoMod.SourceGen.Internal {
                 _ => $"/*unknown ref kind {refKind}*/ ",
             };
 
-        public static TypeContext CreateTypeContext(INamedTypeSymbol type, string? forceTypeKind = null) {
+        public static TypeContext CreateTypeContext(INamedTypeSymbol type, string? forceTypeKind = null, Func<string, string>? modifyName = null) {
             var innermostType = type;
 
             using var builder = ImmutableArrayBuilder<string>.Rent();
@@ -67,7 +68,8 @@ namespace MonoMod.SourceGen.Internal {
                 var isStruct = innermostType.IsValueType;
                 var isRef = innermostType.IsReferenceType;
                 var typeKind = forceTypeKind ?? $"{(isRec ? "record" : "")}{(isRef && !isRec ? "class" : "")} {(isStruct ? "struct" : "")}";
-                builder.Add($"partial {typeKind} {innermostType.Name}");
+                var name = modifyName is not null ? modifyName(innermostType.Name) : innermostType.Name;
+                builder.Add($"partial {typeKind} {name}");
 
                 innermostType = innermostType.ContainingType;
             }
@@ -77,7 +79,7 @@ namespace MonoMod.SourceGen.Internal {
             var typeCtx = "";
             innermostType = type;
             while (innermostType is not null) {
-                typeCtx = innermostType.Name + typeCtx;
+                typeCtx = (modifyName?.Invoke(innermostType.Name) ?? innermostType.Name) + typeCtx;
                 innermostType = innermostType.ContainingType;
                 if (innermostType is not null)
                     typeCtx = "." + typeCtx;

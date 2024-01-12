@@ -788,7 +788,7 @@ namespace MonoMod.HookGen.V2 {
             }
 
             return new(mr,
-                GenHelpers.CreateTypeContext(targetType, "class"),
+                GenHelpers.CreateTypeContext(targetType, "class", SanitizeName),
                 new(kind, includeNested, distinguishOverloads,
                     explicitMembers, memberPrefixes, memberSuffixes));
         }
@@ -930,7 +930,7 @@ namespace MonoMod.HookGen.V2 {
                         continue;
                     }
 
-                    var typeModel = GetTypeModel(GenHelpers.CreateTypeContext(nested, "class"), ImmutableArray.Create(attr), nested, token);
+                    var typeModel = GetTypeModel(GenHelpers.CreateTypeContext(nested, "class", SanitizeName), ImmutableArray.Create(attr), nested, token);
                     if (typeModel is not null) {
                         typesBuilder.Add(typeModel);
                         hasHook |= typeModel.HasHook;
@@ -971,8 +971,27 @@ namespace MonoMod.HookGen.V2 {
 
             var sig = new MethodSignature(thisType, paramTypeBuilder.ToImmutable(), returnType);
 
-            return new(method.Name, sig, options.DistinguishOverloads && hasOverloads, hasOverloads, method.DeclaredAccessibility, options.Kind);
+            return new(SanitizeName(method.Name), sig, options.DistinguishOverloads && hasOverloads, hasOverloads, method.DeclaredAccessibility, options.Kind);
         }
 
+        private static string SanitizeName(string name) {
+            if (string.IsNullOrEmpty(name))
+                return string.Empty;
+
+            var result = name
+                .Replace('<', '_')
+                .Replace('>', '_')
+                .Replace('$', '_');
+
+            if (result != name) {
+                result = "_S_" + result;
+            }
+
+            if (result[0] is >= '0' and <= '9') {
+                result = "@" + result;
+            }
+
+            return result;
+        }
     }
 }
