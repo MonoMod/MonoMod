@@ -4,7 +4,15 @@ using MonoMod.SourceGen.Internal.Helpers;
 using System;
 
 namespace MonoMod.SourceGen.Internal {
-    internal sealed record TypeRef(string MdName, string FqName, string Name, string Refness);
+    internal sealed record TypeRef(string MdName, string FqName, string Name, string Refness) {
+        public TypeRef WithRefness(string refness = "") {
+            if (Refness != refness) {
+                return this with { Refness = refness };
+            } else {
+                return this;
+            }
+        }
+    }
 
     internal sealed record TypeContext(string? Namespace, TypeRef InnermostType,
         string FullContextName, EquatableArray<string> ContainingTypeDecls) {

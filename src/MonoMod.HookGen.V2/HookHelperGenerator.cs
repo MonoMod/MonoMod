@@ -13,7 +13,6 @@ using System.Threading;
 namespace MonoMod.HookGen.V2 {
 
     // TODO: finish support for unnameable types
-    // TODO: generate correct code for constructors
 
     [Generator]
     public sealed class HookHelperGenerator : IIncrementalGenerator {
@@ -122,6 +121,7 @@ namespace MonoMod.HookGen.V2 {
 
         private static readonly ObjectPool<HashSet<string>> stringHashSetPool = new(() => new());
         private static readonly ObjectPool<HashSet<MethodSignature>> methodSigHashSetPool = new(() => new());
+        private static readonly ObjectPool<HashSet<TypeRef>> typeRefHashSetPool = new(() => new());
 
         private static readonly ObjectPool<Queue<GeneratableTypeModel>> genTypeModelQueuePool = new(() => new());
 
@@ -307,22 +307,41 @@ namespace MonoMod.HookGen.V2 {
 
             var generatableAssemblies = mappedAssemblies.Select(GetAllMembersToGenerate!);
 
-            var neededSignaturesWithDupes = generatableAssemblies.SelectMany(ExtractSignatures);
+            var signaturesAndTypes = generatableAssemblies.Select(ExtractSignaturesAndTypes);
 
-            var neededSignaturesWithoutDupes = neededSignaturesWithDupes.Collect().SelectMany((arr, ct) => {
-                var set = methodSigHashSetPool.Allocate();
+            var neededSignaturesWithDupes = signaturesAndTypes.SelectMany((t, ct) => t.Item1.AsImmutableArray());
 
-                foreach (var method in arr) {
-                    _ = set.Add(method);
-                }
+            var neededSignaturesWithoutDupes = neededSignaturesWithDupes.Collect()
+                .SelectMany((arr, ct) => {
+                    var set = methodSigHashSetPool.Allocate();
 
-                var result = set.ToImmutableArray();
-                set.Clear();
-                methodSigHashSetPool.Free(set);
-                return result;
-            });
+                    foreach (var method in arr) {
+                        _ = set.Add(method);
+                    }
+
+                    var result = set.ToImmutableArray();
+                    set.Clear();
+                    methodSigHashSetPool.Free(set);
+                    return result;
+                });
 
             context.RegisterSourceOutput(neededSignaturesWithoutDupes.Collect(), EmitDelegateTypes);
+
+            var typesWithoutDupes = signaturesAndTypes
+                .SelectMany((t, ct) => t.Item2.AsImmutableArray())
+                .Collect()
+                .SelectMany((arr, ct) => {
+                    var set = typeRefHashSetPool.Allocate();
+
+                    foreach (var type in arr) {
+                        _ = set.Add(type);
+                    }
+
+                    var result = set.ToImmutableArray();
+                    set.Clear();
+                    typeRefHashSetPool.Free(set);
+                    return result;
+                });
 
             var generatableTypes = generatableAssemblies.SelectMany((ass, ct) => ass.Types);
 
@@ -498,9 +517,18 @@ namespace MonoMod.HookGen.V2 {
                     .Write("var type = typeof(")
                     .Write(type.Type.InnermostType.FqName)
                     .WriteLine(");")
-                    .Write("var method = type.GetMethod(\"")
-                    .Write(member.Name)
-                    .Write("\", (global::System.Reflection.BindingFlags)")
+                    .Write("var method = type.");
+
+                if (member.Name == ".ctor") {
+                    cb.Write("GetConstructor(");
+                } else {
+                    cb.Write("GetMethod(\"")
+                        .Write(member.Name)
+                        .Write("\", ");
+                }
+
+
+                cb.Write("(global::System.Reflection.BindingFlags)")
                     .Write(((int) bindingFlags).ToString(CultureInfo.InvariantCulture))
                     .WriteLine(", new global::System.Type[]")
                     .OpenBlock();
@@ -619,8 +647,9 @@ namespace MonoMod.HookGen.V2 {
             }
         }
 
-        private static ImmutableArray<MethodSignature> ExtractSignatures(GeneratableAssembly assembly, CancellationToken token) {
-            var set = methodSigHashSetPool.Allocate();
+        private static (EquatableArray<MethodSignature>, EquatableArray<TypeRef>) ExtractSignaturesAndTypes(GeneratableAssembly assembly, CancellationToken token) {
+            var sigSet = methodSigHashSetPool.Allocate();
+            var typeSet = typeRefHashSetPool.Allocate();
             var queue = genTypeModelQueuePool.Allocate();
 
             foreach (var type in assembly.Types) {
@@ -630,9 +659,17 @@ namespace MonoMod.HookGen.V2 {
             while (queue.Count > 0) {
                 var type = queue.Dequeue();
 
+                // add to the type set
+                _ = typeSet.Add(type.Type.InnermostType.WithRefness());
+
                 foreach (var method in type.Members) {
                     if (method.Kind != DetourKind.ILHook) {
-                        set.Add(method.Signature);
+                        sigSet.Add(method.Signature);
+                    }
+
+                    _ = typeSet.Add(method.Signature.ReturnType.WithRefness());
+                    foreach (var p in method.Signature.ParameterTypes) {
+                        _ = typeSet.Add(p.WithRefness());
                     }
                 }
 
@@ -641,11 +678,14 @@ namespace MonoMod.HookGen.V2 {
                 }
             }
 
-            var resultSet = set.ToImmutableArray();
-            set.Clear();
-            methodSigHashSetPool.Free(set);
+            var methodSigs = sigSet.ToImmutableArray();
+            var types = typeSet.ToImmutableArray();
+            sigSet.Clear();
+            typeSet.Clear();
+            methodSigHashSetPool.Free(sigSet);
+            typeRefHashSetPool.Free(typeSet);
             genTypeModelQueuePool.Free(queue);
-            return resultSet;
+            return (methodSigs, types);
         }
 
         private static bool MetadataReferenceEquals(MetadataReference a, MetadataReference b) {
@@ -813,7 +853,9 @@ namespace MonoMod.HookGen.V2 {
 
         private sealed record MethodSignature(TypeRef? ThisType, EquatableArray<TypeRef> ParameterTypes, TypeRef ReturnType);
 
-        private sealed record GeneratableMemberModel(string Name, MethodSignature Signature, bool DistinguishByName, bool HasOverloads, Accessibility Accessibility, DetourKind Kind);
+        private sealed record GeneratableMemberModel(string Name, MethodSignature Signature,
+            bool DistinguishByName, bool HasOverloads,
+            Accessibility Accessibility, DetourKind Kind);
 
         // I'm OK putting this in the pipeline, because the IAssemblySymbol here will always represent a metadata reference.
         // The symbols for those are reused when possible, as far as I can tell.
@@ -981,7 +1023,9 @@ namespace MonoMod.HookGen.V2 {
 
             var sig = new MethodSignature(thisType, paramTypeBuilder.ToImmutable(), returnType);
 
-            return new(method.Name, sig, options.DistinguishOverloads && hasOverloads, hasOverloads, method.DeclaredAccessibility, options.Kind);
+            return new(method.Name, sig,
+                options.DistinguishOverloads && hasOverloads, hasOverloads,
+                method.DeclaredAccessibility, options.Kind);
         }
 
         private static string SanitizeName(string name) {

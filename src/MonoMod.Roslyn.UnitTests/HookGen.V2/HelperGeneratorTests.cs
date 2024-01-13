@@ -283,7 +283,7 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                                 public static global::MonoMod.RuntimeDetour.Hook _ctor(global::MonoMod.HookGen.HookSig_System_Void_0_MonoMod_Roslyn_UnitTests_HookGen_V2_HelperGeneratorTests_TestClass hook, bool applyByDefault = true)
                                 {
                                     var type = typeof(global::MonoMod.Roslyn.UnitTests.HookGen.V2.HelperGeneratorTests.TestClass);
-                                    var method = type.GetMethod(".ctor", (global::System.Reflection.BindingFlags)20, new global::System.Type[]
+                                    var method = type.GetConstructor((global::System.Reflection.BindingFlags)20, new global::System.Type[]
                                     {
                                     }
                                     );
@@ -341,7 +341,7 @@ namespace MonoMod.Roslyn.UnitTests.HookGen.V2 {
                                 public static global::MonoMod.RuntimeDetour.ILHook _ctor(global::MonoMod.Cil.ILContext.Manipulator hook, bool applyByDefault = true)
                                 {
                                     var type = typeof(global::MonoMod.Roslyn.UnitTests.HookGen.V2.HelperGeneratorTests.TestClass);
-                                    var method = type.GetMethod(".ctor", (global::System.Reflection.BindingFlags)20, new global::System.Type[]
+                                    var method = type.GetConstructor((global::System.Reflection.BindingFlags)20, new global::System.Type[]
                                     {
                                     }
                                     );
