@@ -67,6 +67,7 @@ namespace MonoMod.Cil {
         // private state
         private Instruction? _next;
         private ILLabel[]? _afterLabels;
+        private Instruction? _afterEHTargets;
         private SearchTarget _searchTarget;
 
         /// <summary>
@@ -156,6 +157,7 @@ namespace MonoMod.Cil {
             _next = c._next;
             _searchTarget = c._searchTarget;
             _afterLabels = c._afterLabels;
+            _afterEHTargets = c._afterEHTargets;
         }
 
         /// <summary>
@@ -231,6 +233,7 @@ namespace MonoMod.Cil {
         /// <returns>this</returns>
         public ILCursor MoveAfterLabels() {
             _afterLabels = IncomingLabels.ToArray();
+            _afterEHTargets = Next;
             return this;
         }
 
@@ -240,6 +243,7 @@ namespace MonoMod.Cil {
         /// <returns>this</returns>
         public ILCursor MoveBeforeLabels() {
             _afterLabels = null;
+            _afterEHTargets = null;
             return this;
         }
 
@@ -493,6 +497,16 @@ namespace MonoMod.Cil {
             if (_afterLabels != null)
                 foreach (var label in _afterLabels)
                     label.Target = next;
+
+            if (_afterEHTargets != null)
+                foreach (var eh in Body.ExceptionHandlers) {
+                    if (eh.TryStart == _afterEHTargets) eh.TryStart = next;
+                    if (eh.TryEnd == _afterEHTargets) eh.TryEnd = next;
+                    if (eh.HandlerStart == _afterEHTargets) eh.HandlerStart = next;
+                    if (eh.HandlerEnd == _afterEHTargets) eh.HandlerEnd = next;
+                    if (eh.FilterStart == _afterEHTargets) eh.FilterStart = next;
+                }
+
             Goto(next, moveType);
         }
 
