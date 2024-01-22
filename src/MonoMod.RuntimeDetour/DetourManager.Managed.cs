@@ -360,6 +360,10 @@ namespace MonoMod.RuntimeDetour {
 
                     UpdateEndOfChain();
                     UpdateChain(ilhook.Factory, out _);
+                } catch {
+                    // an exception ocurred while trying to install the ILHook, we should revert
+                    RemoveILHook(ilhook, takeLock: false);
+                    throw;
                 } finally {
                     if (lockTaken)
                         detourLock.Exit(true);
