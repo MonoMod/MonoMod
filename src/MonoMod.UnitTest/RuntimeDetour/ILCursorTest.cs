@@ -1,4 +1,4 @@
-﻿extern alias New;
+extern alias New;
 
 using MonoMod.Cil;
 using New::MonoMod.RuntimeDetour;
@@ -59,10 +59,19 @@ namespace MonoMod.UnitTest {
 
         [Fact]
         public void TestMoveBeforeTry() {
+            // moves before the try, but into the if block, and thus doesn't get executed
+            Assert.Equal("trywhenfinallyreturn",
+                TestTryCatchFinallyILEdit(c => {
+                    c.GotoNext(MoveType.Before, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
+                    EmitThrowEx(c);
+                })
+            );
+
             // Moves before the try-catch, so the exception is unhandled
             Assert.Throws<Exception>(() => {
                 TestTryCatchFinallyILEdit(c => {
-                    c.GotoNext(MoveType.Before, i => i.MatchLdloc(0));
+                    c.GotoNext(MoveType.Before, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
+                    c.MoveAfterLabels(intoEHRanges: false);
                     EmitThrowEx(c);
                 });
             });
@@ -73,7 +82,7 @@ namespace MonoMod.UnitTest {
             // Moves into the try-handler, triggering the general catch clause
             Assert.Equal("catchfinallyreturn", 
                 TestTryCatchFinallyILEdit(c => {
-                    c.GotoNext(MoveType.AfterLabel, i => i.MatchLdloc(0));
+                    c.GotoNext(MoveType.AfterLabel, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
                     EmitThrowEx(c);
                 })
             );
@@ -84,7 +93,7 @@ namespace MonoMod.UnitTest {
             // Moves into the filter clause, even through the filter isn't triggered
             Assert.Equal("TESTcatchfinallyreturn",
                 TestTryCatchFinallyILEdit(c => {
-                    c.GotoNext(MoveType.AfterLabel, i => i.MatchLdloc(0));
+                    c.GotoNext(MoveType.AfterLabel, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
                     EmitThrowEx(c);
                     c.GotoNext(MoveType.AfterLabel, i => i.MatchIsinst(out _));
                     EmitAppendTest(c);
@@ -119,6 +128,9 @@ namespace MonoMod.UnitTest {
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static string TryCatchFinally() {
             var sb = new StringBuilder();
+            if (sb.GetType() != typeof(StringBuilder)) {
+                sb.Append("unreachable");
+            }
             try {
                 sb.Append("try");
                 throw new ArgumentException("test");

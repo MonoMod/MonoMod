@@ -1,4 +1,4 @@
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.SourceGen.Attributes;
 using MonoMod.Utils;
@@ -67,7 +67,8 @@ namespace MonoMod.Cil {
         // private state
         private Instruction? _next;
         private ILLabel[]? _afterLabels;
-        private Instruction? _afterEHTargets;
+        private Instruction? _afterHandlerStarts;
+        private Instruction? _afterHandlerEnds;
         private SearchTarget _searchTarget;
 
         /// <summary>
@@ -157,7 +158,8 @@ namespace MonoMod.Cil {
             _next = c._next;
             _searchTarget = c._searchTarget;
             _afterLabels = c._afterLabels;
-            _afterEHTargets = c._afterEHTargets;
+            _afterHandlerStarts = c._afterHandlerStarts;
+            _afterHandlerEnds = c._afterHandlerEnds;
         }
 
         /// <summary>
@@ -232,8 +234,14 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <returns>this</returns>
         public ILCursor MoveAfterLabels() {
+            MoveAfterLabels(intoEHRanges: true);
+            return this;
+        }
+
+        public ILCursor MoveAfterLabels(bool intoEHRanges = true) {
             _afterLabels = IncomingLabels.ToArray();
-            _afterEHTargets = Next;
+            _afterHandlerStarts = intoEHRanges ? Next : null;
+            _afterHandlerEnds = Next;
             return this;
         }
 
@@ -243,7 +251,8 @@ namespace MonoMod.Cil {
         /// <returns>this</returns>
         public ILCursor MoveBeforeLabels() {
             _afterLabels = null;
-            _afterEHTargets = null;
+            _afterHandlerStarts = null;
+            _afterHandlerEnds = null;
             return this;
         }
 
@@ -500,13 +509,17 @@ namespace MonoMod.Cil {
                 foreach (var label in _afterLabels)
                     label.Target = next;
 
-            if (_afterEHTargets != null)
+            if (_afterHandlerStarts != null)
                 foreach (var eh in Body.ExceptionHandlers) {
-                    if (eh.TryStart == _afterEHTargets) eh.TryStart = next;
-                    if (eh.TryEnd == _afterEHTargets) eh.TryEnd = next;
-                    if (eh.HandlerStart == _afterEHTargets) eh.HandlerStart = next;
-                    if (eh.HandlerEnd == _afterEHTargets) eh.HandlerEnd = next;
-                    if (eh.FilterStart == _afterEHTargets) eh.FilterStart = next;
+                    if (eh.TryStart == _afterHandlerStarts) eh.TryStart = next;
+                    if (eh.HandlerStart == _afterHandlerStarts) eh.HandlerStart = next;
+                    if (eh.FilterStart == _afterHandlerStarts) eh.FilterStart = next;
+                }
+
+            if (_afterHandlerEnds != null)
+                foreach (var eh in Body.ExceptionHandlers) {
+                    if (eh.TryEnd == _afterHandlerEnds) eh.TryEnd = next;
+                    if (eh.HandlerEnd == _afterHandlerEnds) eh.HandlerEnd = next;
                 }
 
             Goto(next, moveType);
