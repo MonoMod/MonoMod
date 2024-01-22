@@ -44,7 +44,7 @@ namespace MonoMod.UnitTest {
         }
 
         private static void EmitThrowEx(ILCursor c) {
-            c.EmitNewobj(typeof(Exception).GetConstructors()[0]);
+            c.EmitNewobj(typeof(Exception).GetConstructor([]));
             c.EmitThrow();
         }
 
