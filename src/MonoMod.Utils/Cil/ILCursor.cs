@@ -1,4 +1,4 @@
-﻿using Mono.Cecil;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.SourceGen.Attributes;
 using MonoMod.Utils;
@@ -486,7 +486,7 @@ namespace MonoMod.Cil {
         /// </summary>
         public ILCursor RemoveRange(int num) {
             var index = Index;
-            _Retarget(Instrs[index + num], MoveType.Before);
+            _Retarget(index + num < Instrs.Count ? Instrs[index + num] : null, MoveType.Before);
             while (num-- > 0) // TODO: currently requires O(n) removals, shifting the backing array each time
                 Instrs.RemoveAt(index);
             return this;
