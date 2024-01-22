@@ -1,4 +1,4 @@
-extern alias New;
+﻿extern alias New;
 
 using MonoMod.Cil;
 using New::MonoMod.RuntimeDetour;
@@ -121,6 +121,38 @@ namespace MonoMod.UnitTest {
                         i => i.MatchLdloc(0),
                         i => i.MatchLdstr("return"));
                     EmitAppendTest(c);
+                })
+            );
+        }
+
+        [Fact]
+        public void TestRemoveMaintainsLabelPosition() {
+            // throw statement inserted into try block
+            Assert.Equal("catchfinallyreturn",
+                TestTryCatchFinallyILEdit(c => {
+                    c.GotoNext(MoveType.Before, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
+                    c.MoveAfterLabels();
+                    c.RemoveRange(4);
+                    EmitThrowEx(c);
+                })
+            );
+
+            // throw statement inserted before the try block
+            Assert.Throws<Exception>(() => {
+                TestTryCatchFinallyILEdit(c => {
+                    c.GotoNext(MoveType.Before, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
+                    c.MoveAfterLabels(intoEHRanges: false);
+                    c.RemoveRange(4);
+                    EmitThrowEx(c);
+                });
+            });
+
+            // throw statement inserted in unreachable if statement
+            Assert.Equal("whenfinallyreturn",
+                TestTryCatchFinallyILEdit(c => {
+                    c.GotoNext(MoveType.Before, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
+                    c.RemoveRange(4);
+                    EmitThrowEx(c);
                 })
             );
         }

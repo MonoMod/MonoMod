@@ -1,4 +1,4 @@
-﻿using Mono.Cecil;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.SourceGen.Attributes;
 using MonoMod.Utils;
@@ -67,8 +67,8 @@ namespace MonoMod.Cil {
         // private state
         private Instruction? _next;
         private ILLabel[]? _afterLabels;
-        private Instruction? _afterHandlerStarts;
-        private Instruction? _afterHandlerEnds;
+        private bool _afterHandlerStarts;
+        private bool _afterHandlerEnds;
         private SearchTarget _searchTarget;
 
         /// <summary>
@@ -238,10 +238,15 @@ namespace MonoMod.Cil {
             return this;
         }
 
+        /// <summary>
+        /// Move the cursor after incoming labels (branches). If an instruction is emitted, all labels which currently point to Next, will point to the newly emitted instruction.
+        /// </summary>
+        /// <param name="intoEHRanges">Whether to move the cursor into any try or catch ranges which start at the current position. Defaults to true.</param>
+        /// <returns>this</returns>
         public ILCursor MoveAfterLabels(bool intoEHRanges = true) {
             _afterLabels = IncomingLabels.ToArray();
-            _afterHandlerStarts = intoEHRanges ? Next : null;
-            _afterHandlerEnds = Next;
+            _afterHandlerStarts = intoEHRanges;
+            _afterHandlerEnds = true;
             return this;
         }
 
@@ -251,8 +256,8 @@ namespace MonoMod.Cil {
         /// <returns>this</returns>
         public ILCursor MoveBeforeLabels() {
             _afterLabels = null;
-            _afterHandlerStarts = null;
-            _afterHandlerEnds = null;
+            _afterHandlerStarts = false;
+            _afterHandlerEnds = false;
             return this;
         }
 
@@ -473,56 +478,63 @@ namespace MonoMod.Cil {
         public ILLabel DefineLabel() => Context.DefineLabel();
 
         private ILCursor _Insert(Instruction instr) {
+            // retargetting
+            if (_afterLabels != null)
+                foreach (var label in _afterLabels)
+                    label.Target = instr;
+
+            if (_afterHandlerStarts) {
+                foreach (var eh in Body.ExceptionHandlers) {
+                    if (eh.TryStart == Next) eh.TryStart = instr;
+                    if (eh.HandlerStart == Next) eh.HandlerStart = instr;
+                    if (eh.FilterStart == Next) eh.FilterStart = instr;
+                }
+            }
+
+            if (_afterHandlerEnds) {
+                foreach (var eh in Body.ExceptionHandlers) {
+                    if (eh.TryEnd == Next) eh.TryEnd = instr;
+                    if (eh.HandlerEnd == Next) eh.HandlerEnd = instr;
+                }
+            }
+
             Instrs.Insert(Index, instr);
-            _Retarget(instr, MoveType.After);
+            Goto(instr, MoveType.After);
             return this;
         }
 
         /// <summary>
-        /// Remove the Next instruction
+        /// Remove the Next instruction. Any labels or exception ranges pointing to the instruction will be moved to the following instruction. Cursor position will be maintained.
         /// </summary>
-        public ILCursor Remove() {
-            MoveAfterLabels();
-
-            var index = Index;
-            _Retarget(Next?.Next, MoveType.Before);
-            Instrs.RemoveAt(index);
-            return this;
-        }
+        public ILCursor Remove() => RemoveRange(1);
 
         /// <summary>
-        /// Remove several instructions
+        /// Remove several instructions. Any labels or exception ranges pointing to the instruction will be moved to the following instruction. Cursor position will be maintained.
         /// </summary>
         public ILCursor RemoveRange(int num) {
             var index = Index;
-            _Retarget(index + num < Instrs.Count ? Instrs[index + num] : null, MoveType.Before);
-            while (num-- > 0) // TODO: currently requires O(n) removals, shifting the backing array each time
+
+            // Retargetting
+            var newTarget = index + num < Instrs.Count ? Instrs[index + num] : null;
+            foreach (var label in IncomingLabels)
+                label.Target = newTarget;
+            
+            foreach (var eh in Body.ExceptionHandlers) {
+                if (eh.TryStart == Next) eh.TryStart = newTarget;
+                if (eh.TryEnd == Next) eh.TryEnd = newTarget;
+                if (eh.HandlerStart == Next) eh.HandlerStart = newTarget;
+                if (eh.FilterStart == Next) eh.FilterStart = newTarget;
+                if (eh.HandlerEnd == Next) eh.HandlerEnd = newTarget;
+            }
+
+            // TODO: currently requires O(n) removals, shifting the backing array each time
+            while (num-- > 0)
                 Instrs.RemoveAt(index);
+
+            _searchTarget = SearchTarget.None;
+            _next = newTarget;
+
             return this;
-        }
-
-        /// <summary>
-        /// Move the cursor and all labels the cursor is positioned after to a target instruction
-        /// </summary>
-        private void _Retarget(Instruction? next, MoveType moveType) {
-            if (_afterLabels != null)
-                foreach (var label in _afterLabels)
-                    label.Target = next;
-
-            if (_afterHandlerStarts != null)
-                foreach (var eh in Body.ExceptionHandlers) {
-                    if (eh.TryStart == _afterHandlerStarts) eh.TryStart = next;
-                    if (eh.HandlerStart == _afterHandlerStarts) eh.HandlerStart = next;
-                    if (eh.FilterStart == _afterHandlerStarts) eh.FilterStart = next;
-                }
-
-            if (_afterHandlerEnds != null)
-                foreach (var eh in Body.ExceptionHandlers) {
-                    if (eh.TryEnd == _afterHandlerEnds) eh.TryEnd = next;
-                    if (eh.HandlerEnd == _afterHandlerEnds) eh.HandlerEnd = next;
-                }
-
-            Goto(next, moveType);
         }
 
         /// <summary>
