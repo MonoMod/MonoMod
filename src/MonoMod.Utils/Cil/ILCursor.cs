@@ -473,6 +473,8 @@ namespace MonoMod.Cil {
         /// Remove the Next instruction
         /// </summary>
         public ILCursor Remove() {
+            MoveAfterLabels();
+
             var index = Index;
             _Retarget(Next?.Next, MoveType.Before);
             Instrs.RemoveAt(index);
