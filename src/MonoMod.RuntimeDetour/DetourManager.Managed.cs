@@ -358,12 +358,23 @@ namespace MonoMod.RuntimeDetour {
                         ilhook.ManagerData = entry;
                     }
 
-                    UpdateEndOfChain();
+                    try {
+                        UpdateEndOfChain();
+                    } catch {
+                        // the add failed, remove the node and re-update end of chain
+                        switch (ilhook.ManagerData) {
+                            case DepGraphNode<ILHookEntry> gn:
+                                ilhookGraph.Remove(gn);
+                                break;
+                            case ILHookEntry cn:
+                                noConfigIlhooks.Remove(cn);
+                                break;
+                            default: throw new NotSupportedException("bad managerdata?");
+                        }
+                        UpdateEndOfChain();
+                        throw;
+                    }
                     UpdateChain(ilhook.Factory, out _);
-                } catch {
-                    // an exception ocurred while trying to install the ILHook, we should revert
-                    RemoveILHook(ilhook, takeLock: false);
-                    throw;
                 } finally {
                     if (lockTaken)
                         detourLock.Exit(true);
