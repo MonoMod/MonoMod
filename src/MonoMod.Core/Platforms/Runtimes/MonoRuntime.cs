@@ -16,6 +16,7 @@ namespace MonoMod.Core.Platforms.Runtimes {
             RuntimeFeature.DisableInlining |
             RuntimeFeature.RequiresMethodPinning |
             RuntimeFeature.RequiresMethodIdentification |
+            RuntimeFeature.RequiresCustomMethodCompile | // PrepareMethod doesn't actually compile the method...
             RuntimeFeature.PreciseGC | // some builds use SGen, which is a precise GC, while
                                        // others, such as Unity, use Boehm, which is a conservative GC.
             RuntimeFeature.GenericSharing;
@@ -299,9 +300,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return handle.GetFunctionPointer();
         }
 
-        // we don't provide the flag which would cause this to be used
         public void Compile(MethodBase method) {
-            throw new NotImplementedException();
+            // GetFunctionPointer forces the method to be compiled on Mono
+            _ = GetMethodHandle(method).GetFunctionPointer();
         }
     }
 }
