@@ -362,7 +362,7 @@ namespace MonoMod.RuntimeDetour {
                         UpdateEndOfChain();
                     } catch {
                         // the add failed, remove the node and re-update end of chain
-                        switch (ilhook.ManagerData) {
+                        switch (Interlocked.Exchange(ref ilhook.ManagerData, null)) {
                             case DepGraphNode<ILHookEntry> gn:
                                 ilhookGraph.Remove(gn);
                                 break;
@@ -455,7 +455,14 @@ namespace MonoMod.RuntimeDetour {
                     InvokeManipulator(node, def);
                 }
 
-                EndOfChain = dmd.Generate();
+                var eoc = dmd.Generate();
+
+                // compile the method in-band to throw for invalid code here
+                PlatformTriple.Current.Compile(eoc);
+
+                // don't set EndOfChain until after the method successfully compiles, to ensure some semblance of consistenfy
+                Thread.MemoryBarrier();
+                EndOfChain = eoc;
             }
 
             private static void InvokeManipulator(ILHookEntry entry, MethodDefinition def) {
