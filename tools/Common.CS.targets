@@ -28,6 +28,15 @@
     <Error ContinueOnError="false" Text="MSBuild version is too old to build this project; currently $(MSBuildVersion), needs at least $(MSBuildRequiredVersion)"
            Condition="$([MSBuild]::VersionLessThan('$(MSBuildVersion)', '$(MSBuildRequiredVersion)'))" />
   </Target>
+  
+  <!-- Banned API Analyzer -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
 
   <!-- Backports reference -->
   <ItemGroup Condition="'$(MMReferenceBackports)' == 'true'">

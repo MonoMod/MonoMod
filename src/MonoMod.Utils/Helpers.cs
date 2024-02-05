@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace MonoMod.Utils {
-    public static class Helpers {
+    public static partial class Helpers {
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static void Swap<T>(ref T a, ref T b) {

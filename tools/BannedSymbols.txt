@@ -1,0 +1,1 @@
+M:System.IO.File.ReadAllBytes(System.String);The Unity implementation of ReadAllBytes does not correctly handle certain filesystems which report zero-length (like Linux procfs). Use Helpers.ReadAllBytes instead.

@@ -168,7 +168,7 @@ namespace MonoMod.Utils {
                 if (os == OSKind.Linux) {
                     // we know the kernel is linux, use /proc/self/auxv (present since Linux 2.6.0, which released in 2004)
 
-                    var auxvBytes = File.ReadAllBytes("/proc/self/auxv").AsSpan();
+                    var auxvBytes = Helpers.ReadAllBytes("/proc/self/auxv").AsSpan();
                     var auxv = MemoryMarshal.Cast<byte, Interop.Unix.LinuxAuxvEntry>(auxvBytes);
                     machineName = string.Empty;
                     foreach (var entry in auxv) {

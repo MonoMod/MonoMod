@@ -243,7 +243,7 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="intoEHRanges">Whether to move the cursor into any try or catch ranges which start at the current position. Defaults to true.</param>
         /// <returns>this</returns>
-        public ILCursor MoveAfterLabels(bool intoEHRanges = true) {
+        public ILCursor MoveAfterLabels(bool intoEHRanges) {
             _afterLabels = IncomingLabels.ToArray();
             _afterHandlerStarts = intoEHRanges;
             _afterHandlerEnds = true;
