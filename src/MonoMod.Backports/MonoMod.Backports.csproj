@@ -11,7 +11,7 @@
     <RootNamespace><![CDATA[ ]]></RootNamespace>
 
     <VersionPrefix>1.1.0</VersionPrefix>
-    <PackageValidationBaselineVersion>1.0.1</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <PropertyGroup>
