@@ -242,11 +242,35 @@ namespace MonoMod.Utils {
             {
                 int nullByteOffs;
                 // this is a non-unix kernel, or a fallback, lets hope their uname buffers are more well maintained...
+
+                // struct utsname
+                // 0:   char sysname[];    // Operating system name (e.g., "Linux") 
+                // 1:   char nodename[];   // Name within "some implementation-defined network" 
+                // 2:   char release[];    // Operating system release (e.g., "2.6.28")
+                // 3:   char version[];    // Operating system version
+                // 4:   char machine[];    // Hardware identifier
+                // we've already skipped 0: sysname
+
                 for (var i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
                     if (i != 0) {
                         // skip a string
                         nullByteOffs = unameBuffer.IndexOf((byte)0);
                         unameBuffer = unameBuffer.Slice(nullByteOffs);
+
+                        if (i == 1) {
+                            // we just read nodename
+                            // if the nodename is less than 4 bytes, then it's likely to have only 1 null byte, then some more
+                            // non-null characters before the final padding of the field
+                            // we want to try to detect and correct for that
+                            if (nullByteOffs < 5 && unameBuffer.Length >= 2 && unameBuffer[1] != 0) {
+                                // we want to skip a bit more
+                                // note: it is possible for this to fill the entire buffer, and still cause problems, but standard
+                                // configurations don't have this issue, so we expect it to be rare enough to not worry about. There's
+                                // not really anything we can do anyway.
+                                nullByteOffs = unameBuffer.Slice(1).IndexOf((byte)0);
+                                unameBuffer = unameBuffer.Slice(nullByteOffs + 1);
+                            }
+                        }
                     }
                     // then advance to the next one
                     var j = 0;
