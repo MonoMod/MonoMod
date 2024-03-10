@@ -485,16 +485,21 @@ namespace MonoMod.Cil {
 
             if (_afterHandlerStarts) {
                 foreach (var eh in Body.ExceptionHandlers) {
-                    if (eh.TryStart == Next) eh.TryStart = instr;
-                    if (eh.HandlerStart == Next) eh.HandlerStart = instr;
-                    if (eh.FilterStart == Next) eh.FilterStart = instr;
+                    if (eh.TryStart == Next)
+                        eh.TryStart = instr;
+                    if (eh.HandlerStart == Next)
+                        eh.HandlerStart = instr;
+                    if (eh.FilterStart == Next)
+                        eh.FilterStart = instr;
                 }
             }
 
             if (_afterHandlerEnds) {
                 foreach (var eh in Body.ExceptionHandlers) {
-                    if (eh.TryEnd == Next) eh.TryEnd = instr;
-                    if (eh.HandlerEnd == Next) eh.HandlerEnd = instr;
+                    if (eh.TryEnd == Next)
+                        eh.TryEnd = instr;
+                    if (eh.HandlerEnd == Next)
+                        eh.HandlerEnd = instr;
                 }
             }
 
@@ -518,13 +523,18 @@ namespace MonoMod.Cil {
             var newTarget = index + num < Instrs.Count ? Instrs[index + num] : null;
             foreach (var label in IncomingLabels)
                 label.Target = newTarget;
-            
+
             foreach (var eh in Body.ExceptionHandlers) {
-                if (eh.TryStart == Next) eh.TryStart = newTarget;
-                if (eh.TryEnd == Next) eh.TryEnd = newTarget;
-                if (eh.HandlerStart == Next) eh.HandlerStart = newTarget;
-                if (eh.FilterStart == Next) eh.FilterStart = newTarget;
-                if (eh.HandlerEnd == Next) eh.HandlerEnd = newTarget;
+                if (eh.TryStart == Next)
+                    eh.TryStart = newTarget;
+                if (eh.TryEnd == Next)
+                    eh.TryEnd = newTarget;
+                if (eh.HandlerStart == Next)
+                    eh.HandlerStart = newTarget;
+                if (eh.FilterStart == Next)
+                    eh.FilterStart = newTarget;
+                if (eh.HandlerEnd == Next)
+                    eh.HandlerEnd = newTarget;
             }
 
             // TODO: currently requires O(n) removals, shifting the backing array each time

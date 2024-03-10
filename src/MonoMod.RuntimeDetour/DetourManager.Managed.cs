@@ -369,7 +369,8 @@ namespace MonoMod.RuntimeDetour {
                             case ILHookEntry cn:
                                 noConfigIlhooks.Remove(cn);
                                 break;
-                            default: throw new NotSupportedException("bad managerdata?");
+                            default:
+                                throw new NotSupportedException("bad managerdata?");
                         }
                         UpdateEndOfChain();
                         throw;

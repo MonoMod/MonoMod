@@ -203,7 +203,7 @@ namespace MonoMod.Utils {
                         MMDbgLog.Trace($"Got architecture from getauxval(): {machineName}");
                     }
                 }
-                
+
                 if (machineName is null) {
                     // try to use /proc/self/auxv (present since Linux 2.6.0, which released in 2004)
                     // sometimes it's not accessible (no idea why, but it is), we should handle that
@@ -238,8 +238,7 @@ namespace MonoMod.Utils {
             }
 
             // fall back to trying to pull from uname, however well that will work...
-            if (machineName is null)
-            {
+            if (machineName is null) {
                 int nullByteOffs;
                 // this is a non-unix kernel, or a fallback, lets hope their uname buffers are more well maintained...
 

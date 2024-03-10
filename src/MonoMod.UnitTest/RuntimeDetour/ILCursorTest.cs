@@ -80,7 +80,7 @@ namespace MonoMod.UnitTest {
         [Fact]
         public void TestMoveIntoTryStart() {
             // Moves into the try-handler, triggering the general catch clause
-            Assert.Equal("catchfinallyreturn", 
+            Assert.Equal("catchfinallyreturn",
                 TestTryCatchFinallyILEdit(c => {
                     c.GotoNext(MoveType.AfterLabel, i => i.MatchLdloc(0), i => i.MatchLdstr("try"));
                     EmitThrowEx(c);
@@ -166,14 +166,11 @@ namespace MonoMod.UnitTest {
             try {
                 sb.Append("try");
                 throw new ArgumentException("test");
-            }
-            catch (Exception ex) when (ex is ArgumentException) {
+            } catch (Exception ex) when (ex is ArgumentException) {
                 sb.Append("when");
-            }
-            catch {
+            } catch {
                 sb.Append("catch");
-            }
-            finally {
+            } finally {
                 sb.Append("finally");
             }
             sb.Append("return");
