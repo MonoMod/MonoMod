@@ -9,8 +9,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using static MonoMod.Core.Interop.Windows;
 
-namespace MonoMod.Core.Platforms.Systems {
-    internal sealed class WindowsSystem : ISystem {
+namespace MonoMod.Core.Platforms.Systems
+{
+    internal sealed class WindowsSystem : ISystem
+    {
         public OSKind Target => OSKind.Windows;
 
         public SystemFeature Features => SystemFeature.RWXPages;
@@ -21,15 +23,20 @@ namespace MonoMod.Core.Platforms.Systems {
         public Abi? DefaultAbi { get; }
 
         // the classifiers are only called for value types
-        private static TypeClassification ClassifyX64(Type type, bool isReturn) {
+        private static TypeClassification ClassifyX64(Type type, bool isReturn)
+        {
             var size = type.GetManagedSize();
-            if (size is 1 or 2 or 4 or 8) {
+            if (size is 1 or 2 or 4 or 8)
+            {
                 return TypeClassification.InRegister;
-            } else {
+            }
+            else
+            {
                 return TypeClassification.ByReference;
             }
         }
-        private static TypeClassification ClassifyX86(Type type, bool isReturn) {
+        private static TypeClassification ClassifyX86(Type type, bool isReturn)
+        {
             if (!isReturn)
                 return TypeClassification.OnStack;
 
@@ -39,14 +46,18 @@ namespace MonoMod.Core.Platforms.Systems {
                 return TypeClassification.ByReference;
         }
 
-        public WindowsSystem() {
-            if (PlatformDetection.Architecture == ArchitectureKind.x86_64) {
+        public WindowsSystem()
+        {
+            if (PlatformDetection.Architecture == ArchitectureKind.x86_64)
+            {
                 // fastcall
                 DefaultAbi = new Abi(
                     new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
                     ClassifyX64,
                     ReturnsReturnBuffer: true);
-            } else if (PlatformDetection.Architecture is ArchitectureKind.x86) {
+            }
+            else if (PlatformDetection.Architecture is ArchitectureKind.x86)
+            {
                 // cdecl
                 DefaultAbi = new Abi(
                     new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments },
@@ -56,14 +67,18 @@ namespace MonoMod.Core.Platforms.Systems {
         }
 
         // if the provided backup isn't large enough, the data isn't backed up
-        public unsafe void PatchData(PatchTargetKind patchKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup) {
+        public unsafe void PatchData(PatchTargetKind patchKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup)
+        {
             // TODO: should this be thread-safe? It definitely is not right now.
 
             // Update the protection of this
-            if (patchKind == PatchTargetKind.Executable) {
+            if (patchKind == PatchTargetKind.Executable)
+            {
                 // Because Windows is Windows, we don't actually need to do anything except make sure we're in RWX
                 ProtectRWX(patchTarget, (nuint)data.Length);
-            } else {
+            }
+            else
+            {
                 ProtectRW(patchTarget, (nuint)data.Length);
             }
 
@@ -72,41 +87,52 @@ namespace MonoMod.Core.Platforms.Systems {
             _ = target.TryCopyTo(backup);
             data.CopyTo(target);
 
-            if (patchKind == PatchTargetKind.Executable) {
+            if (patchKind == PatchTargetKind.Executable)
+            {
                 FlushInstructionCache(patchTarget, (nuint)data.Length);
             }
         }
 
-        private unsafe static void ProtectRW(IntPtr addr, nuint size) {
+        private unsafe static void ProtectRW(IntPtr addr, nuint size)
+        {
             uint oldProtect;
-            if (!VirtualProtect((void*)addr, size, PAGE_READWRITE, &oldProtect)) {
+            if (!VirtualProtect((void*)addr, size, PAGE_READWRITE, &oldProtect))
+            {
                 throw LogAllSections(GetLastError(), addr, size);
             }
         }
 
-        private unsafe static void ProtectRWX(IntPtr addr, nuint size) {
+        private unsafe static void ProtectRWX(IntPtr addr, nuint size)
+        {
             uint oldProtect;
-            if (!VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+            if (!VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &oldProtect))
+            {
                 throw LogAllSections(GetLastError(), addr, size);
             }
         }
 
-        private unsafe static void FlushInstructionCache(IntPtr addr, nuint size) {
-            if (!Interop.Windows.FlushInstructionCache(GetCurrentProcess(), (void*)addr, size)) {
+        private unsafe static void FlushInstructionCache(IntPtr addr, nuint size)
+        {
+            if (!Interop.Windows.FlushInstructionCache(GetCurrentProcess(), (void*)addr, size))
+            {
                 throw LogAllSections(GetLastError(), addr, size);
             }
         }
 
-        public IEnumerable<string?> EnumerateLoadedModuleFiles() {
+        public IEnumerable<string?> EnumerateLoadedModuleFiles()
+        {
             return Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Select(m => m.FileName)!;
         }
 
-        public unsafe nint GetSizeOfReadableMemory(nint start, nint guess) {
+        public unsafe nint GetSizeOfReadableMemory(nint start, nint guess)
+        {
             nint knownSize = 0;
 
-            do {
+            do
+            {
                 MEMORY_BASIC_INFORMATION buf;
-                if (VirtualQuery((void*)start, &buf, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) == 0) {
+                if (VirtualQuery((void*)start, &buf, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) == 0)
+                {
                     var lastError = GetLastError();
                     MMDbgLog.Warning($"VirtualQuery failed: {lastError} {new Win32Exception((int)lastError).Message}");
                     // VirtualQuery failed, return 0
@@ -134,7 +160,8 @@ namespace MonoMod.Core.Platforms.Systems {
             return knownSize;
         }
 
-        private static unsafe Exception LogAllSections(uint error, IntPtr src, nuint size, [CallerMemberName] string from = "") {
+        private static unsafe Exception LogAllSections(uint error, IntPtr src, nuint size, [CallerMemberName] string from = "")
+        {
             Exception ex = new Win32Exception((int)error);
             if (!MMDbgLog.IsWritingLog)
                 return ex;
@@ -142,10 +169,12 @@ namespace MonoMod.Core.Platforms.Systems {
             MMDbgLog.Error($"{from} failed for 0x{src:X16} + {size} - logging all memory sections");
             MMDbgLog.Error($"reason: {ex.Message}");
 
-            try {
+            try
+            {
                 var addr = (IntPtr)0x00000000000010000;
                 var i = 0;
-                while (true) {
+                while (true)
+                {
                     MEMORY_BASIC_INFORMATION infoBasic;
                     if (VirtualQuery((void*)addr, &infoBasic, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) == 0)
                         break;
@@ -165,18 +194,23 @@ namespace MonoMod.Core.Platforms.Systems {
                     MMDbgLog.Trace($"protect: {infoBasic.Protect}");
                     MMDbgLog.Trace($"aprotect: {infoBasic.AllocationProtect}");
 
-                    try {
+                    try
+                    {
                         var addrPrev = addr;
                         addr = unchecked((IntPtr)((nuint)infoBasic.BaseAddress + (ulong)infoBasic.RegionSize));
                         if ((ulong)addr <= (ulong)addrPrev)
                             break;
-                    } catch (OverflowException oe) {
+                    }
+                    catch (OverflowException oe)
+                    {
                         MMDbgLog.Error($"overflow {oe}");
                         break;
                     }
                 }
 
-            } catch {
+            }
+            catch
+            {
                 throw ex;
             }
             return ex;
@@ -184,31 +218,37 @@ namespace MonoMod.Core.Platforms.Systems {
 
         public IMemoryAllocator MemoryAllocator { get; } = new QueryingPagedMemoryAllocator(new PageAllocator());
 
-        private sealed class PageAllocator : QueryingMemoryPageAllocatorBase {
+        private sealed class PageAllocator : QueryingMemoryPageAllocatorBase
+        {
             public override uint PageSize { get; }
 
-            public PageAllocator() {
+            public PageAllocator()
+            {
                 SYSTEM_INFO sysInfo;
                 unsafe { GetSystemInfo(&sysInfo); }
                 PageSize = sysInfo.dwPageSize;
             }
 
-            public override unsafe bool TryAllocatePage(nint size, bool executable, out IntPtr allocated) {
+            public override unsafe bool TryAllocatePage(nint size, bool executable, out IntPtr allocated)
+            {
                 var pageProt = executable ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
 
                 allocated = (IntPtr)VirtualAlloc(null, (nuint)size, MEM_RESERVE | MEM_COMMIT, (uint)pageProt);
                 return allocated != IntPtr.Zero;
             }
 
-            public unsafe override bool TryAllocatePage(IntPtr pageAddr, nint size, bool executable, out IntPtr allocated) {
+            public unsafe override bool TryAllocatePage(IntPtr pageAddr, nint size, bool executable, out IntPtr allocated)
+            {
                 var pageProt = executable ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
 
                 allocated = (IntPtr)VirtualAlloc((void*)pageAddr, (nuint)size, MEM_RESERVE | MEM_COMMIT, (uint)pageProt);
                 return allocated != IntPtr.Zero;
             }
 
-            public unsafe override bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg) {
-                if (!VirtualFree((void*)pageAddr, 0, MEM_RELEASE)) {
+            public unsafe override bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg)
+            {
+                if (!VirtualFree((void*)pageAddr, 0, MEM_RELEASE))
+                {
                     // VirtualFree failing is kinda wierd, but whatever
                     errorMsg = new Win32Exception((int)GetLastError()).Message;
                     return false;
@@ -218,9 +258,11 @@ namespace MonoMod.Core.Platforms.Systems {
                 return true;
             }
 
-            public unsafe override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize) {
+            public unsafe override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize)
+            {
                 MEMORY_BASIC_INFORMATION buffer;
-                if (Interop.Windows.VirtualQuery((void*)pageAddr, &buffer, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) != 0) {
+                if (Interop.Windows.VirtualQuery((void*)pageAddr, &buffer, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) != 0)
+                {
                     isFree = buffer.State == MEM_FREE;
                     allocBase = isFree ? (nint)buffer.BaseAddress : (nint)buffer.AllocationBase;
 
@@ -228,7 +270,9 @@ namespace MonoMod.Core.Platforms.Systems {
                     allocSize = (pageAddr + (nint)buffer.RegionSize) - allocBase;
 
                     return true;
-                } else {
+                }
+                else
+                {
                     isFree = false;
                     allocBase = IntPtr.Zero;
                     allocSize = 0;

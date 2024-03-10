@@ -6,24 +6,29 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// Extension methods for Span{T}, Memory{T}, and friends.
     /// </summary>
-    public static partial class MemoryExtensions {
+    public static partial class MemoryExtensions
+    {
         /// <summary>
         /// Removes all leading and trailing white-space characters from the span.
         /// </summary>
-        public static ReadOnlySpan<char> Trim(this ReadOnlySpan<char> span) {
+        public static ReadOnlySpan<char> Trim(this ReadOnlySpan<char> span)
+        {
             return span.TrimStart().TrimEnd();
         }
 
         /// <summary>
         /// Removes all leading white-space characters from the span.
         /// </summary>
-        public static ReadOnlySpan<char> TrimStart(this ReadOnlySpan<char> span) {
+        public static ReadOnlySpan<char> TrimStart(this ReadOnlySpan<char> span)
+        {
             int start = 0;
-            for (; start < span.Length; start++) {
+            for (; start < span.Length; start++)
+            {
                 if (!char.IsWhiteSpace(span[start]))
                     break;
             }
@@ -33,9 +38,11 @@ namespace System {
         /// <summary>
         /// Removes all trailing white-space characters from the span.
         /// </summary>
-        public static ReadOnlySpan<char> TrimEnd(this ReadOnlySpan<char> span) {
+        public static ReadOnlySpan<char> TrimEnd(this ReadOnlySpan<char> span)
+        {
             int end = span.Length - 1;
-            for (; end >= 0; end--) {
+            for (; end >= 0; end--)
+            {
                 if (!char.IsWhiteSpace(span[end]))
                     break;
             }
@@ -47,7 +54,8 @@ namespace System {
         /// </summary>
         /// <param name="span">The source span from which the character is removed.</param>
         /// <param name="trimChar">The specified character to look for and remove.</param>
-        public static ReadOnlySpan<char> Trim(this ReadOnlySpan<char> span, char trimChar) {
+        public static ReadOnlySpan<char> Trim(this ReadOnlySpan<char> span, char trimChar)
+        {
             return span.TrimStart(trimChar).TrimEnd(trimChar);
         }
 
@@ -56,9 +64,11 @@ namespace System {
         /// </summary>
         /// <param name="span">The source span from which the character is removed.</param>
         /// <param name="trimChar">The specified character to look for and remove.</param>
-        public static ReadOnlySpan<char> TrimStart(this ReadOnlySpan<char> span, char trimChar) {
+        public static ReadOnlySpan<char> TrimStart(this ReadOnlySpan<char> span, char trimChar)
+        {
             int start = 0;
-            for (; start < span.Length; start++) {
+            for (; start < span.Length; start++)
+            {
                 if (span[start] != trimChar)
                     break;
             }
@@ -70,9 +80,11 @@ namespace System {
         /// </summary>
         /// <param name="span">The source span from which the character is removed.</param>
         /// <param name="trimChar">The specified character to look for and remove.</param>
-        public static ReadOnlySpan<char> TrimEnd(this ReadOnlySpan<char> span, char trimChar) {
+        public static ReadOnlySpan<char> TrimEnd(this ReadOnlySpan<char> span, char trimChar)
+        {
             int end = span.Length - 1;
-            for (; end >= 0; end--) {
+            for (; end >= 0; end--)
+            {
                 if (span[end] != trimChar)
                     break;
             }
@@ -86,7 +98,8 @@ namespace System {
         /// <param name="span">The source span from which the characters are removed.</param>
         /// <param name="trimChars">The span which contains the set of characters to remove.</param>
         /// <remarks>If <paramref name="trimChars"/> is empty, white-space characters are removed instead.</remarks>
-        public static ReadOnlySpan<char> Trim(this ReadOnlySpan<char> span, ReadOnlySpan<char> trimChars) {
+        public static ReadOnlySpan<char> Trim(this ReadOnlySpan<char> span, ReadOnlySpan<char> trimChars)
+        {
             return span.TrimStart(trimChars).TrimEnd(trimChars);
         }
 
@@ -97,14 +110,18 @@ namespace System {
         /// <param name="span">The source span from which the characters are removed.</param>
         /// <param name="trimChars">The span which contains the set of characters to remove.</param>
         /// <remarks>If <paramref name="trimChars"/> is empty, white-space characters are removed instead.</remarks>
-        public static ReadOnlySpan<char> TrimStart(this ReadOnlySpan<char> span, ReadOnlySpan<char> trimChars) {
-            if (trimChars.IsEmpty) {
+        public static ReadOnlySpan<char> TrimStart(this ReadOnlySpan<char> span, ReadOnlySpan<char> trimChars)
+        {
+            if (trimChars.IsEmpty)
+            {
                 return span.TrimStart();
             }
 
             int start = 0;
-            for (; start < span.Length; start++) {
-                for (int i = 0; i < trimChars.Length; i++) {
+            for (; start < span.Length; start++)
+            {
+                for (int i = 0; i < trimChars.Length; i++)
+                {
                     if (span[start] == trimChars[i])
                         goto Next;
                 }
@@ -122,14 +139,18 @@ namespace System {
         /// <param name="span">The source span from which the characters are removed.</param>
         /// <param name="trimChars">The span which contains the set of characters to remove.</param>
         /// <remarks>If <paramref name="trimChars"/> is empty, white-space characters are removed instead.</remarks>
-        public static ReadOnlySpan<char> TrimEnd(this ReadOnlySpan<char> span, ReadOnlySpan<char> trimChars) {
-            if (trimChars.IsEmpty) {
+        public static ReadOnlySpan<char> TrimEnd(this ReadOnlySpan<char> span, ReadOnlySpan<char> trimChars)
+        {
+            if (trimChars.IsEmpty)
+            {
                 return span.TrimEnd();
             }
 
             int end = span.Length - 1;
-            for (; end >= 0; end--) {
-                for (int i = 0; i < trimChars.Length; i++) {
+            for (; end >= 0; end--)
+            {
+                for (int i = 0; i < trimChars.Length; i++)
+                {
                     if (span[end] == trimChars[i])
                         goto Next;
                 }
@@ -143,8 +164,10 @@ namespace System {
         /// <summary>
         /// Indicates whether the specified span contains only white-space characters.
         /// </summary>
-        public static bool IsWhiteSpace(this ReadOnlySpan<char> span) {
-            for (int i = 0; i < span.Length; i++) {
+        public static bool IsWhiteSpace(this ReadOnlySpan<char> span)
+        {
+            for (int i = 0; i < span.Length; i++)
+            {
                 if (!char.IsWhiteSpace(span[i]))
                     return false;
             }
@@ -158,7 +181,8 @@ namespace System {
         /// <param name="value">The value to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOf<T>(this Span<T> span, T value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -180,7 +204,8 @@ namespace System {
         /// <param name="value">The sequence to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOf<T>(this Span<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -198,7 +223,8 @@ namespace System {
         /// <param name="value">The value to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOf<T>(this Span<T> span, T value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -220,7 +246,8 @@ namespace System {
         /// <param name="value">The sequence to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOf<T>(this Span<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -236,7 +263,8 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool SequenceEqual<T>(this Span<T> span, ReadOnlySpan<T> other)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             int length = span.Length;
 
             if (default(T) != null && IsTypeComparableAsBytes<T>(out nuint size))
@@ -253,7 +281,8 @@ namespace System {
         /// Determines the relative order of the sequences being compared by comparing the elements using IComparable{T}.CompareTo(T). 
         /// </summary>
         public static int SequenceCompareTo<T>(this Span<T> span, ReadOnlySpan<T> other)
-            where T : IComparable<T> {
+            where T : IComparable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.SequenceCompareTo(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -278,7 +307,8 @@ namespace System {
         /// <param name="value">The value to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOf<T>(this ReadOnlySpan<T> span, T value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -300,7 +330,8 @@ namespace System {
         /// <param name="value">The sequence to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOf<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -318,7 +349,8 @@ namespace System {
         /// <param name="value">The value to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOf<T>(this ReadOnlySpan<T> span, T value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -340,7 +372,8 @@ namespace System {
         /// <param name="value">The sequence to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOf<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOf(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -359,7 +392,8 @@ namespace System {
         /// <param name="value1">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOfAny<T>(this Span<T> span, T value0, T value1)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -379,7 +413,8 @@ namespace System {
         /// <param name="value2">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOfAny<T>(this Span<T> span, T value0, T value1, T value2)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -398,7 +433,8 @@ namespace System {
         /// <param name="values">The set of values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOfAny<T>(this Span<T> span, ReadOnlySpan<T> values)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -417,7 +453,8 @@ namespace System {
         /// <param name="value1">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOfAny<T>(this ReadOnlySpan<T> span, T value0, T value1)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -437,7 +474,8 @@ namespace System {
         /// <param name="value2">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOfAny<T>(this ReadOnlySpan<T> span, T value0, T value1, T value2)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -456,7 +494,8 @@ namespace System {
         /// <param name="values">The set of values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int IndexOfAny<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> values)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.IndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -475,7 +514,8 @@ namespace System {
         /// <param name="value1">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOfAny<T>(this Span<T> span, T value0, T value1)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -495,7 +535,8 @@ namespace System {
         /// <param name="value2">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOfAny<T>(this Span<T> span, T value0, T value1, T value2)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -514,7 +555,8 @@ namespace System {
         /// <param name="values">The set of values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOfAny<T>(this Span<T> span, ReadOnlySpan<T> values)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -533,7 +575,8 @@ namespace System {
         /// <param name="value1">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOfAny<T>(this ReadOnlySpan<T> span, T value0, T value1)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -553,7 +596,8 @@ namespace System {
         /// <param name="value2">One of the values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOfAny<T>(this ReadOnlySpan<T> span, T value0, T value1, T value2)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -572,7 +616,8 @@ namespace System {
         /// <param name="values">The set of values to search for.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LastIndexOfAny<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> values)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.LastIndexOfAny(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -588,7 +633,8 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool SequenceEqual<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> other)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             int length = span.Length;
             if (default(T) != null && IsTypeComparableAsBytes<T>(out nuint size))
                 return length == other.Length &&
@@ -605,7 +651,8 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int SequenceCompareTo<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> other)
-            where T : IComparable<T> {
+            where T : IComparable<T>
+        {
             if (typeof(T) == typeof(byte))
                 return SpanHelpers.SequenceCompareTo(
                     ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span)),
@@ -628,7 +675,8 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool StartsWith<T>(this Span<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             int valueLength = value.Length;
             if (default(T) != null && IsTypeComparableAsBytes<T>(out nuint size))
                 return valueLength <= span.Length &&
@@ -645,7 +693,8 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool StartsWith<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             int valueLength = value.Length;
             if (default(T) != null && IsTypeComparableAsBytes<T>(out nuint size))
                 return valueLength <= span.Length &&
@@ -662,7 +711,8 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool EndsWith<T>(this Span<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             int spanLength = span.Length;
             int valueLength = value.Length;
             if (default(T) != null && IsTypeComparableAsBytes<T>(out nuint size))
@@ -684,7 +734,8 @@ namespace System {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool EndsWith<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> value)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             int spanLength = span.Length;
             int valueLength = value.Length;
             if (default(T) != null && IsTypeComparableAsBytes<T>(out nuint size))
@@ -704,14 +755,17 @@ namespace System {
         /// <summary>
         /// Reverses the sequence of the elements in the entire span.
         /// </summary>
-        public static void Reverse<T>(this Span<T> span) {
-            if (span.Length <= 1) {
+        public static void Reverse<T>(this Span<T> span)
+        {
+            if (span.Length <= 1)
+            {
                 return;
             }
 
             ref T first = ref MemoryMarshal.GetReference(span);
             ref T last = ref Unsafe.Add(ref Unsafe.Add(ref first, span.Length), -1);
-            do {
+            do
+            {
                 T temp = first;
                 first = last;
                 last = temp;
@@ -724,7 +778,8 @@ namespace System {
         /// Creates a new span over the target array.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Span<T> AsSpan<T>(this T[]? array) {
+        public static Span<T> AsSpan<T>(this T[]? array)
+        {
             return new Span<T>(array);
         }
 
@@ -741,7 +796,8 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=Length).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Span<T> AsSpan<T>(this T[]? array, int start, int length) {
+        public static Span<T> AsSpan<T>(this T[]? array, int start, int length)
+        {
             return new Span<T>(array, start, length);
         }
 
@@ -749,7 +805,8 @@ namespace System {
         /// Creates a new span over the portion of the target array segment.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Span<T> AsSpan<T>(this ArraySegment<T> segment) {
+        public static Span<T> AsSpan<T>(this ArraySegment<T> segment)
+        {
             return new Span<T>(segment.Array, segment.Offset, segment.Count);
         }
 
@@ -765,7 +822,8 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=segment.Count).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Span<T> AsSpan<T>(this ArraySegment<T> segment, int start) {
+        public static Span<T> AsSpan<T>(this ArraySegment<T> segment, int start)
+        {
             if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
@@ -785,7 +843,8 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=segment.Count).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Span<T> AsSpan<T>(this ArraySegment<T> segment, int start, int length) {
+        public static Span<T> AsSpan<T>(this ArraySegment<T> segment, int start, int length)
+        {
             if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
             if (((uint)length) > segment.Count - start)
@@ -842,7 +901,8 @@ namespace System {
         /// <exception cref="System.ArgumentOutOfRangeException">
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=segment.Count).
         /// </exception>
-        public static Memory<T> AsMemory<T>(this ArraySegment<T> segment, int start) {
+        public static Memory<T> AsMemory<T>(this ArraySegment<T> segment, int start)
+        {
             if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
 
@@ -861,7 +921,8 @@ namespace System {
         /// <exception cref="System.ArgumentOutOfRangeException">
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=segment.Count).
         /// </exception>
-        public static Memory<T> AsMemory<T>(this ArraySegment<T> segment, int start, int length) {
+        public static Memory<T> AsMemory<T>(this ArraySegment<T> segment, int start, int length)
+        {
             if (((uint)start) > segment.Count)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
             if (((uint)length) > segment.Count - start)
@@ -882,7 +943,8 @@ namespace System {
         /// </exception>
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CopyTo<T>(this T[]? source, Span<T> destination) {
+        public static void CopyTo<T>(this T[]? source, Span<T> destination)
+        {
             new ReadOnlySpan<T>(source).CopyTo(destination);
         }
 
@@ -898,7 +960,8 @@ namespace System {
         /// </exception>
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CopyTo<T>(this T[]? source, Memory<T> destination) {
+        public static void CopyTo<T>(this T[]? source, Memory<T> destination)
+        {
             source.CopyTo(destination.Span);
         }
 
@@ -1034,7 +1097,8 @@ namespace System {
         /// Determines whether two sequences overlap in memory.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Overlaps<T>(this Span<T> span, ReadOnlySpan<T> other) {
+        public static bool Overlaps<T>(this Span<T> span, ReadOnlySpan<T> other)
+        {
             return Overlaps((ReadOnlySpan<T>)span, other);
         }
 
@@ -1042,15 +1106,18 @@ namespace System {
         /// Determines whether two sequences overlap in memory and outputs the element offset.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Overlaps<T>(this Span<T> span, ReadOnlySpan<T> other, out int elementOffset) {
+        public static bool Overlaps<T>(this Span<T> span, ReadOnlySpan<T> other, out int elementOffset)
+        {
             return Overlaps((ReadOnlySpan<T>)span, other, out elementOffset);
         }
 
         /// <summary>
         /// Determines whether two sequences overlap in memory.
         /// </summary>
-        public static bool Overlaps<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> other) {
-            if (span.IsEmpty || other.IsEmpty) {
+        public static bool Overlaps<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> other)
+        {
+            if (span.IsEmpty || other.IsEmpty)
+            {
                 return false;
             }
 
@@ -1058,10 +1125,13 @@ namespace System {
                 ref MemoryMarshal.GetReference(span),
                 ref MemoryMarshal.GetReference(other));
 
-            if (Unsafe.SizeOf<IntPtr>() == sizeof(int)) {
+            if (Unsafe.SizeOf<IntPtr>() == sizeof(int))
+            {
                 return (uint)byteOffset < (uint)(span.Length * Unsafe.SizeOf<T>()) ||
                        (uint)byteOffset > (uint)-(other.Length * Unsafe.SizeOf<T>());
-            } else {
+            }
+            else
+            {
                 return (ulong)byteOffset < (ulong)((long)span.Length * Unsafe.SizeOf<T>()) ||
                        (ulong)byteOffset > (ulong)-((long)other.Length * Unsafe.SizeOf<T>());
             }
@@ -1070,8 +1140,10 @@ namespace System {
         /// <summary>
         /// Determines whether two sequences overlap in memory and outputs the element offset.
         /// </summary>
-        public static bool Overlaps<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> other, out int elementOffset) {
-            if (span.IsEmpty || other.IsEmpty) {
+        public static bool Overlaps<T>(this ReadOnlySpan<T> span, ReadOnlySpan<T> other, out int elementOffset)
+        {
+            if (span.IsEmpty || other.IsEmpty)
+            {
                 elementOffset = 0;
                 return false;
             }
@@ -1080,27 +1152,36 @@ namespace System {
                 ref MemoryMarshal.GetReference(span),
                 ref MemoryMarshal.GetReference(other));
 
-            if (Unsafe.SizeOf<IntPtr>() == sizeof(int)) {
+            if (Unsafe.SizeOf<IntPtr>() == sizeof(int))
+            {
                 if ((uint)byteOffset < (uint)(span.Length * Unsafe.SizeOf<T>()) ||
-                    (uint)byteOffset > (uint)-(other.Length * Unsafe.SizeOf<T>())) {
+                    (uint)byteOffset > (uint)-(other.Length * Unsafe.SizeOf<T>()))
+                {
                     if ((int)byteOffset % Unsafe.SizeOf<T>() != 0)
                         ThrowHelper.ThrowArgumentException_OverlapAlignmentMismatch();
 
                     elementOffset = (int)byteOffset / Unsafe.SizeOf<T>();
                     return true;
-                } else {
+                }
+                else
+                {
                     elementOffset = 0;
                     return false;
                 }
-            } else {
+            }
+            else
+            {
                 if ((ulong)byteOffset < (ulong)((long)span.Length * Unsafe.SizeOf<T>()) ||
-                    (ulong)byteOffset > (ulong)-((long)other.Length * Unsafe.SizeOf<T>())) {
+                    (ulong)byteOffset > (ulong)-((long)other.Length * Unsafe.SizeOf<T>()))
+                {
                     if ((long)byteOffset % Unsafe.SizeOf<T>() != 0)
                         ThrowHelper.ThrowArgumentException_OverlapAlignmentMismatch();
 
                     elementOffset = (int)((long)byteOffset / Unsafe.SizeOf<T>());
                     return true;
-                } else {
+                }
+                else
+                {
                     elementOffset = 0;
                     return false;
                 }
@@ -1125,7 +1206,8 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BinarySearch<T>(
-            this Span<T> span, IComparable<T> comparable) {
+            this Span<T> span, IComparable<T> comparable)
+        {
             return BinarySearch<T, IComparable<T>>(span, comparable);
         }
 
@@ -1149,7 +1231,8 @@ namespace System {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BinarySearch<T, TComparable>(
             this Span<T> span, TComparable comparable)
-            where TComparable : IComparable<T> {
+            where TComparable : IComparable<T>
+        {
             return BinarySearch((ReadOnlySpan<T>)span, comparable);
         }
 
@@ -1174,7 +1257,8 @@ namespace System {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BinarySearch<T, TComparer>(
             this Span<T> span, T value, TComparer comparer)
-            where TComparer : IComparer<T> {
+            where TComparer : IComparer<T>
+        {
             return BinarySearch((ReadOnlySpan<T>)span, value, comparer);
         }
 
@@ -1196,7 +1280,8 @@ namespace System {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BinarySearch<T>(
-            this ReadOnlySpan<T> span, IComparable<T> comparable) {
+            this ReadOnlySpan<T> span, IComparable<T> comparable)
+        {
             return BinarySearch<T, IComparable<T>>(span, comparable);
         }
 
@@ -1220,7 +1305,8 @@ namespace System {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BinarySearch<T, TComparable>(
             this ReadOnlySpan<T> span, TComparable comparable)
-            where TComparable : IComparable<T> {
+            where TComparable : IComparable<T>
+        {
             return SpanHelpers.BinarySearch(span, comparable);
         }
 
@@ -1245,7 +1331,8 @@ namespace System {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BinarySearch<T, TComparer>(
             this ReadOnlySpan<T> span, T value, TComparer comparer)
-            where TComparer : IComparer<T> {
+            where TComparer : IComparer<T>
+        {
             if (comparer == null)
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.comparer);
 
@@ -1255,24 +1342,29 @@ namespace System {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsTypeComparableAsBytes<T>(out nuint size) {
-            if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte)) {
+        private static bool IsTypeComparableAsBytes<T>(out nuint size)
+        {
+            if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
+            {
                 // The cast to nuint is not redundant on netstandard. Do not remove it.
                 size = (nuint)sizeof(byte);
                 return true;
             }
 
-            if (typeof(T) == typeof(char) || typeof(T) == typeof(short) || typeof(T) == typeof(ushort)) {
+            if (typeof(T) == typeof(char) || typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
+            {
                 size = (nuint)sizeof(char);
                 return true;
             }
 
-            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint)) {
+            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
+            {
                 size = (nuint)sizeof(int);
                 return true;
             }
 
-            if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong)) {
+            if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
+            {
                 size = (nuint)sizeof(long);
                 return true;
             }

@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// Provides a mechanism for pinning and unpinning objects to prevent the GC from moving them.
     /// </summary>
-    public interface IPinnable {
+    public interface IPinnable
+    {
         /// <summary>
         /// Call this method to indicate that the IPinnable object can not be moved by the garbage collector.
         /// The address of the pinned object can be taken.

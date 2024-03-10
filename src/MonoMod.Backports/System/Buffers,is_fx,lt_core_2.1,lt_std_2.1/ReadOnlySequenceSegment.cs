@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// Represents a linked list of <see cref="ReadOnlyMemory{T}"/> nodes.
     /// </summary>
-    public abstract class ReadOnlySequenceSegment<T> {
+    public abstract class ReadOnlySequenceSegment<T>
+    {
         /// <summary>
         /// The <see cref="ReadOnlyMemory{T}"/> value for current node.
         /// </summary>

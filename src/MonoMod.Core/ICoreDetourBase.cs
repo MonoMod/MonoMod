@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace MonoMod.Core {
+namespace MonoMod.Core
+{
     /// <summary>
     /// A single detour. This is the base type of both <see cref="ICoreDetour"/> and <see cref="ICoreNativeDetour"/>.
     /// </summary>
@@ -9,7 +10,8 @@ namespace MonoMod.Core {
     /// </remarks>
     /// <seealso cref="ICoreDetour"/>
     /// <seealso cref="ICoreNativeDetour"/>
-    public interface ICoreDetourBase : IDisposable {
+    public interface ICoreDetourBase : IDisposable
+    {
         /// <summary>
         /// Gets whether or not this detour is currently applied.
         /// </summary>

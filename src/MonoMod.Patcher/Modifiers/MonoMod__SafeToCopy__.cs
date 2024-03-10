@@ -1,8 +1,10 @@
 ﻿using System;
 
-namespace MonoMod {
+namespace MonoMod
+{
     [MonoMod__SafeToCopy__]
-    internal class MonoMod__SafeToCopy__ : Attribute {
+    internal class MonoMod__SafeToCopy__ : Attribute
+    {
     }
 }
 

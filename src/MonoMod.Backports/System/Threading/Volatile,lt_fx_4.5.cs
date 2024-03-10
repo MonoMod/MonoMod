@@ -3,9 +3,11 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-namespace System.Threading {
+namespace System.Threading
+{
     /// <summary>Methods for accessing memory with volatile semantics.</summary>
-    public static unsafe class Volatile {
+    public static unsafe class Volatile
+    {
         // The VM may replace these implementations with more efficient ones in some cases.
         // In coreclr, for example, see getILIntrinsicImplementationForVolatile() in jitinterface.cpp.
 
@@ -30,7 +32,8 @@ namespace System.Threading {
         #endregion
 
         #region Double
-        public static double Read(ref double location) {
+        public static double Read(ref double location)
+        {
             long result = Read(ref Unsafe.As<double, long>(ref location));
             return *(double*)&result;
         }

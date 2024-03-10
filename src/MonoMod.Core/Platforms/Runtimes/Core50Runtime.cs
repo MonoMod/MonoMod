@@ -2,8 +2,10 @@
 using System;
 using static MonoMod.Core.Interop.CoreCLR;
 
-namespace MonoMod.Core.Platforms.Runtimes {
-    internal class Core50Runtime : Core31Runtime {
+namespace MonoMod.Core.Platforms.Runtimes
+{
+    internal class Core50Runtime : Core31Runtime
+    {
         public Core50Runtime(ISystem system) : base(system) { }
 
         // src/coreclr/src/inc/corinfo.h line 211

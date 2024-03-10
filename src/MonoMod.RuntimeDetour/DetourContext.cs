@@ -5,11 +5,13 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// A persistent context which may be used to configure all detours created while active.
     /// </summary>
-    public abstract class DetourContext {
+    public abstract class DetourContext
+    {
 
         private static DetourContext? globalCurrent;
 
@@ -19,7 +21,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="context">The <see cref="DetourContext"/> to make global.</param>
         /// <returns>The <see cref="DetourContext"/> which was previously global, if any.</returns>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public static DetourContext? SetGlobalContext(DetourContext? context) {
+        public static DetourContext? SetGlobalContext(DetourContext? context)
+        {
             return Interlocked.Exchange(ref globalCurrent, context);
         }
 
@@ -35,8 +38,10 @@ namespace MonoMod.RuntimeDetour {
         /// <para>This property has very limited use. Consider using <see cref="CurrentConfig"/>, <see cref="GetDefaultConfig"/>, 
         /// <see cref="CurrentFactory"/>, or <see cref="GetDefaultFactory"/> instead of this property.</para>
         /// </remarks>
-        public static DetourContext? Current {
-            get {
+        public static DetourContext? Current
+        {
+            get
+            {
                 var cur = current;
                 while (cur is not null && !cur.Active)
                     cur = cur.Prev;
@@ -44,21 +49,25 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private sealed class Scope {
+        private sealed class Scope
+        {
             public readonly DetourContext Context;
             public readonly Scope? Prev;
 
             public bool Active = true;
 
-            public Scope(DetourContext context, Scope? prev) {
+            public Scope(DetourContext context, Scope? prev)
+            {
                 Context = context;
                 Prev = prev;
             }
         }
 
-        private sealed class ContextScopeHandler : ScopeHandlerBase {
+        private sealed class ContextScopeHandler : ScopeHandlerBase
+        {
             public static readonly ContextScopeHandler Instance = new();
-            public override void EndScope(object? data) {
+            public override void EndScope(object? data)
+            {
                 var scope = (Scope)data!;
                 scope.Active = false;
 
@@ -67,7 +76,8 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private static DataScope PushContext(DetourContext ctx) {
+        private static DataScope PushContext(DetourContext ctx)
+        {
             current = new(ctx, current);
             return new(ContextScopeHandler.Instance, current);
         }
@@ -88,7 +98,8 @@ namespace MonoMod.RuntimeDetour {
         /// when no context provides a config.
         /// </remarks>
         /// <returns>The default <see cref="DetourConfig"/>, if any.</returns>
-        public static DetourConfig? GetDefaultConfig() {
+        public static DetourConfig? GetDefaultConfig()
+        {
             return TryGetCurrentConfig(out var cfg) ? cfg : null;
         }
 
@@ -100,7 +111,8 @@ namespace MonoMod.RuntimeDetour {
         /// when no context provides a factory.
         /// </remarks>
         /// <returns>The default <see cref="IDetourFactory"/>.</returns>
-        public static IDetourFactory GetDefaultFactory() {
+        public static IDetourFactory GetDefaultFactory()
+        {
             return TryGetCurrentFactory(out var fac) ? fac : DetourFactory.Current;
         }
 
@@ -137,16 +149,20 @@ namespace MonoMod.RuntimeDetour {
         /// </remarks>
         /// <param name="config">The active <see cref="DetourConfig"/>.</param>
         /// <returns><see langword="true"/> if a <see cref="DetourConfig"/> was found; <see langword="false"/> otherwise.</returns>
-        public static bool TryGetCurrentConfig(out DetourConfig? config) {
+        public static bool TryGetCurrentConfig(out DetourConfig? config)
+        {
             var scope = current;
-            while (scope is not null) {
-                if (scope.Active && scope.Context.TryGetConfig(out config)) {
+            while (scope is not null)
+            {
+                if (scope.Active && scope.Context.TryGetConfig(out config))
+                {
                     return true;
                 }
                 scope = scope.Prev;
             }
 
-            if (globalCurrent is { } gc && gc.TryGetConfig(out config)) {
+            if (globalCurrent is { } gc && gc.TryGetConfig(out config))
+            {
                 return true;
             }
 
@@ -183,16 +199,20 @@ namespace MonoMod.RuntimeDetour {
         /// </remarks>
         /// <param name="detourFactory">The active <see cref="IDetourFactory"/>.</param>
         /// <returns><see langword="true"/> if an <see cref="IDetourFactory"/> was found; <see langword="false"/> otherwise.</returns>
-        public static bool TryGetCurrentFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+        public static bool TryGetCurrentFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory)
+        {
             var scope = current;
-            while (scope is not null) {
-                if (scope.Context.TryGetFactory(out detourFactory)) {
+            while (scope is not null)
+            {
+                if (scope.Context.TryGetFactory(out detourFactory))
+                {
                     return true;
                 }
                 scope = scope.Prev;
             }
 
-            if (globalCurrent is { } gc && gc.TryGetFactory(out detourFactory)) {
+            if (globalCurrent is { } gc && gc.TryGetFactory(out detourFactory))
+            {
                 return true;
             }
 
@@ -204,14 +224,17 @@ namespace MonoMod.RuntimeDetour {
     /// <summary>
     /// A <see cref="DetourContext"/> base class which does not resolve any values for the context.
     /// </summary>
-    public abstract class EmptyDetourContext : DetourContext {
+    public abstract class EmptyDetourContext : DetourContext
+    {
         /// <inheritdoc/>
-        protected override bool TryGetConfig(out DetourConfig? config) {
+        protected override bool TryGetConfig(out DetourConfig? config)
+        {
             config = null;
             return false;
         }
         /// <inheritdoc/>
-        protected override bool TryGetFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+        protected override bool TryGetFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory)
+        {
             detourFactory = null;
             return false;
         }
@@ -220,17 +243,20 @@ namespace MonoMod.RuntimeDetour {
     /// <summary>
     /// A <see cref="DetourContext"/> which unconditionally resolves a <see cref="DetourConfig"/>.
     /// </summary>
-    public class DetourConfigContext : EmptyDetourContext {
+    public class DetourConfigContext : EmptyDetourContext
+    {
         private readonly DetourConfig? cfg;
         /// <summary>
         /// Constructs a <see cref="DetourConfigContext"/> which resolves the provided <see cref="DetourConfig"/>.
         /// </summary>
         /// <param name="cfg">The <see cref="DetourConfig"/> to resolve. If this is <see langword="null"/>, the resolved config is <see langword="null"/>.</param>
-        public DetourConfigContext(DetourConfig? cfg) {
+        public DetourConfigContext(DetourConfig? cfg)
+        {
             this.cfg = cfg;
         }
         /// <inheritdoc/>
-        protected override bool TryGetConfig(out DetourConfig? config) {
+        protected override bool TryGetConfig(out DetourConfig? config)
+        {
             config = cfg;
             return true;
         }
@@ -239,17 +265,20 @@ namespace MonoMod.RuntimeDetour {
     /// <summary>
     /// A <see cref="DetourContext"/> which unconditionally resolves a <see cref="IDetourFactory"/>.
     /// </summary>
-    public class DetourFactoryContext : EmptyDetourContext {
+    public class DetourFactoryContext : EmptyDetourContext
+    {
         private readonly IDetourFactory fac;
         /// <summary>
         /// Constructs a <see cref="DetourFactoryContext"/> which resolves the provided <see cref="IDetourFactory"/>.
         /// </summary>
         /// <param name="fac">The <see cref="IDetourFactory"/> to resolve.</param>
-        public DetourFactoryContext(IDetourFactory fac) {
+        public DetourFactoryContext(IDetourFactory fac)
+        {
             this.fac = fac;
         }
         /// <inheritdoc/>
-        protected override bool TryGetFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory) {
+        protected override bool TryGetFactory([MaybeNullWhen(false)] out IDetourFactory detourFactory)
+        {
             detourFactory = fac;
             return true;
         }

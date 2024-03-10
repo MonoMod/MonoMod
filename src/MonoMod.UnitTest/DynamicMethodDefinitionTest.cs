@@ -13,10 +13,13 @@ using Xunit;
 using Xunit.Abstractions;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 
-namespace MonoMod.UnitTest {
-    public class DynamicMethodDefinitionTest : TestBase {
+namespace MonoMod.UnitTest
+{
+    public class DynamicMethodDefinitionTest : TestBase
+    {
         [Fact]
-        public void TestDMD() {
+        public void TestDMD()
+        {
             Counter = 0;
 
             // Run the original method.
@@ -24,11 +27,13 @@ namespace MonoMod.UnitTest {
 
             var original = typeof(DynamicMethodDefinitionTest).GetMethod(nameof(ExampleMethod), BindingFlags.Static | BindingFlags.NonPublic);
             MethodInfo patched;
-            using (var dmd = new DynamicMethodDefinition(original)) {
+            using (var dmd = new DynamicMethodDefinition(original))
+            {
                 Assert.Equal("i", dmd.Definition.Parameters[0].Name);
 
                 // Modify the MethodDefinition.
-                foreach (var instr in dmd.Definition.Body.Instructions) {
+                foreach (var instr in dmd.Definition.Body.Instructions)
+                {
                     if (instr.Operand as string == StringOriginal)
                         instr.Operand = StringPatched;
                     else if (instr.MatchCallOrCallvirt<DynamicMethodDefinitionTest>(nameof(ExampleMethod)))
@@ -41,9 +46,11 @@ namespace MonoMod.UnitTest {
 
             // Generate an entirely new method that just returns a stack trace for further testing.
             DynamicMethod stacker;
-            using (var dmd = new DynamicMethodDefinition("Stacker", typeof(StackTrace), Array.Empty<Type>())) {
+            using (var dmd = new DynamicMethodDefinition("Stacker", typeof(StackTrace), Array.Empty<Type>()))
+            {
                 using (var il = new ILContext(dmd.Definition))
-                    il.Invoke(_ => {
+                    il.Invoke(_ =>
+                    {
                         var c = new ILCursor(il);
                         for (var i = 0; i < 32; i++)
                             c.Emit(OpCodes.Nop);
@@ -55,7 +62,8 @@ namespace MonoMod.UnitTest {
                 stacker = (DynamicMethod)DMDEmitDynamicMethodGenerator.Generate(dmd, null);
             }
 
-            using (var dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod)))) {
+            using (var dmd = new DynamicMethodDefinition(typeof(ExampleGenericClass<int>).GetMethod(nameof(ExampleMethod))))
+            {
                 Assert.Equal(0, ((Func<int>)dmd.Generate().CreateDelegate(typeof(Func<int>)))());
                 Assert.Equal(0, ((Func<int>)DMDCecilGenerator.Generate(dmd).CreateDelegate(typeof(Func<int>)))());
                 // no
@@ -112,7 +120,8 @@ namespace MonoMod.UnitTest {
             Assert.Equal(Tuple.Create(StringPatched, 3), patched.Invoke(null, new object[] { 1337 }));
 
             // Detour the original method to the patched DynamicMethod, then run the patched method.
-            using (new Hook(original, patched)) {
+            using (new Hook(original, patched))
+            {
                 // The detour is only active in this block.
                 Assert.Equal(Tuple.Create(StringPatched, 6), ExampleMethod(3));
             }
@@ -141,19 +150,22 @@ namespace MonoMod.UnitTest {
 
         private static volatile int Counter;
 
-        public DynamicMethodDefinitionTest(ITestOutputHelper helper) : base(helper) {
+        public DynamicMethodDefinitionTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 #pragma warning disable CA1508 // Avoid dead conditional code
 #pragma warning disable CA1031 // Do not catch general exception types
 
-        private static Tuple<string, int> ExampleMethod(int i) {
+        private static Tuple<string, int> ExampleMethod(int i)
+        {
             if (i == 1337)
                 return ExampleMethod(0);
 
             _ = new TestObjectGeneric<string>();
-            try {
+            try
+            {
                 Console.WriteLine(StringOriginal);
 
                 Counter += new int?(i).Value;
@@ -166,7 +178,8 @@ namespace MonoMod.UnitTest {
 
                 var array2d1 = new string[][] { new string[] { "A" } };
                 var array2d2 = new string[,] { { "B" } };
-                foreach (var str in list) {
+                foreach (var str in list)
+                {
                     TargetTest(array2d1[0][0], array2d2[0, 0], str);
                     TargetTest(array2d1[0][0], array2d2[0, 0]);
                     TargetTest(array2d1[0][0], ref array2d2[0, 0]);
@@ -174,7 +187,8 @@ namespace MonoMod.UnitTest {
                     TargetTest<int, int>();
                 }
 
-                switch (i) {
+                switch (i)
+                {
                     case 0:
                         i *= -2;
                         break;
@@ -183,42 +197,54 @@ namespace MonoMod.UnitTest {
                         break;
                 }
 
-            } catch (Exception e) when (e is null) {
+            }
+            catch (Exception e) when (e is null)
+            {
                 return Tuple.Create("", -2);
-            } catch (Exception) {
+            }
+            catch (Exception)
+            {
                 return Tuple.Create("", -1);
             }
             return Tuple.Create(StringOriginal, Counter);
         }
 
-        private class ExampleGenericClass<T> {
-            public static T ExampleMethod() {
+        private class ExampleGenericClass<T>
+        {
+            public static T ExampleMethod()
+            {
                 Counter++;
                 return default;
             }
         }
 
-        private static int TargetTest<T>(string a, string b, string c) {
+        private static int TargetTest<T>(string a, string b, string c)
+        {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        private static int TargetTest(string a, string b, string c) {
+        private static int TargetTest(string a, string b, string c)
+        {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        private static int TargetTest<T>(string a, T b) {
+        private static int TargetTest<T>(string a, T b)
+        {
             return (a + b).GetHashCode(StringComparison.Ordinal);
         }
 
-        private static int TargetTest<T>(string a, ref T b) {
+        private static int TargetTest<T>(string a, ref T b)
+        {
             return (a + b).GetHashCode(StringComparison.Ordinal);
         }
 
-        private static int TargetTest<TA>() {
+        private static int TargetTest<TA>()
+        {
             return 1;
         }
 
-        private static int TargetTest<TA, TB>() {
+        private static int TargetTest<TA, TB>()
+        {
             return 2;
         }
 

@@ -1,10 +1,12 @@
 ﻿using System;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A factory for construction native alternate entrypoints for functions.
     /// </summary>
-    public interface IAltEntryFactory {
+    public interface IAltEntryFactory
+    {
         /// <summary>
         /// Creates an alternate entrypoint for the function at <paramref name="entrypoint"/>, ensuring that changes to the first <paramref name="minLength"/>
         /// bytes of that function will not interfere with the alternate entrypoint.

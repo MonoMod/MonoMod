@@ -6,15 +6,18 @@
 using System.Runtime.CompilerServices;
 #endif
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// Extensions to <see cref="StringComparer"/> providing consistent access to APIs introduced after the type.
     /// </summary>
-    public static class StringComparerEx {
+    public static class StringComparerEx
+    {
 #if HAS_FROM_COMPARISON
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-        public static StringComparer FromComparison(StringComparison comparisonType) {
+        public static StringComparer FromComparison(StringComparison comparisonType)
+        {
 #if HAS_FROM_COMPARISON
             return StringComparer.FromComparison(comparisonType);
 #else

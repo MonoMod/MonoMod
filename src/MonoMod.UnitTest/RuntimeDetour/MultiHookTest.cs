@@ -12,10 +12,12 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed",
         Justification = "Hooks are disposed by the test teardown method")]
-    public class ManualMultiHookTest : TestBase {
+    public class ManualMultiHookTest : TestBase
+    {
         Hook h1;
         Hook h2;
         ILHook hIL;
@@ -24,13 +26,16 @@ namespace MonoMod.UnitTest {
         private bool h2Run;
         private bool hILRun;
 
-        public ManualMultiHookTest(ITestOutputHelper helper) : base(helper) {
+        public ManualMultiHookTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
-        private void Setup() {
+        private void Setup()
+        {
             h1 = new Hook(
                 typeof(ManualMultiHookTest).GetMethod("DoNothing", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
-                new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) => {
+                new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) =>
+                {
                     orig(self);
                     h1Run = true;
                 }),
@@ -38,7 +43,8 @@ namespace MonoMod.UnitTest {
             );
             h2 = new Hook(
                 typeof(ManualMultiHookTest).GetMethod("DoNothing", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
-                new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) => {
+                new Action<Action<ManualMultiHookTest>, ManualMultiHookTest>((orig, self) =>
+                {
                     orig(self);
                     h2Run = true;
                 }),
@@ -46,10 +52,12 @@ namespace MonoMod.UnitTest {
             );
             hIL = new ILHook(
                 typeof(ManualMultiHookTest).GetMethod("DoNothing", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
-                il => {
+                il =>
+                {
                     var c = new ILCursor(il);
                     c.Emit(OpCodes.Ldc_I4_1);
-                    c.EmitDelegate<Action<bool>>(v => {
+                    c.EmitDelegate<Action<bool>>(v =>
+                    {
                         hILRun = v;
                     });
                 },
@@ -61,7 +69,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void DoNothingTest() {
+        public void DoNothingTest()
+        {
             Setup();
             DoNothing();
             Assert.False(h1Run);
@@ -71,7 +80,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void H1() {
+        public void H1()
+        {
             Setup();
             h1.Apply();
             DoNothing();
@@ -83,7 +93,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void H2() {
+        public void H2()
+        {
             Setup();
             h2.Apply();
             DoNothing();
@@ -94,7 +105,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void HIL() {
+        public void HIL()
+        {
             Setup();
             hIL.Apply();
             DoNothing();
@@ -106,7 +118,8 @@ namespace MonoMod.UnitTest {
 
 
         [SkipRemoteLinuxMonoFact]
-        public void HILH1() {
+        public void HILH1()
+        {
             Setup();
             hIL.Apply();
             h1.Apply();
@@ -119,7 +132,8 @@ namespace MonoMod.UnitTest {
 
 
         [SkipRemoteLinuxMonoFact]
-        public void HILH1H2() {
+        public void HILH1H2()
+        {
             Setup();
             hIL.Apply();
             h1.Apply();
@@ -133,7 +147,8 @@ namespace MonoMod.UnitTest {
 
 
         [SkipRemoteLinuxMonoFact]
-        public void HILH2H1() {
+        public void HILH2H1()
+        {
             Setup();
             hIL.Apply();
             h2.Apply();
@@ -146,7 +161,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void H1H2HIL() {
+        public void H1H2HIL()
+        {
             Setup();
             h1.Apply();
             h2.Apply();
@@ -159,7 +175,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void H2H1HIL() {
+        public void H2H1HIL()
+        {
             Setup();
             h2.Apply();
             h1.Apply();
@@ -172,7 +189,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void H2HIL() {
+        public void H2HIL()
+        {
             Setup();
             h2.Apply();
             hIL.Apply();
@@ -186,7 +204,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void H1HILH2() {
+        public void H1HILH2()
+        {
             Setup();
             h1.Apply();
             hIL.Apply();
@@ -199,7 +218,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void H1HIL() {
+        public void H1HIL()
+        {
             Setup();
             h1.Apply();
             hIL.Apply();
@@ -211,7 +231,8 @@ namespace MonoMod.UnitTest {
         }
 
         [SkipRemoteLinuxMonoFact]
-        public void HILH2() {
+        public void HILH2()
+        {
             Setup();
             hIL.Apply();
             h2.Apply();
@@ -222,14 +243,16 @@ namespace MonoMod.UnitTest {
             TearDown();
         }
 
-        private void TearDown() {
+        private void TearDown()
+        {
             h1.Dispose();
             h2.Dispose();
             hIL.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void DoNothing() {
+        private void DoNothing()
+        {
         }
     }
 }

@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Reflection;
 
-namespace MonoMod.Core {
+namespace MonoMod.Core
+{
     /// <summary>
     /// A single method-to-method managed detour.
     /// </summary>
     [CLSCompliant(true)]
-    public interface ICoreDetour : ICoreDetourBase {
+    public interface ICoreDetour : ICoreDetourBase
+    {
         /// <summary>
         /// The source method.
         /// </summary>

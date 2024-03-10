@@ -16,7 +16,8 @@ namespace System;
 /// </summary>
 [SuppressMessage("Design", "CA1066:Implement IEquatable when overriding Object.Equals",
     Justification = "This is a polyfill for System.HashCode, which is not equatable.")]
-internal struct HashCode {
+internal struct HashCode
+{
     private const uint Prime1 = 2654435761U;
     private const uint Prime2 = 2246822519U;
     private const uint Prime3 = 3266489917U;
@@ -33,10 +34,12 @@ internal struct HashCode {
     /// Initializes the default seed.
     /// </summary>
     /// <returns>A random seed.</returns>
-    private static unsafe uint GenerateGlobalSeed() {
+    private static unsafe uint GenerateGlobalSeed()
+    {
         var bytes = new byte[4];
 
-        using (var generator = RandomNumberGenerator.Create()) {
+        using (var generator = RandomNumberGenerator.Create())
+        {
             generator.GetBytes(bytes);
         }
 
@@ -48,12 +51,14 @@ internal struct HashCode {
     /// </summary>
     /// <typeparam name="T">The type of the value to add into the hash code.</typeparam>
     /// <param name="value">The value to add into the hash code.</param>
-    public void Add<T>(T value) {
+    public void Add<T>(T value)
+    {
         Add(value?.GetHashCode() ?? 0);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Initialize(out uint v1, out uint v2, out uint v3, out uint v4) {
+    private static void Initialize(out uint v1, out uint v2, out uint v3, out uint v4)
+    {
         v1 = seed + Prime1 + Prime2;
         v2 = seed + Prime2;
         v3 = seed;
@@ -61,27 +66,32 @@ internal struct HashCode {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint Round(uint hash, uint input) {
+    private static uint Round(uint hash, uint input)
+    {
         return RotateLeft(hash + input * Prime2, 13) * Prime1;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint QueueRound(uint hash, uint queuedValue) {
+    private static uint QueueRound(uint hash, uint queuedValue)
+    {
         return RotateLeft(hash + queuedValue * Prime3, 17) * Prime4;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint MixState(uint v1, uint v2, uint v3, uint v4) {
+    private static uint MixState(uint v1, uint v2, uint v3, uint v4)
+    {
         return RotateLeft(v1, 1) + RotateLeft(v2, 7) + RotateLeft(v3, 12) + RotateLeft(v4, 18);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint MixEmptyState() {
+    private static uint MixEmptyState()
+    {
         return seed + Prime5;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint MixFinal(uint hash) {
+    private static uint MixFinal(uint hash)
+    {
         hash ^= hash >> 15;
         hash *= Prime2;
         hash ^= hash >> 13;
@@ -91,19 +101,28 @@ internal struct HashCode {
         return hash;
     }
 
-    private void Add(int value) {
+    private void Add(int value)
+    {
         var val = (uint)value;
         var previousLength = length++;
         var position = previousLength % 4;
 
-        if (position == 0) {
+        if (position == 0)
+        {
             queue1 = val;
-        } else if (position == 1) {
+        }
+        else if (position == 1)
+        {
             queue2 = val;
-        } else if (position == 2) {
+        }
+        else if (position == 2)
+        {
             queue3 = val;
-        } else {
-            if (previousLength == 3) {
+        }
+        else
+        {
+            if (previousLength == 3)
+            {
                 Initialize(out v1, out v2, out v3, out v4);
             }
 
@@ -118,20 +137,24 @@ internal struct HashCode {
     /// Gets the resulting hashcode from the current instance.
     /// </summary>
     /// <returns>The resulting hashcode from the current instance.</returns>
-    public int ToHashCode() {
+    public int ToHashCode()
+    {
         var length = this.length;
         var position = length % 4;
         var hash = length < 4 ? MixEmptyState() : MixState(v1, v2, v3, v4);
 
         hash += length * 4;
 
-        if (position > 0) {
+        if (position > 0)
+        {
             hash = QueueRound(hash, queue1);
 
-            if (position > 1) {
+            if (position > 1)
+            {
                 hash = QueueRound(hash, queue2);
 
-                if (position > 2) {
+                if (position > 2)
+                {
                     hash = QueueRound(hash, queue3);
                 }
             }
@@ -161,7 +184,8 @@ internal struct HashCode {
     /// Any value outside the range [0..31] is treated as congruent mod 32.</param>
     /// <returns>The rotated value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint RotateLeft(uint value, int offset) {
+    private static uint RotateLeft(uint value, int offset)
+    {
         return (value << offset) | (value >> (32 - offset));
     }
 }

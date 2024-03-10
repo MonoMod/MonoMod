@@ -2,11 +2,13 @@
 using System;
 using System.Reflection;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// Represents a host .NET runtime.
     /// </summary>
-    public interface IRuntime {
+    public interface IRuntime
+    {
         /// <summary>
         /// Gets the <see cref="RuntimeKind"/> that this instance represents.
         /// </summary>

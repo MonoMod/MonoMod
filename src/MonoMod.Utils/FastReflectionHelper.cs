@@ -7,14 +7,17 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.Utils {
-    public sealed class WeakBox {
+namespace MonoMod.Utils
+{
+    public sealed class WeakBox
+    {
         [SuppressMessage("Design", "CA1051:Do not declare visible instance fields",
             Justification = "This emulates the API of StrongBox<T>, but without being generic.")]
         public object? Value;
     }
 
-    public static class FastReflectionHelper {
+    public static class FastReflectionHelper
+    {
         private static readonly Type[] FastStructInvokerArgs = { typeof(object), typeof(object), typeof(object?[]) };
 
         public delegate object? FastInvoker(object? target, params object?[]? args);
@@ -28,14 +31,16 @@ namespace MonoMod.Utils {
 
         // Takes a FastStructInvoker and implements a FastInvoker for it, assuming that it takes a non-nullable valuetype
         private static object? FastInvokerForStructInvokerVT<T>(FastStructInvoker invoker, object? target, params object?[]? args)
-            where T : struct {
+            where T : struct
+        {
             object result = default(T);
             invoker(target, result, args);
             return result;
         }
         private static readonly MethodInfo S2FValueType = typeof(FastReflectionHelper).GetMethod(nameof(FastInvokerForStructInvokerVT), BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        private static class TypedCache<T> where T : struct {
+        private static class TypedCache<T> where T : struct
+        {
             [ThreadStatic]
             public static StrongBox<T?>? NullableStrongBox;
         }
@@ -43,7 +48,8 @@ namespace MonoMod.Utils {
         // Takes a FastStructInvoker and implements a FastInvoker for it, using a StrongBox as the result type.
         // Suitable for Nullable<T>.
         private static object? FastInvokerForStructInvokerNullable<T>(FastStructInvoker invoker, object? target, params object?[]? args)
-            where T : struct {
+            where T : struct
+        {
             var result = TypedCache<T>.NullableStrongBox ??= new(null);
             invoker(target, result, args);
             return result.Value;
@@ -55,28 +61,33 @@ namespace MonoMod.Utils {
 
         // Takes a FastStructInvoker and implements a FastInvoker for it, using a WeakBox as the result type.
         // Suitable for class types.
-        private static object? FastInvokerForStructInvokerClass(FastStructInvoker invoker, object? target, params object?[]? args) {
+        private static object? FastInvokerForStructInvokerClass(FastStructInvoker invoker, object? target, params object?[]? args)
+        {
             var result = CachedWeakBox ??= new();
             invoker(target, result, args);
             return result.Value;
         }
         private static readonly MethodInfo S2FClass = typeof(FastReflectionHelper).GetMethod(nameof(FastInvokerForStructInvokerClass), BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        private static object? FastInvokerForStructInvokerVoid(FastStructInvoker invoker, object? target, params object?[]? args) {
+        private static object? FastInvokerForStructInvokerVoid(FastStructInvoker invoker, object? target, params object?[]? args)
+        {
             invoker(target, null, args);
             return null;
         }
         private static readonly MethodInfo S2FVoid = typeof(FastReflectionHelper).GetMethod(nameof(FastInvokerForStructInvokerVoid), BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        private enum ReturnTypeClass {
+        private enum ReturnTypeClass
+        {
             Void,
             ValueType,
             Nullable,
             ReferenceType
         }
 
-        private static FastInvoker CreateFastInvoker(FastStructInvoker fsi, ReturnTypeClass retTypeClass, Type returnType) {
-            switch (retTypeClass) {
+        private static FastInvoker CreateFastInvoker(FastStructInvoker fsi, ReturnTypeClass retTypeClass, Type returnType)
+        {
+            switch (retTypeClass)
+            {
                 case ReturnTypeClass.Void:
                     return S2FVoid.CreateDelegate<FastInvoker>(fsi);
                 case ReturnTypeClass.ValueType:
@@ -89,12 +100,14 @@ namespace MonoMod.Utils {
             throw new NotImplementedException($"Invalid ReturnTypeClass {retTypeClass}");
         }
 
-        private sealed class FSITuple {
+        private sealed class FSITuple
+        {
             public readonly FastStructInvoker FSI;
             public readonly ReturnTypeClass RTC;
             public readonly Type ReturnType;
 
-            public FSITuple(FastStructInvoker fsi, ReturnTypeClass rtc, Type rt) {
+            public FSITuple(FastStructInvoker fsi, ReturnTypeClass rtc, Type rt)
+            {
                 FSI = fsi;
                 RTC = rtc;
                 ReturnType = rt;
@@ -103,19 +116,22 @@ namespace MonoMod.Utils {
 
         private static ConditionalWeakTable<MemberInfo, FSITuple> fastStructInvokers = new();
 
-        private static FSITuple GetFSITuple(MethodBase method) {
+        private static FSITuple GetFSITuple(MethodBase method)
+        {
             return fastStructInvokers.GetValue(method, _
                 => new(CreateMethodInvoker(method, out var rtc, out var rt), rtc, rt));
         }
 
 
-        private static FSITuple GetFSITuple(FieldInfo field) {
+        private static FSITuple GetFSITuple(FieldInfo field)
+        {
             return fastStructInvokers.GetValue(field, _
                 => new(CreateFieldInvoker(field, out var rtc, out var rt), rtc, rt));
         }
 
         private static FSITuple GetFSITuple(MemberInfo member)
-            => member switch {
+            => member switch
+            {
                 MethodBase mb => GetFSITuple(mb),
                 FieldInfo fi => GetFSITuple(fi),
                 _ => throw new NotSupportedException($"Member type {member.GetType()} is not supported")
@@ -143,12 +159,15 @@ namespace MonoMod.Utils {
             bool isStatic, object? target,
             int retTypeClass, object? result,
             int expectLen, object?[]? args
-        ) {
-            if (!isStatic) {
+        )
+        {
+            if (!isStatic)
+            {
                 Helpers.ThrowIfArgumentNull(target);
             }
 
-            switch ((ReturnTypeClass)retTypeClass) {
+            switch ((ReturnTypeClass)retTypeClass)
+            {
                 case ReturnTypeClass.Void:
                     // we don't need to ensure anything about the result
                     break;
@@ -160,12 +179,14 @@ namespace MonoMod.Utils {
                     break;
             }
 
-            if (expectLen == 0) {
+            if (expectLen == 0)
+            {
                 return;
             }
 
             Helpers.ThrowIfArgumentNull(args);
-            if (args.Length < expectLen) {
+            if (args.Length < expectLen)
+            {
                 ThrowArgumentOutOfRange();
                 [MethodImpl(MethodImplOptions.NoInlining)]
                 static void ThrowArgumentOutOfRange()
@@ -184,15 +205,18 @@ namespace MonoMod.Utils {
             object? target,
             object? result,
             object?[] args
-        ) {
+        )
+        {
             var expectedType = Type.GetTypeFromHandle(expectType);
-            var realType = arg switch {
+            var realType = arg switch
+            {
                 TargetArgId => target?.GetType(),
                 ResultArgId => result?.GetType(),
                 _ => args[arg]?.GetType()
             };
 
-            var argName = arg switch {
+            var argName = arg switch
+            {
                 TargetArgId => nameof(target),
                 ResultArgId => nameof(result),
                 _ => DebugFormatter.Format($"args[{arg}]")
@@ -201,7 +225,8 @@ namespace MonoMod.Utils {
             if (realType is null)
                 return new ArgumentNullException(argName);
 
-            var message = arg switch {
+            var message = arg switch
+            {
                 TargetArgId => DebugFormatter.Format($"Target object is the wrong type; expected {expectedType}, got {realType}"),
                 ResultArgId => DebugFormatter.Format($"Result object is the wrong type; expected {expectedType}, got {realType}"),
                 _ => DebugFormatter.Format($"Argument {arg} is the wrong type; expected {expectedType}, got {realType}")
@@ -214,22 +239,32 @@ namespace MonoMod.Utils {
 
         private static readonly FieldInfo WeakBoxValueField = typeof(WeakBox).GetField(nameof(WeakBox.Value))!;
 
-        private static ReturnTypeClass ClassifyType(Type returnType) {
-            if (returnType == typeof(void)) {
+        private static ReturnTypeClass ClassifyType(Type returnType)
+        {
+            if (returnType == typeof(void))
+            {
                 return ReturnTypeClass.Void;
-            } else if (returnType.IsValueType) {
-                if (Nullable.GetUnderlyingType(returnType) is not null) {
+            }
+            else if (returnType.IsValueType)
+            {
+                if (Nullable.GetUnderlyingType(returnType) is not null)
+                {
                     // this takes a nullable return type
                     return ReturnTypeClass.Nullable;
-                } else {
+                }
+                else
+                {
                     return ReturnTypeClass.ValueType;
                 }
-            } else {
+            }
+            else
+            {
                 return ReturnTypeClass.ReferenceType;
             }
         }
 
-        private static void EmitCheckArgs(ILCursor il, bool isStatic, ReturnTypeClass rtc, int expectParams) {
+        private static void EmitCheckArgs(ILCursor il, bool isStatic, ReturnTypeClass rtc, int expectParams)
+        {
             // see signature of CheckArgs above
             il.Emit(OpCodes.Ldc_I4, isStatic ? 1 : 0);
             il.Emit(OpCodes.Ldarg_0); // target
@@ -240,17 +275,20 @@ namespace MonoMod.Utils {
             il.Emit(OpCodes.Call, CheckArgsMethod);
         }
 
-        private static void EmitCheckType(ILCursor il, int argId, Type expectType, ILLabel badArgLbl) {
+        private static void EmitCheckType(ILCursor il, int argId, Type expectType, ILLabel badArgLbl)
+        {
             var nextLbl = il.DefineLabel();
             var isByref = expectType.IsByRef;
 
             VariableDefinition? valueVar = null;
 
-            if (isByref) {
+            if (isByref)
+            {
                 expectType = expectType.GetElementType() ?? expectType;
 
                 var cls = ClassifyType(expectType);
-                if (!expectType.IsValueType) {
+                if (!expectType.IsValueType)
+                {
                     valueVar = new VariableDefinition(il.Module.TypeSystem.Object);
                     il.Context.Body.Variables.Add(valueVar);
                     il.Emit(OpCodes.Stloc, valueVar);
@@ -260,19 +298,24 @@ namespace MonoMod.Utils {
                 EmitCheckByref(il, cls, expectType, badArgLbl, argId);
 
                 // if it's a reference type, we want to load the current, and check it
-                if (!expectType.IsValueType) {
-                    if (valueVar is not null) {
+                if (!expectType.IsValueType)
+                {
+                    if (valueVar is not null)
+                    {
                         il.Emit(OpCodes.Ldloc, valueVar);
                     }
                     EmitLoadByref(il, cls, expectType);
                     il.Emit(OpCodes.Ldind_Ref);
-                } else {
+                }
+                else
+                {
                     // otherweise, by checking the byref, we know it's the right type
                     return;
                 }
             }
 
-            if (expectType != typeof(object)) {
+            if (expectType != typeof(object))
+            {
                 il.Emit(OpCodes.Isinst, expectType);
             }
             il.Emit(OpCodes.Brtrue, nextLbl);
@@ -283,17 +326,20 @@ namespace MonoMod.Utils {
             il.MarkLabel(nextLbl);
         }
 
-        private static void EmitCheckAllowNull(ILCursor il, int argId, Type expectType, ILLabel badArgLbl) {
+        private static void EmitCheckAllowNull(ILCursor il, int argId, Type expectType, ILLabel badArgLbl)
+        {
             var nextLbl = il.DefineLabel();
             var isByref = expectType.IsByRef;
 
             VariableDefinition? valueVar = null;
 
-            if (isByref) {
+            if (isByref)
+            {
                 expectType = expectType.GetElementType() ?? expectType;
 
                 var cls = ClassifyType(expectType);
-                if (!expectType.IsValueType) {
+                if (!expectType.IsValueType)
+                {
                     valueVar = new VariableDefinition(il.Module.TypeSystem.Object);
                     il.Context.Body.Variables.Add(valueVar);
                     il.Emit(OpCodes.Stloc, valueVar);
@@ -303,24 +349,30 @@ namespace MonoMod.Utils {
                 EmitCheckByref(il, cls, expectType, badArgLbl, argId);
 
                 // if it's a reference type, we want to load the current, and check it
-                if (!expectType.IsValueType) {
-                    if (valueVar is not null) {
+                if (!expectType.IsValueType)
+                {
+                    if (valueVar is not null)
+                    {
                         il.Emit(OpCodes.Ldloc, valueVar);
                     }
                     EmitLoadByref(il, cls, expectType);
                     il.Emit(OpCodes.Ldind_Ref);
-                } else {
+                }
+                else
+                {
                     // otherweise, by checking the byref, we know it's the right type
                     return;
                 }
             }
 
-            if (expectType == typeof(object)) {
+            if (expectType == typeof(object))
+            {
                 il.Emit(OpCodes.Pop);
                 return;
             }
 
-            if (!expectType.IsValueType || Nullable.GetUnderlyingType(expectType) is not null) {
+            if (!expectType.IsValueType || Nullable.GetUnderlyingType(expectType) is not null)
+            {
                 // we explicitly allow null for reference types and Nullable<T>
                 var doCheck = il.DefineLabel();
                 var val = new VariableDefinition(il.Module.TypeSystem.Object);
@@ -334,13 +386,15 @@ namespace MonoMod.Utils {
             }
 
             // referencetype, or valuetype but not byref
-            if (!expectType.IsValueType || (!isByref && expectType.IsValueType)) {
+            if (!expectType.IsValueType || (!isByref && expectType.IsValueType))
+            {
                 EmitCheckType(il, argId, expectType, badArgLbl);
             }
             il.MarkLabel(nextLbl);
         }
 
-        private static void EmitBadArgCall(ILCursor il, ILLabel badArgLbl) {
+        private static void EmitBadArgCall(ILCursor il, ILLabel badArgLbl)
+        {
             // emit the bad arg call sequence
             il.MarkLabel(badArgLbl);
             il.Emit(OpCodes.Ldarg_0); // target
@@ -350,9 +404,11 @@ namespace MonoMod.Utils {
             il.Emit(OpCodes.Throw);
         }
 
-        private static void EmitCheckByref(ILCursor il, ReturnTypeClass rtc, Type returnType, ILLabel badArgLbl, int argId = ResultArgId) {
+        private static void EmitCheckByref(ILCursor il, ReturnTypeClass rtc, Type returnType, ILLabel badArgLbl, int argId = ResultArgId)
+        {
             // then, we want to check our result type
-            switch (rtc) {
+            switch (rtc)
+            {
                 case ReturnTypeClass.Void:
                     // do nothing, we don't have a return type
                     break;
@@ -374,10 +430,12 @@ namespace MonoMod.Utils {
             }
         }
 
-        private static void EmitLoadByref(ILCursor il, ReturnTypeClass rtc, Type returnType) {
+        private static void EmitLoadByref(ILCursor il, ReturnTypeClass rtc, Type returnType)
+        {
 
             // then we actually want to load the reference to it
-            switch (rtc) {
+            switch (rtc)
+            {
                 case ReturnTypeClass.Void:
                     // no return type, do nothing
                     break;
@@ -398,25 +456,32 @@ namespace MonoMod.Utils {
             }
         }
 
-        private static void EmitLoadArgO(ILCursor il, int arg) {
+        private static void EmitLoadArgO(ILCursor il, int arg)
+        {
             il.Emit(OpCodes.Ldarg_2); // args
             il.Emit(OpCodes.Ldc_I4, arg);
             il.Emit(OpCodes.Ldelem_Ref);
         }
 
-        private static void EmitStoreByref(ILCursor il, ReturnTypeClass rtc, Type returnType) {
+        private static void EmitStoreByref(ILCursor il, ReturnTypeClass rtc, Type returnType)
+        {
             // the only thing left on the stack is the result reference and result, so save the result
-            if (rtc is not ReturnTypeClass.Void) {
-                if (returnType.IsValueType) {
+            if (rtc is not ReturnTypeClass.Void)
+            {
+                if (returnType.IsValueType)
+                {
                     il.Emit(OpCodes.Stobj, returnType);
-                } else {
+                }
+                else
+                {
                     il.Emit(OpCodes.Stind_Ref);
                 }
             }
         }
         #endregion
 
-        private static FastStructInvoker CreateMethodInvoker(MethodBase method, out ReturnTypeClass retTypeClass, out Type retType) {
+        private static FastStructInvoker CreateMethodInvoker(MethodBase method, out ReturnTypeClass retTypeClass, out Type retType)
+        {
             if (!method.IsStatic && (method.DeclaringType?.IsByRefLike() ?? false))
                 throw new ArgumentException("Cannot create reflection invoker for instance method on byref-like type", nameof(method));
 
@@ -432,7 +497,8 @@ namespace MonoMod.Utils {
 
             using var dmd = new DynamicMethodDefinition(DebugFormatter.Format($"MM:FastStructInvoker<{method}>"), null, FastStructInvokerArgs);
             using var ilc = new ILContext(dmd.Definition);
-            ilc.Invoke(ilc => {
+            ilc.Invoke(ilc =>
+            {
                 var il = new ILCursor(ilc);
                 // arg 0 is target, arg 1 is result, arg 2 is args array
 
@@ -443,7 +509,8 @@ namespace MonoMod.Utils {
 
                 // then we want to do a check of our target and args
                 // first, our target, but only if the method is non-static
-                if (!method.IsStatic && method is not ConstructorInfo) {
+                if (!method.IsStatic && method is not ConstructorInfo)
+                {
                     var expectType = method.DeclaringType;
                     Helpers.Assert(expectType is not null);
 
@@ -451,13 +518,15 @@ namespace MonoMod.Utils {
                     EmitCheckType(il, TargetArgId, expectType, badArgLbl);
                 }
 
-                if (typeClass != ReturnTypeClass.Void) {
+                if (typeClass != ReturnTypeClass.Void)
+                {
                     il.Emit(OpCodes.Ldarg_1);
                     EmitCheckByref(il, typeClass, returnType, badArgLbl);
                 }
 
                 // then, we want to go through and check all our arguments
-                for (var arg = 0; arg < methParams.Length; arg++) {
+                for (var arg = 0; arg < methParams.Length; arg++)
+                {
                     var ptype = methParams[arg].ParameterType;
                     if (ptype.IsByRefLike()) // we *can't*, however, support byreflikes, so check for that and throw
                         throw new ArgumentException("Cannot create reflection invoker for method with byref-like argument types", nameof(method));
@@ -466,17 +535,20 @@ namespace MonoMod.Utils {
                     EmitCheckAllowNull(il, arg, ptype, badArgLbl);
                 }
 
-                if (typeClass != ReturnTypeClass.Void) {
+                if (typeClass != ReturnTypeClass.Void)
+                {
                     il.Emit(OpCodes.Ldarg_1);
                     EmitLoadByref(il, typeClass, returnType);
                 }
 
                 // now we can load our target ref if needed
-                if (!method.IsStatic && method is not ConstructorInfo) {
+                if (!method.IsStatic && method is not ConstructorInfo)
+                {
                     var declType = method.DeclaringType;
                     Helpers.Assert(declType is not null);
                     il.Emit(OpCodes.Ldarg_0);
-                    if (declType.IsValueType) {
+                    if (declType.IsValueType)
+                    {
                         // we want a ref to it, not the boxed value
                         // call unbox
                         il.Emit(OpCodes.Unbox, declType);
@@ -484,26 +556,36 @@ namespace MonoMod.Utils {
                 }
 
                 // and finally, we can load all of our arguments
-                for (var arg = 0; arg < methParams.Length; arg++) {
+                for (var arg = 0; arg < methParams.Length; arg++)
+                {
                     var nextLbl = il.DefineLabel();
                     var ptype = methParams[arg].ParameterType;
                     var realType = ptype.IsByRef ? ptype.GetElementType() ?? ptype : ptype;
 
                     EmitLoadArgO(il, arg);
-                    if (ptype.IsByRef) {
+                    if (ptype.IsByRef)
+                    {
                         EmitLoadByref(il, ClassifyType(realType), realType);
-                    } else if (ptype.IsValueType) {
+                    }
+                    else if (ptype.IsValueType)
+                    {
                         il.Emit(OpCodes.Unbox_Any, realType);
                     }
                 }
 
                 // before finally calling the target method
-                if (method is ConstructorInfo ci) {
+                if (method is ConstructorInfo ci)
+                {
                     il.Emit(OpCodes.Newobj, ci);
-                } else {
-                    if (method.IsVirtual) {
+                }
+                else
+                {
+                    if (method.IsVirtual)
+                    {
                         il.Emit(OpCodes.Callvirt, method);
-                    } else {
+                    }
+                    else
+                    {
                         il.Emit(OpCodes.Call, method);
                     }
                 }
@@ -521,7 +603,8 @@ namespace MonoMod.Utils {
 
         // a field invoker can take zero arguments to get the value, or one argument to set the value (and return the new value)
         // note that a caller MUST pass in a result object, even when only setting the field
-        private static FastStructInvoker CreateFieldInvoker(FieldInfo field, out ReturnTypeClass retTypeClass, out Type retType) {
+        private static FastStructInvoker CreateFieldInvoker(FieldInfo field, out ReturnTypeClass retTypeClass, out Type retType)
+        {
             if (!field.IsStatic && (field.DeclaringType?.IsByRefLike() ?? false))
                 throw new ArgumentException("Cannot create reflection invoker for instance field on byref-like type", nameof(field));
 
@@ -533,14 +616,16 @@ namespace MonoMod.Utils {
 
             using var dmd = new DynamicMethodDefinition(DebugFormatter.Format($"MM:FastStructInvoker<{field}>"), null, FastStructInvokerArgs);
             using var ilc = new ILContext(dmd.Definition);
-            ilc.Invoke(ilc => {
+            ilc.Invoke(ilc =>
+            {
                 var il = new ILCursor(ilc);
                 // arg 0 is target, arg 1 is result, arg 2 is args array
 
                 EmitCheckArgs(il, field.IsStatic, typeClass, 0);
 
                 var badArgLbl = il.DefineLabel();
-                if (!field.IsStatic) {
+                if (!field.IsStatic)
+                {
                     var expect = field.DeclaringType!;
                     il.Emit(OpCodes.Ldarg_0);
                     EmitCheckType(il, TargetArgId, expect, badArgLbl);
@@ -570,11 +655,13 @@ namespace MonoMod.Utils {
                 EmitLoadByref(il, typeClass, returnType);
 
                 // load target ref
-                if (!field.IsStatic) {
+                if (!field.IsStatic)
+                {
                     var declType = field.DeclaringType;
                     Helpers.Assert(declType is not null);
                     il.Emit(OpCodes.Ldarg_0);
-                    if (declType.IsValueType) {
+                    if (declType.IsValueType)
+                    {
                         // we want a ref to it, not the boxed value
                         // call unbox
                         il.Emit(OpCodes.Unbox, declType);
@@ -586,9 +673,12 @@ namespace MonoMod.Utils {
                 il.Emit(OpCodes.Unbox_Any, field.FieldType);
 
                 // and store to the field
-                if (field.IsStatic) {
+                if (field.IsStatic)
+                {
                     il.Emit(OpCodes.Stsfld, field);
-                } else {
+                }
+                else
+                {
                     il.Emit(OpCodes.Stfld, field);
                 }
 
@@ -609,11 +699,13 @@ namespace MonoMod.Utils {
                 EmitLoadByref(il, typeClass, returnType);
 
                 // load target ref
-                if (!field.IsStatic) {
+                if (!field.IsStatic)
+                {
                     var declType = field.DeclaringType;
                     Helpers.Assert(declType is not null);
                     il.Emit(OpCodes.Ldarg_0);
-                    if (declType.IsValueType) {
+                    if (declType.IsValueType)
+                    {
                         // we want a ref to it, not the boxed value
                         // call unbox
                         il.Emit(OpCodes.Unbox, declType);
@@ -621,9 +713,12 @@ namespace MonoMod.Utils {
                 }
 
                 // and store to the field
-                if (field.IsStatic) {
+                if (field.IsStatic)
+                {
                     il.Emit(OpCodes.Ldsfld, field);
-                } else {
+                }
+                else
+                {
                     il.Emit(OpCodes.Ldfld, field);
                 }
 

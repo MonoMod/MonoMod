@@ -12,68 +12,86 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// The entry point for introspection of active detours, and the type which manages their application.
     /// </summary>
-    public static partial class DetourManager {
+    public static partial class DetourManager
+    {
 
         #region DepGraph
-        internal sealed class DepListNode<TNode> {
+        internal sealed class DepListNode<TNode>
+        {
             public readonly DetourConfig Config;
             public readonly TNode ChainNode;
 
             public DepListNode<TNode>? Next;
 
-            public DepListNode(DetourConfig config, TNode chainNode) {
+            public DepListNode(DetourConfig config, TNode chainNode)
+            {
                 Config = config;
                 ChainNode = chainNode;
             }
         }
 
-        internal sealed class DepGraphNode<TNode> {
+        internal sealed class DepGraphNode<TNode>
+        {
             public readonly DepListNode<TNode> ListNode;
             public DetourConfig Config => ListNode.Config;
             public readonly List<DepGraphNode<TNode>> BeforeThis = new();
             public bool Visiting;
             public bool Visited;
 
-            public DepGraphNode(DepListNode<TNode> listNode) {
+            public DepGraphNode(DepListNode<TNode> listNode)
+            {
                 ListNode = listNode;
             }
         }
 
-        internal sealed class DepGraph<TNode> {
+        internal sealed class DepGraph<TNode>
+        {
             private readonly List<DepGraphNode<TNode>> nodes = new();
             public DepListNode<TNode>? ListHead;
 
-            private static void PrioInsert(List<DepGraphNode<TNode>> list, DepGraphNode<TNode> node) {
-                if (node.Config.Priority is not { } nPrio) {
+            private static void PrioInsert(List<DepGraphNode<TNode>> list, DepGraphNode<TNode> node)
+            {
+                if (node.Config.Priority is not { } nPrio)
+                {
                     list.Add(node);
                     return;
                 }
 
                 var insertIdx = -1;
-                for (var i = 0; i < list.Count; i++) {
+                for (var i = 0; i < list.Count; i++)
+                {
                     var cur = list[i];
-                    if (cur.Config.Priority is { } cPrio) {
+                    if (cur.Config.Priority is { } cPrio)
+                    {
                         // if the current node is the first node with lower or equal priority, insert here
-                        if (nPrio >= cPrio) {
+                        if (nPrio >= cPrio)
+                        {
                             insertIdx = i;
                             break;
                         }
-                    } else {
+                    }
+                    else
+                    {
                         // if we've hit the block of no priorities, then we have our location
                         insertIdx = i;
                         break;
                     }
                 }
 
-                if (insertIdx < 0) {
+                if (insertIdx < 0)
+                {
                     insertIdx = list.Count;
-                } else {
+                }
+                else
+                {
                     // ensure that nodes with higher sub-priority come first
-                    for (; insertIdx < list.Count; insertIdx++) {
+                    for (; insertIdx < list.Count; insertIdx++)
+                    {
                         var cur = list[insertIdx];
                         if (cur.Config.Priority != node.Config.Priority || cur.Config.SubPriority <= node.Config.SubPriority)
                             break;
@@ -82,24 +100,31 @@ namespace MonoMod.RuntimeDetour {
                 list.Insert(insertIdx, node);
             }
 
-            public void Insert(DepGraphNode<TNode> node) {
+            public void Insert(DepGraphNode<TNode> node)
+            {
                 node.ListNode.Next = null;
                 node.BeforeThis.Clear();
                 node.Visited = false;
                 node.Visiting = false;
 
                 var insertIdx = -1;
-                for (var i = 0; i < nodes.Count; i++) {
+                for (var i = 0; i < nodes.Count; i++)
+                {
                     var cur = nodes[i];
                     cur.Visited = false;
 
-                    if (insertIdx < 0 && node.Config.Priority is { } nPrio) {
+                    if (insertIdx < 0 && node.Config.Priority is { } nPrio)
+                    {
                         // if the current node is the first node with lower or equal priority, insert here
-                        if (cur.Config.Priority is { } cPrio) {
-                            if (nPrio >= cPrio) {
+                        if (cur.Config.Priority is { } cPrio)
+                        {
+                            if (nPrio >= cPrio)
+                            {
                                 insertIdx = i;
                             }
-                        } else {
+                        }
+                        else
+                        {
                             // if we've hit the block of no priorities, then we have our location
                             insertIdx = i;
                         }
@@ -107,41 +132,58 @@ namespace MonoMod.RuntimeDetour {
 
                     bool isBefore = false,
                         isAfter = false;
-                    if (node.Config.Before.Contains(cur.Config.Id)) {
+                    if (node.Config.Before.Contains(cur.Config.Id))
+                    {
                         PrioInsert(cur.BeforeThis, node);
                         isBefore = true;
                     }
-                    if (node.Config.After.Contains(cur.Config.Id)) {
-                        if (isBefore) {
+                    if (node.Config.After.Contains(cur.Config.Id))
+                    {
+                        if (isBefore)
+                        {
                             MMDbgLog.Warning($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
-                        } else {
+                        }
+                        else
+                        {
                             PrioInsert(node.BeforeThis, cur);
                             isAfter = true;
                         }
                     }
-                    if (cur.Config.Before.Contains(node.Config.Id)) {
-                        if (isBefore) {
+                    if (cur.Config.Before.Contains(node.Config.Id))
+                    {
+                        if (isBefore)
+                        {
                             MMDbgLog.Warning($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
-                        } else {
+                        }
+                        else
+                        {
                             PrioInsert(node.BeforeThis, cur);
                             isAfter = true;
                         }
                     }
-                    if (cur.Config.After.Contains(node.Config.Id)) {
-                        if (isAfter) {
+                    if (cur.Config.After.Contains(node.Config.Id))
+                    {
+                        if (isAfter)
+                        {
                             MMDbgLog.Warning($"Detour '{node.Config.Id}' is marked as being both before and after '{cur.Config.Id}'");
-                        } else {
+                        }
+                        else
+                        {
                             PrioInsert(cur.BeforeThis, node);
                             //isBefore = true;
                         }
                     }
                 }
 
-                if (insertIdx < 0) {
+                if (insertIdx < 0)
+                {
                     insertIdx = nodes.Count;
-                } else {
+                }
+                else
+                {
                     // ensure that nodes with higher sub-priority come first
-                    for (; insertIdx < nodes.Count; insertIdx++) {
+                    for (; insertIdx < nodes.Count; insertIdx++)
+                    {
                         var cur = nodes[insertIdx];
                         if (cur.Config.Priority != node.Config.Priority || cur.Config.SubPriority <= node.Config.SubPriority)
                             break;
@@ -152,9 +194,11 @@ namespace MonoMod.RuntimeDetour {
                 UpdateList();
             }
 
-            public void Remove(DepGraphNode<TNode> node) {
+            public void Remove(DepGraphNode<TNode> node)
+            {
                 nodes.Remove(node);
-                foreach (var cur in nodes) {
+                foreach (var cur in nodes)
+                {
                     cur.BeforeThis.Remove(node);
                     cur.Visited = false;
                 }
@@ -168,38 +212,47 @@ namespace MonoMod.RuntimeDetour {
 
             private readonly DepListNode<TNode> dummyListNode = new(null!, default!);
 
-            private void UpdateList() {
+            private void UpdateList()
+            {
                 var dummy = dummyListNode;
                 dummy.Next = null;
 
                 var nextHolder = dummy;
-                foreach (var node in nodes) {
+                foreach (var node in nodes)
+                {
                     InsertListNode(ref nextHolder, node);
                 }
                 ListHead = dummy.Next;
             }
 
-            private static void InsertListNode(ref DepListNode<TNode> nextHolder, DepGraphNode<TNode> node) {
-                if (node.Visiting) {
+            private static void InsertListNode(ref DepListNode<TNode> nextHolder, DepGraphNode<TNode> node)
+            {
+                if (node.Visiting)
+                {
                     throw new InvalidOperationException("Cycle detected");
                 }
-                if (node.Visited) {
+                if (node.Visited)
+                {
                     return;
                 }
 
                 node.Visiting = true;
-                try {
+                try
+                {
                     var listNode = node.ListNode;
                     listNode.Next = null;
 
-                    foreach (var before in node.BeforeThis) {
+                    foreach (var before in node.BeforeThis)
+                    {
                         InsertListNode(ref nextHolder, before);
                     }
 
                     nextHolder.Next = listNode;
                     nextHolder = listNode;
                     node.Visited = true;
-                } finally {
+                }
+                finally
+                {
                     node.Visiting = false;
                 }
             }
@@ -207,42 +260,49 @@ namespace MonoMod.RuntimeDetour {
         #endregion
 
         #region SyncInfo
-        internal class DetourSyncInfo {
+        internal class DetourSyncInfo
+        {
             public MethodBase? SyncProxy;
             public int ActiveCalls;
             public int UpdatingThread;
 
-            public bool WaitForChainUpdate() {
+            public bool WaitForChainUpdate()
+            {
                 // If this is a nested call, allow the call to continue without waiting for the update to avoid deadlocks
                 if (Volatile.Read(ref ActiveCalls) > 1 && DetermineThreadCallDepth() > 1)
                     return true;
 
                 _ = Interlocked.Decrement(ref ActiveCalls);
 
-                if (UpdatingThread == EnvironmentEx.CurrentManagedThreadId) {
+                if (UpdatingThread == EnvironmentEx.CurrentManagedThreadId)
+                {
                     throw new InvalidOperationException("Method's detour chain is being updated by the current thread!");
                 }
 
                 var spin = new SpinWait();
-                while (Volatile.Read(ref UpdatingThread) != -1) {
+                while (Volatile.Read(ref UpdatingThread) != -1)
+                {
                     spin.SpinOnce();
                 }
 
                 return false;
             }
 
-            public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread) {
+            public void WaitForNoActiveCalls(out bool hasActiveCallsFromThread)
+            {
                 var threadCallDepth = DetermineThreadCallDepth();
                 hasActiveCallsFromThread = threadCallDepth > 0;
 
                 // Wait for other threads to have returned from the function
                 var spin = new SpinWait();
-                while (Volatile.Read(ref ActiveCalls) > threadCallDepth) {
+                while (Volatile.Read(ref ActiveCalls) > threadCallDepth)
+                {
                     spin.SpinOnce();
                 }
             }
 
-            private int DetermineThreadCallDepth() {
+            private int DetermineThreadCallDepth()
+            {
                 if (Volatile.Read(ref ActiveCalls) <= 0 || SyncProxy == null)
                     return 0;
 
@@ -268,7 +328,8 @@ namespace MonoMod.RuntimeDetour {
             Action<MethodDefinition, ILProcessor> emitLoadSyncInfo,
             Action<MethodDefinition, ILProcessor, Action> emitInvoke,
             Action<MethodDefinition, ILProcessor, Action>? emitLastCallReturn = null
-        ) {
+        )
+        {
             using var dmd = Sig.CreateDmd(DebugFormatter.Format($"SyncProxy<{innerName}>"));
 
             var il = dmd.GetILProcessor();
@@ -312,7 +373,8 @@ namespace MonoMod.RuntimeDetour {
             il.Append(noWait);
 
             VariableDefinition? returnVar = null;
-            if (Sig.ReturnType != typeof(void)) {
+            if (Sig.ReturnType != typeof(void))
+            {
                 returnVar = new(method.ReturnType);
                 il.Body.Variables.Add(returnVar);
             }
@@ -327,7 +389,8 @@ namespace MonoMod.RuntimeDetour {
             }
 
             emitInvoke(method, il, () => il.Emit(OpCodes.Ldloc, syncInfoVar));
-            if (returnVar is not null) {
+            if (returnVar is not null)
+            {
                 il.Emit(OpCodes.Stloc, returnVar);
             }
 
@@ -340,9 +403,12 @@ namespace MonoMod.RuntimeDetour {
             il.Emit(OpCodes.Ldflda, module.ImportReference(DetourSyncInfo_ActiveCalls));
             il.Emit(OpCodes.Call, module.ImportReference(Interlocked_Decrement));
 
-            if (emitLastCallReturn == null) {
+            if (emitLastCallReturn == null)
+            {
                 il.Emit(OpCodes.Pop);
-            } else {
+            }
+            else
+            {
                 // if Interlocked.Decrement returned zero, this has been the last call to the method
                 var notLastCall = il.Create(OpCodes.Nop);
                 il.Emit(OpCodes.Brtrue_S, notLastCall);
@@ -354,7 +420,8 @@ namespace MonoMod.RuntimeDetour {
             eh.HandlerEnd = beforeReturnIns;
 
             il.Append(beforeReturnIns);
-            if (returnVar is not null) {
+            if (returnVar is not null)
+            {
                 il.Emit(OpCodes.Ldloc, returnVar);
             }
             il.Emit(OpCodes.Ret);
@@ -363,7 +430,8 @@ namespace MonoMod.RuntimeDetour {
         }
         #endregion
 
-        internal abstract class SingleDetourStateBase {
+        internal abstract class SingleDetourStateBase
+        {
             public readonly IDetourFactory Factory;
             public readonly DetourConfig? Config;
 
@@ -372,7 +440,8 @@ namespace MonoMod.RuntimeDetour {
             public bool IsValid;
             public bool IsApplied => Volatile.Read(ref ManagerData) is not null;
 
-            protected SingleDetourStateBase(IDetourBase detour) {
+            protected SingleDetourStateBase(IDetourBase detour)
+            {
                 Factory = detour.Factory;
                 Config = detour.Config;
                 ManagerData = null;
@@ -380,7 +449,8 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        private static MethodInfo GenerateRemovedStub(MethodSignature trampolineSig) {
+        private static MethodInfo GenerateRemovedStub(MethodSignature trampolineSig)
+        {
             using var dmd = trampolineSig.CreateDmd(DebugFormatter.Format($"RemovedStub<{trampolineSig}>"));
             Helpers.Assert(dmd.Module is not null && dmd.Definition is not null);
             var module = dmd.Module;
@@ -396,7 +466,8 @@ namespace MonoMod.RuntimeDetour {
         }
 
         private static readonly ConditionalWeakTable<MethodSignature, MethodInfo> removedStubCache = new();
-        private static MethodInfo GetRemovedStub(MethodSignature trampolineSig) {
+        private static MethodInfo GetRemovedStub(MethodSignature trampolineSig)
+        {
             return removedStubCache.GetValue(trampolineSig, orig => GenerateRemovedStub(trampolineSig));
         }
     }

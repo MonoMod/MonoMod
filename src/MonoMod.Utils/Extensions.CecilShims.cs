@@ -1,9 +1,12 @@
 ﻿using Mono.Cecil;
 
-namespace MonoMod.Utils {
-    public static partial class Extensions {
+namespace MonoMod.Utils
+{
+    public static partial class Extensions
+    {
 
-        public static IMetadataTokenProvider ImportReference(this ModuleDefinition mod, IMetadataTokenProvider mtp) {
+        public static IMetadataTokenProvider ImportReference(this ModuleDefinition mod, IMetadataTokenProvider mtp)
+        {
             Helpers.ThrowIfArgumentNull(mod);
             if (mtp is TypeReference type)
                 return mod.ImportReference(type);

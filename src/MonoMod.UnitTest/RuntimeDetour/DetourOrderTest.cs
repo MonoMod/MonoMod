@@ -9,14 +9,18 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class DetourOrderTest : TestBase {
-        public DetourOrderTest(ITestOutputHelper helper) : base(helper) {
+    public class DetourOrderTest : TestBase
+    {
+        public DetourOrderTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestDetoursOrder() {
+        public void TestDetoursOrder()
+        {
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.
 
@@ -41,14 +45,16 @@ namespace MonoMod.UnitTest {
 
             using (new Hook(
                 original,
-                new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
+                new Func<Func<int, int, int>, int, int, int>((orig, a, b) =>
+                {
                     actual.Add(order[0]);
                     return orig(a, b) * a;
                 })
             ))
             using (new Hook(
                 original,
-                new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
+                new Func<Func<int, int, int>, int, int, int>((orig, a, b) =>
+                {
                     actual.Add(order[1]);
                     return orig(a, b) + b;
                 }),
@@ -57,28 +63,34 @@ namespace MonoMod.UnitTest {
             using (new DetourConfigContext(new("A")).Use())
             using (new Hook(
                 original,
-                new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
+                new Func<Func<int, int, int>, int, int, int>((orig, a, b) =>
+                {
                     actual.Add(order[2]);
                     return orig(a, b) + a;
                 })
             ))
             using (new Hook(
                 original,
-                new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
+                new Func<Func<int, int, int>, int, int, int>((orig, a, b) =>
+                {
                     actual.Add(order[3]);
                     return orig(a, b) * b;
                 }),
                 new DetourConfig("BeforeA").AddBefore("A")
-            )) {
+            ))
+            {
                 TestMethod(2, 3);
 
                 var mdi = DetourManager.GetDetourInfo(original);
-                using (mdi.WithLock()) {
-                    foreach (var d in mdi.Detours) {
+                using (mdi.WithLock())
+                {
+                    foreach (var d in mdi.Detours)
+                    {
                         var config = d.Config;
                         Assert.True(d.IsApplied);
                     }
-                    foreach (var i in mdi.ILHooks) {
+                    foreach (var i in mdi.ILHooks)
+                    {
                         var config = i.Config;
                         Assert.True(i.IsApplied);
                     }
@@ -90,7 +102,8 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static int TestMethod(int a, int b) {
+        public static int TestMethod(int a, int b)
+        {
             return 2;
         }
 

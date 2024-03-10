@@ -7,8 +7,10 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.InlineRT {
-    public static class MonoModRulesManager {
+namespace MonoMod.InlineRT
+{
+    public static class MonoModRulesManager
+    {
 
         private static readonly Assembly MonoModAsm = typeof(MonoModRulesManager).Assembly;
 
@@ -16,10 +18,13 @@ namespace MonoMod.InlineRT {
         private static readonly Dictionary<long, WeakReference> ModderMap = new Dictionary<long, WeakReference>();
         private static readonly Dictionary<WeakReference, long> IDMap = new Dictionary<WeakReference, long>(new WeakReferenceComparer());
 
-        public static MonoModder Modder {
-            get {
+        public static MonoModder Modder
+        {
+            get
+            {
                 var st = new StackTrace();
-                for (var i = 1; i < st.FrameCount; i++) {
+                for (var i = 1; i < st.FrameCount; i++)
+                {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
                     Assembly asm = method.DeclaringType.Assembly;
@@ -31,12 +36,15 @@ namespace MonoMod.InlineRT {
                 }
                 return null;
             }
-    }
+        }
 
-        public static Type RuleType {
-            get {
+        public static Type RuleType
+        {
+            get
+            {
                 var st = new StackTrace();
-                for (var i = 1; i < st.FrameCount; i++) {
+                for (var i = 1; i < st.FrameCount; i++)
+                {
                     StackFrame frame = st.GetFrame(i);
                     MethodBase method = frame.GetMethod();
                     Assembly asm = method.DeclaringType.Assembly;
@@ -45,9 +53,10 @@ namespace MonoMod.InlineRT {
                 }
                 return null;
             }
-    }
+        }
 
-    public static void Register(MonoModder self) {
+        public static void Register(MonoModder self)
+        {
             var weak = new WeakReference(self);
             if (IDMap.ContainsKey(weak))
                 throw new InvalidOperationException("MonoModder instance already registered in MMILProxyManager");
@@ -55,14 +64,16 @@ namespace MonoMod.InlineRT {
             ModderMap[id] = weak;
         }
 
-        public static long GetId(MonoModder self) {
+        public static long GetId(MonoModder self)
+        {
             var weak = new WeakReference(self);
             if (!IDMap.TryGetValue(weak, out var id))
                 throw new InvalidOperationException("MonoModder instance wasn't registered in MMILProxyManager");
             return id;
         }
 
-        public static MonoModder GetModder(string asmName) {
+        public static MonoModder GetModder(string asmName)
+        {
             var idString = asmName;
             var idIndex = idString.IndexOf("[MMILRT, ID:", StringComparison.Ordinal);
             if (idIndex == -1)
@@ -73,12 +84,14 @@ namespace MonoMod.InlineRT {
                 throw new InvalidOperationException($"Cannot get MonoModder ID from assembly name {asmName}");
             if (!ModderMap.TryGetValue(id, out WeakReference modder) || !modder.IsAlive)
                 return null;
-            return (MonoModder) modder.Target;
+            return (MonoModder)modder.Target;
         }
 
-        public static Type ExecuteRules(this MonoModder self, TypeDefinition orig) {
-            var scope = (ModuleDefinition) orig.Scope;
-            if (!self.DependencyMap.ContainsKey(scope)) {
+        public static Type ExecuteRules(this MonoModder self, TypeDefinition orig)
+        {
+            var scope = (ModuleDefinition)orig.Scope;
+            if (!self.DependencyMap.ContainsKey(scope))
+            {
                 // Runtime relinkers can parse rules by passing the "rule module" directly.
                 // Unfortunately, it bypasses the "MonoMod split upgrade hack."
                 // This hack fixes that hack.
@@ -88,7 +101,8 @@ namespace MonoMod.InlineRT {
 
             var wrapper = ModuleDefinition.CreateModule(
                 $"{orig.Module.Name.Substring(0, orig.Module.Name.Length - 4)}.MonoModRules [MMILRT, ID:{GetId(self)}]",
-                new ModuleParameters() {
+                new ModuleParameters()
+                {
                     Architecture = orig.Module.Architecture,
                     AssemblyResolver = self.AssemblyResolver,
                     Kind = ModuleKind.Dll,
@@ -96,7 +110,8 @@ namespace MonoMod.InlineRT {
                     Runtime = TargetRuntime.Net_2_0
                 }
             );
-            MonoModder wrapperMod = new MonoModRulesModder() {
+            MonoModder wrapperMod = new MonoModRulesModder()
+            {
                 Module = wrapper,
                 Orig = orig,
 
@@ -132,7 +147,8 @@ namespace MonoMod.InlineRT {
             wrapperMod.PatchRefs(); // Runs any special passes in-between, f.e. upgrading from pre-split to post-split.
 
             Assembly asm;
-            using (var asmStream = new MemoryStream()) {
+            using (var asmStream = new MemoryStream())
+            {
                 wrapperMod.Write(asmStream);
                 asmStream.Seek(0, SeekOrigin.Begin);
                 asm = ReflectionHelper.Load(asmStream);

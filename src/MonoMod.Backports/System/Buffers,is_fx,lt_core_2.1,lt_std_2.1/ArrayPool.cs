@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// Provides a resource pool that enables reusing instances of arrays.
     /// </summary>
@@ -15,7 +16,8 @@ namespace System.Buffers {
     /// This class is thread-safe.  All members may be used by multiple threads concurrently.
     /// </para>
     /// </remarks>
-    public abstract class ArrayPool<T> {
+    public abstract class ArrayPool<T>
+    {
         // Store the shared ArrayPool in a field of its derived sealed type so the Jit can "see" the exact type
         // when the Shared property is inlined which will allow it to devirtualize calls made on it.
         private static readonly TlsOverPerCoreLockedStacksArrayPool<T> s_shared = new TlsOverPerCoreLockedStacksArrayPool<T>();

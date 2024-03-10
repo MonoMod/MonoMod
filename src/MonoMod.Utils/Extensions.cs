@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace MonoMod.Utils {
+namespace MonoMod.Utils
+{
     /// <summary>
     /// Collection of extensions used by MonoMod and other projects.
     /// </summary>
-    public static partial class Extensions {
+    public static partial class Extensions
+    {
 
         // Use this source file for any extensions which don't deserve their own source files.
 
@@ -29,7 +31,8 @@ namespace MonoMod.Utils {
         /// <returns>True if both types are compatible with each other, false otherwise.</returns>
         public static bool IsCompatible(this Type type, Type other)
             => _IsCompatible(Helpers.ThrowIfNull(type), Helpers.ThrowIfNull(other)) || _IsCompatible(other, type);
-        private static bool _IsCompatible(this Type type, Type other) {
+        private static bool _IsCompatible(this Type type, Type other)
+        {
             if (type == other)
                 return true;
 
@@ -60,14 +63,17 @@ namespace MonoMod.Utils {
             return false;
         }
 
-        public static T GetDeclaredMember<T>(this T member) where T : MemberInfo {
+        public static T GetDeclaredMember<T>(this T member) where T : MemberInfo
+        {
             Helpers.ThrowIfArgumentNull(member);
             if (member.DeclaringType == member.ReflectedType)
                 return member;
 
-            if (member.DeclaringType is not null) {
+            if (member.DeclaringType is not null)
+            {
                 var mt = member.MetadataToken;
-                foreach (var other in member.DeclaringType.GetMembers((BindingFlags)(-1))) {
+                foreach (var other in member.DeclaringType.GetMembers((BindingFlags)(-1)))
+                {
                     if (other.MetadataToken == mt)
                         return (T)other;
                 }
@@ -76,7 +82,8 @@ namespace MonoMod.Utils {
             return member;
         }
 
-        public static unsafe void SetMonoCorlibInternal(this Assembly asm, bool value) {
+        public static unsafe void SetMonoCorlibInternal(this Assembly asm, bool value)
+        {
             // TODO: try to move this impl into MM.Core's platform abstraction
             // it already has this for CoreCLR, which needs it for *other* reasons
             if (PlatformDetection.Runtime is not RuntimeKind.Mono)
@@ -101,8 +108,10 @@ namespace MonoMod.Utils {
 
             // _mono_assembly has changed places between Mono versions.
             FieldInfo? f_mono_assembly;
-            lock (fmap_mono_assembly) {
-                if (!fmap_mono_assembly.TryGetValue(asmType, out f_mono_assembly)) {
+            lock (fmap_mono_assembly)
+            {
+                if (!fmap_mono_assembly.TryGetValue(asmType, out f_mono_assembly))
+                {
                     f_mono_assembly =
                         asmType.GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance) ??
                         asmType.GetField("dynamic_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
@@ -116,18 +125,21 @@ namespace MonoMod.Utils {
             // Assemblies marked as corlib_internal are hidden from AppDomain.GetAssemblies()
             // Make sure that at least the ReflectionHelper can find anything inside of them.
             var name = asm.GetName();
-            lock (ReflectionHelper.AssemblyCache) {
+            lock (ReflectionHelper.AssemblyCache)
+            {
                 var asmRef = new WeakReference(asm);
                 ReflectionHelper.AssemblyCache[asm.GetRuntimeHashedFullName()] = asmRef;
                 ReflectionHelper.AssemblyCache[name.FullName] = asmRef;
-                if (name.Name is not null) {
+                if (name.Name is not null)
+                {
                     ReflectionHelper.AssemblyCache[name.Name] = asmRef;
                 }
             }
 
             var asmPtr = 0L;
             // For AssemblyBuilders, dynamic_assembly is of type UIntPtr which doesn't cast to IntPtr
-            switch (f_mono_assembly.GetValue(asm)) {
+            switch (f_mono_assembly.GetValue(asm))
+            {
                 case IntPtr i:
                     asmPtr = (long)i;
                     break;
@@ -187,7 +199,8 @@ namespace MonoMod.Utils {
             *corlibInternalPtr = value ? (byte)1 : (byte)0;
         }
 
-        public static bool IsDynamicMethod(this MethodBase method) {
+        public static bool IsDynamicMethod(this MethodBase method)
+        {
             Helpers.ThrowIfArgumentNull(method);
             // .NET throws when trying to get metadata like the token / handle, but has got RTDynamicMethod.
             if (_RTDynamicMethod != null)
@@ -207,7 +220,8 @@ namespace MonoMod.Utils {
 
             // Fake DynamicMethods aren't part of their declaring type.
             // Sounds obvious, but seems like the only real method to verify that it's a fake DynamicMethod.
-            if (method.DeclaringType is not null) {
+            if (method.DeclaringType is not null)
+            {
                 foreach (var other in method.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                     if (method == other)
                         return false;
@@ -215,11 +229,15 @@ namespace MonoMod.Utils {
             return true;
         }
 
-        public static object? SafeGetTarget(this WeakReference weak) {
+        public static object? SafeGetTarget(this WeakReference weak)
+        {
             Helpers.ThrowIfArgumentNull(weak);
-            try {
+            try
+            {
                 return weak.Target;
-            } catch (InvalidOperationException) {
+            }
+            catch (InvalidOperationException)
+            {
                 // FUCK OLD UNITY MONO
                 // https://github.com/Unity-Technologies/mono/blob/unity-2017.4/mcs/class/corlib/System/WeakReference.cs#L96
                 // https://github.com/Unity-Technologies/mono/blob/unity-2017.4-mbe/mcs/class/corlib/System/WeakReference.cs#L94
@@ -229,11 +247,15 @@ namespace MonoMod.Utils {
             }
         }
 
-        public static bool SafeGetIsAlive(this WeakReference weak) {
+        public static bool SafeGetIsAlive(this WeakReference weak)
+        {
             Helpers.ThrowIfArgumentNull(weak);
-            try {
+            try
+            {
                 return weak.IsAlive;
-            } catch (InvalidOperationException) {
+            }
+            catch (InvalidOperationException)
+            {
                 // See above FUCK OLD UNITY MONO note.
                 return false;
             }

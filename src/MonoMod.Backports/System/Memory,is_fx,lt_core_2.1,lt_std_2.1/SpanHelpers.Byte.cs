@@ -4,9 +4,12 @@
 
 using System.Diagnostics;
 
-namespace System {
-    internal static partial class SpanHelpers {
-        public static int IndexOf(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength) {
+namespace System
+{
+    internal static partial class SpanHelpers
+    {
+        public static int IndexOf(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength)
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -40,7 +43,8 @@ namespace System {
             return -1;
         }
 
-        public static int IndexOfAny(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength) {
+        public static int IndexOfAny(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength)
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -48,9 +52,11 @@ namespace System {
                 return 0;  // A zero-length sequence is always treated as "found" at the start of the search space.
 
             int index = -1;
-            for (int i = 0; i < valueLength; i++) {
+            for (int i = 0; i < valueLength; i++)
+            {
                 var tempIndex = IndexOf(ref searchSpace, Unsafe.Add(ref value, i), searchSpaceLength);
-                if ((uint)tempIndex < (uint)index) {
+                if ((uint)tempIndex < (uint)index)
+                {
                     index = tempIndex;
                     // Reduce space for search, cause we don't care if we find the search value after the index of a previously found value
                     searchSpaceLength = tempIndex;
@@ -62,7 +68,8 @@ namespace System {
             return index;
         }
 
-        public static int LastIndexOfAny(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength) {
+        public static int LastIndexOfAny(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength)
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -70,7 +77,8 @@ namespace System {
                 return 0;  // A zero-length sequence is always treated as "found" at the start of the search space.
 
             int index = -1;
-            for (int i = 0; i < valueLength; i++) {
+            for (int i = 0; i < valueLength; i++)
+            {
                 var tempIndex = LastIndexOf(ref searchSpace, Unsafe.Add(ref value, i), searchSpaceLength);
                 if (tempIndex > index)
                     index = tempIndex;
@@ -78,13 +86,15 @@ namespace System {
             return index;
         }
 
-        public static unsafe int IndexOf(ref byte searchSpace, byte value, int length) {
+        public static unsafe int IndexOf(ref byte searchSpace, byte value, int length)
+        {
             Debug.Assert(length >= 0);
 
             uint uValue = value; // Use uint for comparisons to avoid unnecessary 8->32 extensions
             nint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
-            while ((byte*)nLength >= (byte*)8) {
+            while ((byte*)nLength >= (byte*)8)
+            {
                 nLength -= 8;
 
                 if (uValue == Unsafe.AddByteOffset(ref searchSpace, index))
@@ -107,7 +117,8 @@ namespace System {
                 index += 8;
             }
 
-            if ((byte*)nLength >= (byte*)4) {
+            if ((byte*)nLength >= (byte*)4)
+            {
                 nLength -= 4;
 
                 if (uValue == Unsafe.AddByteOffset(ref searchSpace, index))
@@ -122,7 +133,8 @@ namespace System {
                 index += 4;
             }
 
-            while ((byte*)nLength > (byte*)0) {
+            while ((byte*)nLength > (byte*)0)
+            {
                 nLength -= 1;
 
                 if (uValue == Unsafe.AddByteOffset(ref searchSpace, index))
@@ -149,7 +161,8 @@ namespace System {
             return (int)(byte*)(index + 7);
         }
 
-        public static int LastIndexOf(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength) {
+        public static int LastIndexOf(ref byte searchSpace, int searchSpaceLength, ref byte value, int valueLength)
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -182,13 +195,15 @@ namespace System {
             return -1;
         }
 
-        public static unsafe int LastIndexOf(ref byte searchSpace, byte value, int length) {
+        public static unsafe int LastIndexOf(ref byte searchSpace, byte value, int length)
+        {
             Debug.Assert(length >= 0);
 
             uint uValue = value; // Use uint for comparisons to avoid unnecessary 8->32 extensions
             nint index = length; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
-            while ((byte*)nLength >= (byte*)8) {
+            while ((byte*)nLength >= (byte*)8)
+            {
                 nLength -= 8;
                 index -= 8;
 
@@ -210,7 +225,8 @@ namespace System {
                     goto Found;
             }
 
-            if ((byte*)nLength >= (byte*)4) {
+            if ((byte*)nLength >= (byte*)4)
+            {
                 nLength -= 4;
                 index -= 4;
 
@@ -224,7 +240,8 @@ namespace System {
                     goto Found;
             }
 
-            while ((byte*)nLength > (byte*)0) {
+            while ((byte*)nLength > (byte*)0)
+            {
                 nLength -= 1;
                 index -= 1;
 
@@ -250,7 +267,8 @@ namespace System {
             return (int)(byte*)(index + 7);
         }
 
-        public static unsafe int IndexOfAny(ref byte searchSpace, byte value0, byte value1, int length) {
+        public static unsafe int IndexOfAny(ref byte searchSpace, byte value0, byte value1, int length)
+        {
             Debug.Assert(length >= 0);
 
             uint uValue0 = value0; // Use uint for comparisons to avoid unnecessary 8->32 extensions
@@ -258,7 +276,8 @@ namespace System {
             nint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
             uint lookUp;
-            while ((byte*)nLength >= (byte*)8) {
+            while ((byte*)nLength >= (byte*)8)
+            {
                 nLength -= 8;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -289,7 +308,8 @@ namespace System {
                 index += 8;
             }
 
-            if ((byte*)nLength >= (byte*)4) {
+            if ((byte*)nLength >= (byte*)4)
+            {
                 nLength -= 4;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -308,7 +328,8 @@ namespace System {
                 index += 4;
             }
 
-            while ((byte*)nLength > (byte*)0) {
+            while ((byte*)nLength > (byte*)0)
+            {
                 nLength -= 1;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -336,7 +357,8 @@ namespace System {
             return (int)(byte*)(index + 7);
         }
 
-        public static unsafe int IndexOfAny(ref byte searchSpace, byte value0, byte value1, byte value2, int length) {
+        public static unsafe int IndexOfAny(ref byte searchSpace, byte value0, byte value1, byte value2, int length)
+        {
             Debug.Assert(length >= 0);
 
             uint uValue0 = value0; // Use uint for comparisons to avoid unnecessary 8->32 extensions
@@ -345,7 +367,8 @@ namespace System {
             nint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
             uint lookUp;
-            while ((byte*)nLength >= (byte*)8) {
+            while ((byte*)nLength >= (byte*)8)
+            {
                 nLength -= 8;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -376,7 +399,8 @@ namespace System {
                 index += 8;
             }
 
-            if ((byte*)nLength >= (byte*)4) {
+            if ((byte*)nLength >= (byte*)4)
+            {
                 nLength -= 4;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -395,7 +419,8 @@ namespace System {
                 index += 4;
             }
 
-            while ((byte*)nLength > (byte*)0) {
+            while ((byte*)nLength > (byte*)0)
+            {
                 nLength -= 1;
 
                 lookUp = Unsafe.AddByteOffset(ref searchSpace, index);
@@ -423,7 +448,8 @@ namespace System {
             return (int)(byte*)(index + 7);
         }
 
-        public static unsafe int LastIndexOfAny(ref byte searchSpace, byte value0, byte value1, int length) {
+        public static unsafe int LastIndexOfAny(ref byte searchSpace, byte value0, byte value1, int length)
+        {
             Debug.Assert(length >= 0);
 
             uint uValue0 = value0; // Use uint for comparisons to avoid unnecessary 8->32 extensions
@@ -431,7 +457,8 @@ namespace System {
             nint index = length; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint nLength = length;
             uint lookUp;
-            while ((byte*)nLength >= (byte*)8) {
+            while ((byte*)nLength >= (byte*)8)
+            {
                 nLength -= 8;
                 index -= 8;
 
@@ -461,7 +488,8 @@ namespace System {
                     goto Found;
             }
 
-            if ((byte*)nLength >= (byte*)4) {
+            if ((byte*)nLength >= (byte*)4)
+            {
                 nLength -= 4;
                 index -= 4;
 
@@ -479,7 +507,8 @@ namespace System {
                     goto Found;
             }
 
-            while ((byte*)nLength > (byte*)0) {
+            while ((byte*)nLength > (byte*)0)
+            {
                 nLength -= 1;
                 index -= 1;
 
@@ -506,7 +535,8 @@ namespace System {
             return (int)(byte*)(index + 7);
         }
 
-        public static unsafe int LastIndexOfAny(ref byte searchSpace, byte value0, byte value1, byte value2, int length) {
+        public static unsafe int LastIndexOfAny(ref byte searchSpace, byte value0, byte value1, byte value2, int length)
+        {
             Debug.Assert(length >= 0);
 
             uint uValue0 = value0; // Use uint for comparisons to avoid unnecessary 8->32 extensions
@@ -516,7 +546,8 @@ namespace System {
             nint nLength = length;
 
             uint lookUp;
-            while ((byte*)nLength >= (byte*)8) {
+            while ((byte*)nLength >= (byte*)8)
+            {
                 nLength -= 8;
                 index -= 8;
 
@@ -546,7 +577,8 @@ namespace System {
                     goto Found;
             }
 
-            if ((byte*)nLength >= (byte*)4) {
+            if ((byte*)nLength >= (byte*)4)
+            {
                 nLength -= 4;
                 index -= 4;
 
@@ -564,7 +596,8 @@ namespace System {
                     goto Found;
             }
 
-            while ((byte*)nLength > (byte*)0) {
+            while ((byte*)nLength > (byte*)0)
+            {
                 nLength -= 1;
                 index -= 1;
 
@@ -594,18 +627,22 @@ namespace System {
 
         // Optimized byte-based SequenceEquals. The "length" parameter for this one is declared a nuint rather than int as we also use it for types other than byte
         // where the length can exceed 2Gb once scaled by sizeof(T).
-        public static unsafe bool SequenceEqual(ref byte first, ref byte second, nuint length) {
+        public static unsafe bool SequenceEqual(ref byte first, ref byte second, nuint length)
+        {
             if (Unsafe.AreSame(ref first, ref second))
                 goto Equal;
 
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint n = (nint)(void*)length;
 
-            if ((byte*)n >= (byte*)sizeof(UIntPtr)) {
+            if ((byte*)n >= (byte*)sizeof(UIntPtr))
+            {
                 n -= sizeof(UIntPtr);
-                while ((byte*)n > (byte*)i) {
+                while ((byte*)n > (byte*)i)
+                {
                     if (Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref first, i)) !=
-                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, i))) {
+                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, i)))
+                    {
                         goto NotEqual;
                     }
                     i += sizeof(UIntPtr);
@@ -614,7 +651,8 @@ namespace System {
                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, n));
             }
 
-            while ((byte*)n > (byte*)i) {
+            while ((byte*)n > (byte*)i)
+            {
                 if (Unsafe.AddByteOffset(ref first, i) != Unsafe.AddByteOffset(ref second, i))
                     goto NotEqual;
                 i += 1;
@@ -627,7 +665,8 @@ namespace System {
             return false;
         }
 
-        public static unsafe int SequenceCompareTo(ref byte first, int firstLength, ref byte second, int secondLength) {
+        public static unsafe int SequenceCompareTo(ref byte first, int firstLength, ref byte second, int secondLength)
+        {
             Debug.Assert(firstLength >= 0);
             Debug.Assert(secondLength >= 0);
 
@@ -639,11 +678,14 @@ namespace System {
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
             nint n = (nint)(void*)minLength;
 
-            if ((byte*)n > (byte*)sizeof(UIntPtr)) {
+            if ((byte*)n > (byte*)sizeof(UIntPtr))
+            {
                 n -= sizeof(UIntPtr);
-                while ((byte*)n > (byte*)i) {
+                while ((byte*)n > (byte*)i)
+                {
                     if (Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref first, i)) !=
-                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, i))) {
+                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.AddByteOffset(ref second, i)))
+                    {
                         goto NotEqual;
                     }
                     i += sizeof(UIntPtr);
@@ -651,7 +693,8 @@ namespace System {
             }
 
             NotEqual:  // Workaround for https://github.com/dotnet/coreclr/issues/13549
-            while ((byte*)minLength > (byte*)i) {
+            while ((byte*)minLength > (byte*)i)
+            {
                 int result = Unsafe.AddByteOffset(ref first, i).CompareTo(Unsafe.AddByteOffset(ref second, i));
                 if (result != 0)
                     return result;

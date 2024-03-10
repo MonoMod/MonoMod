@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace MonoMod {
+namespace MonoMod
+{
     /// <summary>
     /// MonoMod target module attribute.
     /// Apply it onto a type and it will only be patched in the target module.
@@ -9,7 +10,8 @@ namespace MonoMod {
     /// or use the same MonoMod mod on multiple differing input assemblies.
     /// </summary>
     [MonoMod__SafeToCopy__]
-    public class MonoModTargetModule : Attribute {
+    public class MonoModTargetModule : Attribute
+    {
         public MonoModTargetModule(string name) { }
     }
 }

@@ -4,13 +4,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// A type which represents a single method, and permits access to the detours applied to that method.
     /// </summary>
-    public sealed class MethodDetourInfo {
+    public sealed class MethodDetourInfo
+    {
         internal readonly DetourManager.ManagedDetourState state;
-        internal MethodDetourInfo(DetourManager.ManagedDetourState state) {
+        internal MethodDetourInfo(DetourManager.ManagedDetourState state)
+        {
             this.state = state;
         }
 
@@ -53,44 +56,52 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// An event which is invoked whenever a detour is applied to this function.
         /// </summary>
-        public event Action<DetourInfo>? DetourApplied {
+        public event Action<DetourInfo>? DetourApplied
+        {
             add => state.DetourApplied += value;
             remove => state.DetourApplied -= value;
         }
         /// <summary>
         /// An event which is invoked whenver a detour is undone on this function.
         /// </summary>
-        public event Action<DetourInfo>? DetourUndone {
+        public event Action<DetourInfo>? DetourUndone
+        {
             add => state.DetourUndone += value;
             remove => state.DetourUndone -= value;
         }
         /// <summary>
         /// An event which is invoked whenever an <see cref="ILHook"/> is applied to this function.
         /// </summary>
-        public event Action<ILHookInfo>? ILHookApplied {
+        public event Action<ILHookInfo>? ILHookApplied
+        {
             add => state.ILHookApplied += value;
             remove => state.ILHookApplied -= value;
         }
         /// <summary>
         /// An event which is invoked whenver an <see cref="ILHook"/> is undone on this function.
         /// </summary>
-        public event Action<ILHookInfo>? ILHookUndone {
+        public event Action<ILHookInfo>? ILHookUndone
+        {
             add => state.ILHookUndone += value;
             remove => state.ILHookUndone -= value;
         }
 
-        internal DetourInfo GetDetourInfo(DetourManager.SingleManagedDetourState node) {
+        internal DetourInfo GetDetourInfo(DetourManager.SingleManagedDetourState node)
+        {
             var existingInfo = node.DetourInfo;
-            if (existingInfo is null || existingInfo.Method != this) {
+            if (existingInfo is null || existingInfo.Method != this)
+            {
                 return node.DetourInfo = new(this, node);
             }
 
             return existingInfo;
         }
 
-        internal ILHookInfo GetILHookInfo(DetourManager.SingleILHookState entry) {
+        internal ILHookInfo GetILHookInfo(DetourManager.SingleILHookState entry)
+        {
             var existingInfo = entry.HookInfo;
-            if (existingInfo is null || existingInfo.Method != this) {
+            if (existingInfo is null || existingInfo.Method != this)
+            {
                 return entry.HookInfo = new(this, entry);
             }
 
@@ -103,7 +114,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="lockTaken">A boolean which, when this method returns, holds whether or not the method took the
         /// lock and should release the lock in its <see langword="finally"/> block.</param>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public void EnterLock(ref bool lockTaken) {
+        public void EnterLock(ref bool lockTaken)
+        {
             state.detourLock.Enter(ref lockTaken);
         }
 
@@ -112,7 +124,8 @@ namespace MonoMod.RuntimeDetour {
         /// was <see langword="true"/>
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public void ExitLock() {
+        public void ExitLock()
+        {
             state.detourLock.Exit(true);
         }
 
@@ -131,15 +144,20 @@ namespace MonoMod.RuntimeDetour {
             Justification = "This being a nested type makes sense, as its basically only expected to be a temporary on-stack to " +
             "hold and automatically release a lock.")]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public readonly ref struct Lock {
+        public readonly ref struct Lock
+        {
             private readonly MethodDetourInfo mdi;
             private readonly bool lockTaken;
-            internal Lock(MethodDetourInfo mdi) {
+            internal Lock(MethodDetourInfo mdi)
+            {
                 this.mdi = mdi;
                 lockTaken = false;
-                try {
+                try
+                {
                     mdi.EnterLock(ref lockTaken);
-                } catch {
+                }
+                catch
+                {
                     if (lockTaken)
                         mdi.ExitLock();
                     throw;
@@ -147,7 +165,8 @@ namespace MonoMod.RuntimeDetour {
             }
 
             /// <inheritdoc/>
-            public void Dispose() {
+            public void Dispose()
+            {
                 if (lockTaken)
                     mdi.ExitLock();
             }

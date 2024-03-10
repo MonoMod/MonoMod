@@ -2,9 +2,12 @@
 using System;
 using System.Buffers;
 
-namespace MonoMod.Core.Platforms.Architectures {
-    internal static class Shared {
-        public static unsafe ReadOnlyMemory<IAllocatedMemory> CreateVtableStubs(ISystem system, IntPtr vtableBase, int vtableSize, ReadOnlySpan<byte> stubData, int indexOffs, bool premulOffset) {
+namespace MonoMod.Core.Platforms.Architectures
+{
+    internal static class Shared
+    {
+        public static unsafe ReadOnlyMemory<IAllocatedMemory> CreateVtableStubs(ISystem system, IntPtr vtableBase, int vtableSize, ReadOnlySpan<byte> stubData, int indexOffs, bool premulOffset)
+        {
             var maxAllocSize = system.MemoryAllocator.MaxSize;
             var allStubsSize = stubData.Length * vtableSize;
             var numMainAllocs = allStubsSize / maxAllocSize;
@@ -20,7 +23,8 @@ namespace MonoMod.Core.Platforms.Architectures {
             var mainAllocBuf = mainAllocArr.AsSpan().Slice(0, mainAllocSize);
 
             // we want to fill the buffer once, then for each alloc, only set the indicies
-            for (var i = 0; i < numPerAlloc; i++) {
+            for (var i = 0; i < numPerAlloc; i++)
+            {
                 stubData.CopyTo(mainAllocBuf.Slice(i * stubData.Length));
             }
 
@@ -28,12 +32,14 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             // now we want to start making our allocations and filling the input vtable pointer
             // we will be using the same alloc request for all of them
-            var allocReq = new AllocationRequest(mainAllocSize) {
+            var allocReq = new AllocationRequest(mainAllocSize)
+            {
                 Alignment = IntPtr.Size,
                 Executable = true
             };
 
-            for (var i = 0; i < numMainAllocs; i++) {
+            for (var i = 0; i < numMainAllocs; i++)
+            {
                 Helpers.Assert(system.MemoryAllocator.TryAllocate(allocReq, out var alloc));
                 allocs[i] = alloc;
 
@@ -46,7 +52,8 @@ namespace MonoMod.Core.Platforms.Architectures {
             }
 
             // now, if we need one final alloc, do that
-            if (lastAllocSize > 0) {
+            if (lastAllocSize > 0)
+            {
                 allocReq = allocReq with { Size = lastAllocSize };
 
                 Helpers.Assert(system.MemoryAllocator.TryAllocate(allocReq, out var alloc));
@@ -64,19 +71,24 @@ namespace MonoMod.Core.Platforms.Architectures {
 
             return allocs;
 
-            static void FillBufferIndicies(int stubSize, int indexOffs, int numPerAlloc, int i, Span<byte> mainAllocBuf, bool premul) {
-                for (var j = 0; j < numPerAlloc; j++) {
+            static void FillBufferIndicies(int stubSize, int indexOffs, int numPerAlloc, int i, Span<byte> mainAllocBuf, bool premul)
+            {
+                for (var j = 0; j < numPerAlloc; j++)
+                {
                     ref var indexBase = ref mainAllocBuf[j * stubSize + indexOffs];
                     var index = (uint)(numPerAlloc * i + j);
-                    if (premul) {
+                    if (premul)
+                    {
                         index *= (uint)IntPtr.Size;
                     }
                     Unsafe.WriteUnaligned(ref indexBase, index);
                 }
             }
 
-            static void FillVtbl(int stubSize, int baseIndex, ref IntPtr vtblBase, int numEntries, nint baseAddr) {
-                for (var i = 0; i < numEntries; i++) {
+            static void FillVtbl(int stubSize, int baseIndex, ref IntPtr vtblBase, int numEntries, nint baseAddr)
+            {
+                for (var i = 0; i < numEntries; i++)
+                {
                     Unsafe.Add(ref vtblBase, baseIndex + i) = baseAddr + stubSize * i;
                 }
             }

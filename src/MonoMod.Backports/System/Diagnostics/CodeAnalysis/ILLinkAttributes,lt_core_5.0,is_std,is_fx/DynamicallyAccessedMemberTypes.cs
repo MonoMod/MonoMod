@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace System.Diagnostics.CodeAnalysis {
+namespace System.Diagnostics.CodeAnalysis
+{
     /// <summary>
     /// Specifies the types of members that are dynamically accessed.
     ///
@@ -9,7 +10,8 @@ namespace System.Diagnostics.CodeAnalysis {
     /// bitwise combination of its member values.
     /// </summary>
     [Flags]
-    public enum DynamicallyAccessedMemberTypes {
+    public enum DynamicallyAccessedMemberTypes
+    {
         /// <summary>
         /// Specifies no members.
         /// </summary>

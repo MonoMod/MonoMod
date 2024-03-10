@@ -10,25 +10,31 @@ using System.Reflection.Emit;
 using System.Diagnostics.SymbolStore;
 #endif
 
-namespace MonoMod.Utils {
-    internal static partial class _DMDEmit {
+namespace MonoMod.Utils
+{
+    internal static partial class _DMDEmit
+    {
 
         private static readonly Dictionary<short, System.Reflection.Emit.OpCode> _ReflOpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
         private static readonly Dictionary<short, Mono.Cecil.Cil.OpCode> _CecilOpCodes = new Dictionary<short, Mono.Cecil.Cil.OpCode>();
 
-        static _DMDEmit() {
-            foreach (var field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+        static _DMDEmit()
+        {
+            foreach (var field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
                 var reflOpCode = (System.Reflection.Emit.OpCode)field.GetValue(null)!;
                 _ReflOpCodes[reflOpCode.Value] = reflOpCode;
             }
 
-            foreach (var field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var field in typeof(Mono.Cecil.Cil.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
                 var cecilOpCode = (Mono.Cecil.Cil.OpCode)field.GetValue(null)!;
                 _CecilOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
         }
 
-        public static void Generate(DynamicMethodDefinition dmd, MethodBase _mb, ILGenerator il) {
+        public static void Generate(DynamicMethodDefinition dmd, MethodBase _mb, ILGenerator il)
+        {
             var def = dmd.Definition ?? throw new InvalidOperationException();
             var dm = _mb as DynamicMethod;
 #if NETFRAMEWORK
@@ -46,8 +52,10 @@ namespace MonoMod.Utils {
             var defInfo = dmd.Debug ? def.DebugInformation : null;
 #endif
 
-            if (dm != null) {
-                foreach (var param in def.Parameters) {
+            if (dm != null)
+            {
+                foreach (var param in def.Parameters)
+                {
                     dm.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes)param.Attributes, param.Name);
                 }
             }
@@ -60,7 +68,8 @@ namespace MonoMod.Utils {
 #endif
 
             var locals = def.Body.Variables.Select(
-                var => {
+                var =>
+                {
                     var local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
 #if NETFRAMEWORK && !CECIL0_9
                     if (mb != null && defInfo != null && defInfo.TryGetName(var, out var name)) {
@@ -73,13 +82,17 @@ namespace MonoMod.Utils {
 
             // Pre-pass - Set up label map.
             var labelMap = new Dictionary<Instruction, Label>();
-            foreach (var instr in def.Body.Instructions) {
-                if (instr.Operand is Instruction[] targets) {
+            foreach (var instr in def.Body.Instructions)
+            {
+                if (instr.Operand is Instruction[] targets)
+                {
                     foreach (var target in targets)
                         if (!labelMap.ContainsKey(target))
                             labelMap[target] = il.DefineLabel();
 
-                } else if (instr.Operand is Instruction target) {
+                }
+                else if (instr.Operand is Instruction target)
+                {
                     if (!labelMap.ContainsKey(target))
                         labelMap[target] = il.DefineLabel();
                 }
@@ -92,7 +105,8 @@ namespace MonoMod.Utils {
             var paramOffs = def.HasThis ? 1 : 0;
             var emitArgs = new object?[2];
             var checkTryEndEarly = false;
-            foreach (var instr in def.Body.Instructions) {
+            foreach (var instr in def.Body.Instructions)
+            {
                 if (labelMap.TryGetValue(instr, out var label))
                     il.MarkLabel(label);
 
@@ -111,17 +125,25 @@ namespace MonoMod.Utils {
                 }
 #endif
 
-                foreach (var handler in def.Body.ExceptionHandlers) {
-                    if (checkTryEndEarly && handler.HandlerEnd == instr) {
+                foreach (var handler in def.Body.ExceptionHandlers)
+                {
+                    if (checkTryEndEarly && handler.HandlerEnd == instr)
+                    {
                         il.EndExceptionBlock();
                     }
 
-                    if (handler.TryStart == instr) {
+                    if (handler.TryStart == instr)
+                    {
                         il.BeginExceptionBlock();
-                    } else if (handler.FilterStart == instr) {
+                    }
+                    else if (handler.FilterStart == instr)
+                    {
                         il.BeginExceptFilterBlock();
-                    } else if (handler.HandlerStart == instr) {
-                        switch (handler.HandlerType) {
+                    }
+                    else if (handler.HandlerStart == instr)
+                    {
+                        switch (handler.HandlerType)
+                        {
                             case ExceptionHandlerType.Filter:
                                 il.BeginCatchBlock(null!); // This parameter should be null for filter blocks, even though the compiler doesn't thihnk so.
                                 break;
@@ -139,8 +161,10 @@ namespace MonoMod.Utils {
                     }
 
                     // Avoid duplicate endfilter / endfinally
-                    if (handler.HandlerStart == instr.Next) {
-                        switch (handler.HandlerType) {
+                    if (handler.HandlerStart == instr.Next)
+                    {
+                        switch (handler.HandlerType)
+                        {
                             case ExceptionHandlerType.Filter:
                                 if (instr.OpCode == Mono.Cecil.Cil.OpCodes.Endfilter)
                                     goto SkipEmit;
@@ -155,26 +179,36 @@ namespace MonoMod.Utils {
 
                 if (instr.OpCode.OperandType == Mono.Cecil.Cil.OperandType.InlineNone)
                     il.Emit(_ReflOpCodes[instr.OpCode.Value]);
-                else {
+                else
+                {
                     var operand = instr.Operand;
 
-                    if (operand is Instruction[] targets) {
+                    if (operand is Instruction[] targets)
+                    {
                         operand = targets.Select(target => labelMap[target]).ToArray();
                         // Let's hope that the JIT treats the long forms identically to the short forms.
                         instr.OpCode = instr.OpCode.ToLongOp();
 
-                    } else if (operand is Instruction target) {
+                    }
+                    else if (operand is Instruction target)
+                    {
                         operand = labelMap[target];
                         // Let's hope that the JIT treats the long forms identically to the short forms.
                         instr.OpCode = instr.OpCode.ToLongOp();
 
-                    } else if (operand is VariableDefinition var) {
+                    }
+                    else if (operand is VariableDefinition var)
+                    {
                         operand = locals[var.Index];
 
-                    } else if (operand is ParameterDefinition param) {
+                    }
+                    else if (operand is ParameterDefinition param)
+                    {
                         operand = param.Index + paramOffs;
 
-                    } else if (operand is MemberReference mref) {
+                    }
+                    else if (operand is MemberReference mref)
+                    {
                         var member = mref == def ? _mb : mref.ResolveReflection();
                         operand = member;
 #if NETFRAMEWORK
@@ -195,8 +229,11 @@ namespace MonoMod.Utils {
                         }
 #endif
 
-                    } else if (operand is CallSite csite) {
-                        if (dm != null) {
+                    }
+                    else if (operand is CallSite csite)
+                    {
+                        if (dm != null)
+                        {
                             // SignatureHelper in unmanaged contexts cannot be fully made use of for DynamicMethods.
                             _EmitCallSite(dm, il, _ReflOpCodes[instr.OpCode.Value], csite);
                             continue;
@@ -241,9 +278,12 @@ namespace MonoMod.Utils {
                     il.DynEmit(_ReflOpCodes[instr.OpCode.Value], operand);
                 }
 
-                if (!checkTryEndEarly) {
-                    foreach (var handler in def.Body.ExceptionHandlers) {
-                        if (handler.HandlerEnd == instr.Next) {
+                if (!checkTryEndEarly)
+                {
+                    foreach (var handler in def.Body.ExceptionHandlers)
+                    {
+                        if (handler.HandlerEnd == instr.Next)
+                        {
                             il.EndExceptionBlock();
                         }
                     }
@@ -258,7 +298,8 @@ namespace MonoMod.Utils {
             }
         }
 
-        public static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type>? modReq = null, List<Type>? modOpt = null) {
+        public static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type>? modReq = null, List<Type>? modOpt = null)
+        {
             if (modReq is null)
                 modReq = new List<Type>();
             else
@@ -273,8 +314,10 @@ namespace MonoMod.Utils {
                 var mod = typeRef;
                 mod is TypeSpecification modSpec;
                 mod = modSpec.ElementType
-            ) {
-                switch (mod) {
+            )
+            {
+                switch (mod)
+                {
                     case RequiredModifierType paramTypeModReq:
                         modReq.Add(paramTypeModReq.ModifierType.ResolveReflection());
                         break;

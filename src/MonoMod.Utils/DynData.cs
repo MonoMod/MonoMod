@@ -4,8 +4,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.Utils {
-    public sealed class DynData<TTarget> : IDisposable where TTarget : class {
+namespace MonoMod.Utils
+{
+    public sealed class DynData<TTarget> : IDisposable where TTarget : class
+    {
 
         public static event Action<DynData<TTarget>, TTarget?>? OnInitialize;
 
@@ -20,18 +22,22 @@ namespace MonoMod.Utils {
         private TTarget? KeepAlive;
         private readonly _Data_ _Data;
 
-        private class _Data_ : IDisposable {
+        private class _Data_ : IDisposable
+        {
             public readonly Dictionary<string, Func<TTarget, object?>> Getters = new();
             public readonly Dictionary<string, Action<TTarget, object?>> Setters = new();
             public readonly Dictionary<string, object?> Data = new();
             public readonly HashSet<string> Disposable = new();
 
-            ~_Data_() {
+            ~_Data_()
+            {
                 Dispose();
             }
 
-            public void Dispose() {
-                lock (Data) {
+            public void Dispose()
+            {
+                lock (Data)
+                {
                     if (Data.Count == 0)
                         return;
 
@@ -50,24 +56,29 @@ namespace MonoMod.Utils {
         public Dictionary<string, Action<TTarget, object?>> Setters => _Data.Setters;
         public Dictionary<string, object?> Data => _Data.Data;
 
-        static DynData() {
+        static DynData()
+        {
 
-            foreach (var field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+            foreach (var field in typeof(TTarget).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+            {
                 var name = field.Name;
                 _SpecialGetters[name] = (obj) => field.GetValue(obj);
                 _SpecialSetters[name] = (obj, value) => field.SetValue(obj, value);
             }
 
-            foreach (var prop in typeof(TTarget).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+            foreach (var prop in typeof(TTarget).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+            {
                 var name = prop.Name;
 
                 var get = prop.GetGetMethod(true);
-                if (get != null) {
+                if (get != null)
+                {
                     _SpecialGetters[name] = (obj) => get.Invoke(obj, ArrayEx.Empty<object?>());
                 }
 
                 var set = prop.GetSetMethod(true);
-                if (set != null) {
+                if (set != null)
+                {
                     _SpecialSetters[name] = (obj, value) => set.Invoke(obj, new[] { value });
                 }
             }
@@ -76,8 +87,10 @@ namespace MonoMod.Utils {
         public bool IsAlive => Weak == null || Weak.SafeGetIsAlive();
         public TTarget Target => (TTarget)Weak?.SafeGetTarget()!;
 
-        public object? this[string name] {
-            get {
+        public object? this[string name]
+        {
+            get
+            {
                 if (_SpecialGetters.TryGetValue(name, out var cb) ||
                     Getters.TryGetValue(name, out cb))
                     return cb(Target);
@@ -87,9 +100,11 @@ namespace MonoMod.Utils {
 
                 return null;
             }
-            set {
+            set
+            {
                 if (_SpecialSetters.TryGetValue(name, out var cb) ||
-                    Setters.TryGetValue(name, out cb)) {
+                    Setters.TryGetValue(name, out cb))
+                {
                     cb(Target, value);
                     return;
                 }
@@ -102,20 +117,25 @@ namespace MonoMod.Utils {
         }
 
         public DynData()
-            : this(null, false) {
+            : this(null, false)
+        {
         }
 
         public DynData(TTarget? obj)
-            : this(obj, true) {
+            : this(obj, true)
+        {
         }
 
-        public DynData(TTarget? obj, bool keepAlive) {
-            if (obj != null) {
+        public DynData(TTarget? obj, bool keepAlive)
+        {
+            if (obj != null)
+            {
                 var weak = new WeakReference(obj);
 
                 object key = obj;
 
-                if (!_DataMap.TryGetValue(key, out var data)) {
+                if (!_DataMap.TryGetValue(key, out var data))
+                {
                     data = new _Data_();
                     _DataMap.Add(key, data);
                 }
@@ -125,7 +145,9 @@ namespace MonoMod.Utils {
                 if (keepAlive)
                     KeepAlive = obj;
 
-            } else {
+            }
+            else
+            {
                 _Data = _DataStatic;
             }
 
@@ -138,28 +160,34 @@ namespace MonoMod.Utils {
         public void Set<T>(string name, T value)
             => this[name] = value;
 
-        public void RegisterProperty(string name, Func<TTarget, object?> getter, Action<TTarget, object?> setter) {
+        public void RegisterProperty(string name, Func<TTarget, object?> getter, Action<TTarget, object?> setter)
+        {
             Getters[name] = getter;
             Setters[name] = setter;
         }
 
-        public void UnregisterProperty(string name) {
+        public void UnregisterProperty(string name)
+        {
             Getters.Remove(name);
             Setters.Remove(name);
         }
 
-        private void Dispose(bool disposing) {
+        private void Dispose(bool disposing)
+        {
             KeepAlive = default;
-            if (disposing) {
+            if (disposing)
+            {
                 _Data.Dispose();
             }
         }
 
-        ~DynData() {
+        ~DynData()
+        {
             Dispose(false);
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
             Dispose(true);
             GC.SuppressFinalize(this);
         }

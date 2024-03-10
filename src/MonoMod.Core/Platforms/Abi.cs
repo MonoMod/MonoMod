@@ -1,13 +1,15 @@
 ﻿using MonoMod.Utils;
 using System;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// The ABI classification of a type.
     /// </summary>
     /// <seealso cref="Abi"/>
     /// <seealso cref="Classifier"/>
-    public enum TypeClassification {
+    public enum TypeClassification
+    {
         /// <summary>
         /// The type is passed by value in a register.
         /// </summary>
@@ -45,7 +47,8 @@ namespace MonoMod.Core.Platforms {
     /// <summary>
     /// A kind of special argument used in the ABI. Used to specify argument order.
     /// </summary>
-    public enum SpecialArgumentKind {
+    public enum SpecialArgumentKind
+    {
         /// <summary>
         /// The this pointer, when one is present.
         /// </summary>
@@ -81,7 +84,8 @@ namespace MonoMod.Core.Platforms {
         ReadOnlyMemory<SpecialArgumentKind> ArgumentOrder,
         Classifier Classifier,
         bool ReturnsReturnBuffer
-    ) {
+    )
+    {
         /// <summary>
         /// Classifies a type according to the ABI.
         /// </summary>
@@ -94,7 +98,8 @@ namespace MonoMod.Core.Platforms {
         /// <param name="type">The type to classify.</param>
         /// <param name="isReturn"><see langword="true"/> if the classification is being done for a return value; <see langword="false"/> otherwise.</param>
         /// <returns>The <see cref="TypeClassification"/> for the type.</returns>
-        public TypeClassification Classify(Type type, bool isReturn) {
+        public TypeClassification Classify(Type type, bool isReturn)
+        {
             Helpers.ThrowIfArgumentNull(type);
 
             if (type == typeof(void))

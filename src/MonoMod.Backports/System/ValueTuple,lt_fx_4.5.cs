@@ -24,14 +24,16 @@ using System.Runtime.InteropServices;
 #pragma warning disable CA1051 // Do not declare visible instance fields
 // One of the major points of ValueTuple is the visible instance fields
 
-namespace System.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices
+{
     /// <summary>
     ///     Indicates that the use of <see cref="ValueTuple" /> on a member is meant to be treated as a tuple with
     ///     element names.
     /// </summary>
     [CLSCompliant(false)]
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.ReturnValue | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Event)]
-    public sealed class TupleElementNamesAttribute : Attribute {
+    public sealed class TupleElementNamesAttribute : Attribute
+    {
         private readonly string[] _transformNames;
 
         /// <summary>
@@ -59,7 +61,8 @@ namespace System.Runtime.CompilerServices {
         ///     </code>
         ///     .
         /// </remarks>
-        public TupleElementNamesAttribute(string[] transformNames) {
+        public TupleElementNamesAttribute(string[] transformNames)
+        {
             _transformNames = transformNames ?? throw new ArgumentNullException(nameof(transformNames));
         }
 
@@ -72,11 +75,13 @@ namespace System.Runtime.CompilerServices {
     }
 }
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// Helper so we can call some tuple methods recursively without knowing the underlying types.
     /// </summary>
-    internal interface IValueTupleInternal : ITuple {
+    internal interface IValueTupleInternal : ITuple
+    {
         int GetHashCode(IEqualityComparer comparer);
         string ToStringEnd();
     }
@@ -91,32 +96,38 @@ namespace System {
     /// </summary>
     [Serializable]
     public struct ValueTuple
-        : IEquatable<ValueTuple>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// Returns a value that indicates whether the current <see cref="ValueTuple"/> instance is equal to a specified object.
         /// </summary>
         /// <param name="obj">The object to compare with this instance.</param>
         /// <returns><see langword="true"/> if <paramref name="obj"/> is a <see cref="ValueTuple"/>.</returns>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple;
         }
 
         /// <summary>Returns a value indicating whether this instance is equal to a specified value.</summary>
         /// <param name="other">An instance to compare to this instance.</param>
         /// <returns>true if <paramref name="other"/> has the same value as this instance; otherwise, false.</returns>
-        public bool Equals(ValueTuple other) {
+        public bool Equals(ValueTuple other)
+        {
             return true;
         }
 
-        bool IStructuralEquatable.Equals(object? other, IEqualityComparer comparer) {
+        bool IStructuralEquatable.Equals(object? other, IEqualityComparer comparer)
+        {
             return other is ValueTuple;
         }
 
-        int IComparable.CompareTo(object? other) {
+        int IComparable.CompareTo(object? other)
+        {
             if (other is null)
                 return 1;
 
-            if (other is not ValueTuple) {
+            if (other is not ValueTuple)
+            {
                 ThrowHelper.ThrowArgumentException_TupleIncorrectType(this);
             }
 
@@ -131,15 +142,18 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple other) {
+        public int CompareTo(ValueTuple other)
+        {
             return 0;
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
             if (other is null)
                 return 1;
 
-            if (other is not ValueTuple) {
+            if (other is not ValueTuple)
+            {
                 ThrowHelper.ThrowArgumentException_TupleIncorrectType(this);
             }
 
@@ -148,15 +162,18 @@ namespace System {
 
         /// <summary>Returns the hash code for this instance.</summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return 0;
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return 0;
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return 0;
         }
 
@@ -167,11 +184,13 @@ namespace System {
         /// <remarks>
         /// The string returned by this method takes the form <c>()</c>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "()";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return ")";
         }
 
@@ -307,7 +326,8 @@ namespace System {
     /// <typeparam name="T1">The type of the tuple's only component.</typeparam>
     [Serializable]
     public struct ValueTuple<T1>
-        : IEquatable<ValueTuple<T1>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1>>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple<T1>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1>>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1}"/> instance's first component.
         /// </summary>
@@ -317,7 +337,8 @@ namespace System {
         /// Initializes a new instance of the <see cref="ValueTuple{T1}"/> value type.
         /// </summary>
         /// <param name="item1">The value of the tuple's first component.</param>
-        public ValueTuple(T1 item1) {
+        public ValueTuple(T1 item1)
+        {
             Item1 = item1;
         }
 
@@ -334,7 +355,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1> tuple && Equals(tuple);
         }
 
@@ -348,7 +370,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its field
         /// is equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1> other) {
+        public bool Equals(ValueTuple<T1> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1);
         }
 
@@ -356,9 +379,12 @@ namespace System {
             other is ValueTuple<T1> vt &&
             comparer.Equals(Item1, vt.Item1);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1> objTuple)
+                {
                     return Comparer<T1>.Default.Compare(Item1, objTuple.Item1);
                 }
 
@@ -376,13 +402,17 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1> other) {
+        public int CompareTo(ValueTuple<T1> other)
+        {
             return Comparer<T1>.Default.Compare(Item1, other.Item1);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1> objTuple)
+                {
                     return comparer.Compare(Item1, objTuple.Item1);
                 }
 
@@ -396,15 +426,18 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return Item1?.GetHashCode() ?? 0;
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return comparer.GetHashCode(Item1!);
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return comparer.GetHashCode(Item1!);
         }
 
@@ -417,11 +450,13 @@ namespace System {
         /// where <c>Item1</c> represents the value of <see cref="Item1"/>. If the field is <see langword="null"/>,
         /// it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "(" + Item1?.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return Item1?.ToString() + ")";
         }
 
@@ -433,9 +468,12 @@ namespace System {
         /// <summary>
         /// Get the element at position <param name="index"/>.
         /// </summary>
-        object? ITuple.this[int index] {
-            get {
-                if (index != 0) {
+        object? ITuple.this[int index]
+        {
+            get
+            {
+                if (index != 0)
+                {
                     throw new IndexOutOfRangeException();
                 }
                 return Item1;
@@ -451,7 +489,8 @@ namespace System {
     [Serializable]
     [StructLayout(LayoutKind.Auto)]
     public struct ValueTuple<T1, T2>
-        : IEquatable<ValueTuple<T1, T2>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2>>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple<T1, T2>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2>>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2}"/> instance's first component.
         /// </summary>
@@ -467,7 +506,8 @@ namespace System {
         /// </summary>
         /// <param name="item1">The value of the tuple's first component.</param>
         /// <param name="item2">The value of the tuple's second component.</param>
-        public ValueTuple(T1 item1, T2 item2) {
+        public ValueTuple(T1 item1, T2 item2)
+        {
             Item1 = item1;
             Item2 = item2;
         }
@@ -486,7 +526,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1, T2> tuple && Equals(tuple);
         }
 
@@ -499,7 +540,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its fields
         /// are equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1, T2> other) {
+        public bool Equals(ValueTuple<T1, T2> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
                 && EqualityComparer<T2>.Default.Equals(Item2, other.Item2);
         }
@@ -527,9 +569,12 @@ namespace System {
             comparer.Equals(Item1, vt.Item1) &&
             comparer.Equals(Item2, vt.Item2);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2> objTuple)
+                {
                     return CompareTo(objTuple);
                 }
 
@@ -547,7 +592,8 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1, T2> other) {
+        public int CompareTo(ValueTuple<T1, T2> other)
+        {
             int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
             if (c != 0)
                 return c;
@@ -555,9 +601,12 @@ namespace System {
             return Comparer<T2>.Default.Compare(Item2, other.Item2);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2> objTuple)
+                {
                     int c = comparer.Compare(Item1, objTuple.Item1);
                     if (c != 0)
                         return c;
@@ -575,21 +624,25 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return HashCode.Combine(Item1?.GetHashCode() ?? 0,
                                     Item2?.GetHashCode() ?? 0);
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
-        private int GetHashCodeCore(IEqualityComparer comparer) {
+        private int GetHashCodeCore(IEqualityComparer comparer)
+        {
             return HashCode.Combine(comparer.GetHashCode(Item1!),
                                     comparer.GetHashCode(Item2!));
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
@@ -603,11 +656,13 @@ namespace System {
         /// and <see cref="Item2"/> fields. If either field value is <see langword="null"/>,
         /// it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return Item1?.ToString() + ", " + Item2?.ToString() + ")";
         }
 
@@ -620,7 +675,8 @@ namespace System {
         /// Get the element at position <param name="index"/>.
         /// </summary>
         object? ITuple.this[int index] =>
-            index switch {
+            index switch
+            {
                 0 => Item1,
                 1 => Item2,
                 _ => throw new IndexOutOfRangeException(),
@@ -636,7 +692,8 @@ namespace System {
     [Serializable]
     [StructLayout(LayoutKind.Auto)]
     public struct ValueTuple<T1, T2, T3>
-        : IEquatable<ValueTuple<T1, T2, T3>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3>>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple<T1, T2, T3>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3>>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2, T3}"/> instance's first component.
         /// </summary>
@@ -656,7 +713,8 @@ namespace System {
         /// <param name="item1">The value of the tuple's first component.</param>
         /// <param name="item2">The value of the tuple's second component.</param>
         /// <param name="item3">The value of the tuple's third component.</param>
-        public ValueTuple(T1 item1, T2 item2, T3 item3) {
+        public ValueTuple(T1 item1, T2 item2, T3 item3)
+        {
             Item1 = item1;
             Item2 = item2;
             Item3 = item3;
@@ -675,7 +733,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1, T2, T3> tuple && Equals(tuple);
         }
 
@@ -689,7 +748,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its fields
         /// are equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1, T2, T3> other) {
+        public bool Equals(ValueTuple<T1, T2, T3> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
                 && EqualityComparer<T2>.Default.Equals(Item2, other.Item2)
                 && EqualityComparer<T3>.Default.Equals(Item3, other.Item3);
@@ -701,9 +761,12 @@ namespace System {
             comparer.Equals(Item2, vt.Item2) &&
             comparer.Equals(Item3, vt.Item3);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3> objTuple)
+                {
                     return CompareTo(objTuple);
                 }
 
@@ -721,7 +784,8 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1, T2, T3> other) {
+        public int CompareTo(ValueTuple<T1, T2, T3> other)
+        {
             int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
             if (c != 0)
                 return c;
@@ -733,9 +797,12 @@ namespace System {
             return Comparer<T3>.Default.Compare(Item3, other.Item3);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3> objTuple)
+                {
                     int c = comparer.Compare(Item1, objTuple.Item1);
                     if (c != 0)
                         return c;
@@ -757,23 +824,27 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2, T3}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return HashCode.Combine(Item1?.GetHashCode() ?? 0,
                                     Item2?.GetHashCode() ?? 0,
                                     Item3?.GetHashCode() ?? 0);
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
-        private int GetHashCodeCore(IEqualityComparer comparer) {
+        private int GetHashCodeCore(IEqualityComparer comparer)
+        {
             return HashCode.Combine(comparer.GetHashCode(Item1!),
                                     comparer.GetHashCode(Item2!),
                                     comparer.GetHashCode(Item3!));
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
@@ -785,11 +856,13 @@ namespace System {
         /// The string returned by this method takes the form <c>(Item1, Item2, Item3)</c>.
         /// If any field value is <see langword="null"/>, it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ")";
         }
 
@@ -802,7 +875,8 @@ namespace System {
         /// Get the element at position <param name="index"/>.
         /// </summary>
         object? ITuple.this[int index] =>
-            index switch {
+            index switch
+            {
                 0 => Item1,
                 1 => Item2,
                 2 => Item3,
@@ -820,7 +894,8 @@ namespace System {
     [Serializable]
     [StructLayout(LayoutKind.Auto)]
     public struct ValueTuple<T1, T2, T3, T4>
-        : IEquatable<ValueTuple<T1, T2, T3, T4>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4>>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple<T1, T2, T3, T4>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4>>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2, T3, T4}"/> instance's first component.
         /// </summary>
@@ -845,7 +920,8 @@ namespace System {
         /// <param name="item2">The value of the tuple's second component.</param>
         /// <param name="item3">The value of the tuple's third component.</param>
         /// <param name="item4">The value of the tuple's fourth component.</param>
-        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4) {
+        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4)
+        {
             Item1 = item1;
             Item2 = item2;
             Item3 = item3;
@@ -865,7 +941,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1, T2, T3, T4> tuple && Equals(tuple);
         }
 
@@ -879,7 +956,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its fields
         /// are equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1, T2, T3, T4> other) {
+        public bool Equals(ValueTuple<T1, T2, T3, T4> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
                 && EqualityComparer<T2>.Default.Equals(Item2, other.Item2)
                 && EqualityComparer<T3>.Default.Equals(Item3, other.Item3)
@@ -893,9 +971,12 @@ namespace System {
             comparer.Equals(Item3, vt.Item3) &&
             comparer.Equals(Item4, vt.Item4);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4> objTuple)
+                {
                     return CompareTo(objTuple);
                 }
 
@@ -913,7 +994,8 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1, T2, T3, T4> other) {
+        public int CompareTo(ValueTuple<T1, T2, T3, T4> other)
+        {
             int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
             if (c != 0)
                 return c;
@@ -929,9 +1011,12 @@ namespace System {
             return Comparer<T4>.Default.Compare(Item4, other.Item4);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4> objTuple)
+                {
                     int c = comparer.Compare(Item1, objTuple.Item1);
                     if (c != 0)
                         return c;
@@ -957,25 +1042,29 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2, T3, T4}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return HashCode.Combine(Item1?.GetHashCode() ?? 0,
                                     Item2?.GetHashCode() ?? 0,
                                     Item3?.GetHashCode() ?? 0,
                                     Item4?.GetHashCode() ?? 0);
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
-        private int GetHashCodeCore(IEqualityComparer comparer) {
+        private int GetHashCodeCore(IEqualityComparer comparer)
+        {
             return HashCode.Combine(comparer.GetHashCode(Item1!),
                                     comparer.GetHashCode(Item2!),
                                     comparer.GetHashCode(Item3!),
                                     comparer.GetHashCode(Item4!));
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
@@ -987,11 +1076,13 @@ namespace System {
         /// The string returned by this method takes the form <c>(Item1, Item2, Item3, Item4)</c>.
         /// If any field value is <see langword="null"/>, it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ")";
         }
 
@@ -1004,7 +1095,8 @@ namespace System {
         /// Get the element at position <param name="index"/>.
         /// </summary>
         object? ITuple.this[int index] =>
-            index switch {
+            index switch
+            {
                 0 => Item1,
                 1 => Item2,
                 2 => Item3,
@@ -1024,7 +1116,8 @@ namespace System {
     [Serializable]
     [StructLayout(LayoutKind.Auto)]
     public struct ValueTuple<T1, T2, T3, T4, T5>
-        : IEquatable<ValueTuple<T1, T2, T3, T4, T5>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4, T5>>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple<T1, T2, T3, T4, T5>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4, T5>>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2, T3, T4, T5}"/> instance's first component.
         /// </summary>
@@ -1054,7 +1147,8 @@ namespace System {
         /// <param name="item3">The value of the tuple's third component.</param>
         /// <param name="item4">The value of the tuple's fourth component.</param>
         /// <param name="item5">The value of the tuple's fifth component.</param>
-        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5) {
+        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5)
+        {
             Item1 = item1;
             Item2 = item2;
             Item3 = item3;
@@ -1075,7 +1169,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1, T2, T3, T4, T5> tuple && Equals(tuple);
         }
 
@@ -1089,7 +1184,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its fields
         /// are equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1, T2, T3, T4, T5> other) {
+        public bool Equals(ValueTuple<T1, T2, T3, T4, T5> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
                 && EqualityComparer<T2>.Default.Equals(Item2, other.Item2)
                 && EqualityComparer<T3>.Default.Equals(Item3, other.Item3)
@@ -1104,9 +1200,12 @@ namespace System {
             comparer.Equals(Item3, vt.Item3) &&
             comparer.Equals(Item5, vt.Item5);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5> objTuple)
+                {
                     return CompareTo(objTuple);
                 }
 
@@ -1124,7 +1223,8 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5> other) {
+        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5> other)
+        {
             int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
             if (c != 0)
                 return c;
@@ -1144,9 +1244,12 @@ namespace System {
             return Comparer<T5>.Default.Compare(Item5, other.Item5);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5> objTuple)
+                {
                     int c = comparer.Compare(Item1, objTuple.Item1);
                     if (c != 0)
                         return c;
@@ -1176,7 +1279,8 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2, T3, T4, T5}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return HashCode.Combine(Item1?.GetHashCode() ?? 0,
                                     Item2?.GetHashCode() ?? 0,
                                     Item3?.GetHashCode() ?? 0,
@@ -1184,11 +1288,13 @@ namespace System {
                                     Item5?.GetHashCode() ?? 0);
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
-        private int GetHashCodeCore(IEqualityComparer comparer) {
+        private int GetHashCodeCore(IEqualityComparer comparer)
+        {
             return HashCode.Combine(comparer.GetHashCode(Item1!),
                                     comparer.GetHashCode(Item2!),
                                     comparer.GetHashCode(Item3!),
@@ -1196,7 +1302,8 @@ namespace System {
                                     comparer.GetHashCode(Item5!));
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
@@ -1208,11 +1315,13 @@ namespace System {
         /// The string returned by this method takes the form <c>(Item1, Item2, Item3, Item4, Item5)</c>.
         /// If any field value is <see langword="null"/>, it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ")";
         }
 
@@ -1225,7 +1334,8 @@ namespace System {
         /// Get the element at position <param name="index"/>.
         /// </summary>
         object? ITuple.this[int index] =>
-            index switch {
+            index switch
+            {
                 0 => Item1,
                 1 => Item2,
                 2 => Item3,
@@ -1247,7 +1357,8 @@ namespace System {
     [Serializable]
     [StructLayout(LayoutKind.Auto)]
     public struct ValueTuple<T1, T2, T3, T4, T5, T6>
-        : IEquatable<ValueTuple<T1, T2, T3, T4, T5, T6>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4, T5, T6>>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple<T1, T2, T3, T4, T5, T6>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4, T5, T6>>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2, T3, T4, T5, T6}"/> instance's first component.
         /// </summary>
@@ -1282,7 +1393,8 @@ namespace System {
         /// <param name="item4">The value of the tuple's fourth component.</param>
         /// <param name="item5">The value of the tuple's fifth component.</param>
         /// <param name="item6">The value of the tuple's sixth component.</param>
-        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6) {
+        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6)
+        {
             Item1 = item1;
             Item2 = item2;
             Item3 = item3;
@@ -1304,7 +1416,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1, T2, T3, T4, T5, T6> tuple && Equals(tuple);
         }
 
@@ -1318,7 +1431,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its fields
         /// are equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1, T2, T3, T4, T5, T6> other) {
+        public bool Equals(ValueTuple<T1, T2, T3, T4, T5, T6> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
                 && EqualityComparer<T2>.Default.Equals(Item2, other.Item2)
                 && EqualityComparer<T3>.Default.Equals(Item3, other.Item3)
@@ -1335,9 +1449,12 @@ namespace System {
             comparer.Equals(Item5, vt.Item5) &&
             comparer.Equals(Item6, vt.Item6);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5, T6> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5, T6> objTuple)
+                {
                     return CompareTo(objTuple);
                 }
 
@@ -1355,7 +1472,8 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5, T6> other) {
+        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5, T6> other)
+        {
             int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
             if (c != 0)
                 return c;
@@ -1379,9 +1497,12 @@ namespace System {
             return Comparer<T6>.Default.Compare(Item6, other.Item6);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5, T6> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5, T6> objTuple)
+                {
                     int c = comparer.Compare(Item1, objTuple.Item1);
                     if (c != 0)
                         return c;
@@ -1415,7 +1536,8 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2, T3, T4, T5, T6}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return HashCode.Combine(Item1?.GetHashCode() ?? 0,
                                     Item2?.GetHashCode() ?? 0,
                                     Item3?.GetHashCode() ?? 0,
@@ -1424,11 +1546,13 @@ namespace System {
                                     Item6?.GetHashCode() ?? 0);
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
-        private int GetHashCodeCore(IEqualityComparer comparer) {
+        private int GetHashCodeCore(IEqualityComparer comparer)
+        {
             return HashCode.Combine(comparer.GetHashCode(Item1!),
                                     comparer.GetHashCode(Item2!),
                                     comparer.GetHashCode(Item3!),
@@ -1437,7 +1561,8 @@ namespace System {
                                     comparer.GetHashCode(Item6!));
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
@@ -1449,11 +1574,13 @@ namespace System {
         /// The string returned by this method takes the form <c>(Item1, Item2, Item3, Item4, Item5, Item6)</c>.
         /// If any field value is <see langword="null"/>, it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ")";
         }
 
@@ -1466,7 +1593,8 @@ namespace System {
         /// Get the element at position <param name="index"/>.
         /// </summary>
         object? ITuple.this[int index] =>
-            index switch {
+            index switch
+            {
                 0 => Item1,
                 1 => Item2,
                 2 => Item3,
@@ -1490,7 +1618,8 @@ namespace System {
     [Serializable]
     [StructLayout(LayoutKind.Auto)]
     public struct ValueTuple<T1, T2, T3, T4, T5, T6, T7>
-        : IEquatable<ValueTuple<T1, T2, T3, T4, T5, T6, T7>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4, T5, T6, T7>>, IValueTupleInternal, ITuple {
+        : IEquatable<ValueTuple<T1, T2, T3, T4, T5, T6, T7>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4, T5, T6, T7>>, IValueTupleInternal, ITuple
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2, T3, T4, T5, T6, T7}"/> instance's first component.
         /// </summary>
@@ -1530,7 +1659,8 @@ namespace System {
         /// <param name="item5">The value of the tuple's fifth component.</param>
         /// <param name="item6">The value of the tuple's sixth component.</param>
         /// <param name="item7">The value of the tuple's seventh component.</param>
-        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7) {
+        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7)
+        {
             Item1 = item1;
             Item2 = item2;
             Item3 = item3;
@@ -1553,7 +1683,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1, T2, T3, T4, T5, T6, T7> tuple && Equals(tuple);
         }
 
@@ -1567,7 +1698,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its fields
         /// are equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1, T2, T3, T4, T5, T6, T7> other) {
+        public bool Equals(ValueTuple<T1, T2, T3, T4, T5, T6, T7> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
                 && EqualityComparer<T2>.Default.Equals(Item2, other.Item2)
                 && EqualityComparer<T3>.Default.Equals(Item3, other.Item3)
@@ -1586,9 +1718,12 @@ namespace System {
             comparer.Equals(Item6, vt.Item6) &&
             comparer.Equals(Item7, vt.Item7);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7> objTuple)
+                {
                     return CompareTo(objTuple);
                 }
 
@@ -1606,7 +1741,8 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5, T6, T7> other) {
+        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5, T6, T7> other)
+        {
             int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
             if (c != 0)
                 return c;
@@ -1634,9 +1770,12 @@ namespace System {
             return Comparer<T7>.Default.Compare(Item7, other.Item7);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7> objTuple)
+                {
                     int c = comparer.Compare(Item1, objTuple.Item1);
                     if (c != 0)
                         return c;
@@ -1674,7 +1813,8 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2, T3, T4, T5, T6, T7}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return HashCode.Combine(Item1?.GetHashCode() ?? 0,
                                     Item2?.GetHashCode() ?? 0,
                                     Item3?.GetHashCode() ?? 0,
@@ -1684,11 +1824,13 @@ namespace System {
                                     Item7?.GetHashCode() ?? 0);
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
-        private int GetHashCodeCore(IEqualityComparer comparer) {
+        private int GetHashCodeCore(IEqualityComparer comparer)
+        {
             return HashCode.Combine(comparer.GetHashCode(Item1!),
                                     comparer.GetHashCode(Item2!),
                                     comparer.GetHashCode(Item3!),
@@ -1698,7 +1840,8 @@ namespace System {
                                     comparer.GetHashCode(Item7!));
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
@@ -1710,11 +1853,13 @@ namespace System {
         /// The string returned by this method takes the form <c>(Item1, Item2, Item3, Item4, Item5, Item6, Item7)</c>.
         /// If any field value is <see langword="null"/>, it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
+        public override string ToString()
+        {
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
+        string IValueTupleInternal.ToStringEnd()
+        {
             return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ")";
         }
 
@@ -1727,7 +1872,8 @@ namespace System {
         /// Get the element at position <param name="index"/>.
         /// </summary>
         object? ITuple.this[int index] =>
-            index switch {
+            index switch
+            {
                 0 => Item1,
                 1 => Item2,
                 2 => Item3,
@@ -1754,7 +1900,8 @@ namespace System {
     [StructLayout(LayoutKind.Auto)]
     public struct ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest>
     : IEquatable<ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest>>, IStructuralEquatable, IStructuralComparable, IComparable, IComparable<ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest>>, IValueTupleInternal, ITuple
-    where TRest : struct {
+    where TRest : struct
+    {
         /// <summary>
         /// The current <see cref="ValueTuple{T1, T2, T3, T4, T5, T6, T7, TRest}"/> instance's first component.
         /// </summary>
@@ -1799,8 +1946,10 @@ namespace System {
         /// <param name="item6">The value of the tuple's sixth component.</param>
         /// <param name="item7">The value of the tuple's seventh component.</param>
         /// <param name="rest">The value of the tuple's eight component.</param>
-        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, TRest rest) {
-            if (rest is not IValueTupleInternal) {
+        public ValueTuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, TRest rest)
+        {
+            if (rest is not IValueTupleInternal)
+            {
                 throw new ArgumentException("Last argument is not a ValueTuple");
             }
 
@@ -1827,7 +1976,8 @@ namespace System {
         ///     <item><description>Its components are equal to those of the current instance. Equality is determined by the default object equality comparer for each component.</description></item>
         /// </list>
         /// </remarks>
-        public override bool Equals([NotNullWhen(true)] object? obj) {
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
             return obj is ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> tuple && Equals(tuple);
         }
 
@@ -1841,7 +1991,8 @@ namespace System {
         /// The <paramref name="other"/> parameter is considered to be equal to the current instance if each of its fields
         /// are equal to that of the current instance, using the default comparer for that field's type.
         /// </remarks>
-        public bool Equals(ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> other) {
+        public bool Equals(ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> other)
+        {
             return EqualityComparer<T1>.Default.Equals(Item1, other.Item1)
                 && EqualityComparer<T2>.Default.Equals(Item2, other.Item2)
                 && EqualityComparer<T3>.Default.Equals(Item3, other.Item3)
@@ -1862,9 +2013,12 @@ namespace System {
             comparer.Equals(Item7, vt.Item7) &&
             comparer.Equals(Rest, vt.Rest);
 
-        int IComparable.CompareTo(object? other) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple) {
+        int IComparable.CompareTo(object? other)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple)
+                {
                     return CompareTo(objTuple);
                 }
 
@@ -1882,7 +2036,8 @@ namespace System {
         /// instance is equal to <paramref name="other"/>, and greater than zero if this instance is greater
         /// than <paramref name="other"/>.
         /// </returns>
-        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> other) {
+        public int CompareTo(ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> other)
+        {
             int c = Comparer<T1>.Default.Compare(Item1, other.Item1);
             if (c != 0)
                 return c;
@@ -1914,9 +2069,12 @@ namespace System {
             return Comparer<TRest>.Default.Compare(Rest, other.Rest);
         }
 
-        int IStructuralComparable.CompareTo(object? other, IComparer comparer) {
-            if (other is not null) {
-                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple) {
+        int IStructuralComparable.CompareTo(object? other, IComparer comparer)
+        {
+            if (other is not null)
+            {
+                if (other is ValueTuple<T1, T2, T3, T4, T5, T6, T7, TRest> objTuple)
+                {
                     int c = comparer.Compare(Item1, objTuple.Item1);
                     if (c != 0)
                         return c;
@@ -1958,9 +2116,11 @@ namespace System {
         /// Returns the hash code for the current <see cref="ValueTuple{T1, T2, T3, T4, T5, T6, T7, TRest}"/> instance.
         /// </summary>
         /// <returns>A 32-bit signed integer hash code.</returns>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             // We want to have a limited hash in this case. We'll use the first 7 elements of the tuple
-            if (Rest is not IValueTupleInternal) {
+            if (Rest is not IValueTupleInternal)
+            {
                 return HashCode.Combine(Item1?.GetHashCode() ?? 0,
                                         Item2?.GetHashCode() ?? 0,
                                         Item3?.GetHashCode() ?? 0,
@@ -1972,13 +2132,15 @@ namespace System {
 
             int size = ((IValueTupleInternal)Rest).Length;
             int restHashCode = Rest.GetHashCode();
-            if (size >= 8) {
+            if (size >= 8)
+            {
                 return restHashCode;
             }
 
             // In this case, the rest member has less than 8 elements so we need to combine some of our elements with the elements in rest
             int k = 8 - size;
-            switch (k) {
+            switch (k)
+            {
                 case 1:
                     return HashCode.Combine(Item7?.GetHashCode() ?? 0,
                                             restHashCode);
@@ -2028,13 +2190,16 @@ namespace System {
             return -1;
         }
 
-        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer) {
+        int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
-        private int GetHashCodeCore(IEqualityComparer comparer) {
+        private int GetHashCodeCore(IEqualityComparer comparer)
+        {
             // We want to have a limited hash in this case. We'll use the first 7 elements of the tuple
-            if (Rest is not IValueTupleInternal rest) {
+            if (Rest is not IValueTupleInternal rest)
+            {
                 return HashCode.Combine(comparer.GetHashCode(Item1!), comparer.GetHashCode(Item2!), comparer.GetHashCode(Item3!),
                                         comparer.GetHashCode(Item4!), comparer.GetHashCode(Item5!), comparer.GetHashCode(Item6!),
                                         comparer.GetHashCode(Item7!));
@@ -2042,13 +2207,15 @@ namespace System {
 
             int size = rest.Length;
             int restHashCode = rest.GetHashCode(comparer);
-            if (size >= 8) {
+            if (size >= 8)
+            {
                 return restHashCode;
             }
 
             // In this case, the rest member has less than 8 elements so we need to combine some our elements with the elements in rest
             int k = 8 - size;
-            switch (k) {
+            switch (k)
+            {
                 case 1:
                     return HashCode.Combine(comparer.GetHashCode(Item7!),
                                             restHashCode);
@@ -2098,7 +2265,8 @@ namespace System {
             return -1;
         }
 
-        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer) {
+        int IValueTupleInternal.GetHashCode(IEqualityComparer comparer)
+        {
             return GetHashCodeCore(comparer);
         }
 
@@ -2110,16 +2278,20 @@ namespace System {
         /// The string returned by this method takes the form <c>(Item1, Item2, Item3, Item4, Item5, Item6, Item7, Rest)</c>.
         /// If any field value is <see langword="null"/>, it is represented as <see cref="string.Empty"/>.
         /// </remarks>
-        public override string ToString() {
-            if (Rest is IValueTupleInternal) {
+        public override string ToString()
+        {
+            if (Rest is IValueTupleInternal)
+            {
                 return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + ((IValueTupleInternal)Rest).ToStringEnd();
             }
 
             return "(" + Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + Rest.ToString() + ")";
         }
 
-        string IValueTupleInternal.ToStringEnd() {
-            if (Rest is IValueTupleInternal) {
+        string IValueTupleInternal.ToStringEnd()
+        {
+            if (Rest is IValueTupleInternal)
+            {
                 return Item1?.ToString() + ", " + Item2?.ToString() + ", " + Item3?.ToString() + ", " + Item4?.ToString() + ", " + Item5?.ToString() + ", " + Item6?.ToString() + ", " + Item7?.ToString() + ", " + ((IValueTupleInternal)Rest).ToStringEnd();
             }
 
@@ -2134,9 +2306,12 @@ namespace System {
         /// <summary>
         /// Get the element at position <param name="index"/>.
         /// </summary>
-        object? ITuple.this[int index] {
-            get {
-                switch (index) {
+        object? ITuple.this[int index]
+        {
+            get
+            {
+                switch (index)
+                {
                     case 0:
                         return Item1;
                     case 1:
@@ -2153,12 +2328,14 @@ namespace System {
                         return Item7;
                 }
 
-                if (Rest is IValueTupleInternal) {
+                if (Rest is IValueTupleInternal)
+                {
                     return ((IValueTupleInternal)Rest)[index - 7];
                 }
 
 
-                if (index == 7) {
+                if (index == 7)
+                {
                     return Rest;
                 }
 

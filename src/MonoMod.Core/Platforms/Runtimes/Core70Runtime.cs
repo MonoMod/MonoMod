@@ -6,12 +6,15 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using static MonoMod.Core.Interop.CoreCLR;
 
-namespace MonoMod.Core.Platforms.Runtimes {
-    internal class Core70Runtime : Core60Runtime {
+namespace MonoMod.Core.Platforms.Runtimes
+{
+    internal class Core70Runtime : Core60Runtime
+    {
 
         private readonly IArchitecture arch;
 
-        public Core70Runtime(ISystem system, IArchitecture arch) : base(system) {
+        public Core70Runtime(ISystem system, IArchitecture arch) : base(system)
+        {
             this.arch = arch;
         }
 
@@ -37,7 +40,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
         // class ICorDynamicInfo : public ICorStaticInfo
         // class ICorJitInfo : public ICorDynamicInfo
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        protected unsafe struct ICorJitInfoWrapper {
+        protected unsafe struct ICorJitInfoWrapper
+        {
             public IntPtr Vtbl;
             public IntPtr** Wrapped;
 
@@ -48,20 +52,24 @@ namespace MonoMod.Core.Platforms.Runtimes {
             private const int DataQWords = 4;
             private fixed ulong data[DataQWords];
 
-            public ref IntPtr this[int index] {
-                get {
+            public ref IntPtr this[int index]
+            {
+                get
+                {
                     Helpers.DAssert(index < (DataQWords * sizeof(ulong)) / IntPtr.Size);
                     return ref Unsafe.Add(ref Unsafe.As<ulong, IntPtr>(ref data[0]), index);
                 }
             }
         }
 
-        protected unsafe override Delegate CreateCompileMethodDelegate(IntPtr compileMethod) {
+        protected unsafe override Delegate CreateCompileMethodDelegate(IntPtr compileMethod)
+        {
             return new JitHookDelegateHolder(this, InvokeCompileMethodPtr, compileMethod).CompileMethodHook;
         }
 
         [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Only instantiated once, and has to not be disposed otherwise stuff will break.")]
-        private sealed class JitHookDelegateHolder {
+        private sealed class JitHookDelegateHolder
+        {
             public readonly Core70Runtime Runtime;
             public readonly INativeExceptionHelper? NativeExceptionHelper;
             public readonly GetExceptionSlot? GetNativeExceptionSlot;
@@ -73,7 +81,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public readonly ReadOnlyMemory<IAllocatedMemory> iCorJitInfoWrapperAllocs;
             public readonly IntPtr iCorJitInfoWrapperVtbl;
 
-            public JitHookDelegateHolder(Core70Runtime runtime, InvokeCompileMethodPtr icmp, IntPtr compileMethod) {
+            public JitHookDelegateHolder(Core70Runtime runtime, InvokeCompileMethodPtr icmp, IntPtr compileMethod)
+            {
                 Runtime = runtime;
                 NativeExceptionHelper = runtime.NativeExceptionHelper;
                 JitHookHelpers = runtime.JitHookHelpers;
@@ -86,7 +95,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 MMDbgLog.Trace($"Allocated ICorJitInfo wrapper vtable at 0x{iCorJitInfoWrapperVtbl:x16}");
 
                 // eagerly call ICMP to ensure that it's JITted before installing the hook
-                unsafe {
+                unsafe
+                {
                     V21.CORINFO_METHOD_INFO methodInfo;
                     byte* nativeStart;
                     uint nativeSize;
@@ -96,7 +106,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 // and the same with MarshalEx.(Get/Set)LastPInvokeError
                 MarshalEx.SetLastPInvokeError(MarshalEx.GetLastPInvokeError());
                 // and the same for NativeExceptionHelper.NativeException { get; set; }
-                if (NativeExceptionHelper is { } neh) {
+                if (NativeExceptionHelper is { } neh)
+                {
                     GetNativeExceptionSlot = neh.GetExceptionSlot;
                     unsafe { _ = GetNativeExceptionSlot(); }
                 }
@@ -117,7 +128,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 V21.CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
                 uint flags,
                 byte** nativeEntry,
-                uint* nativeSizeOfCode) {
+                uint* nativeSizeOfCode)
+            {
 
                 *nativeEntry = null;
                 *nativeSizeOfCode = 0;
@@ -129,23 +141,30 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 nint nativeException = default;
                 var pNEx = GetNativeExceptionSlot is { } getNex ? getNex() : null;
                 hookEntrancy++;
-                try {
+                try
+                {
 
-                    if (hookEntrancy == 1) {
-                        try {
+                    if (hookEntrancy == 1)
+                    {
+                        try
+                        {
                             var corJitWrapper = iCorJitInfoWrapper.Value;
-                            if (corJitWrapper is null) {
+                            if (corJitWrapper is null)
+                            {
                                 // we need to create corJitWrapper
-                                var allocReq = new AllocationRequest(sizeof(ICorJitInfoWrapper)) {
+                                var allocReq = new AllocationRequest(sizeof(ICorJitInfoWrapper))
+                                {
                                     Alignment = IntPtr.Size,
                                     Executable = false
                                 };
-                                if (Runtime.System.MemoryAllocator.TryAllocate(allocReq, out var alloc)) {
+                                if (Runtime.System.MemoryAllocator.TryAllocate(allocReq, out var alloc))
+                                {
                                     iCorJitInfoWrapper.Value = corJitWrapper = alloc;
                                 }
                             }
                             // we still need to check if we were able to create it, because not creating it should not be a hard error
-                            if (corJitWrapper is not null) {
+                            if (corJitWrapper is not null)
+                            {
                                 var wrapper = (ICorJitInfoWrapper*)corJitWrapper.BaseAddress;
                                 wrapper->Vtbl = iCorJitInfoWrapperVtbl;
                                 wrapper->Wrapped = (IntPtr**)corJitInfo;
@@ -153,10 +172,15 @@ namespace MonoMod.Core.Platforms.Runtimes {
                                 (*wrapper)[ICorJitInfoWrapper.ColdCodeRW] = IntPtr.Zero;
                                 corJitInfo = (IntPtr)wrapper;
                             }
-                        } catch (Exception e) {
-                            try {
+                        }
+                        catch (Exception e)
+                        {
+                            try
+                            {
                                 MMDbgLog.Error($"Error while setting up the ICorJitInfo wrapper: {e}");
-                            } catch {
+                            }
+                            catch
+                            {
 
                             }
                         }
@@ -165,13 +189,16 @@ namespace MonoMod.Core.Platforms.Runtimes {
                     var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
                         jit, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
                     // if a native exception was caught, return immediately and skip all of our normal processing
-                    if (pNEx is not null && (nativeException = *pNEx) is not 0) {
+                    if (pNEx is not null && (nativeException = *pNEx) is not 0)
+                    {
                         MMDbgLog.Warning($"Native exception caught in JIT by exception helper (ex: 0x{nativeException:x16})");
                         return result;
                     }
 
-                    if (hookEntrancy == 1) {
-                        try {
+                    if (hookEntrancy == 1)
+                    {
+                        try
+                        {
                             // we need to make sure that we set up the wrapper to continue
                             var corJitWrapper = iCorJitInfoWrapper.Value;
                             if (corJitWrapper is null)
@@ -184,15 +211,19 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             RuntimeTypeHandle[]? genericClassArgs = null;
                             RuntimeTypeHandle[]? genericMethodArgs = null;
 
-                            if (methodInfo->args.sigInst.classInst != null) {
+                            if (methodInfo->args.sigInst.classInst != null)
+                            {
                                 genericClassArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.classInstCount];
-                                for (var i = 0; i < genericClassArgs.Length; i++) {
+                                for (var i = 0; i < genericClassArgs.Length; i++)
+                                {
                                     genericClassArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.classInst[i]).TypeHandle;
                                 }
                             }
-                            if (methodInfo->args.sigInst.methInst != null) {
+                            if (methodInfo->args.sigInst.methInst != null)
+                            {
                                 genericMethodArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.methInstCount];
-                                for (var i = 0; i < genericMethodArgs.Length; i++) {
+                                for (var i = 0; i < genericMethodArgs.Length; i++)
+                                {
                                     genericMethodArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.methInst[i]).TypeHandle;
                                 }
                             }
@@ -201,13 +232,17 @@ namespace MonoMod.Core.Platforms.Runtimes {
                             var method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
 
                             Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr)(*nativeEntry), rwEntry, *nativeSizeOfCode);
-                        } catch {
+                        }
+                        catch
+                        {
                             // eat the exception so we don't accidentally bubble up to native code
                         }
                     }
 
                     return result;
-                } finally {
+                }
+                finally
+                {
                     hookEntrancy--;
                     if (pNEx is not null)
                         *pNEx = nativeException;
@@ -219,7 +254,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private Delegate? allocMemDelegate;
         private IDisposable? n2mAllocMemHelper;
 
-        protected unsafe virtual void PatchWrapperVtable(IntPtr* vtbl) {
+        protected unsafe virtual void PatchWrapperVtable(IntPtr* vtbl)
+        {
             allocMemDelegate = CastAllocMemToRealType(CreateAllocMemDelegate());
             vtbl[VtableIndexICorJitInfoAllocMem] = EHNativeToManaged(Marshal.GetFunctionPointerForDelegate(allocMemDelegate), out n2mAllocMemHelper);
         }
@@ -232,11 +268,13 @@ namespace MonoMod.Core.Platforms.Runtimes {
         protected virtual Delegate CastAllocMemToRealType(Delegate del)
             => del.CastDelegate<V70.AllocMemDelegate>();
 
-        protected unsafe virtual Delegate CreateAllocMemDelegate() {
+        protected unsafe virtual Delegate CreateAllocMemDelegate()
+        {
             return new AllocMemDelegateHolder(this, InvokeAllocMemPtr).AllocMemHook;
         }
 
-        private sealed class AllocMemDelegateHolder {
+        private sealed class AllocMemDelegateHolder
+        {
             public readonly Core70Runtime Runtime;
             public readonly INativeExceptionHelper? NativeExceptionHelper;
             public readonly GetExceptionSlot? GetNativeExceptionSlot;
@@ -244,7 +282,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             public readonly int ICorJitInfoAllocMemIdx;
             public readonly ConcurrentDictionary<IntPtr, (IntPtr M2N, IDisposable?)> AllocMemExceptionHelperCache = new();
 
-            public AllocMemDelegateHolder(Core70Runtime runtime, InvokeAllocMemPtr iamp) {
+            public AllocMemDelegateHolder(Core70Runtime runtime, InvokeAllocMemPtr iamp)
+            {
                 Runtime = runtime;
                 NativeExceptionHelper = runtime.NativeExceptionHelper;
                 GetNativeExceptionSlot = NativeExceptionHelper?.GetExceptionSlot;
@@ -255,17 +294,20 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 unsafe { iamp.InvokeAllocMem(IntPtr.Zero, IntPtr.Zero, null); }
             }
 
-            private IntPtr GetRealInvokePtr(IntPtr ptr) {
+            private IntPtr GetRealInvokePtr(IntPtr ptr)
+            {
                 if (NativeExceptionHelper is null)
                     return ptr;
                 return AllocMemExceptionHelperCache.GetOrAdd(ptr, p => (Runtime.EHManagedToNative(p, out var h), h)).M2N;
             }
 
-            public unsafe void AllocMemHook(IntPtr thisPtr, V70.AllocMemArgs* args) {
+            public unsafe void AllocMemHook(IntPtr thisPtr, V70.AllocMemArgs* args)
+            {
                 var wrap = (ICorJitInfoWrapper*)thisPtr;
                 var wrapped = wrap->Wrapped;
                 InvokeAllocMemPtr.InvokeAllocMem(GetRealInvokePtr((*wrapped)[ICorJitInfoAllocMemIdx]), (IntPtr)wrapped, args);
-                if (GetNativeExceptionSlot is { } neh && (nint)(*neh()) is not 0) {
+                if (GetNativeExceptionSlot is { } neh && (nint)(*neh()) is not 0)
+                {
                     return;
                 }
                 (*wrap)[ICorJitInfoWrapper.HotCodeRW] = args->hotCodeBlockRW;

@@ -2,19 +2,23 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace MonoMod.Utils {
-    public class GenericMethodInstantiationComparer : IEqualityComparer<MethodBase> {
+namespace MonoMod.Utils
+{
+    public class GenericMethodInstantiationComparer : IEqualityComparer<MethodBase>
+    {
         // this may be null on Mono, so we just don't support the magic this does there
         internal static Type? CannonicalFillType = typeof(object).Assembly.GetType("System.__Canon");
 
         private readonly IEqualityComparer<Type> genericTypeComparer;
 
         public GenericMethodInstantiationComparer() : this(new GenericTypeInstantiationComparer()) { }
-        public GenericMethodInstantiationComparer(IEqualityComparer<Type> typeComparer) {
+        public GenericMethodInstantiationComparer(IEqualityComparer<Type> typeComparer)
+        {
             genericTypeComparer = typeComparer;
         }
 
-        public bool Equals(MethodBase? x, MethodBase? y) {
+        public bool Equals(MethodBase? x, MethodBase? y)
+        {
             if (x is null && y is null)
                 return true;
             if (x is null || y is null)
@@ -59,14 +63,18 @@ namespace MonoMod.Utils {
             var xDefParams = xDef.GetParameters();
             //ParameterInfo[] yDefParams = yDef.GetParameters();
 
-            for (var i = 0; i < xParams.Length; i++) {
+            for (var i = 0; i < xParams.Length; i++)
+            {
                 var xType = xParams[i].ParameterType;
                 var yType = yParams[i].ParameterType;
-                if (xDefParams[i].ParameterType.IsGenericParameter) {
-                    if (!xType.IsValueType) {
+                if (xDefParams[i].ParameterType.IsGenericParameter)
+                {
+                    if (!xType.IsValueType)
+                    {
                         xType = CannonicalFillType ?? typeof(object); // for some sanity
                     }
-                    if (!yType.IsValueType) {
+                    if (!yType.IsValueType)
+                    {
                         yType = CannonicalFillType ?? typeof(object); // for some sanity
                     }
                 }
@@ -77,15 +85,18 @@ namespace MonoMod.Utils {
             return true;
         }
 
-        public int GetHashCode(MethodBase obj) {
+        public int GetHashCode(MethodBase obj)
+        {
             Helpers.ThrowIfArgumentNull(obj);
             if ((!obj.IsGenericMethod || obj.ContainsGenericParameters) && !(obj.DeclaringType?.IsGenericType ?? false))
                 return obj.GetHashCode();
 
-            unchecked {
+            unchecked
+            {
                 var code = unchecked((int)0xdeadbeef);
                 // ok lets do some magic
-                if (obj.DeclaringType != null) { // yes, DeclaringType can be null
+                if (obj.DeclaringType != null)
+                { // yes, DeclaringType can be null
                     code ^= obj.DeclaringType.Assembly.GetHashCode();
                     code ^= genericTypeComparer.GetHashCode(obj.DeclaringType);
                 }
@@ -97,10 +108,12 @@ namespace MonoMod.Utils {
                 paramCount ^= paramCount << 16;
                 code ^= paramCount;
 
-                if (obj.IsGenericMethod) { // we can get here if only the type is generic
+                if (obj.IsGenericMethod)
+                { // we can get here if only the type is generic
                     // type arguments, and here is where we do special treatment
                     var typeArgs = obj.GetGenericArguments();
-                    for (var i = 0; i < typeArgs.Length; i++) {
+                    for (var i = 0; i < typeArgs.Length; i++)
+                    {
                         var offs = i % 32;
                         var type = typeArgs[i];
                         // this magic is to treat all reference types like System.__Canon, because that's what we care about
@@ -113,21 +126,26 @@ namespace MonoMod.Utils {
 
                 // parameter types
                 MethodBase definition;
-                if (obj is MethodInfo info) {
+                if (obj is MethodInfo info)
+                {
                     definition = info.GetActualGenericMethodDefinition();
-                } else {
+                }
+                else
+                {
                     // its probably a constructorinfo or something, so lets use a different method here
                     definition = obj.GetUnfilledMethodOnGenericType();
                 }
 
                 var definitionParams = definition.GetParameters();
                 // amusingly, this requires the actual definition to behave
-                for (var i = 0; i < parameters.Length; i++) {
+                for (var i = 0; i < parameters.Length; i++)
+                {
                     var offs = i % 32;
                     var type = parameters[i].ParameterType;
                     var typeCode = genericTypeComparer.GetHashCode(type);
                     // we only normalize when the parameter in question is a generic parameter
-                    if (definitionParams[i].ParameterType.IsGenericParameter && !type.IsValueType) {
+                    if (definitionParams[i].ParameterType.IsGenericParameter && !type.IsValueType)
+                    {
                         typeCode = CannonicalFillType?.GetHashCode() ?? 0x55555555;
                     }
                     typeCode = (typeCode >> offs) | (typeCode << (32 - offs)); // this is a ror i believe

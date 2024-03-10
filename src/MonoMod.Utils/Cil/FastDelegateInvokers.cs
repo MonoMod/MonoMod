@@ -5,15 +5,18 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.Cil {
+namespace MonoMod.Cil
+{
     [AttributeUsage(AttributeTargets.Method)]
-    internal sealed class GetFastDelegateInvokersArrayAttribute : Attribute {
+    internal sealed class GetFastDelegateInvokersArrayAttribute : Attribute
+    {
         public int MaxParams { get; }
         public GetFastDelegateInvokersArrayAttribute(int maxParams)
             => MaxParams = maxParams;
     }
 
-    public static partial class FastDelegateInvokers {
+    public static partial class FastDelegateInvokers
+    {
         private static readonly (MethodInfo, Type)[] invokers = GetInvokers();
 
         private const int MaxFastInvokerParams = 16;
@@ -21,7 +24,8 @@ namespace MonoMod.Cil {
         [GetFastDelegateInvokersArray(MaxFastInvokerParams)]
         private static partial (MethodInfo, Type)[] GetInvokers();
 
-        private static (MethodInfo Invoker, Type Delegate)? TryGetInvokerForSig(MethodSignature sig) {
+        private static (MethodInfo Invoker, Type Delegate)? TryGetInvokerForSig(MethodSignature sig)
+        {
             // if the signature doesn't take any arguments, we don't need an invoker in the first place
             if (sig.ParameterCount == 0)
                 return null;
@@ -61,7 +65,8 @@ namespace MonoMod.Cil {
             var i = 0;
             if ((index & 1) != 0)
                 typeParams[i++] = sig.ReturnType;
-            foreach (var p in sig.Parameters) {
+            foreach (var p in sig.Parameters)
+            {
                 var t = p;
                 if (t.IsByRef)
                     t = t.GetElementType()!;
@@ -73,28 +78,33 @@ namespace MonoMod.Cil {
         }
 
         private static readonly ConditionalWeakTable<Type, Tuple<MethodInfo?, Type>> invokerCache = new();
-        public static (MethodInfo Invoker, Type Delegate)? GetDelegateInvoker(Type delegateType) {
+        public static (MethodInfo Invoker, Type Delegate)? GetDelegateInvoker(Type delegateType)
+        {
             Helpers.ThrowIfArgumentNull(delegateType);
             if (!typeof(Delegate).IsAssignableFrom(delegateType))
                 throw new ArgumentException("Argument not a delegate type", nameof(delegateType));
 
-            var tuple = invokerCache.GetValue(delegateType, static delegateType => {
+            var tuple = invokerCache.GetValue(delegateType, static delegateType =>
+            {
 
                 var delInvoke = delegateType.GetMethod("Invoke")!;
                 var sig = MethodSignature.ForMethod(delInvoke, ignoreThis: true);
 
-                if (sig.ParameterCount == 0) {
+                if (sig.ParameterCount == 0)
+                {
                     return new(null, delegateType);
                 }
 
                 var builtinInvoker = TryGetInvokerForSig(sig);
-                if (builtinInvoker is { } p) {
+                if (builtinInvoker is { } p)
+                {
                     return new(p.Invoker, p.Delegate);
                 }
 
                 var argTypes = new Type[sig.ParameterCount + 1];
                 var i = 0;
-                foreach (var param in sig.Parameters) {
+                foreach (var param in sig.Parameters)
+                {
                     argTypes[i++] = param;
                 }
                 argTypes[sig.ParameterCount] = delegateType;
@@ -102,7 +112,8 @@ namespace MonoMod.Cil {
                 using (var dmdInvoke = new DynamicMethodDefinition(
                     $"MMIL:Invoke<{delInvoke.DeclaringType?.FullName}>",
                     delInvoke.ReturnType, argTypes
-                )) {
+                ))
+                {
                     var il = dmdInvoke.GetILProcessor();
 
                     // Load the delegate reference first.

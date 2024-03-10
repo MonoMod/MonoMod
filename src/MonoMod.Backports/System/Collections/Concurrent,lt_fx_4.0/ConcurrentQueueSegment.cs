@@ -6,14 +6,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace System.Collections.Concurrent {
+namespace System.Collections.Concurrent
+{
     /// <summary>
     /// Provides a multi-producer, multi-consumer thread-safe bounded segment.  When the queue is full,
     /// enqueues fail and return false.  When the queue is empty, dequeues fail and return null.
     /// These segments are linked together to form the unbounded <see cref="ConcurrentQueue{T}"/>.
     /// </summary>
     [DebuggerDisplay("Capacity = {Capacity}")]
-    internal sealed class ConcurrentQueueSegment<T> {
+    internal sealed class ConcurrentQueueSegment<T>
+    {
         // Segment design is inspired by the algorithm outlined at:
         // http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 
@@ -38,7 +40,8 @@ namespace System.Collections.Concurrent {
         /// <param name="boundedLength">
         /// The maximum number of elements the segment can contain.  Must be a power of 2.
         /// </param>
-        internal ConcurrentQueueSegment(int boundedLength) {
+        internal ConcurrentQueueSegment(int boundedLength)
+        {
             // Validate the length
             Debug.Assert(boundedLength >= 2, $"Must be >= 2, got {boundedLength}");
             Debug.Assert((boundedLength & (boundedLength - 1)) == 0, $"Must be a power of 2, got {boundedLength}");
@@ -62,7 +65,8 @@ namespace System.Collections.Concurrent {
             // subsequent slots, and to have the first enqueuer take longer, so that the slots for 1, 2, 3, etc.
             // may have values, but the 0th slot may still be being filled... in that case, TryDequeue will
             // return false.)
-            for (int i = 0; i < _slots.Length; i++) {
+            for (int i = 0; i < _slots.Length; i++)
+            {
                 _slots[i].SequenceNumber = i;
             }
         }
@@ -98,12 +102,14 @@ namespace System.Collections.Concurrent {
         }
 
         /// <summary>Tries to dequeue an element from the queue.</summary>
-        public bool TryDequeue([MaybeNullWhen(false)] out T item) {
+        public bool TryDequeue([MaybeNullWhen(false)] out T item)
+        {
             Slot[] slots = _slots;
 
             // Loop in case of contention...
             SpinWait spinner = default;
-            while (true) {
+            while (true)
+            {
                 // Get the head at which to try to dequeue.
                 int currentHead = Volatile.Read(ref _headAndTail.Head);
                 int slotsIndex = currentHead & _slotsMask;
@@ -114,7 +120,8 @@ namespace System.Collections.Concurrent {
                 // We can dequeue from this slot if it's been filled by an enqueuer, which
                 // would have left the sequence number at pos+1.
                 int diff = sequenceNumber - (currentHead + 1);
-                if (diff == 0) {
+                if (diff == 0)
+                {
                     // We may be racing with other dequeuers.  Try to reserve the slot by incrementing
                     // the head.  Once we've done that, no one else will be able to read from this slot,
                     // and no enqueuer will be able to read from this slot until we've written the new
@@ -124,12 +131,15 @@ namespace System.Collections.Concurrent {
                     // spin indefinitely.  If this implementation is ever used on such a platform, this
                     // if block should be wrapped in a finally / prepared region.
                     bool doWrite = true;
-                    try {
-                        if (Interlocked.CompareExchange(ref _headAndTail.Head, currentHead + 1, currentHead) == currentHead) {
+                    try
+                    {
+                        if (Interlocked.CompareExchange(ref _headAndTail.Head, currentHead + 1, currentHead) == currentHead)
+                        {
                             // Successfully reserved the slot.  Note that after the above CompareExchange, other threads
                             // trying to dequeue from this slot will end up spinning until we do the subsequent Write.
                             item = slots[slotsIndex].Item!;
-                            if (!Volatile.Read(ref _preservedForObservation)) {
+                            if (!Volatile.Read(ref _preservedForObservation))
+                            {
                                 // If we're preserving, though, we don't zero out the slot, as we need it for
                                 // enumerations, peeking, ToArray, etc.  And we don't update the sequence number,
                                 // so that an enqueuer will see it as full and be forced to move to a new segment.
@@ -138,20 +148,27 @@ namespace System.Collections.Concurrent {
                                 //if (RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
                                 slots[slotsIndex].Item = default;
                                 //}
-                            } else {
+                            }
+                            else
+                            {
                                 doWrite = false;
                             }
                             return true;
                         }
-                    } finally {
-                        if (doWrite) {
+                    }
+                    finally
+                    {
+                        if (doWrite)
+                        {
                             Volatile.Write(ref slots[slotsIndex].SequenceNumber, currentHead + slots.Length);
                         }
                     }
 
                     // The head was already advanced by another thread. A newer head has already been observed and the next
                     // iteration would make forward progress, so there's no need to spin-wait before trying again.
-                } else if (diff < 0) {
+                }
+                else if (diff < 0)
+                {
                     // The sequence number was less than what we needed, which means this slot doesn't
                     // yet contain a value we can dequeue, i.e. the segment is empty.  Technically it's
                     // possible that multiple enqueuers could have written concurrently, with those
@@ -161,7 +178,8 @@ namespace System.Collections.Concurrent {
                     // empty or if we're just waiting for items in flight or after this one to become available.
                     bool frozen = _frozenForEnqueues;
                     int currentTail = Volatile.Read(ref _headAndTail.Tail);
-                    if (currentTail - currentHead <= 0 || (frozen && (currentTail - FreezeOffset - currentHead <= 0))) {
+                    if (currentTail - currentHead <= 0 || (frozen && (currentTail - FreezeOffset - currentHead <= 0)))
+                    {
                         item = default;
                         return false;
                     }
@@ -173,7 +191,9 @@ namespace System.Collections.Concurrent {
                     // this thread may have to check the same slot multiple times. Spin-wait to avoid
                     // a potential busy-wait, and then try again.
                     spinner.SpinOnce(sleep1Threshold: -1);
-                } else {
+                }
+                else
+                {
                     // The item was already dequeued by another thread. The head has already been updated beyond what was
                     // observed above, and the sequence number observed above as a volatile load is more recent than the update
                     // to the head. So, the next iteration of the loop is guaranteed to see a new head. Since this is an
@@ -183,8 +203,10 @@ namespace System.Collections.Concurrent {
         }
 
         /// <summary>Tries to peek at an element from the queue, without removing it.</summary>
-        public bool TryPeek([MaybeNullWhen(false)] out T result, bool resultUsed) {
-            if (resultUsed) {
+        public bool TryPeek([MaybeNullWhen(false)] out T result, bool resultUsed)
+        {
+            if (resultUsed)
+            {
                 // In order to ensure we don't get a torn read on the value, we mark the segment
                 // as preserving for observation.  Additional items can still be enqueued to this
                 // segment, but no space will be freed during dequeues, such that the segment will
@@ -197,7 +219,8 @@ namespace System.Collections.Concurrent {
 
             // Loop in case of contention...
             SpinWait spinner = default;
-            while (true) {
+            while (true)
+            {
                 // Get the head at which to try to peek.
                 int currentHead = Volatile.Read(ref _headAndTail.Head);
                 int slotsIndex = currentHead & _slotsMask;
@@ -208,10 +231,13 @@ namespace System.Collections.Concurrent {
                 // We can peek from this slot if it's been filled by an enqueuer, which
                 // would have left the sequence number at pos+1.
                 int diff = sequenceNumber - (currentHead + 1);
-                if (diff == 0) {
+                if (diff == 0)
+                {
                     result = resultUsed ? slots[slotsIndex].Item! : default!;
                     return true;
-                } else if (diff < 0) {
+                }
+                else if (diff < 0)
+                {
                     // The sequence number was less than what we needed, which means this slot doesn't
                     // yet contain a value we can peek, i.e. the segment is empty.  Technically it's
                     // possible that multiple enqueuers could have written concurrently, with those
@@ -221,7 +247,8 @@ namespace System.Collections.Concurrent {
                     // empty or if we're just waiting for items in flight or after this one to become available.
                     bool frozen = _frozenForEnqueues;
                     int currentTail = Volatile.Read(ref _headAndTail.Tail);
-                    if (currentTail - currentHead <= 0 || (frozen && (currentTail - FreezeOffset - currentHead <= 0))) {
+                    if (currentTail - currentHead <= 0 || (frozen && (currentTail - FreezeOffset - currentHead <= 0)))
+                    {
                         result = default;
                         return false;
                     }
@@ -233,7 +260,9 @@ namespace System.Collections.Concurrent {
                     // this thread may have to check the same slot multiple times. Spin-wait to avoid
                     // a potential busy-wait, and then try again.
                     spinner.SpinOnce(sleep1Threshold: -1);
-                } else {
+                }
+                else
+                {
                     // The item was already dequeued by another thread. The head has already been updated beyond what was
                     // observed above, and the sequence number observed above as a volatile load is more recent than the update
                     // to the head. So, the next iteration of the loop is guaranteed to see a new head. Since this is an
@@ -247,11 +276,13 @@ namespace System.Collections.Concurrent {
         /// in the queue and true will be returned; otherwise, the item won't be stored, and false
         /// will be returned.
         /// </summary>
-        public bool TryEnqueue(T item) {
+        public bool TryEnqueue(T item)
+        {
             Slot[] slots = _slots;
 
             // Loop in case of contention...
-            while (true) {
+            while (true)
+            {
                 // Get the tail at which to try to return.
                 int currentTail = Volatile.Read(ref _headAndTail.Tail);
                 int slotsIndex = currentTail & _slotsMask;
@@ -262,7 +293,8 @@ namespace System.Collections.Concurrent {
                 // The slot is empty and ready for us to enqueue into it if its sequence
                 // number matches the slot.
                 int diff = sequenceNumber - currentTail;
-                if (diff == 0) {
+                if (diff == 0)
+                {
                     // We may be racing with other enqueuers.  Try to reserve the slot by incrementing
                     // the tail.  Once we've done that, no one else will be able to write to this slot,
                     // and no dequeuer will be able to read from this slot until we've written the new
@@ -271,7 +303,8 @@ namespace System.Collections.Concurrent {
                     // but before the Volatile.Write, other threads will spin trying to access this slot.
                     // If this implementation is ever used on such a platform, this if block should be
                     // wrapped in a finally / prepared region.
-                    if (Interlocked.CompareExchange(ref _headAndTail.Tail, currentTail + 1, currentTail) == currentTail) {
+                    if (Interlocked.CompareExchange(ref _headAndTail.Tail, currentTail + 1, currentTail) == currentTail)
+                    {
                         // Successfully reserved the slot.  Note that after the above CompareExchange, other threads
                         // trying to return will end up spinning until we do the subsequent Write.
                         slots[slotsIndex].Item = item;
@@ -281,14 +314,18 @@ namespace System.Collections.Concurrent {
 
                     // The tail was already advanced by another thread. A newer tail has already been observed and the next
                     // iteration would make forward progress, so there's no need to spin-wait before trying again.
-                } else if (diff < 0) {
+                }
+                else if (diff < 0)
+                {
                     // The sequence number was less than what we needed, which means this slot still
                     // contains a value, i.e. the segment is full.  Technically it's possible that multiple
                     // dequeuers could have read concurrently, with those getting later slots actually
                     // finishing first, so there could be spaces after this one that are available, but
                     // we need to enqueue in order.
                     return false;
-                } else {
+                }
+                else
+                {
                     // Either the slot contains an item, or it is empty but because the slot was filled and dequeued. In either
                     // case, the tail has already been updated beyond what was observed above, and the sequence number observed
                     // above as a volatile load is more recent than the update to the tail. So, the next iteration of the loop
@@ -301,7 +338,8 @@ namespace System.Collections.Concurrent {
         /// <summary>Represents a slot in the queue.</summary>
         [StructLayout(LayoutKind.Auto)]
         [DebuggerDisplay("Item = {Item}, SequenceNumber = {SequenceNumber}")]
-        internal struct Slot {
+        internal struct Slot
+        {
             /// <summary>The item.</summary>
             public T? Item; // SOS's ThreadPool command depends on this being at the beginning of the struct when T is a reference type
             /// <summary>The sequence number for this slot, used to synchronize between enqueuers and dequeuers.</summary>
@@ -312,7 +350,8 @@ namespace System.Collections.Concurrent {
     /// <summary>Padded head and tail indices, to avoid false sharing between producers and consumers.</summary>
     [DebuggerDisplay("Head = {Head}, Tail = {Tail}")] // the 128 is guaranteed to be larger than cache lines
     [StructLayout(LayoutKind.Explicit, Size = 3 * 128)] // padding before/between/after fields
-    internal struct PaddedHeadAndTail {
+    internal struct PaddedHeadAndTail
+    {
         [FieldOffset(1 * 128)] public int Head;
         [FieldOffset(2 * 128)] public int Tail;
     }

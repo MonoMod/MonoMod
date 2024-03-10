@@ -18,51 +18,64 @@ using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
 #endif
 
-namespace MonoMod {
-    public static class Switches {
+namespace MonoMod
+{
+    public static class Switches
+    {
         private static readonly ConcurrentDictionary<string, object?> switchValues = new();
 
         private const string Prefix = "MONOMOD_";
 
-        static Switches() {
-            foreach (DictionaryEntry envVar in Environment.GetEnvironmentVariables()) {
+        static Switches()
+        {
+            foreach (DictionaryEntry envVar in Environment.GetEnvironmentVariables())
+            {
                 var key = (string)envVar.Key;
-                if (key.StartsWith(Prefix, StringComparison.Ordinal) && envVar.Value is not null) {
+                if (key.StartsWith(Prefix, StringComparison.Ordinal) && envVar.Value is not null)
+                {
                     var sw = key.Substring(Prefix.Length);
                     _ = switchValues.TryAdd(sw, BestEffortParseEnvVar((string)envVar.Value));
                 }
             }
         }
 
-        private static object? BestEffortParseEnvVar(string value) {
+        private static object? BestEffortParseEnvVar(string value)
+        {
             if (value.Length is 0)
                 return null;
 
             // try to parse as a number
-            if (int.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var ires)) {
+            if (int.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var ires))
+            {
                 return ires;
             }
 
-            if (long.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var lres)) {
+            if (long.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var lres))
+            {
                 return lres;
             }
 
-            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out ires)) {
+            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out ires))
+            {
                 return ires;
             }
 
-            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out lres)) {
+            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out lres))
+            {
                 return lres;
             }
 
             // next, check for a possible boolean
-            if (value[0] is 't' or 'T' or 'f' or 'F' or 'y' or 'Y' or 'n' or 'N') {
+            if (value[0] is 't' or 'T' or 'f' or 'F' or 'y' or 'Y' or 'n' or 'N')
+            {
                 if (bool.TryParse(value, out var bresult))
                     return bresult;
-                if (value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value.Equals("y", StringComparison.OrdinalIgnoreCase)) {
+                if (value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value.Equals("y", StringComparison.OrdinalIgnoreCase))
+                {
                     return true;
                 }
-                if (value.Equals("no", StringComparison.OrdinalIgnoreCase) || value.Equals("n", StringComparison.OrdinalIgnoreCase)) {
+                if (value.Equals("no", StringComparison.OrdinalIgnoreCase) || value.Equals("n", StringComparison.OrdinalIgnoreCase))
+                {
                     return false;
                 }
             }
@@ -151,7 +164,8 @@ namespace MonoMod {
         /// </summary>
         /// <param name="switch">The switch to set the value of.</param>
         /// <param name="value">The value of the switch.</param>
-        public static void SetSwitchValue(string @switch, object? value) {
+        public static void SetSwitchValue(string @switch, object? value)
+        {
             switchValues[@switch] = value;
         }
 
@@ -166,7 +180,8 @@ namespace MonoMod {
         /// that is available on the current platform.
         /// </remarks>
         /// <param name="switch">The switch to clear.</param>
-        public static void ClearSwitchValue(string @switch) {
+        public static void ClearSwitchValue(string @switch)
+        {
             _ = switchValues.TryRemove(@switch, out _);
         }
 #pragma warning restore CA1200 // Avoid using cref tags with a prefix
@@ -214,9 +229,11 @@ namespace MonoMod {
         private static readonly TryGetSwitchFunc? dTryGetSwitch = miTryGetSwitch?.TryCreateDelegate<TryGetSwitchFunc>();
 #endif
 
-        public static bool TryGetSwitchValue(string @switch, out object? value) {
+        public static bool TryGetSwitchValue(string @switch, out object? value)
+        {
             // always check our stuff first
-            if (switchValues.TryGetValue(@switch, out value)) {
+            if (switchValues.TryGetValue(@switch, out value))
+            {
                 return true;
             }
 
@@ -232,7 +249,8 @@ namespace MonoMod {
 #else
                 res = dGetData?.Invoke(appCtxSwitchName);
 #endif
-                if (res is not null) {
+                if (res is not null)
+                {
                     value = res;
                     return true;
                 }
@@ -254,10 +272,13 @@ namespace MonoMod {
 
         // TODO: how do I want to handle setting and caching of this stuff?
 
-        public static bool TryGetSwitchEnabled(string @switch, out bool isEnabled) {
+        public static bool TryGetSwitchEnabled(string @switch, out bool isEnabled)
+        {
             // always check our stuff first
-            if (switchValues.TryGetValue(@switch, out var orig)) {
-                if (orig is not null && TryProcessBoolData(orig, out isEnabled)) {
+            if (switchValues.TryGetValue(@switch, out var orig))
+            {
+                if (orig is not null && TryProcessBoolData(orig, out isEnabled))
+                {
                     return true;
                 }
                 // don't konw what to do with the value, so simply fall out
@@ -284,7 +305,8 @@ namespace MonoMod {
 #else
                 res = dGetData?.Invoke(appCtxSwitchName);
 #endif
-                if (res is not null && TryProcessBoolData(res, out isEnabled)) {
+                if (res is not null && TryProcessBoolData(res, out isEnabled))
+                {
                     return true;
                 }
             }
@@ -293,8 +315,10 @@ namespace MonoMod {
             return false;
         }
 
-        private static bool TryProcessBoolData(object data, out bool boolVal) {
-            switch (data) {
+        private static bool TryProcessBoolData(object data, out bool boolVal)
+        {
+            switch (data)
+            {
                 case bool b:
                     boolVal = b;
                     return true;

@@ -1,10 +1,12 @@
 ﻿using System;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A collection of feature flags for a particular <see cref="PlatformTriple"/>.
     /// </summary>
-    public readonly struct FeatureFlags : IEquatable<FeatureFlags> {
+    public readonly struct FeatureFlags : IEquatable<FeatureFlags>
+    {
         /// <summary>
         /// Gets the <see cref="ArchitectureFeature"/> flags for the architecture.
         /// </summary>
@@ -24,7 +26,8 @@ namespace MonoMod.Core.Platforms {
         /// <param name="archFlags">The <see cref="ArchitectureFeature"/> flags.</param>
         /// <param name="sysFlags">The <see cref="SystemFeature"/> flags.</param>
         /// <param name="runtimeFlags">The <see cref="RuntimeFeature"/> flags.</param>
-        public FeatureFlags(ArchitectureFeature archFlags, SystemFeature sysFlags, RuntimeFeature runtimeFlags) {
+        public FeatureFlags(ArchitectureFeature archFlags, SystemFeature sysFlags, RuntimeFeature runtimeFlags)
+        {
             Runtime = runtimeFlags;
             Architecture = archFlags;
             System = sysFlags;
@@ -55,19 +58,22 @@ namespace MonoMod.Core.Platforms {
             => (System & feature) == feature;
 
         /// <inheritdoc/>
-        public override bool Equals(object? obj) {
+        public override bool Equals(object? obj)
+        {
             return obj is FeatureFlags flags && Equals(flags);
         }
 
         /// <inheritdoc/>
-        public bool Equals(FeatureFlags other) {
+        public bool Equals(FeatureFlags other)
+        {
             return Runtime == other.Runtime &&
                    Architecture == other.Architecture &&
                    System == other.System;
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return HashCode.Combine(Runtime, Architecture, System);
         }
 

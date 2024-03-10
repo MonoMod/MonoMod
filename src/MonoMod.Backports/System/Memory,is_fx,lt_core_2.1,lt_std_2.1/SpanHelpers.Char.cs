@@ -4,9 +4,12 @@
 
 using System.Diagnostics;
 
-namespace System {
-    internal static partial class SpanHelpers {
-        public static unsafe int SequenceCompareTo(ref char first, int firstLength, ref char second, int secondLength) {
+namespace System
+{
+    internal static partial class SpanHelpers
+    {
+        public static unsafe int SequenceCompareTo(ref char first, int firstLength, ref char second, int secondLength)
+        {
             Debug.Assert(firstLength >= 0);
             Debug.Assert(secondLength >= 0);
 
@@ -18,25 +21,31 @@ namespace System {
             nint minLength = (nint)((firstLength < secondLength) ? firstLength : secondLength);
             nint i = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
 
-            if ((byte*)minLength >= (byte*)(sizeof(UIntPtr) / sizeof(char))) {
+            if ((byte*)minLength >= (byte*)(sizeof(UIntPtr) / sizeof(char)))
+            {
 
-                while ((byte*)minLength >= (byte*)(i + sizeof(UIntPtr) / sizeof(char))) {
+                while ((byte*)minLength >= (byte*)(i + sizeof(UIntPtr) / sizeof(char)))
+                {
                     if (Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref first, i))) !=
-                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref second, i)))) {
+                        Unsafe.ReadUnaligned<UIntPtr>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref second, i))))
+                    {
                         break;
                     }
                     i += sizeof(UIntPtr) / sizeof(char);
                 }
             }
 
-            if (sizeof(UIntPtr) > sizeof(int) && (byte*)minLength >= (byte*)(i + sizeof(int) / sizeof(char))) {
+            if (sizeof(UIntPtr) > sizeof(int) && (byte*)minLength >= (byte*)(i + sizeof(int) / sizeof(char)))
+            {
                 if (Unsafe.ReadUnaligned<int>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref first, i))) ==
-                    Unsafe.ReadUnaligned<int>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref second, i)))) {
+                    Unsafe.ReadUnaligned<int>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref second, i))))
+                {
                     i += sizeof(int) / sizeof(char);
                 }
             }
 
-            while ((byte*)i < (byte*)minLength) {
+            while ((byte*)i < (byte*)minLength)
+            {
                 int result = Unsafe.Add(ref first, i).CompareTo(Unsafe.Add(ref second, i));
                 if (result != 0)
                     return result;
@@ -47,14 +56,17 @@ namespace System {
             return lengthDelta;
         }
 
-        public static unsafe int IndexOf(ref char searchSpace, char value, int length) {
+        public static unsafe int IndexOf(ref char searchSpace, char value, int length)
+        {
             Debug.Assert(length >= 0);
 
-            fixed (char* pChars = &searchSpace) {
+            fixed (char* pChars = &searchSpace)
+            {
                 char* pCh = pChars;
                 char* pEndCh = pCh + length;
 
-                while (length >= 4) {
+                while (length >= 4)
+                {
                     length -= 4;
 
                     if (*pCh == value)
@@ -69,7 +81,8 @@ namespace System {
                     pCh += 4;
                 }
 
-                while (length > 0) {
+                while (length > 0)
+                {
                     length -= 1;
 
                     if (*pCh == value)
@@ -89,13 +102,16 @@ namespace System {
             }
         }
 
-        public static unsafe int LastIndexOf(ref char searchSpace, char value, int length) {
+        public static unsafe int LastIndexOf(ref char searchSpace, char value, int length)
+        {
             Debug.Assert(length >= 0);
 
-            fixed (char* pChars = &searchSpace) {
+            fixed (char* pChars = &searchSpace)
+            {
                 char* pCh = pChars + length;
                 char* pEndCh = pChars;
-                while (length >= 4) {
+                while (length >= 4)
+                {
                     length -= 4;
                     pCh -= 4;
 
@@ -109,7 +125,8 @@ namespace System {
                         goto Found;
                 }
 
-                while (length > 0) {
+                while (length > 0)
+                {
                     length -= 1;
                     pCh -= 1;
 

@@ -1,10 +1,12 @@
 ﻿using System;
 
-namespace MonoMod.Core {
+namespace MonoMod.Core
+{
     /// <summary>
     /// Represents a single function-to-function native detour, with an alternate entry point.
     /// </summary>
-    public interface ICoreNativeDetour : ICoreDetourBase {
+    public interface ICoreNativeDetour : ICoreDetourBase
+    {
         /// <summary>
         /// Gets a pointer to the source function.
         /// </summary>

@@ -10,9 +10,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 
-namespace MonoMod.Cil {
+namespace MonoMod.Cil
+{
     [EmitILOverloads("ILOpcodes.txt", ILOverloadKind.Matcher)]
-    public static partial class ILPatternMatchingExt {
+    public static partial class ILPatternMatchingExt
+    {
         #region Equivalence definitions
         private static bool IsEquivalent(int l, int r) => l == r;
         private static bool IsEquivalent(int l, uint r) => unchecked((uint)l) == r;
@@ -41,10 +43,12 @@ namespace MonoMod.Cil {
 
         private static bool IsEquivalent(ILLabel[] l, ILLabel[] r)
             => l == r || l.SequenceEqual(r);
-        private static bool IsEquivalent(ILLabel[] l, Instruction[] r) {
+        private static bool IsEquivalent(ILLabel[] l, Instruction[] r)
+        {
             if (l.Length != r.Length)
                 return false;
-            for (var i = 0; i < l.Length; i++) {
+            for (var i = 0; i < l.Length; i++)
+            {
                 if (!IsEquivalent(l[i].Target, r[i]))
                     return false;
             }
@@ -65,7 +69,8 @@ namespace MonoMod.Cil {
         [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance",
             Justification = "This signature must be uniform across TFMs, and the lowest common denominator is IEnumerable")]
 #endif
-        private static IEnumerable<ParameterReference> CastParamsToRef(IMethodSignature sig) {
+        private static IEnumerable<ParameterReference> CastParamsToRef(IMethodSignature sig)
+        {
 #if NET35
             return sig.Parameters.Cast<ParameterReference>();
 #else
@@ -73,21 +78,26 @@ namespace MonoMod.Cil {
 #endif
         }
 
-        private sealed class ParameterRefEqualityComparer : IEqualityComparer<ParameterReference> {
+        private sealed class ParameterRefEqualityComparer : IEqualityComparer<ParameterReference>
+        {
             public static readonly ParameterRefEqualityComparer Instance = new();
 
-            public bool Equals(ParameterReference? x, ParameterReference? y) {
-                if (x is null) {
+            public bool Equals(ParameterReference? x, ParameterReference? y)
+            {
+                if (x is null)
+                {
                     return y is null;
                 }
-                if (y is null) {
+                if (y is null)
+                {
                     return false;
                 }
 
                 return IsEquivalent(x.ParameterType, y.ParameterType);
             }
 
-            public int GetHashCode([DisallowNull] ParameterReference obj) {
+            public int GetHashCode([DisallowNull] ParameterReference obj)
+            {
                 return obj.ParameterType.GetHashCode();
             }
         }
@@ -122,12 +132,16 @@ namespace MonoMod.Cil {
         /// <param name="opcode">The instruction opcode to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool Match<T>(this Instruction instr, OpCode opcode, [MaybeNullWhen(false)] out T value) {
+        public static bool Match<T>(this Instruction instr, OpCode opcode, [MaybeNullWhen(false)] out T value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == opcode) {
+            if (instr.OpCode == opcode)
+            {
                 value = (T)instr.Operand;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -146,12 +160,16 @@ namespace MonoMod.Cil {
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
         [Obsolete("Leftover from legacy MonoMod, use MatchLeave instead")]
-        public static bool MatchLeaveS(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value) {
+        public static bool MatchLeaveS(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Leave_S) {
+            if (instr.OpCode == OpCodes.Leave_S)
+            {
                 value = (ILLabel)instr.Operand;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -161,24 +179,36 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchLdarg(this Instruction instr, out int value) {
+        public static bool MatchLdarg(this Instruction instr, out int value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Ldarg || instr.OpCode == OpCodes.Ldarg_S) {
+            if (instr.OpCode == OpCodes.Ldarg || instr.OpCode == OpCodes.Ldarg_S)
+            {
                 value = ((ParameterReference)instr.Operand).Index;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldarg_0) {
+            }
+            else if (instr.OpCode == OpCodes.Ldarg_0)
+            {
                 value = 0;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldarg_1) {
+            }
+            else if (instr.OpCode == OpCodes.Ldarg_1)
+            {
                 value = 1;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldarg_2) {
+            }
+            else if (instr.OpCode == OpCodes.Ldarg_2)
+            {
                 value = 2;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldarg_3) {
+            }
+            else if (instr.OpCode == OpCodes.Ldarg_3)
+            {
                 value = 3;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -188,12 +218,16 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchStarg(this Instruction instr, out int value) {
+        public static bool MatchStarg(this Instruction instr, out int value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Starg || instr.OpCode == OpCodes.Starg_S) {
+            if (instr.OpCode == OpCodes.Starg || instr.OpCode == OpCodes.Starg_S)
+            {
                 value = ((ParameterReference)instr.Operand).Index;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -203,12 +237,16 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchLdarga(this Instruction instr, out int value) {
+        public static bool MatchLdarga(this Instruction instr, out int value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Ldarga || instr.OpCode == OpCodes.Ldarga_S) {
+            if (instr.OpCode == OpCodes.Ldarga || instr.OpCode == OpCodes.Ldarga_S)
+            {
                 value = ((ParameterReference)instr.Operand).Index;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -218,24 +256,36 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchLdloc(this Instruction instr, out int value) {
+        public static bool MatchLdloc(this Instruction instr, out int value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Ldloc || instr.OpCode == OpCodes.Ldloc_S) {
+            if (instr.OpCode == OpCodes.Ldloc || instr.OpCode == OpCodes.Ldloc_S)
+            {
                 value = ((VariableReference)instr.Operand).Index;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldloc_0) {
+            }
+            else if (instr.OpCode == OpCodes.Ldloc_0)
+            {
                 value = 0;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldloc_1) {
+            }
+            else if (instr.OpCode == OpCodes.Ldloc_1)
+            {
                 value = 1;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldloc_2) {
+            }
+            else if (instr.OpCode == OpCodes.Ldloc_2)
+            {
                 value = 2;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldloc_3) {
+            }
+            else if (instr.OpCode == OpCodes.Ldloc_3)
+            {
                 value = 3;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -245,24 +295,36 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchStloc(this Instruction instr, out int value) {
+        public static bool MatchStloc(this Instruction instr, out int value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Stloc || instr.OpCode == OpCodes.Stloc_S) {
+            if (instr.OpCode == OpCodes.Stloc || instr.OpCode == OpCodes.Stloc_S)
+            {
                 value = ((VariableReference)instr.Operand).Index;
                 return true;
-            } else if (instr.OpCode == OpCodes.Stloc_0) {
+            }
+            else if (instr.OpCode == OpCodes.Stloc_0)
+            {
                 value = 0;
                 return true;
-            } else if (instr.OpCode == OpCodes.Stloc_1) {
+            }
+            else if (instr.OpCode == OpCodes.Stloc_1)
+            {
                 value = 1;
                 return true;
-            } else if (instr.OpCode == OpCodes.Stloc_2) {
+            }
+            else if (instr.OpCode == OpCodes.Stloc_2)
+            {
                 value = 2;
                 return true;
-            } else if (instr.OpCode == OpCodes.Stloc_3) {
+            }
+            else if (instr.OpCode == OpCodes.Stloc_3)
+            {
                 value = 3;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -272,12 +334,16 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchLdloca(this Instruction instr, out int value) {
+        public static bool MatchLdloca(this Instruction instr, out int value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Ldloca || instr.OpCode == OpCodes.Ldloca_S) {
+            if (instr.OpCode == OpCodes.Ldloca || instr.OpCode == OpCodes.Ldloca_S)
+            {
                 value = ((VariableReference)instr.Operand).Index;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -287,45 +353,71 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchLdcI4(this Instruction instr, out int value) {
+        public static bool MatchLdcI4(this Instruction instr, out int value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Ldc_I4) {
+            if (instr.OpCode == OpCodes.Ldc_I4)
+            {
                 value = (int)instr.Operand;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_S) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_S)
+            {
                 value = (sbyte)instr.Operand;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_0) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_0)
+            {
                 value = 0;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_1) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_1)
+            {
                 value = 1;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_2) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_2)
+            {
                 value = 2;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_3) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_3)
+            {
                 value = 3;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_4) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_4)
+            {
                 value = 4;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_5) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_5)
+            {
                 value = 5;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_6) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_6)
+            {
                 value = 6;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_7) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_7)
+            {
                 value = 7;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_8) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_8)
+            {
                 value = 8;
                 return true;
-            } else if (instr.OpCode == OpCodes.Ldc_I4_M1) {
+            }
+            else if (instr.OpCode == OpCodes.Ldc_I4_M1)
+            {
                 value = -1;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }
@@ -335,12 +427,16 @@ namespace MonoMod.Cil {
         /// <param name="instr">The instruction to try to match.</param>
         /// <param name="value">The operand value of the instruction.</param>
         /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
-        public static bool MatchCallOrCallvirt(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value) {
+        public static bool MatchCallOrCallvirt(this Instruction instr, [MaybeNullWhen(false)] out MethodReference value)
+        {
             Helpers.ThrowIfArgumentNull(instr);
-            if (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) {
+            if (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt)
+            {
                 value = (MethodReference)instr.Operand;
                 return true;
-            } else {
+            }
+            else
+            {
                 value = default;
                 return false;
             }

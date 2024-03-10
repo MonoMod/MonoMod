@@ -4,8 +4,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace MonoMod.RuntimeDetour {
-    internal static class TrampolinePool {
+namespace MonoMod.RuntimeDetour
+{
+    internal static class TrampolinePool
+    {
 
         private static readonly ConcurrentDictionary<MethodSignature, ConcurrentBag<WeakReference<MethodInfo>>> pool
             = new();
@@ -13,11 +15,14 @@ namespace MonoMod.RuntimeDetour {
         private static ConcurrentBag<WeakReference<MethodInfo>> PoolForSig(MethodSignature sig)
             => pool.GetOrAdd(sig, _ => new());
 
-        public static MethodInfo Rent(MethodSignature sig) {
+        public static MethodInfo Rent(MethodSignature sig)
+        {
             var pool = PoolForSig(sig);
 
-            while (pool.TryTake(out var wr)) {
-                if (wr.TryGetTarget(out var meth)) {
+            while (pool.TryTake(out var wr))
+            {
+                if (wr.TryGetTarget(out var meth))
+                {
                     return meth;
                 }
             }
@@ -27,7 +32,8 @@ namespace MonoMod.RuntimeDetour {
             return dmd.StubCriticalDetour().Generate();
         }
 
-        public static void Return(MethodInfo trampoline) {
+        public static void Return(MethodInfo trampoline)
+        {
             var pool = PoolForSig(MethodSignature.ForMethod(trampoline));
             pool.Add(new(trampoline));
         }
@@ -38,10 +44,12 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Fill the DynamicMethodDefinition with a throw.
         /// </summary>
-        public static DynamicMethodDefinition StubCriticalDetour(this DynamicMethodDefinition dm) {
+        public static DynamicMethodDefinition StubCriticalDetour(this DynamicMethodDefinition dm)
+        {
             var il = dm.GetILProcessor();
             var ilModule = il.Body.Method.Module;
-            for (var i = 0; i < 32; i++) {
+            for (var i = 0; i < 32; i++)
+            {
                 // Prevent mono from inlining the DynamicMethod.
                 il.Emit(OpCodes.Nop);
             }

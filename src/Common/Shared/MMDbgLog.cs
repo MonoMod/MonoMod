@@ -5,21 +5,26 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod {
-    internal static class MMDbgLog {
+namespace MonoMod
+{
+    internal static class MMDbgLog
+    {
         public static bool IsWritingLog => DebugLog.IsWritingLog;
 
         [ModuleInitializer]
         [SuppressMessage("Usage", "CA2255:The 'ModuleInitializer' attribute should not be used in libraries",
             Justification = "We want to send a log message as early as possible to keep the log messages together")]
-        internal static void LogVersion() {
+        internal static void LogVersion()
+        {
             Info($"Version {AssemblyInfo.AssemblyVersion}");
         }
 
-        public static void Log(LogLevel level, string message) {
+        public static void Log(LogLevel level, string message)
+        {
             DebugLog.Log(AssemblyInfo.AssemblyName, level, message);
         }
-        public static void Log(LogLevel level, [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message) {
+        public static void Log(LogLevel level, [InterpolatedStringHandlerArgument("level")] ref DebugLogInterpolatedStringHandler message)
+        {
             DebugLog.Log(AssemblyInfo.AssemblyName, level, ref message);
         }
 
@@ -42,7 +47,8 @@ namespace MonoMod {
 
         // TODO: do we want these in each assembly, or should they all go in Utils and just have the handler field be public?
         [InterpolatedStringHandler]
-        internal ref struct DebugLogSpamStringHandler {
+        internal ref struct DebugLogSpamStringHandler
+        {
             internal DebugLogInterpolatedStringHandler handler;
 
             public DebugLogSpamStringHandler(int literalLen, int formattedCount, out bool isEnabled)
@@ -72,7 +78,8 @@ namespace MonoMod {
         }
 
         [InterpolatedStringHandler]
-        internal ref struct DebugLogTraceStringHandler {
+        internal ref struct DebugLogTraceStringHandler
+        {
             internal DebugLogInterpolatedStringHandler handler;
 
             public DebugLogTraceStringHandler(int literalLen, int formattedCount, out bool isEnabled)
@@ -102,7 +109,8 @@ namespace MonoMod {
         }
 
         [InterpolatedStringHandler]
-        internal ref struct DebugLogInfoStringHandler {
+        internal ref struct DebugLogInfoStringHandler
+        {
             internal DebugLogInterpolatedStringHandler handler;
 
             public DebugLogInfoStringHandler(int literalLen, int formattedCount, out bool isEnabled)
@@ -132,7 +140,8 @@ namespace MonoMod {
         }
 
         [InterpolatedStringHandler]
-        internal ref struct DebugLogWarningStringHandler {
+        internal ref struct DebugLogWarningStringHandler
+        {
             internal DebugLogInterpolatedStringHandler handler;
 
             public DebugLogWarningStringHandler(int literalLen, int formattedCount, out bool isEnabled)
@@ -162,7 +171,8 @@ namespace MonoMod {
         }
 
         [InterpolatedStringHandler]
-        internal ref struct DebugLogErrorStringHandler {
+        internal ref struct DebugLogErrorStringHandler
+        {
             internal DebugLogInterpolatedStringHandler handler;
 
             public DebugLogErrorStringHandler(int literalLen, int formattedCount, out bool isEnabled)

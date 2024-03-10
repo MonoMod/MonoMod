@@ -2,8 +2,10 @@
 using System;
 using static MonoMod.Core.Interop.CoreCLR;
 
-namespace MonoMod.Core.Platforms.Runtimes {
-    internal class Core30Runtime : Core21Runtime {
+namespace MonoMod.Core.Platforms.Runtimes
+{
+    internal class Core30Runtime : Core21Runtime
+    {
         public Core30Runtime(ISystem system) : base(system) { }
 
 

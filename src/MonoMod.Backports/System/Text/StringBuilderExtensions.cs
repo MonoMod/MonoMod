@@ -6,12 +6,15 @@
 using System.Runtime.CompilerServices;
 #endif
 
-namespace System.Text {
-    public static class StringBuilderExtensions {
+namespace System.Text
+{
+    public static class StringBuilderExtensions
+    {
 #if HAS_CLEAR
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-        public static StringBuilder Clear(this StringBuilder builder) {
+        public static StringBuilder Clear(this StringBuilder builder)
+        {
             ThrowHelper.ThrowIfArgumentNull(builder, nameof(builder));
 #if HAS_CLEAR
             return builder.Clear();

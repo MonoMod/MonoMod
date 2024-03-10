@@ -4,8 +4,10 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace System.Collections {
-    internal static partial class HashHelpers {
+namespace System.Collections
+{
+    internal static partial class HashHelpers
+    {
         public const uint HashCollisionThreshold = 100;
 
         // This is the maximum prime smaller than Array.MaxLength.
@@ -35,10 +37,13 @@ namespace System.Collections {
             1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369
         };
 
-        public static bool IsPrime(int candidate) {
-            if ((candidate & 1) != 0) {
+        public static bool IsPrime(int candidate)
+        {
+            if ((candidate & 1) != 0)
+            {
                 int limit = (int)Math.Sqrt(candidate);
-                for (int divisor = 3; divisor <= limit; divisor += 2) {
+                for (int divisor = 3; divisor <= limit; divisor += 2)
+                {
                     if ((candidate % divisor) == 0)
                         return false;
                 }
@@ -47,17 +52,20 @@ namespace System.Collections {
             return candidate == 2;
         }
 
-        public static int GetPrime(int min) {
+        public static int GetPrime(int min)
+        {
             if (min < 0)
                 throw new ArgumentException("Prime minimum cannot be less than zero");
 
-            foreach (int prime in s_primes) {
+            foreach (int prime in s_primes)
+            {
                 if (prime >= min)
                     return prime;
             }
 
             // Outside of our predefined table. Compute the hard way.
-            for (int i = (min | 1); i < int.MaxValue; i += 2) {
+            for (int i = (min | 1); i < int.MaxValue; i += 2)
+            {
                 if (IsPrime(i) && ((i - 1) % HashPrime != 0))
                     return i;
             }
@@ -65,12 +73,14 @@ namespace System.Collections {
         }
 
         // Returns size of hashtable to grow to.
-        public static int ExpandPrime(int oldSize) {
+        public static int ExpandPrime(int oldSize)
+        {
             int newSize = 2 * oldSize;
 
             // Allow the hashtables to grow to maximum possible size (~2G elements) before encountering capacity overflow.
             // Note that this check works even when _items.Length overflowed thanks to the (uint) cast
-            if ((uint)newSize > MaxPrimeArrayLength && MaxPrimeArrayLength > oldSize) {
+            if ((uint)newSize > MaxPrimeArrayLength && MaxPrimeArrayLength > oldSize)
+            {
                 Debug.Assert(MaxPrimeArrayLength == GetPrime(MaxPrimeArrayLength), "Invalid MaxPrimeArrayLength");
                 return MaxPrimeArrayLength;
             }
@@ -86,7 +96,8 @@ namespace System.Collections {
         /// <summary>Performs a mod operation using the multiplier pre-computed with <see cref="GetFastModMultiplier"/>.</summary>
         /// <remarks>This should only be used on 64-bit.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint FastMod(uint value, uint divisor, ulong multiplier) {
+        public static uint FastMod(uint value, uint divisor, ulong multiplier)
+        {
             // We use modified Daniel Lemire's fastmod algorithm (https://github.com/dotnet/runtime/pull/406),
             // which allows to avoid the long multiplication if the divisor is less than 2**31.
             Debug.Assert(divisor <= int.MaxValue);

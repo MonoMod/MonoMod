@@ -1,11 +1,13 @@
 ﻿using System;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A set of features which may be provided by an <see cref="IArchitecture"/> implementation.
     /// </summary>
     [Flags]
-    public enum ArchitectureFeature {
+    public enum ArchitectureFeature
+    {
         /// <summary>
         /// No features are implemented.
         /// </summary>

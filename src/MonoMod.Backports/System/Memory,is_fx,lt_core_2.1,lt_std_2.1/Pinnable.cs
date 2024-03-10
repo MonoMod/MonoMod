@@ -5,13 +5,15 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace System {
+namespace System
+{
     //
     // This class exists solely so that arbitrary objects can be Unsafe-casted to it to get a ref to the start of the user data.
     //
     [StructLayout(LayoutKind.Sequential)]
     [SuppressMessage("Performance", "CA1812", Justification = "Objects are unsafe-casted to this to be stored in Memory and Span")]
-    internal sealed class Pinnable<T> {
+    internal sealed class Pinnable<T>
+    {
         public T Data = default!;
     }
 }

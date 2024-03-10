@@ -6,8 +6,10 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using DynamicMethod = System.Reflection.Emit.DynamicMethod;
 
-namespace MonoMod.Core.Platforms.Runtimes {
-    internal abstract class FxCoreBaseRuntime : IRuntime {
+namespace MonoMod.Core.Platforms.Runtimes
+{
+    internal abstract class FxCoreBaseRuntime : IRuntime
+    {
 
         public abstract RuntimeKind Target { get; }
 
@@ -24,11 +26,14 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         public Abi Abi => AbiCore ?? throw new PlatformNotSupportedException($"The runtime's Abi field is not set, and is unusable ({GetType()})");
 
-        private static TypeClassification ClassifyRyuJitX86(Type type, bool isReturn) {
+        private static TypeClassification ClassifyRyuJitX86(Type type, bool isReturn)
+        {
 
-            while (!type.IsPrimitive || type.IsEnum) {
+            while (!type.IsPrimitive || type.IsEnum)
+            {
                 var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (fields == null || fields.Length != 1) {
+                if (fields == null || fields.Length != 1)
+                {
                     // zero-size empty or too large struct, passed byref
                     break;
                 }
@@ -43,26 +48,33 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 TypeCode.Byte or TypeCode.SByte or
                 TypeCode.Int16 or TypeCode.UInt16 or
                 TypeCode.Int32 or TypeCode.UInt32 ||
-                type == typeof(IntPtr) || type == typeof(UIntPtr)) {
+                type == typeof(IntPtr) || type == typeof(UIntPtr))
+            {
                 // if it's one of these primitives, it's always passed in register
                 return TypeClassification.InRegister;
             }
 
             // if the type is a 64-bit integer and we're checking return, it's passed in register
-            if (isReturn && typeCode is TypeCode.Int64 or TypeCode.UInt64) {
+            if (isReturn && typeCode is TypeCode.Int64 or TypeCode.UInt64)
+            {
                 return TypeClassification.InRegister;
             }
 
             // all others are passed on stack, or in a return buffer
-            if (isReturn) {
+            if (isReturn)
+            {
                 return TypeClassification.ByReference;
-            } else {
+            }
+            else
+            {
                 return TypeClassification.OnStack;
             }
         }
 
-        protected FxCoreBaseRuntime() {
-            if (PlatformDetection.Architecture == ArchitectureKind.x86) {
+        protected FxCoreBaseRuntime()
+        {
+            if (PlatformDetection.Architecture == ArchitectureKind.x86)
+            {
                 // On x86/RyuJIT, the runtime uses its own really funky ABI
                 // TODO: is this the ABI used on CLR 2?
                 AbiCore = new Abi(
@@ -73,8 +85,10 @@ namespace MonoMod.Core.Platforms.Runtimes {
             }
         }
 
-        protected static Abi AbiForCoreFx45X64(Abi baseAbi) {
-            return baseAbi with {
+        protected static Abi AbiForCoreFx45X64(Abi baseAbi)
+        {
+            return baseAbi with
+            {
                 ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.GenericContext, SpecialArgumentKind.UserArguments },
             };
         }
@@ -105,7 +119,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo = RtH_CM_FirstArg?.FullName == "System.IRuntimeMethodInfo";
         private static readonly bool _RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal = RtH_CM_FirstArg?.FullName == "System.RuntimeMethodHandleInternal";
 
-        public virtual MethodBase GetIdentifiable(MethodBase method) {
+        public virtual MethodBase GetIdentifiable(MethodBase method)
+        {
             if (RTDynamicMethod_m_owner != null && method.GetType() == RTDynamicMethod)
                 return (MethodBase)RTDynamicMethod_m_owner.GetValue(method)!;
             return method;
@@ -114,18 +129,26 @@ namespace MonoMod.Core.Platforms.Runtimes {
         [SuppressMessage("Design", "CA1031:Do not catch general exception types",
             Justification = "CreateDelegate throwing is expected and wanted, as it forces the method to be compiled. " +
             "We don't want those exceptions propagating higher up the stack though.")]
-        public virtual RuntimeMethodHandle GetMethodHandle(MethodBase method) {
+        public virtual RuntimeMethodHandle GetMethodHandle(MethodBase method)
+        {
             // Compile the method handle before getting our hands on the final method handle.
-            if (method is DynamicMethod dm) {
-                if (TryGetDMHandle(dm, out var handle) && TryInvokeBclCompileMethod(handle)) {
+            if (method is DynamicMethod dm)
+            {
+                if (TryGetDMHandle(dm, out var handle) && TryInvokeBclCompileMethod(handle))
+                {
                     return handle;
-                } else {
+                }
+                else
+                {
                     // This should work just fine.
                     // It abuses the fact that CreateDelegate first compiles the DynamicMethod, before creating the delegate and failing.
                     // Only side effect: It introduces a possible deadlock in f.e. tModLoader, which adds a FirstChanceException handler.
-                    try {
+                    try
+                    {
                         dm.CreateDelegate(typeof(MulticastDelegate));
-                    } catch {
+                    }
+                    catch
+                    {
                     }
                 }
 
@@ -142,7 +165,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private Func<DynamicMethod, RuntimeMethodHandle> GetDMHandleHelper => lazyGetDmHandleHelper ??= CreateGetDMHandleHelper();
         private static bool CanCreateGetDMHandleHelper => _DynamicMethod_GetMethodDescriptor is not null;
 
-        private static Func<DynamicMethod, RuntimeMethodHandle> CreateGetDMHandleHelper() {
+        private static Func<DynamicMethod, RuntimeMethodHandle> CreateGetDMHandleHelper()
+        {
             Helpers.Assert(CanCreateGetDMHandleHelper);
 
             using var dmd = new DynamicMethodDefinition("get DynamicMethod RuntimeMethodHandle", typeof(RuntimeMethodHandle), new[] { typeof(DynamicMethod) });
@@ -168,7 +192,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             && _RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal
                 ))));
 
-        private static Action<RuntimeMethodHandle> CreateBclCompileMethodHelper() {
+        private static Action<RuntimeMethodHandle> CreateBclCompileMethodHelper()
+        {
             Helpers.Assert(CanCreateBclCompileMethodHelper);
 
             using var dmd = new DynamicMethodDefinition("invoke RuntimeHelpers.CompileMethod", null, new[] { typeof(RuntimeMethodHandle) });
@@ -176,7 +201,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             var il = dmd.GetILProcessor();
 
             il.Emit(OpCodes.Ldarga_S, (byte)0);
-            if (_RuntimeHelpers__CompileMethod_TakesIntPtr) {
+            if (_RuntimeHelpers__CompileMethod_TakesIntPtr)
+            {
                 il.Emit(OpCodes.Call, module.ImportReference(_RuntimeMethodHandle_get_Value));
                 il.Emit(OpCodes.Call, module.ImportReference(_RuntimeHelpers__CompileMethod));
                 il.Emit(OpCodes.Ret);
@@ -185,7 +211,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             Helpers.Assert(_RuntimeMethodHandle_m_value is not null);
             il.Emit(OpCodes.Ldfld, module.ImportReference(_RuntimeMethodHandle_m_value));
-            if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
+            if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo)
+            {
                 il.Emit(OpCodes.Call, module.ImportReference(_RuntimeHelpers__CompileMethod));
                 il.Emit(OpCodes.Ret);
                 return dmd.Generate().CreateDelegate<Action<RuntimeMethodHandle>>();
@@ -193,7 +220,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
             Helpers.Assert(_IRuntimeMethodInfo_get_Value is not null);
             il.Emit(OpCodes.Callvirt, module.ImportReference(_IRuntimeMethodInfo_get_Value));
-            if (_RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal) {
+            if (_RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal)
+            {
                 il.Emit(OpCodes.Call, module.ImportReference(_RuntimeHelpers__CompileMethod));
                 il.Emit(OpCodes.Ret);
                 return dmd.Generate().CreateDelegate<Action<RuntimeMethodHandle>>();
@@ -203,23 +231,28 @@ namespace MonoMod.Core.Platforms.Runtimes {
             throw new InvalidOperationException("UNREACHABLE");
         }
 
-        private bool TryGetDMHandle(DynamicMethod dm, out RuntimeMethodHandle handle) {
-            if (CanCreateGetDMHandleHelper) {
+        private bool TryGetDMHandle(DynamicMethod dm, out RuntimeMethodHandle handle)
+        {
+            if (CanCreateGetDMHandleHelper)
+            {
                 handle = GetDMHandleHelper(dm);
                 return true;
             }
             return TryGetDMHandleRefl(dm, out handle);
         }
 
-        protected bool TryInvokeBclCompileMethod(RuntimeMethodHandle handle) {
-            if (CanCreateBclCompileMethodHelper) {
+        protected bool TryInvokeBclCompileMethod(RuntimeMethodHandle handle)
+        {
+            if (CanCreateBclCompileMethodHelper)
+            {
                 BclCompileMethodHelper(handle);
                 return true;
             }
             return TryInvokeBclCompileMethodRefl(handle);
         }
 
-        private static bool TryGetDMHandleRefl(DynamicMethod dm, out RuntimeMethodHandle handle) {
+        private static bool TryGetDMHandleRefl(DynamicMethod dm, out RuntimeMethodHandle handle)
+        {
             handle = default;
             if (_DynamicMethod_GetMethodDescriptor is null)
                 return false;
@@ -227,10 +260,12 @@ namespace MonoMod.Core.Platforms.Runtimes {
             return true;
         }
 
-        private static bool TryInvokeBclCompileMethodRefl(RuntimeMethodHandle handle) {
+        private static bool TryInvokeBclCompileMethodRefl(RuntimeMethodHandle handle)
+        {
             if (_RuntimeHelpers__CompileMethod is null)
                 return false;
-            if (_RuntimeHelpers__CompileMethod_TakesIntPtr) {
+            if (_RuntimeHelpers__CompileMethod_TakesIntPtr)
+            {
                 // mscorlib 2.0.0.0
                 _RuntimeHelpers__CompileMethod.Invoke(null, new object?[] { handle.Value });
                 return true;
@@ -238,7 +273,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             if (_RuntimeMethodHandle_m_value is null)
                 return false;
             var rtMethodInfo = _RuntimeMethodHandle_m_value.GetValue(handle);
-            if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo) {
+            if (_RuntimeHelpers__CompileMethod_TakesIRuntimeMethodInfo)
+            {
                 // mscorlib 4.0.0.0, System.Private.CoreLib 2.1.0
                 _RuntimeHelpers__CompileMethod.Invoke(null, new object?[] { rtMethodInfo });
                 return true;
@@ -246,7 +282,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
             if (_IRuntimeMethodInfo_get_Value is null)
                 return false;
             var rtMethodHandleInternal = _IRuntimeMethodInfo_get_Value.Invoke(rtMethodInfo, null);
-            if (_RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal) {
+            if (_RuntimeHelpers__CompileMethod_TakesRuntimeMethodHandleInternal)
+            {
                 _RuntimeHelpers__CompileMethod.Invoke(null, new object?[] { rtMethodHandleInternal });
                 return true;
             }
@@ -258,25 +295,33 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types",
             Justification = "We want to catch and swallow exceptions from CreateDelegate.")]
-        public virtual void Compile(MethodBase method) {
+        public virtual void Compile(MethodBase method)
+        {
             var handle = GetMethodHandle(method);
             RuntimeHelpers.PrepareMethod(handle);
             Helpers.Assert(TryInvokeBclCompileMethod(handle));
 
-            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
+            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
+            {
                 // if the method is a virtual method on a value type, we want to do something to compile the real
                 // method instead of just the unboxing stub. The RuntimeMethodHandle we got from the MethodBase
                 // points to the unboxing stub. We could use knowlege of the runtime to get the non-unboxing stub
                 // MethodDesc, then create a RuntimeMethodHandle for it, however that may change per-runtime.
                 // If we want to implement that, we can implement TryGetCacnonicalMethodHandle.
 
-                if (TryGetCanonicalMethodHandle(ref handle)) {
+                if (TryGetCanonicalMethodHandle(ref handle))
+                {
                     Helpers.Assert(TryInvokeBclCompileMethod(handle));
-                } else {
-                    try {
+                }
+                else
+                {
+                    try
+                    {
                         // Just like in GetMethodHandle, CreateDelegate will likely compile the right method.
                         _ = method.CreateDelegate<Action>();
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e)
+                    {
                         MMDbgLog.Spam($"Caught exception while attempting to compile real entry point of virtual method on struct: {e}");
                     }
                 }
@@ -286,14 +331,16 @@ namespace MonoMod.Core.Platforms.Runtimes {
         protected virtual bool TryGetCanonicalMethodHandle(ref RuntimeMethodHandle handle) => false;
 
         // pinning isn't usually needed in fx/core
-        public virtual IDisposable? PinMethodIfNeeded(MethodBase method) {
+        public virtual IDisposable? PinMethodIfNeeded(MethodBase method)
+        {
             return null;
         }
 
         protected static readonly bool IsDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var isEnabled) && isEnabled;
 
         // It seems that across all versions of Framework and Core, the layout of the start of a MethodDesc is quite consistent
-        public unsafe virtual void DisableInlining(MethodBase method) {
+        public unsafe virtual void DisableInlining(MethodBase method)
+        {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
             // mdcNotInline = 0x2000
             // References to RuntimeMethodHandle (CORINFO_METHOD_HANDLE) pointing to MethodDesc
@@ -319,10 +366,12 @@ namespace MonoMod.Core.Platforms.Runtimes {
             *m_wFlags |= 0x2000;
         }
 
-        public virtual IntPtr GetMethodEntryPoint(MethodBase method) {
+        public virtual IntPtr GetMethodEntryPoint(MethodBase method)
+        {
             method = GetIdentifiable(method);
 
-            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false)) {
+            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
+            {
                 /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
                  * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation
                  *
@@ -345,7 +394,9 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 }*/
 
                 return method.GetLdftnPointer();
-            } else {
+            }
+            else
+            {
                 // Your typical method.
                 var handle = GetMethodHandle(method);
                 return handle.GetFunctionPointer();
@@ -364,12 +415,16 @@ namespace MonoMod.Core.Platforms.Runtimes {
             IntPtr methodBodyStart,
             IntPtr methodBodyRw,
             ulong methodBodySize
-        ) {
-            try {
+        )
+        {
+            try
+            {
                 var declType = Type.GetTypeFromHandle(declaringType);
-                if (genericTypeArguments is { } gte && declType!.IsGenericTypeDefinition) {
+                if (genericTypeArguments is { } gte && declType!.IsGenericTypeDefinition)
+                {
                     var typeArr = new Type[gte.Length];
-                    for (var i = 0; i < gte.Length; i++) {
+                    for (var i = 0; i < gte.Length; i++)
+                    {
                         typeArr[i] = Type.GetTypeFromHandle(gte.Span[i])!;
                     }
                     declType = declType.MakeGenericType(typeArr);
@@ -383,9 +438,12 @@ namespace MonoMod.Core.Platforms.Runtimes {
                 // It is worth noting, though, that the P/Invoke stubs that are compiled are reused based on signature, and so are not at all
                 // means of uniquely identifying P/Invoke targets.
                 // https://github.com/dotnet/runtime/blob/c7f926c69725369545671305a3b1c4d4391d80f4/docs/design/coreclr/botr/clr-abi.md#hidden-parameters
-                if (method is null) {
-                    foreach (var meth in declType.GetMethods((BindingFlags)(-1))) {
-                        if (meth.MethodHandle.Value == methodHandle.Value) {
+                if (method is null)
+                {
+                    foreach (var meth in declType.GetMethods((BindingFlags)(-1)))
+                    {
+                        if (meth.MethodHandle.Value == methodHandle.Value)
+                        {
                             method = meth;
                             break;
                         }
@@ -394,12 +452,17 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 MMDbgLog.Spam($"JIT compiled {method} to 0x{methodBodyStart:x16} (rw: 0x{methodBodyRw:x16})");
 
-                try {
+                try
+                {
                     OnMethodCompiled?.Invoke(methodHandle, method, methodBodyStart, methodBodyRw, methodBodySize);
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     MMDbgLog.Error($"Error executing OnMethodCompiled event: {e}");
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 MMDbgLog.Error($"Error in OnMethodCompiledCore: {e}");
             }
         }

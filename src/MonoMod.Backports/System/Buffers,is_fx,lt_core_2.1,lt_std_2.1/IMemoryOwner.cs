@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// Owner of Memory<typeparamref name="T"/> that is responsible for disposing the underlying memory appropriately.
     /// </summary>
-    public interface IMemoryOwner<T> : IDisposable {
+    public interface IMemoryOwner<T> : IDisposable
+    {
         /// <summary>
         /// Returns a Memory<typeparamref name="T"/>.
         /// </summary>

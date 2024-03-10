@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 
-namespace System.Collections.Concurrent {
+namespace System.Collections.Concurrent
+{
     /// <summary>
     /// Out-of-the-box partitioners are created with a set of default behaviors.
     /// For example, by default, some form of buffering and chunking will be employed to achieve
@@ -8,7 +9,8 @@ namespace System.Collections.Concurrent {
     /// non-blocking.  These behaviors can be overridden via this enumeration.
     /// </summary>
     [Flags]
-    public enum EnumerablePartitionerOptions {
+    public enum EnumerablePartitionerOptions
+    {
         /// <summary>
         /// Use the default behavior (i.e., use buffering to achieve optimal performance)
         /// </summary>

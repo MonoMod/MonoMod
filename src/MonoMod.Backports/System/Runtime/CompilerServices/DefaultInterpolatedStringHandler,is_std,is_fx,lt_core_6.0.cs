@@ -9,10 +9,12 @@ using System.Globalization;
 #pragma warning disable IDE0038 // Use pattern matching
 // This implementation is copied (basically) verbatim from the real BCL
 
-namespace System.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices
+{
     /// <summary>Provides a handler used by the language compiler to process interpolated strings into <see cref="string"/> instances.</summary>
     [InterpolatedStringHandler]
-    public ref struct DefaultInterpolatedStringHandler {
+    public ref struct DefaultInterpolatedStringHandler
+    {
         // Implementation note:
         // As this type lives in CompilerServices and is only intended to be targeted by the compiler,
         // public APIs eschew argument validation logic in a variety of places, e.g. allowing a null input
@@ -53,7 +55,8 @@ namespace System.Runtime.CompilerServices {
         /// <param name="literalLength">The number of constant characters outside of interpolation expressions in the interpolated string.</param>
         /// <param name="formattedCount">The number of interpolation expressions in the interpolated string.</param>
         /// <remarks>This is intended to be called only by compiler-generated code. Arguments are not validated as they'd otherwise be for members intended to be used directly.</remarks>
-        public DefaultInterpolatedStringHandler(int literalLength, int formattedCount) {
+        public DefaultInterpolatedStringHandler(int literalLength, int formattedCount)
+        {
             _provider = null;
             _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
             _pos = 0;
@@ -65,7 +68,8 @@ namespace System.Runtime.CompilerServices {
         /// <param name="formattedCount">The number of interpolation expressions in the interpolated string.</param>
         /// <param name="provider">An object that supplies culture-specific formatting information.</param>
         /// <remarks>This is intended to be called only by compiler-generated code. Arguments are not validated as they'd otherwise be for members intended to be used directly.</remarks>
-        public DefaultInterpolatedStringHandler(int literalLength, int formattedCount, IFormatProvider? provider) {
+        public DefaultInterpolatedStringHandler(int literalLength, int formattedCount, IFormatProvider? provider)
+        {
             _provider = provider;
             _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
             _pos = 0;
@@ -78,7 +82,8 @@ namespace System.Runtime.CompilerServices {
         /// <param name="provider">An object that supplies culture-specific formatting information.</param>
         /// <param name="initialBuffer">A buffer temporarily transferred to the handler for use as part of its formatting.  Contents may be overwritten.</param>
         /// <remarks>This is intended to be called only by compiler-generated code. Arguments are not validated as they'd otherwise be for members intended to be used directly.</remarks>
-        public DefaultInterpolatedStringHandler(int literalLength, int formattedCount, IFormatProvider? provider, Span<char> initialBuffer) {
+        public DefaultInterpolatedStringHandler(int literalLength, int formattedCount, IFormatProvider? provider, Span<char> initialBuffer)
+        {
             _provider = provider;
             _chars = initialBuffer;
             _arrayToReturnToPool = null;
@@ -105,7 +110,8 @@ namespace System.Runtime.CompilerServices {
         /// and may destabilize the process, as may using any other copies of the handler after ToStringAndClear
         /// is called on any one of them.
         /// </remarks>
-        public string ToStringAndClear() {
+        public string ToStringAndClear()
+        {
             string result = Text.ToString();
             Clear();
             return result;
@@ -113,10 +119,12 @@ namespace System.Runtime.CompilerServices {
 
         /// <summary>Clears the handler, returning any rented array to the pool.</summary>
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)] // used only on a few hot paths
-        internal void Clear() {
+        internal void Clear()
+        {
             char[]? toReturn = _arrayToReturnToPool;
             this = default; // defensive clear
-            if (toReturn is not null) {
+            if (toReturn is not null)
+            {
                 ArrayPool<char>.Shared.Return(toReturn);
             }
         }
@@ -127,7 +135,8 @@ namespace System.Runtime.CompilerServices {
         /// <summary>Writes the specified string to the handler.</summary>
         /// <param name="value">The string to write.</param>
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendLiteral(string value) {
+        public void AppendLiteral(string value)
+        {
             // AppendLiteral is expected to always be called by compiler-generated code with a literal string.
             // By inlining it, the method body is exposed to the constant length of that literal, allowing the JIT to
             // prune away the irrelevant cases.  This effectively enables multiple implementations of AppendLiteral,
@@ -146,25 +155,33 @@ namespace System.Runtime.CompilerServices {
             // could be unrolled based on the literal, ala https://github.com/dotnet/runtime/pull/46392, we might
             // be able to remove all special-casing here.
 
-            if (value.Length == 1) {
+            if (value.Length == 1)
+            {
                 Span<char> chars = _chars;
                 int pos = _pos;
-                if ((uint)pos < (uint)chars.Length) {
+                if ((uint)pos < (uint)chars.Length)
+                {
                     chars[pos] = value[0];
                     _pos = pos + 1;
-                } else {
+                }
+                else
+                {
                     GrowThenCopyString(value);
                 }
                 return;
             }
 
-            if (value.Length == 2) {
+            if (value.Length == 2)
+            {
                 Span<char> chars = _chars;
                 int pos = _pos;
-                if ((uint)pos < chars.Length - 1) {
+                if ((uint)pos < chars.Length - 1)
+                {
                     value.AsSpan().CopyTo(chars.Slice(pos));
                     _pos = pos + 2;
-                } else {
+                }
+                else
+                {
                     GrowThenCopyString(value);
                 }
                 return;
@@ -175,10 +192,14 @@ namespace System.Runtime.CompilerServices {
 
         /// <summary>Writes the specified string to the handler.</summary>
         /// <param name="value">The string to write.</param>
-        private void AppendStringDirect(string value) {
-            if (value.AsSpan().TryCopyTo(_chars.Slice(_pos))) {
+        private void AppendStringDirect(string value)
+        {
+            if (value.AsSpan().TryCopyTo(_chars.Slice(_pos)))
+            {
                 _pos += value.Length;
-            } else {
+            }
+            else
+            {
                 GrowThenCopyString(value);
             }
         }
@@ -262,22 +283,26 @@ namespace System.Runtime.CompilerServices {
         /// <summary>Writes the specified value to the handler.</summary>
         /// <param name="value">The value to write.</param>
         /// <typeparam name="T">The type of the value to write.</typeparam>
-        public void AppendFormatted<T>(T value) {
+        public void AppendFormatted<T>(T value)
+        {
             // This method could delegate to AppendFormatted with a null format, but explicitly passing
             // default as the format to TryFormat helps to improve code quality in some cases when TryFormat is inlined,
             // e.g. for Int32 it enables the JIT to eliminate code in the inlined method based on a length check on the format.
 
             // If there's a custom formatter, always use it.
-            if (_hasCustomFormatter) {
+            if (_hasCustomFormatter)
+            {
                 AppendCustomFormatter(value, format: null);
                 return;
             }
 
-            if (typeof(T) == typeof(IntPtr)) {
+            if (typeof(T) == typeof(IntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value));
                 return;
             }
-            if (typeof(T) == typeof(UIntPtr)) {
+            if (typeof(T) == typeof(UIntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, UIntPtr>(ref value));
                 return;
             }
@@ -290,7 +315,8 @@ namespace System.Runtime.CompilerServices {
             // if it only implements IFormattable, we come out even: only if it implements both do we
             // end up paying for an extra interface check.
             string? s;
-            if (value is IFormattable) {
+            if (value is IFormattable)
+            {
                 // If the value can format itself directly into our buffer, do so.
                 /*if (value is ISpanFormattable) {
                     int charsWritten;
@@ -304,11 +330,14 @@ namespace System.Runtime.CompilerServices {
                 }*/
 
                 s = ((IFormattable)value).ToString(format: null, _provider); // constrained call avoiding boxing for value types
-            } else {
+            }
+            else
+            {
                 s = value?.ToString();
             }
 
-            if (s is not null) {
+            if (s is not null)
+            {
                 AppendStringDirect(s);
             }
         }
@@ -316,18 +345,22 @@ namespace System.Runtime.CompilerServices {
         /// <param name="value">The value to write.</param>
         /// <param name="format">The format string.</param>
         /// <typeparam name="T">The type of the value to write.</typeparam>
-        public void AppendFormatted<T>(T value, string? format) {
+        public void AppendFormatted<T>(T value, string? format)
+        {
             // If there's a custom formatter, always use it.
-            if (_hasCustomFormatter) {
+            if (_hasCustomFormatter)
+            {
                 AppendCustomFormatter(value, format);
                 return;
             }
 
-            if (typeof(T) == typeof(IntPtr)) {
+            if (typeof(T) == typeof(IntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value), format);
                 return;
             }
-            if (typeof(T) == typeof(UIntPtr)) {
+            if (typeof(T) == typeof(UIntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, UIntPtr>(ref value), format);
                 return;
             }
@@ -340,7 +373,8 @@ namespace System.Runtime.CompilerServices {
             // if it only implements IFormattable, we come out even: only if it implements both do we
             // end up paying for an extra interface check.
             string? s;
-            if (value is IFormattable) {
+            if (value is IFormattable)
+            {
                 // If the value can format itself directly into our buffer, do so.
                 /*if (value is ISpanFormattable) {
                     int charsWritten;
@@ -354,11 +388,14 @@ namespace System.Runtime.CompilerServices {
                 }*/
 
                 s = ((IFormattable)value).ToString(format, _provider); // constrained call avoiding boxing for value types
-            } else {
+            }
+            else
+            {
                 s = value?.ToString();
             }
 
-            if (s is not null) {
+            if (s is not null)
+            {
                 AppendStringDirect(s);
             }
         }
@@ -367,10 +404,12 @@ namespace System.Runtime.CompilerServices {
         /// <param name="value">The value to write.</param>
         /// <param name="alignment">Minimum number of characters that should be written for this value.  If the value is negative, it indicates left-aligned and the required minimum is the absolute value.</param>
         /// <typeparam name="T">The type of the value to write.</typeparam>
-        public void AppendFormatted<T>(T value, int alignment) {
+        public void AppendFormatted<T>(T value, int alignment)
+        {
             int startingPos = _pos;
             AppendFormatted(value);
-            if (alignment != 0) {
+            if (alignment != 0)
+            {
                 AppendOrInsertAlignmentIfNeeded(startingPos, alignment);
             }
         }
@@ -380,10 +419,12 @@ namespace System.Runtime.CompilerServices {
         /// <param name="format">The format string.</param>
         /// <param name="alignment">Minimum number of characters that should be written for this value.  If the value is negative, it indicates left-aligned and the required minimum is the absolute value.</param>
         /// <typeparam name="T">The type of the value to write.</typeparam>
-        public void AppendFormatted<T>(T value, int alignment, string? format) {
+        public void AppendFormatted<T>(T value, int alignment, string? format)
+        {
             int startingPos = _pos;
             AppendFormatted(value, format);
-            if (alignment != 0) {
+            if (alignment != 0)
+            {
                 AppendOrInsertAlignmentIfNeeded(startingPos, alignment);
             }
         }
@@ -396,35 +437,51 @@ namespace System.Runtime.CompilerServices {
         // BCL implementation
 
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(IntPtr value) {
-            if (IntPtr.Size == 4) {
+        private void AppendFormatted(IntPtr value)
+        {
+            if (IntPtr.Size == 4)
+            {
                 AppendFormatted((int)value);
-            } else {
+            }
+            else
+            {
                 AppendFormatted((long)value);
             }
         }
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(IntPtr value, string? format) {
-            if (IntPtr.Size == 4) {
+        private void AppendFormatted(IntPtr value, string? format)
+        {
+            if (IntPtr.Size == 4)
+            {
                 AppendFormatted((int)value, format);
-            } else {
+            }
+            else
+            {
                 AppendFormatted((long)value, format);
             }
         }
 
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(UIntPtr value) {
-            if (UIntPtr.Size == 4) {
+        private void AppendFormatted(UIntPtr value)
+        {
+            if (UIntPtr.Size == 4)
+            {
                 AppendFormatted((uint)value);
-            } else {
+            }
+            else
+            {
                 AppendFormatted((ulong)value);
             }
         }
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(UIntPtr value, string? format) {
-            if (UIntPtr.Size == 4) {
+        private void AppendFormatted(UIntPtr value, string? format)
+        {
+            if (UIntPtr.Size == 4)
+            {
                 AppendFormatted((uint)value, format);
-            } else {
+            }
+            else
+            {
                 AppendFormatted((ulong)value, format);
             }
         }
@@ -433,11 +490,15 @@ namespace System.Runtime.CompilerServices {
         #region AppendFormatted ReadOnlySpan<char>
         /// <summary>Writes the specified character span to the handler.</summary>
         /// <param name="value">The span to write.</param>
-        public void AppendFormatted(ReadOnlySpan<char> value) {
+        public void AppendFormatted(ReadOnlySpan<char> value)
+        {
             // Fast path for when the value fits in the current buffer
-            if (value.TryCopyTo(_chars.Slice(_pos))) {
+            if (value.TryCopyTo(_chars.Slice(_pos)))
+            {
                 _pos += value.Length;
-            } else {
+            }
+            else
+            {
                 GrowThenCopySpan(value);
             }
         }
@@ -446,15 +507,18 @@ namespace System.Runtime.CompilerServices {
         /// <param name="value">The span to write.</param>
         /// <param name="alignment">Minimum number of characters that should be written for this value.  If the value is negative, it indicates left-aligned and the required minimum is the absolute value.</param>
         /// <param name="format">The format string.</param>
-        public void AppendFormatted(ReadOnlySpan<char> value, int alignment = 0, string? format = null) {
+        public void AppendFormatted(ReadOnlySpan<char> value, int alignment = 0, string? format = null)
+        {
             bool leftAlign = false;
-            if (alignment < 0) {
+            if (alignment < 0)
+            {
                 leftAlign = true;
                 alignment = -alignment;
             }
 
             int paddingRequired = alignment - value.Length;
-            if (paddingRequired <= 0) {
+            if (paddingRequired <= 0)
+            {
                 // The value is as large or larger than the required amount of padding,
                 // so just write the value.
                 AppendFormatted(value);
@@ -463,12 +527,15 @@ namespace System.Runtime.CompilerServices {
 
             // Write the value along with the appropriate padding.
             EnsureCapacityForAdditionalChars(value.Length + paddingRequired);
-            if (leftAlign) {
+            if (leftAlign)
+            {
                 value.CopyTo(_chars.Slice(_pos));
                 _pos += value.Length;
                 _chars.Slice(_pos, paddingRequired).Fill(' ');
                 _pos += paddingRequired;
-            } else {
+            }
+            else
+            {
                 _chars.Slice(_pos, paddingRequired).Fill(' ');
                 _pos += paddingRequired;
                 value.CopyTo(_chars.Slice(_pos));
@@ -480,13 +547,17 @@ namespace System.Runtime.CompilerServices {
         #region AppendFormatted string
         /// <summary>Writes the specified value to the handler.</summary>
         /// <param name="value">The value to write.</param>
-        public void AppendFormatted(string? value) {
+        public void AppendFormatted(string? value)
+        {
             // Fast-path for no custom formatter and a non-null string that fits in the current destination buffer.
             if (!_hasCustomFormatter &&
                 value is not null &&
-                value.AsSpan().TryCopyTo(_chars.Slice(_pos))) {
+                value.AsSpan().TryCopyTo(_chars.Slice(_pos)))
+            {
                 _pos += value.Length;
-            } else {
+            }
+            else
+            {
                 AppendFormattedSlow(value);
             }
         }
@@ -498,10 +569,14 @@ namespace System.Runtime.CompilerServices {
         /// or a string that doesn't fit in the current buffer.
         /// </remarks>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void AppendFormattedSlow(string? value) {
-            if (_hasCustomFormatter) {
+        private void AppendFormattedSlow(string? value)
+        {
+            if (_hasCustomFormatter)
+            {
                 AppendCustomFormatter(value, format: null);
-            } else if (value is not null) {
+            }
+            else if (value is not null)
+            {
                 EnsureCapacityForAdditionalChars(value.Length);
                 value.AsSpan().CopyTo(_chars.Slice(_pos));
                 _pos += value.Length;
@@ -534,7 +609,8 @@ namespace System.Runtime.CompilerServices {
 
         /// <summary>Gets whether the provider provides a custom formatter.</summary>
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)] // only used in a few hot path call sites
-        internal static bool HasCustomFormatter(IFormatProvider provider) {
+        internal static bool HasCustomFormatter(IFormatProvider provider)
+        {
             Debug.Assert(provider is not null);
             Debug.Assert(provider is not CultureInfo || provider.GetFormat(typeof(ICustomFormatter)) is null, "Expected CultureInfo to not provide a custom formatter");
             return
@@ -549,7 +625,8 @@ namespace System.Runtime.CompilerServices {
         [MethodImpl(MethodImplOptions.NoInlining)]
         [Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
             Justification = "Extra guard protects against null in release, where the asserts aren't present")]
-        private void AppendCustomFormatter<T>(T value, string? format) {
+        private void AppendCustomFormatter<T>(T value, string? format)
+        {
             // This case is very rare, but we need to handle it prior to the other checks in case
             // a provider was used that supplied an ICustomFormatter which wanted to intercept the particular value.
             // We do the cast here rather than in the ctor, even though this could be executed multiple times per
@@ -560,7 +637,8 @@ namespace System.Runtime.CompilerServices {
             ICustomFormatter? formatter = (ICustomFormatter?)_provider!.GetFormat(typeof(ICustomFormatter));
             Debug.Assert(formatter != null, "An incorrectly written provider said it implemented ICustomFormatter, and then didn't");
 
-            if (formatter is not null && formatter.Format(format, value, _provider) is { } customFormatted) {
+            if (formatter is not null && formatter.Format(format, value, _provider) is { } customFormatted)
+            {
                 AppendStringDirect(customFormatted);
             }
         }
@@ -568,25 +646,31 @@ namespace System.Runtime.CompilerServices {
         /// <summary>Handles adding any padding required for aligning a formatted value in an interpolation expression.</summary>
         /// <param name="startingPos">The position at which the written value started.</param>
         /// <param name="alignment">Non-zero minimum number of characters that should be written for this value.  If the value is negative, it indicates left-aligned and the required minimum is the absolute value.</param>
-        private void AppendOrInsertAlignmentIfNeeded(int startingPos, int alignment) {
+        private void AppendOrInsertAlignmentIfNeeded(int startingPos, int alignment)
+        {
             Debug.Assert(startingPos >= 0 && startingPos <= _pos);
             Debug.Assert(alignment != 0);
 
             int charsWritten = _pos - startingPos;
 
             bool leftAlign = false;
-            if (alignment < 0) {
+            if (alignment < 0)
+            {
                 leftAlign = true;
                 alignment = -alignment;
             }
 
             int paddingNeeded = alignment - charsWritten;
-            if (paddingNeeded > 0) {
+            if (paddingNeeded > 0)
+            {
                 EnsureCapacityForAdditionalChars(paddingNeeded);
 
-                if (leftAlign) {
+                if (leftAlign)
+                {
                     _chars.Slice(_pos, paddingNeeded).Fill(' ');
-                } else {
+                }
+                else
+                {
                     _chars.Slice(startingPos, charsWritten).CopyTo(_chars.Slice(startingPos + paddingNeeded));
                     _chars.Slice(startingPos, paddingNeeded).Fill(' ');
                 }
@@ -597,8 +681,10 @@ namespace System.Runtime.CompilerServices {
 
         /// <summary>Ensures <see cref="_chars"/> has the capacity to store <paramref name="additionalChars"/> beyond <see cref="_pos"/>.</summary>
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        private void EnsureCapacityForAdditionalChars(int additionalChars) {
-            if (_chars.Length - _pos < additionalChars) {
+        private void EnsureCapacityForAdditionalChars(int additionalChars)
+        {
+            if (_chars.Length - _pos < additionalChars)
+            {
                 Grow(additionalChars);
             }
         }
@@ -606,7 +692,8 @@ namespace System.Runtime.CompilerServices {
         /// <summary>Fallback for fast path in <see cref="AppendStringDirect"/> when there's not enough space in the destination.</summary>
         /// <param name="value">The string to write.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void GrowThenCopyString(string value) {
+        private void GrowThenCopyString(string value)
+        {
             Grow(value.Length);
             value.AsSpan().CopyTo(_chars.Slice(_pos));
             _pos += value.Length;
@@ -615,7 +702,8 @@ namespace System.Runtime.CompilerServices {
         /// <summary>Fallback for <see cref="AppendFormatted(ReadOnlySpan{char})"/> for when not enough space exists in the current buffer.</summary>
         /// <param name="value">The span to write.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void GrowThenCopySpan(ReadOnlySpan<char> value) {
+        private void GrowThenCopySpan(ReadOnlySpan<char> value)
+        {
             Grow(value.Length);
             value.CopyTo(_chars.Slice(_pos));
             _pos += value.Length;
@@ -623,7 +711,8 @@ namespace System.Runtime.CompilerServices {
 
         /// <summary>Grows <see cref="_chars"/> to have the capacity to store at least <paramref name="additionalChars"/> beyond <see cref="_pos"/>.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)] // keep consumers as streamlined as possible
-        private void Grow(int additionalChars) {
+        private void Grow(int additionalChars)
+        {
             // This method is called when the remaining space (_chars.Length - _pos) is
             // insufficient to store a specific number of additional characters.  Thus, we
             // need to grow to at least that new total. GrowCore will handle growing by more
@@ -634,7 +723,8 @@ namespace System.Runtime.CompilerServices {
 
         /// <summary>Grows the size of <see cref="_chars"/>.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)] // keep consumers as streamlined as possible
-        private void Grow() {
+        private void Grow()
+        {
             // This method is called when the remaining space in _chars isn't sufficient to continue
             // the operation.  Thus, we need at least one character beyond _chars.Length.  GrowCore
             // will handle growing by more than that if possible.
@@ -643,7 +733,8 @@ namespace System.Runtime.CompilerServices {
 
         /// <summary>Grow the size of <see cref="_chars"/> to at least the specified <paramref name="requiredMinCapacity"/>.</summary>
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)] // but reuse this grow logic directly in both of the above grow routines
-        private void GrowCore(uint requiredMinCapacity) {
+        private void GrowCore(uint requiredMinCapacity)
+        {
             // We want the max of how much space we actually required and doubling our capacity (without going beyond the max allowed length). We
             // also want to avoid asking for small arrays, to reduce the number of times we need to grow, and since we're working with unsigned
             // ints that could technically overflow if someone tried to, for example, append a huge string to a huge string, we also clamp to int.MaxValue.
@@ -658,7 +749,8 @@ namespace System.Runtime.CompilerServices {
             char[]? toReturn = _arrayToReturnToPool;
             _chars = _arrayToReturnToPool = newArray;
 
-            if (toReturn is not null) {
+            if (toReturn is not null)
+            {
                 ArrayPool<char>.Shared.Return(toReturn);
             }
         }

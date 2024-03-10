@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Reflection;
 
-namespace MonoMod.Utils {
-    public static partial class DynDll {
+namespace MonoMod.Utils
+{
+    public static partial class DynDll
+    {
         // TODO: remove calls to Assembly.GetCallingAssembly when its not necessary (perhaps by moving them into the backend?)
         // (if we move them into the backend, how can it know how far up to look?)
 
@@ -14,7 +16,8 @@ namespace MonoMod.Utils {
         /// </remarks>
         /// <param name="name">The library name.</param>
         /// <returns>The library handle.</returns>
-        public static IntPtr OpenLibrary(string? name) {
+        public static IntPtr OpenLibrary(string? name)
+        {
             return Backend.OpenLibrary(name, Assembly.GetCallingAssembly());
         }
 
@@ -27,7 +30,8 @@ namespace MonoMod.Utils {
         /// <param name="name">The library name.</param>
 		/// <param name="libraryPtr">The library handle.</param>
         /// <returns><see langword="true"/> if the library was opened successfully; <see langword="false"/> if an error ocurred.</returns>
-        public static bool TryOpenLibrary(string? name, out IntPtr libraryPtr) {
+        public static bool TryOpenLibrary(string? name, out IntPtr libraryPtr)
+        {
             return Backend.TryOpenLibrary(name, Assembly.GetCallingAssembly(), out libraryPtr);
         }
 
@@ -35,7 +39,8 @@ namespace MonoMod.Utils {
         /// Release a library handle obtained from <see cref="OpenLibrary(string?)"/> or <see cref="TryOpenLibrary(string?, out IntPtr)"/>.
         /// </summary>
         /// <param name="lib">The library handle.</param>
-        public static void CloseLibrary(IntPtr lib) {
+        public static void CloseLibrary(IntPtr lib)
+        {
             Backend.CloseLibrary(lib);
         }
 
@@ -44,7 +49,8 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="lib">The library handle.</param>
         /// <returns><see langword="true"/> if the library was closed successfully; <see langword="false"/> if an error ocurred.</returns>
-        public static bool TryCloseLibrary(IntPtr lib) {
+        public static bool TryCloseLibrary(IntPtr lib)
+        {
             return Backend.TryCloseLibrary(lib);
         }
 
@@ -54,7 +60,8 @@ namespace MonoMod.Utils {
         /// <param name="libraryPtr">The library handle.</param>
         /// <param name="name">The function name.</param>
         /// <returns>The function pointer.</returns>
-        public static IntPtr GetExport(this IntPtr libraryPtr, string name) {
+        public static IntPtr GetExport(this IntPtr libraryPtr, string name)
+        {
             return Backend.GetExport(libraryPtr, name);
         }
 
@@ -65,7 +72,8 @@ namespace MonoMod.Utils {
         /// <param name="name">The function name.</param>
         /// <param name="functionPtr">The export pointer, or null if it wasn't found.</param>
         /// <returns><see langword="true"/> if the export was obtained successfully; <see langword="false"/> if an error ocurred.</returns>
-        public static bool TryGetExport(this IntPtr libraryPtr, string name, out IntPtr functionPtr) {
+        public static bool TryGetExport(this IntPtr libraryPtr, string name, out IntPtr functionPtr)
+        {
             return Backend.TryGetExport(libraryPtr, name, out functionPtr);
         }
 

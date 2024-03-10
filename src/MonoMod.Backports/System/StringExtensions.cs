@@ -4,11 +4,14 @@
 
 using System.Runtime.CompilerServices;
 
-namespace System {
-    public static class StringExtensions {
+namespace System
+{
+    public static class StringExtensions
+    {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string Replace(this string self, string oldValue, string newValue, StringComparison comparison) {
+        public static string Replace(this string self, string oldValue, string newValue, StringComparison comparison)
+        {
             ThrowHelper.ThrowIfArgumentNull(self, ExceptionArgument.self);
             ThrowHelper.ThrowIfArgumentNull(oldValue, ExceptionArgument.oldValue);
             ThrowHelper.ThrowIfArgumentNull(newValue, ExceptionArgument.newValue);
@@ -35,7 +38,8 @@ namespace System {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Contains(this string self, string value, StringComparison comparison) {
+        public static bool Contains(this string self, string value, StringComparison comparison)
+        {
             ThrowHelper.ThrowIfArgumentNull(self, ExceptionArgument.self);
             ThrowHelper.ThrowIfArgumentNull(value, ExceptionArgument.value);
 #if HAS_STRING_COMPARISON
@@ -46,7 +50,8 @@ namespace System {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Contains(this string self, char value, StringComparison comparison) {
+        public static bool Contains(this string self, char value, StringComparison comparison)
+        {
             ThrowHelper.ThrowIfArgumentNull(self, ExceptionArgument.self);
 #if HAS_STRING_COMPARISON
             return self.Contains(value, comparison);
@@ -56,7 +61,8 @@ namespace System {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetHashCode(this string self, StringComparison comparison) {
+        public static int GetHashCode(this string self, StringComparison comparison)
+        {
             ThrowHelper.ThrowIfArgumentNull(self, ExceptionArgument.self);
 #if HAS_STRING_COMPARISON
             return self.GetHashCode(comparison);
@@ -67,7 +73,8 @@ namespace System {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int IndexOf(this string self, char value, StringComparison comparison) {
+        public static int IndexOf(this string self, char value, StringComparison comparison)
+        {
             ThrowHelper.ThrowIfArgumentNull(self, ExceptionArgument.self);
 #if HAS_STRING_COMPARISON
             return self.IndexOf(value, comparison);

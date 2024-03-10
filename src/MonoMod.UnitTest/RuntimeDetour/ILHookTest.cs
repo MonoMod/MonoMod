@@ -10,29 +10,35 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class ILHookTest : TestBase {
+    public class ILHookTest : TestBase
+    {
         private bool DidNothing = true;
 
-        public ILHookTest(ITestOutputHelper helper) : base(helper) {
+        public ILHookTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestILHooks() {
+        public void TestILHooks()
+        {
             DidNothing = true;
             DoNothing();
             Assert.True(DidNothing);
 
             using (var h = new ILHook(
                 typeof(ILHookTest).GetMethod("DoNothing", BindingFlags.Instance | BindingFlags.NonPublic),
-                il => {
+                il =>
+                {
                     var c = new ILCursor(il);
                     c.Emit(OpCodes.Ldarg_0);
                     c.Emit(OpCodes.Ldc_I4_0);
                     c.Emit(OpCodes.Stfld, typeof(ILHookTest).GetField("DidNothing", BindingFlags.NonPublic | BindingFlags.Instance));
                 }
-            )) {
+            ))
+            {
                 DidNothing = true;
                 DoNothing();
                 Assert.False(DidNothing);
@@ -44,7 +50,8 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal void DoNothing() {
+        internal void DoNothing()
+        {
         }
 
     }

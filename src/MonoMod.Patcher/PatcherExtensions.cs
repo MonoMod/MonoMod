@@ -4,24 +4,28 @@ using System.Collections.Generic;
 using Mono.Cecil.Cil;
 using Mono.Cecil;
 
-namespace MonoMod {
-    public static partial class PatcherExtensions {
+namespace MonoMod
+{
+    public static partial class PatcherExtensions
+    {
 
-        public static void SetPublic(this IMetadataTokenProvider mtp, bool p) {
+        public static void SetPublic(this IMetadataTokenProvider mtp, bool p)
+        {
             if (mtp is TypeDefinition)
-                ((TypeDefinition) mtp).SetPublic(p);
+                ((TypeDefinition)mtp).SetPublic(p);
             else if (mtp is FieldDefinition)
-                ((FieldDefinition) mtp).SetPublic(p);
+                ((FieldDefinition)mtp).SetPublic(p);
             else if (mtp is MethodDefinition)
-                ((MethodDefinition) mtp).SetPublic(p);
+                ((MethodDefinition)mtp).SetPublic(p);
             else if (mtp is PropertyDefinition)
-                ((PropertyDefinition) mtp).SetPublic(p);
+                ((PropertyDefinition)mtp).SetPublic(p);
             else if (mtp is EventDefinition)
-                ((EventDefinition) mtp).SetPublic(p);
+                ((EventDefinition)mtp).SetPublic(p);
             else
                 throw new InvalidOperationException($"MonoMod can't set metadata token providers of the type {mtp.GetType()} public.");
         }
-        public static void SetPublic(this FieldDefinition o, bool p) {
+        public static void SetPublic(this FieldDefinition o, bool p)
+        {
             if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
                 return;
             o.IsPrivate = !p;
@@ -29,7 +33,8 @@ namespace MonoMod {
             if (p)
                 o.DeclaringType.SetPublic(true);
         }
-        public static void SetPublic(this MethodDefinition o, bool p) {
+        public static void SetPublic(this MethodDefinition o, bool p)
+        {
             if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
                 return;
             o.IsPrivate = !p;
@@ -37,7 +42,8 @@ namespace MonoMod {
             if (p)
                 o.DeclaringType.SetPublic(true);
         }
-        public static void SetPublic(this PropertyDefinition o, bool p) {
+        public static void SetPublic(this PropertyDefinition o, bool p)
+        {
             if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
                 return;
             o.GetMethod?.SetPublic(p);
@@ -47,7 +53,8 @@ namespace MonoMod {
             if (p)
                 o.DeclaringType.SetPublic(true);
         }
-        public static void SetPublic(this EventDefinition o, bool p) {
+        public static void SetPublic(this EventDefinition o, bool p)
+        {
             if (!o.IsDefinition || o.DeclaringType.Name == "<PrivateImplementationDetails>")
                 return;
             o.AddMethod?.SetPublic(p);
@@ -58,17 +65,21 @@ namespace MonoMod {
             if (p)
                 o.DeclaringType.SetPublic(true);
         }
-        public static void SetPublic(this TypeDefinition o, bool p) {
+        public static void SetPublic(this TypeDefinition o, bool p)
+        {
             if (
                 !o.IsDefinition ||
                 o.Name == "<PrivateImplementationDetails>" ||
                 (o.DeclaringType != null && o.DeclaringType.Name == "<PrivateImplementationDetails>")
             )
                 return;
-            if (o.DeclaringType == null) {
+            if (o.DeclaringType == null)
+            {
                 o.IsNotPublic = !p;
                 o.IsPublic = p;
-            } else {
+            }
+            else
+            {
                 o.IsNestedPrivate = !p;
                 o.IsNestedPublic = p;
                 if (p)
@@ -77,8 +88,10 @@ namespace MonoMod {
         }
 
         // Required for field -> call conversions where the original access was an address access.
-        internal static void AppendGetAddr(this MethodBody body, Instruction instr, TypeReference type, IDictionary<TypeReference, VariableDefinition> localMap = null) {
-            if (localMap == null || !localMap.TryGetValue(type, out VariableDefinition local)) {
+        internal static void AppendGetAddr(this MethodBody body, Instruction instr, TypeReference type, IDictionary<TypeReference, VariableDefinition> localMap = null)
+        {
+            if (localMap == null || !localMap.TryGetValue(type, out VariableDefinition local))
+            {
                 local = new VariableDefinition(type);
                 body.Variables.Add(local);
                 if (localMap != null)
@@ -91,15 +104,18 @@ namespace MonoMod {
             il.InsertAfter(tmp, tmp = il.Create(OpCodes.Ldloca, local));
         }
 
-        internal static CustomAttribute GetNextCustomAttribute(this ICustomAttributeProvider cap, string attribute) {
+        internal static CustomAttribute GetNextCustomAttribute(this ICustomAttributeProvider cap, string attribute)
+        {
             if (cap == null || !cap.HasCustomAttributes)
                 return null;
             var next = false;
-            for (var i = 0; i < cap.CustomAttributes.Count; i++) {
+            for (var i = 0; i < cap.CustomAttributes.Count; i++)
+            {
                 CustomAttribute attrib = cap.CustomAttributes[i];
                 if (attrib.AttributeType.FullName != attribute)
                     continue;
-                if (!next) {
+                if (!next)
+                {
                     cap.CustomAttributes.RemoveAt(i);
                     i--;
                     next = true;
@@ -110,13 +126,15 @@ namespace MonoMod {
             return null;
         }
 
-        public static string GetOriginalName(this MethodDefinition method) {
+        public static string GetOriginalName(this MethodDefinition method)
+        {
             foreach (CustomAttribute attrib in method.CustomAttributes)
                 if (attrib.AttributeType.FullName == "MonoMod.MonoModOriginalName")
-                    return (string) attrib.ConstructorArguments[0].Value;
+                    return (string)attrib.ConstructorArguments[0].Value;
 
-            if (method.Name == ".ctor" || method.Name == ".cctor") {
-                return "orig_ctor_" + ((MemberReference) method.DeclaringType).GetPatchName();
+            if (method.Name == ".ctor" || method.Name == ".cctor")
+            {
+                return "orig_ctor_" + ((MemberReference)method.DeclaringType).GetPatchName();
             }
 
             return "orig_" + method.Name;

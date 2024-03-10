@@ -6,9 +6,12 @@
 using System.Buffers;
 #endif
 
-namespace System.IO {
-    public static class StreamExtensions {
-        public static void CopyTo(this Stream src, Stream destination) {
+namespace System.IO
+{
+    public static class StreamExtensions
+    {
+        public static void CopyTo(this Stream src, Stream destination)
+        {
             ThrowHelper.ThrowIfArgumentNull(src, nameof(src));
 
 #if HAS_COPYTO
@@ -17,7 +20,8 @@ namespace System.IO {
             CopyTo(src, destination, 81920);
 #endif
         }
-        public static void CopyTo(this Stream src, Stream destination, int bufferSize) {
+        public static void CopyTo(this Stream src, Stream destination, int bufferSize)
+        {
             ThrowHelper.ThrowIfArgumentNull(src, nameof(src));
 
 #if HAS_COPYTO

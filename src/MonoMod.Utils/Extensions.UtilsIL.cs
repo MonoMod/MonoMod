@@ -3,19 +3,23 @@ using Mono.Cecil.Cil;
 using System;
 using System.Reflection;
 
-namespace MonoMod.Utils {
-    public static partial class Extensions {
+namespace MonoMod.Utils
+{
+    public static partial class Extensions
+    {
 
         #region Misc Helpers
 
-        public static bool Is(this MemberReference member, string fullName) {
+        public static bool Is(this MemberReference member, string fullName)
+        {
             Helpers.ThrowIfArgumentNull(fullName);
             if (member == null)
                 return false;
             return member.FullName.Replace("+", "/", StringComparison.Ordinal) == fullName.Replace("+", "/", StringComparison.Ordinal);
         }
 
-        public static bool Is(this MemberReference member, string typeFullName, string name) {
+        public static bool Is(this MemberReference member, string typeFullName, string name)
+        {
             Helpers.ThrowIfArgumentNull(typeFullName);
             Helpers.ThrowIfArgumentNull(name);
             if (member == null)
@@ -23,7 +27,8 @@ namespace MonoMod.Utils {
             return member.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == typeFullName.Replace("+", "/", StringComparison.Ordinal) && member.Name == name;
         }
 
-        public static bool Is(this MemberReference member, Type type, string name) {
+        public static bool Is(this MemberReference member, Type type, string name)
+        {
             Helpers.ThrowIfArgumentNull(type);
             Helpers.ThrowIfArgumentNull(name);
             if (member == null)
@@ -32,12 +37,14 @@ namespace MonoMod.Utils {
                 && member.Name == name;
         }
 
-        public static bool Is(this MethodReference method, string fullName) {
+        public static bool Is(this MethodReference method, string fullName)
+        {
             Helpers.ThrowIfArgumentNull(fullName);
             if (method == null)
                 return false;
 
-            if (fullName.Contains(' ', StringComparison.Ordinal)) {
+            if (fullName.Contains(' ', StringComparison.Ordinal))
+            {
                 // Namespace.Type::MethodName
                 if (method.GetID(withType: true, simple: true).Replace("+", "/", StringComparison.Ordinal) == fullName.Replace("+", "/", StringComparison.Ordinal))
                     return true;
@@ -50,13 +57,15 @@ namespace MonoMod.Utils {
             return method.FullName.Replace("+", "/", StringComparison.Ordinal) == fullName.Replace("+", "/", StringComparison.Ordinal);
         }
 
-        public static bool Is(this MethodReference method, string typeFullName, string name) {
+        public static bool Is(this MethodReference method, string typeFullName, string name)
+        {
             Helpers.ThrowIfArgumentNull(typeFullName);
             Helpers.ThrowIfArgumentNull(name);
             if (method == null)
                 return false;
 
-            if (name.Contains(' ', StringComparison.Ordinal)) {
+            if (name.Contains(' ', StringComparison.Ordinal))
+            {
                 // ReturnType MethodName(ArgType,ArgType)
                 if (method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == typeFullName.Replace("+", "/", StringComparison.Ordinal) && method.GetID(withType: false).Replace("+", "/", StringComparison.Ordinal) == name.Replace("+", "/", StringComparison.Ordinal))
                     return true;
@@ -65,13 +74,15 @@ namespace MonoMod.Utils {
             return method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == typeFullName.Replace("+", "/", StringComparison.Ordinal) && method.Name == name;
         }
 
-        public static bool Is(this MethodReference method, Type type, string name) {
+        public static bool Is(this MethodReference method, Type type, string name)
+        {
             Helpers.ThrowIfArgumentNull(type);
             Helpers.ThrowIfArgumentNull(name);
             if (method == null)
                 return false;
 
-            if (name.Contains(' ', StringComparison.Ordinal)) {
+            if (name.Contains(' ', StringComparison.Ordinal))
+            {
                 // ReturnType MethodName(ArgType,ArgType)
                 if (method.DeclaringType.FullName.Replace("+", "/", StringComparison.Ordinal) == type.FullName?.Replace("+", "/", StringComparison.Ordinal)
                     && method.GetID(withType: false).Replace("+", "/", StringComparison.Ordinal) == name.Replace("+", "/", StringComparison.Ordinal))
@@ -86,7 +97,8 @@ namespace MonoMod.Utils {
 
         #region Misc IL Helpers
 
-        public static void ReplaceOperands(this ILProcessor il, object? from, object? to) {
+        public static void ReplaceOperands(this ILProcessor il, object? from, object? to)
+        {
             Helpers.ThrowIfArgumentNull(il);
             foreach (var instr in il.Body.Instructions)
                 if (instr.Operand?.Equals(from) ?? from == null)
@@ -103,10 +115,12 @@ namespace MonoMod.Utils {
             => Helpers.ThrowIfNull(il).Body.Method.Module.ImportReference(method);
         public static TypeReference Import(this ILProcessor il, Type type)
             => Helpers.ThrowIfNull(il).Body.Method.Module.ImportReference(type);
-        public static MemberReference Import(this ILProcessor il, MemberInfo member) {
+        public static MemberReference Import(this ILProcessor il, MemberInfo member)
+        {
             Helpers.ThrowIfArgumentNull(il);
             Helpers.ThrowIfArgumentNull(member);
-            switch (member) {
+            switch (member)
+            {
                 case FieldInfo info:
                     return il.Import(info);
                 case MethodBase info:
@@ -120,7 +134,8 @@ namespace MonoMod.Utils {
 
         public static Instruction Create(this ILProcessor il, OpCode opcode, FieldInfo field)
             => Helpers.ThrowIfNull(il).Create(opcode, il.Import(field));
-        public static Instruction Create(this ILProcessor il, OpCode opcode, MethodBase method) {
+        public static Instruction Create(this ILProcessor il, OpCode opcode, MethodBase method)
+        {
             Helpers.ThrowIfArgumentNull(il);
             if (method is System.Reflection.Emit.DynamicMethod)
                 return il.Create(opcode, (object)method);
@@ -128,16 +143,19 @@ namespace MonoMod.Utils {
         }
         public static Instruction Create(this ILProcessor il, OpCode opcode, Type type)
             => Helpers.ThrowIfNull(il).Create(opcode, il.Import(type));
-        public static Instruction Create(this ILProcessor il, OpCode opcode, object operand) {
+        public static Instruction Create(this ILProcessor il, OpCode opcode, object operand)
+        {
             var instr = Helpers.ThrowIfNull(il).Create(OpCodes.Nop);
             instr.OpCode = opcode;
             instr.Operand = operand;
             return instr;
         }
-        public static Instruction Create(this ILProcessor il, OpCode opcode, MemberInfo member) {
+        public static Instruction Create(this ILProcessor il, OpCode opcode, MemberInfo member)
+        {
             Helpers.ThrowIfArgumentNull(il);
             Helpers.ThrowIfArgumentNull(member);
-            switch (member) {
+            switch (member)
+            {
                 case FieldInfo info:
                     return il.Create(opcode, info);
                 case MethodBase info:
@@ -151,10 +169,12 @@ namespace MonoMod.Utils {
 
         public static void Emit(this ILProcessor il, OpCode opcode, FieldInfo field)
             => Helpers.ThrowIfNull(il).Emit(opcode, il.Import(field));
-        public static void Emit(this ILProcessor il, OpCode opcode, MethodBase method) {
+        public static void Emit(this ILProcessor il, OpCode opcode, MethodBase method)
+        {
             Helpers.ThrowIfArgumentNull(il);
             Helpers.ThrowIfArgumentNull(method);
-            if (method is System.Reflection.Emit.DynamicMethod) {
+            if (method is System.Reflection.Emit.DynamicMethod)
+            {
                 il.Emit(opcode, (object)method);
                 return;
             }
@@ -162,10 +182,12 @@ namespace MonoMod.Utils {
         }
         public static void Emit(this ILProcessor il, OpCode opcode, Type type)
             => Helpers.ThrowIfNull(il).Emit(opcode, il.Import(type));
-        public static void Emit(this ILProcessor il, OpCode opcode, MemberInfo member) {
+        public static void Emit(this ILProcessor il, OpCode opcode, MemberInfo member)
+        {
             Helpers.ThrowIfArgumentNull(il);
             Helpers.ThrowIfArgumentNull(member);
-            switch (member) {
+            switch (member)
+            {
                 case FieldInfo info:
                     il.Emit(opcode, info);
                     break;

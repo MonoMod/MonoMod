@@ -11,10 +11,13 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 
-namespace MonoMod.RuntimeDetour {
-    public static partial class DetourManager {
+namespace MonoMod.RuntimeDetour
+{
+    public static partial class DetourManager
+    {
         #region Detour chain
-        internal abstract class ManagedChainNode {
+        internal abstract class ManagedChainNode
+        {
 
             public ManagedChainNode? Next;
 
@@ -29,29 +32,35 @@ namespace MonoMod.RuntimeDetour {
 
             public bool IsApplied { get; private set; }
 
-            private void UndoTrampolineDetour() {
+            private void UndoTrampolineDetour()
+            {
                 var detour = Interlocked.Exchange(ref trampolineDetour, null);
-                if (detour is not null) {
+                if (detour is not null)
+                {
                     detour.Undo();
                     // TODO: cache trampolineDetours for a time, so they can be reused
                     detour.Dispose();
                 }
             }
 
-            public virtual void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
+            public virtual void UpdateDetour(IDetourFactory factory, MethodBase fallback)
+            {
                 var to = Next?.Entry;
-                if (to is null && DetourToFallback) {
+                if (to is null && DetourToFallback)
+                {
                     to = fallback;
                 }
 
-                if (to == lastTarget) {
+                if (to == lastTarget)
+                {
                     // our target hasn't changed, don't need to update this link
                     return;
                 }
 
                 UndoTrampolineDetour();
 
-                if (to is not null) {
+                if (to is not null)
+                {
                     trampolineDetour = factory.CreateDetour(NextTrampoline, to, applyByDefault: true);
                 }
 
@@ -59,8 +68,10 @@ namespace MonoMod.RuntimeDetour {
                 IsApplied = true;
             }
 
-            public void Remove() {
-                if (!hasStolenTrampoline) {
+            public void Remove()
+            {
+                if (!hasStolenTrampoline)
+                {
                     UndoTrampolineDetour();
                 }
                 lastTarget = null;
@@ -68,7 +79,8 @@ namespace MonoMod.RuntimeDetour {
                 IsApplied = false;
             }
 
-            public void StealTrampoline(IDetourFactory factory) {
+            public void StealTrampoline(IDetourFactory factory)
+            {
                 Helpers.Assert(!hasStolenTrampoline);
 
                 StealTrampolineInner();
@@ -79,7 +91,8 @@ namespace MonoMod.RuntimeDetour {
             }
             protected virtual void StealTrampolineInner() => throw new NotSupportedException("Can't steal ManagedChainNode trampoline");
 
-            public virtual void ReturnStolenTrampoline() {
+            public virtual void ReturnStolenTrampoline()
+            {
                 Helpers.Assert(hasStolenTrampoline);
 
                 UndoTrampolineDetour();
@@ -91,8 +104,10 @@ namespace MonoMod.RuntimeDetour {
 
         }
 
-        internal sealed class ManagedDetourChainNode : ManagedChainNode {
-            public ManagedDetourChainNode(SingleManagedDetourState detour) {
+        internal sealed class ManagedDetourChainNode : ManagedChainNode
+        {
+            public ManagedDetourChainNode(SingleManagedDetourState detour)
+            {
                 Detour = detour;
             }
 
@@ -107,12 +122,14 @@ namespace MonoMod.RuntimeDetour {
             protected override void ReturnStolenTrampolineInner() => Detour.NextTrampoline.ReturnTrampolineOwnership();
         }
 
-        internal sealed class ManagedDetourSyncInfo : DetourSyncInfo {
+        internal sealed class ManagedDetourSyncInfo : DetourSyncInfo
+        {
 
             public int HasStolenTrampolines;
             public readonly ConcurrentQueue<ManagedChainNode> TrampolineStealers = new ConcurrentQueue<ManagedChainNode>();
 
-            public void StealTrampoline(IDetourFactory factory, ManagedChainNode node) {
+            public void StealTrampoline(IDetourFactory factory, ManagedChainNode node)
+            {
                 node.StealTrampoline(factory);
 
                 // We don't have a race condition with ReturnStolenTrampolines here because:
@@ -123,12 +140,15 @@ namespace MonoMod.RuntimeDetour {
                 Volatile.Write(ref HasStolenTrampolines, 1);
             }
 
-            public void ReturnStolenTrampolines() {
-                if (Interlocked.CompareExchange(ref HasStolenTrampolines, 0, 1) != 1) {
+            public void ReturnStolenTrampolines()
+            {
+                if (Interlocked.CompareExchange(ref HasStolenTrampolines, 0, 1) != 1)
+                {
                     return;
                 }
 
-                while (TrampolineStealers.TryDequeue(out var node)) {
+                while (TrampolineStealers.TryDequeue(out var node))
+                {
                     node.ReturnStolenTrampoline();
                 }
             }
@@ -139,7 +159,8 @@ namespace MonoMod.RuntimeDetour {
 
         // The root node is the existing method. It's NextTrampoline is the method, which is the same
         // as the entry point, because we want to detour the entry point. Entry should never be targeted though.
-        internal sealed class RootManagedChainNode : ManagedChainNode {
+        internal sealed class RootManagedChainNode : ManagedChainNode
+        {
             public override MethodBase Entry { get; }
             public override MethodBase NextTrampoline { get; }
             public override DetourConfig? Config => null;
@@ -152,7 +173,8 @@ namespace MonoMod.RuntimeDetour {
 
             public bool HasILHook;
 
-            public RootManagedChainNode(MethodBase method) {
+            public RootManagedChainNode(MethodBase method)
+            {
                 Sig = MethodSignature.ForMethod(method);
                 Entry = method;
                 NextTrampoline = TrampolinePool.Rent(Sig);
@@ -160,13 +182,16 @@ namespace MonoMod.RuntimeDetour {
                 DataScope<DynamicReferenceCell> refScope = default;
                 SyncInfo.SyncProxy = GenerateSyncProxy(DebugFormatter.Format($"{Entry}"), Sig,
                     (method, il) => refScope = il.EmitNewTypedReference(SyncInfo, out _),
-                    (method, il, loadSyncInfo) => {
-                        foreach (var p in method.Parameters) {
+                    (method, il, loadSyncInfo) =>
+                    {
+                        foreach (var p in method.Parameters)
+                        {
                             il.Emit(OpCodes.Ldarg, p);
                         }
                         il.Emit(OpCodes.Call, method.Module.ImportReference(NextTrampoline));
                     },
-                    (method, il, loadSyncInfo) => {
+                    (method, il, loadSyncInfo) =>
+                    {
                         // we keep the stolen trampolines alive a bit longer than required by only returning them once *all* threads have returned from the method
                         // but doing it this way avoids an expensive TLV lookup to track per-thread active calls
                         loadSyncInfo();
@@ -177,14 +202,18 @@ namespace MonoMod.RuntimeDetour {
 
             private ICoreDetour? syncDetour;
 
-            public override void UpdateDetour(IDetourFactory factory, MethodBase fallback) {
+            public override void UpdateDetour(IDetourFactory factory, MethodBase fallback)
+            {
                 base.UpdateDetour(factory, fallback);
 
                 syncDetour ??= factory.CreateDetour(Entry, SyncInfo.SyncProxy!, applyByDefault: false);
 
-                if (!HasILHook && Next is null && syncDetour.IsApplied) {
+                if (!HasILHook && Next is null && syncDetour.IsApplied)
+                {
                     syncDetour.Undo();
-                } else if ((HasILHook || Next is not null) && !syncDetour.IsApplied) {
+                }
+                else if ((HasILHook || Next is not null) && !syncDetour.IsApplied)
+                {
                     syncDetour.Apply();
                 }
             }
@@ -192,7 +221,8 @@ namespace MonoMod.RuntimeDetour {
         #endregion
 
         #region ILHook chain
-        internal sealed class ILHookEntry {
+        internal sealed class ILHookEntry
+        {
             public readonly SingleILHookState Hook;
 
             public IDetourFactory Factory => Hook.Factory;
@@ -202,23 +232,27 @@ namespace MonoMod.RuntimeDetour {
             public ILContext? LastContext;
             public bool IsApplied;
 
-            public ILHookEntry(SingleILHookState hook) {
+            public ILHookEntry(SingleILHookState hook)
+            {
                 Hook = hook;
             }
 
-            public void Remove() {
+            public void Remove()
+            {
                 IsApplied = false;
                 LastContext?.Dispose();
             }
         }
         #endregion
 
-        internal sealed class ManagedDetourState {
+        internal sealed class ManagedDetourState
+        {
             public readonly MethodBase Source;
             public readonly MethodBase ILCopy;
             public MethodBase EndOfChain;
 
-            public ManagedDetourState(MethodBase src) {
+            public ManagedDetourState(MethodBase src)
+            {
                 Source = src;
                 ILCopy = src.CreateILCopy();
                 EndOfChain = ILCopy;
@@ -235,10 +269,12 @@ namespace MonoMod.RuntimeDetour {
             internal SpinLock detourLock = new(true);
             internal int detourChainVersion;
 
-            public void AddDetour(SingleManagedDetourState detour, bool takeLock = true) {
+            public void AddDetour(SingleManagedDetourState detour, bool takeLock = true)
+            {
                 ManagedDetourChainNode cnode;
                 var lockTaken = false;
-                try {
+                try
+                {
                     if (takeLock)
                         detourLock.Enter(ref lockTaken);
                     if (detour.ManagerData is not null)
@@ -246,14 +282,17 @@ namespace MonoMod.RuntimeDetour {
 
                     cnode = new ManagedDetourChainNode(detour);
                     detourChainVersion++;
-                    if (cnode.Config is { } cfg) {
+                    if (cnode.Config is { } cfg)
+                    {
                         var listNode = new DepListNode<ManagedChainNode>(cfg, cnode);
                         var graphNode = new DepGraphNode<ManagedChainNode>(listNode);
 
                         detourGraph.Insert(graphNode);
 
                         detour.ManagerData = graphNode;
-                    } else {
+                    }
+                    else
+                    {
                         cnode.Next = noConfigChain;
                         noConfigChain = cnode;
 
@@ -261,7 +300,9 @@ namespace MonoMod.RuntimeDetour {
                     }
 
                     UpdateChain(detour.Factory, out _);
-                } finally {
+                }
+                finally
+                {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
@@ -270,14 +311,17 @@ namespace MonoMod.RuntimeDetour {
                 InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, detour);
             }
 
-            public void RemoveDetour(SingleManagedDetourState detour, bool takeLock = true) {
+            public void RemoveDetour(SingleManagedDetourState detour, bool takeLock = true)
+            {
                 ManagedDetourChainNode cnode;
                 var lockTaken = false;
-                try {
+                try
+                {
                     if (takeLock)
                         detourLock.Enter(ref lockTaken);
                     detourChainVersion++;
-                    switch (Interlocked.Exchange(ref detour.ManagerData, null)) {
+                    switch (Interlocked.Exchange(ref detour.ManagerData, null))
+                    {
                         case null:
                             throw new InvalidOperationException("Trying to remove detour which wasn't added");
 
@@ -294,7 +338,9 @@ namespace MonoMod.RuntimeDetour {
                         default:
                             throw new InvalidOperationException("Trying to remove detour with unknown manager data");
                     }
-                } finally {
+                }
+                finally
+                {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
@@ -303,19 +349,24 @@ namespace MonoMod.RuntimeDetour {
                 InvokeDetourEvent(DetourManager.DetourUndone, DetourUndone, detour);
             }
 
-            private void RemoveGraphDetour(SingleManagedDetourState detour, DepGraphNode<ManagedChainNode> node) {
+            private void RemoveGraphDetour(SingleManagedDetourState detour, DepGraphNode<ManagedChainNode> node)
+            {
                 detourGraph.Remove(node);
                 UpdateChain(detour.Factory, out var stealTrampoline);
-                if (stealTrampoline) {
+                if (stealTrampoline)
+                {
                     detourList.SyncInfo.StealTrampoline(detour.Factory, node.ListNode.ChainNode);
                 }
                 node.ListNode.ChainNode.Remove();
             }
 
-            private void RemoveNoConfigDetour(SingleManagedDetourState detour, ManagedDetourChainNode node) {
+            private void RemoveNoConfigDetour(SingleManagedDetourState detour, ManagedDetourChainNode node)
+            {
                 ref var chain = ref noConfigChain;
-                while (chain is not null) {
-                    if (ReferenceEquals(chain, node)) {
+                while (chain is not null)
+                {
+                    if (ReferenceEquals(chain, node))
+                    {
                         chain = node.Next;
                         node.Next = null;
                         break;
@@ -325,7 +376,8 @@ namespace MonoMod.RuntimeDetour {
                 }
 
                 UpdateChain(detour.Factory, out var stealTrampoline);
-                if (stealTrampoline) {
+                if (stealTrampoline)
+                {
                     detourList.SyncInfo.StealTrampoline(detour.Factory, node);
                 }
                 node.Remove();
@@ -335,10 +387,12 @@ namespace MonoMod.RuntimeDetour {
             internal readonly List<ILHookEntry> noConfigIlhooks = new();
 
             internal int ilhookVersion;
-            public void AddILHook(SingleILHookState ilhook, bool takeLock = true) {
+            public void AddILHook(SingleILHookState ilhook, bool takeLock = true)
+            {
                 ILHookEntry entry;
                 var lockTaken = false;
-                try {
+                try
+                {
                     if (takeLock)
                         detourLock.Enter(ref lockTaken);
                     if (ilhook.ManagerData is not null)
@@ -346,23 +400,30 @@ namespace MonoMod.RuntimeDetour {
 
                     entry = new ILHookEntry(ilhook);
                     ilhookVersion++;
-                    if (entry.Config is { } cfg) {
+                    if (entry.Config is { } cfg)
+                    {
                         var listNode = new DepListNode<ILHookEntry>(cfg, entry);
                         var graphNode = new DepGraphNode<ILHookEntry>(listNode);
 
                         ilhookGraph.Insert(graphNode);
 
                         ilhook.ManagerData = graphNode;
-                    } else {
+                    }
+                    else
+                    {
                         noConfigIlhooks.Add(entry);
                         ilhook.ManagerData = entry;
                     }
 
-                    try {
+                    try
+                    {
                         UpdateEndOfChain();
-                    } catch {
+                    }
+                    catch
+                    {
                         // the add failed, remove the node and re-update end of chain
-                        switch (Interlocked.Exchange(ref ilhook.ManagerData, null)) {
+                        switch (Interlocked.Exchange(ref ilhook.ManagerData, null))
+                        {
                             case DepGraphNode<ILHookEntry> gn:
                                 ilhookGraph.Remove(gn);
                                 break;
@@ -376,7 +437,9 @@ namespace MonoMod.RuntimeDetour {
                         throw;
                     }
                     UpdateChain(ilhook.Factory, out _);
-                } finally {
+                }
+                finally
+                {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
@@ -385,14 +448,17 @@ namespace MonoMod.RuntimeDetour {
                 InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, ilhook);
             }
 
-            public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true) {
+            public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true)
+            {
                 ILHookEntry entry;
                 var lockTaken = false;
-                try {
+                try
+                {
                     if (takeLock)
                         detourLock.Enter(ref lockTaken);
                     ilhookVersion++;
-                    switch (Interlocked.Exchange(ref ilhook.ManagerData, null)) {
+                    switch (Interlocked.Exchange(ref ilhook.ManagerData, null))
+                    {
                         case null:
                             throw new InvalidOperationException("Trying to remove IL hook which wasn't added");
 
@@ -409,7 +475,9 @@ namespace MonoMod.RuntimeDetour {
                         default:
                             throw new InvalidOperationException("Trying to remove IL hook with unknown manager data");
                     }
-                } finally {
+                }
+                finally
+                {
                     if (lockTaken)
                         detourLock.Exit(true);
                 }
@@ -418,7 +486,8 @@ namespace MonoMod.RuntimeDetour {
                 InvokeILHookEvent(DetourManager.ILHookUndone, ILHookUndone, ilhook);
             }
 
-            private void RemoveGraphILHook(SingleILHookState ilhook, DepGraphNode<ILHookEntry> node) {
+            private void RemoveGraphILHook(SingleILHookState ilhook, DepGraphNode<ILHookEntry> node)
+            {
                 ilhookGraph.Remove(node);
                 UpdateEndOfChain();
                 UpdateChain(ilhook.Factory, out _);
@@ -426,7 +495,8 @@ namespace MonoMod.RuntimeDetour {
                 node.ListNode.ChainNode.Remove();
             }
 
-            private void RemoveNoConfigILHook(SingleILHookState ilhook, ILHookEntry node) {
+            private void RemoveNoConfigILHook(SingleILHookState ilhook, ILHookEntry node)
+            {
                 noConfigIlhooks.Remove(node);
                 UpdateEndOfChain();
                 UpdateChain(ilhook.Factory, out _);
@@ -434,8 +504,10 @@ namespace MonoMod.RuntimeDetour {
                 node.Remove();
             }
 
-            private void UpdateEndOfChain() {
-                if (noConfigIlhooks.Count == 0 && ilhookGraph.ListHead is null) {
+            private void UpdateEndOfChain()
+            {
+                if (noConfigIlhooks.Count == 0 && ilhookGraph.ListHead is null)
+                {
                     detourList.HasILHook = false;
                     EndOfChain = ILCopy;
                     return;
@@ -447,12 +519,14 @@ namespace MonoMod.RuntimeDetour {
 
                 var def = dmd.Definition!;
                 var cur = ilhookGraph.ListHead;
-                while (cur is not null) {
+                while (cur is not null)
+                {
                     InvokeManipulator(cur.ChainNode, def);
                     cur = cur.Next;
                 }
 
-                foreach (var node in noConfigIlhooks) {
+                foreach (var node in noConfigIlhooks)
+                {
                     InvokeManipulator(node, def);
                 }
 
@@ -466,13 +540,15 @@ namespace MonoMod.RuntimeDetour {
                 EndOfChain = eoc;
             }
 
-            private static void InvokeManipulator(ILHookEntry entry, MethodDefinition def) {
+            private static void InvokeManipulator(ILHookEntry entry, MethodDefinition def)
+            {
                 //entry.LastContext?.Dispose(); // we can't safely clean up the old context until after we've updated the chain to point at the new method
                 entry.IsApplied = true;
                 var il = new ILContext(def);
                 entry.CurrentContext = il;
                 il.Invoke(entry.Manip);
-                if (il.IsReadOnly) {
+                if (il.IsReadOnly)
+                {
                     il.Dispose();
                     return;
                 }
@@ -484,18 +560,22 @@ namespace MonoMod.RuntimeDetour {
                 return;
             }
 
-            private void CleanILContexts() {
+            private void CleanILContexts()
+            {
                 var cur = ilhookGraph.ListHead;
-                while (cur is not null) {
+                while (cur is not null)
+                {
                     CleanContext(cur.ChainNode);
                     cur = cur.Next;
                 }
 
-                foreach (var node in noConfigIlhooks) {
+                foreach (var node in noConfigIlhooks)
+                {
                     CleanContext(node);
                 }
 
-                static void CleanContext(ILHookEntry entry) {
+                static void CleanContext(ILHookEntry entry)
+                {
                     if (entry.CurrentContext == entry.LastContext)
                         return;
                     var old = entry.LastContext;
@@ -504,12 +584,14 @@ namespace MonoMod.RuntimeDetour {
                 }
             }
 
-            private void UpdateChain(IDetourFactory updatingFactory, out bool stealTrampolines) {
+            private void UpdateChain(IDetourFactory updatingFactory, out bool stealTrampolines)
+            {
                 var graphNode = detourGraph.ListHead;
 
                 ManagedChainNode? chain = null;
                 ref var next = ref chain;
-                while (graphNode is not null) {
+                while (graphNode is not null)
+                {
                     next = graphNode.ChainNode;
                     next = ref next.Next;
                     next = null; // clear it to be safe before continuing
@@ -524,9 +606,11 @@ namespace MonoMod.RuntimeDetour {
 
                 Volatile.Write(ref detourList.SyncInfo.UpdatingThread, EnvironmentEx.CurrentManagedThreadId);
                 detourList.SyncInfo.WaitForNoActiveCalls(out stealTrampolines);
-                try {
+                try
+                {
                     chain = detourList;
-                    while (chain is not null) {
+                    while (chain is not null)
+                    {
                         // we want to use the factory for the next node first
                         var fac = (chain.Next as ManagedDetourChainNode)?.Factory;
                         // then, if that doesn't exist, the current factory
@@ -537,7 +621,9 @@ namespace MonoMod.RuntimeDetour {
 
                         chain = chain.Next;
                     }
-                } finally {
+                }
+                finally
+                {
                     Volatile.Write(ref detourList.SyncInfo.UpdatingThread, -1);
                 }
             }
@@ -547,16 +633,20 @@ namespace MonoMod.RuntimeDetour {
             public event Action<ILHookInfo>? ILHookApplied;
             public event Action<ILHookInfo>? ILHookUndone;
 
-            private void InvokeDetourEvent(Action<DetourInfo>? evt1, Action<DetourInfo>? evt2, SingleManagedDetourState node) {
-                if (evt1 is not null || evt2 is not null) {
+            private void InvokeDetourEvent(Action<DetourInfo>? evt1, Action<DetourInfo>? evt2, SingleManagedDetourState node)
+            {
+                if (evt1 is not null || evt2 is not null)
+                {
                     var info = Info.GetDetourInfo(node);
                     evt1?.Invoke(info);
                     evt2?.Invoke(info);
                 }
             }
 
-            private void InvokeILHookEvent(Action<ILHookInfo>? evt1, Action<ILHookInfo>? evt2, SingleILHookState entry) {
-                if (evt1 is not null || evt2 is not null) {
+            private void InvokeILHookEvent(Action<ILHookInfo>? evt1, Action<ILHookInfo>? evt2, SingleILHookState entry)
+            {
+                if (evt1 is not null || evt2 is not null)
+                {
                     var info = Info.GetILHookInfo(entry);
                     evt1?.Invoke(info);
                     evt2?.Invoke(info);
@@ -564,32 +654,37 @@ namespace MonoMod.RuntimeDetour {
             }
         }
 
-        internal sealed class SingleManagedDetourState : SingleDetourStateBase {
+        internal sealed class SingleManagedDetourState : SingleDetourStateBase
+        {
             public readonly MethodInfo PublicTarget;
             public readonly MethodInfo InvokeTarget;
             public readonly IDetourTrampoline NextTrampoline;
 
             public DetourInfo? DetourInfo;
 
-            public SingleManagedDetourState(IDetour dt) : base(dt) {
+            public SingleManagedDetourState(IDetour dt) : base(dt)
+            {
                 PublicTarget = dt.PublicTarget;
                 InvokeTarget = dt.InvokeTarget;
                 NextTrampoline = dt.NextTrampoline;
             }
         }
 
-        internal sealed class SingleILHookState : SingleDetourStateBase {
+        internal sealed class SingleILHookState : SingleDetourStateBase
+        {
             public readonly ILContext.Manipulator Manip;
             public ILHookInfo? HookInfo;
 
-            public SingleILHookState(IILHook hk) : base(hk) {
+            public SingleILHookState(IILHook hk) : base(hk)
+            {
                 Manip = hk.Manip;
             }
         }
 
         private static readonly ConcurrentDictionary<MethodBase, ManagedDetourState> detourStates = new();
 
-        internal static ManagedDetourState GetDetourState(MethodBase method) {
+        internal static ManagedDetourState GetDetourState(MethodBase method)
+        {
             method = PlatformTriple.Current.GetIdentifiable(method);
             return detourStates.GetOrAdd(method, static m => new(m));
         }

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A native memory allocator, capable of allocating memory within certain bounds.
     /// </summary>
-    public interface IMemoryAllocator {
+    public interface IMemoryAllocator
+    {
         /// <summary>
         /// Gets the maximum size of allocation that this allocator is able to allocate.
         /// </summary>
@@ -31,7 +33,8 @@ namespace MonoMod.Core.Platforms {
     /// A memory allocation request.
     /// </summary>
     /// <param name="Size">The size of the requested allocation.</param>
-    public readonly record struct AllocationRequest(int Size) {
+    public readonly record struct AllocationRequest(int Size)
+    {
         /// <summary>
         /// Gets or sets the alignment of the requested allocation. Default is 8.
         /// </summary>
@@ -62,7 +65,8 @@ namespace MonoMod.Core.Platforms {
     /// <remarks>
     /// When this object is disposed, the allocation is freed. Similarly, when the GC collects this object, the allocation is freed.
     /// </remarks>
-    public interface IAllocatedMemory : IDisposable {
+    public interface IAllocatedMemory : IDisposable
+    {
         /// <summary>
         /// Gets whether or not this allocation is executable.
         /// </summary>

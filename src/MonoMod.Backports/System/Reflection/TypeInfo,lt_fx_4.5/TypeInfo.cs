@@ -4,8 +4,10 @@
 
 using System.Collections.Generic;
 
-namespace System.Reflection {
-    public abstract partial class TypeInfo : Type, IReflectableType {
+namespace System.Reflection
+{
+    public abstract partial class TypeInfo : Type, IReflectableType
+    {
         // this ctor is only available in Core3.0 and NS2.1 :/
         private protected TypeInfo() { }
 
@@ -25,8 +27,10 @@ namespace System.Reflection {
 
         public abstract bool IsConstructedGenericType { get; }
 
-        public virtual IEnumerable<MethodInfo> GetDeclaredMethods(string name) {
-            foreach (MethodInfo method in GetMethods(TypeInfo.DeclaredOnlyLookup)) {
+        public virtual IEnumerable<MethodInfo> GetDeclaredMethods(string name)
+        {
+            foreach (MethodInfo method in GetMethods(TypeInfo.DeclaredOnlyLookup))
+            {
                 if (method.Name == name)
                     yield return method;
             }
@@ -37,9 +41,12 @@ namespace System.Reflection {
         public virtual IEnumerable<FieldInfo> DeclaredFields => GetFields(TypeInfo.DeclaredOnlyLookup);
         public virtual IEnumerable<MemberInfo> DeclaredMembers => GetMembers(TypeInfo.DeclaredOnlyLookup);
         public virtual IEnumerable<MethodInfo> DeclaredMethods => GetMethods(TypeInfo.DeclaredOnlyLookup);
-        public virtual IEnumerable<System.Reflection.TypeInfo> DeclaredNestedTypes {
-            get {
-                foreach (Type t in GetNestedTypes(TypeInfo.DeclaredOnlyLookup)) {
+        public virtual IEnumerable<System.Reflection.TypeInfo> DeclaredNestedTypes
+        {
+            get
+            {
+                foreach (Type t in GetNestedTypes(TypeInfo.DeclaredOnlyLookup))
+                {
                     yield return t.GetTypeInfo();
                 }
             }
@@ -49,7 +56,8 @@ namespace System.Reflection {
         public virtual IEnumerable<Type> ImplementedInterfaces => GetInterfaces();
 
         //a re-implementation of ISAF from Type, skipping the use of UnderlyingType
-        public virtual bool IsAssignableFrom(TypeInfo typeInfo) {
+        public virtual bool IsAssignableFrom(TypeInfo typeInfo)
+        {
             if (typeInfo == null)
                 return false;
 
@@ -60,9 +68,12 @@ namespace System.Reflection {
             if (typeInfo.IsSubclassOf(this))
                 return true;
 
-            if (IsInterface) {
+            if (IsInterface)
+            {
                 return ImplementsInterface(typeInfo, this);
-            } else if (IsGenericParameter) {
+            }
+            else if (IsGenericParameter)
+            {
                 Type[] constraints = GetGenericParameterConstraints();
                 for (int i = 0; i < constraints.Length; i++)
                     if (!constraints[i].IsAssignableFrom(typeInfo))
@@ -74,12 +85,16 @@ namespace System.Reflection {
             return false;
         }
 
-        private static bool ImplementsInterface(Type self, Type ifaceType) {
+        private static bool ImplementsInterface(Type self, Type ifaceType)
+        {
             Type? t = self;
-            while (t != null) {
+            while (t != null)
+            {
                 Type[] interfaces = t.GetInterfaces();
-                if (interfaces != null) {
-                    for (int i = 0; i < interfaces.Length; i++) {
+                if (interfaces != null)
+                {
+                    for (int i = 0; i < interfaces.Length; i++)
+                    {
                         // Interfaces don't derive from other interfaces, they implement them.
                         // So instead of IsSubclassOf, we should use ImplementInterface instead.
                         if (interfaces[i] == ifaceType ||

@@ -7,19 +7,24 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class ILHookPoisonTest : TestBase {
-        public ILHookPoisonTest(ITestOutputHelper helper) : base(helper) {
+    public class ILHookPoisonTest : TestBase
+    {
+        public ILHookPoisonTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestRecoveryFromInvalidProgram() {
+        public void TestRecoveryFromInvalidProgram()
+        {
             Assert.True(ReturnTrue());
 
             var method = new Func<bool>(ReturnTrue).Method;
 
-            Assert.Throws<InvalidProgramException>(() => {
+            Assert.Throws<InvalidProgramException>(() =>
+            {
                 using (new ILHook(method, il => new ILCursor(il).Emit(OpCodes.Pop)))
                     Assert.True(ReturnTrue());
             });

@@ -6,17 +6,21 @@ using System.Linq;
 using System.Reflection;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
 
-namespace MonoMod.Utils {
-    public sealed partial class DynamicMethodDefinition {
+namespace MonoMod.Utils
+{
+    public sealed partial class DynamicMethodDefinition
+    {
 
         private static OpCode[] _CecilOpCodes1X = null!;
         private static OpCode[] _CecilOpCodes2X = null!;
 
-        private static void _InitCopier() {
+        private static void _InitCopier()
+        {
             _CecilOpCodes1X = new OpCode[0xe1];
             _CecilOpCodes2X = new OpCode[0x1f];
 
-            foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
                 var opcode = (OpCode)field.GetValue(null)!;
                 if (opcode.OpCodeType == OpCodeType.Nternal)
                     continue;
@@ -28,7 +32,8 @@ namespace MonoMod.Utils {
             }
         }
 
-        private static void _CopyMethodToDefinition(MethodBase from, MethodDefinition into) {
+        private static void _CopyMethodToDefinition(MethodBase from, MethodDefinition into)
+        {
             var moduleFrom = from.Module;
             var bodyFrom = from.GetMethodBody() ?? throw new NotSupportedException("Body-less method");
             var data = bodyFrom.GetILAsByteArray() ?? throw new InvalidOperationException();
@@ -45,15 +50,18 @@ namespace MonoMod.Utils {
             if (from.IsGenericMethod)
                 methodArguments = from.GetGenericArguments();
 
-            foreach (var info in bodyFrom.LocalVariables) {
+            foreach (var info in bodyFrom.LocalVariables)
+            {
                 var type = moduleTo.ImportReference(info.LocalType);
                 if (info.IsPinned)
                     type = new PinnedType(type);
                 bodyTo.Variables.Add(new VariableDefinition(type));
             }
 
-            using (var reader = new BinaryReader(new MemoryStream(data))) {
-                for (Instruction? instr = null, prev = null; reader.BaseStream.Position < reader.BaseStream.Length; prev = instr) {
+            using (var reader = new BinaryReader(new MemoryStream(data)))
+            {
+                for (Instruction? instr = null, prev = null; reader.BaseStream.Position < reader.BaseStream.Length; prev = instr)
+                {
                     var offset = (int)reader.BaseStream.Position;
                     instr = Instruction.Create(OpCodes.Nop);
                     var op = reader.ReadByte();
@@ -67,8 +75,10 @@ namespace MonoMod.Utils {
                 }
             }
 
-            foreach (var instr in bodyTo.Instructions) {
-                switch (instr.OpCode.OperandType) {
+            foreach (var instr in bodyTo.Instructions)
+            {
+                switch (instr.OpCode.OperandType)
+                {
                     case OperandType.ShortInlineBrTarget:
                     case OperandType.InlineBrTarget:
                         instr.Operand = GetInstruction((int)instr.Operand!);
@@ -84,7 +94,8 @@ namespace MonoMod.Utils {
                 }
             }
 
-            foreach (var clause in bodyFrom.ExceptionHandlingClauses) {
+            foreach (var clause in bodyFrom.ExceptionHandlingClauses)
+            {
                 var handler = new ExceptionHandler((ExceptionHandlerType)clause.Flags);
                 bodyTo.ExceptionHandlers.Add(handler);
 
@@ -98,9 +109,11 @@ namespace MonoMod.Utils {
                 handler.CatchType = handler.HandlerType != ExceptionHandlerType.Catch ? null : clause.CatchType == null ? null : moduleTo.ImportReference(clause.CatchType);
             }
 
-            void ReadOperand(BinaryReader reader, Instruction instr) {
+            void ReadOperand(BinaryReader reader, Instruction instr)
+            {
                 int index, offs, length;
-                switch (instr.OpCode.OperandType) {
+                switch (instr.OpCode.OperandType)
+                {
                     case OperandType.InlineNone:
                         instr.Operand = null;
                         break;
@@ -186,9 +199,12 @@ namespace MonoMod.Utils {
                 }
             }
 
-            MemberReference ResolveTokenAs(int token, TokenResolutionMode resolveMode) {
-                try {
-                    switch (resolveMode) {
+            MemberReference ResolveTokenAs(int token, TokenResolutionMode resolveMode)
+            {
+                try
+                {
+                    switch (resolveMode)
+                    {
                         case TokenResolutionMode.Type:
                             var resolvedType = moduleFrom.ResolveType(token, typeArguments, methodArguments);
                             resolvedType.FixReflectionCacheAuto();
@@ -205,7 +221,8 @@ namespace MonoMod.Utils {
                             return moduleTo.ImportReference(resolvedField);
 
                         case TokenResolutionMode.Any:
-                            switch (moduleFrom.ResolveMember(token, typeArguments, methodArguments)) {
+                            switch (moduleFrom.ResolveMember(token, typeArguments, methodArguments))
+                            {
                                 case Type i:
                                     i.FixReflectionCacheAuto();
                                     return moduleTo.ImportReference(i);
@@ -226,26 +243,32 @@ namespace MonoMod.Utils {
                             throw new NotSupportedException($"Invalid TokenResolutionMode {resolveMode}");
                     }
 
-                } catch (MissingMemberException) {
+                }
+                catch (MissingMemberException)
+                {
                     // we could not resolve the method normally, so lets read the import table
                     // but we can only do that if the module was loaded from disk
                     // this can still throw if the assembly is a dynamic one, but if that's broken, you have bigger issues
                     var filePath = moduleFrom.Assembly.Location;
-                    if (!File.Exists(filePath)) {
+                    if (!File.Exists(filePath))
+                    {
                         // in this case, the fallback cannot be followed, and so throwing the original error gives the user information
                         throw;
                     }
 
                     // TODO: make this cached somehow so its not read and re-opened a bunch
-                    using (var assembly = AssemblyDefinition.ReadAssembly(filePath, new ReaderParameters {
+                    using (var assembly = AssemblyDefinition.ReadAssembly(filePath, new ReaderParameters
+                    {
                         ReadingMode = ReadingMode.Deferred
-                    })) {
+                    }))
+                    {
                         var module = assembly.Modules.First(m => m.Name == moduleFrom.Name);
                         // this should only fail if the token itself is somehow wrong
                         var reference = (MemberReference)module.LookupToken(token);
                         // the explicit casts here are to throw if they are incorrect
                         // normally the references would need to be imported, but moduleTo isn't written to anywhere
-                        switch (resolveMode) {
+                        switch (resolveMode)
+                        {
                             case TokenResolutionMode.Type:
                                 return (TypeReference)reference;
 
@@ -265,14 +288,16 @@ namespace MonoMod.Utils {
                 }
             }
 
-            Instruction? GetInstruction(int offset) {
+            Instruction? GetInstruction(int offset)
+            {
                 var last = bodyTo.Instructions.Count - 1;
                 if (offset < 0 || offset > bodyTo.Instructions[last].Offset)
                     return null;
 
                 var min = 0;
                 var max = last;
-                while (min <= max) {
+                while (min <= max)
+                {
                     var mid = min + ((max - min) / 2);
                     var instr = bodyTo.Instructions[mid];
 
@@ -290,7 +315,8 @@ namespace MonoMod.Utils {
 
         }
 
-        private enum TokenResolutionMode {
+        private enum TokenResolutionMode
+        {
             Any,
             Type,
             Method,

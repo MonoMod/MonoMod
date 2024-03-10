@@ -7,9 +7,12 @@
 
 using CultureInfo = System.Globalization.CultureInfo;
 
-namespace System.Reflection {
-    internal sealed class DelegatingTypeInfo : TypeInfo {
-        public override bool IsAssignableFrom(TypeInfo typeInfo) {
+namespace System.Reflection
+{
+    internal sealed class DelegatingTypeInfo : TypeInfo
+    {
+        public override bool IsAssignableFrom(TypeInfo typeInfo)
+        {
             if (typeInfo == null)
                 return false;
             return IsAssignableFrom(typeInfo.AsType());
@@ -18,7 +21,8 @@ namespace System.Reflection {
         // this is what's done by the BCL
         private Type typeImpl = null!;
 
-        public DelegatingTypeInfo(Type delegatingType) {
+        public DelegatingTypeInfo(Type delegatingType)
+        {
             ThrowHelper.ThrowIfArgumentNull(delegatingType, nameof(delegatingType));
 
             typeImpl = delegatingType;
@@ -28,7 +32,8 @@ namespace System.Reflection {
         public override int MetadataToken => typeImpl.MetadataToken;
 
         public override object? InvokeMember(string name, BindingFlags invokeAttr, Binder? binder, object? target,
-            object?[]? args, ParameterModifier[]? modifiers, CultureInfo? culture, string[]? namedParameters) {
+            object?[]? args, ParameterModifier[]? modifiers, CultureInfo? culture, string[]? namedParameters)
+        {
             return typeImpl.InvokeMember(name, invokeAttr, binder, target, args, modifiers, culture, namedParameters);
         }
 
@@ -42,14 +47,16 @@ namespace System.Reflection {
         public override Type? BaseType => typeImpl.BaseType;
 
         protected override ConstructorInfo? GetConstructorImpl(BindingFlags bindingAttr, Binder? binder,
-                CallingConventions callConvention, Type[] types, ParameterModifier[]? modifiers) {
+                CallingConventions callConvention, Type[] types, ParameterModifier[]? modifiers)
+        {
             return typeImpl.GetConstructor(bindingAttr, binder, callConvention, types, modifiers);
         }
 
         public override ConstructorInfo[] GetConstructors(BindingFlags bindingAttr) => typeImpl.GetConstructors(bindingAttr);
 
         protected override MethodInfo? GetMethodImpl(string name, BindingFlags bindingAttr, Binder? binder,
-                CallingConventions callConvention, Type[]? types, ParameterModifier[]? modifiers) {
+                CallingConventions callConvention, Type[]? types, ParameterModifier[]? modifiers)
+        {
             // This is interesting there are two paths into the impl.  One that validates
             //  type as non-null and one where type may be null.
             if (types == null)
@@ -72,7 +79,8 @@ namespace System.Reflection {
         public override EventInfo[] GetEvents() => typeImpl.GetEvents();
 
         protected override PropertyInfo? GetPropertyImpl(string name, BindingFlags bindingAttr, Binder? binder,
-                        Type? returnType, Type[]? types, ParameterModifier[]? modifiers) {
+                        Type? returnType, Type[]? types, ParameterModifier[]? modifiers)
+        {
             if (returnType == null && types == null)
                 return typeImpl.GetProperty(name, bindingAttr);
             else

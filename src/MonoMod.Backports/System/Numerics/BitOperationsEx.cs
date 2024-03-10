@@ -9,11 +9,13 @@
 
 using System.Runtime.CompilerServices;
 
-namespace System.Numerics {
+namespace System.Numerics
+{
     /// <summary>
     /// Extensions to <see cref="StringComparer"/> providing consistent access to APIs introduced after the type.
     /// </summary>
-    public static class BitOperationsEx {
+    public static class BitOperationsEx
+    {
         #region IsPow2
         /// <summary>
         /// Evaluate whether a given integral value is a power of 2.
@@ -159,9 +161,12 @@ namespace System.Numerics {
             => BitOperations.RoundUpToPowerOf2(value);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return (nuint)RoundUpToPowerOf2((ulong)value);
-            } else {
+            }
+            else
+            {
                 return (nuint)RoundUpToPowerOf2((uint)value);
             }
         }
@@ -199,9 +204,12 @@ namespace System.Numerics {
             => BitOperations.LeadingZeroCount(value);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return LeadingZeroCount((ulong)value);
-            } else {
+            }
+            else
+            {
                 return LeadingZeroCount((uint)value);
             }
         }
@@ -239,9 +247,12 @@ namespace System.Numerics {
             => BitOperations.LeadingZeroCount(value);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return Log2((ulong)value);
-            } else {
+            }
+            else
+            {
                 return Log2((uint)value);
             }
         }
@@ -279,9 +290,12 @@ namespace System.Numerics {
             => BitOperations.PopCount(value);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return PopCount((ulong)value);
-            } else {
+            }
+            else
+            {
                 return PopCount((uint)value);
             }
         }
@@ -334,9 +348,12 @@ namespace System.Numerics {
             => BitOperations.TrailingZeroCount(value);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return TrailingZeroCount((long)value);
-            } else {
+            }
+            else
+            {
                 return TrailingZeroCount((int)value);
             }
         }
@@ -354,9 +371,12 @@ namespace System.Numerics {
             => BitOperations.TrailingZeroCount(value);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return TrailingZeroCount((ulong)value);
-            } else {
+            }
+            else
+            {
                 return TrailingZeroCount((uint)value);
             }
         }
@@ -404,9 +424,12 @@ namespace System.Numerics {
             => BitOperations.RotateLeft(value, offset);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return (nuint)RotateLeft((ulong)value, offset);
-            } else {
+            }
+            else
+            {
                 return (nuint)RotateLeft((uint)value, offset);
             }
         }
@@ -454,9 +477,12 @@ namespace System.Numerics {
             => BitOperations.RotateLeft(value, offset);
 #else
         {
-            if (IntPtr.Size == 8) {
+            if (IntPtr.Size == 8)
+            {
                 return (nuint)RotateRight((ulong)value, offset);
-            } else {
+            }
+            else
+            {
                 return (nuint)RotateRight((uint)value, offset);
             }
         }

@@ -8,12 +8,15 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class DisableInliningTest : TestBase {
+    public class DisableInliningTest : TestBase
+    {
         private bool DidNothing = true;
 
-        public DisableInliningTest(ITestOutputHelper helper) : base(helper) {
+        public DisableInliningTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
 #if DEBUG
@@ -23,7 +26,8 @@ namespace MonoMod.UnitTest {
 #else
         [Fact(Skip = "Unfinished")]
 #endif
-        public void TestDisableInlining() {
+        public void TestDisableInlining()
+        {
             // The following use cases are not meant to be usage examples.
             // Please take a look at DetourTest and HookTest instead.
 
@@ -39,17 +43,20 @@ namespace MonoMod.UnitTest {
 
         [MethodImpl(MethodImplOptions.NoInlining)]
 
-        private void RunWithInlining() {
+        private void RunWithInlining()
+        {
             DidNothing = true;
             DoNothing();
             Assert.True(DidNothing);
 
             using (var h = new Hook(
                 typeof(DisableInliningTest).GetMethod("DoNothing"),
-                new Action<DisableInliningTest>(self => {
+                new Action<DisableInliningTest>(self =>
+                {
                     DidNothing = false;
                 })
-            )) {
+            ))
+            {
                 DidNothing = true;
                 DoNothing();
                 // Assume DoNothing got inlined and did nothing.
@@ -62,17 +69,20 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void RunWithoutInlining() {
+        private void RunWithoutInlining()
+        {
             DidNothing = true;
             DoNothing();
             Assert.True(DidNothing);
 
             using (var h = new Hook(
                 typeof(DisableInliningTest).GetMethod("DoNothing"),
-                new Action<DisableInliningTest>(self => {
+                new Action<DisableInliningTest>(self =>
+                {
                     DidNothing = false;
                 })
-            )) {
+            ))
+            {
                 DidNothing = true;
                 DoNothing();
                 // Assume DoNothing got detoured and did something.
@@ -84,7 +94,8 @@ namespace MonoMod.UnitTest {
             Assert.True(DidNothing);
         }
 
-        public void DoNothing() {
+        public void DoNothing()
+        {
         }
 
     }

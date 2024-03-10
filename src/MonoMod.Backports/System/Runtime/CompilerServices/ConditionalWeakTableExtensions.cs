@@ -20,15 +20,18 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 #endif
 
-namespace System.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices
+{
 
     // WE use this for our implementation of CWT so that Roslyn always uses this extension method to enumerate it on old frameworks
-    internal interface ICWTEnumerable<T> {
+    internal interface ICWTEnumerable<T>
+    {
         IEnumerable<T> SelfEnumerable { get; }
         IEnumerator<T> GetEnumerator();
     }
 
-    internal sealed class CWTEnumerable<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>> where TKey : class where TValue : class? {
+    internal sealed class CWTEnumerable<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>> where TKey : class where TValue : class?
+    {
         private readonly ConditionalWeakTable<TKey, TValue> cwt;
 
         public CWTEnumerable(ConditionalWeakTable<TKey, TValue> table)
@@ -39,7 +42,8 @@ namespace System.Runtime.CompilerServices {
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    public static class ConditionalWeakTableExtensions {
+    public static class ConditionalWeakTableExtensions
+    {
 #if CWT_NOT_ENUMERABLE
         private static class CWTInfoHolder<TKey, TValue> where TKey : class where TValue : class? {
             private static readonly MethodInfo? get_KeysMethod;
@@ -60,26 +64,38 @@ namespace System.Runtime.CompilerServices {
 
         [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
             Justification = "This check is expected to be always true for some targets.")]
-        public static IEnumerable<KeyValuePair<TKey, TValue>> AsEnumerable<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class? {
+        public static IEnumerable<KeyValuePair<TKey, TValue>> AsEnumerable<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class?
+        {
             ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
-            if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
+            if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable)
+            {
                 return enumerable;
-            } else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwt) {
+            }
+            else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwt)
+            {
                 return cwt.SelfEnumerable;
-            } else {
+            }
+            else
+            {
                 return new CWTEnumerable<TKey, TValue>(self);
             }
         }
 
         [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
             Justification = "This check is expected to be always true for some targets.")]
-        public static IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class? {
+        public static IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class?
+        {
             ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
-            if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable) {
+            if (self is IEnumerable<KeyValuePair<TKey, TValue>> enumerable)
+            {
                 return enumerable.GetEnumerator();
-            } else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwtEnum) {
+            }
+            else if (self is ICWTEnumerable<KeyValuePair<TKey, TValue>> cwtEnum)
+            {
                 return cwtEnum.GetEnumerator();
-            } else {
+            }
+            else
+            {
 #if !CWT_NOT_ENUMERABLE
                 throw new PlatformNotSupportedException("This version of MonoMod.Backports was built targeting a version of the framework " +
                     "where ConditionalWeakTable is enumerable, but it isn't!");
@@ -100,7 +116,8 @@ namespace System.Runtime.CompilerServices {
             }
         }
 
-        public static void Clear<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class? {
+        public static void Clear<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self) where TKey : class where TValue : class?
+        {
             ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
 #if HAS_CWT_CLEAR
             self.Clear();
@@ -111,13 +128,15 @@ namespace System.Runtime.CompilerServices {
 #endif
         }
 
-        public static bool TryAdd<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self, TKey key, TValue value) where TKey : class where TValue : class? {
+        public static bool TryAdd<TKey, TValue>(this ConditionalWeakTable<TKey, TValue> self, TKey key, TValue value) where TKey : class where TValue : class?
+        {
             ThrowHelper.ThrowIfArgumentNull(self, nameof(self));
 #if HAS_TRYADD
             return self.TryAdd(key, value);
 #else
             var didAdd = false;
-            _ = self.GetValue(key, _ => {
+            _ = self.GetValue(key, _ =>
+            {
                 didAdd = true;
                 return value;
             });

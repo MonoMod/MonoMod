@@ -4,8 +4,10 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace MonoMod.Utils {
-    public static partial class ReflectionHelper {
+namespace MonoMod.Utils
+{
+    public static partial class ReflectionHelper
+    {
 
         // https://github.com/dotnet/runtime/blob/10717887317beb824e57cdb29417663615211e99/src/coreclr/src/System.Private.CoreLib/src/System/Reflection/Emit/SignatureHelper.cs#L191
         // https://github.com/mono/mono/blob/1317cf06da06682419f8f4b0c9810ad5d5d3ac3a/mcs/class/corlib/System.Reflection.Emit/SignatureHelper.cs#L55
@@ -13,7 +15,8 @@ namespace MonoMod.Utils {
             typeof(SignatureHelper).GetField("m_module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance) ??
             typeof(SignatureHelper).GetField("module", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
-        private static Module GetSignatureHelperModule(SignatureHelper signature) {
+        private static Module GetSignatureHelperModule(SignatureHelper signature)
+        {
             if (f_SignatureHelper_module == null)
                 throw new InvalidOperationException("Unable to find module field for SignatureHelper");
 
@@ -26,7 +29,8 @@ namespace MonoMod.Utils {
             => Helpers.ThrowIfNull(moduleTo).ImportCallSite(GetSignatureHelperModule(signature), Helpers.ThrowIfNull(signature).GetSignature());
         public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, int token)
             => Helpers.ThrowIfNull(moduleTo).ImportCallSite(moduleFrom, Helpers.ThrowIfNull(moduleFrom).ResolveSignature(token));
-        public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, byte[] data) {
+        public static CallSite ImportCallSite(this ModuleDefinition moduleTo, Module moduleFrom, byte[] data)
+        {
             Helpers.ThrowIfArgumentNull(moduleTo);
             Helpers.ThrowIfArgumentNull(moduleFrom);
             Helpers.ThrowIfArgumentNull(data);
@@ -35,26 +39,31 @@ namespace MonoMod.Utils {
             // Based on https://github.com/jbevain/cecil/blob/96026325ee1cb6627a3e4a32b924ab2905f02553/Mono.Cecil/AssemblyReader.cs#L3448
 
             using (var stream = new MemoryStream(data, false))
-            using (var reader = new BinaryReader(stream)) {
+            using (var reader = new BinaryReader(stream))
+            {
                 ReadMethodSignature(callsite);
                 return callsite;
 
-                void ReadMethodSignature(IMethodSignature method) {
+                void ReadMethodSignature(IMethodSignature method)
+                {
                     var callConv = reader.ReadByte();
 
-                    if ((callConv & 0x20) != 0) {
+                    if ((callConv & 0x20) != 0)
+                    {
                         method.HasThis = true;
                         callConv = (byte)(callConv & ~0x20);
                     }
 
-                    if ((callConv & 0x40) != 0) {
+                    if ((callConv & 0x40) != 0)
+                    {
                         method.ExplicitThis = true;
                         callConv = (byte)(callConv & ~0x40);
                     }
 
                     method.CallingConvention = (MethodCallingConvention)callConv;
 
-                    if ((callConv & 0x10) != 0) {
+                    if ((callConv & 0x10) != 0)
+                    {
                         var arity = ReadCompressedUInt32();
                         // Shouldn't apply to CallSites.
                     }
@@ -67,7 +76,8 @@ namespace MonoMod.Utils {
                         method.Parameters.Add(new ParameterDefinition(ReadTypeSignature()));
                 }
 
-                uint ReadCompressedUInt32() {
+                uint ReadCompressedUInt32()
+                {
                     var first = reader!.ReadByte();
                     if ((first & 0x80) == 0)
                         return first;
@@ -82,7 +92,8 @@ namespace MonoMod.Utils {
                         | reader.ReadByte();
                 }
 
-                int ReadCompressedInt32() {
+                int ReadCompressedInt32()
+                {
                     var b = reader.ReadByte();
                     reader.BaseStream.Seek(-1, SeekOrigin.Current);
                     var u = (int)ReadCompressedUInt32();
@@ -90,7 +101,8 @@ namespace MonoMod.Utils {
                     if ((u & 1) == 0)
                         return v;
 
-                    switch (b & 0xc0) {
+                    switch (b & 0xc0)
+                    {
                         case 0:
                         case 0x40:
                             return v - 0x40;
@@ -103,12 +115,14 @@ namespace MonoMod.Utils {
                     }
                 }
 
-                TypeReference GetTypeDefOrRef() {
+                TypeReference GetTypeDefOrRef()
+                {
                     var tokenData = ReadCompressedUInt32();
 
                     var rid = tokenData >> 2;
                     uint token;
-                    switch (tokenData & 3) {
+                    switch (tokenData & 3)
+                    {
                         case 0:
                             token = (uint)TokenType.TypeDef | rid;
                             break;
@@ -129,9 +143,11 @@ namespace MonoMod.Utils {
                     return moduleTo.ImportReference(moduleFrom.ResolveType((int)token));
                 }
 
-                TypeReference ReadTypeSignature() {
+                TypeReference ReadTypeSignature()
+                {
                     var etype = (MetadataType)reader.ReadByte();
-                    switch (etype) {
+                    switch (etype)
+                    {
                         case MetadataType.ValueType:
                         case MetadataType.Class:
                             return GetTypeDefOrRef();
@@ -168,7 +184,8 @@ namespace MonoMod.Utils {
 
                             array.Dimensions.Clear();
 
-                            for (var i = 0; i < rank; i++) {
+                            for (var i = 0; i < rank; i++)
+                            {
                                 int? lower = null, upper = null;
 
                                 if (i < lowBounds.Length)

@@ -3,15 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace MonoMod.Utils {
-    public static partial class Extensions {
+namespace MonoMod.Utils
+{
+    public static partial class Extensions
+    {
 
         /// <summary>
         /// Get the "patch name" - the name of the target to patch - for the given member.
         /// </summary>
         /// <param name="mr">The member to get the patch name for.</param>
         /// <returns>The patch name.</returns>
-        public static string GetPatchName(this MemberReference mr) {
+        public static string GetPatchName(this MemberReference mr)
+        {
             Helpers.ThrowIfArgumentNull(mr);
             return (mr as ICustomAttributeProvider)?.GetPatchName() ?? mr.Name;
         }
@@ -20,20 +23,24 @@ namespace MonoMod.Utils {
         /// </summary>
         /// <param name="mr">The member to get the patch name for.</param>
         /// <returns>The patch name.</returns>
-        public static string GetPatchFullName(this MemberReference mr) {
+        public static string GetPatchFullName(this MemberReference mr)
+        {
             Helpers.ThrowIfArgumentNull(mr);
             return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
         }
 
-        private static string GetPatchName(this ICustomAttributeProvider cap) {
+        private static string GetPatchName(this ICustomAttributeProvider cap)
+        {
             Helpers.ThrowIfArgumentNull(cap);
             string name;
 
             var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
-            if (patchAttrib != null) {
+            if (patchAttrib != null)
+            {
                 name = (string)patchAttrib.ConstructorArguments[0].Value;
                 var dotIndex = name.LastIndexOf('.');
-                if (dotIndex != -1 && dotIndex != name.Length - 1) {
+                if (dotIndex != -1 && dotIndex != name.Length - 1)
+                {
                     name = name.Substring(dotIndex + 1);
                 }
                 return name;
@@ -43,16 +50,21 @@ namespace MonoMod.Utils {
             name = ((MemberReference)cap).Name;
             return name.StartsWith("patch_", StringComparison.Ordinal) ? name.Substring(6) : name;
         }
-        private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr) {
+        private static string GetPatchFullName(this ICustomAttributeProvider cap, MemberReference mr)
+        {
             Helpers.ThrowIfArgumentNull(cap);
             Helpers.ThrowIfArgumentNull(mr);
-            if (cap is TypeReference type) {
+            if (cap is TypeReference type)
+            {
                 var patchAttrib = cap.GetCustomAttribute("MonoMod.MonoModPatch");
                 string name;
 
-                if (patchAttrib != null) {
+                if (patchAttrib != null)
+                {
                     name = (string)patchAttrib.ConstructorArguments[0].Value;
-                } else {
+                }
+                else
+                {
                     // Backwards-compatibility: Check for patch_
                     name = ((MemberReference)cap).Name;
                     name = name.StartsWith("patch_", StringComparison.Ordinal) ? name.Substring(6) : name;
@@ -66,17 +78,20 @@ namespace MonoMod.Utils {
                 else if (type.IsNested)
                     name = type.DeclaringType.GetPatchFullName() + "/" + name;
 
-                if (mr is TypeSpecification specification) {
+                if (mr is TypeSpecification specification)
+                {
                     // Collect TypeSpecifications and append formats back to front.
                     var formats = new List<TypeSpecification>();
                     var ts = specification;
-                    do {
+                    do
+                    {
                         formats.Add(ts);
                     } while ((ts = (ts.ElementType as TypeSpecification)) != null);
 
                     var builder = new StringBuilder(name.Length + formats.Count * 4);
                     builder.Append(name);
-                    for (var formati = formats.Count - 1; formati > -1; --formati) {
+                    for (var formati = formats.Count - 1; formati > -1; --formati)
+                    {
                         ts = formats[formati];
 
                         if (ts.IsByReference)
@@ -85,37 +100,46 @@ namespace MonoMod.Utils {
                             builder.Append('*');
                         else if (ts.IsPinned) { } // FullName not overriden.
                         else if (ts.IsSentinel) { } // FullName not overriden.
-                        else if (ts.IsArray) {
+                        else if (ts.IsArray)
+                        {
                             var array = (ArrayType)ts;
                             if (array.IsVector)
                                 builder.Append("[]");
-                            else {
+                            else
+                            {
                                 builder.Append('[');
-                                for (var i = 0; i < array.Dimensions.Count; i++) {
+                                for (var i = 0; i < array.Dimensions.Count; i++)
+                                {
                                     if (i > 0)
                                         builder.Append(',');
                                     builder.Append(array.Dimensions[i].ToString());
                                 }
                                 builder.Append(']');
                             }
-                        } else if (ts.IsRequiredModifier)
+                        }
+                        else if (ts.IsRequiredModifier)
                             builder.Append("modreq(").Append(((RequiredModifierType)ts).ModifierType).Append(')');
                         else if (ts.IsOptionalModifier)
                             builder.Append("modopt(").Append(((OptionalModifierType)ts).ModifierType).Append(')');
-                        else if (ts.IsGenericInstance) {
+                        else if (ts.IsGenericInstance)
+                        {
                             var gen = (GenericInstanceType)ts;
                             builder.Append('<');
-                            for (var i = 0; i < gen.GenericArguments.Count; i++) {
+                            for (var i = 0; i < gen.GenericArguments.Count; i++)
+                            {
                                 if (i > 0)
                                     builder.Append(',');
                                 builder.Append(gen.GenericArguments[i].GetPatchFullName());
                             }
                             builder.Append('>');
-                        } else if (ts.IsFunctionPointer) {
+                        }
+                        else if (ts.IsFunctionPointer)
+                        {
                             var fpt = (FunctionPointerType)ts;
                             builder.Append(' ').Append(fpt.ReturnType.GetPatchFullName()).Append(" *(");
                             if (fpt.HasParameters)
-                                for (var i = 0; i < fpt.Parameters.Count; i++) {
+                                for (var i = 0; i < fpt.Parameters.Count; i++)
+                                {
                                     var parameter = fpt.Parameters[i];
                                     if (i > 0)
                                         builder.Append(',');
@@ -126,7 +150,8 @@ namespace MonoMod.Utils {
                                     builder.Append(parameter.ParameterType.FullName);
                                 }
                             builder.Append(')');
-                        } else
+                        }
+                        else
                             throw new NotSupportedException($"MonoMod can't handle TypeSpecification: {type.FullName} ({type.GetType()})");
                     }
 
@@ -136,7 +161,8 @@ namespace MonoMod.Utils {
                 return name;
             }
 
-            if (cap is FieldReference field) {
+            if (cap is FieldReference field)
+            {
                 return $"{field.FieldType.GetPatchFullName()} {field.DeclaringType.GetPatchFullName()}::{cap.GetPatchName()}";
             }
 

@@ -4,11 +4,13 @@
 
 using System.Runtime.CompilerServices;
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// Manager of <see cref="System.Memory{T}"/> that provides the implementation.
     /// </summary>
-    public abstract class MemoryManager<T> : IMemoryOwner<T>, IPinnable {
+    public abstract class MemoryManager<T> : IMemoryOwner<T>, IPinnable
+    {
         /// <summary>
         /// Returns a <see cref="System.Memory{T}"/>.
         /// </summary>
@@ -49,7 +51,8 @@ namespace System.Buffers {
         /// Returns an array segment.
         /// <remarks>Returns the default array segment if not overriden.</remarks>
         /// </summary>
-        protected internal virtual bool TryGetArray(out ArraySegment<T> segment) {
+        protected internal virtual bool TryGetArray(out ArraySegment<T> segment)
+        {
             segment = default;
             return false;
         }
@@ -57,7 +60,8 @@ namespace System.Buffers {
         /// <summary>
         /// Implements IDisposable.
         /// </summary>
-        void IDisposable.Dispose() {
+        void IDisposable.Dispose()
+        {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }

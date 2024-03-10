@@ -12,13 +12,15 @@ namespace MonoMod.SourceGen.Internal.Extensions;
 /// <summary>
 /// Extension methods for the <see cref="ISymbol"/> type.
 /// </summary>
-internal static class ISymbolExtensions {
+internal static class ISymbolExtensions
+{
     /// <summary>
     /// Gets the fully qualified name for a given symbol.
     /// </summary>
     /// <param name="symbol">The input <see cref="ISymbol"/> instance.</param>
     /// <returns>The fully qualified name for <paramref name="symbol"/>.</returns>
-    public static string GetFullyQualifiedName(this ISymbol symbol) {
+    public static string GetFullyQualifiedName(this ISymbol symbol)
+    {
         return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
     }
 
@@ -27,7 +29,8 @@ internal static class ISymbolExtensions {
     /// </summary>
     /// <param name="symbol">The input <see cref="ISymbol"/> instance.</param>
     /// <returns>The fully qualified name for <paramref name="symbol"/>.</returns>
-    public static string GetFullyQualifiedNameWithNullabilityAnnotations(this ISymbol symbol) {
+    public static string GetFullyQualifiedNameWithNullabilityAnnotations(this ISymbol symbol)
+    {
         return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat.AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier));
     }
 
@@ -37,7 +40,8 @@ internal static class ISymbolExtensions {
     /// <param name="symbol">The input <see cref="ISymbol"/> instance to check.</param>
     /// <param name="name">The full name to check.</param>
     /// <returns>Whether <paramref name="symbol"/> has a full name equals to <paramref name="name"/>.</returns>
-    public static bool HasFullyQualifiedName(this ISymbol symbol, string name) {
+    public static bool HasFullyQualifiedName(this ISymbol symbol, string name)
+    {
         return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == name;
     }
 
@@ -47,9 +51,12 @@ internal static class ISymbolExtensions {
     /// <param name="symbol">The input <see cref="ISymbol"/> instance to check.</param>
     /// <param name="name">The attribute name to look for.</param>
     /// <returns>Whether or not <paramref name="symbol"/> has an attribute with the specified name.</returns>
-    public static bool HasAttributeWithFullyQualifiedMetadataName(this ISymbol symbol, string name) {
-        foreach (var attribute in symbol.GetAttributes()) {
-            if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(name) == true) {
+    public static bool HasAttributeWithFullyQualifiedMetadataName(this ISymbol symbol, string name)
+    {
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(name) == true)
+            {
                 return true;
             }
         }
@@ -63,9 +70,12 @@ internal static class ISymbolExtensions {
     /// <param name="symbol">The input <see cref="ISymbol"/> instance to check.</param>
     /// <param name="typeSymbol">The <see cref="ITypeSymbol"/> instance for the attribute type to look for.</param>
     /// <returns>Whether or not <paramref name="symbol"/> has an attribute with the specified type.</returns>
-    public static bool HasAttributeWithType(this ISymbol symbol, ITypeSymbol typeSymbol) {
-        foreach (var attribute in symbol.GetAttributes()) {
-            if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, typeSymbol)) {
+    public static bool HasAttributeWithType(this ISymbol symbol, ITypeSymbol typeSymbol)
+    {
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, typeSymbol))
+            {
                 return true;
             }
         }
@@ -101,12 +111,14 @@ internal static class ISymbolExtensions {
     /// </summary>
     /// <param name="symbol">The <see cref="ISymbol"/> instance to check.</param>
     /// <returns>The effective accessibility for <paramref name="symbol"/>.</returns>
-    public static Accessibility GetEffectiveAccessibility(this ISymbol symbol) {
+    public static Accessibility GetEffectiveAccessibility(this ISymbol symbol)
+    {
         // Start by assuming it's visible
         var visibility = Accessibility.Public;
 
         // Handle special cases
-        switch (symbol.Kind) {
+        switch (symbol.Kind)
+        {
             case SymbolKind.Alias:
                 return Accessibility.Private;
             case SymbolKind.Parameter:
@@ -116,8 +128,10 @@ internal static class ISymbolExtensions {
         }
 
         // Traverse the symbol hierarchy to determine the effective accessibility
-        while (symbol is not null && symbol.Kind != SymbolKind.Namespace) {
-            switch (symbol.DeclaredAccessibility) {
+        while (symbol is not null && symbol.Kind != SymbolKind.Namespace)
+        {
+            switch (symbol.DeclaredAccessibility)
+            {
                 case Accessibility.NotApplicable:
                 case Accessibility.Private:
                     return Accessibility.Private;
@@ -139,7 +153,8 @@ internal static class ISymbolExtensions {
     /// <param name="symbol">The input <see cref="ISymbol"/> instance to check.</param>
     /// <param name="assembly">The assembly to check the accessibility of <paramref name="symbol"/> for.</param>
     /// <returns>Whether <paramref name="assembly"/> can access <paramref name="symbol"/>.</returns>
-    public static bool CanBeAccessedFrom(this ISymbol symbol, IAssemblySymbol assembly) {
+    public static bool CanBeAccessedFrom(this ISymbol symbol, IAssemblySymbol assembly)
+    {
         var accessibility = symbol.GetEffectiveAccessibility();
 
         return

@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// Represents a <typeparam name="T"/> sink
     /// </summary>
-    public interface IBufferWriter<T> {
+    public interface IBufferWriter<T>
+    {
         /// <summary>
         /// Notifies <see cref="IBufferWriter{T}"/> that <paramref name="count"/> amount of data was written to <see cref="Span{T}"/>/<see cref="Memory{T}"/>
         /// </summary>

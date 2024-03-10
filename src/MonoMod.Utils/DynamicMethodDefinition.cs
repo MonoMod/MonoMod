@@ -11,10 +11,13 @@ using System.Security;
 using System.Linq;
 #endif
 
-namespace MonoMod.Utils {
-    public sealed partial class DynamicMethodDefinition : IDisposable {
+namespace MonoMod.Utils
+{
+    public sealed partial class DynamicMethodDefinition : IDisposable
+    {
 
-        static DynamicMethodDefinition() {
+        static DynamicMethodDefinition()
+        {
             _InitCopier();
         }
 
@@ -62,11 +65,13 @@ namespace MonoMod.Utils {
 
         private bool isDisposed;
 
-        private static bool GetDefaultDebugValue() {
+        private static bool GetDefaultDebugValue()
+        {
             return Switches.TryGetSwitchEnabled(Switches.DMDDebug, out var value) && value;
         }
 
-        public DynamicMethodDefinition(MethodBase method) {
+        public DynamicMethodDefinition(MethodBase method)
+        {
             Helpers.ThrowIfArgumentNull(method);
 
             OriginalMethod = method;
@@ -77,7 +82,8 @@ namespace MonoMod.Utils {
             Definition = definition;
         }
 
-        public DynamicMethodDefinition(string name, Type? returnType, Type[] parameterTypes) {
+        public DynamicMethodDefinition(string name, Type? returnType, Type[] parameterTypes)
+        {
             Helpers.ThrowIfArgumentNull(name);
             Helpers.ThrowIfArgumentNull(parameterTypes);
 
@@ -91,21 +97,25 @@ namespace MonoMod.Utils {
         }
 
         [MemberNotNull(nameof(Definition))]
-        public ILProcessor GetILProcessor() {
+        public ILProcessor GetILProcessor()
+        {
             if (Definition is null)
                 throw new InvalidOperationException();
             return Definition.Body.GetILProcessor();
         }
 
         [MemberNotNull(nameof(Definition))]
-        public ILGenerator GetILGenerator() {
+        public ILGenerator GetILGenerator()
+        {
             if (Definition is null)
                 throw new InvalidOperationException();
             return new Cil.CecilILGenerator(Definition.Body.GetILProcessor()).GetProxy();
         }
 
-        private void _CreateDynModule(string name, Type? returnType, Type[] parameterTypes, out ModuleDefinition Module, out MethodDefinition Definition) {
-            var module = Module = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters() {
+        private void _CreateDynModule(string name, Type? returnType, Type[] parameterTypes, out ModuleDefinition Module, out MethodDefinition Definition)
+        {
+            var module = Module = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters()
+            {
                 Kind = ModuleKind.Dll,
                 ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
             });
@@ -127,15 +137,19 @@ namespace MonoMod.Utils {
             type.Methods.Add(def);
         }
 
-        private void LoadFromMethod(MethodBase orig, out ModuleDefinition Module, out MethodDefinition def) {
+        private void LoadFromMethod(MethodBase orig, out ModuleDefinition Module, out MethodDefinition def)
+        {
             Type[] argTypes;
             var args = orig.GetParameters();
             var offs = 0;
-            if (!orig.IsStatic) {
+            if (!orig.IsStatic)
+            {
                 offs++;
                 argTypes = new Type[args.Length + 1];
                 argTypes[0] = orig.GetThisParamType();
-            } else {
+            }
+            else
+            {
                 argTypes = new Type[args.Length];
             }
             for (var i = 0; i < args.Length; i++)
@@ -145,7 +159,8 @@ namespace MonoMod.Utils {
 
             _CopyMethodToDefinition(orig, def);
 
-            if (!orig.IsStatic) {
+            if (!orig.IsStatic)
+            {
                 def.Parameters[0].Name = "this";
             }
             for (var i = 0; i < args.Length; i++)
@@ -154,16 +169,20 @@ namespace MonoMod.Utils {
 
         public MethodInfo Generate()
             => Generate(null);
-        public MethodInfo Generate(object? context) {
+        public MethodInfo Generate(object? context)
+        {
             var dmdType = Switches.TryGetSwitchValue(Switches.DMDType, out var swValue) ? swValue as string : null;
 
-            if (dmdType is not null) {
+            if (dmdType is not null)
+            {
                 if (dmdType.Equals("dynamicmethod", StringComparison.OrdinalIgnoreCase)
-                    || dmdType.Equals("dm", StringComparison.OrdinalIgnoreCase)) {
+                    || dmdType.Equals("dm", StringComparison.OrdinalIgnoreCase))
+                {
                     return DMDEmitDynamicMethodGenerator.Generate(this, context);
                 }
                 if (dmdType.Equals("cecil", StringComparison.OrdinalIgnoreCase)
-                    || dmdType.Equals("md", StringComparison.OrdinalIgnoreCase)) {
+                    || dmdType.Equals("md", StringComparison.OrdinalIgnoreCase))
+                {
                     return DMDCecilGenerator.Generate(this, context);
                 }
 #if NETFRAMEWORK
@@ -174,9 +193,11 @@ namespace MonoMod.Utils {
 #endif
             }
 
-            if (dmdType is not null) {
+            if (dmdType is not null)
+            {
                 var type = ReflectionHelper.GetType(dmdType);
-                if (type != null) {
+                if (type != null)
+                {
                     if (!t__IDMDGenerator.IsCompatible(type))
                         throw new ArgumentException($"Invalid DMDGenerator type: {dmdType}");
                     var gen = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator)Activator.CreateInstance(type)!);
@@ -208,14 +229,16 @@ namespace MonoMod.Utils {
             return DMDEmitDynamicMethodGenerator.Generate(this, context);
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
             if (isDisposed)
                 return;
             isDisposed = true;
             Module?.Dispose();
         }
 
-        public string GetDumpName(string type) {
+        public string GetDumpName(string type)
+        {
             // TODO: Add {Definition.GetID(withType: false)} without killing MethodBuilder
             return $"DMDASM.{GUID.GetHashCode():X8}{(string.IsNullOrEmpty(type) ? "" : $".{type}")}";
         }

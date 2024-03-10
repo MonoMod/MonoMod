@@ -13,7 +13,8 @@
 
 using System.Collections.Generic;
 
-namespace System.Collections.Concurrent {
+namespace System.Collections.Concurrent
+{
     /// <summary>
     /// Represents a particular manner of splitting a data source into multiple partitions.
     /// </summary>
@@ -41,7 +42,8 @@ namespace System.Collections.Concurrent {
     /// </ol>
     /// </para>
     /// </remarks>
-    public abstract class Partitioner<TSource> {
+    public abstract class Partitioner<TSource>
+    {
         /// <summary>
         /// Partitions the underlying collection into the given number of partitions.
         /// </summary>
@@ -64,7 +66,8 @@ namespace System.Collections.Concurrent {
         /// cref="SupportsDynamicPartitions"/> should not vary over the lifetime of this instance.
         /// </para>
         /// </remarks>
-        public virtual bool SupportsDynamicPartitions {
+        public virtual bool SupportsDynamicPartitions
+        {
             get { return false; }
         }
 
@@ -88,7 +91,8 @@ namespace System.Collections.Concurrent {
         /// <returns>An object that can create partitions over the underlying data source.</returns>
         /// <exception cref="NotSupportedException">Dynamic partitioning is not supported by this
         /// partitioner.</exception>
-        public virtual IEnumerable<TSource> GetDynamicPartitions() {
+        public virtual IEnumerable<TSource> GetDynamicPartitions()
+        {
             throw new NotSupportedException("Dynamic partitions are not supported");
         }
     }

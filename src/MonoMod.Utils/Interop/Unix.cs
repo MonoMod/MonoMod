@@ -4,10 +4,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace MonoMod.Utils.Interop {
+namespace MonoMod.Utils.Interop
+{
     [SuppressMessage("Security", "CA5392:Use DefaultDllImportSearchPaths attribute for P/Invokes",
         Justification = "The attribute doesn't do anything on platforms where this will be used.")]
-    internal unsafe static partial class Unix {
+    internal unsafe static partial class Unix
+    {
         // If this dllimport decl isn't enough to get the runtime to load the right thing, I give up
         public const string LibC = "libc";
         public const string DL1 = "dl";
@@ -25,14 +27,16 @@ namespace MonoMod.Utils.Interop {
 #endif
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct LinuxAuxvEntry {
+        public struct LinuxAuxvEntry
+        {
             public nint Key;
             public nint Value;
         }
 
         public const int AT_PLATFORM = 0xf;
 
-        public enum DlopenFlags : int {
+        public enum DlopenFlags : int
+        {
             RTLD_LAZY = 0x0001,
             RTLD_NOW = 0x0002,
             RTLD_LOCAL = 0x0000,
@@ -58,7 +62,8 @@ namespace MonoMod.Utils.Interop {
         [DllImport(DL2, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlerror();
 
-        internal static byte[]? MarshalToUtf8(string? str) {
+        internal static byte[]? MarshalToUtf8(string? str)
+        {
             if (str is null)
                 return null;
 
@@ -70,7 +75,8 @@ namespace MonoMod.Utils.Interop {
             return arr;
         }
 
-        internal static void FreeMarshalledArray(byte[]? arr) {
+        internal static void FreeMarshalledArray(byte[]? arr)
+        {
             if (arr is null)
                 return;
             ArrayPool<byte>.Shared.Return(arr);
@@ -78,13 +84,19 @@ namespace MonoMod.Utils.Interop {
 
         private static int dlVersion = 1;
 
-        public static IntPtr DlOpen(string? filename, DlopenFlags flags) {
+        public static IntPtr DlOpen(string? filename, DlopenFlags flags)
+        {
             var arr = MarshalToUtf8(filename);
-            try {
-                while (true) {
-                    try {
-                        fixed (byte* pStr = arr) {
-                            switch (dlVersion) {
+            try
+            {
+                while (true)
+                {
+                    try
+                    {
+                        fixed (byte* pStr = arr)
+                        {
+                            switch (dlVersion)
+                            {
                                 case 1:
                                     return DL2dlopen(pStr, flags);
 
@@ -93,19 +105,27 @@ namespace MonoMod.Utils.Interop {
                                     return DL1dlopen(pStr, flags);
                             }
                         }
-                    } catch (DllNotFoundException) when (dlVersion > 0) {
+                    }
+                    catch (DllNotFoundException) when (dlVersion > 0)
+                    {
                         dlVersion--;
                     }
                 }
-            } finally {
+            }
+            finally
+            {
                 FreeMarshalledArray(arr);
             }
         }
 
-        public static bool DlClose(IntPtr handle) {
-            while (true) {
-                try {
-                    switch (dlVersion) {
+        public static bool DlClose(IntPtr handle)
+        {
+            while (true)
+            {
+                try
+                {
+                    switch (dlVersion)
+                    {
                         case 1:
                             return DL2dlclose(handle) == 0;
 
@@ -113,19 +133,27 @@ namespace MonoMod.Utils.Interop {
                         default:
                             return DL1dlclose(handle) == 0;
                     }
-                } catch (DllNotFoundException) when (dlVersion > 0) {
+                }
+                catch (DllNotFoundException) when (dlVersion > 0)
+                {
                     dlVersion--;
                 }
             }
         }
 
-        public static IntPtr DlSym(IntPtr handle, string symbol) {
+        public static IntPtr DlSym(IntPtr handle, string symbol)
+        {
             var arr = MarshalToUtf8(symbol);
-            try {
-                while (true) {
-                    try {
-                        fixed (byte* pStr = arr) {
-                            switch (dlVersion) {
+            try
+            {
+                while (true)
+                {
+                    try
+                    {
+                        fixed (byte* pStr = arr)
+                        {
+                            switch (dlVersion)
+                            {
                                 case 1:
                                     return DL2dlsym(handle, pStr);
 
@@ -134,19 +162,27 @@ namespace MonoMod.Utils.Interop {
                                     return DL1dlsym(handle, pStr);
                             }
                         }
-                    } catch (DllNotFoundException) when (dlVersion > 0) {
+                    }
+                    catch (DllNotFoundException) when (dlVersion > 0)
+                    {
                         dlVersion--;
                     }
                 }
-            } finally {
+            }
+            finally
+            {
                 FreeMarshalledArray(arr);
             }
         }
 
-        public static IntPtr DlError() {
-            while (true) {
-                try {
-                    switch (dlVersion) {
+        public static IntPtr DlError()
+        {
+            while (true)
+            {
+                try
+                {
+                    switch (dlVersion)
+                    {
                         case 1:
                             return DL2dlerror();
 
@@ -154,7 +190,9 @@ namespace MonoMod.Utils.Interop {
                         default:
                             return DL1dlerror();
                     }
-                } catch (DllNotFoundException) when (dlVersion > 0) {
+                }
+                catch (DllNotFoundException) when (dlVersion > 0)
+                {
                     dlVersion--;
                 }
             }

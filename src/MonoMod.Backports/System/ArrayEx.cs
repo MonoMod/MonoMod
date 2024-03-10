@@ -8,11 +8,13 @@
 
 using System.Runtime.CompilerServices;
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// Extensions to <see cref="Array"/> providing consistent access to APIs introduced after the type.
     /// </summary>
-    public static class ArrayEx {
+    public static class ArrayEx
+    {
 #if !HAS_EMPTY
         private static class TypeHolder<T> {
             public static readonly T[] Empty = new T[0];

@@ -5,12 +5,14 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.Core {
+namespace MonoMod.Core
+{
     /// <summary>
     /// A factory for creating <see cref="ICoreDetour"/>s and <see cref="ICoreNativeDetour"/>s.
     /// </summary>
     [CLSCompliant(true)]
-    public interface IDetourFactory {
+    public interface IDetourFactory
+    {
         /// <summary>
         /// Creates an <see cref="ICoreDetour"/> according to the arguments specified in <paramref name="request"/>.
         /// </summary>
@@ -32,7 +34,8 @@ namespace MonoMod.Core {
     /// <param name="Target">The target method for the detour.</param>
     /// <seealso cref="IDetourFactory.CreateDetour(CreateDetourRequest)"/>
     [CLSCompliant(true)]
-    public readonly record struct CreateDetourRequest(MethodBase Source, MethodBase Target) {
+    public readonly record struct CreateDetourRequest(MethodBase Source, MethodBase Target)
+    {
         /// <summary>
         /// Gets or sets whether or not the detour should be applied when <see cref="IDetourFactory.CreateDetour(CreateDetourRequest)"/> returns.
         /// Defaults to <see langword="true"/>.
@@ -47,7 +50,8 @@ namespace MonoMod.Core {
     /// <param name="Target">The target function for the detour.</param>
     /// <seealso cref="IDetourFactory.CreateNativeDetour(CreateNativeDetourRequest)"/>
     [CLSCompliant(true)]
-    public readonly record struct CreateNativeDetourRequest(IntPtr Source, IntPtr Target) {
+    public readonly record struct CreateNativeDetourRequest(IntPtr Source, IntPtr Target)
+    {
         /// <summary>
         /// Gets or sets whether or not the detour should be applied when <see cref="IDetourFactory.CreateNativeDetour(CreateNativeDetourRequest)"/> returns.
         /// Defaults to <see langword="true"/>.
@@ -60,7 +64,8 @@ namespace MonoMod.Core {
     /// using <see cref="IDetourFactory"/> easier.
     /// </summary>
     [CLSCompliant(true)]
-    public static class DetourFactory {
+    public static class DetourFactory
+    {
         // use the actual type for this so that an inlined getter can see the actual type
         private static PlatformTripleDetourFactory? lazyCurrent;
         /// <summary>
@@ -71,7 +76,8 @@ namespace MonoMod.Core {
         /// at that point in time. After it is constructed, the <see cref="PlatformTriple"/> implementation cannot be replaced.
         /// </remarks>
         /// <seealso cref="PlatformTriple.Current"/>
-        public static unsafe IDetourFactory Current {
+        public static unsafe IDetourFactory Current
+        {
             [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
             get => Helpers.GetOrInit(ref lazyCurrent, &CreateDefaultFactory);
         }
@@ -88,7 +94,8 @@ namespace MonoMod.Core {
         /// <param name="applyByDefault"><see langword="true"/> if the detour should be applied when this method returns;
         /// <see langword="false"/> if the caller must apply it themselves.</param>
         /// <returns>The created <see cref="ICoreDetour"/>.</returns>
-        public static ICoreDetour CreateDetour(this IDetourFactory factory, MethodBase source, MethodBase target, bool applyByDefault = true) {
+        public static ICoreDetour CreateDetour(this IDetourFactory factory, MethodBase source, MethodBase target, bool applyByDefault = true)
+        {
             Helpers.ThrowIfArgumentNull(factory);
             return factory.CreateDetour(new(source, target) { ApplyByDefault = applyByDefault });
         }
@@ -102,7 +109,8 @@ namespace MonoMod.Core {
         /// <param name="applyByDefault"><see langword="true"/> if the detour should be applied when this method returns;
         /// <see langword="false"/> if the caller must apply it themselves.</param>
         /// <returns>The created <see cref="ICoreNativeDetour"/>.</returns>
-        public static ICoreNativeDetour CreateNativeDetour(this IDetourFactory factory, IntPtr source, IntPtr target, bool applyByDefault = true) {
+        public static ICoreNativeDetour CreateNativeDetour(this IDetourFactory factory, IntPtr source, IntPtr target, bool applyByDefault = true)
+        {
             Helpers.ThrowIfArgumentNull(factory);
             return factory.CreateNativeDetour(new(source, target) { ApplyByDefault = applyByDefault });
         }

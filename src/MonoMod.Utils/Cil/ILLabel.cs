@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MonoMod.Cil {
+namespace MonoMod.Cil
+{
     /// <summary>
     /// A label to be used in ILContexts.
     /// </summary>
-    public sealed class ILLabel {
+    public sealed class ILLabel
+    {
 
         private readonly ILContext Context;
         /// <summary>
@@ -20,13 +22,15 @@ namespace MonoMod.Cil {
         public IEnumerable<Instruction> Branches
             => Context.Instrs.Where(i => i.Operand == this);
 
-        internal ILLabel(ILContext context) {
+        internal ILLabel(ILContext context)
+        {
             Context = context;
             Context._Labels.Add(this);
         }
 
         internal ILLabel(ILContext context, Instruction? target)
-            : this(context) {
+            : this(context)
+        {
             Target = target;
         }
     }

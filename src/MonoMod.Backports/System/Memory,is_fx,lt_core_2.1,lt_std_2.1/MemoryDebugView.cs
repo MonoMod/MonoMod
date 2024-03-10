@@ -4,15 +4,19 @@
 
 using System.Diagnostics;
 
-namespace System {
-    internal sealed class MemoryDebugView<T> {
+namespace System
+{
+    internal sealed class MemoryDebugView<T>
+    {
         private readonly ReadOnlyMemory<T> _memory;
 
-        public MemoryDebugView(Memory<T> memory) {
+        public MemoryDebugView(Memory<T> memory)
+        {
             _memory = memory;
         }
 
-        public MemoryDebugView(ReadOnlyMemory<T> memory) {
+        public MemoryDebugView(ReadOnlyMemory<T> memory)
+        {
             _memory = memory;
         }
 

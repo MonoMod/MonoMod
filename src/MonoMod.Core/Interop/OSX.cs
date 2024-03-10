@@ -4,8 +4,10 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace MonoMod.Core.Interop {
-    internal static unsafe class OSX {
+namespace MonoMod.Core.Interop
+{
+    internal static unsafe class OSX
+    {
 
         public const string LibSystem = "libSystem";
 
@@ -185,13 +187,18 @@ namespace MonoMod.Core.Interop {
 
         // mach_task_self() is a macro which accesses the global mach_task_self_, hence this whole rigamarole
         private static unsafe int* mach_task_self_;
-        public static unsafe int mach_task_self() {
+        public static unsafe int mach_task_self()
+        {
             var ptr = mach_task_self_;
-            if (ptr is null) {
+            if (ptr is null)
+            {
                 var lib = DynDll.OpenLibrary(LibSystem);
-                try {
+                try
+                {
                     mach_task_self_ = ptr = (int*)DynDll.GetExport(lib, "mach_task_self_");
-                } finally {
+                }
+                finally
+                {
                     DynDll.CloseLibrary(lib);
                 }
             }
@@ -218,7 +225,8 @@ namespace MonoMod.Core.Interop {
 
         // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/vm_region.h#L254
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        public struct vm_region_submap_short_info_64 {
+        public struct vm_region_submap_short_info_64
+        {
             public vm_prot_t protection;
             public vm_prot_t max_protection;
             public vm_inherit_t inheritance;
@@ -237,7 +245,8 @@ namespace MonoMod.Core.Interop {
         }
 
         // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/vm_region.h#L120
-        public enum ShareMode : byte {
+        public enum ShareMode : byte
+        {
             COW = 1,
             Private = 2,
             Empty = 3,
@@ -251,7 +260,8 @@ namespace MonoMod.Core.Interop {
 
         // https://github.com/apple-oss-distributions/xnu/blob/5c2921b07a2480ab43ec66f5b9e41cb872bc554f/osfmk/mach/task_info.h#L279
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        public struct task_dyld_info {
+        public struct task_dyld_info
+        {
             public ulong all_image_info_addr; // mach_vm_address_t
             public ulong all_image_info_size; // mach_vm_size_t
             public task_dyld_all_image_info_format all_image_info_format;
@@ -264,7 +274,8 @@ namespace MonoMod.Core.Interop {
         // because this is all in-process, we can use pointers normally
         // this is defined in /usr/include/mach-o/dyld_images.h in the SDK
         [StructLayout(LayoutKind.Sequential)] // don't know the pack setting unfortunately
-        public unsafe struct dyld_all_image_infos {
+        public unsafe struct dyld_all_image_infos
+        {
             public uint version;
             public uint infoArrayCount;
             public dyld_image_info* infoArray;
@@ -274,28 +285,33 @@ namespace MonoMod.Core.Interop {
         }
 
         [StructLayout(LayoutKind.Sequential)] // don't know the pack setting unfortunately
-        public unsafe struct dyld_image_info {
+        public unsafe struct dyld_image_info
+        {
             public void* imageLoadAddress; // mach_header*
             public PCSTR imageFilePath; // const char* (we use PCSTR because it already can give us a string with no extra work)
             public nuint imageFileModDate; // uintptr_t
         }
 
-        public enum task_dyld_all_image_info_format : int {
+        public enum task_dyld_all_image_info_format : int
+        {
             Bits32 = 0,
             Bits64 = 1,
         }
 
-        public enum task_flavor_t : uint {
+        public enum task_flavor_t : uint
+        {
             DyldInfo = 17,
         }
 
-        public enum vm_region_flavor_t : int {
+        public enum vm_region_flavor_t : int
+        {
             BasicInfo64 = 9
         }
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_prot.h.auto.html
         [Flags]
-        public enum vm_prot_t : int {
+        public enum vm_prot_t : int
+        {
             None = 0,
             Read = 1,
             Write = 2,
@@ -323,24 +339,29 @@ namespace MonoMod.Core.Interop {
 
         public static VmProtFmtProxy P(vm_prot_t prot) => new(prot);
 
-        public struct VmProtFmtProxy : IDebugFormattable {
+        public struct VmProtFmtProxy : IDebugFormattable
+        {
             private readonly vm_prot_t value;
             public VmProtFmtProxy(vm_prot_t value) => this.value = value;
 
             // format is: [~]rwx[!][c][ (mask)]
-            public bool TryFormatInto(Span<char> span, out int wrote) {
+            public bool TryFormatInto(Span<char> span, out int wrote)
+            {
                 var w = 0;
 
 #pragma warning disable CS0618 // Type or member is obsolete
-                if (value.Has(vm_prot_t.NoChange)) {
-                    if (span.Slice(w).Length < 1) {
+                if (value.Has(vm_prot_t.NoChange))
+                {
+                    if (span.Slice(w).Length < 1)
+                    {
                         wrote = w;
                         return false;
                     }
                     span[w++] = '~';
                 }
 
-                if (span.Slice(w).Length < 3) {
+                if (span.Slice(w).Length < 3)
+                {
                     wrote = 0;
                     return false;
                 }
@@ -348,25 +369,31 @@ namespace MonoMod.Core.Interop {
                 span[w++] = value.Has(vm_prot_t.Write) ? 'w' : '-';
                 span[w++] = value.Has(vm_prot_t.Execute) ? 'x' : '-';
 
-                if (value.Has(vm_prot_t.StripRead)) {
-                    if (span.Slice(w).Length < 1) {
+                if (value.Has(vm_prot_t.StripRead))
+                {
+                    if (span.Slice(w).Length < 1)
+                    {
                         wrote = w;
                         return false;
                     }
                     span[w++] = '!';
                 }
 
-                if (value.Has(vm_prot_t.Copy)) {
-                    if (span.Slice(w).Length < 1) {
+                if (value.Has(vm_prot_t.Copy))
+                {
+                    if (span.Slice(w).Length < 1)
+                    {
                         wrote = w;
                         return false;
                     }
                     span[w++] = 'c';
                 }
 
-                if (value.Has(vm_prot_t.IsMask)) {
+                if (value.Has(vm_prot_t.IsMask))
+                {
                     const string MaskStr = " (mask)";
-                    if (span.Slice(w).Length < MaskStr.Length) {
+                    if (span.Slice(w).Length < MaskStr.Length)
+                    {
                         wrote = w;
                         return false;
                     }
@@ -382,7 +409,8 @@ namespace MonoMod.Core.Interop {
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_statistics.h.auto.html
         [Flags]
-        public enum vm_flags : int {
+        public enum vm_flags : int
+        {
             // Allocate at the specified virtual address.
             Fixed = 0x0000,
             // Allocate anywhere in the address space.
@@ -404,7 +432,8 @@ namespace MonoMod.Core.Interop {
         }
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_inherit.h.auto.html
-        public enum vm_inherit_t : uint {
+        public enum vm_inherit_t : uint
+        {
             Share = 0, // share with child
             Copy = 1, // copy into child
             None = 2, // absent form child
@@ -415,7 +444,8 @@ namespace MonoMod.Core.Interop {
         }
 
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/vm_behavior.h.auto.html
-        public enum vm_behavior_t : int {
+        public enum vm_behavior_t : int
+        {
             // stroed in t VM map entry
             Default = 0,
             Random = 1,
@@ -437,7 +467,8 @@ namespace MonoMod.Core.Interop {
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/arm/boolean.h.auto.html
         [DebuggerDisplay($"{{{nameof(ToString)}(),nq}}")]
         [StructLayout(LayoutKind.Sequential)]
-        public struct boolean_t {
+        public struct boolean_t
+        {
             // note: this is uint on x86_64, but int everywhere else
             private int value;
 
@@ -453,7 +484,8 @@ namespace MonoMod.Core.Interop {
         // https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/mach/kern_return.h.auto.html
         [DebuggerDisplay($"{{{nameof(Value)}}}")]
         [StructLayout(LayoutKind.Sequential)]
-        public struct kern_return_t : IEquatable<kern_return_t> {
+        public struct kern_return_t : IEquatable<kern_return_t>
+        {
             // note: this is uint on x86_64, but int everywhere else
             private int value;
 
@@ -466,15 +498,18 @@ namespace MonoMod.Core.Interop {
             public static bool operator ==(kern_return_t x, kern_return_t y) => x.value == y.value;
             public static bool operator !=(kern_return_t x, kern_return_t y) => x.value != y.value;
 
-            public override bool Equals(object? obj) {
+            public override bool Equals(object? obj)
+            {
                 return obj is kern_return_t t && Equals(t);
             }
 
-            public bool Equals(kern_return_t other) {
+            public bool Equals(kern_return_t other)
+            {
                 return value == other.value;
             }
 
-            public override int GetHashCode() {
+            public override int GetHashCode()
+            {
                 return HashCode.Combine(value);
             }
 

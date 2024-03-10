@@ -2,11 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// A collection of <see cref="ILHookInfo"/> associated with a method.
     /// </summary>
-    public sealed class ILHookCollection : IEnumerable<ILHookInfo> {
+    public sealed class ILHookCollection : IEnumerable<ILHookInfo>
+    {
         private readonly MethodDetourInfo mdi;
         internal ILHookCollection(MethodDetourInfo mdi)
             => this.mdi = mdi;
@@ -24,14 +26,16 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// An enumerator for an <see cref="ILHookCollection"/>.
         /// </summary>
-        public struct Enumerator : IEnumerator<ILHookInfo> {
+        public struct Enumerator : IEnumerator<ILHookInfo>
+        {
             private readonly MethodDetourInfo mdi;
             private DetourManager.DepListNode<DetourManager.ILHookEntry>? listEntry;
             private List<DetourManager.ILHookEntry>.Enumerator listEnum;
             private int state;
             private int version;
 
-            internal Enumerator(MethodDetourInfo mdi) {
+            internal Enumerator(MethodDetourInfo mdi)
+            {
                 this.mdi = mdi;
                 version = mdi.state.ilhookVersion;
                 listEntry = null;
@@ -41,7 +45,8 @@ namespace MonoMod.RuntimeDetour {
 
             /// <inheritdoc/>
             public ILHookInfo Current
-                => state switch {
+                => state switch
+                {
                     0 => throw new InvalidOperationException(), // Current should never be called in state 0
                     1 => mdi.GetILHookInfo(listEntry!.ChainNode.Hook), // in state 1, our value is that of the current list node
                     2 => mdi.GetILHookInfo(listEnum.Current.Hook), // in state 2, our value is the current value of the list enumerator
@@ -51,11 +56,13 @@ namespace MonoMod.RuntimeDetour {
             object IEnumerator.Current => Current;
 
             /// <inheritdoc/>
-            public bool MoveNext() {
+            public bool MoveNext()
+            {
                 if (version != mdi.state.ilhookVersion)
                     throw new InvalidOperationException("The detour chain was modified while enumerating");
 
-                switch (state) {
+                switch (state)
+                {
                     case 0:
                         // we haven't started iterating yet
                         // start by grabbing the first entry
@@ -71,7 +78,8 @@ namespace MonoMod.RuntimeDetour {
 
                         CheckEnumeratingLL:
                         // we need to check the value of listEntry for null, and if it's null switch to enumerating the list enumerator
-                        if (listEntry is not null) {
+                        if (listEntry is not null)
+                        {
                             // we have a list entry, we have a value to return
                             return true;
                         }
@@ -91,7 +99,8 @@ namespace MonoMod.RuntimeDetour {
             }
 
             /// <inheritdoc/>
-            public void Reset() {
+            public void Reset()
+            {
                 version = mdi.state.ilhookVersion;
                 listEntry = null;
                 state = 0;
@@ -99,7 +108,8 @@ namespace MonoMod.RuntimeDetour {
             }
 
             /// <inheritdoc/>
-            public void Dispose() {
+            public void Dispose()
+            {
                 listEnum.Dispose();
                 Reset();
             }

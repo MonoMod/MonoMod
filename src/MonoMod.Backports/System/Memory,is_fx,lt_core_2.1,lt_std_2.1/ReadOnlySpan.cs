@@ -8,19 +8,23 @@ using System.Runtime.CompilerServices;
 
 #pragma warning disable 0809  //warning CS0809: Obsolete member 'Span<T>.Equals(object)' overrides non-obsolete member 'object.Equals(object)'
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// ReadOnlySpan represents a contiguous region of arbitrary memory. Unlike arrays, it can point to either managed
     /// or native memory, or to memory allocated on the stack. It is type- and memory-safe.
     /// </summary>
     [DebuggerTypeProxy(typeof(SpanDebugView<>))]
     [DebuggerDisplay("{ToString(),raw}")]
-    public readonly ref partial struct ReadOnlySpan<T> {
+    public readonly ref partial struct ReadOnlySpan<T>
+    {
         /// <summary>
         /// The number of items in the read-only span.
         /// </summary>
-        public int Length {
-            get {
+        public int Length
+        {
+            get
+            {
                 return _length;
             }
         }
@@ -28,8 +32,10 @@ namespace System {
         /// <summary>
         /// Returns true if Length is 0.
         /// </summary>
-        public bool IsEmpty {
-            get {
+        public bool IsEmpty
+        {
+            get
+            {
                 return _length == 0;
             }
         }
@@ -47,7 +53,8 @@ namespace System {
         /// </summary>
         [Obsolete("Equals() on ReadOnlySpan will always throw an exception. Use == instead.")]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public override bool Equals(object? obj) {
+        public override bool Equals(object? obj)
+        {
             throw new NotSupportedException("Cannot call Equals on Span");
         }
 
@@ -59,7 +66,8 @@ namespace System {
         /// </summary>
         [Obsolete("GetHashCode() on ReadOnlySpan will always throw an exception.")]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             throw new NotSupportedException("Cannot call GetHashCodee on Span");
         }
 
@@ -83,7 +91,8 @@ namespace System {
         public Enumerator GetEnumerator() => new Enumerator(this);
 
         /// <summary>Enumerates the elements of a <see cref="ReadOnlySpan{T}"/>.</summary>
-        public ref struct Enumerator {
+        public ref struct Enumerator
+        {
             /// <summary>The span being enumerated.</summary>
             private readonly ReadOnlySpan<T> _span;
             /// <summary>The next index to yield.</summary>
@@ -92,16 +101,19 @@ namespace System {
             /// <summary>Initialize the enumerator.</summary>
             /// <param name="span">The span to enumerate.</param>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal Enumerator(ReadOnlySpan<T> span) {
+            internal Enumerator(ReadOnlySpan<T> span)
+            {
                 _span = span;
                 _index = -1;
             }
 
             /// <summary>Advances the enumerator to the next element of the span.</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool MoveNext() {
+            public bool MoveNext()
+            {
                 int index = _index + 1;
-                if (index < _span.Length) {
+                if (index < _span.Length)
+                {
                     _index = index;
                     return true;
                 }
@@ -110,7 +122,8 @@ namespace System {
             }
 
             /// <summary>Gets the element at the current position of the enumerator.</summary>
-            public ref readonly T Current {
+            public ref readonly T Current
+            {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get => ref _span[_index];
             }

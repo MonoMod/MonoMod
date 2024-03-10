@@ -5,13 +5,17 @@ using System.Reflection;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
-    public class FieldOrderTest : TestBase {
-        public FieldOrderTest(ITestOutputHelper helper) : base(helper) {
+namespace MonoMod.UnitTest
+{
+    public class FieldOrderTest : TestBase
+    {
+        public FieldOrderTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestFieldOrder() {
+        public void TestFieldOrder()
+        {
             // We could hardcode the field metadata tokens but ehhh, compilers.
             // DynamicMethodDefinition will call ResolveField *and* FixReflectionCache for us.
             new DynamicMethodDefinition(typeof(FieldOrderTest).GetMethod("DummyMethod", BindingFlags.NonPublic | BindingFlags.Static)).Dispose();
@@ -27,7 +31,8 @@ namespace MonoMod.UnitTest {
 
         private static void DummyMethod() => new DummyClass().B = 3;
 
-        private class DummyClass {
+        private class DummyClass
+        {
 #pragma warning disable CS0649 // Not initialized
             public string A;
             public int B;

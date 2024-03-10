@@ -1,7 +1,9 @@
 ﻿using Mono.Cecil;
 
-namespace MonoMod.DebugIL {
-    internal enum ExceptionBlockType {
+namespace MonoMod.DebugIL
+{
+    internal enum ExceptionBlockType
+    {
         BeginExceptionBlock,
         BeginCatchBlock,
         BeginExceptFilterBlock,
@@ -10,7 +12,8 @@ namespace MonoMod.DebugIL {
         EndExceptionBlock
     }
 
-    internal class ExceptionBlock {
+    internal class ExceptionBlock
+    {
         public ExceptionBlockType BlockType;
         public TypeReference CatchType;
     }

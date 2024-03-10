@@ -4,12 +4,15 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.Logs {
-    public static class DebugFormatter {
+namespace MonoMod.Logs
+{
+    public static class DebugFormatter
+    {
         // We have explicit checks for types which may prove problematic using default formatting
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static bool CanDebugFormat<T>(in T value, out object? extraData) {
+        public static bool CanDebugFormat<T>(in T value, out object? extraData)
+        {
             extraData = null;
 
             // first check for exact type matches
@@ -38,7 +41,8 @@ namespace MonoMod.Logs {
                 or FieldInfo
                 or PropertyInfo)
                 return true;
-            if (value is Exception ex) {
+            if (value is Exception ex)
+            {
                 // we want to stringify the exception once, and reuse that where possible
                 extraData = ex.ToString();
                 return true;
@@ -52,12 +56,14 @@ namespace MonoMod.Logs {
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public static bool TryFormatInto<T>(in T value, object? extraData, Span<char> into, out int wrote) {
+        public static bool TryFormatInto<T>(in T value, object? extraData, Span<char> into, out int wrote)
+        {
             [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
             static ref TOut Transmute<TOut>(in T val)
                 => ref Unsafe.As<T, TOut>(ref Unsafe.AsRef(in val));
 
-            if (default(T) == null && value is null) {
+            if (default(T) == null && value is null)
+            {
                 wrote = 0;
                 return true;
             }
@@ -105,7 +111,8 @@ namespace MonoMod.Logs {
             return false;
         }
 
-        private static bool TryFormatException(Exception e, string? eStr, Span<char> into, out int wrote) {
+        private static bool TryFormatException(Exception e, string? eStr, Span<char> into, out int wrote)
+        {
             wrote = 0;
 
             // if eStr is null, then we have to alloc here, oh well
@@ -122,19 +129,23 @@ namespace MonoMod.Logs {
 
             // extra information for specific exception types
 
-            if (e is ReflectionTypeLoadException rtle) {
-                for (var i = 0; i < 4 && i < rtle.Types.Length; i++) {
+            if (e is ReflectionTypeLoadException rtle)
+            {
+                for (var i = 0; i < 4 && i < rtle.Types.Length; i++)
+                {
                     if (!Into(into.Slice(wrote), out w, $"{nl}System.Reflection.ReflectionTypeLoadException.Types[{i}] = {rtle.Types[i]}"))
                         return false;
                     wrote += w;
                 }
-                if (rtle.Types.Length >= 4) {
+                if (rtle.Types.Length >= 4)
+                {
                     if (!Into(into.Slice(wrote), out w, $"{nl}System.Reflection.ReflectionTypeLoadException.Types[...] = ..."))
                         return false;
                     wrote += w;
                 }
 
-                if (rtle.LoaderExceptions.Length > 0) {
+                if (rtle.LoaderExceptions.Length > 0)
+                {
                     const string Sep = "System.Reflection.ReflectionTypeLoadException.LoaderExceptions = [";
                     if (into.Slice(wrote).Length < nl.Length + Sep.Length)
                         return false;
@@ -143,7 +154,8 @@ namespace MonoMod.Logs {
                     Sep.AsSpan().CopyTo(into.Slice(wrote));
                     wrote += Sep.Length;
 
-                    for (var i = 0; i < rtle.LoaderExceptions.Length; i++) {
+                    for (var i = 0; i < rtle.LoaderExceptions.Length; i++)
+                    {
                         var ex = rtle.LoaderExceptions[i];
                         if (ex is null)
                             continue;
@@ -166,13 +178,15 @@ namespace MonoMod.Logs {
                 }
             }
 
-            if (e is TypeLoadException tle) {
+            if (e is TypeLoadException tle)
+            {
                 if (!Into(into.Slice(wrote), out w, $"{nl}System.TypeLoadException.TypeName = {tle.TypeName}"))
                     return false;
                 wrote += w;
             }
 
-            if (e is BadImageFormatException bife) {
+            if (e is BadImageFormatException bife)
+            {
                 if (!Into(into.Slice(wrote), out w, $"{nl}System.BadImageFormatException.FileName = {bife.FileName}"))
                     return false;
                 wrote += w;
@@ -181,7 +195,8 @@ namespace MonoMod.Logs {
             return true;
         }
 
-        private static bool TryFormatType(Type type, Span<char> into, out int wrote) {
+        private static bool TryFormatType(Type type, Span<char> into, out int wrote)
+        {
             wrote = 0;
 
             var name = type.FullName;
@@ -194,7 +209,8 @@ namespace MonoMod.Logs {
             return true;
         }
 
-        private static bool TryFormatMethodInfo(MethodInfo method, Span<char> into, out int wrote) {
+        private static bool TryFormatMethodInfo(MethodInfo method, Span<char> into, out int wrote)
+        {
             var ret = method.ReturnType;
             wrote = 0;
             if (!TryFormatType(ret, into.Slice(wrote), out var w))
@@ -209,10 +225,12 @@ namespace MonoMod.Logs {
             return true;
         }
 
-        private static bool TryFormatMemberInfoName(MemberInfo member, Span<char> into, out int wrote) {
+        private static bool TryFormatMemberInfoName(MemberInfo member, Span<char> into, out int wrote)
+        {
             wrote = 0;
             var declType = member.DeclaringType;
-            if (declType is not null) {
+            if (declType is not null)
+            {
                 if (!TryFormatType(declType, into.Slice(wrote), out var w))
                     return false;
                 wrote += w;
@@ -229,20 +247,24 @@ namespace MonoMod.Logs {
             return true;
         }
 
-        private static bool TryFormatMethodBase(MethodBase method, Span<char> into, out int wrote) {
+        private static bool TryFormatMethodBase(MethodBase method, Span<char> into, out int wrote)
+        {
             wrote = 0;
             if (!TryFormatMemberInfoName(method, into.Slice(wrote), out var w))
                 return false;
             wrote += w;
 
-            if (method.IsGenericMethod) {
+            if (method.IsGenericMethod)
+            {
                 if (into.Slice(wrote).Length < 1)
                     return false;
                 into[wrote++] = '<';
 
                 var genArgs = method.GetGenericArguments();
-                for (var i = 0; i < genArgs.Length; i++) {
-                    if (i != 0) {
+                for (var i = 0; i < genArgs.Length; i++)
+                {
+                    if (i != 0)
+                    {
                         if (into.Slice(wrote).Length < 2)
                             return false;
                         into[wrote++] = ',';
@@ -264,8 +286,10 @@ namespace MonoMod.Logs {
                 return false;
             into[wrote++] = '(';
 
-            for (var i = 0; i < args.Length; i++) {
-                if (i != 0) {
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (i != 0)
+                {
                     if (into.Slice(wrote).Length < 2)
                         return false;
                     into[wrote++] = ',';
@@ -284,7 +308,8 @@ namespace MonoMod.Logs {
             return true;
         }
 
-        private static bool TryFormatFieldInfo(FieldInfo field, Span<char> into, out int wrote) {
+        private static bool TryFormatFieldInfo(FieldInfo field, Span<char> into, out int wrote)
+        {
             wrote = 0;
             if (!TryFormatType(field.FieldType, into.Slice(wrote), out var w))
                 return false;
@@ -298,7 +323,8 @@ namespace MonoMod.Logs {
             return true;
         }
 
-        private static bool TryFormatPropertyInfo(PropertyInfo prop, Span<char> into, out int wrote) {
+        private static bool TryFormatPropertyInfo(PropertyInfo prop, Span<char> into, out int wrote)
+        {
             wrote = 0;
             if (!TryFormatType(prop.PropertyType, into.Slice(wrote), out var w))
                 return false;
@@ -317,14 +343,17 @@ namespace MonoMod.Logs {
                 return false;
             " { ".AsSpan().CopyTo(into.Slice(wrote));
             wrote += 3;
-            if (hasGet) {
+            if (hasGet)
+            {
                 "get;".AsSpan().CopyTo(into.Slice(wrote));
                 wrote += 4;
             }
-            if (hasGet && hasSet) {
+            if (hasGet && hasSet)
+            {
                 into[wrote++] = ' ';
             }
-            if (hasSet) {
+            if (hasSet)
+            {
                 "set;".AsSpan().CopyTo(into.Slice(wrote));
                 wrote += 4;
             }
@@ -333,12 +362,14 @@ namespace MonoMod.Logs {
             return true;
         }
 
-        public static string Format(ref FormatInterpolatedStringHandler handler) {
+        public static string Format(ref FormatInterpolatedStringHandler handler)
+        {
             return handler.ToStringAndClear();
         }
 
         public static bool Into(Span<char> into, out int wrote,
-            [InterpolatedStringHandlerArgument("into")] ref FormatIntoInterpolatedStringHandler handler) {
+            [InterpolatedStringHandlerArgument("into")] ref FormatIntoInterpolatedStringHandler handler)
+        {
             _ = into;
             wrote = handler.pos;
             return !handler.incomplete;
@@ -346,11 +377,13 @@ namespace MonoMod.Logs {
     }
 
     [InterpolatedStringHandler]
-    public ref struct FormatInterpolatedStringHandler {
+    public ref struct FormatInterpolatedStringHandler
+    {
         private DebugLogInterpolatedStringHandler handler;
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public FormatInterpolatedStringHandler(int literalLen, int formattedCount) {
+        public FormatInterpolatedStringHandler(int literalLen, int formattedCount)
+        {
             handler = new(literalLen, formattedCount, enabled: true, recordHoles: false, out _);
         }
 
@@ -358,39 +391,48 @@ namespace MonoMod.Logs {
         public string ToStringAndClear() => handler.ToStringAndClear();
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendLiteral(string s) {
+        public void AppendLiteral(string s)
+        {
             handler.AppendLiteral(s);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(string? s) {
+        public void AppendFormatted(string? s)
+        {
             handler.AppendFormatted(s);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(string? s, int alignment = 0, string? format = default) {
+        public void AppendFormatted(string? s, int alignment = 0, string? format = default)
+        {
             handler.AppendFormatted(s, alignment, format);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(ReadOnlySpan<char> s) {
+        public void AppendFormatted(ReadOnlySpan<char> s)
+        {
             handler.AppendFormatted(s);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(ReadOnlySpan<char> s, int alignment = 0, string? format = default) {
+        public void AppendFormatted(ReadOnlySpan<char> s, int alignment = 0, string? format = default)
+        {
             handler.AppendFormatted(s, alignment, format);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted<T>(T value) {
+        public void AppendFormatted<T>(T value)
+        {
             handler.AppendFormatted(value);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted<T>(T value, int alignment) {
+        public void AppendFormatted<T>(T value, int alignment)
+        {
             handler.AppendFormatted(value, alignment);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted<T>(T value, string? format) {
+        public void AppendFormatted<T>(T value, string? format)
+        {
             handler.AppendFormatted(value, format);
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted<T>(T value, int alignment, string? format) {
+        public void AppendFormatted<T>(T value, int alignment, string? format)
+        {
             handler.AppendFormatted(value, alignment, format);
         }
     }

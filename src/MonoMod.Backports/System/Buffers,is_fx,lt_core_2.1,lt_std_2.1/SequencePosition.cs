@@ -4,19 +4,22 @@
 
 using System.ComponentModel;
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// Represents position in non-contiguous set of memory.
     /// Properties of this type should not be interpreted by anything but the type that created it.
     /// </summary>
-    public readonly struct SequencePosition : IEquatable<SequencePosition> {
+    public readonly struct SequencePosition : IEquatable<SequencePosition>
+    {
         private readonly object? _object;
         private readonly int _integer;
 
         /// <summary>
         /// Creates new <see cref="SequencePosition"/>
         /// </summary>
-        public SequencePosition(object? @object, int integer) {
+        public SequencePosition(object? @object, int integer)
+        {
             _object = @object;
             _integer = integer;
         }

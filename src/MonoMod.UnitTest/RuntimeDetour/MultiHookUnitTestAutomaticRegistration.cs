@@ -10,9 +10,12 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
-    public class MultiHookUnitTestAutomaticRegistration : TestBase {
-        public MultiHookUnitTestAutomaticRegistration(ITestOutputHelper helper) : base(helper) {
+namespace MonoMod.UnitTest
+{
+    public class MultiHookUnitTestAutomaticRegistration : TestBase
+    {
+        public MultiHookUnitTestAutomaticRegistration(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Collection("RuntimeDetour")]
@@ -20,7 +23,8 @@ namespace MonoMod.UnitTest {
             Justification = "Sucks.")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible",
             Justification = "Sucks.")]
-        public class OnIL {
+        public class OnIL
+        {
             Hook h1;
             ILHook hIL;
 
@@ -28,10 +32,12 @@ namespace MonoMod.UnitTest {
             private bool hILRun;
 
             [SkipRemoteLinuxMonoFact]
-            public void OnThenIL() {
+            public void OnThenIL()
+            {
                 h1 = new Hook(
                     typeof(OnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnIL>, OnIL>((orig, self) => {
+                    new Action<Action<OnIL>, OnIL>((orig, self) =>
+                    {
                         orig(self);
                         h1Run = true;
                     }),
@@ -39,9 +45,11 @@ namespace MonoMod.UnitTest {
                 );
                 hIL = new ILHook(
                     typeof(OnIL).GetMethod("DoNothing"),
-                    il => {
+                    il =>
+                    {
                         var c = new ILCursor(il);
-                        c.EmitDelegate<Action>(() => {
+                        c.EmitDelegate<Action>(() =>
+                        {
                             hILRun = true;
                         });
                     },
@@ -57,12 +65,15 @@ namespace MonoMod.UnitTest {
             }
 
             [SkipRemoteLinuxMonoFact]
-            public void ILThenOn() {
+            public void ILThenOn()
+            {
                 hIL = new ILHook(
                     typeof(OnIL).GetMethod("DoNothing"),
-                    il => {
+                    il =>
+                    {
                         var c = new ILCursor(il);
-                        c.EmitDelegate<Action>(() => {
+                        c.EmitDelegate<Action>(() =>
+                        {
                             hILRun = true;
                         });
                     },
@@ -70,7 +81,8 @@ namespace MonoMod.UnitTest {
                 );
                 h1 = new Hook(
                     typeof(OnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnIL>, OnIL>((orig, self) => {
+                    new Action<Action<OnIL>, OnIL>((orig, self) =>
+                    {
                         orig(self);
                         h1Run = true;
                     }),
@@ -85,7 +97,8 @@ namespace MonoMod.UnitTest {
                 hIL.Dispose();
             }
             [MethodImpl(MethodImplOptions.NoInlining)]
-            public void DoNothing() {
+            public void DoNothing()
+            {
             }
         }
 
@@ -94,7 +107,8 @@ namespace MonoMod.UnitTest {
             Justification = "Sucks.")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible",
             Justification = "Sucks.")]
-        public class OnOnIL {
+        public class OnOnIL
+        {
             Hook h1;
             Hook h2;
             ILHook hIL;
@@ -104,10 +118,12 @@ namespace MonoMod.UnitTest {
             private bool hILRun;
 
             [SkipRemoteLinuxMonoFact]
-            public void OnThenOnThenIL() {
+            public void OnThenOnThenIL()
+            {
                 h1 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) => {
+                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) =>
+                    {
                         orig(self);
                         h1Run = true;
                     }),
@@ -115,7 +131,8 @@ namespace MonoMod.UnitTest {
                 );
                 h2 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) => {
+                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) =>
+                    {
                         orig(self);
                         h2Run = true;
                     }),
@@ -123,9 +140,11 @@ namespace MonoMod.UnitTest {
                 );
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    il => {
+                    il =>
+                    {
                         var c = new ILCursor(il);
-                        c.EmitDelegate<Action>(() => {
+                        c.EmitDelegate<Action>(() =>
+                        {
                             hILRun = true;
                         });
                     },
@@ -144,10 +163,12 @@ namespace MonoMod.UnitTest {
             }
 
             [SkipRemoteLinuxMonoFact]
-            public void OnThenILThenOn() {
+            public void OnThenILThenOn()
+            {
                 h1 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) => {
+                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) =>
+                    {
                         orig(self);
                         h1Run = true;
                     }),
@@ -155,9 +176,11 @@ namespace MonoMod.UnitTest {
                 );
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    il => {
+                    il =>
+                    {
                         var c = new ILCursor(il);
-                        c.EmitDelegate<Action>(() => {
+                        c.EmitDelegate<Action>(() =>
+                        {
                             hILRun = true;
                         });
                     },
@@ -165,7 +188,8 @@ namespace MonoMod.UnitTest {
                 );
                 h2 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) => {
+                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) =>
+                    {
                         orig(self);
                         h2Run = true;
                     }),
@@ -184,12 +208,15 @@ namespace MonoMod.UnitTest {
             }
 
             [SkipRemoteLinuxMonoFact]
-            public void ILThenOnThenOn() {
+            public void ILThenOnThenOn()
+            {
                 hIL = new ILHook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    il => {
+                    il =>
+                    {
                         var c = new ILCursor(il);
-                        c.EmitDelegate<Action>(() => {
+                        c.EmitDelegate<Action>(() =>
+                        {
                             hILRun = true;
                         });
                     },
@@ -197,7 +224,8 @@ namespace MonoMod.UnitTest {
                 );
                 h1 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) => {
+                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) =>
+                    {
                         orig(self);
                         h1Run = true;
                     }),
@@ -205,7 +233,8 @@ namespace MonoMod.UnitTest {
                 );
                 h2 = new Hook(
                     typeof(OnOnIL).GetMethod("DoNothing"),
-                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) => {
+                    new Action<Action<OnOnIL>, OnOnIL>((orig, self) =>
+                    {
                         orig(self);
                         h2Run = true;
                     }),
@@ -223,7 +252,8 @@ namespace MonoMod.UnitTest {
                 hIL.Dispose();
             }
             [MethodImpl(MethodImplOptions.NoInlining)]
-            public void DoNothing() {
+            public void DoNothing()
+            {
             }
         }
     }

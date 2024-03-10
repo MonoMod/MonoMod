@@ -11,12 +11,14 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A triple of <see cref="IArchitecture"/>, <see cref="ISystem"/>, and <see cref="IRuntime"/> which provides higher-level operations
     /// based on the underlying implementations.
     /// </summary>
-    public sealed class PlatformTriple {
+    public sealed class PlatformTriple
+    {
         /// <summary>
         /// Creates an <see cref="IRuntime"/> implementation using the provided <see cref="ISystem"/> and <see cref="IArchitecture"/> according
         /// to the runtime detected by <see cref="PlatformDetection.Runtime"/>.
@@ -31,10 +33,12 @@ namespace MonoMod.Core.Platforms {
         /// <exception cref="PlatformNotSupportedException">Thrown if <see cref="PlatformDetection.Runtime"/> returns an unsupported
         /// runtime kind.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public static IRuntime CreateCurrentRuntime(ISystem system, IArchitecture arch) {
+        public static IRuntime CreateCurrentRuntime(ISystem system, IArchitecture arch)
+        {
             Helpers.ThrowIfArgumentNull(system);
             Helpers.ThrowIfArgumentNull(arch);
-            return PlatformDetection.Runtime switch {
+            return PlatformDetection.Runtime switch
+            {
                 RuntimeKind.Framework => Runtimes.FxBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system),
                 RuntimeKind.CoreCLR => Runtimes.CoreBaseRuntime.CreateForVersion(PlatformDetection.RuntimeVersion, system, arch),
                 RuntimeKind.Mono => new Runtimes.MonoRuntime(system),
@@ -57,9 +61,11 @@ namespace MonoMod.Core.Platforms {
         /// <exception cref="PlatformNotSupportedException">Thrown if <see cref="PlatformDetection.Architecture"/> returns an unsupported
         /// architecture kind.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public static IArchitecture CreateCurrentArchitecture(ISystem system) {
+        public static IArchitecture CreateCurrentArchitecture(ISystem system)
+        {
             Helpers.ThrowIfArgumentNull(system);
-            return PlatformDetection.Architecture switch {
+            return PlatformDetection.Architecture switch
+            {
                 ArchitectureKind.x86 => new Architectures.x86Arch(system),
                 ArchitectureKind.x86_64 => new Architectures.x86_64Arch(system),
                 ArchitectureKind.Arm => throw new NotImplementedException(),
@@ -78,7 +84,8 @@ namespace MonoMod.Core.Platforms {
         /// operating system.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public static ISystem CreateCurrentSystem()
-            => PlatformDetection.OS switch {
+            => PlatformDetection.OS switch
+            {
                 OSKind.Posix => throw new NotImplementedException(),
                 OSKind.Linux => new Systems.LinuxSystem(),
                 OSKind.Android => throw new NotImplementedException(),
@@ -112,7 +119,8 @@ namespace MonoMod.Core.Platforms {
         /// </remarks>
         public static unsafe PlatformTriple Current => Helpers.GetOrInitWithLock(ref lazyCurrent, lazyCurrentLock, &CreateCurrent);
 
-        private static PlatformTriple CreateCurrent() {
+        private static PlatformTriple CreateCurrent()
+        {
             var sys = CreateCurrentSystem();
             var arch = CreateCurrentArchitecture(sys);
             var runtime = CreateCurrentRuntime(sys, arch);
@@ -129,12 +137,14 @@ namespace MonoMod.Core.Platforms {
         /// <exception cref="InvalidOperationException">Thrown if a platform triple was previously set, or <see cref="Current"/>
         /// was invoked before calling this method.</exception>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public static void SetPlatformTriple(PlatformTriple triple) {
+        public static void SetPlatformTriple(PlatformTriple triple)
+        {
             Helpers.ThrowIfArgumentNull(triple);
             if (lazyCurrent is null)
                 ThrowTripleAlreadyExists();
 
-            lock (lazyCurrentLock) {
+            lock (lazyCurrentLock)
+            {
                 if (lazyCurrent is null)
                     ThrowTripleAlreadyExists();
 
@@ -143,7 +153,8 @@ namespace MonoMod.Core.Platforms {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ThrowTripleAlreadyExists() {
+        private static void ThrowTripleAlreadyExists()
+        {
             throw new InvalidOperationException("The platform triple has already been initialized; cannot set a new one");
         }
 
@@ -167,7 +178,8 @@ namespace MonoMod.Core.Platforms {
         /// <param name="system">The <see cref="ISystem"/> to use.</param>
         /// <param name="runtime">The <see cref="IRuntime"/> to use.</param>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime) {
+        public PlatformTriple(IArchitecture architecture, ISystem system, IRuntime runtime)
+        {
             Helpers.ThrowIfArgumentNull(architecture);
             Helpers.ThrowIfArgumentNull(system);
             Helpers.ThrowIfArgumentNull(runtime);
@@ -186,7 +198,8 @@ namespace MonoMod.Core.Platforms {
             Abi = Runtime.Abi;
         }
 
-        private void InitIfNeeded(object obj) {
+        private void InitIfNeeded(object obj)
+        {
             (obj as IInitialize<ISystem>)?.Initialize(System);
             (obj as IInitialize<IArchitecture>)?.Initialize(Architecture);
             (obj as IInitialize<IRuntime>)?.Initialize(Runtime);
@@ -218,22 +231,28 @@ namespace MonoMod.Core.Platforms {
         /// for the same method, if possible.
         /// </remarks>
         /// <param name="method">The method to prepare.</param>
-        public void Compile(MethodBase method) {
+        public void Compile(MethodBase method)
+        {
             Helpers.ThrowIfArgumentNull(method);
 
-            if (method.IsGenericMethodDefinition) {
+            if (method.IsGenericMethodDefinition)
+            {
                 throw new ArgumentException("Cannot prepare generic method definition", nameof(method));
             }
 
             method = GetIdentifiable(method);
 
             // if this flag is set, then the runtime implementation is solely responsible for ensuring that the method gets compiled
-            if (SupportedFeatures.Has(RuntimeFeature.RequiresCustomMethodCompile)) {
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresCustomMethodCompile))
+            {
                 Runtime.Compile(method);
-            } else {
+            }
+            else
+            {
                 var handle = Runtime.GetMethodHandle(method);
 
-                if (method.IsGenericMethod) {
+                if (method.IsGenericMethod)
+                {
                     // we need to get the handles of the type args too
                     var typeArgs = method.GetGenericArguments();
                     var argHandles = new RuntimeTypeHandle[typeArgs.Length];
@@ -241,7 +260,9 @@ namespace MonoMod.Core.Platforms {
                         argHandles[i] = typeArgs[i].TypeHandle;
 
                     RuntimeHelpers.PrepareMethod(handle, argHandles);
-                } else {
+                }
+                else
+                {
                     // or we can just call the normal PrepareMethod
                     RuntimeHelpers.PrepareMethod(handle);
                 }
@@ -254,10 +275,12 @@ namespace MonoMod.Core.Platforms {
         /// <param name="method">The method to identify.</param>
         /// <returns>The identifiable <see cref="MethodBase"/>.</returns>
         /// <seealso cref="IRuntime.GetIdentifiable(MethodBase)"/>
-        public MethodBase GetIdentifiable(MethodBase method) {
+        public MethodBase GetIdentifiable(MethodBase method)
+        {
             Helpers.ThrowIfArgumentNull(method);
 
-            if (SupportedFeatures.Has(RuntimeFeature.RequiresMethodIdentification)) {
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresMethodIdentification))
+            {
                 // see the comment in PinMethodIfNeeded
                 method = Runtime.GetIdentifiable(method);
             }
@@ -265,25 +288,33 @@ namespace MonoMod.Core.Platforms {
             // because the .NET reflection APIs are really bad, two MethodBases may not compare equal if they represent the same method
             // *but were gotten through different means*. Because MemberInfo.ReflectedType exists.
             // In order to fix this, when getting an identifiable method, we make sure to correct it, by retrieving it directly from its declaring type (or module, as it may be)
-            if (method.ReflectedType != method.DeclaringType) {
+            if (method.ReflectedType != method.DeclaringType)
+            {
                 var parameters = method.GetParameters();
                 var paramTypes = new Type[parameters.Length];
-                for (var i = 0; i < parameters.Length; i++) {
+                for (var i = 0; i < parameters.Length; i++)
+                {
                     paramTypes[i] = parameters[i].ParameterType;
                 }
 
-                if (method.DeclaringType is null) {
+                if (method.DeclaringType is null)
+                {
                     // the method lives on the module, get it from there
                     var got = method.Module.GetMethod(method.Name, (BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
                     Helpers.Assert(got is not null, $"orig: {method}, module: {method.Module}");
                     method = got;
-                } else {
+                }
+                else
+                {
                     // the method has a declaring type, get it there
-                    if (method.IsConstructor) {
+                    if (method.IsConstructor)
+                    {
                         var got = method.DeclaringType.GetConstructor((BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
                         Helpers.Assert(got is not null, $"orig: {method}");
                         method = got;
-                    } else {
+                    }
+                    else
+                    {
                         var got = method.DeclaringType.GetMethod(method.Name, (BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
                         Helpers.Assert(got is not null, $"orig: {method}");
                         method = got;
@@ -300,8 +331,10 @@ namespace MonoMod.Core.Platforms {
         /// <param name="method">The method to pin.</param>
         /// <returns>An <see cref="IDisposable"/> which managed the lifetime of the pin.</returns>
         /// <seealso cref="IRuntime.PinMethodIfNeeded(MethodBase)"/>
-        public IDisposable? PinMethodIfNeeded(MethodBase method) {
-            if (SupportedFeatures.Has(RuntimeFeature.RequiresMethodPinning)) {
+        public IDisposable? PinMethodIfNeeded(MethodBase method)
+        {
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresMethodPinning))
+            {
                 // only make the interface call if it's needed, because interface dispatches are slow
                 return Runtime.PinMethodIfNeeded(method);
             }
@@ -315,8 +348,10 @@ namespace MonoMod.Core.Platforms {
         /// </summary>
         /// <param name="method">The method to disable inlining of.</param>
         /// <returns><see langword="true"/> if inlining could be disabled; <see langword="false"/> otherwise.</returns>
-        public bool TryDisableInlining(MethodBase method) {
-            if (SupportedFeatures.Has(RuntimeFeature.DisableInlining)) {
+        public bool TryDisableInlining(MethodBase method)
+        {
+            if (SupportedFeatures.Has(RuntimeFeature.DisableInlining))
+            {
                 Runtime.DisableInlining(method);
                 return true;
             }
@@ -335,8 +370,10 @@ namespace MonoMod.Core.Platforms {
         /// <returns>A <see cref="SimpleNativeDetour"/> instance managing the generated detour.</returns>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public SimpleNativeDetour CreateSimpleDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default) {
-            if (fromRw == default) {
+        public SimpleNativeDetour CreateSimpleDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default)
+        {
+            if (fromRw == default)
+            {
                 fromRw = from;
             }
             Helpers.Assert(from != to, $"Cannot detour a method to itself! (from: {from}, to: {to})");
@@ -373,7 +410,8 @@ namespace MonoMod.Core.Platforms {
         /// <seealso cref="CreateNativeDetour(IntPtr, IntPtr, int, IntPtr)"/>
         [SuppressMessage("Design", "CA1034:Nested types should not be visible",
             Justification = "This type should rarely be used, and should not exist in the above namespace to avoid people trying to use it when they shouldn't.")]
-        public record struct NativeDetour(SimpleNativeDetour Simple, IntPtr AltEntry, IDisposable? AltHandle) {
+        public record struct NativeDetour(SimpleNativeDetour Simple, IntPtr AltEntry, IDisposable? AltHandle)
+        {
             /// <summary>
             /// Gets whether or not this instance is holding an alternate entrypoint in <see cref="AltEntry"/>.
             /// </summary>
@@ -392,8 +430,10 @@ namespace MonoMod.Core.Platforms {
         /// <returns>A <see cref="NativeDetour"/> instance managing the generated detour.</returns>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default) {
-            if (fromRw == default) {
+        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default)
+        {
+            if (fromRw == default)
+            {
                 fromRw = from;
             }
             Helpers.Assert(from != to, $"Cannot detour a method to itself! (from: {from}, to: {to})");
@@ -414,9 +454,12 @@ namespace MonoMod.Core.Platforms {
             // now that we have the detour size, we'll try to allocate an alternate entry point
             var altEntry = IntPtr.Zero;
             IDisposable? altHandle = null;
-            if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)) {
+            if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint))
+            {
                 altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, size, out altHandle);
-            } else {
+            }
+            else
+            {
                 MMDbgLog.Warning($"Cannot create alternate entry point for native detour (from: {from:x16}, to: {to:x16}");
             }
 
@@ -435,15 +478,20 @@ namespace MonoMod.Core.Platforms {
         /// </summary>
         /// <param name="method">The method to get the body of.</param>
         /// <returns>A pointer to the native method body of the method.</returns>
-        public IntPtr GetNativeMethodBody(MethodBase method) {
-            if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking)) {
+        public IntPtr GetNativeMethodBody(MethodBase method)
+        {
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking))
+            {
                 return GetNativeMethodBodyWalk(method, reloadPtr: true);
-            } else {
+            }
+            else
+            {
                 return GetNativeMethodBodyDirect(method);
             }
         }
 
-        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr) {
+        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr)
+        {
             var regenerated = false;
             var didPrepareLastIter = false;
             var iters = 0;
@@ -457,20 +505,24 @@ namespace MonoMod.Core.Platforms {
             ReloadFuncPtr:
             var entry = (nint)Runtime.GetMethodEntryPoint(method);
             MMDbgLog.Trace($"Starting entry point = 0x{entry:x16}");
-            do {
-                if (iters++ > 20) {
+            do
+            {
+                if (iters++ > 20)
+                {
                     MMDbgLog.Error($"Could not get entry point for {method}! (tried {iters} times) entry: 0x{entry:x16} prevEntry: 0x{prevEntry:x16}");
                     throw new NotSupportedException(DebugFormatter.Format($"Could not get entrypoint for {method} (stuck in a loop)"));
                 }
 
-                if (!didPrepareLastIter && prevEntry == entry) {
+                if (!didPrepareLastIter && prevEntry == entry)
+                {
                     // we're in a loop, break out
                     break;
                 }
                 prevEntry = entry;
 
                 var readableLen = System.GetSizeOfReadableMemory(entry, archMatchCollection.MaxMinLength);
-                if (readableLen <= 0) {
+                if (readableLen <= 0)
+                {
                     MMDbgLog.Warning($"Got zero or negative readable length {readableLen} at 0x{entry:x16}");
                 }
 
@@ -488,24 +540,31 @@ namespace MonoMod.Core.Platforms {
 
                 var meaning = match.AddressMeaning;
                 MMDbgLog.Trace($"Matched thunk with {meaning} at 0x{entry:x16} (addr: 0x{addr:x8}, offset: {offset})");
-                if (meaning.Kind.IsPrecodeFixup() && !regenerated) {
+                if (meaning.Kind.IsPrecodeFixup() && !regenerated)
+                {
                     var precode = meaning.ProcessAddress(entry, offset, addr);
-                    if (reloadPtr) {
+                    if (reloadPtr)
+                    {
                         MMDbgLog.Trace($"Method thunk reset; regenerating (PrecodeFixupThunk: 0x{precode:X16})");
                         Compile(method);
                         didPrepareLastIter = true;
                         //regenerated = true;
                         goto ReloadFuncPtr;
-                    } else {
+                    }
+                    else
+                    {
                         entry = precode;
                     }
-                } else {
+                }
+                else
+                {
                     entry = meaning.ProcessAddress(entry, offset, addr);
                 }
                 MMDbgLog.Trace($"Got next entry point 0x{entry:x16}");
 
                 entry = NotThePreStub(lastEntry, entry, out var wasPreStub);
-                if (wasPreStub && reloadPtr) {
+                if (wasPreStub && reloadPtr)
+                {
                     MMDbgLog.Trace("Matched ThePreStub");
                     Compile(method);
                     //regenerated = true;
@@ -516,15 +575,18 @@ namespace MonoMod.Core.Platforms {
             return entry;
         }
 
-        private unsafe IntPtr GetNativeMethodBodyDirect(MethodBase method) {
+        private unsafe IntPtr GetNativeMethodBodyDirect(MethodBase method)
+        {
             return Runtime.GetMethodEntryPoint(method);
         }
 
         private IntPtr ThePreStub = IntPtr.Zero;
 
         // TODO: make this something actually runtime-dependent
-        private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed, out bool wasPreStub) {
-            if (ThePreStub == IntPtr.Zero) {
+        private IntPtr NotThePreStub(IntPtr ptrGot, IntPtr ptrParsed, out bool wasPreStub)
+        {
+            if (ThePreStub == IntPtr.Zero)
+            {
                 ThePreStub = (IntPtr)(-2);
 
                 // FIXME: Find a better less likely called NGEN'd candidate that points to ThePreStub.
@@ -558,7 +620,8 @@ namespace MonoMod.Core.Platforms {
         /// <param name="from">The method being detoured from.</param>
         /// <param name="to">The method being detoured to.</param>
         /// <returns>The method to detour to instead of <paramref name="to"/>.</returns>
-        public MethodBase GetRealDetourTarget(MethodBase from, MethodBase to) {
+        public MethodBase GetRealDetourTarget(MethodBase from, MethodBase to)
+        {
             Helpers.ThrowIfArgumentNull(from);
             Helpers.ThrowIfArgumentNull(to);
 
@@ -569,14 +632,16 @@ namespace MonoMod.Core.Platforms {
 
             if (from is MethodInfo fromInfo &&
                 to is MethodInfo toInfo &&
-                !fromInfo.IsStatic && to.IsStatic) {
+                !fromInfo.IsStatic && to.IsStatic)
+            {
                 var retType = fromInfo.ReturnType;
                 // if from has `this` and to doesn't, then we need to fix up the abi
                 var returnClass = Abi.Classify(retType, true);
 
                 // only if the return class is ByRef do we need to do something
                 // TODO: perform better decisions based on the ABI argument order and return class
-                if (returnClass == TypeClassification.ByReference) {
+                if (returnClass == TypeClassification.ByReference)
+                {
                     var thisType = from.GetThisParamType();
                     var retPtrType = retType.MakeByRefType();
 
@@ -588,16 +653,22 @@ namespace MonoMod.Core.Platforms {
 
                     var argTypes = new List<Type>();
                     var order = Abi.ArgumentOrder.Span;
-                    for (var i = 0; i < order.Length; i++) {
+                    for (var i = 0; i < order.Length; i++)
+                    {
                         var kind = order[i];
 
-                        if (kind == SpecialArgumentKind.ThisPointer) {
+                        if (kind == SpecialArgumentKind.ThisPointer)
+                        {
                             thisPos = argTypes.Count;
                             argTypes.Add(thisType);
-                        } else if (kind == SpecialArgumentKind.ReturnBuffer) {
+                        }
+                        else if (kind == SpecialArgumentKind.ReturnBuffer)
+                        {
                             retBufPos = argTypes.Count;
                             argTypes.Add(retPtrType);
-                        } else if (kind == SpecialArgumentKind.UserArguments) {
+                        }
+                        else if (kind == SpecialArgumentKind.UserArguments)
+                        {
                             argOffset = argTypes.Count;
                             argTypes.AddRange(paramList.Select(p => p.ParameterType));
                         }
@@ -613,7 +684,8 @@ namespace MonoMod.Core.Platforms {
                     using (var dmd = new DynamicMethodDefinition(
                         DebugFormatter.Format($"Glue:AbiFixup<{from},{to}>"),
                         newRetType, argTypes.ToArray()
-                    )) {
+                    ))
+                    {
                         // TODO: make DMD apply attributes to the generated DynamicMethod, when possible
                         dmd.Definition!.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining |
                             (Mono.Cecil.MethodImplAttributes)(int)MethodImplOptionsEx.AggressiveOptimization;
@@ -627,7 +699,8 @@ namespace MonoMod.Core.Platforms {
                         il.Emit(OpCodes.Ldarg, thisPos);
 
                         // load user arguments
-                        for (var i = 0; i < paramList.Length; i++) {
+                        for (var i = 0; i < paramList.Length; i++)
+                        {
                             il.Emit(OpCodes.Ldarg, i + argOffset);
                         }
 
@@ -638,7 +711,8 @@ namespace MonoMod.Core.Platforms {
                         il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(retType));
 
                         // if we need to return the pointer, do that
-                        if (Abi.ReturnsReturnBuffer) {
+                        if (Abi.ReturnsReturnBuffer)
+                        {
                             il.Emit(OpCodes.Ldarg, retBufPos);
                         }
 

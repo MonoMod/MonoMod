@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace MonoMod.Core.Interop {
+namespace MonoMod.Core.Interop
+{
     /// <summary>
     /// A pointer to a constant character string.
     /// </summary>
     [DebuggerDisplay("{" + nameof(DebuggerDisplay) + "}")]
     internal unsafe readonly partial struct PCSTR
-        : IEquatable<PCSTR> {
+        : IEquatable<PCSTR>
+    {
         /// <summary>
         /// A pointer to the first character in the string. The content should be considered readonly, as it was typed as constant in the SDK.
         /// </summary>
@@ -26,8 +28,10 @@ namespace MonoMod.Core.Interop {
         /// <summary>
         /// Gets the number of characters up to the first null character (exclusive).
         /// </summary>
-        internal int Length {
-            get {
+        internal int Length
+        {
+            get
+            {
                 var p = Value;
                 if (p is null)
                     return 0;

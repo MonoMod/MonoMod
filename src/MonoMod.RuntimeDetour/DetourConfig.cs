@@ -2,14 +2,16 @@
 using System.ComponentModel;
 using System.Linq;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// A configuration for detours, which allows for the ordering of detours relative to each other.
     /// </summary>
     /// <remarks>
     /// See the detailed documentation on detour order calculation for specifics on how this affects relative ordering.
     /// </remarks>
-    public class DetourConfig {
+    public class DetourConfig
+    {
         /// <summary>
         /// Gets the ID of the detours represented by this config. Typically, this will be the name of the mod which creates this detour.
         /// </summary>
@@ -65,7 +67,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="after">An enumerable containing the list of IDs of detours to run after detours with this config.</param>
         /// <param name="subPriority">The sub-priority of the detour config. Refer to <see cref="SubPriority"/> for details.</param>
         [Browsable(false), EditorBrowsable(EditorBrowsableState.Never)]
-        public DetourConfig(string id, int? priority, IEnumerable<string>? before, IEnumerable<string>? after, int subPriority) {
+        public DetourConfig(string id, int? priority, IEnumerable<string>? before, IEnumerable<string>? after, int subPriority)
+        {
             Id = id;
             Priority = priority;
             Before = AsFixedSize(before ?? Enumerable.Empty<string>());
@@ -73,7 +76,8 @@ namespace MonoMod.RuntimeDetour {
             SubPriority = subPriority;
         }
 
-        private static IEnumerable<string> AsFixedSize(IEnumerable<string> enumerable) {
+        private static IEnumerable<string> AsFixedSize(IEnumerable<string> enumerable)
+        {
             if (enumerable == Enumerable.Empty<string>())
                 return enumerable;
             if (enumerable is ICollection<string>)

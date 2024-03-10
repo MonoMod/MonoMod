@@ -11,18 +11,22 @@ using Xunit;
 using Xunit.Abstractions;
 using MC = Mono.Cecil;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class JitHookRegressionTest : TestBase {
+    public class JitHookRegressionTest : TestBase
+    {
 
         static int ID;
 
-        public JitHookRegressionTest(ITestOutputHelper helper) : base(helper) {
+        public JitHookRegressionTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         // At the time of writing, this should only affect .NET Core, but let's test almost all runtimes.
         [Fact]
-        public void TestJitHookMissingMethod() {
+        public void TestJitHookMissingMethod()
+        {
             // The JIT hook might already be set up thanks to previous tests.
             TestJitHookMissingMethodStep();
 
@@ -32,7 +36,8 @@ namespace MonoMod.UnitTest {
             TestJitHookMissingMethodStep();
         }
 
-        private void TestJitHookMissingMethodStep() {
+        private void TestJitHookMissingMethodStep()
+        {
             var id = ID++;
             var @namespace = "MonoMod.UnitTest";
             var @name = "JitHookRegressionTestHelper" + id;
@@ -40,15 +45,18 @@ namespace MonoMod.UnitTest {
 
             Assembly asm;
 
-            using (var module = ModuleDefinition.CreateModule(@fullName, new ModuleParameters() {
+            using (var module = ModuleDefinition.CreateModule(@fullName, new ModuleParameters()
+            {
                 Kind = ModuleKind.Dll,
                 ReflectionImporterProvider = MMReflectionImporter.Provider
-            })) {
+            }))
+            {
                 var type = new TypeDefinition(
                     @namespace,
                     @name,
                     MC.TypeAttributes.Public | MC.TypeAttributes.Abstract | MC.TypeAttributes.Sealed
-                ) {
+                )
+                {
                     BaseType = module.TypeSystem.Object
                 };
                 module.Types.Add(type);
@@ -76,9 +84,12 @@ namespace MonoMod.UnitTest {
                 asm = ReflectionHelper.Load(module);
             }
 
-            try {
+            try
+            {
                 (asm.GetType(@fullName).GetMethod(@name).CreateDelegate<Action>())();
-            } catch (TypeLoadException) {
+            }
+            catch (TypeLoadException)
+            {
             }
         }
 

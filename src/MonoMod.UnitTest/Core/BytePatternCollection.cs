@@ -3,13 +3,17 @@ using System;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest.Core {
-    public class BytePatternCollectionTests : TestBase {
-        public BytePatternCollectionTests(ITestOutputHelper helper) : base(helper) {
+namespace MonoMod.UnitTest.Core
+{
+    public class BytePatternCollectionTests : TestBase
+    {
+        public BytePatternCollectionTests(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestBytePattern() {
+        public void TestBytePattern()
+        {
 
             const ushort An = BytePattern.SAnyValue;
             const ushort Ad = BytePattern.SAddressValue;

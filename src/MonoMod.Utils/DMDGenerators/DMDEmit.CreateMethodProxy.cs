@@ -5,8 +5,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using OpCodes = System.Reflection.Emit.OpCodes;
 
-namespace MonoMod.Utils {
-    internal static partial class _DMDEmit {
+namespace MonoMod.Utils
+{
+    internal static partial class _DMDEmit
+    {
 
         private readonly static MethodInfo m_MethodBase_InvokeSimple = typeof(MethodBase).GetMethod(
             "Invoke", BindingFlags.Public | BindingFlags.Instance, null,
@@ -14,7 +16,8 @@ namespace MonoMod.Utils {
             null
         )!;
 
-        private static MethodBuilder _CreateMethodProxy(MethodBuilder context, MethodInfo target) {
+        private static MethodBuilder _CreateMethodProxy(MethodBuilder context, MethodInfo target)
+        {
             var tb = (TypeBuilder)context.DeclaringType!;
             var name = $".dmdproxy<{target.Name.Replace('.', '_')}>?{target.GetHashCode()}";
             MethodBuilder mb;
@@ -45,7 +48,8 @@ namespace MonoMod.Utils {
             il.Emit(OpCodes.Ldc_I4, args.Length);
             il.Emit(OpCodes.Newarr, typeof(object));
 
-            for (var i = 0; i < args.Length; i++) {
+            for (var i = 0; i < args.Length; i++)
+            {
                 il.Emit(OpCodes.Dup);
                 il.Emit(OpCodes.Ldc_I4, i);
 
@@ -56,7 +60,8 @@ namespace MonoMod.Utils {
                 if (argIsByRef)
                     argType = argType.GetElementType() ?? argType;
                 var argIsValueType = argType.IsValueType;
-                if (argIsValueType) {
+                if (argIsValueType)
+                {
                     il.Emit(OpCodes.Box, argType);
                 }
 

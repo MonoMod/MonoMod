@@ -1,34 +1,43 @@
 ﻿using System;
 
-namespace MonoMod.Utils {
-    public sealed class LazyDisposable : IDisposable {
+namespace MonoMod.Utils
+{
+    public sealed class LazyDisposable : IDisposable
+    {
         public event Action? OnDispose;
 
-        public LazyDisposable() {
+        public LazyDisposable()
+        {
         }
         public LazyDisposable(Action a)
-            : this() {
+            : this()
+        {
             OnDispose += a;
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
             OnDispose?.Invoke();
         }
     }
 
-    public sealed class LazyDisposable<T> : IDisposable {
+    public sealed class LazyDisposable<T> : IDisposable
+    {
         private T? Instance;
         public event Action<T>? OnDispose;
 
-        public LazyDisposable(T instance) {
+        public LazyDisposable(T instance)
+        {
             Instance = instance;
         }
         public LazyDisposable(T instance, Action<T> a)
-            : this(instance) {
+            : this(instance)
+        {
             OnDispose += a;
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
             OnDispose?.Invoke(Instance!);
             Instance = default;
         }

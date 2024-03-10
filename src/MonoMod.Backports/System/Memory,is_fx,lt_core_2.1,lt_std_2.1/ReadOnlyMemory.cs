@@ -9,14 +9,16 @@ using System.Runtime.InteropServices;
 using EditorBrowsableAttribute = System.ComponentModel.EditorBrowsableAttribute;
 using EditorBrowsableState = System.ComponentModel.EditorBrowsableState;
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// Represents a contiguous region of memory, similar to <see cref="ReadOnlySpan{T}"/>.
     /// Unlike <see cref="ReadOnlySpan{T}"/>, it is not a byref-like type.
     /// </summary>
     [DebuggerTypeProxy(typeof(MemoryDebugView<>))]
     [DebuggerDisplay("{ToString(),raw}")]
-    public readonly struct ReadOnlyMemory<T> {
+    public readonly struct ReadOnlyMemory<T>
+    {
         // NOTE: With the current implementation, Memory<T> and ReadOnlyMemory<T> must have the same layout,
         // as code uses Unsafe.As to cast between them.
 
@@ -38,8 +40,10 @@ namespace System {
         /// <remarks>Returns default when <paramref name="array"/> is null.</remarks>
         /// <exception cref="System.ArrayTypeMismatchException">Thrown when <paramref name="array"/> is covariant and array's type is not exactly T[].</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyMemory(T[]? array) {
-            if (array == null) {
+        public ReadOnlyMemory(T[]? array)
+        {
+            if (array == null)
+            {
                 this = default;
                 return; // returns default
             }
@@ -62,8 +66,10 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=Length).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyMemory(T[]? array, int start, int length) {
-            if (array == null) {
+        public ReadOnlyMemory(T[]? array, int start, int length)
+        {
+            if (array == null)
+            {
                 if (start != 0 || length != 0)
                     ThrowHelper.ThrowArgumentOutOfRangeException();
                 this = default;
@@ -82,7 +88,8 @@ namespace System {
         /// <param name="start">The index at which to begin the memory.</param>
         /// <param name="length">The number of items in the memory.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ReadOnlyMemory(object? obj, int start, int length) {
+        internal ReadOnlyMemory(object? obj, int start, int length)
+        {
             // No validation performed; caller must provide any necessary validation.
             _object = obj;
             _index = start;
@@ -118,8 +125,10 @@ namespace System {
         /// For <see cref="ReadOnlyMemory{Char}"/>, returns a new instance of string that represents the characters pointed to by the memory.
         /// Otherwise, returns a <see cref="string"/> with the name of the type and the number of elements.
         /// </summary>
-        public override string ToString() {
-            if (typeof(T) == typeof(char)) {
+        public override string ToString()
+        {
+            if (typeof(T) == typeof(char))
+            {
                 return (_object is string str) ? str.Substring(_index, _length & RemoveFlagsBitMask) : Span.ToString();
             }
             return $"System.ReadOnlyMemory<{typeof(T).Name}>[{_length & RemoveFlagsBitMask}]";
@@ -133,11 +142,13 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> index is not in range (&lt;0 or &gt;=Length).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyMemory<T> Slice(int start) {
+        public ReadOnlyMemory<T> Slice(int start)
+        {
             // Used to maintain the high-bit which indicates whether the Memory has been pre-pinned or not.
             int capturedLength = _length;
             int actualLength = capturedLength & RemoveFlagsBitMask;
-            if ((uint)start > (uint)actualLength) {
+            if ((uint)start > (uint)actualLength)
+            {
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
             }
 
@@ -154,11 +165,13 @@ namespace System {
         /// Thrown when the specified <paramref name="start"/> or end index is not in range (&lt;0 or &gt;=Length).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyMemory<T> Slice(int start, int length) {
+        public ReadOnlyMemory<T> Slice(int start, int length)
+        {
             // Used to maintain the high-bit which indicates whether the Memory has been pre-pinned or not.
             int capturedLength = _length;
             int actualLength = _length & RemoveFlagsBitMask;
-            if ((uint)start > (uint)actualLength || (uint)length > (uint)(actualLength - start)) {
+            if ((uint)start > (uint)actualLength || (uint)length > (uint)(actualLength - start))
+            {
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
             }
 
@@ -169,19 +182,28 @@ namespace System {
         /// <summary>
         /// Returns a span from the memory.
         /// </summary>
-        public ReadOnlySpan<T> Span {
+        public ReadOnlySpan<T> Span
+        {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get {
-                if (_index < 0) {
+            get
+            {
+                if (_index < 0)
+                {
                     Debug.Assert(_length >= 0);
                     Debug.Assert(_object != null);
                     return ((MemoryManager<T>)_object!).GetSpan().Slice(_index & RemoveFlagsBitMask, _length);
-                } else if (typeof(T) == typeof(char) && _object is string s) {
+                }
+                else if (typeof(T) == typeof(char) && _object is string s)
+                {
                     Debug.Assert(_length >= 0);
                     return new ReadOnlySpan<T>(Unsafe.As<Pinnable<T>>(s), MemoryExtensions.StringAdjustment, s.Length).Slice(_index, _length);
-                } else if (_object != null) {
+                }
+                else if (_object != null)
+                {
                     return new ReadOnlySpan<T>((T[])_object, _index, _length & RemoveFlagsBitMask);
-                } else {
+                }
+                else
+                {
                     return default;
                 }
             }
@@ -218,20 +240,29 @@ namespace System {
         /// An instance with nonprimitive (non-blittable) members cannot be pinned.
         /// </exception>
         /// </summary>
-        public unsafe MemoryHandle Pin() {
-            if (_index < 0) {
+        public unsafe MemoryHandle Pin()
+        {
+            if (_index < 0)
+            {
                 Debug.Assert(_object != null);
                 return ((MemoryManager<T>)_object!).Pin((_index & RemoveFlagsBitMask));
-            } else if (typeof(T) == typeof(char) && _object is string s) {
+            }
+            else if (typeof(T) == typeof(char) && _object is string s)
+            {
                 GCHandle handle = GCHandle.Alloc(s, GCHandleType.Pinned);
                 void* pointer = Unsafe.Add<T>((void*)handle.AddrOfPinnedObject(), _index);
                 return new MemoryHandle(pointer, handle);
-            } else if (_object is T[] array) {
+            }
+            else if (_object is T[] array)
+            {
                 // Array is already pre-pinned
-                if (_length < 0) {
+                if (_length < 0)
+                {
                     void* pointer = Unsafe.Add<T>(Unsafe.AsPointer(ref MemoryMarshal.GetReference<T>(array)), _index);
                     return new MemoryHandle(pointer);
-                } else {
+                }
+                else
+                {
                     GCHandle handle = GCHandle.Alloc(array, GCHandleType.Pinned);
                     void* pointer = Unsafe.Add<T>((void*)handle.AddrOfPinnedObject(), _index);
                     return new MemoryHandle(pointer, handle);
@@ -249,12 +280,18 @@ namespace System {
 
         /// <summary>Determines whether the specified object is equal to the current object.</summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public override bool Equals(object? obj) {
-            if (obj is ReadOnlyMemory<T> readOnlyMemory) {
+        public override bool Equals(object? obj)
+        {
+            if (obj is ReadOnlyMemory<T> readOnlyMemory)
+            {
                 return Equals(readOnlyMemory);
-            } else if (obj is Memory<T> memory) {
+            }
+            else if (obj is Memory<T> memory)
+            {
                 return Equals(memory);
-            } else {
+            }
+            else
+            {
                 return false;
             }
         }
@@ -263,7 +300,8 @@ namespace System {
         /// Returns true if the memory points to the same array and has the same length.  Note that
         /// this does *not* check to see if the *contents* are equal.
         /// </summary>
-        public bool Equals(ReadOnlyMemory<T> other) {
+        public bool Equals(ReadOnlyMemory<T> other)
+        {
             return
                 _object == other._object &&
                 _index == other._index &&
@@ -272,7 +310,8 @@ namespace System {
 
         /// <summary>Returns the hash code for this <see cref="ReadOnlyMemory{T}"/></summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public override int GetHashCode() {
+        public override int GetHashCode()
+        {
             return _object != null ? HashCode.Combine(_object, _index, _length) : 0;
         }
 
@@ -281,7 +320,8 @@ namespace System {
         /// <param name="length">The count.</param>
         /// <returns>The object.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal object? GetObjectStartLength(out int start, out int length) {
+        internal object? GetObjectStartLength(out int start, out int length)
+        {
             start = _index;
             length = _length;
             return _object;

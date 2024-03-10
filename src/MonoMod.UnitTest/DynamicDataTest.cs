@@ -5,13 +5,17 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
-    public class DynamicDataTest : TestBase {
-        public DynamicDataTest(ITestOutputHelper helper) : base(helper) {
+namespace MonoMod.UnitTest
+{
+    public class DynamicDataTest : TestBase
+    {
+        public DynamicDataTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestDynamicDataByrefsVt() {
+        public void TestDynamicDataByrefsVt()
+        {
             var dict = new Dictionary<string, int>();
             using dynamic data = new DynamicData(dict);
 
@@ -29,7 +33,8 @@ namespace MonoMod.UnitTest {
         }
 
         [Fact]
-        public void TestDynamicDataByrefsNullVt() {
+        public void TestDynamicDataByrefsNullVt()
+        {
             var dict = new Dictionary<string, int?>();
             using dynamic data = new DynamicData(dict);
 
@@ -48,7 +53,8 @@ namespace MonoMod.UnitTest {
 
 
         [Fact]
-        public void TestDynamicDataByrefsRef() {
+        public void TestDynamicDataByrefsRef()
+        {
             var dict = new Dictionary<string, string>();
             using dynamic data = new DynamicData(dict);
 
@@ -66,7 +72,8 @@ namespace MonoMod.UnitTest {
         }
 
         [Fact]
-        public void TestDynamicData() {
+        public void TestDynamicData()
+        {
             var dummy = new Dummy();
             using dynamic data = new DynamicData(dummy);
 
@@ -103,21 +110,24 @@ namespace MonoMod.UnitTest {
             using (var dyndata = new DynamicData(dummy))
                 Assert.Equal("World!", dyndata.Get<string>("Hello"));
 
-            Assert.Equal(dummy, DynamicData.Set(dummy, new {
+            Assert.Equal(dummy, DynamicData.Set(dummy, new
+            {
                 A = 10,
                 Other = "New"
             }));
             Assert.Equal(10, dummy.A);
             Assert.Equal("New", data.Other);
 
-            data.CopyFrom(new {
+            data.CopyFrom(new
+            {
                 A = 20,
                 Other = "Newer"
             });
             Assert.Equal(20, dummy.A);
             Assert.Equal("Newer", data.Other);
 
-            dummy = DynamicData.New<Dummy>()(new {
+            dummy = DynamicData.New<Dummy>()(new
+            {
                 A = 30,
                 B = 60L,
                 C = "90",
@@ -136,7 +146,8 @@ namespace MonoMod.UnitTest {
 
             using var dataTo = DynamicData.For(dummyTo);
             Assert.Equal(dataTo, DynamicData.For(dummyTo));
-            using (var dyndata = new DynamicData(dummy)) {
+            using (var dyndata = new DynamicData(dummy))
+            {
                 foreach (var kvp in dyndata)
                     dataTo.Set(kvp.Key, kvp.Value);
             }
@@ -149,13 +160,15 @@ namespace MonoMod.UnitTest {
 
 #pragma warning disable IDE0051 // Remove unused private members
 #pragma warning disable CA1822 // Mark members as static
-        private class DummyBase {
+        private class DummyBase
+        {
 
             private int PrivateBaseMethod(int a, int b) => a * b * b;
 
         }
 
-        private class Dummy : DummyBase {
+        private class Dummy : DummyBase
+        {
 
             public int A = 69;
             private long B = 420L;

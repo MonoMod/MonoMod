@@ -2,10 +2,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace MonoMod.Core.Interop {
-    internal static unsafe partial class CoreCLR {
+namespace MonoMod.Core.Interop
+{
+    internal static unsafe partial class CoreCLR
+    {
 
-        public readonly struct InvokeAllocMemPtr {
+        public readonly struct InvokeAllocMemPtr
+        {
             private readonly IntPtr methodPtr;
             public InvokeAllocMemPtr(
                 delegate*<
@@ -14,7 +17,8 @@ namespace MonoMod.Core.Interop {
                     V70.AllocMemArgs*, // request
                     void
                 > ptr
-            ) {
+            )
+            {
                 methodPtr = (IntPtr)ptr;
             }
 
@@ -37,8 +41,10 @@ namespace MonoMod.Core.Interop {
             "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
             "needing duplicates.")]
         [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 8.")]
-        public class V70 : V60 {
-            public static class ICorJitInfoVtable {
+        public class V70 : V60
+        {
+            public static class ICorJitInfoVtable
+            {
 
                 // src/coreclr/inc/corinfo.h
                 // class ICorStaticInfo
@@ -229,7 +235,8 @@ namespace MonoMod.Core.Interop {
             }
 
             [StructLayout(LayoutKind.Sequential)]
-            public struct AllocMemArgs {
+            public struct AllocMemArgs
+            {
                 // Input arguments
                 public uint hotCodeSize;
                 public uint coldCodeSize;
@@ -258,9 +265,11 @@ namespace MonoMod.Core.Interop {
                 IntPtr functionPtr,
                 IntPtr thisPtr, // ICorJitInfo*
                 V70.AllocMemArgs* args
-            ) {
+            )
+            {
                 // this is present so that we can pre-JIT this method by calling it
-                if (functionPtr == IntPtr.Zero) {
+                if (functionPtr == IntPtr.Zero)
+                {
                     return;
                 }
 

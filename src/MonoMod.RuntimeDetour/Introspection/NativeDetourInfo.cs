@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Reflection;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// An object which represents a native detour, without extending its lifetime.
     /// </summary>
-    public sealed class NativeDetourInfo {
+    public sealed class NativeDetourInfo
+    {
         private readonly DetourManager.SingleNativeDetourState detour;
 
-        internal NativeDetourInfo(FunctionDetourInfo fdi, DetourManager.SingleNativeDetourState detour) {
+        internal NativeDetourInfo(FunctionDetourInfo fdi, DetourManager.SingleNativeDetourState detour)
+        {
             Function = fdi;
             this.detour = detour;
         }
@@ -32,15 +35,19 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Applies this detour.
         /// </summary>
-        public void Apply() {
+        public void Apply()
+        {
             ref var spinLock = ref Function.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
-            try {
+            try
+            {
                 if (!lockTaken)
                     spinLock.Enter(ref lockTaken);
 
                 ApplyCore();
-            } finally {
+            }
+            finally
+            {
                 if (lockTaken)
                     spinLock.Exit(true);
             }
@@ -49,34 +56,43 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Undoes this detour.
         /// </summary>
-        public void Undo() {
+        public void Undo()
+        {
             ref var spinLock = ref Function.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
-            try {
+            try
+            {
                 if (!lockTaken)
                     spinLock.Enter(ref lockTaken);
 
                 UndoCore();
-            } finally {
+            }
+            finally
+            {
                 if (lockTaken)
                     spinLock.Exit(true);
             }
         }
 
-        private void ApplyCore() {
-            if (detour.IsApplied) {
+        private void ApplyCore()
+        {
+            if (detour.IsApplied)
+            {
                 throw new InvalidOperationException("NativeDetour is already applied");
             }
 
-            if (!detour.IsValid) {
+            if (!detour.IsValid)
+            {
                 throw new InvalidOperationException("NativeDetour is no longer valid");
             }
 
             Function.state.AddDetour(detour, false);
         }
 
-        private void UndoCore() {
-            if (!detour.IsApplied) {
+        private void UndoCore()
+        {
+            if (!detour.IsApplied)
+            {
                 throw new InvalidOperationException("NativeDetour is not currently applied");
             }
 
@@ -89,7 +105,8 @@ namespace MonoMod.RuntimeDetour {
         public MethodInfo Entry => detour.Invoker.Method;
 
         internal DetourManager.NativeDetourChainNode? ChainNode
-            => detour.ManagerData switch {
+            => detour.ManagerData switch
+            {
                 DetourManager.NativeDetourChainNode cn => cn,
                 DetourManager.DepGraphNode<DetourManager.NativeChainNode> gn => (DetourManager.NativeDetourChainNode)gn.ListNode.ChainNode,
                 _ => null,

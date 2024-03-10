@@ -1,11 +1,13 @@
 ﻿using System;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A set of features which may be provided by an <see cref="IRuntime"/> implementation.
     /// </summary>
     [Flags]
-    public enum RuntimeFeature {
+    public enum RuntimeFeature
+    {
         /// <summary>
         /// No features are provided.
         /// </summary>

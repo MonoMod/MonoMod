@@ -1,12 +1,15 @@
 ﻿using Microsoft.CodeAnalysis;
 using System.Text;
 
-namespace MonoMod.SourceGen.Internal {
+namespace MonoMod.SourceGen.Internal
+{
     // The purpose of this generator is to expose certain build-time properties, like the assembly name and version,
     // so we don't need reflection to access this information.
     [Generator]
-    public class AssemblyInfoGenerator : ISourceGenerator {
-        public void Initialize(GeneratorInitializationContext context) {
+    public class AssemblyInfoGenerator : ISourceGenerator
+    {
+        public void Initialize(GeneratorInitializationContext context)
+        {
         }
 
         private static readonly DiagnosticDescriptor WRN_CouldNotGetAssemblyName = new(
@@ -24,25 +27,31 @@ namespace MonoMod.SourceGen.Internal {
 
         private const string AssemblyInfoClass = "AssemblyInfo";
 
-        public void Execute(GeneratorExecutionContext context) {
+        public void Execute(GeneratorExecutionContext context)
+        {
 
             var asmName = context.Compilation.AssemblyName;
-            if (context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.AssemblyName", out var asmNameProp)) {
+            if (context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.AssemblyName", out var asmNameProp))
+            {
                 asmName = asmNameProp;
             }
-            if (asmName is null) {
+            if (asmName is null)
+            {
                 context.ReportDiagnostic(Diagnostic.Create(WRN_CouldNotGetAssemblyName, null));
                 asmName = "MonoMod.UnknownAssemblyName";
             }
 
-            if (!context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.Version", out var version)) {
+            if (!context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.Version", out var version))
+            {
                 context.ReportDiagnostic(Diagnostic.Create(WRN_CouldNotGetVersion, null));
                 version = "unknown";
             }
 
-            if (context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace)) {
+            if (context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace))
+            {
                 rootNamespace = rootNamespace.Trim();
-                if (string.IsNullOrWhiteSpace(rootNamespace)) {
+                if (string.IsNullOrWhiteSpace(rootNamespace))
+                {
                     rootNamespace = null;
                 }
             }
@@ -52,7 +61,8 @@ namespace MonoMod.SourceGen.Internal {
             var cb = new CodeBuilder(sb);
             _ = cb.WriteHeader();
 
-            if (rootNamespace is not null) {
+            if (rootNamespace is not null)
+            {
                 _ = cb // TODO: should this even go in the root namespace of the project? or should it go in MonoMod?
                     .Write("global using AssemblyInfo = ").Write(rootNamespace).Write('.').Write(AssemblyInfoClass).WriteLine(';')
                     .Write("namespace ").Write(rootNamespace).WriteLine(" {").IncreaseIndent();
@@ -64,7 +74,8 @@ namespace MonoMod.SourceGen.Internal {
                 .Write("public const string AssemblyVersion = \"").Write(version).WriteLine("\";");
             _ = cb.DecreaseIndent().WriteLine("}");
 
-            if (rootNamespace is not null) {
+            if (rootNamespace is not null)
+            {
                 _ = cb.DecreaseIndent().WriteLine("}");
             }
 

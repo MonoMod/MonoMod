@@ -5,9 +5,11 @@ using MonoMod.SourceGen.Internal.Helpers;
 using System.Collections.Immutable;
 using System.Text;
 
-namespace MonoMod.SourceGen.Internal.Interop {
+namespace MonoMod.SourceGen.Internal.Interop
+{
     [Generator]
-    public class FatInterfaceGenerator : IIncrementalGenerator {
+    public class FatInterfaceGenerator : IIncrementalGenerator
+    {
         private const string FatInterfaceAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceAttribute";
         private const string FatInterfaceImplAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceImplAttribute";
         private const string FatInterfaceIgnoreAttribute = "MonoMod.Core.Interop.Attributes.FatInterfaceIgnoreAttribute";
@@ -17,21 +19,27 @@ namespace MonoMod.SourceGen.Internal.Interop {
         private sealed record FatInterfaceGenInfo(TypeContext Type, EquatableArray<FatIfaceMethod> Methods);
         private sealed record FatIfaceImplInfo(TypeContext Type, TypeRef IfaceType, bool IfaceHasAttr, EquatableArray<FatIfaceMethod> IfaceMethods);
 
-        private static ImmutableArray<FatIfaceMethod> GetIfaceTypeMethods(INamedTypeSymbol sym) {
+        private static ImmutableArray<FatIfaceMethod> GetIfaceTypeMethods(INamedTypeSymbol sym)
+        {
             using var methodListBuilder = ImmutableArrayBuilder<FatIfaceMethod>.Rent();
-            foreach (var member in sym.GetMembers()) {
-                if (member is not IMethodSymbol method) {
+            foreach (var member in sym.GetMembers())
+            {
+                if (member is not IMethodSymbol method)
+                {
                     continue;
                 }
-                if (method.IsStatic || !method.IsPartialDefinition) {
+                if (method.IsStatic || !method.IsPartialDefinition)
+                {
                     continue;
                 }
-                if (method.HasAttributeWithFullyQualifiedMetadataName(FatInterfaceIgnoreAttribute)) {
+                if (method.HasAttributeWithFullyQualifiedMetadataName(FatInterfaceIgnoreAttribute))
+                {
                     continue;
                 }
 
                 using var paramsBuilder = ImmutableArrayBuilder<TypeRef>.Rent();
-                foreach (var param in method.Parameters) {
+                foreach (var param in method.Parameters)
+                {
                     paramsBuilder.Add(GenHelpers.CreateRef(param));
                 }
 
@@ -40,11 +48,13 @@ namespace MonoMod.SourceGen.Internal.Interop {
             return methodListBuilder.ToImmutable();
         }
 
-        public void Initialize(IncrementalGeneratorInitializationContext context) {
+        public void Initialize(IncrementalGeneratorInitializationContext context)
+        {
             // find our methods to implement
             var interfaces = context.SyntaxProvider.ForAttributeWithMetadataName(FatInterfaceAttribute,
                 (n, ct) => n is StructDeclarationSyntax,
-                (ctx, ct) => {
+                (ctx, ct) =>
+                {
                     var sym = (INamedTypeSymbol)ctx.TargetSymbol;
                     var methods = GetIfaceTypeMethods(sym);
                     return new FatInterfaceGenInfo(GenHelpers.CreateTypeContext(sym), methods);
@@ -52,8 +62,10 @@ namespace MonoMod.SourceGen.Internal.Interop {
 
             var interfaceImpls = context.SyntaxProvider.ForAttributeWithMetadataName(FatInterfaceImplAttribute,
                 (n, ct) => n is StructDeclarationSyntax,
-                (ctx, ct) => {
-                    if (ctx.Attributes is not [AttributeData { ConstructorArguments: [{ Value: INamedTypeSymbol ifaceType }] }]) {
+                (ctx, ct) =>
+                {
+                    if (ctx.Attributes is not [AttributeData { ConstructorArguments: [{ Value: INamedTypeSymbol ifaceType }] }])
+                    {
                         return null;
                     }
 
@@ -73,7 +85,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
         const string IntPtr = "global::System.IntPtr";
 
         private static string GetAccessibililty(Accessibility acc)
-            => acc switch {
+            => acc switch
+            {
                 Accessibility.NotApplicable => "",
                 Accessibility.Private => "private ",
                 Accessibility.ProtectedAndInternal => "private protected ",
@@ -84,7 +97,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 _ => "/*unknown accessibility*/ ",
             };
 
-        private void GenerateIfaceDecl(SourceProductionContext ctx, FatInterfaceGenInfo info) {
+        private void GenerateIfaceDecl(SourceProductionContext ctx, FatInterfaceGenInfo info)
+        {
             // TODO: pool stringbuilder/codebuilder
             var sb = new StringBuilder();
             var cb = new CodeBuilder(sb);
@@ -93,7 +107,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
             ctx.AddSource(fname + ".g.cs", sb.ToString());
         }
 
-        private static string DoGenerateIfaceDecl(CodeBuilder code, FatInterfaceGenInfo info) {
+        private static string DoGenerateIfaceDecl(CodeBuilder code, FatInterfaceGenInfo info)
+        {
             info.Type.AppendEnterContext(code, "unsafe");
 
             // common core code
@@ -106,12 +121,14 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 .WriteLine();
 
             // the methods
-            foreach (var method in info.Methods) {
+            foreach (var method in info.Methods)
+            {
                 code.WriteLine($"{method.Access}partial {method.RetType.FqName} {method.Name}(")
                     .IncreaseIndent();
 
                 var i = 0;
-                foreach (var param in method.Parameters) {
+                foreach (var param in method.Parameters)
+                {
                     if (i is not 0)
                         code.WriteLine(", ");
 
@@ -124,7 +141,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 code.WriteLine().DecreaseIndent().WriteLine(") {").IncreaseIndent();
                 code.Write("return ((delegate*<void*").IncreaseIndent();
 
-                foreach (var param in method.Parameters) {
+                foreach (var param in method.Parameters)
+                {
                     code.WriteLine(", ")
                         .Write(param.FqName);
                 }
@@ -138,7 +156,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
                     .IncreaseIndent();
 
                 i = 0;
-                foreach (var param in method.Parameters) {
+                foreach (var param in method.Parameters)
+                {
                     code.WriteLine(", ")
                         .Write(param.Refness)
                         .Write("_")
@@ -158,7 +177,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
             return "FatIf_" + info.Type.FullContextName;
         }
 
-        private static void GenerateIfaceImpl(SourceProductionContext ctx, FatIfaceImplInfo info) {
+        private static void GenerateIfaceImpl(SourceProductionContext ctx, FatIfaceImplInfo info)
+        {
             // TODO: pool stringbuilder/codebuilder
             var sb = new StringBuilder();
             var cb = new CodeBuilder(sb);
@@ -167,8 +187,10 @@ namespace MonoMod.SourceGen.Internal.Interop {
             ctx.AddSource(fname + ".g.cs", sb.ToString());
         }
 
-        private static string DoGenerateIfaceImpl(CodeBuilder code, FatIfaceImplInfo info) {
-            if (!info.IfaceHasAttr) {
+        private static string DoGenerateIfaceImpl(CodeBuilder code, FatIfaceImplInfo info)
+        {
+            if (!info.IfaceHasAttr)
+            {
                 code.WriteLine($"#error Target type {info.IfaceType.FqName} is not a fat interface");
                 return "FatIfImpl_" + info.Type.FullContextName;
             }
@@ -180,11 +202,13 @@ namespace MonoMod.SourceGen.Internal.Interop {
                 .WriteLine($"public static {IntPtr}[] FatVtable_ {{ get {{").IncreaseIndent();
 
             var i = 0;
-            foreach (var method in ifaceMethods) {
+            foreach (var method in ifaceMethods)
+            {
                 code.Write($"static {method.RetType.FqName} S_{method.Name}_{i}(void* ptr__")
                     .IncreaseIndent();
                 var j = 0;
-                foreach (var param in method.Parameters) {
+                foreach (var param in method.Parameters)
+                {
                     code.WriteLine(", ")
                         .Write(param.FqName)
                         .Write(' ')
@@ -196,7 +220,8 @@ namespace MonoMod.SourceGen.Internal.Interop {
                     .Write($"return (({info.Type.InnermostType.FqName}*)ptr__)->{method.Name}(").IncreaseIndent();
 
                 j = 0;
-                foreach (var param in method.Parameters) {
+                foreach (var param in method.Parameters)
+                {
                     if (j is not 0)
                         code.WriteLine(", ");
 
@@ -216,10 +241,12 @@ namespace MonoMod.SourceGen.Internal.Interop {
             code.WriteLine($"return fatVtable_ ??= new {IntPtr}[] {{").IncreaseIndent();
 
             i = 0;
-            foreach (var method in ifaceMethods) {
+            foreach (var method in ifaceMethods)
+            {
                 code.Write($"({IntPtr}) (delegate*<void*").IncreaseIndent();
 
-                foreach (var param in method.Parameters) {
+                foreach (var param in method.Parameters)
+                {
                     code.WriteLine(", ")
                         .Write(param.FqName);
                 }

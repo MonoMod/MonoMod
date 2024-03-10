@@ -1,8 +1,10 @@
-﻿namespace MonoMod.RuntimeDetour {
+﻿namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// The base class for detours associated with a <see cref="MethodDetourInfo"/>.
     /// </summary>
-    public abstract class DetourBase {
+    public abstract class DetourBase
+    {
         /// <summary>
         /// Gets the <see cref="MethodDetourInfo"/> this detour is associated with.
         /// </summary>
@@ -28,15 +30,19 @@
         /// <summary>
         /// Applies this detour.
         /// </summary>
-        public void Apply() {
+        public void Apply()
+        {
             ref var spinLock = ref Method.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
-            try {
+            try
+            {
                 if (!lockTaken)
                     spinLock.Enter(ref lockTaken);
 
                 ApplyCore();
-            } finally {
+            }
+            finally
+            {
                 if (lockTaken)
                     spinLock.Exit(true);
             }
@@ -45,15 +51,19 @@
         /// <summary>
         /// Undoes this detour.
         /// </summary>
-        public void Undo() {
+        public void Undo()
+        {
             ref var spinLock = ref Method.state.detourLock;
             var lockTaken = spinLock.IsThreadOwnerTrackingEnabled && spinLock.IsHeldByCurrentThread;
-            try {
+            try
+            {
                 if (!lockTaken)
                     spinLock.Enter(ref lockTaken);
 
                 UndoCore();
-            } finally {
+            }
+            finally
+            {
                 if (lockTaken)
                     spinLock.Exit(true);
             }

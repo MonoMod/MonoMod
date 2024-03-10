@@ -14,7 +14,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace System.Collections.Concurrent {
+namespace System.Collections.Concurrent
+{
     // The static class Partitioners implements 3 default partitioning strategies:
     // 1. dynamic load balance partitioning for indexable data source (IList and arrays)
     // 2. static partitioning for indexable data source (IList and arrays)
@@ -40,7 +41,8 @@ namespace System.Collections.Concurrent {
     /// thread.
     /// </para>
     /// </remarks>
-    public static class Partitioner {
+    public static class Partitioner
+    {
         // How many chunks do we want to divide the range into?  If this is 1, then the
         // answer is "one chunk per core".  Generally, though, you'll achieve better
         // load balancing on a busy system if you make it higher than 1.
@@ -59,12 +61,16 @@ namespace System.Collections.Concurrent {
         /// <returns>
         /// An orderable partitioner based on the input list.
         /// </returns>
-        public static OrderablePartitioner<TSource> Create<TSource>(IList<TSource> list, bool loadBalance) {
+        public static OrderablePartitioner<TSource> Create<TSource>(IList<TSource> list, bool loadBalance)
+        {
             if (list is null)
                 ThrowHelper.ThrowArgumentNullException(nameof(list));
-            if (loadBalance) {
+            if (loadBalance)
+            {
                 return (new DynamicPartitionerForIList<TSource>(list));
-            } else {
+            }
+            else
+            {
                 return (new StaticIndexRangePartitionerForIList<TSource>(list));
             }
         }
@@ -81,16 +87,20 @@ namespace System.Collections.Concurrent {
         /// <returns>
         /// An orderable partitioner based on the input array.
         /// </returns>
-        public static OrderablePartitioner<TSource> Create<TSource>(TSource[] array, bool loadBalance) {
+        public static OrderablePartitioner<TSource> Create<TSource>(TSource[] array, bool loadBalance)
+        {
             if (array is null)
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.array);
 
             // This implementation uses 'ldelem' instructions for element retrieval, rather than using a
             // method call.
 
-            if (loadBalance) {
+            if (loadBalance)
+            {
                 return (new DynamicPartitionerForArray<TSource>(array));
-            } else {
+            }
+            else
+            {
                 return (new StaticIndexRangePartitionerForArray<TSource>(array));
             }
         }
@@ -107,7 +117,8 @@ namespace System.Collections.Concurrent {
         /// The ordering used in the created partitioner is determined by the natural order of the elements
         /// as retrieved from the source enumerable.
         /// </remarks>
-        public static OrderablePartitioner<TSource> Create<TSource>(IEnumerable<TSource> source) {
+        public static OrderablePartitioner<TSource> Create<TSource>(IEnumerable<TSource> source)
+        {
             return Create<TSource>(source, EnumerablePartitionerOptions.None);
         }
 
@@ -128,7 +139,8 @@ namespace System.Collections.Concurrent {
         /// The ordering used in the created partitioner is determined by the natural order of the elements
         /// as retrieved from the source enumerable.
         /// </remarks>
-        public static OrderablePartitioner<TSource> Create<TSource>(IEnumerable<TSource> source, EnumerablePartitionerOptions partitionerOptions) {
+        public static OrderablePartitioner<TSource> Create<TSource>(IEnumerable<TSource> source, EnumerablePartitionerOptions partitionerOptions)
+        {
             if (source is null)
                 ThrowHelper.ThrowArgumentNullException(nameof(source));
             if ((partitionerOptions & (~EnumerablePartitionerOptions.NoBuffering)) != 0)
@@ -144,7 +156,8 @@ namespace System.Collections.Concurrent {
         /// <exception cref="System.ArgumentOutOfRangeException"> The <paramref name="toExclusive"/> argument is
         /// less than or equal to the <paramref name="fromInclusive"/> argument.</exception>
         /// <remarks>if ProccessorCount == 1, for correct rangeSize calculation the const CoreOversubscriptionRate must be > 1 (avoid division by 1)</remarks>
-        public static OrderablePartitioner<Tuple<long, long>> Create(long fromInclusive, long toExclusive) {
+        public static OrderablePartitioner<Tuple<long, long>> Create(long fromInclusive, long toExclusive)
+        {
             if (toExclusive <= fromInclusive)
                 throw new ArgumentOutOfRangeException(nameof(toExclusive));
             decimal range = (decimal)toExclusive - fromInclusive;
@@ -163,7 +176,8 @@ namespace System.Collections.Concurrent {
         /// less than or equal to the <paramref name="fromInclusive"/> argument.</exception>
         /// <exception cref="System.ArgumentOutOfRangeException"> The <paramref name="rangeSize"/> argument is
         /// less than or equal to 0.</exception>
-        public static OrderablePartitioner<Tuple<long, long>> Create(long fromInclusive, long toExclusive, long rangeSize) {
+        public static OrderablePartitioner<Tuple<long, long>> Create(long fromInclusive, long toExclusive, long rangeSize)
+        {
             if (toExclusive <= fromInclusive)
                 throw new ArgumentOutOfRangeException(nameof(toExclusive));
             if (rangeSize <= 0)
@@ -172,14 +186,18 @@ namespace System.Collections.Concurrent {
         }
 
         // Private method to parcel out range tuples.
-        private static IEnumerable<Tuple<long, long>> CreateRanges(long fromInclusive, long toExclusive, long rangeSize) {
+        private static IEnumerable<Tuple<long, long>> CreateRanges(long fromInclusive, long toExclusive, long rangeSize)
+        {
             // Enumerate all of the ranges
             long from, to;
             bool shouldQuit = false;
 
-            for (long i = fromInclusive; (i < toExclusive) && !shouldQuit; i = unchecked(i + rangeSize)) {
+            for (long i = fromInclusive; (i < toExclusive) && !shouldQuit; i = unchecked(i + rangeSize))
+            {
                 from = i;
-                try { checked { to = i + rangeSize; } } catch (OverflowException) {
+                try { checked { to = i + rangeSize; } }
+                catch (OverflowException)
+                {
                     to = toExclusive;
                     shouldQuit = true;
                 }
@@ -197,7 +215,8 @@ namespace System.Collections.Concurrent {
         /// less than or equal to the <paramref name="fromInclusive"/> argument.</exception>
         /// <remarks>if ProccessorCount == 1, for correct rangeSize calculation the const CoreOversubscriptionRate must be > 1 (avoid division by 1),
         /// and the same issue could occur with rangeSize == -1 when fromInclusive = int.MinValue and toExclusive = int.MaxValue.</remarks>
-        public static OrderablePartitioner<Tuple<int, int>> Create(int fromInclusive, int toExclusive) {
+        public static OrderablePartitioner<Tuple<int, int>> Create(int fromInclusive, int toExclusive)
+        {
             if (toExclusive <= fromInclusive)
                 throw new ArgumentOutOfRangeException(nameof(toExclusive));
             long range = (long)toExclusive - fromInclusive;
@@ -216,7 +235,8 @@ namespace System.Collections.Concurrent {
         /// less than or equal to the <paramref name="fromInclusive"/> argument.</exception>
         /// <exception cref="System.ArgumentOutOfRangeException"> The <paramref name="rangeSize"/> argument is
         /// less than or equal to 0.</exception>
-        public static OrderablePartitioner<Tuple<int, int>> Create(int fromInclusive, int toExclusive, int rangeSize) {
+        public static OrderablePartitioner<Tuple<int, int>> Create(int fromInclusive, int toExclusive, int rangeSize)
+        {
             if (toExclusive <= fromInclusive)
                 throw new ArgumentOutOfRangeException(nameof(toExclusive));
             if (rangeSize <= 0)
@@ -225,14 +245,18 @@ namespace System.Collections.Concurrent {
         }
 
         // Private method to parcel out range tuples.
-        private static IEnumerable<Tuple<int, int>> CreateRanges(int fromInclusive, int toExclusive, int rangeSize) {
+        private static IEnumerable<Tuple<int, int>> CreateRanges(int fromInclusive, int toExclusive, int rangeSize)
+        {
             // Enumerate all of the ranges
             int from, to;
             bool shouldQuit = false;
 
-            for (int i = fromInclusive; (i < toExclusive) && !shouldQuit; i = unchecked(i + rangeSize)) {
+            for (int i = fromInclusive; (i < toExclusive) && !shouldQuit; i = unchecked(i + rangeSize))
+            {
                 from = i;
-                try { checked { to = i + rangeSize; } } catch (OverflowException) {
+                try { checked { to = i + rangeSize; } }
+                catch (OverflowException)
+                {
                     to = toExclusive;
                     shouldQuit = true;
                 }
@@ -265,7 +289,8 @@ namespace System.Collections.Concurrent {
         //  - TSource[], when source data is TSource[], the shared reader is source data itself
         //  - IEnumerator<TSource>, when source data is IEnumerable<TSource>, and the shared reader is an
         //    enumerator of the source data
-        private abstract class DynamicPartitionEnumerator_Abstract<TSource, TSourceReader> : IEnumerator<KeyValuePair<long, TSource>> {
+        private abstract class DynamicPartitionEnumerator_Abstract<TSource, TSourceReader> : IEnumerator<KeyValuePair<long, TSource>>
+        {
             //----------------- common fields and constructor for all dynamic partitioners -----------------
             //--- shared by all derived class with source data type: IList, Array, and IEnumerator
             protected readonly TSourceReader _sharedReader;
@@ -289,10 +314,12 @@ namespace System.Collections.Concurrent {
             protected readonly SharedLong _sharedIndex;
 
             protected DynamicPartitionEnumerator_Abstract(TSourceReader sharedReader, SharedLong sharedIndex)
-                : this(sharedReader, sharedIndex, false) {
+                : this(sharedReader, sharedIndex, false)
+            {
             }
 
-            protected DynamicPartitionEnumerator_Abstract(TSourceReader sharedReader, SharedLong sharedIndex, bool useSingleChunking) {
+            protected DynamicPartitionEnumerator_Abstract(TSourceReader sharedReader, SharedLong sharedIndex, bool useSingleChunking)
+            {
                 _sharedReader = sharedReader;
                 _sharedIndex = sharedIndex;
                 _maxChunkSize = useSingleChunking ? 1 : s_defaultMaxChunkSize;
@@ -343,7 +370,8 @@ namespace System.Collections.Concurrent {
             /// <summary>
             /// Reset on partitions is not supported
             /// </summary>
-            public void Reset() {
+            public void Reset()
+            {
                 throw new NotSupportedException();
             }
 
@@ -351,8 +379,10 @@ namespace System.Collections.Concurrent {
             /// <summary>
             /// Get the current element in the current partition. Property required by IEnumerator interface
             /// </summary>
-            object? IEnumerator.Current {
-                get {
+            object? IEnumerator.Current
+            {
+                get
+                {
                     return ((DynamicPartitionEnumerator_Abstract<TSource, TSourceReader>)this).Current;
                 }
             }
@@ -367,9 +397,11 @@ namespace System.Collections.Concurrent {
             /// false otherwise, if and only if there is no more elements left in the current chunk
             /// AND the source collection is exhausted.
             /// </returns>
-            public bool MoveNext() {
+            public bool MoveNext()
+            {
                 //perform deferred allocating of the local variables.
-                if (_localOffset == null) {
+                if (_localOffset == null)
+                {
                     Debug.Assert(_currentChunkSize == null);
                     _localOffset = new StrongBox<int>(-1);
                     _currentChunkSize = new StrongBox<int>(0);
@@ -382,10 +414,11 @@ namespace System.Collections.Concurrent {
                 {
                     _localOffset.Value++;
                     return true;
-                } else
-                  //otherwise it means we exhausted the local chunk
-                  //grab a new chunk from the source enumerator
-                  {
+                }
+                else
+                //otherwise it means we exhausted the local chunk
+                //grab a new chunk from the source enumerator
+                {
                     // The second part of the || condition is necessary to handle the case when MoveNext() is called
                     // after a previous MoveNext call returned false.
                     Debug.Assert(_localOffset.Value == _currentChunkSize.Value - 1 || _currentChunkSize.Value == 0);
@@ -395,9 +428,13 @@ namespace System.Collections.Concurrent {
                     if (_currentChunkSize.Value == 0) //first time grabbing from source enumerator
                     {
                         requestedChunkSize = 1;
-                    } else if (_doublingCountdown > 0) {
+                    }
+                    else if (_doublingCountdown > 0)
+                    {
                         requestedChunkSize = _currentChunkSize.Value;
-                    } else {
+                    }
+                    else
+                    {
                         requestedChunkSize = Math.Min(_currentChunkSize.Value * 2, _maxChunkSize);
                         _doublingCountdown = CHUNK_DOUBLING_RATE; // reset
                     }
@@ -407,11 +444,14 @@ namespace System.Collections.Concurrent {
 
                     Debug.Assert(requestedChunkSize > 0 && requestedChunkSize <= _maxChunkSize);
                     //GrabNextChunk will update the value of _currentChunkSize
-                    if (GrabNextChunk(requestedChunkSize)) {
+                    if (GrabNextChunk(requestedChunkSize))
+                    {
                         Debug.Assert(_currentChunkSize.Value <= requestedChunkSize && _currentChunkSize.Value > 0);
                         _localOffset.Value = 0;
                         return true;
-                    } else {
+                    }
+                    else
+                    {
                         return false;
                     }
                 }
@@ -426,13 +466,15 @@ namespace System.Collections.Concurrent {
         /// of EnumerableOfPartitionsForIEnumerator defined internally
         /// </summary>
         /// <typeparam name="TSource">Type of elements in the source data</typeparam>
-        private sealed class DynamicPartitionerForIEnumerable<TSource> : OrderablePartitioner<TSource> {
+        private sealed class DynamicPartitionerForIEnumerable<TSource> : OrderablePartitioner<TSource>
+        {
             private readonly IEnumerable<TSource> _source;
             private readonly bool _useSingleChunking;
 
             //constructor
             internal DynamicPartitionerForIEnumerable(IEnumerable<TSource> source, EnumerablePartitionerOptions partitionerOptions)
-                : base(true, false, true) {
+                : base(true, false, true)
+            {
                 _source = source;
                 _useSingleChunking = ((partitionerOptions & EnumerablePartitionerOptions.NoBuffering) != 0);
             }
@@ -443,8 +485,10 @@ namespace System.Collections.Concurrent {
             /// </summary>
             /// <param name="partitionCount">number of partitions requested</param>
             /// <returns>A list containing <paramref name="partitionCount"/> enumerators.</returns>
-            public override IList<IEnumerator<KeyValuePair<long, TSource>>> GetOrderablePartitions(int partitionCount) {
-                if (partitionCount <= 0) {
+            public override IList<IEnumerator<KeyValuePair<long, TSource>>> GetOrderablePartitions(int partitionCount)
+            {
+                if (partitionCount <= 0)
+                {
                     throw new ArgumentOutOfRangeException(nameof(partitionCount));
                 }
                 IEnumerator<KeyValuePair<long, TSource>>[] partitions
@@ -453,7 +497,8 @@ namespace System.Collections.Concurrent {
 #pragma warning disable CA2000 // Dispose objects before losing scope
                 // This is the BCL implementation of this method.
                 IEnumerable<KeyValuePair<long, TSource>> partitionEnumerable = new InternalPartitionEnumerable(_source.GetEnumerator(), _useSingleChunking, true);
-                for (int i = 0; i < partitionCount; i++) {
+                for (int i = 0; i < partitionCount; i++)
+                {
                     partitions[i] = partitionEnumerable.GetEnumerator();
                 }
                 return partitions;
@@ -463,14 +508,16 @@ namespace System.Collections.Concurrent {
             /// Overrides OrderablePartitioner.GetOrderableDynamicPartitions
             /// </summary>
             /// <returns>a enumerable collection of orderable partitions</returns>
-            public override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions() {
+            public override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions()
+            {
                 return new InternalPartitionEnumerable(_source.GetEnumerator(), _useSingleChunking, false);
             }
 
             /// <summary>
             /// Whether additional partitions can be created dynamically.
             /// </summary>
-            public override bool SupportsDynamicPartitions {
+            public override bool SupportsDynamicPartitions
+            {
                 get { return true; }
             }
 
@@ -481,7 +528,8 @@ namespace System.Collections.Concurrent {
             /// shared by the partitions it owns, including a boolean "_hasNoElementsLef", a shared lock, and a
             /// shared count "_activePartitionCount" used to track active partitions when they were created statically
             /// </summary>
-            private sealed class InternalPartitionEnumerable : IEnumerable<KeyValuePair<long, TSource>>, IDisposable {
+            private sealed class InternalPartitionEnumerable : IEnumerable<KeyValuePair<long, TSource>>, IDisposable
+            {
                 //reader through which we access the source data
                 private readonly IEnumerator<TSource> _sharedReader;
                 private readonly SharedLong _sharedIndex; //initial value -1
@@ -508,7 +556,8 @@ namespace System.Collections.Concurrent {
                 // records whether or not the user has requested single-chunking behavior
                 private readonly bool _useSingleChunking;
 
-                internal InternalPartitionEnumerable(IEnumerator<TSource> sharedReader, bool useSingleChunking, bool isStaticPartitioning) {
+                internal InternalPartitionEnumerable(IEnumerator<TSource> sharedReader, bool useSingleChunking, bool isStaticPartitioning)
+                {
                     _sharedReader = sharedReader;
                     _sharedIndex = new SharedLong(-1);
                     _hasNoElementsLeft = new SharedBool(false);
@@ -517,7 +566,8 @@ namespace System.Collections.Concurrent {
                     _useSingleChunking = useSingleChunking;
 
                     // Only allocate the fill-buffer if single-chunking is not in effect
-                    if (!_useSingleChunking) {
+                    if (!_useSingleChunking)
+                    {
                         // Time to allocate the fill buffer which is used to reduce the contention on the shared lock.
                         // First pick the buffer size multiplier. We use 4 for when there are more than 4 cores, and just 1 for below. This is based on empirical evidence.
                         int fillBufferMultiplier = (Environment.ProcessorCount > 4) ? 4 : 1;
@@ -526,12 +576,15 @@ namespace System.Collections.Concurrent {
                         _fillBuffer = new KeyValuePair<long, TSource>[fillBufferMultiplier * Partitioner.GetDefaultChunkSize<TSource>()];
                     }
 
-                    if (isStaticPartitioning) {
+                    if (isStaticPartitioning)
+                    {
                         // If this object is created for static partitioning (ie. via GetPartitions(int partitionCount),
                         // GetOrderablePartitions(int partitionCount)), we track the active partitions, in order to dispose
                         // this object when all the partitions have been disposed.
                         _activePartitionCount = new SharedInt(0);
-                    } else {
+                    }
+                    else
+                    {
                         // Otherwise this object is created for dynamic partitioning (ie, via GetDynamicPartitions(),
                         // GetOrderableDynamicPartitions()), we do not need tracking. This object must be disposed
                         // explicitly
@@ -539,17 +592,22 @@ namespace System.Collections.Concurrent {
                     }
                 }
 
-                public IEnumerator<KeyValuePair<long, TSource>> GetEnumerator() {
-                    if (_disposed) {
+                public IEnumerator<KeyValuePair<long, TSource>> GetEnumerator()
+                {
+                    if (_disposed)
+                    {
                         throw new ObjectDisposedException("Cannot call GetEnumerator after source has been disposed");
-                    } else {
+                    }
+                    else
+                    {
                         return new InternalPartitionEnumerator(_sharedReader, _sharedIndex,
                             _hasNoElementsLeft, _activePartitionCount, this, _useSingleChunking);
                     }
                 }
 
 
-                IEnumerator IEnumerable.GetEnumerator() {
+                IEnumerator IEnumerable.GetEnumerator()
+                {
                     return ((InternalPartitionEnumerable)this).GetEnumerator();
                 }
 
@@ -558,7 +616,8 @@ namespace System.Collections.Concurrent {
                 // Used by GrabChunk_Buffered()
                 private void TryCopyFromFillBuffer(KeyValuePair<long, TSource>[] destArray,
                                                   int requestedChunkSize,
-                                                  ref int actualNumElementsGrabbed) {
+                                                  ref int actualNumElementsGrabbed)
+                {
                     actualNumElementsGrabbed = 0;
 
 
@@ -569,7 +628,8 @@ namespace System.Collections.Concurrent {
 
                     // first do a quick check, and give up if the current position is at the end
                     // so that we don't do an unnecessary pair of Interlocked.Increment / Decrement calls
-                    if (_fillBufferCurrentPosition >= _fillBufferSize) {
+                    if (_fillBufferCurrentPosition >= _fillBufferSize)
+                    {
                         return; // no elements in the buffer to copy from
                     }
 
@@ -583,7 +643,8 @@ namespace System.Collections.Concurrent {
                     int endPos = Interlocked.Add(ref _fillBufferCurrentPosition, requestedChunkSize);
                     int beginPos = endPos - requestedChunkSize;
 
-                    if (beginPos < _fillBufferSize) {
+                    if (beginPos < _fillBufferSize)
+                    {
                         // adjust index and do the actual copy
                         actualNumElementsGrabbed = (endPos < _fillBufferSize) ? endPos : _fillBufferSize - beginPos;
                         Array.Copy(fillBufferLocalRef, beginPos, destArray, 0, actualNumElementsGrabbed);
@@ -600,16 +661,21 @@ namespace System.Collections.Concurrent {
                 /// true if we successfully reserved at least one element
                 /// false if all elements in the source collection have been reserved.
                 /// </returns>
-                internal bool GrabChunk(KeyValuePair<long, TSource>[] destArray, int requestedChunkSize, ref int actualNumElementsGrabbed) {
+                internal bool GrabChunk(KeyValuePair<long, TSource>[] destArray, int requestedChunkSize, ref int actualNumElementsGrabbed)
+                {
                     actualNumElementsGrabbed = 0;
 
-                    if (_hasNoElementsLeft.Value) {
+                    if (_hasNoElementsLeft.Value)
+                    {
                         return false;
                     }
 
-                    if (_useSingleChunking) {
+                    if (_useSingleChunking)
+                    {
                         return GrabChunk_Single(destArray, requestedChunkSize, ref actualNumElementsGrabbed);
-                    } else {
+                    }
+                    else
+                    {
                         return GrabChunk_Buffered(destArray, requestedChunkSize, ref actualNumElementsGrabbed);
                     }
                 }
@@ -621,31 +687,39 @@ namespace System.Collections.Concurrent {
                 /// true if we successfully reserved an element
                 /// false if all elements in the source collection have been reserved.
                 /// </returns>
-                internal bool GrabChunk_Single(KeyValuePair<long, TSource>[] destArray, int requestedChunkSize, ref int actualNumElementsGrabbed) {
+                internal bool GrabChunk_Single(KeyValuePair<long, TSource>[] destArray, int requestedChunkSize, ref int actualNumElementsGrabbed)
+                {
                     Debug.Assert(_useSingleChunking, "Expected _useSingleChecking to be true");
                     Debug.Assert(requestedChunkSize == 1, $"Got requested chunk size of {requestedChunkSize} when single-chunking was on");
                     Debug.Assert(actualNumElementsGrabbed == 0, $"Expected actualNumElementsGrabbed == 0, instead it is {actualNumElementsGrabbed}");
                     Debug.Assert(destArray.Length == 1, $"Expected destArray to be of length 1, instead its length is {destArray.Length}");
 
-                    lock (_sharedLock) {
+                    lock (_sharedLock)
+                    {
                         if (_hasNoElementsLeft.Value)
                             return false;
 
-                        try {
-                            if (_sharedReader.MoveNext()) {
+                        try
+                        {
+                            if (_sharedReader.MoveNext())
+                            {
                                 _sharedIndex.Value = checked(_sharedIndex.Value + 1);
                                 destArray[0]
                                     = new KeyValuePair<long, TSource>(_sharedIndex.Value,
                                                                         _sharedReader.Current);
                                 actualNumElementsGrabbed = 1;
                                 return true;
-                            } else {
+                            }
+                            else
+                            {
                                 //if MoveNext() return false, we set the flag to inform other partitions
                                 _sourceDepleted.Value = true;
                                 _hasNoElementsLeft.Value = true;
                                 return false;
                             }
-                        } catch {
+                        }
+                        catch
+                        {
                             // On an exception, make sure that no additional items are hereafter enumerated
                             _sourceDepleted.Value = true;
                             _hasNoElementsLeft.Value = true;
@@ -663,16 +737,20 @@ namespace System.Collections.Concurrent {
                 /// true if we successfully reserved at least one element (up to #=requestedChunkSize)
                 /// false if all elements in the source collection have been reserved.
                 /// </returns>
-                internal bool GrabChunk_Buffered(KeyValuePair<long, TSource>[] destArray, int requestedChunkSize, ref int actualNumElementsGrabbed) {
+                internal bool GrabChunk_Buffered(KeyValuePair<long, TSource>[] destArray, int requestedChunkSize, ref int actualNumElementsGrabbed)
+                {
                     Debug.Assert(requestedChunkSize > 0);
                     Debug.Assert(!_useSingleChunking, "Did not expect to be in single-chunking mode");
 
                     TryCopyFromFillBuffer(destArray, requestedChunkSize, ref actualNumElementsGrabbed);
 
-                    if (actualNumElementsGrabbed == requestedChunkSize) {
+                    if (actualNumElementsGrabbed == requestedChunkSize)
+                    {
                         // that was easy.
                         return true;
-                    } else if (_sourceDepleted.Value) {
+                    }
+                    else if (_sourceDepleted.Value)
+                    {
                         // looks like we both reached the end of the fill buffer, and the source was depleted previously
                         // this means no more work to do for any other worker
                         _hasNoElementsLeft.Value = true;
@@ -684,14 +762,18 @@ namespace System.Collections.Concurrent {
                     //
                     //  now's the time to take the shared lock and enumerate
                     //
-                    lock (_sharedLock) {
-                        if (_sourceDepleted.Value) {
+                    lock (_sharedLock)
+                    {
+                        if (_sourceDepleted.Value)
+                        {
                             return (actualNumElementsGrabbed > 0);
                         }
 
-                        try {
+                        try
+                        {
                             // we need to make sure all array copiers are finished
-                            if (_activeCopiers > 0) {
+                            if (_activeCopiers > 0)
+                            {
                                 SpinWait sw = default;
                                 while (_activeCopiers > 0)
                                     sw.SpinOnce();
@@ -703,13 +785,17 @@ namespace System.Collections.Concurrent {
 
                             // We first fill up the requested # of elements in the caller's array
                             // continue from the where TryCopyFromFillBuffer() left off
-                            for (; actualNumElementsGrabbed < requestedChunkSize; actualNumElementsGrabbed++) {
-                                if (_sharedReader.MoveNext()) {
+                            for (; actualNumElementsGrabbed < requestedChunkSize; actualNumElementsGrabbed++)
+                            {
+                                if (_sharedReader.MoveNext())
+                                {
                                     _sharedIndex!.Value = checked(_sharedIndex.Value + 1);
                                     destArray[actualNumElementsGrabbed]
                                         = new KeyValuePair<long, TSource>(_sharedIndex.Value,
                                                                           _sharedReader.Current);
-                                } else {
+                                }
+                                else
+                                {
                                     //if MoveNext() return false, we set the flag to inform other partitions
                                     _sourceDepleted.Value = true;
                                     break;
@@ -723,14 +809,19 @@ namespace System.Collections.Concurrent {
                             // If the big buffer seems to be depleted, we will also fill that up while we are under the lock
                             // Note that this is the only place that _FillBufferCurrentPosition can be reset
                             if (_sourceDepleted.Value == false && localFillBufferRef != null &&
-                                _fillBufferCurrentPosition >= localFillBufferRef.Length) {
-                                for (int i = 0; i < localFillBufferRef.Length; i++) {
-                                    if (_sharedReader.MoveNext()) {
+                                _fillBufferCurrentPosition >= localFillBufferRef.Length)
+                            {
+                                for (int i = 0; i < localFillBufferRef.Length; i++)
+                                {
+                                    if (_sharedReader.MoveNext())
+                                    {
                                         _sharedIndex!.Value = checked(_sharedIndex.Value + 1);
                                         localFillBufferRef[i]
                                             = new KeyValuePair<long, TSource>(_sharedIndex.Value,
                                                                               _sharedReader.Current);
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         // No more elements left in the enumerator.
                                         // Record this, so that the next request can skip the lock
                                         _sourceDepleted.Value = true;
@@ -745,7 +836,9 @@ namespace System.Collections.Concurrent {
 
                                 _fillBufferCurrentPosition = 0;
                             }
-                        } catch {
+                        }
+                        catch
+                        {
                             // If an exception occurs, don't let the other enumerators try to enumerate.
                             // NOTE: this could instead throw an InvalidOperationException, but that would be unexpected
                             // and not helpful to the end user.  We know the root cause is being communicated already.)
@@ -758,8 +851,10 @@ namespace System.Collections.Concurrent {
                     return (actualNumElementsGrabbed > 0);
                 }
 
-                public void Dispose() {
-                    if (!_disposed) {
+                public void Dispose()
+                {
+                    if (!_disposed)
+                    {
                         _disposed = true;
                         _sharedReader.Dispose();
                     }
@@ -770,7 +865,8 @@ namespace System.Collections.Concurrent {
             /// Inherits from DynamicPartitionEnumerator_Abstract directly
             /// Provides customized implementation for: GrabNextChunk, HasNoElementsLeft, Current, Dispose
             /// </summary>
-            private sealed class InternalPartitionEnumerator : DynamicPartitionEnumerator_Abstract<TSource, IEnumerator<TSource>> {
+            private sealed class InternalPartitionEnumerator : DynamicPartitionEnumerator_Abstract<TSource, IEnumerator<TSource>>
+            {
                 //---- fields ----
                 //cached local copy of the current chunk
                 private KeyValuePair<long, TSource>[]? _localList; //defer allocating to avoid false sharing
@@ -789,12 +885,14 @@ namespace System.Collections.Concurrent {
                     SharedInt? activePartitionCount,
                     InternalPartitionEnumerable enumerable,
                     bool useSingleChunking)
-                    : base(sharedReader, sharedIndex, useSingleChunking) {
+                    : base(sharedReader, sharedIndex, useSingleChunking)
+                {
                     _hasNoElementsLeft = hasNoElementsLeft;
                     _enumerable = enumerable;
                     _activePartitionCount = activePartitionCount;
 
-                    if (_activePartitionCount != null) {
+                    if (_activePartitionCount != null)
+                    {
                         // If static partitioning, we need to increase the active partition count.
                         Interlocked.Increment(ref _activePartitionCount.Value);
                     }
@@ -810,15 +908,18 @@ namespace System.Collections.Concurrent {
                 /// true if we successfully reserved at least one element (up to #=requestedChunkSize)
                 /// false if all elements in the source collection have been reserved.
                 /// </returns>
-                protected override bool GrabNextChunk(int requestedChunkSize) {
+                protected override bool GrabNextChunk(int requestedChunkSize)
+                {
                     Debug.Assert(requestedChunkSize > 0);
 
-                    if (HasNoElementsLeft) {
+                    if (HasNoElementsLeft)
+                    {
                         return false;
                     }
 
                     // defer allocation to avoid false sharing
-                    if (_localList == null) {
+                    if (_localList == null)
+                    {
                         _localList = new KeyValuePair<long, TSource>[_maxChunkSize];
                     }
 
@@ -835,14 +936,18 @@ namespace System.Collections.Concurrent {
                 /// or not, because we can't undo MoveNext(). Thus we need to maintain a shared
                 /// boolean value _hasNoElementsLeft across all partitions
                 /// </remarks>
-                protected override bool HasNoElementsLeft {
+                protected override bool HasNoElementsLeft
+                {
                     get { return _hasNoElementsLeft.Value; }
                 }
 
-                public override KeyValuePair<long, TSource> Current {
-                    get {
+                public override KeyValuePair<long, TSource> Current
+                {
+                    get
+                    {
                         //verify that MoveNext is at least called once before Current is called
-                        if (_currentChunkSize == null) {
+                        if (_currentChunkSize == null)
+                        {
                             throw new InvalidOperationException("Current called before ModeNext");
                         }
                         Debug.Assert(_localList != null);
@@ -851,10 +956,12 @@ namespace System.Collections.Concurrent {
                     }
                 }
 
-                public override void Dispose() {
+                public override void Dispose()
+                {
                     // If this is static partitioning, i.e. _activePartitionCount != null, since the current partition
                     // is disposed, we decrement the number of active partitions for the shared reader.
-                    if (_activePartitionCount != null && Interlocked.Decrement(ref _activePartitionCount.Value) == 0) {
+                    if (_activePartitionCount != null && Interlocked.Decrement(ref _activePartitionCount.Value) == 0)
+                    {
                         // If the number of active partitions becomes 0, we need to dispose the shared
                         // reader we created in the _enumerable object.
                         _enumerable.Dispose();
@@ -874,7 +981,8 @@ namespace System.Collections.Concurrent {
         /// </summary>
         /// <typeparam name="TSource">Type of the elements in the source data</typeparam>
         /// <typeparam name="TCollection"> Type of the source data collection</typeparam>
-        private abstract class DynamicPartitionerForIndexRange_Abstract<TSource, TCollection> : OrderablePartitioner<TSource> {
+        private abstract class DynamicPartitionerForIndexRange_Abstract<TSource, TCollection> : OrderablePartitioner<TSource>
+        {
             // TCollection can be: IList<TSource>, TSource[] and IEnumerable<TSource>
             // Derived classes specify TCollection, and implement the abstract method GetOrderableDynamicPartitions_Factory accordingly
             private readonly TCollection _data;
@@ -884,7 +992,8 @@ namespace System.Collections.Concurrent {
             /// </summary>
             /// <param name="data">source data collection</param>
             protected DynamicPartitionerForIndexRange_Abstract(TCollection data)
-                : base(true, false, true) {
+                : base(true, false, true)
+            {
                 _data = data;
             }
 
@@ -901,14 +1010,17 @@ namespace System.Collections.Concurrent {
             /// </summary>
             /// <param name="partitionCount">number of partitions requested</param>
             /// <returns>A list containing <paramref name="partitionCount"/> enumerators.</returns>
-            public override IList<IEnumerator<KeyValuePair<long, TSource>>> GetOrderablePartitions(int partitionCount) {
-                if (partitionCount <= 0) {
+            public override IList<IEnumerator<KeyValuePair<long, TSource>>> GetOrderablePartitions(int partitionCount)
+            {
+                if (partitionCount <= 0)
+                {
                     throw new ArgumentOutOfRangeException(nameof(partitionCount));
                 }
                 IEnumerator<KeyValuePair<long, TSource>>[] partitions
                     = new IEnumerator<KeyValuePair<long, TSource>>[partitionCount];
                 IEnumerable<KeyValuePair<long, TSource>> partitionEnumerable = GetOrderableDynamicPartitions_Factory(_data);
-                for (int i = 0; i < partitionCount; i++) {
+                for (int i = 0; i < partitionCount; i++)
+                {
                     partitions[i] = partitionEnumerable.GetEnumerator();
                 }
                 return partitions;
@@ -918,14 +1030,16 @@ namespace System.Collections.Concurrent {
             /// Overrides OrderablePartitioner.GetOrderableDynamicPartitions
             /// </summary>
             /// <returns>a enumerable collection of orderable partitions</returns>
-            public override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions() {
+            public override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions()
+            {
                 return GetOrderableDynamicPartitions_Factory(_data);
             }
 
             /// <summary>
             /// Whether additional partitions can be created dynamically.
             /// </summary>
-            public override bool SupportsDynamicPartitions {
+            public override bool SupportsDynamicPartitions
+            {
                 get { return true; }
             }
         }
@@ -940,13 +1054,15 @@ namespace System.Collections.Concurrent {
         /// </summary>
         /// <typeparam name="TSource">Type of the elements in the data source</typeparam>
         /// <typeparam name="TSourceReader">Type of the reader on the source data</typeparam>
-        private abstract class DynamicPartitionEnumeratorForIndexRange_Abstract<TSource, TSourceReader> : DynamicPartitionEnumerator_Abstract<TSource, TSourceReader> {
+        private abstract class DynamicPartitionEnumeratorForIndexRange_Abstract<TSource, TSourceReader> : DynamicPartitionEnumerator_Abstract<TSource, TSourceReader>
+        {
             //fields
             protected int _startIndex; //initially zero
 
             //constructor
             protected DynamicPartitionEnumeratorForIndexRange_Abstract(TSourceReader sharedReader, SharedLong sharedIndex)
-                : base(sharedReader, sharedIndex) {
+                : base(sharedReader, sharedIndex)
+            {
             }
 
             //abstract methods
@@ -969,15 +1085,18 @@ namespace System.Collections.Concurrent {
             /// true if we successfully reserved at least one element (up to #=requestedChunkSize)
             /// false if all elements in the source collection have been reserved.
             /// </returns>
-            protected override bool GrabNextChunk(int requestedChunkSize) {
+            protected override bool GrabNextChunk(int requestedChunkSize)
+            {
                 Debug.Assert(requestedChunkSize > 0);
 
-                while (!HasNoElementsLeft) {
+                while (!HasNoElementsLeft)
+                {
                     Debug.Assert(_sharedIndex != null);
                     // use the new Volatile.Read method because it is cheaper than Interlocked.Read on AMD64 architecture
                     long oldSharedIndex = Volatile.Read(ref _sharedIndex!.Value);
 
-                    if (HasNoElementsLeft) {
+                    if (HasNoElementsLeft)
+                    {
                         //HasNoElementsLeft situation changed from false to true immediately
                         //and oldSharedIndex becomes stale
                         return false;
@@ -991,7 +1110,8 @@ namespace System.Collections.Concurrent {
                     //the following CAS, if successful, reserves a chunk of elements [oldSharedIndex+1, newSharedIndex]
                     //inclusive in the source collection
                     if (Interlocked.CompareExchange(ref _sharedIndex.Value, newSharedIndex, oldSharedIndex)
-                        == oldSharedIndex) {
+                        == oldSharedIndex)
+                    {
                         //set up local indexes.
                         //_currentChunkSize is always set to requestedChunkSize when source data had
                         //enough elements of what we requested
@@ -1009,8 +1129,10 @@ namespace System.Collections.Concurrent {
             /// Returns whether or not the shared reader has already read the last
             /// element of the source data
             /// </summary>
-            protected override bool HasNoElementsLeft {
-                get {
+            protected override bool HasNoElementsLeft
+            {
+                get
+                {
                     Debug.Assert(_sharedIndex != null);
                     // use the new Volatile.Read method because it is cheaper than Interlocked.Read on AMD64 architecture
                     return Volatile.Read(ref _sharedIndex!.Value) >= SourceCount - 1;
@@ -1031,13 +1153,15 @@ namespace System.Collections.Concurrent {
         /// of EnumerableOfPartitionsForIList defined internally
         /// </summary>
         /// <typeparam name="TSource">Type of elements in the source data</typeparam>
-        private sealed class DynamicPartitionerForIList<TSource> : DynamicPartitionerForIndexRange_Abstract<TSource, IList<TSource>> {
+        private sealed class DynamicPartitionerForIList<TSource> : DynamicPartitionerForIndexRange_Abstract<TSource, IList<TSource>>
+        {
             //constructor
             internal DynamicPartitionerForIList(IList<TSource> source)
                 : base(source) { }
 
             //override methods
-            protected override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions_Factory(IList<TSource> _data) {
+            protected override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions_Factory(IList<TSource> _data)
+            {
                 //_data itself serves as shared reader
                 return new InternalPartitionEnumerable(_data);
             }
@@ -1046,21 +1170,25 @@ namespace System.Collections.Concurrent {
             /// Inherits from PartitionList_Abstract
             /// Provides customized implementation for source data of IList
             /// </summary>
-            private sealed class InternalPartitionEnumerable : IEnumerable<KeyValuePair<long, TSource>> {
+            private sealed class InternalPartitionEnumerable : IEnumerable<KeyValuePair<long, TSource>>
+            {
                 //reader through which we access the source data
                 private readonly IList<TSource> _sharedReader;
                 private readonly SharedLong _sharedIndex;
 
-                internal InternalPartitionEnumerable(IList<TSource> sharedReader) {
+                internal InternalPartitionEnumerable(IList<TSource> sharedReader)
+                {
                     _sharedReader = sharedReader;
                     _sharedIndex = new SharedLong(-1);
                 }
 
-                public IEnumerator<KeyValuePair<long, TSource>> GetEnumerator() {
+                public IEnumerator<KeyValuePair<long, TSource>> GetEnumerator()
+                {
                     return new InternalPartitionEnumerator(_sharedReader, _sharedIndex);
                 }
 
-                IEnumerator IEnumerable.GetEnumerator() {
+                IEnumerator IEnumerable.GetEnumerator()
+                {
                     return ((InternalPartitionEnumerable)this).GetEnumerator();
                 }
             }
@@ -1069,22 +1197,27 @@ namespace System.Collections.Concurrent {
             /// Inherits from DynamicPartitionEnumeratorForIndexRange_Abstract
             /// Provides customized implementation of SourceCount property and Current property for IList
             /// </summary>
-            private sealed class InternalPartitionEnumerator : DynamicPartitionEnumeratorForIndexRange_Abstract<TSource, IList<TSource>> {
+            private sealed class InternalPartitionEnumerator : DynamicPartitionEnumeratorForIndexRange_Abstract<TSource, IList<TSource>>
+            {
                 //constructor
                 internal InternalPartitionEnumerator(IList<TSource> sharedReader, SharedLong sharedIndex)
                     : base(sharedReader, sharedIndex) { }
 
                 //overriding methods
-                protected override int SourceCount {
+                protected override int SourceCount
+                {
                     get { return _sharedReader.Count; }
                 }
                 /// <summary>
                 /// return a KeyValuePair of the current element and its key
                 /// </summary>
-                public override KeyValuePair<long, TSource> Current {
-                    get {
+                public override KeyValuePair<long, TSource> Current
+                {
+                    get
+                    {
                         //verify that MoveNext is at least called once before Current is called
-                        if (_currentChunkSize == null) {
+                        if (_currentChunkSize == null)
+                        {
                             throw new InvalidOperationException("Current called before MoveNext");
                         }
 
@@ -1104,13 +1237,15 @@ namespace System.Collections.Concurrent {
         /// of EnumerableOfPartitionsForArray defined internally
         /// </summary>
         /// <typeparam name="TSource">Type of elements in the source data</typeparam>
-        private sealed class DynamicPartitionerForArray<TSource> : DynamicPartitionerForIndexRange_Abstract<TSource, TSource[]> {
+        private sealed class DynamicPartitionerForArray<TSource> : DynamicPartitionerForIndexRange_Abstract<TSource, TSource[]>
+        {
             //constructor
             internal DynamicPartitionerForArray(TSource[] source)
                 : base(source) { }
 
             //override methods
-            protected override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions_Factory(TSource[] _data) {
+            protected override IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions_Factory(TSource[] _data)
+            {
                 return new InternalPartitionEnumerable(_data);
             }
 
@@ -1118,22 +1253,26 @@ namespace System.Collections.Concurrent {
             /// Inherits from PartitionList_Abstract
             /// Provides customized implementation for source data of Array
             /// </summary>
-            private sealed class InternalPartitionEnumerable : IEnumerable<KeyValuePair<long, TSource>> {
+            private sealed class InternalPartitionEnumerable : IEnumerable<KeyValuePair<long, TSource>>
+            {
                 //reader through which we access the source data
                 private readonly TSource[] _sharedReader;
                 private readonly SharedLong _sharedIndex;
 
-                internal InternalPartitionEnumerable(TSource[] sharedReader) {
+                internal InternalPartitionEnumerable(TSource[] sharedReader)
+                {
                     _sharedReader = sharedReader;
                     _sharedIndex = new SharedLong(-1);
                 }
 
-                IEnumerator IEnumerable.GetEnumerator() {
+                IEnumerator IEnumerable.GetEnumerator()
+                {
                     return ((InternalPartitionEnumerable)this).GetEnumerator();
                 }
 
 
-                public IEnumerator<KeyValuePair<long, TSource>> GetEnumerator() {
+                public IEnumerator<KeyValuePair<long, TSource>> GetEnumerator()
+                {
                     return new InternalPartitionEnumerator(_sharedReader, _sharedIndex);
                 }
             }
@@ -1142,20 +1281,25 @@ namespace System.Collections.Concurrent {
             /// Inherits from DynamicPartitionEnumeratorForIndexRange_Abstract
             /// Provides customized implementation of SourceCount property and Current property for Array
             /// </summary>
-            private sealed class InternalPartitionEnumerator : DynamicPartitionEnumeratorForIndexRange_Abstract<TSource, TSource[]> {
+            private sealed class InternalPartitionEnumerator : DynamicPartitionEnumeratorForIndexRange_Abstract<TSource, TSource[]>
+            {
                 //constructor
                 internal InternalPartitionEnumerator(TSource[] sharedReader, SharedLong sharedIndex)
                     : base(sharedReader, sharedIndex) { }
 
                 //overriding methods
-                protected override int SourceCount {
+                protected override int SourceCount
+                {
                     get { return _sharedReader.Length; }
                 }
 
-                public override KeyValuePair<long, TSource> Current {
-                    get {
+                public override KeyValuePair<long, TSource> Current
+                {
+                    get
+                    {
                         //verify that MoveNext is at least called once before Current is called
-                        if (_currentChunkSize == null) {
+                        if (_currentChunkSize == null)
+                        {
                             throw new InvalidOperationException("Current called before MoveNext");
                         }
 
@@ -1181,7 +1325,8 @@ namespace System.Collections.Concurrent {
         /// </summary>
         /// <typeparam name="TSource">type of the elements</typeparam>
         /// <typeparam name="TCollection">Type of the source data collection</typeparam>
-        private abstract class StaticIndexRangePartitioner<TSource, TCollection> : OrderablePartitioner<TSource> {
+        private abstract class StaticIndexRangePartitioner<TSource, TCollection> : OrderablePartitioner<TSource>
+        {
             protected StaticIndexRangePartitioner()
                 : base(true, true, true) { }
 
@@ -1218,8 +1363,10 @@ namespace System.Collections.Concurrent {
             /// </summary>
             /// <param name="partitionCount">specified number of partitions</param>
             /// <returns>a list of partitions</returns>
-            public override IList<IEnumerator<KeyValuePair<long, TSource>>> GetOrderablePartitions(int partitionCount) {
-                if (partitionCount <= 0) {
+            public override IList<IEnumerator<KeyValuePair<long, TSource>>> GetOrderablePartitions(int partitionCount)
+            {
+                if (partitionCount <= 0)
+                {
                     throw new ArgumentOutOfRangeException(nameof(partitionCount));
                 }
 
@@ -1229,12 +1376,16 @@ namespace System.Collections.Concurrent {
 
                 IEnumerator<KeyValuePair<long, TSource>>[] partitions = new IEnumerator<KeyValuePair<long, TSource>>[partitionCount];
                 int lastEndIndex = -1;
-                for (int i = 0; i < partitionCount; i++) {
+                for (int i = 0; i < partitionCount; i++)
+                {
                     int startIndex = lastEndIndex + 1;
 
-                    if (i < remainder) {
+                    if (i < remainder)
+                    {
                         lastEndIndex = startIndex + quotient;
-                    } else {
+                    }
+                    else
+                    {
                         lastEndIndex = startIndex + quotient - 1;
                     }
                     partitions[i] = CreatePartition(startIndex, lastEndIndex);
@@ -1252,7 +1403,8 @@ namespace System.Collections.Concurrent {
         //We assume the source collection is not being updated concurrently. Otherwise it will break the
         //static partitioning, since each partition operates on the source collection directly, it does
         //not have a local cache of the elements assigned to them.
-        private abstract class StaticIndexRangePartition<TSource> : IEnumerator<KeyValuePair<long, TSource>> {
+        private abstract class StaticIndexRangePartition<TSource> : IEnumerator<KeyValuePair<long, TSource>>
+        {
             //the start and end position in the source collection for the current partition
             //the partition is empty if and only if
             // (_startIndex == _data.Count && _endIndex == _data.Count-1)
@@ -1267,7 +1419,8 @@ namespace System.Collections.Concurrent {
             /// </summary>
             /// <param name="startIndex">the start index in the source collection for the current partition </param>
             /// <param name="endIndex">the end index in the source collection for the current partition</param>
-            protected StaticIndexRangePartition(int startIndex, int endIndex) {
+            protected StaticIndexRangePartition(int startIndex, int endIndex)
+            {
                 _startIndex = startIndex;
                 _endIndex = endIndex;
                 _offset = startIndex - 1;
@@ -1284,7 +1437,8 @@ namespace System.Collections.Concurrent {
             /// </summary>
             public void Dispose() { }
 
-            public void Reset() {
+            public void Reset()
+            {
                 throw new NotSupportedException();
             }
 
@@ -1293,11 +1447,15 @@ namespace System.Collections.Concurrent {
             /// Before the first MoveNext is called: _offset == _startIndex-1;
             /// </summary>
             /// <returns>true if successful, false if there is no item left</returns>
-            public bool MoveNext() {
-                if (_offset < _endIndex) {
+            public bool MoveNext()
+            {
+                if (_offset < _endIndex)
+                {
                     _offset++;
                     return true;
-                } else {
+                }
+                else
+                {
                     //After we have enumerated over all elements, we set _offset to _endIndex +1.
                     //The reason we do this is, for an empty enumerator, we need to tell the Current
                     //property whether MoveNext has been called or not.
@@ -1309,8 +1467,10 @@ namespace System.Collections.Concurrent {
                 }
             }
 
-            object? IEnumerator.Current {
-                get {
+            object? IEnumerator.Current
+            {
+                get
+                {
                     return ((StaticIndexRangePartition<TSource>)this).Current;
                 }
             }
@@ -1323,17 +1483,21 @@ namespace System.Collections.Concurrent {
         /// Provides customized implementation of SourceCount and CreatePartition
         /// </summary>
         /// <typeparam name="TSource"></typeparam>
-        private sealed class StaticIndexRangePartitionerForIList<TSource> : StaticIndexRangePartitioner<TSource, IList<TSource>> {
+        private sealed class StaticIndexRangePartitionerForIList<TSource> : StaticIndexRangePartitioner<TSource, IList<TSource>>
+        {
             private readonly IList<TSource> _list;
             internal StaticIndexRangePartitionerForIList(IList<TSource> list)
-                : base() {
+                : base()
+            {
                 Debug.Assert(list != null);
                 _list = list!;
             }
-            protected override int SourceCount {
+            protected override int SourceCount
+            {
                 get { return _list.Count; }
             }
-            protected override IEnumerator<KeyValuePair<long, TSource>> CreatePartition(int startIndex, int endIndex) {
+            protected override IEnumerator<KeyValuePair<long, TSource>> CreatePartition(int startIndex, int endIndex)
+            {
                 return new StaticIndexRangePartitionForIList<TSource>(_list, startIndex, endIndex);
             }
         }
@@ -1343,20 +1507,25 @@ namespace System.Collections.Concurrent {
         /// Provides customized implementation of Current property
         /// </summary>
         /// <typeparam name="TSource"></typeparam>
-        private sealed class StaticIndexRangePartitionForIList<TSource> : StaticIndexRangePartition<TSource> {
+        private sealed class StaticIndexRangePartitionForIList<TSource> : StaticIndexRangePartition<TSource>
+        {
             //the source collection shared by all partitions
             private readonly IList<TSource> _list;
 
             internal StaticIndexRangePartitionForIList(IList<TSource> list, int startIndex, int endIndex)
-                : base(startIndex, endIndex) {
+                : base(startIndex, endIndex)
+            {
                 Debug.Assert(startIndex >= 0 && endIndex <= list.Count - 1);
                 _list = list;
             }
 
-            public override KeyValuePair<long, TSource> Current {
-                get {
+            public override KeyValuePair<long, TSource> Current
+            {
+                get
+                {
                     //verify that MoveNext is at least called once before Current is called
-                    if (_offset < _startIndex) {
+                    if (_offset < _startIndex)
+                    {
                         throw new InvalidOperationException("Current called before MoveNext");
                     }
 
@@ -1372,17 +1541,21 @@ namespace System.Collections.Concurrent {
         /// Inherits from StaticIndexRangePartitioner
         /// Provides customized implementation of SourceCount and CreatePartition for Array
         /// </summary>
-        private sealed class StaticIndexRangePartitionerForArray<TSource> : StaticIndexRangePartitioner<TSource, TSource[]> {
+        private sealed class StaticIndexRangePartitionerForArray<TSource> : StaticIndexRangePartitioner<TSource, TSource[]>
+        {
             private readonly TSource[] _array;
             internal StaticIndexRangePartitionerForArray(TSource[] array)
-                : base() {
+                : base()
+            {
                 Debug.Assert(array != null);
                 _array = array!;
             }
-            protected override int SourceCount {
+            protected override int SourceCount
+            {
                 get { return _array.Length; }
             }
-            protected override IEnumerator<KeyValuePair<long, TSource>> CreatePartition(int startIndex, int endIndex) {
+            protected override IEnumerator<KeyValuePair<long, TSource>> CreatePartition(int startIndex, int endIndex)
+            {
                 return new StaticIndexRangePartitionForArray<TSource>(_array, startIndex, endIndex);
             }
         }
@@ -1391,20 +1564,25 @@ namespace System.Collections.Concurrent {
         /// Inherits from StaticIndexRangePartitioner
         /// Provides customized implementation of SourceCount and CreatePartition
         /// </summary>
-        private sealed class StaticIndexRangePartitionForArray<TSource> : StaticIndexRangePartition<TSource> {
+        private sealed class StaticIndexRangePartitionForArray<TSource> : StaticIndexRangePartition<TSource>
+        {
             //the source collection shared by all partitions
             private readonly TSource[] _array;
 
             internal StaticIndexRangePartitionForArray(TSource[] array, int startIndex, int endIndex)
-                : base(startIndex, endIndex) {
+                : base(startIndex, endIndex)
+            {
                 Debug.Assert(startIndex >= 0 && endIndex <= array.Length - 1);
                 _array = array;
             }
 
-            public override KeyValuePair<long, TSource> Current {
-                get {
+            public override KeyValuePair<long, TSource> Current
+            {
+                get
+                {
                     //verify that MoveNext is at least called once before Current is called
-                    if (_offset < _startIndex) {
+                    if (_offset < _startIndex)
+                    {
                         throw new InvalidOperationException("Current called before MoveNext");
                     }
 
@@ -1420,10 +1598,12 @@ namespace System.Collections.Concurrent {
         /// <summary>
         /// A very simple primitive that allows us to share a value across multiple threads.
         /// </summary>
-        private sealed class SharedInt {
+        private sealed class SharedInt
+        {
             internal volatile int Value;
 
-            internal SharedInt(int value) {
+            internal SharedInt(int value)
+            {
                 Value = value;
             }
         }
@@ -1431,10 +1611,12 @@ namespace System.Collections.Concurrent {
         /// <summary>
         /// A very simple primitive that allows us to share a value across multiple threads.
         /// </summary>
-        private sealed class SharedBool {
+        private sealed class SharedBool
+        {
             internal volatile bool Value;
 
-            internal SharedBool(bool value) {
+            internal SharedBool(bool value)
+            {
                 Value = value;
             }
         }
@@ -1442,9 +1624,11 @@ namespace System.Collections.Concurrent {
         /// <summary>
         /// A very simple primitive that allows us to share a value across multiple threads.
         /// </summary>
-        private sealed class SharedLong {
+        private sealed class SharedLong
+        {
             internal long Value;
-            internal SharedLong(long value) {
+            internal SharedLong(long value)
+            {
                 Value = value;
             }
         }
@@ -1460,10 +1644,12 @@ namespace System.Collections.Concurrent {
         private const int DEFAULT_BYTES_PER_UNIT = 128;
         private const int DEFAULT_BYTES_PER_CHUNK = DEFAULT_BYTES_PER_UNIT * 4;
 
-        private static int GetDefaultChunkSize<TSource>() {
+        private static int GetDefaultChunkSize<TSource>()
+        {
             int chunkSize;
 
-            if (typeof(TSource).IsValueType) {
+            if (typeof(TSource).IsValueType)
+            {
                 // Marshal.SizeOf fails for value types that don't have explicit layouts. We
                 // just fall back to some arbitrary constant in that case. Is there a better way?
                 {
@@ -1471,7 +1657,9 @@ namespace System.Collections.Concurrent {
                     // the total bytes used will be a multiple of 128. This ensures it's cache aligned.
                     chunkSize = DEFAULT_BYTES_PER_UNIT;
                 }
-            } else {
+            }
+            else
+            {
                 Debug.Assert((DEFAULT_BYTES_PER_CHUNK % IntPtr.Size) == 0, "bytes per chunk should be a multiple of pointer size");
                 chunkSize = (DEFAULT_BYTES_PER_CHUNK / IntPtr.Size);
             }

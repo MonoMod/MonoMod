@@ -5,13 +5,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
-namespace MonoMod.Utils {
+namespace MonoMod.Utils
+{
     /// <summary>
     /// A DMDGenerator implementation using Mono.Cecil to build an in-memory assembly.
     /// </summary>
-    public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator> {
+    public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator>
+    {
 
-        protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
+        protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context)
+        {
             var def = dmd.Definition ?? throw new InvalidOperationException();
             var typeDef = context as TypeDefinition;
 
@@ -19,14 +22,17 @@ namespace MonoMod.Utils {
             var module = typeDef?.Module;
             HashSet<string>? accessChecksIgnored = null;
 
-            try {
-                if (typeDef is null || module is null) {
+            try
+            {
+                if (typeDef is null || module is null)
+                {
                     moduleIsTemporary = true;
 
                     var name = dmd.GetDumpName("Cecil");
 #pragma warning disable CA2000 // Dispose objects before losing scope
                     // This is disposed correctly, just not in a way the analyzer recognizes.
-                    module = ModuleDefinition.CreateModule(name, new ModuleParameters() {
+                    module = ModuleDefinition.CreateModule(name, new ModuleParameters()
+                    {
                         Kind = ModuleKind.Dll,
                         ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
                     });
@@ -36,7 +42,8 @@ namespace MonoMod.Utils {
 
                     module.Assembly.CustomAttributes.Add(new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_UnverifiableCodeAttribute)));
 
-                    if (dmd.Debug) {
+                    if (dmd.Debug)
+                    {
                         var caDebug = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_DebuggableAttribute));
                         caDebug.ConstructorArguments.Add(new CustomAttributeArgument(
                             module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
@@ -49,7 +56,8 @@ namespace MonoMod.Utils {
                         "",
                         $"DMD<{dmd.OriginalMethod?.Name?.Replace('.', '_')}>?{GetHashCode()}",
                         Mono.Cecil.TypeAttributes.Public | Mono.Cecil.TypeAttributes.Abstract | Mono.Cecil.TypeAttributes.Sealed | Mono.Cecil.TypeAttributes.Class
-                    ) {
+                    )
+                    {
                         BaseType = module.TypeSystem.Object
                     };
 
@@ -61,10 +69,12 @@ namespace MonoMod.Utils {
                 var tr_IsVolatile = new TypeReference("System.Runtime.CompilerServices", "IsVolatile", module, module.TypeSystem.CoreLibrary);
 
 #pragma warning disable IDE0039 // Use local function
-                Relinker relinker = (mtp, ctx) => {
+                Relinker relinker = (mtp, ctx) =>
+                {
                     if (mtp == def)
                         return clone!;
-                    if (mtp is MethodReference mr) {
+                    if (mtp is MethodReference mr)
+                    {
                         if (mr.FullName == def.FullName
                          && mr.DeclaringType.FullName == def.DeclaringType.FullName
                          && mr.DeclaringType.Scope.Name == def.DeclaringType.Scope.Name)
@@ -74,7 +84,8 @@ namespace MonoMod.Utils {
                 };
 #pragma warning restore IDE0039 // Use local function
 
-                clone = new MethodDefinition(dmd.Name ?? "_" + def.Name.Replace('.', '_'), def.Attributes, module.TypeSystem.Void) {
+                clone = new MethodDefinition(dmd.Name ?? "_" + def.Name.Replace('.', '_'), def.Attributes, module.TypeSystem.Void)
+                {
                     MethodReturnType = def.MethodReturnType,
                     Attributes = Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.HideBySig | Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
                     ImplAttributes = Mono.Cecil.MethodImplAttributes.IL | Mono.Cecil.MethodImplAttributes.Managed,
@@ -99,15 +110,19 @@ namespace MonoMod.Utils {
                     if (handler.CatchType != null)
                         handler.CatchType = handler.CatchType.Relink(relinker, clone);
 
-                for (var instri = 0; instri < body.Instructions.Count; instri++) {
+                for (var instri = 0; instri < body.Instructions.Count; instri++)
+                {
                     var instr = body.Instructions[instri];
                     var operand = instr.Operand;
 
                     // Import references.
-                    if (operand is ParameterDefinition param) {
+                    if (operand is ParameterDefinition param)
+                    {
                         operand = clone.Parameters[param.Index];
 
-                    } else if (operand is IMetadataTokenProvider mtp) {
+                    }
+                    else if (operand is IMetadataTokenProvider mtp)
+                    {
                         operand = mtp.Relink(relinker, clone);
 
                     }
@@ -127,13 +142,16 @@ namespace MonoMod.Utils {
                         fref.FieldType = new RequiredModifierType(tr_IsVolatile, fref.FieldType);
                     }*/
 
-                    if (operand is DynamicMethodReference dmref) {
+                    if (operand is DynamicMethodReference dmref)
+                    {
                         // TODO: Fix up DynamicMethod inline refs.
                     }
 
-                    if (accessChecksIgnored != null && operand is MemberReference mref) {
+                    if (accessChecksIgnored != null && operand is MemberReference mref)
+                    {
                         var asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
-                        if (!accessChecksIgnored.Contains(asmRef.Name)) {
+                        if (!accessChecksIgnored.Contains(asmRef.Name))
+                        {
                             var caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
                             caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
                                 module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
@@ -149,7 +167,8 @@ namespace MonoMod.Utils {
 
                 clone.HasThis = false;
 
-                if (def.HasThis) {
+                if (def.HasThis)
+                {
                     TypeReference type = def.DeclaringType;
                     if (type.IsValueType)
                         type = new ByReferenceType(type);
@@ -157,7 +176,8 @@ namespace MonoMod.Utils {
                 }
 
                 var envDmdDump = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
-                if (!string.IsNullOrEmpty(envDmdDump)) {
+                if (!string.IsNullOrEmpty(envDmdDump))
+                {
                     var dir = Path.GetFullPath(envDmdDump);
                     var name = module.Name + ".dll";
                     var path = Path.Combine(dir, name);
@@ -176,7 +196,9 @@ namespace MonoMod.Utils {
                     .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
                     ?? throw new InvalidOperationException("Could not find generated method");
 
-            } finally {
+            }
+            finally
+            {
                 if (moduleIsTemporary)
                     module!.Dispose();
                 module = null;

@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace MonoMod.ModInterop {
-    public static class ModInteropManager {
+namespace MonoMod.ModInterop
+{
+    public static class ModInteropManager
+    {
 
         private static HashSet<Type> Registered = new HashSet<Type>();
 
@@ -13,7 +15,8 @@ namespace MonoMod.ModInterop {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
             Justification = "The exception is swallowed so taht it can try the next.")]
-        public static void ModInterop(this Type type) {
+        public static void ModInterop(this Type type)
+        {
             Helpers.ThrowIfArgumentNull(type);
 
             if (Registered.Contains(type))
@@ -21,35 +24,44 @@ namespace MonoMod.ModInterop {
             Registered.Add(type);
 
             var prefix = type.Assembly.GetName().Name;
-            foreach (ModExportNameAttribute attrib in type.GetCustomAttributes(typeof(ModExportNameAttribute), false)) {
+            foreach (ModExportNameAttribute attrib in type.GetCustomAttributes(typeof(ModExportNameAttribute), false))
+            {
                 prefix = attrib.Name;
             }
 
             // Collect fields and methods in the type.
-            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
                 if (!typeof(Delegate).IsAssignableFrom(field.FieldType))
                     continue;
                 Fields.Add(field);
             }
-            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
+            {
                 method.RegisterModExport();
                 method.RegisterModExport(prefix);
             }
 
             // Refresh all existing fields and methods.
-            foreach (var field in Fields) {
-                if (!Methods.TryGetValue(field.GetModImportName(), out var methods)) {
+            foreach (var field in Fields)
+            {
+                if (!Methods.TryGetValue(field.GetModImportName(), out var methods))
+                {
                     field.SetValue(null, null);
                     continue;
                 }
                 // Set the field to the first matching method, or null.
                 var matched = false;
-                foreach (var method in methods) {
-                    try {
+                foreach (var method in methods)
+                {
+                    try
+                    {
                         field.SetValue(null, Delegate.CreateDelegate(field.FieldType, null, method));
                         matched = true;
                         break;
-                    } catch {
+                    }
+                    catch
+                    {
                         // Silently try the next method with the same name.
                     }
                 }
@@ -58,7 +70,8 @@ namespace MonoMod.ModInterop {
             }
         }
 
-        public static void RegisterModExport(this MethodInfo method, string? prefix = null) {
+        public static void RegisterModExport(this MethodInfo method, string? prefix = null)
+        {
             Helpers.ThrowIfArgumentNull(method);
             if (!method.IsPublic || !method.IsStatic)
                 throw new MemberAccessException("Utility must be public static");
@@ -73,13 +86,17 @@ namespace MonoMod.ModInterop {
                 methods.Add(method);
         }
 
-        private static string GetModImportName(this FieldInfo field) {
-            foreach (ModImportNameAttribute attrib in field.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
+        private static string GetModImportName(this FieldInfo field)
+        {
+            foreach (ModImportNameAttribute attrib in field.GetCustomAttributes(typeof(ModImportNameAttribute), false))
+            {
                 return attrib.Name;
             }
 
-            if (field.DeclaringType is not null) {
-                foreach (ModImportNameAttribute attrib in field.DeclaringType.GetCustomAttributes(typeof(ModImportNameAttribute), false)) {
+            if (field.DeclaringType is not null)
+            {
+                foreach (ModImportNameAttribute attrib in field.DeclaringType.GetCustomAttributes(typeof(ModImportNameAttribute), false))
+                {
                     return attrib.Name + "." + field.Name;
                 }
             }

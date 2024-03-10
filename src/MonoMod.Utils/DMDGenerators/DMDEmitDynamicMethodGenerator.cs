@@ -4,8 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace MonoMod.Utils {
-    public sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator> {
+namespace MonoMod.Utils
+{
+    public sealed class DMDEmitDynamicMethodGenerator : DMDGenerator<DMDEmitDynamicMethodGenerator>
+    {
 
         private static readonly FieldInfo _DynamicMethod_returnType =
             typeof(DynamicMethod).GetField("returnType", BindingFlags.NonPublic | BindingFlags.Instance) ??
@@ -13,35 +15,45 @@ namespace MonoMod.Utils {
             typeof(DynamicMethod).GetField("m_returnType", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Cannot find returnType field on DynamicMethod");
 
-        protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context) {
+        protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context)
+        {
             var orig = dmd.OriginalMethod;
             var def = dmd.Definition ?? throw new InvalidOperationException();
 
             Type[] argTypes;
 
-            if (orig != null) {
+            if (orig != null)
+            {
                 var args = orig.GetParameters();
                 var offs = 0;
-                if (!orig.IsStatic) {
+                if (!orig.IsStatic)
+                {
                     offs++;
                     argTypes = new Type[args.Length + 1];
                     argTypes[0] = orig.GetThisParamType();
-                } else {
+                }
+                else
+                {
                     argTypes = new Type[args.Length];
                 }
                 for (var i = 0; i < args.Length; i++)
                     argTypes[i + offs] = args[i].ParameterType;
 
-            } else {
+            }
+            else
+            {
                 var offs = 0;
-                if (def.HasThis) {
+                if (def.HasThis)
+                {
                     offs++;
                     argTypes = new Type[def.Parameters.Count + 1];
                     var type = def.DeclaringType.ResolveReflection();
                     if (type.IsValueType)
                         type = type.MakeByRefType();
                     argTypes[0] = type;
-                } else {
+                }
+                else
+                {
                     argTypes = new Type[def.Parameters.Count];
                 }
                 for (var i = 0; i < def.Parameters.Count; i++)

@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace System.Runtime.CompilerServices {
+namespace System.Runtime.CompilerServices
+{
     /// <summary>
     /// Used to indicate to the compiler that a method should be called
     /// in its containing module's initializer.
@@ -23,8 +24,10 @@ namespace System.Runtime.CompilerServices {
     /// https://github.com/dotnet/runtime/blob/main/docs/design/specs/Ecma-335-Augments.md#module-initializer
     /// </remarks>
     [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-    public sealed class ModuleInitializerAttribute : Attribute {
-        public ModuleInitializerAttribute() {
+    public sealed class ModuleInitializerAttribute : Attribute
+    {
+        public ModuleInitializerAttribute()
+        {
         }
     }
 }

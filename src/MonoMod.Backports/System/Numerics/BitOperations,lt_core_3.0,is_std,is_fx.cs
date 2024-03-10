@@ -10,13 +10,15 @@ using System.Runtime.InteropServices;
 // Some routines inspired by the Stanford Bit Twiddling Hacks by Sean Eron Anderson:
 // http://graphics.stanford.edu/~seander/bithacks.html
 
-namespace System.Numerics {
+namespace System.Numerics
+{
     /// <summary>
     /// Utility methods for intrinsic bit-twiddling operations.
     /// The methods use hardware intrinsics when available on the underlying platform,
     /// otherwise they use optimized software fallbacks.
     /// </summary>
-    public static class BitOperations {
+    public static class BitOperations
+    {
         // C# no-alloc optimization that directly wraps the data section of the dll (similar to string constants)
         // https://github.com/dotnet/roslyn/pull/24621
 
@@ -43,9 +45,11 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int LeadingZeroCount(uint value) {
+        public static int LeadingZeroCount(uint value)
+        {
             // Unguarded fallback contract is 0->31, BSR contract is 0->undefined
-            if (value == 0) {
+            if (value == 0)
+            {
                 return 32;
             }
 
@@ -59,10 +63,12 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int LeadingZeroCount(ulong value) {
+        public static int LeadingZeroCount(ulong value)
+        {
             uint hi = (uint)(value >> 32);
 
-            if (hi == 0) {
+            if (hi == 0)
+            {
                 return 32 + LeadingZeroCount((uint)value);
             }
 
@@ -76,7 +82,8 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int Log2(uint value) {
+        public static int Log2(uint value)
+        {
             // The 0->0 contract is fulfilled by setting the LSB to 1.
             // Log(1) is 0, and setting the LSB for values > 1 does not change the log2 result.
             value |= 1;
@@ -92,12 +99,14 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int Log2(ulong value) {
+        public static int Log2(ulong value)
+        {
             value |= 1;
 
             uint hi = (uint)(value >> 32);
 
-            if (hi == 0) {
+            if (hi == 0)
+            {
                 return Log2((uint)value);
             }
 
@@ -110,7 +119,8 @@ namespace System.Numerics {
         /// Does not directly use any hardware intrinsics, nor does it incur branching.
         /// </summary>
         /// <param name="value">The value.</param>
-        private static int Log2SoftwareFallback(uint value) {
+        private static int Log2SoftwareFallback(uint value)
+        {
             // No AggressiveInlining due to large method size
             // Has conventional contract 0->0 (Log(0) is undefined)
 
@@ -132,9 +142,11 @@ namespace System.Numerics {
         /// <summary>Returns the integer (ceiling) log of the specified value, base 2.</summary>
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int Log2Ceiling(uint value) {
+        internal static int Log2Ceiling(uint value)
+        {
             int result = Log2(value);
-            if (PopCount(value) != 1) {
+            if (PopCount(value) != 1)
+            {
                 result++;
             }
             return result;
@@ -143,9 +155,11 @@ namespace System.Numerics {
         /// <summary>Returns the integer (ceiling) log of the specified value, base 2.</summary>
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int Log2Ceiling(ulong value) {
+        internal static int Log2Ceiling(ulong value)
+        {
             int result = Log2(value);
-            if (PopCount(value) != 1) {
+            if (PopCount(value) != 1)
+            {
                 result++;
             }
             return result;
@@ -158,10 +172,12 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int PopCount(uint value) {
+        public static int PopCount(uint value)
+        {
             return SoftwareFallback(value);
 
-            static int SoftwareFallback(uint value) {
+            static int SoftwareFallback(uint value)
+            {
                 const uint c1 = 0x_55555555u;
                 const uint c2 = 0x_33333333u;
                 const uint c3 = 0x_0F0F0F0Fu;
@@ -182,15 +198,20 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int PopCount(ulong value) {
-            if (IntPtr.Size == 8) {
+        public static int PopCount(ulong value)
+        {
+            if (IntPtr.Size == 8)
+            {
                 return PopCount((uint)value) // lo
                     + PopCount((uint)(value >> 32)); // hi
-            } else {
+            }
+            else
+            {
                 return SoftwareFallback(value);
             }
 
-            static int SoftwareFallback(ulong value) {
+            static int SoftwareFallback(ulong value)
+            {
                 const ulong c1 = 0x_55555555_55555555ul;
                 const ulong c2 = 0x_33333333_33333333ul;
                 const ulong c3 = 0x_0F0F0F0F_0F0F0F0Ful;
@@ -220,9 +241,11 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [CLSCompliant(false)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int TrailingZeroCount(uint value) {
+        public static int TrailingZeroCount(uint value)
+        {
             // Unguarded fallback contract is 0->0, BSF contract is 0->undefined
-            if (value == 0) {
+            if (value == 0)
+            {
                 return 32;
             }
 
@@ -250,10 +273,12 @@ namespace System.Numerics {
         /// <param name="value">The value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [CLSCompliant(false)]
-        public static int TrailingZeroCount(ulong value) {
+        public static int TrailingZeroCount(ulong value)
+        {
             uint lo = (uint)value;
 
-            if (lo == 0) {
+            if (lo == 0)
+            {
                 return 32 + TrailingZeroCount((uint)(value >> 32));
             }
 
@@ -316,7 +341,8 @@ namespace System.Numerics {
         /// Reset the lowest significant bit in the given value
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static uint ResetLowestSetBit(uint value) {
+        internal static uint ResetLowestSetBit(uint value)
+        {
             // It's lowered to BLSR on x86
             return value & (value - 1);
         }
@@ -325,7 +351,8 @@ namespace System.Numerics {
         /// Reset specific bit in the given value
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static uint ResetBit(uint value, int bitPos) {
+        internal static uint ResetBit(uint value, int bitPos)
+        {
             // TODO: Recognize BTR on x86 and LSL+BIC on ARM
             return value & ~(uint)(1 << bitPos);
         }

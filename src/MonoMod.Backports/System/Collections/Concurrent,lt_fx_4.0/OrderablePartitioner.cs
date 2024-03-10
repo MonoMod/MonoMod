@@ -13,7 +13,8 @@
 
 using System.Collections.Generic;
 
-namespace System.Collections.Concurrent {
+namespace System.Collections.Concurrent
+{
     /// <summary>
     /// Represents a particular manner of splitting an orderable data source into multiple partitions.
     /// </summary>
@@ -57,7 +58,8 @@ namespace System.Collections.Concurrent {
     /// </ol>
     /// </para>
     /// </remarks>
-    public abstract class OrderablePartitioner<TSource> : Partitioner<TSource> {
+    public abstract class OrderablePartitioner<TSource> : Partitioner<TSource>
+    {
         /// <summary>
         /// Initializes a new instance of the <see cref="OrderablePartitioner{TSource}"/> class with the
         /// specified constraints on the index keys.
@@ -77,7 +79,8 @@ namespace System.Collections.Concurrent {
         /// integers in the range [0 .. numberOfElements-1]. If false, order keys must still be distinct, but
         /// only their relative order is considered, not their absolute values.
         /// </param>
-        protected OrderablePartitioner(bool keysOrderedInEachPartition, bool keysOrderedAcrossPartitions, bool keysNormalized) {
+        protected OrderablePartitioner(bool keysOrderedInEachPartition, bool keysOrderedAcrossPartitions, bool keysNormalized)
+        {
             KeysOrderedInEachPartition = keysOrderedInEachPartition;
             KeysOrderedAcrossPartitions = keysOrderedAcrossPartitions;
             KeysNormalized = keysNormalized;
@@ -120,7 +123,8 @@ namespace System.Collections.Concurrent {
         /// <returns>An object that can create partitions over the underlying data source.</returns>
         /// <exception cref="NotSupportedException">Dynamic partitioning is not supported by this
         /// partitioner.</exception>
-        public virtual IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions() {
+        public virtual IEnumerable<KeyValuePair<long, TSource>> GetOrderableDynamicPartitions()
+        {
             throw new NotSupportedException("Dynamic partitions not supported");
         }
 
@@ -158,15 +162,18 @@ namespace System.Collections.Concurrent {
         /// </remarks>
         /// <param name="partitionCount">The number of partitions to create.</param>
         /// <returns>A list containing <paramref name="partitionCount"/> enumerators.</returns>
-        public override IList<IEnumerator<TSource>> GetPartitions(int partitionCount) {
+        public override IList<IEnumerator<TSource>> GetPartitions(int partitionCount)
+        {
             IList<IEnumerator<KeyValuePair<long, TSource>>> orderablePartitions = GetOrderablePartitions(partitionCount);
 
-            if (orderablePartitions.Count != partitionCount) {
+            if (orderablePartitions.Count != partitionCount)
+            {
                 throw new InvalidOperationException("OrderablePartitioner_GetPartitions_WrongNumberOfPartitions");
             }
 
             IEnumerator<TSource>[] partitions = new IEnumerator<TSource>[partitionCount];
-            for (int i = 0; i < partitionCount; i++) {
+            for (int i = 0; i < partitionCount; i++)
+            {
                 partitions[i] = new EnumeratorDropIndices(orderablePartitions[i]);
             }
             return partitions;
@@ -196,7 +203,8 @@ namespace System.Collections.Concurrent {
         /// <returns>An object that can create partitions over the underlying data source.</returns>
         /// <exception cref="NotSupportedException">Dynamic partitioning is not supported by this
         /// partitioner.</exception>
-        public override IEnumerable<TSource> GetDynamicPartitions() {
+        public override IEnumerable<TSource> GetDynamicPartitions()
+        {
             IEnumerable<KeyValuePair<long, TSource>> orderablePartitions = GetOrderableDynamicPartitions();
             return new EnumerableDropIndices(orderablePartitions);
         }
@@ -204,46 +212,61 @@ namespace System.Collections.Concurrent {
         /// <summary>
         /// Converts an enumerable over key-value pairs to an enumerable over values.
         /// </summary>
-        private sealed class EnumerableDropIndices : IEnumerable<TSource>, IDisposable {
+        private sealed class EnumerableDropIndices : IEnumerable<TSource>, IDisposable
+        {
             private readonly IEnumerable<KeyValuePair<long, TSource>> _source;
-            public EnumerableDropIndices(IEnumerable<KeyValuePair<long, TSource>> source) {
+            public EnumerableDropIndices(IEnumerable<KeyValuePair<long, TSource>> source)
+            {
                 _source = source;
             }
-            public IEnumerator<TSource> GetEnumerator() {
+            public IEnumerator<TSource> GetEnumerator()
+            {
                 return new EnumeratorDropIndices(_source.GetEnumerator());
             }
-            IEnumerator IEnumerable.GetEnumerator() {
+            IEnumerator IEnumerable.GetEnumerator()
+            {
                 return ((EnumerableDropIndices)this).GetEnumerator();
             }
-            public void Dispose() {
-                if (_source is IDisposable d) {
+            public void Dispose()
+            {
+                if (_source is IDisposable d)
+                {
                     d.Dispose();
                 }
             }
         }
 
-        private sealed class EnumeratorDropIndices : IEnumerator<TSource> {
+        private sealed class EnumeratorDropIndices : IEnumerator<TSource>
+        {
             private readonly IEnumerator<KeyValuePair<long, TSource>> _source;
-            public EnumeratorDropIndices(IEnumerator<KeyValuePair<long, TSource>> source) {
+            public EnumeratorDropIndices(IEnumerator<KeyValuePair<long, TSource>> source)
+            {
                 _source = source;
             }
-            public bool MoveNext() {
+            public bool MoveNext()
+            {
                 return _source.MoveNext();
             }
-            public TSource Current {
-                get {
+            public TSource Current
+            {
+                get
+                {
                     return _source.Current.Value;
                 }
             }
-            object? IEnumerator.Current {
-                get {
+            object? IEnumerator.Current
+            {
+                get
+                {
                     return ((EnumeratorDropIndices)this).Current;
                 }
             }
-            public void Dispose() {
+            public void Dispose()
+            {
                 _source.Dispose();
             }
-            public void Reset() {
+            public void Reset()
+            {
                 _source.Reset();
             }
         }

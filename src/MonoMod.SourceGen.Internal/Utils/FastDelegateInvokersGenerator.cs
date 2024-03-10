@@ -4,12 +4,15 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 
-namespace MonoMod.SourceGen.Internal.Utils {
+namespace MonoMod.SourceGen.Internal.Utils
+{
     [Generator]
-    public class FastDelegateInvokersGenerator : IIncrementalGenerator {
+    public class FastDelegateInvokersGenerator : IIncrementalGenerator
+    {
         private const string AttributeName = "MonoMod.Cil.GetFastDelegateInvokersArrayAttribute";
 
-        public void Initialize(IncrementalGeneratorInitializationContext context) {
+        public void Initialize(IncrementalGeneratorInitializationContext context)
+        {
             var methods = context.SyntaxProvider
                 .ForAttributeWithMetadataName(AttributeName,
                     (n, ct) => true,
@@ -26,7 +29,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
         }
 
         private sealed record GeneratorMethod(TypeContext Type, string MethodName, string Modifiers, int MaxArgs);
-        private void Execute(SourceProductionContext ctx, GeneratorMethod method) {
+        private void Execute(SourceProductionContext ctx, GeneratorMethod method)
+        {
             var sb = new StringBuilder();
             var builder = new CodeBuilder(sb);
             _ = builder.WriteHeader();
@@ -37,7 +41,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
 
         [SuppressMessage("Globalization", "CA1305:Specify IFormatProvider",
             Justification = "SourceGen is a Roslyn extension, not using specific localization settings for integers isn't that important.")]
-        private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod info, out string methodName) {
+        private static void BuildSourceFor(CodeBuilder builder, GeneratorMethod info, out string methodName)
+        {
             _ = builder.WriteLine("using BindingFlags = global::System.Reflection.BindingFlags;");
             _ = builder.WriteLine("using MethodInfo = global::System.Reflection.MethodInfo;");
             _ = builder.WriteLine("using Type = global::System.Type;");
@@ -55,7 +60,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
             _ = builder.WriteLine($"{ReturnType}[] {info.MethodName}() {{").IncreaseIndent();
 
             _ = builder.WriteLine($"var array = new {ReturnType}[{info.MaxArgs << 2}];");
-            for (var i = 0; i < (info.MaxArgs << 2); i++) {
+            for (var i = 0; i < (info.MaxArgs << 2); i++)
+            {
                 var name = ComputeNameForIdx(i);
                 _ = builder.Write($"array[{i}] = (").Write(selfTypeof).Write(".GetMethod(\"Invoke").Write(name)
                     .Write("\", BindingFlags.NonPublic | BindingFlags.Static)!, ")
@@ -77,7 +83,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
             _ = builder.WriteLine("#nullable disable").WriteLine();
 
             // now we generate the types and methods themselves
-            for (var i = 0; i < (info.MaxArgs << 2); i++) {
+            for (var i = 0; i < (info.MaxArgs << 2); i++)
+            {
                 var name = ComputeNameForIdx(i);
                 // generic parameters are TResult, T0, ...
                 var hasResult = (i & 1) != 0;
@@ -94,7 +101,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
                 genericArgsBuilder.Append("T0");
                 if (numRemaining > 0)
                     genericArgsBuilder.Append(", ");
-                for (var j = 0; j < numRemaining; j++) {
+                for (var j = 0; j < numRemaining; j++)
+                {
                     genericArgsBuilder.Append($"T{j + 1}");
                     if (j + 1 < numRemaining)
                         genericArgsBuilder.Append(", ");
@@ -106,7 +114,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
                 if (firstIsByRef)
                     _ = builder.Write("ref ");
 
-                for (var j = 0; j < numRemaining + 1; j++) {
+                for (var j = 0; j < numRemaining + 1; j++)
+                {
                     _ = builder.Write($"T{j} _{j}");
                     if (j < numRemaining)
                         _ = builder.Write(", ");
@@ -119,7 +128,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
                     .Write(genericArgs).Write('(');
                 if (firstIsByRef)
                     _ = builder.Write("ref ");
-                for (var j = 0; j < numRemaining + 1; j++) {
+                for (var j = 0; j < numRemaining + 1; j++)
+                {
                     _ = builder.Write($"T{j} _{j}, ");
                 }
                 // now the last arg, which is the delegate arg
@@ -128,7 +138,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
                     .IncreaseIndent().Write("=> Helpers.ThrowIfNull(del)(");
                 if (firstIsByRef)
                     builder.Write("ref ");
-                for (var j = 0; j < numRemaining + 1; j++) {
+                for (var j = 0; j < numRemaining + 1; j++)
+                {
                     _ = builder.Write($"_{j}");
                     if (j < numRemaining)
                         _ = builder.Write(", ");
@@ -142,7 +153,8 @@ namespace MonoMod.SourceGen.Internal.Utils {
             info.Type.AppendExitContext(builder);
         }
 
-        private static string ComputeNameForIdx(int idx) {
+        private static string ComputeNameForIdx(int idx)
+        {
             // this index is structured as follows (low to high bits)
             //     xyzzzzz...
             // x: has non-void return

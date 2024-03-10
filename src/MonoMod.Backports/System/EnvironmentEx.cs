@@ -6,8 +6,10 @@
 using System.Threading;
 #endif
 
-namespace System {
-    public static class EnvironmentEx {
+namespace System
+{
+    public static class EnvironmentEx
+    {
 
         public static int CurrentManagedThreadId
 #if HAS_CURRENTMANAGEDTHREADID

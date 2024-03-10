@@ -2,11 +2,13 @@
 using System;
 using System.Linq;
 
-namespace MonoMod.Core.Utils {
+namespace MonoMod.Core.Utils
+{
     /// <summary>
     /// A byte pattern which can be quickly matched, and extract an address.
     /// </summary>
-    public sealed class BytePattern {
+    public sealed class BytePattern
+    {
 
         private const ushort MaskMask = 0xFF00;
 
@@ -61,11 +63,13 @@ namespace MonoMod.Core.Utils {
         /// </summary>
         public bool MustMatchAtStart { get; }
 
-        private enum SegmentKind {
+        private enum SegmentKind
+        {
             Literal, MaskedLiteral, Any, AnyRepeating, Address,
         }
 
-        private record struct PatternSegment(int Start, int Length, SegmentKind Kind) {
+        private record struct PatternSegment(int Start, int Length, SegmentKind Kind)
+        {
             public ReadOnlySpan<T> SliceOf<T>(ReadOnlySpan<T> span) => span.Slice(Start, Length);
             public ReadOnlyMemory<T> SliceOf<T>(ReadOnlyMemory<T> mem) => mem.Slice(Start, Length);
         }
@@ -115,7 +119,8 @@ namespace MonoMod.Core.Utils {
         /// <param name="meaning">The <see cref="AddressMeaning"/>.</param>
         /// <param name="mustMatchAtStart"><see langword="true"/> if this pattern must match at the start of scanned data.</param>
         /// <param name="pattern">The pattern.</param>
-        public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<ushort> pattern) {
+        public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<ushort> pattern)
+        {
             AddressMeaning = meaning;
             MustMatchAtStart = mustMatchAtStart;
             (segments, MinLength, AddressBytes) = ComputeSegmentsFromShort(pattern);
@@ -124,7 +129,8 @@ namespace MonoMod.Core.Utils {
             var patternAlloc = new byte[pattern.Length * 2].AsMemory();
             var patternData = patternAlloc.Slice(0, pattern.Length);
             var bitmaskData = patternAlloc.Slice(pattern.Length);
-            for (var i = 0; i < pattern.Length; i++) {
+            for (var i = 0; i < pattern.Length; i++)
+            {
                 var @byte = pattern.Span[i];
                 var mask = (byte)((@byte & MaskMask) >> 8);
                 var data = (byte)(@byte & ~MaskMask);
@@ -161,7 +167,8 @@ namespace MonoMod.Core.Utils {
         /// <param name="mustMatchAtStart"><see langword="true"/> if this pattern must match at the start of scanned data.</param>
         /// <param name="mask">The bitmask to use to match against <paramref name="pattern"/>.</param>
         /// <param name="pattern">The pattern bytes.</param>
-        public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) {
+        public BytePattern(AddressMeaning meaning, bool mustMatchAtStart, ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern)
+        {
             AddressMeaning = meaning;
             MustMatchAtStart = mustMatchAtStart;
             (segments, MinLength, AddressBytes) = ComputeSegmentsFromMaskPattern(mask, pattern);
@@ -171,14 +178,18 @@ namespace MonoMod.Core.Utils {
 
         private readonly record struct ComputeSegmentsResult(PatternSegment[] Segments, int MinLen, int AddrBytes);
 
-        private unsafe static ComputeSegmentsResult ComputeSegmentsFromShort(ReadOnlyMemory<ushort> pattern) {
+        private unsafe static ComputeSegmentsResult ComputeSegmentsFromShort(ReadOnlyMemory<ushort> pattern)
+        {
             return ComputeSegmentsCore(&KindForShort, pattern.Length, pattern);
 
-            static SegmentKind KindForShort(ReadOnlyMemory<ushort> pattern, int idx) {
+            static SegmentKind KindForShort(ReadOnlyMemory<ushort> pattern, int idx)
+            {
                 var value = pattern.Span[idx];
-                return (value & MaskMask) switch {
+                return (value & MaskMask) switch
+                {
                     0x0000 => SegmentKind.Literal, // a normal literal
-                    MaskMask => (value & 0x00ff) switch { // a special value
+                    MaskMask => (value & 0x00ff) switch
+                    { // a special value
                         (BAnyValue) => SegmentKind.Any,
                         (BAnyRepeatingValue) => SegmentKind.AnyRepeating,
                         (BAddressValue) => SegmentKind.Address,
@@ -189,15 +200,19 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        private unsafe static ComputeSegmentsResult ComputeSegmentsFromMaskPattern(ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) {
+        private unsafe static ComputeSegmentsResult ComputeSegmentsFromMaskPattern(ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern)
+        {
             if (mask.Length < pattern.Length)
                 throw new ArgumentException("Mask buffer shorter than pattern", nameof(mask));
 
             return ComputeSegmentsCore(&KindForIdx, pattern.Length, (mask, pattern));
 
-            static SegmentKind KindForIdx((ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) t, int idx) {
-                return t.mask.Span[idx] switch {
-                    0x00 => t.pattern.Span[idx] switch { // the mask hides this byte, it means something special
+            static SegmentKind KindForIdx((ReadOnlyMemory<byte> mask, ReadOnlyMemory<byte> pattern) t, int idx)
+            {
+                return t.mask.Span[idx] switch
+                {
+                    0x00 => t.pattern.Span[idx] switch
+                    { // the mask hides this byte, it means something special
                         BAnyValue => SegmentKind.Any,
                         BAnyRepeatingValue => SegmentKind.AnyRepeating,
                         BAddressValue => SegmentKind.Address,
@@ -209,7 +224,8 @@ namespace MonoMod.Core.Utils {
             }
         }
 
-        private unsafe static ComputeSegmentsResult ComputeSegmentsCore<TPattern>(delegate*<TPattern, int, SegmentKind> kindForIdx, int patternLength, TPattern pattern) {
+        private unsafe static ComputeSegmentsResult ComputeSegmentsCore<TPattern>(delegate*<TPattern, int, SegmentKind> kindForIdx, int patternLength, TPattern pattern)
+        {
             if (patternLength == 0)
                 throw new ArgumentException("Pattern cannot be empty", nameof(pattern));
 
@@ -221,10 +237,12 @@ namespace MonoMod.Core.Utils {
             var minLength = 0;
             var firstSegmentStart = -1;
 
-            for (var i = 0; i < patternLength; i++) {
+            for (var i = 0; i < patternLength; i++)
+            {
                 var thisSegmentKind = kindForIdx(pattern, i);
 
-                minLength += thisSegmentKind switch {
+                minLength += thisSegmentKind switch
+                {
                     SegmentKind.Literal => 1,
                     SegmentKind.MaskedLiteral => 1,
                     SegmentKind.Any => 1,
@@ -233,12 +251,15 @@ namespace MonoMod.Core.Utils {
                     _ => 0,
                 };
 
-                if (thisSegmentKind != lastKind) {
+                if (thisSegmentKind != lastKind)
+                {
                     if (firstSegmentStart < 0)
                         firstSegmentStart = i;
                     segmentCount++;
                     segmentLength = 1;
-                } else {
+                }
+                else
+                {
                     segmentLength++;
                 }
 
@@ -248,12 +269,14 @@ namespace MonoMod.Core.Utils {
                 lastKind = thisSegmentKind;
             }
 
-            if (segmentCount > 0 && lastKind is SegmentKind.AnyRepeating) {
+            if (segmentCount > 0 && lastKind is SegmentKind.AnyRepeating)
+            {
                 // if we ended with an AnyRepeating, we want to decrement segmentCount, as we want to ignore trailing AnyRepeating
                 segmentCount--;
             }
 
-            if (segmentCount == 0 || minLength <= 0) {
+            if (segmentCount == 0 || minLength <= 0)
+            {
                 throw new ArgumentException("Pattern has no meaningful segments", nameof(pattern));
             }
 
@@ -263,14 +286,18 @@ namespace MonoMod.Core.Utils {
             lastKind = SegmentKind.AnyRepeating;
             segmentLength = 0;
 
-            for (var i = firstSegmentStart; i < patternLength && segmentCount <= segments.Length; i++) {
+            for (var i = firstSegmentStart; i < patternLength && segmentCount <= segments.Length; i++)
+            {
                 var thisSegmentKind = kindForIdx(pattern, i);
 
-                if (thisSegmentKind != lastKind) {
-                    if (segmentCount > 0) {
+                if (thisSegmentKind != lastKind)
+                {
+                    if (segmentCount > 0)
+                    {
                         segments[segmentCount - 1] = new(i - segmentLength, segmentLength, lastKind);
 
-                        if (segmentCount > 1 && lastKind is SegmentKind.Any && segments[segmentCount - 2].Kind is SegmentKind.AnyRepeating) {
+                        if (segmentCount > 1 && lastKind is SegmentKind.Any && segments[segmentCount - 2].Kind is SegmentKind.AnyRepeating)
+                        {
                             // if we have an Any after an AnyRepeating, swap them, so that we will always have a fixed-length address or a literal after an AnyRepeating
                             Helpers.Swap(ref segments[segmentCount - 2], ref segments[segmentCount - 1]);
                         }
@@ -278,14 +305,17 @@ namespace MonoMod.Core.Utils {
 
                     segmentCount++;
                     segmentLength = 1;
-                } else {
+                }
+                else
+                {
                     segmentLength++;
                 }
 
                 lastKind = thisSegmentKind;
             }
 
-            if (lastKind is not SegmentKind.AnyRepeating && segmentCount > 0) {
+            if (lastKind is not SegmentKind.AnyRepeating && segmentCount > 0)
+            {
                 segments[segmentCount - 1] = new(patternLength - segmentLength, segmentLength, lastKind);
             }
 
@@ -310,8 +340,10 @@ namespace MonoMod.Core.Utils {
         /// <param name="address">The address which is parsed out of the data.</param>
         /// <param name="length">The length of the matched pattern.</param>
         /// <returns><see langword="true"/> if <paramref name="data"/> matched at the start; <see langword="false"/> otherwise.</returns>
-        public bool TryMatchAt(ReadOnlySpan<byte> data, out ulong address, out int length) {
-            if (data.Length < MinLength) {
+        public bool TryMatchAt(ReadOnlySpan<byte> data, out ulong address, out int length)
+        {
+            if (data.Length < MinLength)
+            {
                 length = 0;
                 address = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
@@ -332,8 +364,10 @@ namespace MonoMod.Core.Utils {
         /// <param name="addrBuf">A buffer to write address bytes to.</param>
         /// <param name="length">The length of the matched pattern.</param>
         /// <returns><see langword="true"/> if <paramref name="data"/> matched at the start; <see langword="false"/> otherwise.</returns>
-        public bool TryMatchAt(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length) {
-            if (data.Length < MinLength) {
+        public bool TryMatchAt(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length)
+        {
+            if (data.Length < MinLength)
+            {
                 length = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
@@ -342,14 +376,18 @@ namespace MonoMod.Core.Utils {
             return TryMatchAtImpl(patternSpan, data, addrBuf, out length, 0);
         }
 
-        private bool TryMatchAtImpl(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length, int startAtSegment) {
+        private bool TryMatchAtImpl(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int length, int startAtSegment)
+        {
             var pos = 0;
             var segmentIdx = startAtSegment;
 
-            while (segmentIdx < segments.Length) {
+            while (segmentIdx < segments.Length)
+            {
                 var segment = segments[segmentIdx];
-                switch (segment.Kind) {
-                    case SegmentKind.Literal: {
+                switch (segment.Kind)
+                {
+                    case SegmentKind.Literal:
+                        {
                             if (data.Length - pos < segment.Length)
                                 goto NoMatch; // if we don't have enough space left for the match, then just fail out
 
@@ -362,7 +400,8 @@ namespace MonoMod.Core.Utils {
                             pos += segment.Length;
                             break;
                         }
-                    case SegmentKind.MaskedLiteral: {
+                    case SegmentKind.MaskedLiteral:
+                        {
                             if (data.Length - pos < segment.Length)
                                 goto NoMatch;
 
@@ -375,7 +414,8 @@ namespace MonoMod.Core.Utils {
                             pos += segment.Length;
                             break;
                         }
-                    case SegmentKind.Any: {
+                    case SegmentKind.Any:
+                        {
                             // this is easily the simplest pattern to match
                             // we just need to make sure that there's enough space left in the input
                             if (data.Length - pos < segment.Length)
@@ -383,7 +423,8 @@ namespace MonoMod.Core.Utils {
                             pos += segment.Length;
                             break;
                         }
-                    case SegmentKind.Address: {
+                    case SegmentKind.Address:
+                        {
                             // this is almost as simple as Any, we just *also* need to copy into the addrBuf
                             if (data.Length - pos < segment.Length)
                                 goto NoMatch;
@@ -395,7 +436,8 @@ namespace MonoMod.Core.Utils {
                             pos += segment.Length;
                             break;
                         }
-                    case SegmentKind.AnyRepeating: {
+                    case SegmentKind.AnyRepeating:
+                        {
                             // this is far and away the most difficult segment to process; we need to scan forward for the next 
                             // literal, then possibly back up some for Any or Address segments
 
@@ -435,8 +477,10 @@ namespace MonoMod.Core.Utils {
         /// <param name="offset">The offset within the span that the pattern matched at.</param>
         /// <param name="length">The length of the matched pattern.</param>
         /// <returns><see langword="true"/> if a match was found; <see langword="false"/> otherwise.</returns>
-        public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, out int offset, out int length) {
-            if (data.Length < MinLength) {
+        public bool TryFindMatch(ReadOnlySpan<byte> data, out ulong address, out int offset, out int length)
+        {
+            if (data.Length < MinLength)
+            {
                 length = offset = 0;
                 address = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
@@ -446,10 +490,13 @@ namespace MonoMod.Core.Utils {
 
             Span<byte> addr = stackalloc byte[sizeof(ulong)];
             bool result;
-            if (MustMatchAtStart) {
+            if (MustMatchAtStart)
+            {
                 offset = 0;
                 result = TryMatchAtImpl(patternSpan, data, addr, out length, 0);
-            } else {
+            }
+            else
+            {
                 result = ScanForNextLiteral(patternSpan, data, addr, out offset, out length, 0);
             }
             address = Unsafe.ReadUnaligned<ulong>(ref addr[0]);
@@ -464,40 +511,50 @@ namespace MonoMod.Core.Utils {
         /// <param name="offset">The offset within the span that the pattern matched at.</param>
         /// <param name="length">The length of the matched pattern.</param>
         /// <returns><see langword="true"/> if a match was found; <see langword="false"/> otherwise.</returns>
-        public bool TryFindMatch(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length) {
-            if (data.Length < MinLength) {
+        public bool TryFindMatch(ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length)
+        {
+            if (data.Length < MinLength)
+            {
                 length = offset = 0;
                 return false; // the input data is less than this pattern's minimum length, so it can't possibly match
             }
 
             var patternSpan = pattern.Span;
-            if (MustMatchAtStart) {
+            if (MustMatchAtStart)
+            {
                 offset = 0;
                 return TryMatchAtImpl(patternSpan, data, addrBuf, out length, 0);
-            } else {
+            }
+            else
+            {
                 return ScanForNextLiteral(patternSpan, data, addrBuf, out offset, out length, 0);
             }
         }
 
-        private bool ScanForNextLiteral(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length, int segmentIndex) {
+        private bool ScanForNextLiteral(ReadOnlySpan<byte> patternSpan, ReadOnlySpan<byte> data, Span<byte> addrBuf, out int offset, out int length, int segmentIndex)
+        {
             var (literalSegment, baseOffs) = GetNextLiteralSegment(segmentIndex);
-            if (baseOffs + literalSegment.Length > data.Length) {
+            if (baseOffs + literalSegment.Length > data.Length)
+            {
                 // we literally *cannot* match this data based on the segments, so fail out
                 offset = length = 0;
                 return false;
             }
 
             var scanOffsFromBase = 0;
-            do {
+            do
+            {
                 var scannedOffs = data.Slice(baseOffs + scanOffsFromBase).IndexOf(literalSegment.SliceOf(patternSpan));
-                if (scannedOffs < 0) {
+                if (scannedOffs < 0)
+                {
                     // we didn't find the literal 
                     offset = length = 0;
                     return false;
                 }
 
                 // we found the literal at baseOffs + scanOffsFromBase + scannedOffs, so we want to try to match at scanOffsFromBase + scannedOffs
-                if (TryMatchAtImpl(patternSpan, data.Slice(offset = scanOffsFromBase + scannedOffs), addrBuf, out length, segmentIndex)) {
+                if (TryMatchAtImpl(patternSpan, data.Slice(offset = scanOffsFromBase + scannedOffs), addrBuf, out length, segmentIndex))
+                {
                     // we found a full match! we can now exit
                     return true;
                 }
@@ -514,26 +571,37 @@ namespace MonoMod.Core.Utils {
         /// </summary>
         public (ReadOnlyMemory<byte> Bytes, int Offset) FirstLiteralSegment => lazyFirstLiteralSegment ??= GetFirstLiteralSegment();
 
-        private (ReadOnlyMemory<byte> Bytes, int Offset) GetFirstLiteralSegment() {
+        private (ReadOnlyMemory<byte> Bytes, int Offset) GetFirstLiteralSegment()
+        {
             var (segment, offset) = GetNextLiteralSegment(0);
             return (segment.SliceOf(pattern), offset);
         }
 
-        private (PatternSegment Segment, int LiteralOffset) GetNextLiteralSegment(int segmentIndexId) {
-            if (segmentIndexId < 0 || segmentIndexId >= segments.Length) {
+        private (PatternSegment Segment, int LiteralOffset) GetNextLiteralSegment(int segmentIndexId)
+        {
+            if (segmentIndexId < 0 || segmentIndexId >= segments.Length)
+            {
                 throw new ArgumentOutOfRangeException(nameof(segmentIndexId));
             }
 
             var litOffset = 0;
-            for (; segmentIndexId < segments.Length; segmentIndexId++) {
+            for (; segmentIndexId < segments.Length; segmentIndexId++)
+            {
                 var segment = segments[segmentIndexId];
-                if (segment.Kind is SegmentKind.Literal) {
+                if (segment.Kind is SegmentKind.Literal)
+                {
                     return (segment, litOffset);
-                } else if (segment.Kind is SegmentKind.Any or SegmentKind.Address or SegmentKind.MaskedLiteral) { // TODO: enable indexing MaskedLiterals
+                }
+                else if (segment.Kind is SegmentKind.Any or SegmentKind.Address or SegmentKind.MaskedLiteral)
+                { // TODO: enable indexing MaskedLiterals
                     litOffset += segment.Length;
-                } else if (segment.Kind is SegmentKind.AnyRepeating) {
+                }
+                else if (segment.Kind is SegmentKind.AnyRepeating)
+                {
                     // no litOffset change, just advance to the next segment
-                } else {
+                }
+                else
+                {
                     throw new InvalidOperationException("Unknown segment kind");
                 }
             }

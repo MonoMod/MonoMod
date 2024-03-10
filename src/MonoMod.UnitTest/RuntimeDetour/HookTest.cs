@@ -9,15 +9,20 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class HookTest : TestBase {
-        public HookTest(ITestOutputHelper helper) : base(helper) {
+    public class HookTest : TestBase
+    {
+        public HookTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestHooks() {
-            lock (TestObject.Lock) {
+        public void TestHooks()
+        {
+            lock (TestObject.Lock)
+            {
                 Console.WriteLine("Hooks: none");
                 TestObject.TestStep(5, 6, 8);
                 Console.WriteLine();
@@ -27,7 +32,8 @@ namespace MonoMod.UnitTest {
                 DetourManager.DetourApplied += DetourManager_DetourApplied;
                 DetourManager.DetourUndone += DetourManager_DetourUndone;
 
-                try {
+                try
+                {
                     using var hookTestMethodA = new Hook(
                         typeof(TestObject).GetMethod("TestMethod", BindingFlags.Instance | BindingFlags.Public),
                         typeof(HookTest).GetMethod("TestMethod_A", BindingFlags.Static | BindingFlags.NonPublic)
@@ -50,13 +56,15 @@ namespace MonoMod.UnitTest {
                     );
                     using var hookTestStaticMethodB = new Hook(
                         typeof(TestObject).GetMethod("TestStaticMethod", BindingFlags.Static | BindingFlags.Public),
-                        new Func<Func<int, int, int>, int, int, int>((orig, a, b) => {
+                        new Func<Func<int, int, int>, int, int, int>((orig, a, b) =>
+                        {
                             return orig(a, b) + 2;
                         })
                     );
                     using var hookTestVoidMethodB = new Hook(
                         typeof(TestObject).GetMethod("TestVoidMethod", BindingFlags.Static | BindingFlags.Public),
-                        new Action<Action<int, int>, int, int>((orig, a, b) => {
+                        new Action<Action<int, int>, int, int>((orig, a, b) =>
+                        {
                             Console.WriteLine("Hook B");
                             TestObject.VoidResult += 2;
                             orig(a, b);
@@ -79,39 +87,47 @@ namespace MonoMod.UnitTest {
                     Console.WriteLine("Detours: none");
                     TestObject.TestStep(5, 6, 8);
                     Console.WriteLine();
-                } finally {
+                }
+                finally
+                {
                     DetourManager.DetourApplied -= DetourManager_DetourApplied;
                     DetourManager.DetourUndone -= DetourManager_DetourUndone;
                 }
             }
         }
 
-        private void DetourManager_DetourUndone(DetourInfo obj) {
+        private void DetourManager_DetourUndone(DetourInfo obj)
+        {
 
         }
 
-        private void DetourManager_DetourApplied(DetourInfo obj) {
+        private void DetourManager_DetourApplied(DetourInfo obj)
+        {
 
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static int TestMethod_A(TestObject self, int a, int b) {
+        internal static int TestMethod_A(TestObject self, int a, int b)
+        {
             return 42;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static int TestStaticMethod_A(int a, int b) {
+        internal static int TestStaticMethod_A(int a, int b)
+        {
             return a * b * 2;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static void TestVoidMethod_A(int a, int b) {
+        internal static void TestVoidMethod_A(int a, int b)
+        {
             Console.WriteLine("Hook A");
             TestObject.VoidResult += 1;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static int TestMethod_B(Func<TestObject, int, int, int> orig, TestObject self, int a, int b) {
+        internal static int TestMethod_B(Func<TestObject, int, int, int> orig, TestObject self, int a, int b)
+        {
             return orig(self, a, b) + 42;
         }
 

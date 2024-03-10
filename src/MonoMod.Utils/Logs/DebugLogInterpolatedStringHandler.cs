@@ -4,9 +4,11 @@ using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
-namespace MonoMod.Logs {
+namespace MonoMod.Logs
+{
     [InterpolatedStringHandler]
-    public ref struct DebugLogInterpolatedStringHandler {
+    public ref struct DebugLogInterpolatedStringHandler
+    {
 
         // Most of this implementation is copied from DefaultInterpolatedStringHandler so we can get access to the current length
 
@@ -30,52 +32,73 @@ namespace MonoMod.Logs {
 
         internal readonly bool enabled;
 
-        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, bool enabled, bool recordHoles, out bool isEnabled) {
+        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, bool enabled, bool recordHoles, out bool isEnabled)
+        {
             _pos = holeBegin = holePos = 0;
             this.enabled = isEnabled = enabled;
-            if (enabled) {
+            if (enabled)
+            {
                 _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
-                if (recordHoles) {
+                if (recordHoles)
+                {
                     holes = new MessageHole[formattedCount];
-                } else {
+                }
+                else
+                {
                     holes = default;
                 }
-            } else {
+            }
+            else
+            {
                 _chars = _arrayToReturnToPool = null;
                 holes = default;
             }
         }
 
-        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, out bool isEnabled) {
+        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, out bool isEnabled)
+        {
             var log = DebugLog.Instance;
             _pos = holeBegin = holePos = 0;
-            if (log.ShouldLog) {
+            if (log.ShouldLog)
+            {
                 enabled = isEnabled = true;
                 _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
-                if (log.RecordHoles) {
+                if (log.RecordHoles)
+                {
                     holes = new MessageHole[formattedCount];
-                } else {
+                }
+                else
+                {
                     holes = default;
                 }
-            } else {
+            }
+            else
+            {
                 enabled = isEnabled = false;
                 _chars = _arrayToReturnToPool = null;
                 holes = default;
             }
         }
 
-        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, LogLevel level, out bool isEnabled) {
+        public DebugLogInterpolatedStringHandler(int literalLength, int formattedCount, LogLevel level, out bool isEnabled)
+        {
             var log = DebugLog.Instance;
             _pos = holeBegin = holePos = 0;
-            if (log.ShouldLogLevel(level)) {
+            if (log.ShouldLogLevel(level))
+            {
                 enabled = isEnabled = true;
                 _chars = _arrayToReturnToPool = ArrayPool<char>.Shared.Rent(GetDefaultLength(literalLength, formattedCount));
-                if (log.ShouldLevelRecordHoles(level)) {
+                if (log.ShouldLevelRecordHoles(level))
+                {
                     holes = new MessageHole[formattedCount];
-                } else {
+                }
+                else
+                {
                     holes = default;
                 }
-            } else {
+            }
+            else
+            {
                 enabled = isEnabled = false;
                 _chars = _arrayToReturnToPool = null;
                 holes = default;
@@ -90,23 +113,27 @@ namespace MonoMod.Logs {
 
         public override string ToString() => Text.ToString();
 
-        public string ToStringAndClear() {
+        public string ToStringAndClear()
+        {
             var result = Text.ToString();
             Clear();
             return result;
         }
 
-        internal string ToStringAndClear(out ReadOnlyMemory<MessageHole> holes) {
+        internal string ToStringAndClear(out ReadOnlyMemory<MessageHole> holes)
+        {
             holes = this.holes;
             return ToStringAndClear();
         }
 
         /// <summary>Clears the handler, returning any rented array to the pool.</summary>
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)] // used only on a few hot paths
-        internal void Clear() {
+        internal void Clear()
+        {
             var toReturn = _arrayToReturnToPool;
             this = default; // defensive clear
-            if (toReturn is not null) {
+            if (toReturn is not null)
+            {
                 ArrayPool<char>.Shared.Return(toReturn);
             }
         }
@@ -114,26 +141,35 @@ namespace MonoMod.Logs {
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1062:Validate arguments of public methods",
             Justification = "The value.Length cases are expected to be JIT-time constants due to inlining, and doing argument verification may interfere with that.")]
-        public void AppendLiteral(string value) {
-            if (value.Length == 1) {
+        public void AppendLiteral(string value)
+        {
+            if (value.Length == 1)
+            {
                 var chars = _chars;
                 var pos = _pos;
-                if ((uint)pos < (uint)chars.Length) {
+                if ((uint)pos < (uint)chars.Length)
+                {
                     chars[pos] = value[0];
                     _pos = pos + 1;
-                } else {
+                }
+                else
+                {
                     GrowThenCopyString(value);
                 }
                 return;
             }
 
-            if (value.Length == 2) {
+            if (value.Length == 2)
+            {
                 var chars = _chars;
                 var pos = _pos;
-                if ((uint)pos < chars.Length - 1) {
+                if ((uint)pos < chars.Length - 1)
+                {
                     value.AsSpan().CopyTo(chars.Slice(pos));
                     _pos = pos + 2;
-                } else {
+                }
+                else
+                {
                     GrowThenCopyString(value);
                 }
                 return;
@@ -142,16 +178,21 @@ namespace MonoMod.Logs {
             AppendStringDirect(value);
         }
 
-        private void AppendStringDirect(string value) {
-            if (value.AsSpan().TryCopyTo(_chars.Slice(_pos))) {
+        private void AppendStringDirect(string value)
+        {
+            if (value.AsSpan().TryCopyTo(_chars.Slice(_pos)))
+            {
                 _pos += value.Length;
-            } else {
+            }
+            else
+            {
                 GrowThenCopyString(value);
             }
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        private void BeginHole() {
+        private void BeginHole()
+        {
             holeBegin = _pos;
         }
 
@@ -160,27 +201,35 @@ namespace MonoMod.Logs {
             => EndHole<object?>(obj, reprd);
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void EndHole<T>(in T obj, bool reprd) {
-            if (!holes.IsEmpty) {
+        private void EndHole<T>(in T obj, bool reprd)
+        {
+            if (!holes.IsEmpty)
+            {
                 holes.Span[holePos++] = reprd ? new MessageHole(holeBegin, _pos, obj) : new(holeBegin, _pos);
             }
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted(string? value) {
+        public void AppendFormatted(string? value)
+        {
             BeginHole();
             if (value is not null &&
-                value.AsSpan().TryCopyTo(_chars.Slice(_pos))) {
+                value.AsSpan().TryCopyTo(_chars.Slice(_pos)))
+            {
                 _pos += value.Length;
-            } else {
+            }
+            else
+            {
                 AppendFormattedSlow(value);
             }
             EndHole(value, true);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void AppendFormattedSlow(string? value) {
-            if (value is not null) {
+        private void AppendFormattedSlow(string? value)
+        {
+            if (value is not null)
+            {
                 EnsureCapacityForAdditionalChars(value.Length);
                 value.AsSpan().CopyTo(_chars.Slice(_pos));
                 _pos += value.Length;
@@ -191,26 +240,33 @@ namespace MonoMod.Logs {
         public void AppendFormatted(string? value, int alignment = 0, string? format = default)
             => AppendFormatted<string?>(value, alignment, format);
 
-        public void AppendFormatted(ReadOnlySpan<char> value) {
+        public void AppendFormatted(ReadOnlySpan<char> value)
+        {
             BeginHole();
             // Fast path for when the value fits in the current buffer
-            if (value.TryCopyTo(_chars.Slice(_pos))) {
+            if (value.TryCopyTo(_chars.Slice(_pos)))
+            {
                 _pos += value.Length;
-            } else {
+            }
+            else
+            {
                 GrowThenCopySpan(value);
             }
             EndHole(null, false);
         }
 
-        public void AppendFormatted(ReadOnlySpan<char> value, int alignment = 0, string? format = default) {
+        public void AppendFormatted(ReadOnlySpan<char> value, int alignment = 0, string? format = default)
+        {
             var leftAlign = false;
-            if (alignment < 0) {
+            if (alignment < 0)
+            {
                 leftAlign = true;
                 alignment = -alignment;
             }
 
             var paddingRequired = alignment - value.Length;
-            if (paddingRequired <= 0) {
+            if (paddingRequired <= 0)
+            {
                 // The value is as large or larger than the required amount of padding,
                 // so just write the value.
                 AppendFormatted(value);
@@ -220,12 +276,15 @@ namespace MonoMod.Logs {
             BeginHole();
             // Write the value along with the appropriate padding.
             EnsureCapacityForAdditionalChars(value.Length + paddingRequired);
-            if (leftAlign) {
+            if (leftAlign)
+            {
                 value.CopyTo(_chars.Slice(_pos));
                 _pos += value.Length;
                 _chars.Slice(_pos, paddingRequired).Fill(' ');
                 _pos += paddingRequired;
-            } else {
+            }
+            else
+            {
                 _chars.Slice(_pos, paddingRequired).Fill(' ');
                 _pos += paddingRequired;
                 value.CopyTo(_chars.Slice(_pos));
@@ -237,31 +296,40 @@ namespace MonoMod.Logs {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0038:Use pattern matching",
             Justification = "We want to avoid boxing here as much as possible, and the JIT doesn't recognize pattern matching to prevent that." +
                             "Not that the compiler emits a constrained call here anyway, but...")]
-        public void AppendFormatted<T>(T value) {
-            if (typeof(T) == typeof(IntPtr)) {
+        public void AppendFormatted<T>(T value)
+        {
+            if (typeof(T) == typeof(IntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value));
                 return;
             }
-            if (typeof(T) == typeof(UIntPtr)) {
+            if (typeof(T) == typeof(UIntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, UIntPtr>(ref value));
                 return;
             }
 
             BeginHole();
             string? s;
-            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
+            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData))
+            {
                 int wrote;
                 while (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(_pos), out wrote))
                     Grow();
                 _pos += wrote;
                 return;
-            } else if (value is IFormattable) {
+            }
+            else if (value is IFormattable)
+            {
                 s = ((IFormattable)value).ToString(format: null, null); // constrained call avoiding boxing for value types (though it might box later anyway
-            } else {
+            }
+            else
+            {
                 s = value?.ToString();
             }
 
-            if (s is not null) {
+            if (s is not null)
+            {
                 AppendStringDirect(s);
             }
             EndHole(value, true);
@@ -269,52 +337,74 @@ namespace MonoMod.Logs {
 
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(IntPtr value) {
-            unchecked {
-                if (IntPtr.Size == 4) {
+        private void AppendFormatted(IntPtr value)
+        {
+            unchecked
+            {
+                if (IntPtr.Size == 4)
+                {
                     AppendFormatted((int)value);
-                } else {
+                }
+                else
+                {
                     AppendFormatted((long)value);
                 }
             }
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(IntPtr value, string? format) {
-            unchecked {
-                if (IntPtr.Size == 4) {
+        private void AppendFormatted(IntPtr value, string? format)
+        {
+            unchecked
+            {
+                if (IntPtr.Size == 4)
+                {
                     AppendFormatted((int)value, format);
-                } else {
+                }
+                else
+                {
                     AppendFormatted((long)value, format);
                 }
             }
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(UIntPtr value) {
-            unchecked {
-                if (UIntPtr.Size == 4) {
+        private void AppendFormatted(UIntPtr value)
+        {
+            unchecked
+            {
+                if (UIntPtr.Size == 4)
+                {
                     AppendFormatted((uint)value);
-                } else {
+                }
+                else
+                {
                     AppendFormatted((ulong)value);
                 }
             }
         }
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        private void AppendFormatted(UIntPtr value, string? format) {
-            unchecked {
-                if (UIntPtr.Size == 4) {
+        private void AppendFormatted(UIntPtr value, string? format)
+        {
+            unchecked
+            {
+                if (UIntPtr.Size == 4)
+                {
                     AppendFormatted((uint)value, format);
-                } else {
+                }
+                else
+                {
                     AppendFormatted((ulong)value, format);
                 }
             }
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted<T>(T value, int alignment) {
+        public void AppendFormatted<T>(T value, int alignment)
+        {
             var startingPos = _pos;
             AppendFormatted(value);
-            if (alignment != 0) {
+            if (alignment != 0)
+            {
                 AppendOrInsertAlignmentIfNeeded(startingPos, alignment);
             }
         }
@@ -323,25 +413,31 @@ namespace MonoMod.Logs {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0038:Use pattern matching",
             Justification = "We want to avoid boxing here as much as possible, and the JIT doesn't recognize pattern matching to prevent that." +
                             "Not that the compiler emits a constrained call here anyway, but...")]
-        public void AppendFormatted<T>(T value, string? format) {
-            if (typeof(T) == typeof(IntPtr)) {
+        public void AppendFormatted<T>(T value, string? format)
+        {
+            if (typeof(T) == typeof(IntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, IntPtr>(ref value), format);
                 return;
             }
-            if (typeof(T) == typeof(UIntPtr)) {
+            if (typeof(T) == typeof(UIntPtr))
+            {
                 AppendFormatted(Unsafe.As<T, UIntPtr>(ref value), format);
                 return;
             }
 
             BeginHole();
             string? s;
-            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData)) {
+            if (DebugFormatter.CanDebugFormat(value, out var dbgFormatExtraData))
+            {
                 int wrote;
                 while (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(_pos), out wrote))
                     Grow();
                 _pos += wrote;
                 return;
-            } else if (value is IFormattable) {
+            }
+            else if (value is IFormattable)
+            {
                 // If the value can format itself directly into our buffer, do so.
                 /*if (value is ISpanFormattable) {
                     int charsWritten;
@@ -355,21 +451,26 @@ namespace MonoMod.Logs {
                 }*/
 
                 s = ((IFormattable)value).ToString(format, null); // constrained call avoiding boxing for value types
-            } else {
+            }
+            else
+            {
                 s = value?.ToString();
             }
 
-            if (s is not null) {
+            if (s is not null)
+            {
                 AppendStringDirect(s);
             }
             EndHole(value, true);
         }
 
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-        public void AppendFormatted<T>(T value, int alignment, string? format) {
+        public void AppendFormatted<T>(T value, int alignment, string? format)
+        {
             var startingPos = _pos;
             AppendFormatted(value, format);
-            if (alignment != 0) {
+            if (alignment != 0)
+            {
                 AppendOrInsertAlignmentIfNeeded(startingPos, alignment);
             }
         }
@@ -377,25 +478,31 @@ namespace MonoMod.Logs {
         /// <summary>Handles adding any padding required for aligning a formatted value in an interpolation expression.</summary>
         /// <param name="startingPos">The position at which the written value started.</param>
         /// <param name="alignment">Non-zero minimum number of characters that should be written for this value.  If the value is negative, it indicates left-aligned and the required minimum is the absolute value.</param>
-        private void AppendOrInsertAlignmentIfNeeded(int startingPos, int alignment) {
+        private void AppendOrInsertAlignmentIfNeeded(int startingPos, int alignment)
+        {
             Helpers.DAssert(startingPos >= 0 && startingPos <= _pos);
             Helpers.DAssert(alignment != 0);
 
             var charsWritten = _pos - startingPos;
 
             var leftAlign = false;
-            if (alignment < 0) {
+            if (alignment < 0)
+            {
                 leftAlign = true;
                 alignment = -alignment;
             }
 
             var paddingNeeded = alignment - charsWritten;
-            if (paddingNeeded > 0) {
+            if (paddingNeeded > 0)
+            {
                 EnsureCapacityForAdditionalChars(paddingNeeded);
 
-                if (leftAlign) {
+                if (leftAlign)
+                {
                     _chars.Slice(_pos, paddingNeeded).Fill(' ');
-                } else {
+                }
+                else
+                {
                     _chars.Slice(startingPos, charsWritten).CopyTo(_chars.Slice(startingPos + paddingNeeded));
                     _chars.Slice(startingPos, paddingNeeded).Fill(' ');
                 }
@@ -406,8 +513,10 @@ namespace MonoMod.Logs {
 
         /// <summary>Ensures <see cref="_chars"/> has the capacity to store <paramref name="additionalChars"/> beyond <see cref="_pos"/>.</summary>
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
-        private void EnsureCapacityForAdditionalChars(int additionalChars) {
-            if (_chars.Length - _pos < additionalChars) {
+        private void EnsureCapacityForAdditionalChars(int additionalChars)
+        {
+            if (_chars.Length - _pos < additionalChars)
+            {
                 Grow(additionalChars);
             }
         }
@@ -415,7 +524,8 @@ namespace MonoMod.Logs {
         /// <summary>Fallback for fast path in <see cref="AppendStringDirect"/> when there's not enough space in the destination.</summary>
         /// <param name="value">The string to write.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void GrowThenCopyString(string value) {
+        private void GrowThenCopyString(string value)
+        {
             Grow(value.Length);
             value.AsSpan().CopyTo(_chars.Slice(_pos));
             _pos += value.Length;
@@ -424,7 +534,8 @@ namespace MonoMod.Logs {
         /// <summary>Fallback for <see cref="AppendFormatted(ReadOnlySpan{char})"/> for when not enough space exists in the current buffer.</summary>
         /// <param name="value">The span to write.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void GrowThenCopySpan(ReadOnlySpan<char> value) {
+        private void GrowThenCopySpan(ReadOnlySpan<char> value)
+        {
             Grow(value.Length);
             value.CopyTo(_chars.Slice(_pos));
             _pos += value.Length;
@@ -432,7 +543,8 @@ namespace MonoMod.Logs {
 
         /// <summary>Grows <see cref="_chars"/> to have the capacity to store at least <paramref name="additionalChars"/> beyond <see cref="_pos"/>.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)] // keep consumers as streamlined as possible
-        private void Grow(int additionalChars) {
+        private void Grow(int additionalChars)
+        {
             // This method is called when the remaining space (_chars.Length - _pos) is
             // insufficient to store a specific number of additional characters.  Thus, we
             // need to grow to at least that new total. GrowCore will handle growing by more
@@ -443,7 +555,8 @@ namespace MonoMod.Logs {
 
         /// <summary>Grows the size of <see cref="_chars"/>.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)] // keep consumers as streamlined as possible
-        private void Grow() {
+        private void Grow()
+        {
             // This method is called when the remaining space in _chars isn't sufficient to continue
             // the operation.  Thus, we need at least one character beyond _chars.Length.  GrowCore
             // will handle growing by more than that if possible.
@@ -452,7 +565,8 @@ namespace MonoMod.Logs {
 
         /// <summary>Grow the size of <see cref="_chars"/> to at least the specified <paramref name="requiredMinCapacity"/>.</summary>
         [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)] // but reuse this grow logic directly in both of the above grow routines
-        private void GrowCore(uint requiredMinCapacity) {
+        private void GrowCore(uint requiredMinCapacity)
+        {
             // We want the max of how much space we actually required and doubling our capacity (without going beyond the max allowed length). We
             // also want to avoid asking for small arrays, to reduce the number of times we need to grow, and since we're working with unsigned
             // ints that could technically overflow if someone tried to, for example, append a huge string to a huge string, we also clamp to int.MaxValue.
@@ -467,7 +581,8 @@ namespace MonoMod.Logs {
             var toReturn = _arrayToReturnToPool;
             _chars = _arrayToReturnToPool = newArray;
 
-            if (toReturn is not null) {
+            if (toReturn is not null)
+            {
                 ArrayPool<char>.Shared.Return(toReturn);
             }
         }

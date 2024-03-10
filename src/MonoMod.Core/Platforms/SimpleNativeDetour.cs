@@ -2,13 +2,15 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A simple native detour from one address to another.
     /// </summary>
     /// <seealso cref="PlatformTriple.CreateSimpleDetour(IntPtr, IntPtr, int, IntPtr)"/>
     /// <seealso cref="PlatformTriple.CreateNativeDetour(IntPtr, IntPtr, int, IntPtr)"/>
-    public sealed class SimpleNativeDetour : IDisposable {
+    public sealed class SimpleNativeDetour : IDisposable
+    {
         private bool disposedValue;
         private readonly PlatformTriple triple;
         private NativeDetourInfo detourInfo;
@@ -29,7 +31,8 @@ namespace MonoMod.Core.Platforms {
         /// </summary>
         public IntPtr Destination => detourInfo.To;
 
-        internal SimpleNativeDetour(PlatformTriple triple, NativeDetourInfo detourInfo, Memory<byte> backup, IDisposable? allocHandle) {
+        internal SimpleNativeDetour(PlatformTriple triple, NativeDetourInfo detourInfo, Memory<byte> backup, IDisposable? allocHandle)
+        {
             this.triple = triple;
             this.detourInfo = detourInfo;
             this.backup = backup;
@@ -52,7 +55,8 @@ namespace MonoMod.Core.Platforms {
         /// <seealso cref="IAltEntryFactory.CreateAlternateEntrypoint(IntPtr, int, out IDisposable?)"/>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public void ChangeTarget(IntPtr newTarget) {
+        public void ChangeTarget(IntPtr newTarget)
+        {
             CheckDisposed();
 
             MMDbgLog.Trace($"Retargeting simple detour 0x{Source:x16} => 0x{Destination:x16} to target 0x{newTarget:x16}");
@@ -67,12 +71,14 @@ namespace MonoMod.Core.Platforms {
 
             // this is the major place where logic diverges
             // notably, we want to do nearly completely different things if we need to repatch versus not
-            if (repatch) {
+            if (repatch)
+            {
                 // the retarget requires re-patching the source body
                 Helpers.DAssert(retarget.Size == wroteBytes);
 
                 byte[]? newBackup = null;
-                if (retarget.Size > backup.Length) {
+                if (retarget.Size > backup.Length)
+                {
                     // the retarget is actually larger than the old detour, so we need to allocate a new backup array and do some shenanigans to keep it consistent
                     newBackup = new byte[retarget.Size];
                 }
@@ -80,7 +86,8 @@ namespace MonoMod.Core.Platforms {
 
                 triple.System.PatchData(PatchTargetKind.Executable, Source, retargetBytes, newBackup);
 
-                if (newBackup is not null) {
+                if (newBackup is not null)
+                {
                     // this means that the retarget is larger, so we want to copy in our old backup
                     backup.Span.CopyTo(newBackup); // this will overwrite the existing patch in this backup
                     backup = newBackup;
@@ -91,7 +98,8 @@ namespace MonoMod.Core.Platforms {
             detourInfo = retarget;
             // and we want to swap the old and new allocations, disposing the old only if disposeOldAlloc
             (alloc, AllocHandle) = (AllocHandle, alloc);
-            if (disposeOldAlloc) {
+            if (disposeOldAlloc)
+            {
                 alloc?.Dispose();
             }
         }
@@ -99,32 +107,39 @@ namespace MonoMod.Core.Platforms {
         /// <summary>
         /// Undoes this detour. After this is called, the object is disposed, and may not be used.
         /// </summary>
-        public void Undo() {
+        public void Undo()
+        {
             CheckDisposed();
             UndoCore(true);
         }
 
-        private void CheckDisposed() {
+        private void CheckDisposed()
+        {
             if (disposedValue)
                 throw new ObjectDisposedException(nameof(SimpleNativeDetour));
         }
 
-        private void UndoCore(bool disposing) {
+        private void UndoCore(bool disposing)
+        {
             MMDbgLog.Trace($"Undoing simple detour 0x{Source:x16} => 0x{Destination:x16}");
             // literally just patch again, but the other direction
             triple.System.PatchData(PatchTargetKind.Executable, Source, DetourBackup.Span, default);
-            if (disposing) {
+            if (disposing)
+            {
                 Cleanup();
             }
             disposedValue = true;
         }
 
-        private void Cleanup() {
+        private void Cleanup()
+        {
             AllocHandle?.Dispose();
         }
 
-        private void Dispose(bool disposing) {
-            if (!disposedValue) {
+        private void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
                 UndoCore(disposing);
 
                 disposedValue = true;
@@ -134,7 +149,8 @@ namespace MonoMod.Core.Platforms {
         /// <summary>
         /// Undoes and cleans up this detour.
         /// </summary>
-        ~SimpleNativeDetour() {
+        ~SimpleNativeDetour()
+        {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }
@@ -142,7 +158,8 @@ namespace MonoMod.Core.Platforms {
         /// <summary>
         /// Undoes and cleans up this detour.
         /// </summary>
-        public void Dispose() {
+        public void Dispose()
+        {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);

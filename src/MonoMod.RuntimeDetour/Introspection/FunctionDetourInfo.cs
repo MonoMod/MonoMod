@@ -3,13 +3,16 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// A type which represents a single native function, and permits access to the detours applied to that function.
     /// </summary>
-    public sealed class FunctionDetourInfo {
+    public sealed class FunctionDetourInfo
+    {
         internal readonly DetourManager.NativeDetourState state;
-        internal FunctionDetourInfo(DetourManager.NativeDetourState state) {
+        internal FunctionDetourInfo(DetourManager.NativeDetourState state)
+        {
             this.state = state;
         }
 
@@ -46,21 +49,25 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// An event which is invoked whenever a detour is applied to this function.
         /// </summary>
-        public event Action<NativeDetourInfo>? DetourApplied {
+        public event Action<NativeDetourInfo>? DetourApplied
+        {
             add => state.NativeDetourApplied += value;
             remove => state.NativeDetourApplied -= value;
         }
         /// <summary>
         /// An event which is invoked whenver a detour is undone on this function.
         /// </summary>
-        public event Action<NativeDetourInfo>? DetourUndone {
+        public event Action<NativeDetourInfo>? DetourUndone
+        {
             add => state.NativeDetourUndone += value;
             remove => state.NativeDetourUndone -= value;
         }
 
-        internal NativeDetourInfo GetDetourInfo(DetourManager.SingleNativeDetourState node) {
+        internal NativeDetourInfo GetDetourInfo(DetourManager.SingleNativeDetourState node)
+        {
             var existingInfo = node.DetourInfo;
-            if (existingInfo is null || existingInfo.Function != this) {
+            if (existingInfo is null || existingInfo.Function != this)
+            {
                 return node.DetourInfo = new(this, node);
             }
 
@@ -73,7 +80,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="lockTaken">A boolean which, when this method returns, holds whether or not the method took the
         /// lock and should release the lock in its <see langword="finally"/> block.</param>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public void EnterLock(ref bool lockTaken) {
+        public void EnterLock(ref bool lockTaken)
+        {
             state.detourLock.Enter(ref lockTaken);
         }
 
@@ -82,7 +90,8 @@ namespace MonoMod.RuntimeDetour {
         /// was <see langword="true"/>
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public void ExitLock() {
+        public void ExitLock()
+        {
             state.detourLock.Exit(true);
         }
 
@@ -101,15 +110,20 @@ namespace MonoMod.RuntimeDetour {
             Justification = "This being a nested type makes sense, as its basically only expected to be a temporary on-stack to " +
             "hold and automatically release a lock.")]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public readonly ref struct Lock {
+        public readonly ref struct Lock
+        {
             private readonly FunctionDetourInfo fdi;
             private readonly bool lockTaken;
-            internal Lock(FunctionDetourInfo fdi) {
+            internal Lock(FunctionDetourInfo fdi)
+            {
                 this.fdi = fdi;
                 lockTaken = false;
-                try {
+                try
+                {
                     fdi.EnterLock(ref lockTaken);
-                } catch {
+                }
+                catch
+                {
                     if (lockTaken)
                         fdi.ExitLock();
                     throw;
@@ -117,7 +131,8 @@ namespace MonoMod.RuntimeDetour {
             }
 
             /// <inheritdoc/>
-            public void Dispose() {
+            public void Dispose()
+            {
                 if (lockTaken)
                     fdi.ExitLock();
             }

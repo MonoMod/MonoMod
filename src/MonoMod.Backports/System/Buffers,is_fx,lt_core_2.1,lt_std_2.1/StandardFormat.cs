@@ -4,12 +4,14 @@
 
 using System.Diagnostics;
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// Represents a standard formatting string without using an actual String. A StandardFormat consists of a character (such as 'G', 'D' or 'X')
     /// and an optional precision ranging from 0..99, or the special value NoPrecision.
     /// </summary>
-    public readonly struct StandardFormat : IEquatable<StandardFormat> {
+    public readonly struct StandardFormat : IEquatable<StandardFormat>
+    {
         /// <summary>
         /// Precision values for format that don't use a precision, or for when the precision is to be unspecified.
         /// </summary>
@@ -48,7 +50,8 @@ namespace System.Buffers {
         /// </summary>
         /// <param name="symbol">A type-specific formatting character such as 'G', 'D' or 'X'</param>
         /// <param name="precision">An optional precision ranging from 0..9 or the special value NoPrecision (the default)</param>
-        public StandardFormat(char symbol, byte precision = NoPrecision) {
+        public StandardFormat(char symbol, byte precision = NoPrecision)
+        {
             if (precision != NoPrecision && precision > MaxPrecision)
                 ThrowHelper.ThrowArgumentOutOfRangeException_PrecisionTooLarge();
             if (symbol != (byte)symbol)
@@ -66,17 +69,22 @@ namespace System.Buffers {
         /// <summary>
         /// Converts a classic .NET format string into a StandardFormat
         /// </summary>
-        public static StandardFormat Parse(ReadOnlySpan<char> format) {
+        public static StandardFormat Parse(ReadOnlySpan<char> format)
+        {
             if (format.Length == 0)
                 return default;
 
             char symbol = format[0];
             byte precision;
-            if (format.Length == 1) {
+            if (format.Length == 1)
+            {
                 precision = NoPrecision;
-            } else {
+            }
+            else
+            {
                 uint parsedPrecision = 0;
-                for (int srcIndex = 1; srcIndex < format.Length; srcIndex++) {
+                for (int srcIndex = 1; srcIndex < format.Length; srcIndex++)
+                {
                     uint digit = format[srcIndex] - 48u; // '0'
                     if (digit > 9)
                         throw new FormatException($"Cannot parse precision (max is {MaxPrecision})");
@@ -115,24 +123,30 @@ namespace System.Buffers {
         /// <summary>
         /// Returns the format in classic .NET format.
         /// </summary>
-        public override string ToString() {
-            unsafe {
+        public override string ToString()
+        {
+            unsafe
+            {
                 const int MaxLength = 4;
                 char* pBuffer = stackalloc char[MaxLength];
 
                 int dstIndex = 0;
                 char symbol = Symbol;
-                if (symbol != default) {
+                if (symbol != default)
+                {
                     pBuffer[dstIndex++] = symbol;
 
                     byte precision = Precision;
-                    if (precision != NoPrecision) {
-                        if (precision >= 100) {
+                    if (precision != NoPrecision)
+                    {
+                        if (precision >= 100)
+                        {
                             pBuffer[dstIndex++] = (char)('0' + (precision / 100) % 10);
                             precision = (byte)(precision % 100);
                         }
 
-                        if (precision >= 10) {
+                        if (precision >= 10)
+                        {
                             pBuffer[dstIndex++] = (char)('0' + (precision / 10) % 10);
                             precision = (byte)(precision % 10);
                         }

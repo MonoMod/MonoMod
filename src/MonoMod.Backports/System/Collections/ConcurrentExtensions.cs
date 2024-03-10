@@ -16,9 +16,12 @@
 
 using System.Collections.Generic;
 
-namespace System.Collections.Concurrent {
-    public static class ConcurrentExtensions {
-        public static void Clear<T>(this ConcurrentBag<T> bag) {
+namespace System.Collections.Concurrent
+{
+    public static class ConcurrentExtensions
+    {
+        public static void Clear<T>(this ConcurrentBag<T> bag)
+        {
             ThrowHelper.ThrowIfArgumentNull(bag, nameof(bag));
 #if HAS_BAG_CLEAR
             bag.Clear();
@@ -28,7 +31,8 @@ namespace System.Collections.Concurrent {
                 ;
 #endif
         }
-        public static void Clear<T>(this ConcurrentQueue<T> queue) {
+        public static void Clear<T>(this ConcurrentQueue<T> queue)
+        {
             ThrowHelper.ThrowIfArgumentNull(queue, nameof(queue));
 #if HAS_QUEUE_CLEAR
             queue.Clear();
@@ -41,7 +45,8 @@ namespace System.Collections.Concurrent {
 
         public static TValue AddOrUpdate<TKey, TValue, TArg>(this ConcurrentDictionary<TKey, TValue> dict,
             TKey key, Func<TKey, TArg, TValue> addValueFactory, Func<TKey, TValue, TArg, TValue> updateValueFactory, TArg factoryArgument)
-            where TKey : notnull {
+            where TKey : notnull
+        {
             ThrowHelper.ThrowIfArgumentNull(dict, nameof(dict));
 #if HAS_ADD_OR_UPDATE_ARG
             return dict.AddOrUpdate(key, addValueFactory, updateValueFactory, factoryArgument);
@@ -53,7 +58,8 @@ namespace System.Collections.Concurrent {
 
         public static TValue GetOrAdd<TKey, TValue, TArg>(this ConcurrentDictionary<TKey, TValue> dict,
             TKey key, Func<TKey, TArg, TValue> valueFactory, TArg factoryArgument)
-            where TKey : notnull {
+            where TKey : notnull
+        {
             ThrowHelper.ThrowIfArgumentNull(dict, nameof(dict));
 #if HAS_GET_OR_ADD_ARG
             return dict.GetOrAdd(key, valueFactory, factoryArgument);
@@ -64,7 +70,8 @@ namespace System.Collections.Concurrent {
         }
 
         public static bool TryRemove<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dict, KeyValuePair<TKey, TValue> item)
-            where TKey : notnull {
+            where TKey : notnull
+        {
             ThrowHelper.ThrowIfArgumentNull(dict, nameof(dict));
 #if HAS_TRYREMOVE_KVP
             return dict.TryRemove(item);

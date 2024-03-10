@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace MonoMod.Core.Platforms {
+namespace MonoMod.Core.Platforms
+{
     /// <summary>
     /// A native exception helper to enable interop with native code that throws exceptions.
     /// </summary>
@@ -15,7 +16,8 @@ namespace MonoMod.Core.Platforms {
     /// the managed->native transition. This thunk will catch exceptions which are thrown in the native code, and store
     /// them in a thread local associated with the exception helper.</para>
     /// </remarks>
-    public interface INativeExceptionHelper {
+    public interface INativeExceptionHelper
+    {
         /// <summary>
         /// Gets a delegate which can be used to get a pointer to the current thread's native exception slot.
         /// </summary>

@@ -2,16 +2,20 @@
 using System;
 using Xunit;
 
-namespace MonoMod.UnitTest {
-    public sealed class SkipRemoteLinuxMonoFactAttribute : FactAttribute {
-        public SkipRemoteLinuxMonoFactAttribute(params string[] names) {
+namespace MonoMod.UnitTest
+{
+    public sealed class SkipRemoteLinuxMonoFactAttribute : FactAttribute
+    {
+        public SkipRemoteLinuxMonoFactAttribute(params string[] names)
+        {
             Names = names;
 
             // FIXME: Some tests like to go horribly wrong on Azure Linux mono.
 
             if (Environment.GetEnvironmentVariable("AGENT_OS") == "Linux" &&
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_ARTIFACTSTAGINGDIRECTORY")) &&
-                PlatformDetection.Runtime is RuntimeKind.Mono) {
+                PlatformDetection.Runtime is RuntimeKind.Mono)
+            {
                 Skip = "Not supported on Azure Linux mono.";
                 return;
             }

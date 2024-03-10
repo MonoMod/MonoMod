@@ -7,11 +7,13 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 #endif
 
-namespace System {
+namespace System
+{
     /// <summary>
     /// Extensions to <see cref="StringComparer"/> providing consistent access to APIs introduced after the type.
     /// </summary>
-    public static class MathEx {
+    public static class MathEx
+    {
         /// <summary>Returns <paramref name="value" /> clamped to the inclusive range of <paramref name="min" /> and <paramref name="max" />.</summary>
         /// <param name="value">The value to be clamped.</param>
         /// <param name="min">The lower bound of the result.</param>

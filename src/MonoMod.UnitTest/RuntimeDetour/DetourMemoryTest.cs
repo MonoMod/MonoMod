@@ -9,15 +9,20 @@ using System.Collections.Generic;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class DetourMemoryTest : TestBase {
-        public DetourMemoryTest(ITestOutputHelper helper) : base(helper) {
+    public class DetourMemoryTest : TestBase
+    {
+        public DetourMemoryTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestDetourMemory() {
-            if (PlatformDetection.Runtime is RuntimeKind.Mono) {
+        public void TestDetourMemory()
+        {
+            if (PlatformDetection.Runtime is RuntimeKind.Mono)
+            {
                 // GC.GetTotalMemory likes to die on Mono:
                 // * Assertion: should not be reached at sgen-scan-object.h:91
                 // at System.GC:GetTotalMemory <0x00061>
@@ -31,10 +36,12 @@ namespace MonoMod.UnitTest {
             var memPre = GC.GetTotalMemory(true);
             long memPost;
 
-            try {
+            try
+            {
 
                 Console.WriteLine($"GC.GetTotalMemory before detour memory test: {memPre}");
-                for (var i = 0; i < 256; i++) {
+                for (var i = 0; i < 256; i++)
+                {
                     var h = new Hook(
                         typeof(DetourMemoryTest).GetMethod("TestStaticMethod", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic),
                         typeof(DetourMemoryTest).GetMethod("TestStaticMethodHook", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
@@ -48,7 +55,9 @@ namespace MonoMod.UnitTest {
                 Console.WriteLine($"GC.GetTotalMemory after detour memory test: {memPost}");
                 Console.WriteLine($"After - Before: {memPost - memPre}");
 
-            } finally {
+            }
+            finally
+            {
                 foreach (var h in hooks)
                     h.Dispose();
                 hooks.Clear();
@@ -64,9 +73,11 @@ namespace MonoMod.UnitTest {
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 #pragma warning disable CA1508 // Avoid dead conditional code
 #pragma warning disable CA1031 // Do not catch general exception types
-        internal static Counter<int> TestStaticMethod(int a, int b) {
+        internal static Counter<int> TestStaticMethod(int a, int b)
+        {
             _ = new TestObjectGeneric<string>();
-            try {
+            try
+            {
                 a *= new int?(b).Value;
 
                 b += new List<TestObjectGeneric<TestObject>>() { new TestObjectGeneric<TestObject>() }.GetEnumerator().Current?.GetHashCode() ?? 0;
@@ -76,13 +87,18 @@ namespace MonoMod.UnitTest {
 
                 var array2d1 = new string[][] { new string[] { "A" } };
                 var array2d2 = new string[,] { { "B" } };
-                foreach (var str in list) {
+                foreach (var str in list)
+                {
                     TargetTest(array2d1[0][0], array2d2[0, 0], str);
                 }
 
-            } catch (Exception e) when (e is null) {
+            }
+            catch (Exception e) when (e is null)
+            {
                 return new Counter<int> { Count = -2 };
-            } catch (Exception) {
+            }
+            catch (Exception)
+            {
                 return new Counter<int> { Count = -1 };
             }
             return new Counter<int> { Count = a };
@@ -91,21 +107,25 @@ namespace MonoMod.UnitTest {
 #pragma warning restore CA1508 // Avoid dead conditional code
 #pragma warning restore CA1814 // Prefer jagged arrays over multidimensional
 
-        internal static Counter<int> TestStaticMethodHook(Func<int, int, Counter<int>> orig, int a, int b) {
+        internal static Counter<int> TestStaticMethodHook(Func<int, int, Counter<int>> orig, int a, int b)
+        {
             var c = orig(a, b);
             c.Count++;
             return c;
         }
 
-        internal static int TargetTest<T>(string a, string b, string c) {
+        internal static int TargetTest<T>(string a, string b, string c)
+        {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        internal static int TargetTest(string a, string b, string c) {
+        internal static int TargetTest(string a, string b, string c)
+        {
             return (a + b + c).GetHashCode(StringComparison.Ordinal);
         }
 
-        internal struct Counter<T> where T : struct {
+        internal struct Counter<T> where T : struct
+        {
             public T Count;
         }
 

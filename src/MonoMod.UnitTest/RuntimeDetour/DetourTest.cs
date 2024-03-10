@@ -9,15 +9,20 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class DetourTest : TestBase {
-        public DetourTest(ITestOutputHelper helper) : base(helper) {
+    public class DetourTest : TestBase
+    {
+        public DetourTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestDetours() {
-            lock (TestObject.Lock) {
+        public void TestDetours()
+        {
+            lock (TestObject.Lock)
+            {
                 Console.WriteLine("Detours: none");
                 TestObject.TestStep(5, 6, 8);
                 Console.WriteLine();
@@ -86,33 +91,39 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static int TestMethod_A(TestObject self, int a, int b) {
+        internal static int TestMethod_A(TestObject self, int a, int b)
+        {
             return 42;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static int TestStaticMethod_A(int a, int b) {
+        internal static int TestStaticMethod_A(int a, int b)
+        {
             return a * b * 2;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static void TestVoidMethod_A(int a, int b) {
+        internal static void TestVoidMethod_A(int a, int b)
+        {
             Console.WriteLine("Detour A");
             TestObject.VoidResult += 1;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static int TestMethod_B(TestObject self, int a, int b) {
+        internal static int TestMethod_B(TestObject self, int a, int b)
+        {
             return 120;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static int TestStaticMethod_B(int a, int b) {
+        internal static int TestStaticMethod_B(int a, int b)
+        {
             return a * b + 2;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static void TestVoidMethod_B(int a, int b) {
+        internal static void TestVoidMethod_B(int a, int b)
+        {
             Console.WriteLine("Detour B");
             TestObject.VoidResult += 2;
         }

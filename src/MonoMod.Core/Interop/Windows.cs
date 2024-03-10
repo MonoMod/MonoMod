@@ -5,12 +5,14 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace MonoMod.Core.Interop {
+namespace MonoMod.Core.Interop
+{
 
     // IMPORTANT: Instead of manually writing the interop code for Windows, we mostly use Microsoft.Windows.CsWin32 to generate them.
     // New Win32 methods should be added to NativeMethods.txt and used as Windows.Win32.Interop.*
 
-    internal static unsafe class Windows {
+    internal static unsafe class Windows
+    {
         // Definitions copied from source.terrafx.dev
 
         [Conditional("NEVER")]
@@ -18,7 +20,8 @@ namespace MonoMod.Core.Interop {
         private sealed class SetsLastSystemErrorAttribute : Attribute { }
         [Conditional("NEVER")]
         [AttributeUsage(AttributeTargets.All)]
-        private sealed class NativeTypeNameAttribute : Attribute {
+        private sealed class NativeTypeNameAttribute : Attribute
+        {
             public NativeTypeNameAttribute(string x) { }
         }
 
@@ -55,7 +58,8 @@ namespace MonoMod.Core.Interop {
         [return: NativeTypeName("DWORD")]
         public static extern uint GetLastError();
 
-        public unsafe partial struct MEMORY_BASIC_INFORMATION {
+        public unsafe partial struct MEMORY_BASIC_INFORMATION
+        {
             [NativeTypeName("PVOID")]
             public void* BaseAddress;
             [NativeTypeName("PVOID")]
@@ -76,7 +80,8 @@ namespace MonoMod.Core.Interop {
             public uint Type;
         }
 
-        public unsafe partial struct SYSTEM_INFO {
+        public unsafe partial struct SYSTEM_INFO
+        {
             [NativeTypeName("_SYSTEM_INFO::(anonymous union at C:/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/um/sysinfoapi.h:48:5)")]
             public _Anonymous_e__Union Anonymous;
 
@@ -100,38 +105,46 @@ namespace MonoMod.Core.Interop {
             public ushort wProcessorRevision;
 
             [UnscopedRef]
-            public ref uint dwOemId {
+            public ref uint dwOemId
+            {
                 [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-                get {
+                get
+                {
                     return ref Anonymous.dwOemId;
                 }
             }
 
             [UnscopedRef]
-            public ref ushort wProcessorArchitecture {
+            public ref ushort wProcessorArchitecture
+            {
                 [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-                get {
+                get
+                {
                     return ref Anonymous.Anonymous.wProcessorArchitecture;
                 }
             }
 
             [UnscopedRef]
-            public ref ushort wReserved {
+            public ref ushort wReserved
+            {
                 [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-                get {
+                get
+                {
                     return ref Anonymous.Anonymous.wReserved;
                 }
             }
 
             [StructLayout(LayoutKind.Explicit)]
-            public partial struct _Anonymous_e__Union {
+            public partial struct _Anonymous_e__Union
+            {
                 [FieldOffset(0)]
                 [NativeTypeName("DWORD")]
                 public uint dwOemId;
                 [FieldOffset(0)]
                 [NativeTypeName("_SYSTEM_INFO::(anonymous struct at C:/Program Files (x86)/Windows Kits/10/include/10.0.22621.0/um/sysinfoapi.h:50:9)")]
                 public _Anonymous_e__Struct Anonymous;
-                public partial struct _Anonymous_e__Struct {
+                public partial struct _Anonymous_e__Struct
+                {
                     [NativeTypeName("WORD")]
                     public ushort wProcessorArchitecture;
                     [NativeTypeName("WORD")]
@@ -140,10 +153,12 @@ namespace MonoMod.Core.Interop {
             }
         }
 
-        public readonly partial struct BOOL : IComparable, IComparable<BOOL>, IEquatable<BOOL>, IFormattable {
+        public readonly partial struct BOOL : IComparable, IComparable<BOOL>, IEquatable<BOOL>, IFormattable
+        {
             public readonly int Value;
 
-            public BOOL(int value) {
+            public BOOL(int value)
+            {
                 Value = value;
             }
 
@@ -211,8 +226,10 @@ namespace MonoMod.Core.Interop {
 
             public static explicit operator nuint(BOOL value) => (nuint)(value.Value);
 
-            public int CompareTo(object? obj) {
-                if (obj is BOOL other) {
+            public int CompareTo(object? obj)
+            {
+                if (obj is BOOL other)
+                {
                     return CompareTo(other);
                 }
 
@@ -232,10 +249,12 @@ namespace MonoMod.Core.Interop {
             public string ToString(string? format, IFormatProvider? formatProvider) => Value.ToString(format, formatProvider);
         }
 
-        public readonly unsafe partial struct HANDLE : IComparable, IComparable<HANDLE>, IEquatable<HANDLE>, IFormattable {
+        public readonly unsafe partial struct HANDLE : IComparable, IComparable<HANDLE>, IEquatable<HANDLE>, IFormattable
+        {
             public readonly void* Value;
 
-            public HANDLE(void* value) {
+            public HANDLE(void* value)
+            {
                 Value = value;
             }
 
@@ -299,8 +318,10 @@ namespace MonoMod.Core.Interop {
 
             public static implicit operator nuint(HANDLE value) => (nuint)(value.Value);
 
-            public int CompareTo(object? obj) {
-                if (obj is HANDLE other) {
+            public int CompareTo(object? obj)
+            {
+                if (obj is HANDLE other)
+                {
                     return CompareTo(other);
                 }
 

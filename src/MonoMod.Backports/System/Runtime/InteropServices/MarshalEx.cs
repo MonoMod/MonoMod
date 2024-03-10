@@ -5,8 +5,10 @@ using System.Runtime.CompilerServices;
 using System.Reflection;
 #endif
 
-namespace System.Runtime.InteropServices {
-    public static class MarshalEx {
+namespace System.Runtime.InteropServices
+{
+    public static class MarshalEx
+    {
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static int GetLastPInvokeError()
 #if NET6_0_OR_GREATER
@@ -25,7 +27,8 @@ namespace System.Runtime.InteropServices {
 #else
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
 #endif
-        public static void SetLastPInvokeError(int error) {
+        public static void SetLastPInvokeError(int error)
+        {
 #if NET6_0_OR_GREATER
             Marshal.SetLastPInvokeError(error);
 #else

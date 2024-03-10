@@ -4,11 +4,13 @@
 
 using System.Runtime.InteropServices;
 
-namespace System.Buffers {
+namespace System.Buffers
+{
     /// <summary>
     /// A handle for the memory.
     /// </summary>
-    public unsafe struct MemoryHandle : IDisposable {
+    public unsafe struct MemoryHandle : IDisposable
+    {
         private void* _pointer;
         private GCHandle _handle;
         private IPinnable? _pinnable;
@@ -20,7 +22,8 @@ namespace System.Buffers {
         /// <param name="pinnable">reference to manually managed object, or default if there is no memory manager</param>
         /// <param name="handle">handle used to pin array buffers</param>
         [CLSCompliant(false)]
-        public MemoryHandle(void* pointer, GCHandle handle = default, IPinnable? pinnable = default) {
+        public MemoryHandle(void* pointer, GCHandle handle = default, IPinnable? pinnable = default)
+        {
             _pointer = pointer;
             _handle = handle;
             _pinnable = pinnable;
@@ -35,12 +38,15 @@ namespace System.Buffers {
         /// <summary>
         /// Frees the pinned handle and releases IPinnable.
         /// </summary>
-        public void Dispose() {
-            if (_handle.IsAllocated) {
+        public void Dispose()
+        {
+            if (_handle.IsAllocated)
+            {
                 _handle.Free();
             }
 
-            if (_pinnable != null) {
+            if (_pinnable != null)
+            {
                 _pinnable.Unpin();
                 _pinnable = null;
             }

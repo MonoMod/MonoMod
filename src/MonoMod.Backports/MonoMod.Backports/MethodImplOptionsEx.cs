@@ -3,8 +3,10 @@ using SysMethodImplOpts = System.Runtime.CompilerServices.MethodImplOptions;
 
 // TODO: maybe move this into System.Runtime.CompilerServices
 
-namespace MonoMod.Backports {
-    public static class MethodImplOptionsEx {
+namespace MonoMod.Backports
+{
+    public static class MethodImplOptionsEx
+    {
         public const SysMethodImplOpts
             Unmanaged = (SysMethodImplOpts)4,
             NoInlining = (SysMethodImplOpts)8,

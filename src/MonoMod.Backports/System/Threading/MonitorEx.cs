@@ -6,16 +6,19 @@
 using System.Runtime.CompilerServices;
 #endif
 
-namespace System.Threading {
+namespace System.Threading
+{
     /// <summary>
     /// Extensions to <see cref="Monitor"/> providing consistent access to APIs introduced after the type.
     /// </summary>
-    public static class MonitorEx {
+    public static class MonitorEx
+    {
 
 #if HAS_MONITOR_ENTER_BYREF
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-        public static void Enter(object obj, ref bool lockTaken) {
+        public static void Enter(object obj, ref bool lockTaken)
+        {
 #if HAS_MONITOR_ENTER_BYREF
             Monitor.Enter(obj, ref lockTaken);
 #else

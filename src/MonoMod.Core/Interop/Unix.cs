@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace MonoMod.Core.Interop {
-    internal static class Unix {
+namespace MonoMod.Core.Interop
+{
+    internal static class Unix
+    {
         // If this dllimport decl isn't enough to get the runtime to load the right thing, I give up
         public const string LibC = "libc";
 
@@ -40,12 +42,14 @@ namespace MonoMod.Core.Interop {
         public static unsafe int Errno => *__errno_location();
 
         [Flags]
-        public enum PipeFlags : int {
+        public enum PipeFlags : int
+        {
             CloseOnExec = 0x80000
         }
 
         [Flags]
-        public enum Protection : int {
+        public enum Protection : int
+        {
             None = 0x00,
             Read = 0x01,
             Write = 0x02,
@@ -53,7 +57,8 @@ namespace MonoMod.Core.Interop {
         }
 
         [Flags]
-        public enum MmapFlags : int {
+        public enum MmapFlags : int
+        {
             Shared = 0x01,
             Private = 0x02,
             SharedValidate = 0x03,
@@ -75,7 +80,8 @@ namespace MonoMod.Core.Interop {
             FixedNoReplace = 0x100000,
         }
 
-        public enum SysconfName {
+        public enum SysconfName
+        {
             ArgMax,
             ChildMax,
             ClockTick,

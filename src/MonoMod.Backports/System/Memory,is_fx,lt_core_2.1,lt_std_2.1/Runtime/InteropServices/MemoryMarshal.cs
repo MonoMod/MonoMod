@@ -7,30 +7,38 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace System.Runtime.InteropServices {
+namespace System.Runtime.InteropServices
+{
     /// <summary>
     /// Provides a collection of methods for interoperating with <see cref="Memory{T}"/>, <see cref="ReadOnlyMemory{T}"/>,
     /// <see cref="Span{T}"/>, and <see cref="ReadOnlySpan{T}"/>.
     /// </summary>
-    public static partial class MemoryMarshal {
+    public static partial class MemoryMarshal
+    {
         /// <summary>
         /// Get an array segment from the underlying memory.
         /// If unable to get the array segment, return false with a default array segment.
         /// </summary>
-        public static bool TryGetArray<T>(ReadOnlyMemory<T> memory, out ArraySegment<T> segment) {
+        public static bool TryGetArray<T>(ReadOnlyMemory<T> memory, out ArraySegment<T> segment)
+        {
             object? obj = memory.GetObjectStartLength(out int index, out int length);
-            if (index < 0) {
+            if (index < 0)
+            {
                 Debug.Assert(length >= 0);
-                if (((MemoryManager<T>)obj!).TryGetArray(out ArraySegment<T> arraySegment)) {
+                if (((MemoryManager<T>)obj!).TryGetArray(out ArraySegment<T> arraySegment))
+                {
                     segment = new ArraySegment<T>(arraySegment.Array!, arraySegment.Offset + (index & ReadOnlyMemory<T>.RemoveFlagsBitMask), length);
                     return true;
                 }
-            } else if (obj is T[] arr) {
+            }
+            else if (obj is T[] arr)
+            {
                 segment = new ArraySegment<T>(arr, index, length & ReadOnlyMemory<T>.RemoveFlagsBitMask);
                 return true;
             }
 
-            if ((length & ReadOnlyMemory<T>.RemoveFlagsBitMask) == 0) {
+            if ((length & ReadOnlyMemory<T>.RemoveFlagsBitMask) == 0)
+            {
                 segment = new ArraySegment<T>(SpanHelpers.PerTypeValues<T>.EmptyArray);
                 return true;
             }
@@ -49,7 +57,8 @@ namespace System.Runtime.InteropServices {
         /// <param name="manager">The returned manager of the <see cref="ReadOnlyMemory{T}"/>.</param>
         /// <returns>A <see cref="bool"/> indicating if it was successful.</returns>
         public static bool TryGetMemoryManager<T, TManager>(ReadOnlyMemory<T> memory, out TManager? manager)
-            where TManager : MemoryManager<T> {
+            where TManager : MemoryManager<T>
+        {
             TManager? localManager; // Use register for null comparison rather than byref
             manager = localManager = memory.GetObjectStartLength(out _, out _) as TManager;
             return localManager != null;
@@ -67,14 +76,16 @@ namespace System.Runtime.InteropServices {
         /// <param name="length">The length of the <paramref name="manager" /> that the <paramref name="memory" /> represents.</param>
         /// <returns>A <see cref="bool"/> indicating if it was successful.</returns>
         public static bool TryGetMemoryManager<T, TManager>(ReadOnlyMemory<T> memory, out TManager? manager, out int start, out int length)
-           where TManager : MemoryManager<T> {
+           where TManager : MemoryManager<T>
+        {
             TManager? localManager; // Use register for null comparison rather than byref
             manager = localManager = memory.GetObjectStartLength(out start, out length) as TManager;
             start &= ReadOnlyMemory<T>.RemoveFlagsBitMask;
 
             Debug.Assert(length >= 0);
 
-            if (localManager == null) {
+            if (localManager == null)
+            {
                 start = default;
                 length = default;
                 return false;
@@ -89,7 +100,8 @@ namespace System.Runtime.InteropServices {
         /// <typeparam name="T">The element type of the <paramref name="memory" />.</typeparam>
         /// <param name="memory">The ReadOnlyMemory to view as an <see cref="IEnumerable{T}"/></param>
         /// <returns>An <see cref="IEnumerable{T}"/> view of the given <paramref name="memory" /></returns>
-        public static IEnumerable<T> ToEnumerable<T>(ReadOnlyMemory<T> memory) {
+        public static IEnumerable<T> ToEnumerable<T>(ReadOnlyMemory<T> memory)
+        {
             for (int i = 0; i < memory.Length; i++)
                 yield return memory.Span[i];
         }
@@ -100,15 +112,19 @@ namespace System.Runtime.InteropServices {
         /// <param name="start">The starting location in <paramref name="text"/>.</param>
         /// <param name="length">The number of items in <paramref name="text"/>.</param>
         /// <returns></returns>
-        public static bool TryGetString(ReadOnlyMemory<char> memory, out string? text, out int start, out int length) {
-            if (memory.GetObjectStartLength(out int offset, out int count) is string s) {
+        public static bool TryGetString(ReadOnlyMemory<char> memory, out string? text, out int start, out int length)
+        {
+            if (memory.GetObjectStartLength(out int offset, out int count) is string s)
+            {
                 Debug.Assert(offset >= 0);
                 Debug.Assert(count >= 0);
                 text = s;
                 start = offset;
                 length = count;
                 return true;
-            } else {
+            }
+            else
+            {
                 text = null;
                 start = 0;
                 length = 0;
@@ -121,11 +137,14 @@ namespace System.Runtime.InteropServices {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Read<T>(ReadOnlySpan<byte> source)
-            where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
+            where T : struct
+        {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
+            {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
-            if (Unsafe.SizeOf<T>() > source.Length) {
+            if (Unsafe.SizeOf<T>() > source.Length)
+            {
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.length);
             }
             return Unsafe.ReadUnaligned<T>(ref GetReference(source));
@@ -137,11 +156,14 @@ namespace System.Runtime.InteropServices {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryRead<T>(ReadOnlySpan<byte> source, out T value)
-            where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
+            where T : struct
+        {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
+            {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
-            if (Unsafe.SizeOf<T>() > (uint)source.Length) {
+            if (Unsafe.SizeOf<T>() > (uint)source.Length)
+            {
                 value = default;
                 return false;
             }
@@ -154,11 +176,14 @@ namespace System.Runtime.InteropServices {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Write<T>(Span<byte> destination, ref T value)
-            where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
+            where T : struct
+        {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
+            {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
-            if ((uint)Unsafe.SizeOf<T>() > (uint)destination.Length) {
+            if ((uint)Unsafe.SizeOf<T>() > (uint)destination.Length)
+            {
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.length);
             }
             Unsafe.WriteUnaligned<T>(ref GetReference(destination), value);
@@ -170,11 +195,14 @@ namespace System.Runtime.InteropServices {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryWrite<T>(Span<byte> destination, ref T value)
-            where T : struct {
-            if (SpanHelpers.IsReferenceOrContainsReferences<T>()) {
+            where T : struct
+        {
+            if (SpanHelpers.IsReferenceOrContainsReferences<T>())
+            {
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
             }
-            if (Unsafe.SizeOf<T>() > (uint)destination.Length) {
+            if (Unsafe.SizeOf<T>() > (uint)destination.Length)
+            {
                 return false;
             }
             Unsafe.WriteUnaligned<T>(ref GetReference(destination), value);
@@ -197,8 +225,10 @@ namespace System.Runtime.InteropServices {
         /// Thrown when the specified <paramref name="start"/> or end index is not in the range (&lt;0 or &gt;=Length).
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Memory<T> CreateFromPinnedArray<T>(T[] array, int start, int length) {
-            if (array == null) {
+        public static Memory<T> CreateFromPinnedArray<T>(T[] array, int start, int length)
+        {
+            if (array == null)
+            {
                 if (start != 0 || length != 0)
                     ThrowHelper.ThrowArgumentOutOfRangeException();
                 return default;

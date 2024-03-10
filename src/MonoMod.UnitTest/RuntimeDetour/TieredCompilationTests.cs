@@ -7,12 +7,15 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
-    public class TieredCompilationTests : TestBase {
+namespace MonoMod.UnitTest
+{
+    public class TieredCompilationTests : TestBase
+    {
 
         private static bool TargetHit;
 
-        public TieredCompilationTests(ITestOutputHelper helper) : base(helper) {
+        public TieredCompilationTests(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         //
@@ -22,25 +25,32 @@ namespace MonoMod.UnitTest {
         //
 
         [Fact]
-        public void WithTieredCompilation() {
-            if (Environment.GetEnvironmentVariable("MM_TEST_DEBUG_TIERED_COMP") != null) {
+        public void WithTieredCompilation()
+        {
+            if (Environment.GetEnvironmentVariable("MM_TEST_DEBUG_TIERED_COMP") != null)
+            {
                 Console.WriteLine("Attach the debugger then press enter");
                 Console.ReadLine();
             }
 
-            using (new Hook(() => From(), () => To())) {
+            using (new Hook(() => From(), () => To()))
+            {
                 TestFrom();
             }
         }
 
-        private static void TestFrom() {
+        private static void TestFrom()
+        {
             var sw = new Stopwatch();
-            for (var loop = 0; loop < 50; loop++) {
+            for (var loop = 0; loop < 50; loop++)
+            {
                 // first we make sure From qualifies for recomp
-                for (var i = 0; i < 1000; i++) {
+                for (var i = 0; i < 1000; i++)
+                {
                     TargetHit = false;
                     From();
-                    if (!TargetHit) {
+                    if (!TargetHit)
+                    {
                         Assert.True(TargetHit, $"iteration {i} of loop {loop}");
                     }
                 }
@@ -52,10 +62,12 @@ namespace MonoMod.UnitTest {
                 // and then try again
 
                 // make sure that To qualifies for recomp too
-                for (var i = 0; i < 1000; i++) {
+                for (var i = 0; i < 1000; i++)
+                {
                     TargetHit = false;
                     To();
-                    if (!TargetHit) {
+                    if (!TargetHit)
+                    {
                         Assert.True(TargetHit, $"iteration {i} of loop {loop}");
                     }
                 }
@@ -72,7 +84,8 @@ namespace MonoMod.UnitTest {
         private static void Empty() { }
 
         // Importantly, the quick JIT is disabled when it contains loops (in 3, seemingly not in 5)
-        private static void From() {
+        private static void From()
+        {
             Empty();
             Empty();
             Empty();
@@ -86,7 +99,8 @@ namespace MonoMod.UnitTest {
             Empty();
         }
 
-        private static void To() {
+        private static void To()
+        {
             Empty();
             Empty();
             Empty();

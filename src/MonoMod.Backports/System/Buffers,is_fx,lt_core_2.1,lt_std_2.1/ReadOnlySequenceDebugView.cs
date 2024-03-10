@@ -4,27 +4,33 @@
 
 using System.Diagnostics;
 
-namespace System.Buffers {
-    internal sealed class ReadOnlySequenceDebugView<T> {
+namespace System.Buffers
+{
+    internal sealed class ReadOnlySequenceDebugView<T>
+    {
         private readonly T[] _array;
 
         private readonly ReadOnlySequenceDebugViewSegments _segments;
 
-        public ReadOnlySequenceDebugView(ReadOnlySequence<T> sequence) {
+        public ReadOnlySequenceDebugView(ReadOnlySequence<T> sequence)
+        {
             _array = sequence.ToArray();
 
             var segmentCount = 0;
-            foreach (var _ in sequence) {
+            foreach (var _ in sequence)
+            {
                 segmentCount++;
             }
 
             var segments = new ReadOnlyMemory<T>[segmentCount];
             int i = 0;
-            foreach (ReadOnlyMemory<T> readOnlyMemory in sequence) {
+            foreach (ReadOnlyMemory<T> readOnlyMemory in sequence)
+            {
                 segments[i] = readOnlyMemory;
                 i++;
             }
-            _segments = new ReadOnlySequenceDebugViewSegments() {
+            _segments = new ReadOnlySequenceDebugViewSegments()
+            {
                 Segments = segments
             };
         }
@@ -35,7 +41,8 @@ namespace System.Buffers {
         public T[] Items => _array;
 
         [DebuggerDisplay("Count: {Segments.Length}", Name = "Segments")]
-        public struct ReadOnlySequenceDebugViewSegments {
+        public struct ReadOnlySequenceDebugViewSegments
+        {
             [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
             public ReadOnlyMemory<T>[] Segments { get; set; }
         }

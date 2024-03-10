@@ -1,8 +1,11 @@
-﻿namespace System.Runtime.CompilerServices {
+﻿namespace System.Runtime.CompilerServices
+{
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-    public sealed class IgnoresAccessChecksToAttribute : Attribute {
+    public sealed class IgnoresAccessChecksToAttribute : Attribute
+    {
         public string AssemblyName { get; }
-        public IgnoresAccessChecksToAttribute(string assemblyName) {
+        public IgnoresAccessChecksToAttribute(string assemblyName)
+        {
             AssemblyName = assemblyName;
         }
     }

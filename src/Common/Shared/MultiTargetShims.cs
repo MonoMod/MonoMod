@@ -1,8 +1,10 @@
 ﻿#nullable enable
 using Mono.Cecil;
 
-namespace MonoMod {
-    internal static class MultiTargetShims {
+namespace MonoMod
+{
+    internal static class MultiTargetShims
+    {
 
 #if CECIL0_10
     public static TypeReference GetConstraintType(this TypeReference type)

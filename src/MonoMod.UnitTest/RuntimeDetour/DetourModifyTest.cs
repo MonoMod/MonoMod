@@ -8,23 +8,28 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public class DetourModifyTest : TestBase {
+    public class DetourModifyTest : TestBase
+    {
 
         private static readonly MethodInfo m_HookTarget = typeof(DetourModifyTest).GetMethod("HookTarget");
 
-        public DetourModifyTest(ITestOutputHelper helper) : base(helper) {
+        public DetourModifyTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestDetoursModify() {
+        public void TestDetoursModify()
+        {
             using (var h = new Hook(m_HookTarget, Hook, new DetourConfig("MainHook")))
                 HookTarget(h, true);
         }
 
         private static Hook beforeHook;
-        public static void Hook(Action<Hook, bool> orig, Hook hook, bool shouldInvoke) {
+        public static void Hook(Action<Hook, bool> orig, Hook hook, bool shouldInvoke)
+        {
             // Check if we should have reached the hook method
             Assert.True(shouldInvoke, "Hook method should not have been called");
 
@@ -33,8 +38,10 @@ namespace MonoMod.UnitTest {
 
             // Test adding a hook *before* our own while already in an active call
             beforeHook = new Hook(m_HookTarget,
-                new Action<Hook, bool>(static (h, _) => {
-                    if (h != null) {
+                new Action<Hook, bool>(static (h, _) =>
+                {
+                    if (h != null)
+                    {
                         Assert.Fail("Newly added hooks before the active one mustn't be invoked for currently ongoing calls");
                     }
                 }),
@@ -54,7 +61,8 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void HookTarget(Hook hook, bool shouldInvoke) {
+        public static void HookTarget(Hook hook, bool shouldInvoke)
+        {
             Assert.True(shouldInvoke, "Hook target should not have been called");
         }
 

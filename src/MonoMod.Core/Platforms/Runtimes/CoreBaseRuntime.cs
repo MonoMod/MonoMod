@@ -4,12 +4,16 @@ using System;
 using System.IO;
 using System.Linq;
 
-namespace MonoMod.Core.Platforms.Runtimes {
-    internal abstract class CoreBaseRuntime : FxCoreBaseRuntime, IInitialize {
+namespace MonoMod.Core.Platforms.Runtimes
+{
+    internal abstract class CoreBaseRuntime : FxCoreBaseRuntime, IInitialize
+    {
 
-        public static CoreBaseRuntime CreateForVersion(Version version, ISystem system, IArchitecture arch) {
+        public static CoreBaseRuntime CreateForVersion(Version version, ISystem system, IArchitecture arch)
+        {
 
-            switch (version.Major) {
+            switch (version.Major)
+            {
                 case 2:
                 case 4:
                     // .NET Core 2.x
@@ -18,7 +22,8 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
                 case 3:
                     // .NET Core 3.x
-                    return version.Minor switch {
+                    return version.Minor switch
+                    {
                         0 => new Core30Runtime(system),
                         1 => new Core31Runtime(system),
                         _ => throw new PlatformNotSupportedException($"Unknown .NET Core 3.x minor version {version.Minor}"),
@@ -53,32 +58,41 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         protected ISystem System { get; }
 
-        protected CoreBaseRuntime(ISystem system) {
+        protected CoreBaseRuntime(ISystem system)
+        {
             System = system;
 
             if (PlatformDetection.Architecture == ArchitectureKind.x86_64 &&
-                system.DefaultAbi is { } abi) {
+                system.DefaultAbi is { } abi)
+            {
                 AbiCore = AbiForCoreFx45X64(abi);
             }
         }
 
-        void IInitialize.Initialize() {
+        void IInitialize.Initialize()
+        {
             InstallJitHook(JitObject);
         }
 
         private static bool IsMaybeClrJitPath(string path)
             => Path.GetFileNameWithoutExtension(path).EndsWith("clrjit", StringComparison.Ordinal);
 
-        protected virtual string GetClrJitPath() {
+        protected virtual string GetClrJitPath()
+        {
             string? clrjitFile = null;
 
-            if (Switches.TryGetSwitchValue(Switches.JitPath, out var swValue) && swValue is string jitPath) {
-                if (!IsMaybeClrJitPath(jitPath)) {
+            if (Switches.TryGetSwitchValue(Switches.JitPath, out var swValue) && swValue is string jitPath)
+            {
+                if (!IsMaybeClrJitPath(jitPath))
+                {
                     MMDbgLog.Warning($"Provided value for MonoMod.JitPath switch '{jitPath}' does not look like a ClrJIT path");
-                } else {
+                }
+                else
+                {
                     clrjitFile = System.EnumerateLoadedModuleFiles()
                         .FirstOrDefault(f => f is not null && f == jitPath);
-                    if (clrjitFile is null) {
+                    if (clrjitFile is null)
+                    {
                         MMDbgLog.Warning($"Provided path for MonoMod.JitPath switch was not loaded in this process. jitPath: {jitPath}");
                     }
                 }
@@ -97,15 +111,19 @@ namespace MonoMod.Core.Platforms.Runtimes {
         private IntPtr? lazyJitObject;
         protected IntPtr JitObject => lazyJitObject ??= GetJitObject();
 
-        private unsafe IntPtr GetJitObject() {
+        private unsafe IntPtr GetJitObject()
+        {
             var path = GetClrJitPath();
 
             if (!DynDll.TryOpenLibrary(path, out var clrjit))
                 throw new PlatformNotSupportedException("Could not open clrjit library");
 
-            try {
+            try
+            {
                 return ((delegate* unmanaged[Stdcall]<IntPtr>)DynDll.GetExport(clrjit, "getJit"))();
-            } catch {
+            }
+            catch
+            {
                 DynDll.CloseLibrary(clrjit);
                 throw;
             }
@@ -115,15 +133,19 @@ namespace MonoMod.Core.Platforms.Runtimes {
 
         private INativeExceptionHelper? lazyNativeExceptionHelper;
         protected INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= System.NativeExceptionHelper;
-        protected IntPtr EHNativeToManaged(IntPtr target, out IDisposable? handle) {
-            if (NativeExceptionHelper is not null) {
+        protected IntPtr EHNativeToManaged(IntPtr target, out IDisposable? handle)
+        {
+            if (NativeExceptionHelper is not null)
+            {
                 return NativeExceptionHelper.CreateNativeToManagedHelper(target, out handle);
             }
             handle = null;
             return target;
         }
-        protected IntPtr EHManagedToNative(IntPtr target, out IDisposable? handle) {
-            if (NativeExceptionHelper is not null) {
+        protected IntPtr EHManagedToNative(IntPtr target, out IDisposable? handle)
+        {
+            if (NativeExceptionHelper is not null)
+            {
                 return NativeExceptionHelper.CreateManagedToNativeHelper(target, out handle);
             }
             handle = null;

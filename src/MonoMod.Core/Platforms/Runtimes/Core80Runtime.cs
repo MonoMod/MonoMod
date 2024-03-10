@@ -2,9 +2,11 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using static MonoMod.Core.Interop.CoreCLR;
 
-namespace MonoMod.Core.Platforms.Runtimes {
+namespace MonoMod.Core.Platforms.Runtimes
+{
     [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 9.")]
-    internal class Core80Runtime : Core70Runtime {
+    internal class Core80Runtime : Core70Runtime
+    {
         public Core80Runtime(ISystem system, IArchitecture arch) : base(system, arch) { }
 
         // src/coreclr/inc/jiteeversionguid.h line 46

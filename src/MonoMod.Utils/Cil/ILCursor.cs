@@ -13,11 +13,13 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 // Certain paramaters are self-explanatory (f.e. predicates in Goto*), while others are not (f.e. cursors in Find*).
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
 
-namespace MonoMod.Cil {
+namespace MonoMod.Cil
+{
     /// <summary>
     /// Specifies where a ILCursor should be positioned in relation to the target of a search function
     /// </summary>
-    public enum MoveType {
+    public enum MoveType
+    {
         /// <summary>
         ///  Move the cursor before the first instruction in the match
         /// </summary>
@@ -40,7 +42,8 @@ namespace MonoMod.Cil {
     /// <para />
     /// SearchTarget.Next is the result of searching with MoveType.Before, and SearchTarget.Prev from MoveType.After 
     /// </summary>
-    public enum SearchTarget {
+    public enum SearchTarget
+    {
         None,
 
         /// <summary>
@@ -58,7 +61,8 @@ namespace MonoMod.Cil {
     /// A cursor used to manipulate a method body in an ILContext.
     /// </summary>
     [EmitILOverloads("ILOpcodes.txt", ILOverloadKind.Cursor)]
-    public sealed partial class ILCursor {
+    public sealed partial class ILCursor
+    {
         /// <summary>
         /// The context to which this cursor belongs to.
         /// </summary>
@@ -74,7 +78,8 @@ namespace MonoMod.Cil {
         /// <summary>
         /// The instruction immediately following the cursor position or null if the cursor is at the end of the instruction list.
         /// </summary>
-        public Instruction? Next {
+        public Instruction? Next
+        {
             get => _next;
             set => Goto(value);
         }
@@ -82,7 +87,8 @@ namespace MonoMod.Cil {
         /// <summary>
         /// The instruction immediately preceding the cursor position or null if the cursor is at the start of the instruction list.
         /// </summary>
-        public Instruction Prev {
+        public Instruction Prev
+        {
             get => Next == null ? Instrs[Instrs.Count - 1] : Next.Previous;
             set => Goto(value, MoveType.After);
         }
@@ -90,7 +96,8 @@ namespace MonoMod.Cil {
         /// <summary>
         /// The instruction immediately preceding the cursor position or null if the cursor is at the start of the instruction list.
         /// </summary>
-        public Instruction Previous {
+        public Instruction Previous
+        {
             get => Prev;
             set => Prev = value;
         }
@@ -99,7 +106,8 @@ namespace MonoMod.Cil {
         /// The index of the instruction immediately following the cursor position. Range: 0 to <c>Instrs.Count</c>
         /// Setter accepts negative indexing by adding <c>Instrs.Count</c> to the operand
         /// </summary>
-        public int Index {
+        public int Index
+        {
             get => Context.IndexOf(Next);
             set => Goto(value);
         }
@@ -110,9 +118,11 @@ namespace MonoMod.Cil {
         /// 
         /// See <see cref="Cil.SearchTarget"/>
         /// </summary>
-        public SearchTarget SearchTarget {
+        public SearchTarget SearchTarget
+        {
             get => _searchTarget;
-            set {
+            set
+            {
                 if (value == SearchTarget.Next && Next == null || value == SearchTarget.Prev && Prev == null)
                     value = SearchTarget.None;
 
@@ -147,12 +157,14 @@ namespace MonoMod.Cil {
         /// </summary>
         public InstrList Instrs => Context.Instrs;
 
-        public ILCursor(ILContext context) {
+        public ILCursor(ILContext context)
+        {
             Context = context;
             Index = 0;
         }
 
-        public ILCursor(ILCursor c) {
+        public ILCursor(ILCursor c)
+        {
             Helpers.ThrowIfArgumentNull(c);
             Context = c.Context;
             _next = c._next;
@@ -187,7 +199,8 @@ namespace MonoMod.Cil {
         /// Obtain a string representation of this cursor (method ID, index, search target, surrounding instructions).
         /// </summary>
         /// <returns>A string representation of this cursor.</returns>
-        public override string ToString() {
+        public override string ToString()
+        {
             var builder = new StringBuilder();
 
 #pragma warning disable CA1305 // Specify IFormatProvider
@@ -209,7 +222,8 @@ namespace MonoMod.Cil {
         /// <param name="moveType">Where to move in relation to the target instruction and incoming labels (branches)</param>
         /// <param name="setTarget">Whether to set the `SearchTarget` and skip the target instruction with the next search function</param>
         /// <returns>this</returns>
-        public ILCursor Goto(Instruction? insn, MoveType moveType = MoveType.Before, bool setTarget = false) {
+        public ILCursor Goto(Instruction? insn, MoveType moveType = MoveType.Before, bool setTarget = false)
+        {
             if (moveType == MoveType.After)
                 // Moving past the end of the method shouldn't move any further, nor wrap around.
                 _next = insn?.Next;
@@ -233,7 +247,8 @@ namespace MonoMod.Cil {
         /// Move the cursor after incoming labels (branches). If an instruction is emitted, all labels which currently point to Next, will point to the newly emitted instruction.
         /// </summary>
         /// <returns>this</returns>
-        public ILCursor MoveAfterLabels() {
+        public ILCursor MoveAfterLabels()
+        {
             MoveAfterLabels(intoEHRanges: true);
             return this;
         }
@@ -243,7 +258,8 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="intoEHRanges">Whether to move the cursor into any try or catch ranges which start at the current position. Defaults to true.</param>
         /// <returns>this</returns>
-        public ILCursor MoveAfterLabels(bool intoEHRanges) {
+        public ILCursor MoveAfterLabels(bool intoEHRanges)
+        {
             _afterLabels = IncomingLabels.ToArray();
             _afterHandlerStarts = intoEHRanges;
             _afterHandlerEnds = true;
@@ -254,7 +270,8 @@ namespace MonoMod.Cil {
         /// Move the cursor before incoming labels (branches). This is the default behaviour. Emitted instructions will not cause labels to change targets.
         /// </summary>
         /// <returns>this</returns>
-        public ILCursor MoveBeforeLabels() {
+        public ILCursor MoveBeforeLabels()
+        {
             _afterLabels = null;
             _afterHandlerStarts = false;
             _afterHandlerEnds = false;
@@ -265,7 +282,8 @@ namespace MonoMod.Cil {
         /// Move the cursor to a target index. Supports negative indexing. See <see cref="Goto(Instruction, MoveType, bool)"/>
         /// </summary>
         /// <returns>this</returns>
-        public ILCursor Goto(int index, MoveType moveType = MoveType.Before, bool setTarget = false) {
+        public ILCursor Goto(int index, MoveType moveType = MoveType.Before, bool setTarget = false)
+        {
             if (index < 0)
                 index += Instrs.Count;
 
@@ -284,7 +302,8 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public ILCursor GotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+        public ILCursor GotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates)
+        {
             if (!TryGotoNext(moveType, predicates))
                 throw new KeyNotFoundException();
 
@@ -295,7 +314,8 @@ namespace MonoMod.Cil {
         /// Search forward and moves the cursor to the next sequence of instructions matching the corresponding predicates.
         /// </summary>
         /// <returns>True if a match was found</returns>
-        public bool TryGotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+        public bool TryGotoNext(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates)
+        {
             Helpers.ThrowIfArgumentNull(predicates);
 
             var instrs = Instrs;
@@ -303,9 +323,12 @@ namespace MonoMod.Cil {
             if (SearchTarget == SearchTarget.Next)
                 i++;
 
-            for (; i + predicates.Length <= instrs.Count; i++) {
-                for (var j = 0; j < predicates.Length; j++) {
-                    if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true)) {
+            for (; i + predicates.Length <= instrs.Count; i++)
+            {
+                for (var j = 0; j < predicates.Length; j++)
+                {
+                    if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
+                    {
                         goto Next;
                     }
                 }
@@ -324,7 +347,8 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <returns>this</returns>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public ILCursor GotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+        public ILCursor GotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates)
+        {
             if (!TryGotoPrev(moveType, predicates))
                 throw new KeyNotFoundException();
 
@@ -335,7 +359,8 @@ namespace MonoMod.Cil {
         /// Search backward and moves the cursor to the next sequence of instructions matching the corresponding predicates.
         /// </summary>
         /// <returns>True if a match was found</returns>
-        public bool TryGotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates) {
+        public bool TryGotoPrev(MoveType moveType = MoveType.Before, params Func<Instruction, bool>[] predicates)
+        {
             Helpers.ThrowIfArgumentNull(predicates);
             var instrs = Instrs;
             var i = Index - 1;
@@ -343,7 +368,8 @@ namespace MonoMod.Cil {
                 i--;
             i = Math.Min(i, instrs.Count - predicates.Length);
 
-            for (; i >= 0; i--) {
+            for (; i >= 0; i--)
+            {
                 for (var j = 0; j < predicates.Length; j++)
                     if (!(predicates[j]?.Invoke(instrs[i + j]) ?? true))
                         goto Next;
@@ -372,7 +398,8 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public void FindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates)
+        {
             if (!TryFindNext(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
@@ -382,11 +409,13 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <returns>True if a match was found</returns>
-        public bool TryFindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public bool TryFindNext(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates)
+        {
             Helpers.ThrowIfArgumentNull(predicates);
             cursors = new ILCursor[predicates.Length];
             var c = this;
-            for (var i = 0; i < predicates.Length; i++) {
+            for (var i = 0; i < predicates.Length; i++)
+            {
                 c = c.Clone();
                 if (!c.TryGotoNext(predicates[i]))
                     return false;
@@ -401,7 +430,8 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <exception cref="KeyNotFoundException">If no match is found</exception>
-        public void FindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public void FindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates)
+        {
             if (!TryFindPrev(out cursors, predicates))
                 throw new KeyNotFoundException();
         }
@@ -411,11 +441,13 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="cursors">An array of cursors corresponding to each found instruction (MoveType.Before)</param>
         /// <returns>True if a match was found</returns>
-        public bool TryFindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates) {
+        public bool TryFindPrev(out ILCursor[] cursors, params Func<Instruction, bool>[] predicates)
+        {
             Helpers.ThrowIfArgumentNull(predicates);
             cursors = new ILCursor[predicates.Length];
             var c = this;
-            for (var i = predicates.Length - 1; i >= 0; i--) {
+            for (var i = predicates.Length - 1; i >= 0; i--)
+            {
                 c = c.Clone();
                 if (!c.TryGotoPrev(predicates[i]))
                     return false;
@@ -433,15 +465,19 @@ namespace MonoMod.Cil {
         /// Set the target of a label to the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
         /// <param name="label">The label to mark</param>
-        public void MarkLabel(ILLabel? label) {
+        public void MarkLabel(ILLabel? label)
+        {
             if (label == null)
                 label = new ILLabel(Context);
 
             label.Target = Next;
-            if (_afterLabels != null) {
+            if (_afterLabels != null)
+            {
                 Array.Resize(ref _afterLabels, _afterLabels.Length + 1);
                 _afterLabels[_afterLabels.Length - 1] = label;
-            } else {
+            }
+            else
+            {
                 _afterLabels = new[] { label };
             }
         }
@@ -451,9 +487,11 @@ namespace MonoMod.Cil {
         /// </summary>
         /// <param name="inst">The instruction to target</param>
         /// <returns>The created label</returns>
-        public ILLabel MarkLabel(Instruction inst) {
+        public ILLabel MarkLabel(Instruction inst)
+        {
             var label = Context.DefineLabel();
-            if (inst == Next) {
+            if (inst == Next)
+            {
                 MarkLabel(label);
                 return label;
             }
@@ -465,7 +503,8 @@ namespace MonoMod.Cil {
         /// Create a new label targetting the current position (<c>label.Target = Next</c>) and moves after it.
         /// </summary>
         /// <returns>The newly created label</returns>
-        public ILLabel MarkLabel() {
+        public ILLabel MarkLabel()
+        {
             var label = DefineLabel();
             MarkLabel(label);
             return label;
@@ -477,14 +516,17 @@ namespace MonoMod.Cil {
         /// <returns>A new label with no target</returns>
         public ILLabel DefineLabel() => Context.DefineLabel();
 
-        private ILCursor _Insert(Instruction instr) {
+        private ILCursor _Insert(Instruction instr)
+        {
             // retargetting
             if (_afterLabels != null)
                 foreach (var label in _afterLabels)
                     label.Target = instr;
 
-            if (_afterHandlerStarts) {
-                foreach (var eh in Body.ExceptionHandlers) {
+            if (_afterHandlerStarts)
+            {
+                foreach (var eh in Body.ExceptionHandlers)
+                {
                     if (eh.TryStart == Next)
                         eh.TryStart = instr;
                     if (eh.HandlerStart == Next)
@@ -494,8 +536,10 @@ namespace MonoMod.Cil {
                 }
             }
 
-            if (_afterHandlerEnds) {
-                foreach (var eh in Body.ExceptionHandlers) {
+            if (_afterHandlerEnds)
+            {
+                foreach (var eh in Body.ExceptionHandlers)
+                {
                     if (eh.TryEnd == Next)
                         eh.TryEnd = instr;
                     if (eh.HandlerEnd == Next)
@@ -516,7 +560,8 @@ namespace MonoMod.Cil {
         /// <summary>
         /// Remove several instructions. Any labels or exception ranges pointing to the instruction will be moved to the following instruction. Cursor position will be maintained.
         /// </summary>
-        public ILCursor RemoveRange(int num) {
+        public ILCursor RemoveRange(int num)
+        {
             var index = Index;
 
             // Retargetting
@@ -524,7 +569,8 @@ namespace MonoMod.Cil {
             foreach (var label in IncomingLabels)
                 label.Target = newTarget;
 
-            foreach (var eh in Body.ExceptionHandlers) {
+            foreach (var eh in Body.ExceptionHandlers)
+            {
                 if (eh.TryStart == Next)
                     eh.TryStart = newTarget;
                 if (eh.TryEnd == Next)
@@ -729,14 +775,16 @@ namespace MonoMod.Cil {
         /// <summary>
         /// Emit the IL to retrieve a stored reference of type <typeparamref name="T"/> with the given <paramref name="id"/> and place it on the stack.
         /// </summary>
-        public void EmitGetReference<T>(int id) {
+        public void EmitGetReference<T>(int id)
+        {
             this.EmitLoadTypedReference(Context.GetReferenceCell(id), typeof(T));
         }
 
         /// <summary>
         /// Store an object in the reference store, and emit the IL to retrieve it and place it on the stack.
         /// </summary>
-        public int EmitReference<T>(in T? t) {
+        public int EmitReference<T>(in T? t)
+        {
             var id = AddReference(in t);
             // we can use the UNsafe variant because, in this case, we know for sure that the type will be correct
             this.EmitLoadTypedReferenceUnsafe(Context.GetReferenceCell(id), typeof(T));
@@ -746,9 +794,11 @@ namespace MonoMod.Cil {
         /// <summary>
         /// Emit the IL to invoke a delegate as if it were a method. Stack behaviour matches OpCodes.Call
         /// </summary>
-        public int EmitDelegate<T>(T cb) where T : Delegate {
+        public int EmitDelegate<T>(T cb) where T : Delegate
+        {
             Helpers.ThrowIfArgumentNull(cb);
-            if (cb.GetInvocationList().Length == 1 && cb.Target == null) { // optimisation for static delegates
+            if (cb.GetInvocationList().Length == 1 && cb.Target == null)
+            { // optimisation for static delegates
                 Emit(OpCodes.Call, cb.Method);
                 return -1;
             }
@@ -756,13 +806,16 @@ namespace MonoMod.Cil {
             int id; // we delay the emitting of the reference because we may need to cast it
 
             var invoker = FastDelegateInvokers.GetDelegateInvoker(typeof(T));
-            if (invoker is { } pair) {
+            if (invoker is { } pair)
+            {
                 var cast = cb.CastDelegate(pair.Delegate);
                 id = EmitReference(cast);
                 // Prevent the invoker from getting GC'd early, f.e. when it's a DynamicMethod.
                 AddReference(pair.Invoker);
                 Emit(OpCodes.Call, pair.Invoker);
-            } else {
+            }
+            else
+            {
                 id = EmitReference(cb);
                 var delInvoke = typeof(T).GetMethod("Invoke")!;
                 Emit(OpCodes.Callvirt, delInvoke);

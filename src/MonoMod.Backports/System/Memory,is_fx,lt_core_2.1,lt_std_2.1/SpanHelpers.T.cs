@@ -4,10 +4,13 @@
 
 using System.Diagnostics;
 
-namespace System {
-    internal static partial class SpanHelpers {
+namespace System
+{
+    internal static partial class SpanHelpers
+    {
         public static int IndexOf<T>(ref T searchSpace, int searchSpaceLength, ref T value, int valueLength)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -42,11 +45,13 @@ namespace System {
         }
 
         public static unsafe int IndexOf<T>(ref T searchSpace, T value, int length)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(length >= 0);
 
             nuint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
-            while (length >= 8) {
+            while (length >= 8)
+            {
                 length -= 8;
 
                 if (value.Equals(Unsafe.Add(ref searchSpace, index)))
@@ -69,7 +74,8 @@ namespace System {
                 index += 8;
             }
 
-            if (length >= 4) {
+            if (length >= 4)
+            {
                 length -= 4;
 
                 if (value.Equals(Unsafe.Add(ref searchSpace, index)))
@@ -84,7 +90,8 @@ namespace System {
                 index += 4;
             }
 
-            while (length > 0) {
+            while (length > 0)
+            {
                 if (value.Equals(Unsafe.Add(ref searchSpace, index)))
                     goto Found;
 
@@ -112,12 +119,14 @@ namespace System {
         }
 
         public static int IndexOfAny<T>(ref T searchSpace, T value0, T value1, int length)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(length >= 0);
 
             T lookUp;
             int index = 0;
-            while ((length - index) >= 8) {
+            while ((length - index) >= 8)
+            {
                 lookUp = Unsafe.Add(ref searchSpace, index);
                 if (value0.Equals(lookUp) || value1.Equals(lookUp))
                     goto Found;
@@ -146,7 +155,8 @@ namespace System {
                 index += 8;
             }
 
-            if ((length - index) >= 4) {
+            if ((length - index) >= 4)
+            {
                 lookUp = Unsafe.Add(ref searchSpace, index);
                 if (value0.Equals(lookUp) || value1.Equals(lookUp))
                     goto Found;
@@ -163,7 +173,8 @@ namespace System {
                 index += 4;
             }
 
-            while (index < length) {
+            while (index < length)
+            {
                 lookUp = Unsafe.Add(ref searchSpace, index);
                 if (value0.Equals(lookUp) || value1.Equals(lookUp))
                     goto Found;
@@ -191,12 +202,14 @@ namespace System {
         }
 
         public static int IndexOfAny<T>(ref T searchSpace, T value0, T value1, T value2, int length)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(length >= 0);
 
             T lookUp;
             int index = 0;
-            while ((length - index) >= 8) {
+            while ((length - index) >= 8)
+            {
                 lookUp = Unsafe.Add(ref searchSpace, index);
                 if (value0.Equals(lookUp) || value1.Equals(lookUp) || value2.Equals(lookUp))
                     goto Found;
@@ -225,7 +238,8 @@ namespace System {
                 index += 8;
             }
 
-            if ((length - index) >= 4) {
+            if ((length - index) >= 4)
+            {
                 lookUp = Unsafe.Add(ref searchSpace, index);
                 if (value0.Equals(lookUp) || value1.Equals(lookUp) || value2.Equals(lookUp))
                     goto Found;
@@ -242,7 +256,8 @@ namespace System {
                 index += 4;
             }
 
-            while (index < length) {
+            while (index < length)
+            {
                 lookUp = Unsafe.Add(ref searchSpace, index);
                 if (value0.Equals(lookUp) || value1.Equals(lookUp) || value2.Equals(lookUp))
                     goto Found;
@@ -270,7 +285,8 @@ namespace System {
         }
 
         public static int IndexOfAny<T>(ref T searchSpace, int searchSpaceLength, ref T value, int valueLength)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -278,9 +294,11 @@ namespace System {
                 return 0;  // A zero-length sequence is always treated as "found" at the start of the search space.
 
             int index = -1;
-            for (int i = 0; i < valueLength; i++) {
+            for (int i = 0; i < valueLength; i++)
+            {
                 var tempIndex = IndexOf(ref searchSpace, Unsafe.Add(ref value, i), searchSpaceLength);
-                if ((uint)tempIndex < (uint)index) {
+                if ((uint)tempIndex < (uint)index)
+                {
                     index = tempIndex;
                     // Reduce space for search, cause we don't care if we find the search value after the index of a previously found value
                     searchSpaceLength = tempIndex;
@@ -293,7 +311,8 @@ namespace System {
         }
 
         public static int LastIndexOf<T>(ref T searchSpace, int searchSpaceLength, ref T value, int valueLength)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -327,10 +346,12 @@ namespace System {
         }
 
         public static int LastIndexOf<T>(ref T searchSpace, T value, int length)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(length >= 0);
 
-            while (length >= 8) {
+            while (length >= 8)
+            {
                 length -= 8;
 
                 if (value.Equals(Unsafe.Add(ref searchSpace, length + 7)))
@@ -351,7 +372,8 @@ namespace System {
                     goto Found;
             }
 
-            if (length >= 4) {
+            if (length >= 4)
+            {
                 length -= 4;
 
                 if (value.Equals(Unsafe.Add(ref searchSpace, length + 3)))
@@ -364,7 +386,8 @@ namespace System {
                     goto Found;
             }
 
-            while (length > 0) {
+            while (length > 0)
+            {
                 length--;
 
                 if (value.Equals(Unsafe.Add(ref searchSpace, length)))
@@ -391,11 +414,13 @@ namespace System {
         }
 
         public static int LastIndexOfAny<T>(ref T searchSpace, T value0, T value1, int length)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(length >= 0);
 
             T lookUp;
-            while (length >= 8) {
+            while (length >= 8)
+            {
                 length -= 8;
 
                 lookUp = Unsafe.Add(ref searchSpace, length + 7);
@@ -424,7 +449,8 @@ namespace System {
                     goto Found;
             }
 
-            if (length >= 4) {
+            if (length >= 4)
+            {
                 length -= 4;
 
                 lookUp = Unsafe.Add(ref searchSpace, length + 3);
@@ -441,7 +467,8 @@ namespace System {
                     goto Found;
             }
 
-            while (length > 0) {
+            while (length > 0)
+            {
                 length--;
 
                 lookUp = Unsafe.Add(ref searchSpace, length);
@@ -469,11 +496,13 @@ namespace System {
         }
 
         public static int LastIndexOfAny<T>(ref T searchSpace, T value0, T value1, T value2, int length)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(length >= 0);
 
             T lookUp;
-            while (length >= 8) {
+            while (length >= 8)
+            {
                 length -= 8;
 
                 lookUp = Unsafe.Add(ref searchSpace, length + 7);
@@ -502,7 +531,8 @@ namespace System {
                     goto Found;
             }
 
-            if (length >= 4) {
+            if (length >= 4)
+            {
                 length -= 4;
 
                 lookUp = Unsafe.Add(ref searchSpace, length + 3);
@@ -519,7 +549,8 @@ namespace System {
                     goto Found;
             }
 
-            while (length > 0) {
+            while (length > 0)
+            {
                 length--;
 
                 lookUp = Unsafe.Add(ref searchSpace, length);
@@ -547,7 +578,8 @@ namespace System {
         }
 
         public static int LastIndexOfAny<T>(ref T searchSpace, int searchSpaceLength, ref T value, int valueLength)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(searchSpaceLength >= 0);
             Debug.Assert(valueLength >= 0);
 
@@ -555,7 +587,8 @@ namespace System {
                 return 0;  // A zero-length sequence is always treated as "found" at the start of the search space.
 
             int index = -1;
-            for (int i = 0; i < valueLength; i++) {
+            for (int i = 0; i < valueLength; i++)
+            {
                 var tempIndex = LastIndexOf(ref searchSpace, Unsafe.Add(ref value, i), searchSpaceLength);
                 if (tempIndex > index)
                     index = tempIndex;
@@ -564,14 +597,16 @@ namespace System {
         }
 
         public static bool SequenceEqual<T>(ref T first, ref T second, int length)
-            where T : IEquatable<T> {
+            where T : IEquatable<T>
+        {
             Debug.Assert(length >= 0);
 
             if (Unsafe.AreSame(ref first, ref second))
                 goto Equal;
 
             nuint index = 0; // Use IntPtr for arithmetic to avoid unnecessary 64->32->64 truncations
-            while (length >= 8) {
+            while (length >= 8)
+            {
                 length -= 8;
 
                 if (!Unsafe.Add(ref first, index).Equals(Unsafe.Add(ref second, index)))
@@ -594,7 +629,8 @@ namespace System {
                 index += 8;
             }
 
-            if (length >= 4) {
+            if (length >= 4)
+            {
                 length -= 4;
 
                 if (!Unsafe.Add(ref first, index).Equals(Unsafe.Add(ref second, index)))
@@ -609,7 +645,8 @@ namespace System {
                 index += 4;
             }
 
-            while (length > 0) {
+            while (length > 0)
+            {
                 if (!Unsafe.Add(ref first, index).Equals(Unsafe.Add(ref second, index)))
                     goto NotEqual;
                 index += 1;
@@ -624,14 +661,16 @@ namespace System {
         }
 
         public static int SequenceCompareTo<T>(ref T first, int firstLength, ref T second, int secondLength)
-            where T : IComparable<T> {
+            where T : IComparable<T>
+        {
             Debug.Assert(firstLength >= 0);
             Debug.Assert(secondLength >= 0);
 
             var minLength = firstLength;
             if (minLength > secondLength)
                 minLength = secondLength;
-            for (int i = 0; i < minLength; i++) {
+            for (int i = 0; i < minLength; i++)
+            {
                 int result = Unsafe.Add(ref first, i).CompareTo(Unsafe.Add(ref second, i));
                 if (result != 0)
                     return result;

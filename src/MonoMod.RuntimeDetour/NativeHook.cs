@@ -3,7 +3,8 @@ using MonoMod.Utils;
 using System;
 using System.Linq;
 
-namespace MonoMod.RuntimeDetour {
+namespace MonoMod.RuntimeDetour
+{
     /// <summary>
     /// A single hook from a native function to a target delegate, optionally allowing the target to call the original function.
     /// </summary>
@@ -12,7 +13,8 @@ namespace MonoMod.RuntimeDetour {
     /// or the object is disposed. Use <see cref="DetourInfo"/> to get an object which represents the hook without
     /// extending its lifetime.
     /// </remarks>
-    public sealed class NativeHook : INativeDetour, IDisposable {
+    public sealed class NativeHook : INativeDetour, IDisposable
+    {
 
         // TODO: reference external xmldoc which describes the shape that a delegate can take, both here and for Hook
         #region Constructor overloads
@@ -77,7 +79,8 @@ namespace MonoMod.RuntimeDetour {
         /// <param name="factory">The <see cref="IDetourFactory"/> to use to interact with this hook.</param>
         /// <param name="config">The <see cref="DetourConfig"/> to use for this detour.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
-        public NativeHook(IntPtr function, Delegate hook, IDetourFactory factory, DetourConfig? config, bool applyByDefault) {
+        public NativeHook(IntPtr function, Delegate hook, IDetourFactory factory, DetourConfig? config, bool applyByDefault)
+        {
             Helpers.ThrowIfArgumentNull(hook);
             Helpers.ThrowIfArgumentNull(factory);
 
@@ -91,7 +94,8 @@ namespace MonoMod.RuntimeDetour {
             state = DetourManager.GetNativeDetourState(function);
             detour = new(this);
 
-            if (applyByDefault) {
+            if (applyByDefault)
+            {
                 Apply();
             }
         }
@@ -101,13 +105,16 @@ namespace MonoMod.RuntimeDetour {
         Type INativeDetour.NativeDelegateType => nativeDelType;
         bool INativeDetour.HasOrigParam => hasOrigParam;
 
-        private static Type GetNativeDelegateType(Type inDelType, out bool hasOrigParam) {
+        private static Type GetNativeDelegateType(Type inDelType, out bool hasOrigParam)
+        {
             var sig = MethodSignature.ForMethod(inDelType.GetMethod("Invoke")!, ignoreThis: true);
 
             // we are kinda guessing here, because we don't know the sig of the method
-            if (sig.FirstParameter is { } fst && typeof(Delegate).IsAssignableFrom(fst)) {
+            if (sig.FirstParameter is { } fst && typeof(Delegate).IsAssignableFrom(fst))
+            {
                 var fsig = MethodSignature.ForMethod(fst.GetMethod("Invoke")!, ignoreThis: true);
-                if (sig.Parameters.Skip(1).SequenceEqual(fsig.Parameters)) {
+                if (sig.Parameters.Skip(1).SequenceEqual(fsig.Parameters))
+                {
                     hasOrigParam = true;
                     return fst;
                 }
@@ -117,7 +124,8 @@ namespace MonoMod.RuntimeDetour {
             return inDelType;
         }
 
-        private void CheckDisposed() {
+        private void CheckDisposed()
+        {
             if (disposedValue)
                 throw new ObjectDisposedException(ToString());
         }
@@ -125,17 +133,21 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Applies the hook, if it was not already applied.
         /// </summary>
-        public void Apply() {
+        public void Apply()
+        {
             CheckDisposed();
 
             var lockTaken = false;
-            try {
+            try
+            {
                 state.detourLock.Enter(ref lockTaken);
                 if (IsApplied)
                     return;
                 MMDbgLog.Trace($"Applying NativeHook of 0x{Function:x16}");
                 state.AddDetour(detour, !lockTaken);
-            } finally {
+            }
+            finally
+            {
                 if (lockTaken)
                     state.detourLock.Exit(true);
             }
@@ -144,17 +156,21 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Undoes the hook, if it was applied.
         /// </summary>
-        public void Undo() {
+        public void Undo()
+        {
             CheckDisposed();
 
             var lockTaken = false;
-            try {
+            try
+            {
                 state.detourLock.Enter(ref lockTaken);
                 if (!IsApplied)
                     return;
                 MMDbgLog.Trace($"Undoing NativeHook from 0x{Function:x16}");
                 state.RemoveDetour(detour, !lockTaken);
-            } finally {
+            }
+            finally
+            {
                 if (lockTaken)
                     state.detourLock.Exit(true);
             }
@@ -174,8 +190,10 @@ namespace MonoMod.RuntimeDetour {
         /// </summary>
         public NativeDetourInfo DetourInfo => state.Info.GetDetourInfo(detour);
 
-        private void Dispose(bool disposing) {
-            if (!disposedValue && detour is not null) {
+        private void Dispose(bool disposing)
+        {
+            if (!disposedValue && detour is not null)
+            {
                 detour.IsValid = false;
                 if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))
                     Undo();
@@ -187,13 +205,15 @@ namespace MonoMod.RuntimeDetour {
         /// <summary>
         /// Cleans up and undoes the hook, if needed.
         /// </summary>
-        ~NativeHook() {
+        ~NativeHook()
+        {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);
         }
 
         /// <inheritdoc/>
-        public void Dispose() {
+        public void Dispose()
+        {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);

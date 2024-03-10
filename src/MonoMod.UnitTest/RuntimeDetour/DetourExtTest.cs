@@ -20,15 +20,20 @@ using System.Data.SqlClient;
 using MonoMod.Utils;
 #endif
 
-namespace MonoMod.UnitTest {
+namespace MonoMod.UnitTest
+{
     [Collection("RuntimeDetour")]
-    public unsafe class DetourExtTest : TestBase {
-        public DetourExtTest(ITestOutputHelper helper) : base(helper) {
+    public unsafe class DetourExtTest : TestBase
+    {
+        public DetourExtTest(ITestOutputHelper helper) : base(helper)
+        {
         }
 
         [Fact]
-        public void TestDetoursExt() {
-            lock (TestObject.Lock) {
+        public void TestDetoursExt()
+        {
+            lock (TestObject.Lock)
+            {
                 // The following use cases are not meant to be usage examples.
                 // Please take a look at DetourTest and HookTest instead.
 
@@ -118,9 +123,11 @@ namespace MonoMod.UnitTest {
                 // TextWriter's methods (including all overrides) were unable to be hooked on some runtimes.
                 // FIXME: .NET 5 introduces similar behavior for macOS and Linux, but RD isn't ready for that. See DetourRuntimeNETPlatform for more info.
 #if true
-                using (var ms = new MemoryStream()) {
+                using (var ms = new MemoryStream())
+                {
 
-                    using (var writer = new StreamWriter(ms, Encoding.UTF8, 1024, true)) {
+                    using (var writer = new StreamWriter(ms, Encoding.UTF8, 1024, true))
+                    {
                         // In case anyone needs to debug this mess anytime in the future ever again:
                         /*/
                         MethodBase m = typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) });
@@ -135,10 +142,12 @@ namespace MonoMod.UnitTest {
 
                         using (var h = new Hook(
                             typeof(StreamWriter).GetMethod("Write", new Type[] { typeof(string) }),
-                            new Action<Action<StreamWriter, string>, StreamWriter, string>((orig, self, value) => {
+                            new Action<Action<StreamWriter, string>, StreamWriter, string>((orig, self, value) =>
+                            {
                                 orig(self, "-");
                             })
-                        )) {
+                        ))
+                        {
                             // Debugger.Break();
                             writer.Write("B");
                         }
@@ -148,7 +157,8 @@ namespace MonoMod.UnitTest {
 
                     ms.Seek(0, SeekOrigin.Begin);
 
-                    using (var reader = new StreamReader(ms, Encoding.UTF8, false, 1024, true)) {
+                    using (var reader = new StreamReader(ms, Encoding.UTF8, false, 1024, true))
+                    {
                         Assert.Equal("A-C", reader.ReadToEnd());
                     }
 
@@ -221,32 +231,46 @@ namespace MonoMod.UnitTest {
                 // This was provided by a Harmony user.
                 // Theoretically this should be a DynamicMethodDefinition test but who knows what else this will unearth.
 #if true
-                try {
+                try
+                {
                     _ = new Thrower(1);
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     Assert.Equal("1", e.Message);
                 }
 
                 using (var h = new Hook(
                     typeof(Thrower).GetConstructor(new Type[] { typeof(int) }),
-                    new Action<Action<Thrower, int>, Thrower, int>((orig, self, a) => {
-                        try {
+                    new Action<Action<Thrower, int>, Thrower, int>((orig, self, a) =>
+                    {
+                        try
+                        {
                             orig(self, a + 2);
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e)
+                        {
                             throw new Exception($"{a} + 2 = {e.Message}");
                         }
                     })
-                )) {
-                    try {
+                ))
+                {
+                    try
+                    {
                         _ = new Thrower(1);
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e)
+                    {
                         Assert.Equal("1 + 2 = 3", e.Message);
                     }
                 }
 
-                try {
+                try
+                {
                     _ = new Thrower(1);
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     Assert.Equal("1", e.Message);
                 }
 #endif
@@ -255,37 +279,44 @@ namespace MonoMod.UnitTest {
 #if true
                 using (var h = new Hook(
                     typeof(Process).GetMethod("Start", BindingFlags.Public | BindingFlags.Instance),
-                    new Func<Func<Process, bool>, Process, bool>((orig, self) => {
+                    new Func<Func<Process, bool>, Process, bool>((orig, self) =>
+                    {
                         return orig(self);
                     })
-                )) {
+                ))
+                {
                 }
 #endif
 
                 // This was provided by WEGFan from the Everest team.
                 // It should be preferably tested on x86, as it's where the struct size caused problems.
 #if true
-                Assert.Equal(new TwoInts() {
+                Assert.Equal(new TwoInts()
+                {
                     A = 11111111,
                     B = 22222222
                 }, DummyTwoInts());
 
                 using (var h = new Hook(
                     typeof(DetourExtTest).GetMethod("DummyTwoInts", BindingFlags.NonPublic | BindingFlags.Instance),
-                    new Func<Func<DetourExtTest, TwoInts>, DetourExtTest, TwoInts>((orig, self) => {
+                    new Func<Func<DetourExtTest, TwoInts>, DetourExtTest, TwoInts>((orig, self) =>
+                    {
                         var rv = orig(self);
                         rv.A *= 2;
                         rv.B *= 3;
                         return rv;
                     })
-                )) {
-                    Assert.Equal(new TwoInts() {
+                ))
+                {
+                    Assert.Equal(new TwoInts()
+                    {
                         A = 11111111 * 2,
                         B = 22222222 * 3
                     }, DummyTwoInts());
                 }
 
-                Assert.Equal(new TwoInts() {
+                Assert.Equal(new TwoInts()
+                {
                     A = 11111111,
                     B = 22222222
                 }, DummyTwoInts());
@@ -341,7 +372,8 @@ namespace MonoMod.UnitTest {
 #if true
                 Assert.Equal(
                     11111111,
-                    new TwoInts() {
+                    new TwoInts()
+                    {
                         A = 11111111,
                         B = 22222222
                     }.Magic
@@ -349,15 +381,18 @@ namespace MonoMod.UnitTest {
 
                 using (var h = new Hook(
                     typeof(TwoInts).GetMethod("get_Magic", BindingFlags.Public | BindingFlags.Instance),
-                    new Func<Func<IntPtr, int>, IntPtr, int>((orig, self) => {
+                    new Func<Func<IntPtr, int>, IntPtr, int>((orig, self) =>
+                    {
                         var rv = orig(self);
                         rv = rv * 2 + ((TwoInts*)self)->B;
                         return rv;
                     })
-                )) {
+                ))
+                {
                     Assert.Equal(
                         11111111 * 2 + 22222222,
-                        new TwoInts() {
+                        new TwoInts()
+                        {
                             A = 11111111,
                             B = 22222222
                         }.Magic
@@ -366,7 +401,8 @@ namespace MonoMod.UnitTest {
 
                 Assert.Equal(
                     11111111,
-                    new TwoInts() {
+                    new TwoInts()
+                    {
                         A = 11111111,
                         B = 22222222
                     }.Magic
@@ -379,40 +415,49 @@ namespace MonoMod.UnitTest {
             }
         }
 
-        private void OnFirstChanceException(object sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e) {
+        private void OnFirstChanceException(object sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+        {
             // nop
         }
 
-        internal static int TestStaticMethod_A(int a, int b) {
+        internal static int TestStaticMethod_A(int a, int b)
+        {
             return a * b * 2;
         }
 
-        internal class Thrower {
+        internal class Thrower
+        {
 #pragma warning disable CS0649 // Not initialized
             public int b;
 #pragma warning restore CS0649
 
-            public Thrower(int a) {
+            public Thrower(int a)
+            {
                 throw new Exception(a.ToString(CultureInfo.InvariantCulture));
             }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions)512))]
-        internal static int DummyA(int a, int b) {
+        internal static int DummyA(int a, int b)
+        {
             return a * b * 2;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining | /* AggressiveOptimization */ ((MethodImplOptions)512))]
-        internal static int DummyB(int a, int b) {
+        internal static int DummyB(int a, int b)
+        {
             return a * b * 2;
         }
 
-        internal struct TwoInts {
+        internal struct TwoInts
+        {
             public int A;
             public int B;
-            public int Magic {
+            public int Magic
+            {
                 [MethodImpl(MethodImplOptions.NoInlining)]
-                get {
+                get
+                {
                     return A;
                 }
             }
@@ -422,8 +467,10 @@ namespace MonoMod.UnitTest {
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private TwoInts DummyTwoInts() {
-            return new TwoInts() {
+        private TwoInts DummyTwoInts()
+        {
+            return new TwoInts()
+            {
                 A = 11111111,
                 B = 22222222
             };
@@ -431,13 +478,15 @@ namespace MonoMod.UnitTest {
 
         private delegate KeyValuePair<int, int> orig_DictionaryEnumeratorCurrentIntInt(ref Dictionary<int, int>.Enumerator self);
         private delegate KeyValuePair<int, int> hook_DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self);
-        private static KeyValuePair<int, int> DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self) {
+        private static KeyValuePair<int, int> DictionaryEnumeratorCurrentIntInt(orig_DictionaryEnumeratorCurrentIntInt orig, ref Dictionary<int, int>.Enumerator self)
+        {
             return new KeyValuePair<int, int>(1, 1);
         }
 
         private delegate KeyValuePair<string, int> orig_DictionaryEnumeratorCurrentStringInt(ref Dictionary<string, int>.Enumerator self);
         private delegate KeyValuePair<string, int> hook_DictionaryEnumeratorCurrentStringInt(orig_DictionaryEnumeratorCurrentStringInt orig, ref Dictionary<string, int>.Enumerator self);
-        private static KeyValuePair<string, int> DictionaryEnumeratorCurrentStringInt(orig_DictionaryEnumeratorCurrentStringInt orig, ref Dictionary<string, int>.Enumerator self) {
+        private static KeyValuePair<string, int> DictionaryEnumeratorCurrentStringInt(orig_DictionaryEnumeratorCurrentStringInt orig, ref Dictionary<string, int>.Enumerator self)
+        {
             return new KeyValuePair<string, int>("1", 1);
         }
 

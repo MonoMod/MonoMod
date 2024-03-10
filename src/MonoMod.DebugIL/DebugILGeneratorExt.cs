@@ -5,12 +5,15 @@ using System;
 using System.Globalization;
 using System.Text;
 
-namespace MonoMod.DebugIL {
-    public static class DebugILGeneratorExt {
+namespace MonoMod.DebugIL
+{
+    public static class DebugILGeneratorExt
+    {
 
         public static readonly Type tMetadataType = typeof(MetadataType);
 
-        public static ScopeDebugInformation GetOrAddScope(this MethodDebugInformation mdi) {
+        public static ScopeDebugInformation GetOrAddScope(this MethodDebugInformation mdi)
+        {
             Helpers.ThrowIfArgumentNull(mdi);
             if (mdi.Scope != null)
                 return mdi.Scope;
@@ -20,7 +23,8 @@ namespace MonoMod.DebugIL {
             );
         }
 
-        public static string GenerateVariableName(this VariableDefinition @var) {
+        public static string GenerateVariableName(this VariableDefinition @var)
+        {
             Helpers.ThrowIfArgumentNull(var);
             var type = @var.VariableType;
             while (type is TypeSpecification ts)
@@ -36,7 +40,8 @@ namespace MonoMod.DebugIL {
             return name.Substring(0, 1).ToLower(CultureInfo.CurrentCulture) + name.Substring(1) + @var.Index;
         }
 
-        public static string ToRelativeString(this Instruction self) {
+        public static string ToRelativeString(this Instruction self)
+        {
             Helpers.ThrowIfArgumentNull(self);
             var instruction = new StringBuilder();
 
@@ -47,15 +52,17 @@ namespace MonoMod.DebugIL {
 
             instruction.Append(' ');
 
-            switch (self.OpCode.OperandType) {
+            switch (self.OpCode.OperandType)
+            {
                 case OperandType.ShortInlineBrTarget:
                 case OperandType.InlineBrTarget:
-                    AppendRelativeLabel(instruction, self, (Instruction) self.Operand);
+                    AppendRelativeLabel(instruction, self, (Instruction)self.Operand);
                     break;
 
                 case OperandType.InlineSwitch:
-                    var labels = (Instruction[]) self.Operand;
-                    for (var i = 0; i < labels.Length; i++) {
+                    var labels = (Instruction[])self.Operand;
+                    for (var i = 0; i < labels.Length; i++)
+                    {
                         if (i > 0)
                             instruction.Append(',');
 
@@ -77,31 +84,37 @@ namespace MonoMod.DebugIL {
             return instruction.ToString();
         }
 
-        static void AppendRelativeLabel(StringBuilder builder, Instruction from, Instruction to) {
+        static void AppendRelativeLabel(StringBuilder builder, Instruction from, Instruction to)
+        {
             builder.Append("IL_Rel");
 
             var offset = to.Offset - from.Offset;
             Instruction instr;
-            if (offset < 0) {
+            if (offset < 0)
+            {
                 builder.Append('-');
                 offset = 0;
                 for (instr = from; instr != to && instr != null; instr = instr.Previous)
                     offset++;
-            } else {
+            }
+            else
+            {
                 builder.Append('+');
                 offset = 0;
                 for (instr = from; instr != to && instr != null; instr = instr.Next)
                     offset++;
             }
 
-            if (instr == null) {
+            if (instr == null)
+            {
                 builder.Append("?(").Append((to.Offset - from.Offset).ToString("x4", CultureInfo.InvariantCulture)).Append(')');
                 return;
             }
-            
+
             builder.Append(offset);
 
-            switch (instr.OpCode.OperandType) {
+            switch (instr.OpCode.OperandType)
+            {
                 case OperandType.ShortInlineBrTarget:
                 case OperandType.InlineBrTarget:
                 case OperandType.InlineSwitch:

@@ -38,7 +38,8 @@ namespace MonoMod.SourceGen.Internal.Helpers;
 /// </summary>
 /// <typeparam name="T">The type of objects to pool.</typeparam>
 internal sealed class ObjectPool<T>
-    where T : class {
+    where T : class
+{
     /// <summary>
     /// The factory is stored for the lifetime of the pool. We will call this only when pool needs to
     /// expand. compared to "new T()", Func gives more flexibility to implementers and faster than "new T()".
@@ -61,7 +62,8 @@ internal sealed class ObjectPool<T>
     /// </summary>
     /// <param name="factory">The input factory to produce <typeparamref name="T"/> items.</param>
     public ObjectPool(Func<T> factory)
-        : this(factory, Environment.ProcessorCount * 2) {
+        : this(factory, Environment.ProcessorCount * 2)
+    {
     }
 
     /// <summary>
@@ -69,7 +71,8 @@ internal sealed class ObjectPool<T>
     /// </summary>
     /// <param name="factory">The input factory to produce <typeparamref name="T"/> items.</param>
     /// <param name="size">The pool size to use.</param>
-    public ObjectPool(Func<T> factory, int size) {
+    public ObjectPool(Func<T> factory, int size)
+    {
         this.factory = factory;
         items = new Element[size - 1];
     }
@@ -79,10 +82,12 @@ internal sealed class ObjectPool<T>
     /// </summary>
     /// <returns>The returned <typeparamref name="T"/> item to use.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T Allocate() {
+    public T Allocate()
+    {
         var item = firstItem;
 
-        if (item is null || item != Interlocked.CompareExchange(ref firstItem, null, item)) {
+        if (item is null || item != Interlocked.CompareExchange(ref firstItem, null, item))
+        {
             item = AllocateSlow();
         }
 
@@ -94,10 +99,14 @@ internal sealed class ObjectPool<T>
     /// </summary>
     /// <param name="obj">The <typeparamref name="T"/> instance to return.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Free(T obj) {
-        if (firstItem is null) {
+    public void Free(T obj)
+    {
+        if (firstItem is null)
+        {
             firstItem = obj;
-        } else {
+        }
+        else
+        {
             FreeSlow(obj);
         }
     }
@@ -107,12 +116,16 @@ internal sealed class ObjectPool<T>
     /// </summary>
     /// <returns>The returned <typeparamref name="T"/> item to use.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private T AllocateSlow() {
-        foreach (ref var element in items.AsSpan()) {
+    private T AllocateSlow()
+    {
+        foreach (ref var element in items.AsSpan())
+        {
             var instance = element.Value;
 
-            if (instance is not null) {
-                if (instance == Interlocked.CompareExchange(ref element.Value, null, instance)) {
+            if (instance is not null)
+            {
+                if (instance == Interlocked.CompareExchange(ref element.Value, null, instance))
+                {
                     return instance;
                 }
             }
@@ -126,9 +139,12 @@ internal sealed class ObjectPool<T>
     /// </summary>
     /// <param name="obj">The <typeparamref name="T"/> item to return to the pool.</param>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private void FreeSlow(T obj) {
-        foreach (ref var element in items.AsSpan()) {
-            if (element.Value is null) {
+    private void FreeSlow(T obj)
+    {
+        foreach (ref var element in items.AsSpan())
+        {
+            if (element.Value is null)
+            {
                 element.Value = obj;
 
                 break;
@@ -139,7 +155,8 @@ internal sealed class ObjectPool<T>
     /// <summary>
     /// A container for a produced item (using a <see langword="struct"/> wrapper to avoid covariance checks).
     /// </summary>
-    private struct Element {
+    private struct Element
+    {
         /// <summary>
         /// The value held at the current element.
         /// </summary>

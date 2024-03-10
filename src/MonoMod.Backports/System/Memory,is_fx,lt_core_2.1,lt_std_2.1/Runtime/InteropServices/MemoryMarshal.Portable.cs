@@ -4,12 +4,14 @@
 
 using System.Runtime.CompilerServices;
 
-namespace System.Runtime.InteropServices {
+namespace System.Runtime.InteropServices
+{
     /// <summary>
     /// Provides a collection of methods for interoperating with <see cref="Memory{T}"/>, <see cref="ReadOnlyMemory{T}"/>,
     /// <see cref="Span{T}"/>, and <see cref="ReadOnlySpan{T}"/>.
     /// </summary>
-    public static partial class MemoryMarshal {
+    public static partial class MemoryMarshal
+    {
         /// <summary>
         /// Casts a Span of one primitive type <typeparamref name="T"/> to Span of bytes.
         /// That type may not contain pointers or references. This is checked at runtime in order to preserve type safety.
@@ -23,7 +25,8 @@ namespace System.Runtime.InteropServices {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Span<byte> AsBytes<T>(Span<T> span)
-            where T : struct {
+            where T : struct
+        {
             if (SpanHelpers.IsReferenceOrContainsReferences<T>())
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
 
@@ -44,7 +47,8 @@ namespace System.Runtime.InteropServices {
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ReadOnlySpan<byte> AsBytes<T>(ReadOnlySpan<T> span)
-            where T : struct {
+            where T : struct
+        {
             if (SpanHelpers.IsReferenceOrContainsReferences<T>())
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(T));
 
@@ -68,7 +72,8 @@ namespace System.Runtime.InteropServices {
         /// Returns a reference to the 0th element of the Span. If the Span is empty, returns a reference to the location where the 0th element
         /// would have been stored. Such a reference can be used for pinning but must never be dereferenced.
         /// </summary>
-        public static ref T GetReference<T>(Span<T> span) {
+        public static ref T GetReference<T>(Span<T> span)
+        {
             if (span.Pinnable == null)
                 unsafe { return ref Unsafe.AsRef<T>(span.ByteOffset.ToPointer()); }
             else
@@ -79,7 +84,8 @@ namespace System.Runtime.InteropServices {
         /// Returns a reference to the 0th element of the ReadOnlySpan. If the Span is empty, returns a reference to the location where the 0th element
         /// would have been stored. Such a reference can be used for pinning but must never be dereferenced.
         /// </summary>
-        public static ref T GetReference<T>(ReadOnlySpan<T> span) {
+        public static ref T GetReference<T>(ReadOnlySpan<T> span)
+        {
             if (span.Pinnable == null)
                 unsafe { return ref Unsafe.AsRef<T>(span.ByteOffset.ToPointer()); }
             else
@@ -99,7 +105,8 @@ namespace System.Runtime.InteropServices {
         /// </exception>
         public static Span<TTo> Cast<TFrom, TTo>(Span<TFrom> span)
             where TFrom : struct
-            where TTo : struct {
+            where TTo : struct
+        {
             if (SpanHelpers.IsReferenceOrContainsReferences<TFrom>())
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(TFrom));
 
@@ -123,7 +130,8 @@ namespace System.Runtime.InteropServices {
         /// </exception>
         public static ReadOnlySpan<TTo> Cast<TFrom, TTo>(ReadOnlySpan<TFrom> span)
             where TFrom : struct
-            where TTo : struct {
+            where TTo : struct
+        {
             if (SpanHelpers.IsReferenceOrContainsReferences<TFrom>())
                 ThrowHelper.ThrowArgumentException_InvalidTypeWithPointersNotSupported(typeof(TFrom));
 

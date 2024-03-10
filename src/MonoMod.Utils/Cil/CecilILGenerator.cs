@@ -12,11 +12,13 @@ using OpCode = Mono.Cecil.Cil.OpCode;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 using SRE = System.Reflection.Emit;
 
-namespace MonoMod.Utils.Cil {
+namespace MonoMod.Utils.Cil
+{
     /// <summary>
     /// A variant of ILGenerator which uses Mono.Cecil under the hood.
     /// </summary>
-    public sealed class CecilILGenerator : ILGeneratorShim {
+    public sealed class CecilILGenerator : ILGeneratorShim
+    {
         // https://github.com/Unity-Technologies/mono/blob/unity-5.6/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
         // https://github.com/Unity-Technologies/mono/blob/unity-2018.3-mbe/mcs/class/corlib/System.Reflection.Emit/LocalBuilder.cs
         // https://github.com/dotnet/coreclr/blob/master/src/System.Private.CoreLib/src/System/Reflection/Emit/LocalBuilder.cs
@@ -38,8 +40,10 @@ namespace MonoMod.Utils.Cil {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1810:Initialize reference type static fields inline",
             Justification = "The performance penalty for cctor checks is not worth caring about here. We already do some high-level shenanigans to get calls here.")]
-        static CecilILGenerator() {
-            foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+        static CecilILGenerator()
+        {
+            foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
                 var cecilOpCode = (OpCode)field.GetValue(null)!;
                 _MCCOpCodes[cecilOpCode.Value] = cecilOpCode;
             }
@@ -65,7 +69,8 @@ namespace MonoMod.Utils.Cil {
 
         private int labelCounter;
 
-        public CecilILGenerator(ILProcessor il) {
+        public CecilILGenerator(ILProcessor il)
+        {
             IL = il;
         }
 
@@ -83,17 +88,24 @@ namespace MonoMod.Utils.Cil {
         private int _ILOffset;
         public override int ILOffset => _ILOffset;
 
-        private Instruction ProcessLabels(Instruction ins) {
-            if (_LabelsToMark.Count != 0) {
-                foreach (var labelInfo in _LabelsToMark) {
-                    foreach (var insToFix in labelInfo.Branches) {
-                        switch (insToFix.Operand) {
+        private Instruction ProcessLabels(Instruction ins)
+        {
+            if (_LabelsToMark.Count != 0)
+            {
+                foreach (var labelInfo in _LabelsToMark)
+                {
+                    foreach (var insToFix in labelInfo.Branches)
+                    {
+                        switch (insToFix.Operand)
+                        {
                             case Instruction:
                                 insToFix.Operand = ins;
                                 break;
                             case Instruction[] instrsOperand:
-                                for (var i = 0; i < instrsOperand.Length; i++) {
-                                    if (instrsOperand[i] == labelInfo.Instruction) {
+                                for (var i = 0; i < instrsOperand.Length; i++)
+                                {
+                                    if (instrsOperand[i] == labelInfo.Instruction)
+                                    {
                                         instrsOperand[i] = ins;
                                         break;
                                     }
@@ -109,9 +121,11 @@ namespace MonoMod.Utils.Cil {
                 _LabelsToMark.Clear();
             }
 
-            if (_ExceptionHandlersToMark.Count != 0) {
+            if (_ExceptionHandlersToMark.Count != 0)
+            {
                 foreach (var exHandler in _ExceptionHandlersToMark)
-                    IL.Body.ExceptionHandlers.Add(new ExceptionHandler(exHandler.HandlerType) {
+                    IL.Body.ExceptionHandlers.Add(new ExceptionHandler(exHandler.HandlerType)
+                    {
                         TryStart = _(exHandler.TryStart)?.Instruction,
                         TryEnd = _(exHandler.TryEnd)?.Instruction,
                         HandlerStart = _(exHandler.HandlerStart)?.Instruction,
@@ -126,7 +140,8 @@ namespace MonoMod.Utils.Cil {
             return ins;
         }
 
-        public override unsafe Label DefineLabel() {
+        public override unsafe Label DefineLabel()
+        {
             Label handle = default;
             // The label struct holds a single int field on .NET Framework, .NET Core and Mono.
             *(int*)&handle = labelCounter++;
@@ -134,7 +149,8 @@ namespace MonoMod.Utils.Cil {
             return handle;
         }
 
-        public override void MarkLabel(Label loc) {
+        public override void MarkLabel(Label loc)
+        {
             if (!_LabelInfos.TryGetValue(loc, out var labelInfo) || labelInfo.Emitted)
                 return;
             _LabelsToMark.Add(labelInfo);
@@ -142,7 +158,8 @@ namespace MonoMod.Utils.Cil {
 
         public override LocalBuilder DeclareLocal(Type localType) => DeclareLocal(localType, false);
 
-        public override LocalBuilder DeclareLocal(Type localType, bool pinned) {
+        public override LocalBuilder DeclareLocal(Type localType, bool pinned)
+        {
             // The handle itself is out of sync with the "backing" VariableDefinition.
             var index = IL.Body.Variables.Count;
             var handle = (LocalBuilder)(
@@ -166,7 +183,8 @@ namespace MonoMod.Utils.Cil {
             return handle;
         }
 
-        private void Emit(Instruction ins) {
+        private void Emit(Instruction ins)
+        {
             ins.Offset = _ILOffset;
             _ILOffset += ins.GetSize();
             IL.Append(ProcessLabels(ins));
@@ -174,7 +192,8 @@ namespace MonoMod.Utils.Cil {
 
         public override void Emit(SRE.OpCode opcode) => Emit(IL.Create(CecilILGenerator._(opcode)));
 
-        public override void Emit(SRE.OpCode opcode, byte arg) {
+        public override void Emit(SRE.OpCode opcode, byte arg)
+        {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
                 _EmitInlineVar(CecilILGenerator._(opcode), arg);
@@ -182,7 +201,8 @@ namespace MonoMod.Utils.Cil {
                 Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
 
-        public override void Emit(SRE.OpCode opcode, sbyte arg) {
+        public override void Emit(SRE.OpCode opcode, sbyte arg)
+        {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
                 _EmitInlineVar(CecilILGenerator._(opcode), arg);
@@ -190,7 +210,8 @@ namespace MonoMod.Utils.Cil {
                 Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
 
-        public override void Emit(SRE.OpCode opcode, short arg) {
+        public override void Emit(SRE.OpCode opcode, short arg)
+        {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
                 _EmitInlineVar(CecilILGenerator._(opcode), arg);
@@ -198,7 +219,8 @@ namespace MonoMod.Utils.Cil {
                 Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
 
-        public override void Emit(SRE.OpCode opcode, int arg) {
+        public override void Emit(SRE.OpCode opcode, int arg)
+        {
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
                 _EmitInlineVar(CecilILGenerator._(opcode), arg);
@@ -217,14 +239,16 @@ namespace MonoMod.Utils.Cil {
         public override void Emit(SRE.OpCode opcode, ConstructorInfo con) => Emit(IL.Create(CecilILGenerator._(opcode), _(con)));
         public override void Emit(SRE.OpCode opcode, MethodInfo meth) => Emit(IL.Create(CecilILGenerator._(opcode), _(meth)));
 
-        public override void Emit(SRE.OpCode opcode, Label label) {
+        public override void Emit(SRE.OpCode opcode, Label label)
+        {
             var info = _(label)!;
             var ins = IL.Create(CecilILGenerator._(opcode), _(label)!.Instruction);
             info.Branches.Add(ins);
             Emit(ProcessLabels(ins));
         }
 
-        public override void Emit(SRE.OpCode opcode, Label[] labels) {
+        public override void Emit(SRE.OpCode opcode, Label[] labels)
+        {
             var labelInfos = labels.Distinct().Select(_).Where(x => x is not null)!.ToArray();
             var ins = IL.Create(CecilILGenerator._(opcode), labelInfos.Select(labelInfo => labelInfo!.Instruction).ToArray());
             foreach (var labelInfo in labelInfos)
@@ -236,10 +260,12 @@ namespace MonoMod.Utils.Cil {
         public override void Emit(SRE.OpCode opcode, SignatureHelper signature) => Emit(IL.Create(CecilILGenerator._(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
         public void Emit(SRE.OpCode opcode, ICallSiteGenerator signature) => Emit(IL.Create(CecilILGenerator._(opcode), IL.Body.Method.Module.ImportCallSite(signature)));
 
-        private void _EmitInlineVar(OpCode opcode, int index) {
+        private void _EmitInlineVar(OpCode opcode, int index)
+        {
             // System.Reflection.Emit has only got (Short)InlineVar and allows index refs.
             // Mono.Cecil has also got (Short)InlineArg and requires definition refs.
-            switch (opcode.OperandType) {
+            switch (opcode.OperandType)
+            {
                 case MCC.OperandType.ShortInlineArg:
                 case MCC.OperandType.InlineArg:
                     Emit(IL.Create(opcode, IL.Body.Method.Parameters[index]));
@@ -265,10 +291,12 @@ namespace MonoMod.Utils.Cil {
         public override void EmitCalli(SRE.OpCode opcode, CallingConvention unmanagedCallConv, Type? returnType,
             Type[]? parameterTypes) => throw new NotSupportedException();
 
-        public override void EmitWriteLine(FieldInfo fld) {
+        public override void EmitWriteLine(FieldInfo fld)
+        {
             if (fld.IsStatic)
                 Emit(IL.Create(OpCodes.Ldsfld, _(fld)));
-            else {
+            else
+            {
                 Emit(IL.Create(OpCodes.Ldarg_0));
                 Emit(IL.Create(OpCodes.Ldfld, _(fld)));
             }
@@ -276,65 +304,79 @@ namespace MonoMod.Utils.Cil {
             Emit(IL.Create(OpCodes.Call, _(typeof(Console).GetMethod("WriteLine", new[] { fld.FieldType })!)));
         }
 
-        public override void EmitWriteLine(LocalBuilder localBuilder) {
+        public override void EmitWriteLine(LocalBuilder localBuilder)
+        {
             Emit(IL.Create(OpCodes.Ldloc, _(localBuilder)));
             Emit(IL.Create(OpCodes.Call,
                 _(typeof(Console).GetMethod("WriteLine", new[] { localBuilder.LocalType })!)));
         }
 
-        public override void EmitWriteLine(string value) {
+        public override void EmitWriteLine(string value)
+        {
             Emit(IL.Create(OpCodes.Ldstr, value));
             Emit(IL.Create(OpCodes.Call, _(typeof(Console).GetMethod("WriteLine", new[] { typeof(string) })!)));
         }
 
-        public override void ThrowException(Type excType) {
+        public override void ThrowException(Type excType)
+        {
             Emit(IL.Create(OpCodes.Newobj, _(excType.GetConstructor(Type.EmptyTypes) ?? throw new InvalidOperationException("No default constructor"))));
             Emit(IL.Create(OpCodes.Throw));
         }
 
-        public override Label BeginExceptionBlock() {
+        public override Label BeginExceptionBlock()
+        {
             var chain = new ExceptionHandlerChain(this);
             _ExceptionHandlers.Push(chain);
             return chain.SkipAll;
         }
 
-        public override void BeginCatchBlock(Type exceptionType) {
+        public override void BeginCatchBlock(Type exceptionType)
+        {
             var handler = _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Catch);
             handler.ExceptionType = exceptionType is null ? null : _(exceptionType);
         }
 
-        public override void BeginExceptFilterBlock() {
+        public override void BeginExceptFilterBlock()
+        {
             _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Filter);
         }
 
-        public override void BeginFaultBlock() {
+        public override void BeginFaultBlock()
+        {
             _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Fault);
         }
 
-        public override void BeginFinallyBlock() {
+        public override void BeginFinallyBlock()
+        {
             _ExceptionHandlers.Peek().BeginHandler(ExceptionHandlerType.Finally);
         }
 
-        public override void EndExceptionBlock() {
+        public override void EndExceptionBlock()
+        {
             _ExceptionHandlers.Pop().End();
         }
 
-        public override void BeginScope() {
+        public override void BeginScope()
+        {
         }
 
-        public override void EndScope() {
+        public override void EndScope()
+        {
         }
 
-        public override void UsingNamespace(string usingNamespace) {
+        public override void UsingNamespace(string usingNamespace)
+        {
         }
 
-        private class LabelInfo {
+        private class LabelInfo
+        {
             public bool Emitted;
             public Instruction Instruction = Instruction.Create(OpCodes.Nop);
             public readonly List<Instruction> Branches = new List<Instruction>();
         }
 
-        private class LabelledExceptionHandler {
+        private class LabelledExceptionHandler
+        {
             public Label TryStart = NullLabel;
             public Label TryEnd = NullLabel;
             public Label HandlerStart = NullLabel;
@@ -344,7 +386,8 @@ namespace MonoMod.Utils.Cil {
             public TypeReference? ExceptionType;
         }
 
-        private class ExceptionHandlerChain {
+        private class ExceptionHandlerChain
+        {
             private readonly CecilILGenerator IL;
 
             private readonly Label _Start;
@@ -354,7 +397,8 @@ namespace MonoMod.Utils.Cil {
             private LabelledExceptionHandler? _Prev;
             private LabelledExceptionHandler? _Handler;
 
-            public ExceptionHandlerChain(CecilILGenerator il) {
+            public ExceptionHandlerChain(CecilILGenerator il)
+            {
                 IL = il;
 
                 _Start = il.DefineLabel();
@@ -363,7 +407,8 @@ namespace MonoMod.Utils.Cil {
                 SkipAll = il.DefineLabel();
             }
 
-            public LabelledExceptionHandler BeginHandler(ExceptionHandlerType type) {
+            public LabelledExceptionHandler BeginHandler(ExceptionHandlerType type)
+            {
                 var prev = _Prev = _Handler;
                 if (prev is not null)
                     EndHandler(prev);
@@ -373,7 +418,8 @@ namespace MonoMod.Utils.Cil {
                 var handlerStart = IL.DefineLabel();
                 IL.MarkLabel(handlerStart);
 
-                var next = _Handler = new LabelledExceptionHandler {
+                var next = _Handler = new LabelledExceptionHandler
+                {
                     TryStart = _Start,
                     TryEnd = handlerStart,
                     HandlerType = type,
@@ -387,10 +433,12 @@ namespace MonoMod.Utils.Cil {
                 return next;
             }
 
-            public void EndHandler(LabelledExceptionHandler handler) {
+            public void EndHandler(LabelledExceptionHandler handler)
+            {
                 var skip = _SkipHandler;
 
-                switch (handler.HandlerType) {
+                switch (handler.HandlerType)
+                {
                     case ExceptionHandlerType.Filter:
                         IL.Emit(SRE.OpCodes.Endfilter);
                         break;
@@ -408,7 +456,8 @@ namespace MonoMod.Utils.Cil {
                 IL._ExceptionHandlersToMark.Add(handler);
             }
 
-            public void End() {
+            public void End()
+            {
                 EndHandler(_Handler ?? throw new InvalidOperationException("Cannot end when there is no current handler!"));
                 IL.MarkLabel(SkipAll);
             }

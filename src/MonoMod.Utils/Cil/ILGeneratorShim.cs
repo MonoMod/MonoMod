@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Reflection;
 
-namespace MonoMod.Utils.Cil {
+namespace MonoMod.Utils.Cil
+{
     /// <summary>
     /// Abstract version of System.Reflection.Emit.ILGenerator. See <see cref="System.Reflection.Emit.ILGenerator"/> for proper documentation.
     /// </summary>
-    public abstract partial class ILGeneratorShim {
+    public abstract partial class ILGeneratorShim
+    {
 
         public abstract int ILOffset { get; }
         public abstract void BeginCatchBlock(Type exceptionType);

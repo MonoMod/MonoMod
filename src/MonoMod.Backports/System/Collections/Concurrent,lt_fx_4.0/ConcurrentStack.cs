@@ -14,7 +14,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
-namespace System.Collections.Concurrent {
+namespace System.Collections.Concurrent
+{
     // A stack that uses CAS operations internally to maintain thread-safety in a lock-free
     // manner. Attempting to push or pop concurrently from the stack will not trigger waiting,
     // although some optimistic concurrency and retry is used, possibly leading to lack of
@@ -35,11 +36,13 @@ namespace System.Collections.Concurrent {
     /// </remarks>
     [DebuggerDisplay("Count = {Count}")]
     [DebuggerTypeProxy(typeof(IProducerConsumerCollectionDebugView<>))]
-    public class ConcurrentStack<T> : IProducerConsumerCollection<T>, /*IReadOnlyCollection<T>*/ IEnumerable<T> {
+    public class ConcurrentStack<T> : IProducerConsumerCollection<T>, /*IReadOnlyCollection<T>*/ IEnumerable<T>
+    {
         /// <summary>
         /// A simple (internal) node type used to store elements of concurrent stacks and queues.
         /// </summary>
-        private sealed class Node {
+        private sealed class Node
+        {
             internal readonly T _value; // Value of the node.
             internal Node? _next; // Next pointer.
 
@@ -47,7 +50,8 @@ namespace System.Collections.Concurrent {
             /// Constructs a new node with the specified value and no next node.
             /// </summary>
             /// <param name="value">The value of the node.</param>
-            internal Node(T value) {
+            internal Node(T value)
+            {
                 _value = value;
                 _next = null;
             }
@@ -60,7 +64,8 @@ namespace System.Collections.Concurrent {
         /// Initializes a new instance of the <see cref="ConcurrentStack{T}"/>
         /// class.
         /// </summary>
-        public ConcurrentStack() {
+        public ConcurrentStack()
+        {
         }
 
         /// <summary>
@@ -71,7 +76,8 @@ namespace System.Collections.Concurrent {
         /// cref="ConcurrentStack{T}"/>.</param>
         /// <exception cref="System.ArgumentNullException">The <paramref name="collection"/> argument is
         /// null.</exception>
-        public ConcurrentStack(IEnumerable<T> collection) {
+        public ConcurrentStack(IEnumerable<T> collection)
+        {
             ThrowHelper.ThrowIfArgumentNull(collection, ExceptionArgument.collection);
             InitializeFromCollection(collection);
         }
@@ -80,10 +86,12 @@ namespace System.Collections.Concurrent {
         /// Initializes the contents of the stack from an existing collection.
         /// </summary>
         /// <param name="collection">A collection from which to copy elements.</param>
-        private void InitializeFromCollection(IEnumerable<T> collection) {
+        private void InitializeFromCollection(IEnumerable<T> collection)
+        {
             // We just copy the contents of the collection to our stack.
             Node? lastNode = null;
-            foreach (T element in collection) {
+            foreach (T element in collection)
+            {
                 Node newNode = new Node(element);
                 newNode._next = lastNode;
                 lastNode = newNode;
@@ -104,7 +112,8 @@ namespace System.Collections.Concurrent {
         /// that another thread will modify the collection after <see cref="IsEmpty"/> returns, thus invalidating
         /// the result.
         /// </remarks>
-        public bool IsEmpty {
+        public bool IsEmpty
+        {
             // Checks whether the stack is empty. Clearly the answer may be out of date even prior to
             // the function returning (i.e. if another thread concurrently adds to the stack). It does
             // guarantee, however, that, if another thread does not mutate the stack, a subsequent call
@@ -121,12 +130,14 @@ namespace System.Collections.Concurrent {
         /// property is recommended rather than retrieving the number of items from the <see cref="Count"/>
         /// property and comparing it to 0.
         /// </remarks>
-        public int Count {
+        public int Count
+        {
             // Counts the number of entries in the stack. This is an O(n) operation. The answer may be out
             // of date before returning, but guarantees to return a count that was once valid. Conceptually,
             // the implementation snaps a copy of the list and then counts the entries, though physically
             // this is not what actually happens.
-            get {
+            get
+            {
                 int count = 0;
 
                 // Just whip through the list and tally up the number of nodes. We rely on the fact that
@@ -134,7 +145,8 @@ namespace System.Collections.Concurrent {
                 // they are being dequeued. If we ever changed this (e.g. to pool nodes somehow),
                 // we'd need to revisit this implementation.
 
-                for (Node? curr = _head; curr != null; curr = curr._next) {
+                for (Node? curr = _head; curr != null; curr = curr._next)
+                {
                     count++; //we don't handle overflow, to be consistent with existing generic collection types in CLR
                 }
 
@@ -150,7 +162,8 @@ namespace System.Collections.Concurrent {
         /// <value>true if access to the <see cref="System.Collections.ICollection"/> is synchronized
         /// with the SyncRoot; otherwise, false. For <see cref="ConcurrentStack{T}"/>, this property always
         /// returns false.</value>
-        bool ICollection.IsSynchronized {
+        bool ICollection.IsSynchronized
+        {
             // Gets a value indicating whether access to this collection is synchronized. Always returns
             // false. The reason is subtle. While access is in face thread safe, it's not the case that
             // locking on the SyncRoot would have prevented concurrent pushes and pops, as this property
@@ -163,8 +176,10 @@ namespace System.Collections.Concurrent {
         /// cref="System.Collections.ICollection"/>. This property is not supported.
         /// </summary>
         /// <exception cref="System.NotSupportedException">The SyncRoot property is not supported</exception>
-        object ICollection.SyncRoot {
-            get {
+        object ICollection.SyncRoot
+        {
+            get
+            {
                 throw new NotSupportedException("SyncRoot not supported");
             }
         }
@@ -172,7 +187,8 @@ namespace System.Collections.Concurrent {
         /// <summary>
         /// Removes all objects from the <see cref="ConcurrentStack{T}"/>.
         /// </summary>
-        public void Clear() {
+        public void Clear()
+        {
             // Clear the list by setting the head to null. We don't need to use an atomic
             // operation for this: anybody who is mutating the head by pushing or popping
             // will need to use an atomic operation to guarantee they serialize and don't
@@ -205,7 +221,8 @@ namespace System.Collections.Concurrent {
         /// cref="System.Collections.ICollection"/> cannot be cast automatically to the type of the
         /// destination <paramref name="array"/>.
         /// </exception>
-        void ICollection.CopyTo(Array array, int index) {
+        void ICollection.CopyTo(Array array, int index)
+        {
             if (array is null)
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.array);
             // We must be careful not to corrupt the array, so we will first accumulate an
@@ -235,7 +252,8 @@ namespace System.Collections.Concurrent {
         /// available space from <paramref name="index"/> to the end of the destination <paramref
         /// name="array"/>.
         /// </exception>
-        public void CopyTo(T[] array, int index) {
+        public void CopyTo(T[] array, int index)
+        {
             if (array is null)
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.array);
             // We must be careful not to corrupt the array, so we will first accumulate an
@@ -251,7 +269,8 @@ namespace System.Collections.Concurrent {
         /// <param name="item">The object to push onto the <see cref="ConcurrentStack{T}"/>. The value can be
         /// a null reference (Nothing in Visual Basic) for reference types.
         /// </param>
-        public void Push(T item) {
+        public void Push(T item)
+        {
             // Pushes a node onto the front of the stack thread-safely. Internally, this simply
             // swaps the current head pointer using a (thread safe) CAS operation to accomplish
             // lock freedom. If the CAS fails, we add some back off to statistically decrease
@@ -259,7 +278,8 @@ namespace System.Collections.Concurrent {
 
             Node newNode = new Node(item);
             newNode._next = _head;
-            if (Interlocked.CompareExchange(ref _head, newNode, newNode._next) == newNode._next) {
+            if (Interlocked.CompareExchange(ref _head, newNode, newNode._next) == newNode._next)
+            {
                 return;
             }
 
@@ -280,7 +300,8 @@ namespace System.Collections.Concurrent {
         /// be able to inject elements between the elements being pushed.  Items at lower indices in
         /// the <paramref name="items"/> array will be pushed before items at higher indices.
         /// </remarks>
-        public void PushRange(T[] items) {
+        public void PushRange(T[] items)
+        {
             ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             PushRange(items, 0, items.Length);
         }
@@ -307,7 +328,8 @@ namespace System.Collections.Concurrent {
         /// be able to inject elements between the elements being pushed. Items at lower indices in the
         /// <paramref name="items"/> array will be pushed before items at higher indices.
         /// </remarks>
-        public void PushRange(T[] items, int startIndex, int count) {
+        public void PushRange(T[] items, int startIndex, int count)
+        {
             ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             ValidatePushPopRangeInput(items, startIndex, count);
 
@@ -317,14 +339,16 @@ namespace System.Collections.Concurrent {
 
             Node head, tail;
             head = tail = new Node(items[startIndex]);
-            for (int i = startIndex + 1; i < startIndex + count; i++) {
+            for (int i = startIndex + 1; i < startIndex + count; i++)
+            {
                 Node node = new Node(items[i]);
                 node._next = head;
                 head = node;
             }
 
             tail._next = _head;
-            if (Interlocked.CompareExchange(ref _head, head, tail._next) == tail._next) {
+            if (Interlocked.CompareExchange(ref _head, head, tail._next) == tail._next)
+            {
                 return;
             }
 
@@ -339,11 +363,13 @@ namespace System.Collections.Concurrent {
         /// </summary>
         /// <param name="head">The head pointer to the new list</param>
         /// <param name="tail">The tail pointer to the new list</param>
-        private void PushCore(Node head, Node tail) {
+        private void PushCore(Node head, Node tail)
+        {
             SpinWait spin = default;
 
             // Keep trying to CAS the existing head with the new node until we succeed.
-            do {
+            do
+            {
                 spin.SpinOnce(sleep1Threshold: -1);
                 // Reread the head and link our new node.
                 tail._next = _head;
@@ -355,14 +381,17 @@ namespace System.Collections.Concurrent {
         /// <summary>
         /// Local helper function to validate the Pop Push range methods input
         /// </summary>
-        private static void ValidatePushPopRangeInput(T[] items, int startIndex, int count) {
+        private static void ValidatePushPopRangeInput(T[] items, int startIndex, int count)
+        {
             if (items is null)
                 ThrowHelper.ThrowArgumentNullException(nameof(items));
-            if (count < 0) {
+            if (count < 0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(count), "Push/Pop count out of range");
             }
             int length = items.Length;
-            if (startIndex > length || startIndex < 0) {
+            if (startIndex > length || startIndex < 0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(startIndex), "Push/Pop count out of range");
             }
             if (length - count < startIndex) //instead of (startIndex + count > items.Length) to prevent overflow
@@ -383,7 +412,8 @@ namespace System.Collections.Concurrent {
         /// <remarks>For <see cref="ConcurrentStack{T}"/>, this operation
         /// will always insert the object onto the top of the <see cref="ConcurrentStack{T}"/>
         /// and return true.</remarks>
-        bool IProducerConsumerCollection<T>.TryAdd(T item) {
+        bool IProducerConsumerCollection<T>.TryAdd(T item)
+        {
             Push(item);
             return true;
         }
@@ -396,14 +426,18 @@ namespace System.Collections.Concurrent {
         /// the top of the <see cref="System.Collections.Concurrent.ConcurrentStack{T}"/> or an
         /// unspecified value if the operation failed.</param>
         /// <returns>true if and object was returned successfully; otherwise, false.</returns>
-        public bool TryPeek([MaybeNullWhen(false)] out T result) {
+        public bool TryPeek([MaybeNullWhen(false)] out T result)
+        {
             Node? head = _head;
 
             // If the stack is empty, return false; else return the element and true.
-            if (head == null) {
+            if (head == null)
+            {
                 result = default!;
                 return false;
-            } else {
+            }
+            else
+            {
                 result = head._value;
                 return true;
             }
@@ -419,14 +453,17 @@ namespace System.Collections.Concurrent {
         /// <returns>true if an element was removed and returned from the top of the <see
         /// cref="ConcurrentStack{T}"/>
         /// successfully; otherwise, false.</returns>
-        public bool TryPop([MaybeNullWhen(false)] out T result) {
+        public bool TryPop([MaybeNullWhen(false)] out T result)
+        {
             Node? head = _head;
             //stack is empty
-            if (head == null) {
+            if (head == null)
+            {
                 result = default!;
                 return false;
             }
-            if (Interlocked.CompareExchange(ref _head, head._next, head) == head) {
+            if (Interlocked.CompareExchange(ref _head, head._next, head) == head)
+            {
                 result = head._value;
                 return true;
             }
@@ -455,7 +492,8 @@ namespace System.Collections.Concurrent {
         /// with the first node to be popped at the startIndex, the second node to be popped
         /// at startIndex + 1, and so on.
         /// </remarks>
-        public int TryPopRange(T[] items) {
+        public int TryPopRange(T[] items)
+        {
             ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             return TryPopRange(items, 0, items.Length);
         }
@@ -488,7 +526,8 @@ namespace System.Collections.Concurrent {
         /// with the first node to be popped at the startIndex, the second node to be popped
         /// at startIndex + 1, and so on.
         /// </remarks>
-        public int TryPopRange(T[] items, int startIndex, int count) {
+        public int TryPopRange(T[] items, int startIndex, int count)
+        {
             ThrowHelper.ThrowIfArgumentNull(items, nameof(items));
             ValidatePushPopRangeInput(items, startIndex, count);
 
@@ -497,7 +536,8 @@ namespace System.Collections.Concurrent {
                 return 0;
 
             int nodesCount = TryPopCore(count, out ConcurrentStack<T>.Node? poppedHead);
-            if (nodesCount > 0) {
+            if (nodesCount > 0)
+            {
                 CopyRemovedItems(poppedHead!, items, startIndex, nodesCount);
             }
             return nodesCount;
@@ -508,9 +548,11 @@ namespace System.Collections.Concurrent {
         /// </summary>
         /// <param name="result">The popped item</param>
         /// <returns>True if succeeded, false otherwise</returns>
-        private bool TryPopCore([MaybeNullWhen(false)] out T result) {
+        private bool TryPopCore([MaybeNullWhen(false)] out T result)
+        {
 
-            if (TryPopCore(1, out ConcurrentStack<T>.Node? poppedNode) == 1) {
+            if (TryPopCore(1, out ConcurrentStack<T>.Node? poppedNode) == 1)
+            {
                 result = poppedNode!._value;
                 return true;
             }
@@ -530,7 +572,8 @@ namespace System.Collections.Concurrent {
         /// </param>
         /// <returns>The number of objects successfully popped from the top of
         /// the <see cref="ConcurrentStack{T}"/>.</returns>
-        private int TryPopCore(int count, out Node? poppedHead) {
+        private int TryPopCore(int count, out Node? poppedHead)
+        {
             SpinWait spin = default;
 
             // Try to CAS the head with its current next.  We stop when we succeed or
@@ -538,34 +581,42 @@ namespace System.Collections.Concurrent {
             Node? head;
             Node next;
             int backoff = 1;
-            while (true) {
+            while (true)
+            {
                 head = _head;
                 // Is the stack empty?
-                if (head == null) {
+                if (head == null)
+                {
                     poppedHead = null;
                     return 0;
                 }
                 next = head;
                 int nodesCount = 1;
-                for (; nodesCount < count && next._next != null; nodesCount++) {
+                for (; nodesCount < count && next._next != null; nodesCount++)
+                {
                     next = next._next;
                 }
 
                 // Try to swap the new head.  If we succeed, break out of the loop.
-                if (Interlocked.CompareExchange(ref _head, next._next, head) == head) {
+                if (Interlocked.CompareExchange(ref _head, next._next, head) == head)
+                {
                     // Return the popped Node.
                     poppedHead = head;
                     return nodesCount;
                 }
 
                 // We failed to CAS the new head.  Spin briefly and retry.
-                for (int i = 0; i < backoff; i++) {
+                for (int i = 0; i < backoff; i++)
+                {
                     spin.SpinOnce(sleep1Threshold: -1);
                 }
 
-                if (spin.NextSpinWillYield) {
+                if (spin.NextSpinWillYield)
+                {
                     backoff = new Random().Next(1, BACKOFF_MAX_YIELDS);
-                } else {
+                }
+                else
+                {
                     backoff *= 2;
                 }
             }
@@ -578,9 +629,11 @@ namespace System.Collections.Concurrent {
         /// <param name="collection">The collection to place the popped items in</param>
         /// <param name="startIndex">the beginning of index of where to place the popped items</param>
         /// <param name="nodesCount">The number of nodes.</param>
-        private static void CopyRemovedItems(Node head, T[] collection, int startIndex, int nodesCount) {
+        private static void CopyRemovedItems(Node head, T[] collection, int startIndex, int nodesCount)
+        {
             Node? current = head;
-            for (int i = startIndex; i < startIndex + nodesCount; i++) {
+            for (int i = startIndex; i < startIndex + nodesCount; i++)
+            {
                 collection[i] = current!._value;
                 current = current._next;
             }
@@ -598,7 +651,8 @@ namespace System.Collections.Concurrent {
         /// <remarks>For <see cref="ConcurrentStack{T}"/>, this operation will attempt to pope the object at
         /// the top of the <see cref="ConcurrentStack{T}"/>.
         /// </remarks>
-        bool IProducerConsumerCollection<T>.TryTake([MaybeNullWhen(false)] out T item) {
+        bool IProducerConsumerCollection<T>.TryTake([MaybeNullWhen(false)] out T item)
+        {
             return TryPop(out item);
         }
 
@@ -607,7 +661,8 @@ namespace System.Collections.Concurrent {
         /// </summary>
         /// <returns>A new array containing a snapshot of elements copied from the <see
         /// cref="ConcurrentStack{T}"/>.</returns>
-        public T[] ToArray() {
+        public T[] ToArray()
+        {
             Node? curr = _head;
             return curr == null ?
                 ArrayEx.Empty<T>() :
@@ -619,7 +674,8 @@ namespace System.Collections.Concurrent {
         /// the target list node as the head of a region in the list.
         /// </summary>
         /// <returns>A list of the stack's contents.</returns>
-        private List<T> ToList() {
+        private List<T> ToList()
+        {
             return ToList(_head);
         }
 
@@ -627,10 +683,12 @@ namespace System.Collections.Concurrent {
         /// Returns an array containing a snapshot of the list's contents starting at the specified node.
         /// </summary>
         /// <returns>A list of the stack's contents starting at the specified node.</returns>
-        private static List<T> ToList(Node? curr) {
+        private static List<T> ToList(Node? curr)
+        {
             List<T> list = new List<T>();
 
-            while (curr != null) {
+            while (curr != null)
+            {
                 list.Add(curr._value);
                 curr = curr._next;
             }
@@ -648,7 +706,8 @@ namespace System.Collections.Concurrent {
         /// <see cref="GetEnumerator()"/> was called.  The enumerator is safe to use
         /// concurrently with reads from and writes to the stack.
         /// </remarks>
-        public IEnumerator<T> GetEnumerator() {
+        public IEnumerator<T> GetEnumerator()
+        {
             // Returns an enumerator for the stack. This effectively takes a snapshot
             // of the stack's contents at the time of the call, i.e. subsequent modifications
             // (pushes or pops) will not be reflected in the enumerator's contents.
@@ -660,9 +719,11 @@ namespace System.Collections.Concurrent {
             return GetEnumerator(_head);
         }
 
-        private static IEnumerator<T> GetEnumerator(Node? head) {
+        private static IEnumerator<T> GetEnumerator(Node? head)
+        {
             Node? current = head;
-            while (current != null) {
+            while (current != null)
+            {
                 yield return current._value;
                 current = current._next;
             }
@@ -679,7 +740,8 @@ namespace System.Collections.Concurrent {
         /// <see cref="GetEnumerator()"/> was called. The enumerator is safe to use concurrently with reads
         /// from and writes to the stack.
         /// </remarks>
-        IEnumerator IEnumerable.GetEnumerator() {
+        IEnumerator IEnumerable.GetEnumerator()
+        {
             return ((IEnumerable<T>)this).GetEnumerator();
         }
     }
