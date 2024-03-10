@@ -31,6 +31,9 @@
       <Version Condition="'$(CecilVersion)' != ''">$(CecilVersion)</Version>
     </PackageReference>
     <Reference Include="0Harmony" HintPath="lib\0Harmony.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="System.Runtime" />
     <Reference Include="System.Runtime.Extensions" />
     <Reference Include="Microsoft.CSharp" />
