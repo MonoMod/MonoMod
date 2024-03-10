@@ -164,50 +164,7 @@ namespace MonoMod.Utils {
                 }
                 // TODO: fill in other known kernel names
 
-                string machineName;
-                if (os == OSKind.Linux) {
-                    // we know the kernel is linux, use /proc/self/auxv (present since Linux 2.6.0, which released in 2004)
-
-                    var auxvBytes = Helpers.ReadAllBytes("/proc/self/auxv").AsSpan();
-                    var auxv = MemoryMarshal.Cast<byte, Interop.Unix.LinuxAuxvEntry>(auxvBytes);
-                    machineName = string.Empty;
-                    foreach (var entry in auxv) {
-                        if (entry.Key != Interop.Unix.AT_PLATFORM) {
-                            continue;
-                        }
-
-                        machineName = Marshal.PtrToStringAnsi(entry.Value) ?? string.Empty;
-                        break;
-                    }
-
-                    if (machineName.Length == 0) {
-                        MMDbgLog.Warning($"Auxv table did not inlcude useful AT_PLATFORM (0x{Interop.Unix.AT_PLATFORM:x}) entry");
-                        foreach (var entry in auxv) {
-                            MMDbgLog.Trace($"{entry.Key:x16} = {entry.Value:x16}");
-                        }
-                    } else {
-                        MMDbgLog.Trace($"Got architecture name {machineName} from /proc/self/auxv");
-                    }
-                } else {
-                    // this is a non-unix kernel, lets hope their uname buffers are more well maintained...
-                    for (var i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
-                        if (i != 0) {
-                            // skip a string
-                            nullByteOffs = buffer.IndexOf((byte)0);
-                            buffer = buffer.Slice(nullByteOffs);
-                        }
-                        // then advance to the next one
-                        var j = 0;
-                        for (; j < buffer.Length && buffer[j] == 0; j++) { }
-                        buffer = buffer.Slice(j);
-                    }
-
-                    // and here we find the machine field
-                    machineName = GetCString(buffer, out _);
-                    MMDbgLog.Trace($"Got architecture name {machineName} from uname()");
-                }
-
-                machineName = machineName.ToUpperInvariant();
+                var machineName = GetMachineNamePosix(os, buffer).ToUpperInvariant();
 
                 if (machineName.Contains("X86_64", StringComparison.Ordinal)) {
                     arch = ArchitectureKind.x86_64;
@@ -229,6 +186,80 @@ namespace MonoMod.Utils {
                 MMDbgLog.Error($"Error trying to detect info on POSIX-like system {e}");
                 return;
             }
+        }
+
+        private static unsafe string GetMachineNamePosix(OSKind os, Span<byte> unameBuffer) {
+            string? machineName = null;
+
+            if (os == OSKind.Linux) {
+                // we know the kernel is linux
+                // first, lets try go get libc!getauxval and use that
+
+                var libc = DynDll.OpenLibrary(Interop.Unix.LibC);
+                if (DynDll.TryGetExport(libc, "getauxval", out var getAuxVal)) {
+                    var result = ((delegate* unmanaged[Cdecl]<nint, nint>)getAuxVal)(Interop.Unix.AT_PLATFORM);
+                    if (result is not 0) {
+                        machineName = Marshal.PtrToStringAnsi(result);
+                        MMDbgLog.Trace($"Got architecture from getauxval(): {machineName}");
+                    }
+                }
+                
+                if (machineName is null) {
+                    // try to use /proc/self/auxv (present since Linux 2.6.0, which released in 2004)
+                    // sometimes it's not accessible (no idea why, but it is), we should handle that
+                    try {
+                        var auxvBytes = Helpers.ReadAllBytes("/proc/self/auxv").AsSpan();
+                        var auxv = MemoryMarshal.Cast<byte, Interop.Unix.LinuxAuxvEntry>(auxvBytes);
+                        machineName = string.Empty;
+                        foreach (var entry in auxv) {
+                            if (entry.Key != Interop.Unix.AT_PLATFORM) {
+                                continue;
+                            }
+
+                            machineName = Marshal.PtrToStringAnsi(entry.Value) ?? string.Empty;
+                            break;
+                        }
+
+                        if (machineName.Length == 0) {
+                            MMDbgLog.Warning($"Auxv table did not inlcude useful AT_PLATFORM (0x{Interop.Unix.AT_PLATFORM:x}) entry");
+                            foreach (var entry in auxv) {
+                                MMDbgLog.Trace($"{entry.Key:x16} = {entry.Value:x16}");
+                            }
+                            machineName = null;
+                        } else {
+                            MMDbgLog.Trace($"Got architecture name {machineName} from /proc/self/auxv");
+                        }
+                    } catch (UnauthorizedAccessException ex) {
+                        MMDbgLog.Warning("Could not read /proc/self/auxv, and libc does not have getauxval");
+                        MMDbgLog.Warning("Falling back to parsing out of uname() result...");
+                        MMDbgLog.Warning(ex.ToString());
+                    }
+                }
+            }
+
+            // fall back to trying to pull from uname, however well that will work...
+            if (machineName is null)
+            {
+                int nullByteOffs;
+                // this is a non-unix kernel, or a fallback, lets hope their uname buffers are more well maintained...
+                for (var i = 0; i < 4; i++) { // we want to jump to string 4, but we've already skipped the text of the first
+                    if (i != 0) {
+                        // skip a string
+                        nullByteOffs = unameBuffer.IndexOf((byte)0);
+                        unameBuffer = unameBuffer.Slice(nullByteOffs);
+                    }
+                    // then advance to the next one
+                    var j = 0;
+                    for (; j < unameBuffer.Length && unameBuffer[j] == 0; j++) { }
+                    unameBuffer = unameBuffer.Slice(j);
+                }
+
+                // and here we find the machine field
+                machineName = GetCString(unameBuffer, out _);
+                MMDbgLog.Trace($"Got architecture name {machineName} from uname()");
+            }
+
+            return machineName;
         }
 
         private static unsafe void DetectInfoWindows(ref OSKind os, ref ArchitectureKind arch) {
