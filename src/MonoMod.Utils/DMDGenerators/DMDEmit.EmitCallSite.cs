@@ -44,20 +44,34 @@ namespace MonoMod.Utils
 
         // Based on https://referencesource.microsoft.com/#mscorlib/system/reflection/mdimport.cs,74bfbae3c61889bc
         private static readonly Type?[] CorElementTypes = new Type?[] {
-            null,
-            typeof(void),
-            typeof(bool),
-            typeof(char),
-            typeof(sbyte),
-            typeof(byte),
-            typeof(short),
-            typeof(ushort),
-            typeof(int),
-            typeof(uint),
-            typeof(long),
-            typeof(ulong),
-            typeof(string),
-            typeof(IntPtr)
+            null,               // END
+            typeof(void),       // VOID
+            typeof(bool),       // BOOL
+            typeof(char),       // CHAR
+            typeof(sbyte),      // I1
+            typeof(byte),       // U1
+            typeof(short),      // I2
+            typeof(ushort),     // U2
+            typeof(int),        // I4
+            typeof(uint),       // U4
+            typeof(long),       // I8
+            typeof(ulong),      // U8
+            typeof(float),      // R4
+            typeof(double),     // R8
+            typeof(string),     // STRING
+            null,               // PTR
+            null,               // BYREF
+            null,               // VALUETYPE
+            null,               // CLASS
+            null,               // VAR
+            null,               // ARRAY
+            null,               // GENERICINST
+            null,               // TYPEDBYREF
+            typeof(IntPtr),     // I
+            typeof(UIntPtr),    // U
+            null,               // FNPTR
+            typeof(object),     // OBJECT
+            // all others don't have specific types associated
         };
 
         internal static void _EmitCallSite(DynamicMethod dm, ILGenerator il, System.Reflection.Emit.OpCode opcode, CallSite csite)
