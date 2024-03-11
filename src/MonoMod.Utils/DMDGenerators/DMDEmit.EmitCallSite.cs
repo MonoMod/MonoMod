@@ -18,15 +18,22 @@ namespace MonoMod.Utils
         private static readonly MethodInfo? _ILGen_ll_emit =
             typeof(ILGenerator).GetMethod("ll_emit", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        // .NET 8+
+        private static readonly Type? TRuntimeILGenerator = Type.GetType("System.Reflection.Emit.RuntimeILGenerator");
+
         // .NET
         private static readonly MethodInfo? _ILGen_EnsureCapacity =
-            typeof(ILGenerator).GetMethod("EnsureCapacity", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(ILGenerator).GetMethod("EnsureCapacity", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? TRuntimeILGenerator?.GetMethod("EnsureCapacity", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo? _ILGen_PutInteger4 =
-            typeof(ILGenerator).GetMethod("PutInteger4", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(ILGenerator).GetMethod("PutInteger4", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? TRuntimeILGenerator?.GetMethod("PutInteger4", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo? _ILGen_InternalEmit =
-            typeof(ILGenerator).GetMethod("InternalEmit", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(ILGenerator).GetMethod("InternalEmit", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? TRuntimeILGenerator?.GetMethod("InternalEmit", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo? _ILGen_UpdateStackSize =
-            typeof(ILGenerator).GetMethod("UpdateStackSize", BindingFlags.NonPublic | BindingFlags.Instance);
+            typeof(ILGenerator).GetMethod("UpdateStackSize", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? TRuntimeILGenerator?.GetMethod("UpdateStackSize", BindingFlags.NonPublic | BindingFlags.Instance);
 
         private static readonly FieldInfo? f_DynILGen_m_scope =
             typeof(ILGenerator).Assembly
