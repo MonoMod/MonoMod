@@ -70,6 +70,7 @@ namespace MonoMod.Utils
             null,               // (unused)
             typeof(IntPtr),     // I
             typeof(UIntPtr),    // U
+            null,               // (unused)
             null,               // FNPTR
             typeof(object),     // OBJECT
             // all others don't have specific types associated
