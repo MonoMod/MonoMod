@@ -18,17 +18,20 @@ namespace MonoMod.UnitTest.Github
         private static double Fn1() => default;
         private static IntPtr Fn2() => default;
         private static UIntPtr Fn3() => default;
+        private static object Fn4() => default;
 
         [Theory]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(2)]
+        [InlineData(3)]
         public void CalliToManagedMethodDoesNotFail(int idx)
         {
             ReadOnlySpan<MethodInfo> methods = [
                 ((Delegate)Fn1).Method,
                 ((Delegate)Fn2).Method,
-                ((Delegate)Fn3).Method
+                ((Delegate)Fn3).Method,
+                ((Delegate)Fn4).Method
             ];
 
             DoTestForMethod(methods[idx]);
