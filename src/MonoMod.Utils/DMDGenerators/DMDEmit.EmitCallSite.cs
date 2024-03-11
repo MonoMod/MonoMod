@@ -67,6 +67,7 @@ namespace MonoMod.Utils
             null,               // ARRAY
             null,               // GENERICINST
             null,               // TYPEDBYREF
+            null,               // (unused)
             typeof(IntPtr),     // I
             typeof(UIntPtr),    // U
             null,               // FNPTR

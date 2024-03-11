@@ -5,6 +5,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using System.Reflection;
 
 namespace MonoMod.UnitTest.Github
 {
@@ -15,12 +16,26 @@ namespace MonoMod.UnitTest.Github
         }
 
         private static double Fn1() => default;
+        private static IntPtr Fn2() => default;
+        private static UIntPtr Fn3() => default;
 
-        [Fact]
-        public void CalliToManagedMethodDoesNotFail()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void CalliToManagedMethodDoesNotFail(int idx)
         {
-            var original = ((Delegate)Fn1).Method;
+            ReadOnlySpan<MethodInfo> methods = [
+                ((Delegate)Fn1).Method,
+                ((Delegate)Fn2).Method,
+                ((Delegate)Fn3).Method
+            ];
 
+            DoTestForMethod(methods[idx]);
+        }
+
+        private static void DoTestForMethod(MethodInfo original)
+        {
             var originalParameters = original.GetParameters();
             var offset = original.IsStatic ? 0 : 1;
             var parameterTypes = new Type[originalParameters.Length + offset];
