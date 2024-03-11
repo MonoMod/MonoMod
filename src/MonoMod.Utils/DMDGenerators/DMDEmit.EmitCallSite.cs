@@ -211,7 +211,6 @@ namespace MonoMod.Utils
                 _ILGen_make_room!.Invoke(il, new object[] { 6 });
                 _ILGen_ll_emit!.Invoke(il, new object[] { opcode });
                 _ILGen_emit_int!.Invoke(il, new object[] { GetTokenForSig(signature) });
-
             }
             else
             {
