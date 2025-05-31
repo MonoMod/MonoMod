@@ -44,6 +44,7 @@ namespace MonoMod.UnitTest.Github
             }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private static void Original()
         {
             var random = new Random();
