@@ -47,7 +47,7 @@ namespace MonoMod.UnitTest.Github
         private static void Original()
         {
             var random = new Random();
-            var enumerable = Enumerable.Range(0, 50).Select(i => new SomeType { index = random.Next(0, 3) });
+            var enumerable = Enumerable.Range(0, 50).Select(i => new SomeType { index = random.Next(0, 5) });
 
             foreach (var item in enumerable)
             {
@@ -61,7 +61,7 @@ namespace MonoMod.UnitTest.Github
 
             cursor.GotoNext(
                 MoveType.After,
-                x => x.Match(OpCodes.Ldloc_2),
+                x => x.MatchLdloc(out _),
                 x => x.Match(OpCodes.Callvirt),
                 x => x.Match(OpCodes.Ldelem_Ref));
 
@@ -78,7 +78,7 @@ namespace MonoMod.UnitTest.Github
 
             if (!cursor.TryGotoNext(
                     MoveType.After,
-                    x => x.Match(OpCodes.Ldloc_2),
+                    x => x.MatchLdloc(out _),
                     x => x.Match(OpCodes.Callvirt),
                     x => x.Match(OpCodes.Ldelem_Ref)))
             {
@@ -95,7 +95,7 @@ namespace MonoMod.UnitTest.Github
 
             if (!cursor.TryGotoNext(
                     MoveType.Before,
-                    x => x.Match(OpCodes.Ldloc_1),
+                    x => x.MatchLdloc(out _),
                     x => x.Match(OpCodes.Callvirt),
                     x => x.Match(OpCodes.Stloc_S)))
             {
