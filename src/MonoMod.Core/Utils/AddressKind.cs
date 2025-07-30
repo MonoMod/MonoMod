@@ -1,5 +1,4 @@
-﻿using MonoMod.Backports;
-using MonoMod.Logs;
+﻿using MonoMod.Logs;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;

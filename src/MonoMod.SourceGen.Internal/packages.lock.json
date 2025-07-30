@@ -8,12 +8,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -74,12 +68,6 @@
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "PolySharp": {
         "type": "Direct",

@@ -8,10 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
 
     <NoWarn>$(NoWarn);CA2007;CA1308</NoWarn>
-    
-    <MMReferenceILHelpers>false</MMReferenceILHelpers>
-    <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>
-    <MMReferenceSourcePkgs>false</MMReferenceSourcePkgs>
+
     <MMReferenceUtils>false</MMReferenceUtils>
     <MMReferenceBackports>false</MMReferenceBackports>
     <MMSharedSourceFiles>false</MMSharedSourceFiles>

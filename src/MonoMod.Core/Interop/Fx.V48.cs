@@ -1,5 +1,6 @@
 using MonoMod.Utils;
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 #pragma warning disable CA1069 // Enums values should not be duplicated

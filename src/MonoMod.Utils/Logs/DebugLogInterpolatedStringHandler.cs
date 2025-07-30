@@ -1,5 +1,4 @@
-﻿using MonoMod.Backports;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
@@ -512,7 +511,7 @@ namespace MonoMod.Logs
         }
 
         /// <summary>Ensures <see cref="_chars"/> has the capacity to store <paramref name="additionalChars"/> beyond <see cref="_pos"/>.</summary>
-        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)]
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         private void EnsureCapacityForAdditionalChars(int additionalChars)
         {
             if (_chars.Length - _pos < additionalChars)
@@ -564,7 +563,7 @@ namespace MonoMod.Logs
         }
 
         /// <summary>Grow the size of <see cref="_chars"/> to at least the specified <paramref name="requiredMinCapacity"/>.</summary>
-        [MethodImpl(MonoMod.Backports.MethodImplOptionsEx.AggressiveInlining)] // but reuse this grow logic directly in both of the above grow routines
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)] // but reuse this grow logic directly in both of the above grow routines
         private void GrowCore(uint requiredMinCapacity)
         {
             // We want the max of how much space we actually required and doubling our capacity (without going beyond the max allowed length). We

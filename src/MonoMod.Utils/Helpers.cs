@@ -1,5 +1,4 @@
-﻿using MonoMod.Backports;
-using MonoMod.Logs;
+﻿using MonoMod.Logs;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -196,6 +195,11 @@ namespace MonoMod.Utils
             return InitializeValueWithLock(ref location, @lock, init, param);
         }
 
+        private static unsafe T DelegatePtr<T>(IntPtr source)
+        {
+            return ((delegate*<T>)source)();
+        }
+
         /// <remarks>
         /// This overload may not work on some older Mono implementations, which do not have good function pointer support.
         /// </remarks>
@@ -204,7 +208,7 @@ namespace MonoMod.Utils
         {
             if (location is not null)
                 return location;
-            return InitializeValue(ref location, &ILHelpers.TailCallDelegatePtr<T>, (IntPtr)init);
+            return InitializeValue(ref location, &DelegatePtr<T>, (IntPtr)init);
         }
 
 
@@ -216,7 +220,7 @@ namespace MonoMod.Utils
         {
             if (location is not null)
                 return location;
-            return InitializeValueWithLock(ref location, @lock, &ILHelpers.TailCallDelegatePtr<T>, (IntPtr)init);
+            return InitializeValueWithLock(ref location, @lock, &DelegatePtr<T>, (IntPtr)init);
         }
 
         /// <remarks>

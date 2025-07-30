@@ -49,6 +49,7 @@
   <!-- Package Validation -->
   <PropertyGroup>
     <EnablePackageValidation>true</EnablePackageValidation>
+    <RunPackageValidationWithoutReferences>true</RunPackageValidationWithoutReferences>
   </PropertyGroup>
 
 </Project>

@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using MonoMod.Backports;
 using MonoMod.Logs;
 using System;
 using System.Diagnostics.CodeAnalysis;

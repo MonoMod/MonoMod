@@ -12,9 +12,7 @@
             "**/MonoMod.FrameworkTests.*",
             "**/MonoMod.SourceGen.*.*",
             "**/MonoMod.UnitTest.*",
-            "**/MonoMod.Backports.Tasks.*",
             "**/MonoMod.Patcher.*",
-            "**/MonoMod.ILHelpers.Patcher.*",
             "**/MonoMod.DebugIL.*",
             "**/MonoMod.RuntimeDetour.HookGen.*"
           ]

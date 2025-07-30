@@ -1,5 +1,4 @@
 using Mono.Cecil.Cil;
-using MonoMod.Backports;
 using MonoMod.Core.Utils;
 using MonoMod.Logs;
 using MonoMod.Utils;
