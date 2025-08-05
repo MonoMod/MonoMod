@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
 
+  <PropertyGroup Condition="'$(_UsingDefaultRuntimeIdentifier)' == 'true'">
+    <!-- The above property indicates that <RuntimeIdentifier> is set to a Windows default. Clear it now so that we don't add extra garbage to our package lock. -->
+    <!-- See also:
+         - https://github.com/NuGet/Home/issues/9195#issuecomment-777153274
+         - https://github.com/dotnet/sdk/issues/26505
+         -->
+    <RuntimeIdentifier></RuntimeIdentifier>
+  </PropertyGroup>
+  
   <!-- NuGet Information -->
   <Import Project="$(MMToolsPath)NuGet.targets" />
 

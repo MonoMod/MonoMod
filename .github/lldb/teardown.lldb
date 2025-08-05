@@ -1,0 +1,2 @@
+# We need to make sure to exit with the right exit code
+script -l python -- import lldb; import os; import sys; os._exit(lldb.process.exit_state)

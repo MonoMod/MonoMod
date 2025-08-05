@@ -41,6 +41,12 @@ namespace MonoMod.Core.Interop
 
         public static unsafe int Errno => *__errno_location();
 
+        static Unix()
+        {
+            // Preload pinvoke initialization so it doesn't affect errno when accessed the first time
+            _ = Errno;
+        }
+
         [Flags]
         public enum PipeFlags : int
         {

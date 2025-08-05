@@ -8,7 +8,7 @@ RUN apk update \
     -X https://dl-cdn.alpinelinux.org/alpine/edge/community \
     -X https://dl-cdn.alpinelinux.org/alpine/edge/testing \
         git git-lfs curl wget bash nodejs lttng-ust openssh-client tar \
-        mono dotnet9-runtime \
+        mono dotnet9-runtime sudo doas lldb py3-lldb \
 # Dependencies for older runtimes
  && apk add --no-cache -X https://dl-cdn.alpinelinux.org/alpine/v3.18/community \
         libssl1.1 \
@@ -23,6 +23,13 @@ RUN curl -L \
  && chmod +x /opt/powershell/pwsh \
  && ln -s /opt/powershell/pwsh /usr/bin/pwsh \
  && rm /tmp/powershell.tar.gz
+ 
+# Then, user
+RUN adduser -D -h /home/runner -s /bin/bash -u 1001 runner wheel \
+    && echo "runner ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/runner \
+    && chmod 0440 /etc/sudoers.d/runner
+USER runner
+WORKDIR /home/runner
 
 # Older runtimes can't find a valid libicu, and we don't particularly care about globalization anyway
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1

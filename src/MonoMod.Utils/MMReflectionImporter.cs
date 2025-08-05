@@ -118,7 +118,46 @@ namespace MonoMod.Utils
             if (CachedAsms.TryGetValue(asm, out var asmRef))
                 return asmRef;
 
-            asmRef = Default.ImportReference(asm.GetName());
+            //copied from Mono.Cecil Default Importer
+            bool TryGetAssemblyNameReference(AssemblyName name, [NotNullWhen(true)] out AssemblyNameReference? assembly_reference)
+            {
+                var references = Module.AssemblyReferences;
+
+                for (int i = 0; i < references.Count; i++)
+                {
+                    var reference = references[i];
+                    if (name.FullName != reference.FullName) // TODO compare field by field
+                        continue;
+
+                    if (!reference.HashIs(asm))
+                        continue;
+                    assembly_reference = reference;
+                    return true;
+                }
+
+                assembly_reference = null;
+                return false;
+            }
+            AssemblyNameReference ImportReference(AssemblyName name)
+            {
+                //Mixin.CheckName(name);
+
+                if (TryGetAssemblyNameReference(name, out var reference))
+                    return reference;
+
+                reference = new AssemblyNameReference(name.Name, name.Version)
+                {
+                    PublicKeyToken = name.GetPublicKeyToken(),
+                    Culture = name.CultureInfo!.Name,
+                    HashAlgorithm = (Mono.Cecil.AssemblyHashAlgorithm)name.HashAlgorithm,
+                };
+
+                Module.AssemblyReferences.Add(reference);
+
+                return reference;
+            }
+            //asmRef = Default.ImportReference(asm.GetName());
+            asmRef = ImportReference(asm.GetName());
             // It's possible to load multiple assemblies with the same name but different contents!
             // Assembly load contexts are pain. (And this can even happen without ALCs!)
             asmRef.ApplyRuntimeHash(asm);

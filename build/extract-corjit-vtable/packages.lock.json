@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net9.0": {
+      "Chell": {
+        "type": "Direct",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "p6P2DRvjmZf0rtFxB2LwnogGfqDKAmZWRqwLeZQEpefXlr4VmwoMDmHtqdeMfmhtkBplXW1uV3F5BbeeSFgrlA==",
+        "dependencies": {
+          "Kokuban": "0.1.0",
+          "Microsoft.Extensions.FileSystemGlobbing": "5.0.0",
+          "System.IO.Pipelines": "5.0.0"
+        }
+      },
+      "ClangSharp": {
+        "type": "Direct",
+        "requested": "[18.1.0.1, )",
+        "resolved": "18.1.0.1",
+        "contentHash": "8+PPecxrE3epacqDDO6gQ4vdwg1/vpR8HGF+Ryf1+y0W0UB/cHowX0EhWg1Qq9jD2oiPUIC2S4RymLzMB3iWkA==",
+        "dependencies": {
+          "ClangSharp.Interop": "18.1.0.1"
+        }
+      },
+      "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
+        "type": "Direct",
+        "requested": "[4.12.0, )",
+        "resolved": "4.12.0",
+        "contentHash": "5S+LHLhm0am4MWQQMN0O3VyKA/St5JCqH1yv+1YGZl2klIJlLlmNA/KTLCVJSC1kZPIKR1MFF/3g9FqsyzIyCQ=="
+      },
+      "Microsoft.Net.Compilers.Toolset": {
+        "type": "Direct",
+        "requested": "[4.12.0, )",
+        "resolved": "4.12.0",
+        "contentHash": "xXDdIgDfcbMr+2bLzVJHg+/oCHwcYs808TlooX0M9+BVCeHITaROsjdbWSJNdyzeMe/K8iB2NeHmaAOUcqkKWw=="
+      },
+      "Microsoft.SourceLink.GitHub": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "G5q7OqtwIyGTkeIOAc3u2ZuV/kicQaec5EaRnc0pIeSnh9LUjj+PYQrJYBURvDt7twGl2PKA7nSN0kz1Zw5bnQ==",
+        "dependencies": {
+          "Microsoft.Build.Tasks.Git": "8.0.0",
+          "Microsoft.SourceLink.Common": "8.0.0"
+        }
+      },
+      "NuGetizer": {
+        "type": "Direct",
+        "requested": "[1.2.3, )",
+        "resolved": "1.2.3",
+        "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
+      },
+      "ClangSharp.Interop": {
+        "type": "Transitive",
+        "resolved": "18.1.0.1",
+        "contentHash": "TgM1Ywf9Ve6solkU5JLZdXD9QTyDXNE+0GYjpKOq+agOo+0uSUImegIs1VeVebDyPNIdw/G0kWI77EbVeHB1wA==",
+        "dependencies": {
+          "libClang": "18.1.3.2",
+          "libClangSharp": "18.1.3.1"
+        }
+      },
+      "Kokuban": {
+        "type": "Transitive",
+        "resolved": "0.1.0",
+        "contentHash": "pgSr5TGBXoy5gyGRc6xJmFzR4A8/iENgllNqlxnBx2I7iJt9MClrdY8ZBl8JuLjX8G0NQW4UNgAs2JDoTjzEEQ=="
+      },
+      "libclang": {
+        "type": "Transitive",
+        "resolved": "18.1.3.2",
+        "contentHash": "ugV1RcbJ50D9QivPWoJ5qF14psjQQqiFmd9bTsUScfpcGUEJBE2qm8eIZzatEZOKUchW3wSHRXryBzTtapibwQ=="
+      },
+      "libClangSharp": {
+        "type": "Transitive",
+        "resolved": "18.1.3.1",
+        "contentHash": "HjHcNOxPFYvWk2vgqbLjmRW63b6ZQw2UgwlOAAb4XGWnLmOLDipoV2nWTA3T0orE4dleWw7lemGKhZwtvmFKQw=="
+      },
+      "Microsoft.Build.Tasks.Git": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
+      },
+      "Microsoft.Extensions.FileSystemGlobbing": {
+        "type": "Transitive",
+        "resolved": "5.0.0",
+        "contentHash": "ArliS8lGk8sWRtrWpqI8yUVYJpRruPjCDT+EIjrgkA/AAPRctlAkRISVZ334chAKktTLzD1+PK8F5IZpGedSqA=="
+      },
+      "Microsoft.SourceLink.Common": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
+      },
+      "System.IO.Pipelines": {
+        "type": "Transitive",
+        "resolved": "5.0.0",
+        "contentHash": "irMYm3vhVgRsYvHTU5b2gsT2CwT/SMM6LZFzuJjpIvT5Z4CshxNsaoBC1X/LltwuR3Opp8d6jOS/60WwOb7Q2Q=="
+      }
+    },
+    "net9.0/linux-x64": {
+      "libclang": {
+        "type": "Transitive",
+        "resolved": "18.1.3.2",
+        "contentHash": "ugV1RcbJ50D9QivPWoJ5qF14psjQQqiFmd9bTsUScfpcGUEJBE2qm8eIZzatEZOKUchW3wSHRXryBzTtapibwQ==",
+        "dependencies": {
+          "libclang.runtime.linux-x64": "18.1.3.2"
+        }
+      },
+      "libclang.runtime.linux-x64": {
+        "type": "Transitive",
+        "resolved": "18.1.3.2",
+        "contentHash": "BSr6TVaFsEOK2zoDl4aZ6+cqR/4mvdbv+N+cdOZoafbIfNbWwV5XYi3SK/A1HcDEI2y3YPHg/rc8xGdhUIhsRA=="
+      },
+      "libClangSharp": {
+        "type": "Transitive",
+        "resolved": "18.1.3.1",
+        "contentHash": "HjHcNOxPFYvWk2vgqbLjmRW63b6ZQw2UgwlOAAb4XGWnLmOLDipoV2nWTA3T0orE4dleWw7lemGKhZwtvmFKQw==",
+        "dependencies": {
+          "libClangSharp.runtime.linux-x64": "18.1.3.1"
+        }
+      },
+      "libClangSharp.runtime.linux-x64": {
+        "type": "Transitive",
+        "resolved": "18.1.3.1",
+        "contentHash": "btwuosmQpqgdWZsttfGlT1bd4X1/QMeXUfvjEADdyNV529E0/UMwsKBaVbECAF/APZ5k1dIBImfNUlsT6+0Fmg=="
+      }
+    },
+    "net9.0/win-x64": {
+      "libclang": {
+        "type": "Transitive",
+        "resolved": "18.1.3.2",
+        "contentHash": "ugV1RcbJ50D9QivPWoJ5qF14psjQQqiFmd9bTsUScfpcGUEJBE2qm8eIZzatEZOKUchW3wSHRXryBzTtapibwQ==",
+        "dependencies": {
+          "libclang.runtime.win-x64": "18.1.3.2"
+        }
+      },
+      "libclang.runtime.win-x64": {
+        "type": "Transitive",
+        "resolved": "18.1.3.2",
+        "contentHash": "L8bgxTUASasstvQdjpSdOQEjpLtXKpZFSmV4iRNtC3+hyCt87KvOR1v8F5V+sPasdihLkN3160KmtpcAdcUm1A=="
+      },
+      "libClangSharp": {
+        "type": "Transitive",
+        "resolved": "18.1.3.1",
+        "contentHash": "HjHcNOxPFYvWk2vgqbLjmRW63b6ZQw2UgwlOAAb4XGWnLmOLDipoV2nWTA3T0orE4dleWw7lemGKhZwtvmFKQw==",
+        "dependencies": {
+          "libClangSharp.runtime.win-x64": "18.1.3.1"
+        }
+      },
+      "libClangSharp.runtime.win-x64": {
+        "type": "Transitive",
+        "resolved": "18.1.3.1",
+        "contentHash": "Uu9w/jthpuC7uDFKYmkdmU/LIVJAlht5a6QFLzkUxdET7Szo5h/sMezU2oRE7P2ufIyFnPl5KYyFV1z0jGAedQ=="
+      }
+    }
+  }
+}

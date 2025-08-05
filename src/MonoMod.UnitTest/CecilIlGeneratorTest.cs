@@ -1,6 +1,5 @@
 ﻿using Mono.Cecil;
 using MonoMod.Utils.Cil;
-using System;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;

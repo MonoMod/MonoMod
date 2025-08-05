@@ -36,7 +36,7 @@ namespace MonoMod.UnitTest.Github
         }
 
         [Fact]
-        public void GlueAbiFixup_HookingPrivateGetProperty_DoesNotThrow()
+        public void GlueAbiFixupHookingPrivateGetPropertyDoesNotThrow()
         {
             var prop = typeof(Player).GetProperty("RunMaxSpeed", BindingFlags.Instance | BindingFlags.NonPublic);
             using var runMaxSpeed = new Hook(prop.GetGetMethod(true), RunMaxSpeed_patch);

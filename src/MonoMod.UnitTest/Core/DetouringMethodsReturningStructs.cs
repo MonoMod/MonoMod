@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Xunit;
@@ -21,6 +22,7 @@ namespace MonoMod.UnitTest.Core
             Instance
         }
 
+        [SuppressMessage("", "CA1812", Justification = "Implicitly instantiated by xUnit")]
         private class AddTestData : IEnumerable<object[]>
         {
             public IEnumerator<object[]> GetEnumerator()
@@ -39,7 +41,7 @@ namespace MonoMod.UnitTest.Core
 
         [Theory]
         [ClassData(typeof(AddTestData))]
-        public void ReturningStructMethods_DoesNotThrow(CallType type, int byteCount)
+        public void ReturningStructMethodsDoesNotThrow(CallType type, int byteCount)
         {
             var all = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
             var suffix = byteCount < 10 ? $"0{byteCount}" : $"{byteCount}";
@@ -591,6 +593,7 @@ namespace MonoMod.UnitTest.Core
             }
         }
 
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value 0
         private struct St01
         {
             public byte b1;
