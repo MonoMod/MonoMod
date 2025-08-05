@@ -243,23 +243,15 @@ namespace MonoMod.Utils
 
                 var machineName = GetMachineNamePosix(os, buffer).ToUpperInvariant();
 
-                if (machineName.Contains("X86_64", StringComparison.Ordinal))
+                if (machineName.Contains("X86_64", StringComparison.Ordinal) || machineName.Contains("AMD64", StringComparison.Ordinal))
                 {
                     arch = ArchitectureKind.x86_64;
                 }
-                else if (machineName.Contains("AMD64", StringComparison.Ordinal))
-                {
-                    arch = ArchitectureKind.x86_64;
-                }
-                else if (machineName.Contains("X86", StringComparison.Ordinal))
+                else if (machineName.Contains("X86", StringComparison.Ordinal) || machineName.Contains("I686", StringComparison.Ordinal))
                 {
                     arch = ArchitectureKind.x86;
                 }
-                else if (machineName.Contains("AARCH64", StringComparison.Ordinal))
-                {
-                    arch = ArchitectureKind.Arm64;
-                }
-                else if (machineName.Contains("ARM64", StringComparison.Ordinal))
+                else if (machineName.Contains("AARCH64", StringComparison.Ordinal) || machineName.Contains("ARM64", StringComparison.Ordinal))
                 {
                     arch = ArchitectureKind.Arm64;
                 }

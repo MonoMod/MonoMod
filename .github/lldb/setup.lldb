@@ -1,0 +1,13 @@
+# need to make sure we don't disable ASLR for Docker, but we also want to always keep it anyway
+settings set target.disable-aslr false
+
+# set up signal handling
+process handle -s false -p true -n false SIGINT SIGSTOP SIGSEGV SIGHUP SIGQUIT SIGTRAP SIGFPE SIGKILL SIGTERM SIGPIPE
+process handle -s true -p true -n true SIGXCPU SIGABRT SIGILL SIGBUS
+
+# set some breakpoints for mono
+# if mono_handle_native_crash is invoked, break and create a dump immediately
+breakpoint set -b mono_handle_native_crash -H -K true -G true -C sdmp
+
+# --- SETUP DONE --- 
+run

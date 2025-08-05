@@ -125,7 +125,7 @@ namespace MonoMod.Utils
                     wrote += 2;
                 }
 
-                if (!DebugFormatter.Into(span, out w, $"{parameters[i]}"))
+                if (!DebugFormatter.Into(span.Slice(wrote), out w, $"{parameters[i]}"))
                     return false;
                 wrote += w;
             }

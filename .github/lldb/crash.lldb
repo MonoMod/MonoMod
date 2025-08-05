@@ -1,0 +1,3 @@
+# When this executes, we've already done the coredump. We need to kill the process in a way that allows teardown.lldb to exit with the right exit code.
+sdmp # save the coredump
+kill

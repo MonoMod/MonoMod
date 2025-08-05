@@ -30,6 +30,7 @@ env:
   DOTNET_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_PACKAGES: ${{github.workspace}}/artifacts/pkg
+  RestoreLockedMode: true
 
 jobs:
   build:
@@ -53,7 +54,7 @@ jobs:
     # TODO: maybe we can eventually use package locks for package caching?
     
     - name: Install .NET SDK
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
       with:
         global-json: global.json
         
@@ -62,8 +63,8 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.NUGET_PACKAGES }}
-        key: ${{ runner.os }}-nuget-v1-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', 'nuget.config', 'global.json') }}
-        restore-keys: ${{ runner.os }}-nuget-v1-
+        key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}
 
     - name: Restore
       run: dotnet restore -bl:restore.binlog -noAutoRsp

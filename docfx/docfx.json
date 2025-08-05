@@ -92,6 +92,9 @@
     "noLangKeyword": false,
     "keepFileLink": false,
     "cleanupCacheHistory": false,
-    "disableGitFeatures": false
+    "disableGitFeatures": false,
+    "xref": [
+      "https://learn.microsoft.com/en-us/dotnet/.xrefmap.json"
+    ]
   }
 }

@@ -5,8 +5,8 @@ RUN apt-get update \
  && apt-get upgrade -y \
  && apt-get install --no-install-recommends -y \
         apt-transport-https software-properties-common \
-        git git-lfs curl wget bash \
-        ca-certificates-mono mono-runtime mono-utils mono-gac mono-devel \
+        git git-lfs curl wget bash sudo lldb \
+        ca-certificates-mono mono-runtime mono-runtime-dbg mono-utils mono-gac mono-devel \
  && add-apt-repository ppa:dotnet/backports \
  && wget -q https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
  && dpkg -i packages-microsoft-prod.deb \
@@ -27,7 +27,9 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # Then, user
-RUN useradd -rm -d /home/runner -s /bin/bash -g root -G sudo -u 1001 runner
+RUN useradd -rm -d /home/runner -s /bin/bash -g root -G sudo -u 1001 runner \
+    && echo "runner ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/runner \
+    && chmod 0440 /etc/sudoers.d/runner
 USER runner
 WORKDIR /home/runner
 

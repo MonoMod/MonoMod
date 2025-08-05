@@ -15,7 +15,23 @@ env:
   DOTNET_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_PACKAGES: ${{github.workspace}}/artifacts/pkg
+  RestoreLockedMode: true
   XunitVersion: "2.4.2"
+
+  DUMPS_PATH: ${{github.workspace}}/artifacts/dumps/
+  WORKSPACE: ${{github.workspace}}
+  DOTNET_DbgEnableMiniDump: 1
+  DOTNET_DbgMiniDumpName: "${{github.workspace}}/artifacts/dumps/dump_%e_%p.dmp"
+  DOTNET_DbgMiniDumpType: 4
+  DOTNET_CreateDumpDiagnostics: 1
+  DOTNET_CreateDumpVerboseDiagnostics: 1
+  DOTNET_EnableDumpOnSigTerm: 1
+  COMPlus_DbgEnableMiniDump: 1
+  COMPlus_DbgMiniDumpName: "${{github.workspace}}/artifacts/dumps/dump_%e_%p.dmp"
+  COMPlus_DbgMiniDumpType: 4
+  COMPlus_CreateDumpDiagnostics: 1
+  COMPlus_CreateDumpVerboseDiagnostics: 1
+  COMPlus_EnableDumpOnSigTerm: 1
 
 jobs:
   test:  
@@ -25,7 +41,20 @@ jobs:
     env:
       LOG_FILE_NAME: testresults.${{ fromJSON(inputs.matrix).os.runner }}.${{ fromJSON(inputs.matrix).dotnet.id != '' && fromJSON(inputs.matrix).dotnet.id || fromJSON(inputs.matrix).dotnet.sdk }}.${{ fromJSON(inputs.matrix).arch }}
 
-    steps:    
+    steps:
+    
+    # MacOS 13 ships an LLDB that doesn't work properly for crashes off the main thread. We install LLVM from Brew for its LLDB that doesn't have this issue.
+    - name: Install LLVM from Brew
+      uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
+      with:
+        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-v1
+        tools: llvm@20
+    - name: Add new LLVM to PATH
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
+      shell: bash
+      run: echo "$(brew --prefix llvm@20)/bin" >> "$GITHUB_PATH"
+      
     - name: Checkout
       uses: actions/checkout@v4
       if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore || fromJSON(inputs.matrix).dotnet.isMono }}
@@ -36,7 +65,7 @@ jobs:
     # Note: All of the SDKs we install have to be for the target architecture. Otherwise, we get issues when the default != the target.
     - name: Install global SDK
       if: ${{ ! fromJSON(inputs.matrix).dotnet.needsRestore }}
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
       with:
         architecture: ${{ fromJSON(inputs.matrix).arch }}
         version: "9.0"
@@ -46,12 +75,12 @@ jobs:
       if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
       with:
         path: ${{ env.NUGET_PACKAGES }}
-        key: ${{ runner.os }}-nuget-v1-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', 'nuget.config', 'global.json') }}
-        restore-keys: ${{ runner.os }}-nuget-v1-
+        key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}
 
     - name: Install restore SDK
       if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
       with:
         architecture: ${{ fromJSON(inputs.matrix).arch }}
         global-json: global.json
@@ -67,7 +96,7 @@ jobs:
         
     - name: Install test target runtime
       if: ${{ fromJSON(inputs.matrix).dotnet.sdk != '' }}
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
       with:
         version: ${{ fromJSON(inputs.matrix).dotnet.sdk }}
         architecture: ${{ fromJSON(inputs.matrix).arch }}
@@ -79,7 +108,6 @@ jobs:
       env:
         INPUT_JOB: ${{ inputs.matrix }}
       run: |
-        #./.github/setup-mono.ps1 $env:INPUT_JOB $env:GITHUB_OUTPUT $env:GITHUB_ENV ${{ runner.os }}
         dotnet run --project ./build/setup-mono/setup-mono.csproj -- $env:INPUT_JOB $env:GITHUB_OUTPUT $env:GITHUB_ENV ${{ runner.os }}
 
     - name: Print SDK info
@@ -93,7 +121,9 @@ jobs:
     - name: Run tests
       if: ${{ ! fromJSON(inputs.matrix).dotnet.isMono && ! fromJSON(inputs.matrix).dotnet.pgo }}
       run: |
-        dotnet test -f ${{ fromJSON(inputs.matrix).dotnet.tfm }} -a ${{ fromJSON(inputs.matrix).arch }} `
+        dotnet test `
+          --blame-crash-dump-type full --blame-hang-timeout 5m --blame-hang-dump-type full `
+          -f ${{ fromJSON(inputs.matrix).dotnet.tfm }} -a ${{ fromJSON(inputs.matrix).arch }} `
           -l:"trx;LogFileName=$($env:LOG_FILE_NAME).trx" release_${{ fromJSON(inputs.matrix).dotnet.tfm }}/MonoMod.UnitTest.dll
 
     - name: Run tests (PGO)
@@ -103,7 +133,9 @@ jobs:
         DOTNET_TC_QuicJitForLoops: ${{ fromJSON(inputs.matrix).usePgo && 1 || 0 }}
         DOTNET_TieredPGO: ${{ fromJSON(inputs.matrix).usePgo && 1 || 0 }}
       run: |
-        dotnet test -f ${{ fromJSON(inputs.matrix).dotnet.tfm }} -a ${{ fromJSON(inputs.matrix).arch }} `
+        dotnet test `
+          --blame-crash-dump-type full --blame-hang-timeout 5m --blame-hang-dump-type full `
+          -f ${{ fromJSON(inputs.matrix).dotnet.tfm }} -a ${{ fromJSON(inputs.matrix).arch }} `
           -l:"trx;LogFileName=$($env:LOG_FILE_NAME).trx" release_${{ fromJSON(inputs.matrix).dotnet.tfm }}/MonoMod.UnitTest.dll
           
     - name: Run tests (Mono)
@@ -128,3 +160,14 @@ jobs:
           TestResults/*.trx
           *.xml
           diaglog.*
+
+    - name: Upload process dumps
+      uses: actions/upload-artifact@v4
+      if: ${{ always() }}
+      with:
+        name: test-dumps ${{ fromJSON(inputs.matrix).title }}
+        retention-days: 1
+        if-no-files-found: ignore
+        path: |
+          ${{ env.DUMPS_PATH }}*
+          **/*.dmp

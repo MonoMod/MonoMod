@@ -12,6 +12,10 @@
     <Project Path="build/gen-test-matrix/gen-test-matrix.csproj" />
     <Project Path="build/setup-mono/setup-mono.csproj" />
   </Folder>
+  <Folder Name="/build/containers/">
+    <File Path="build/containers/linux-musl-x64.dockerfile" />
+    <File Path="build/containers/linux-x64.dockerfile" />
+  </Folder>
   <Folder Name="/external/">
     <Project Path="external/iced.csproj" />
   </Folder>

@@ -13,6 +13,7 @@ env:
   DOTNET_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_PACKAGES: ${{github.workspace}}/artifacts/pkg
+  RestoreLockedMode: true
   
 # If new commits are pushed, don't bother finishing the current run.
 concurrency:
@@ -59,7 +60,7 @@ jobs:
     
     - name: Install .NET SDK
       if: steps.skip_check.outputs.should_skip != 'true'
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
       with:
         global-json: global.json
         
@@ -69,8 +70,8 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.NUGET_PACKAGES }}
-        key: ${{ runner.os }}-nuget-v1-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', 'nuget.config', 'global.json') }}
-        restore-keys: ${{ runner.os }}-nuget-v1-
+        key: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}
+        restore-keys: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
 
     - name: Compute test matrix
       if: steps.skip_check.outputs.should_skip != 'true'
@@ -94,11 +95,10 @@ jobs:
     if: needs.setup.outputs.should_skip != 'true'
     strategy:
       matrix:
-        os: [windows-latest, macos-13]
         include:
         - os: windows-latest
           name: Windows
-        - os: macos-13
+        - os: macos-latest
           name: MacOS
           
     name: 'Build #${{ needs.setup.outputs.ver }} (${{ matrix.name }})'
