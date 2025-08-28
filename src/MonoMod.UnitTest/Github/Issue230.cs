@@ -48,7 +48,7 @@ namespace MonoMod.UnitTest.Github
         private static void Original()
         {
             var random = new Random();
-            var enumerable = Enumerable.Range(0, 50).Select(i => new SomeType { index = random.Next(0, 5) });
+            var enumerable = Enumerable.Range(0, 50).Select(i => new SomeType { index = random.Next(50) });
 
             foreach (var item in enumerable)
             {
