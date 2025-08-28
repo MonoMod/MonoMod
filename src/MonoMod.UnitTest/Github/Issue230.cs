@@ -23,7 +23,7 @@ namespace MonoMod.UnitTest.Github
             public int index { get; set; }
         }
 
-        private static readonly List<SomeType>[] _list = new List<SomeType>[3];
+        private static readonly List<SomeType>[] _list = new List<SomeType>[4];
 
         [Fact]
         public void ILHookOnMonoShouldSucceed()
