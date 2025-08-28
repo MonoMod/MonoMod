@@ -1,0 +1,141 @@
+<Project>
+
+  <Target Name="_MM_ClearItems">
+    <ItemGroup>
+      <_MM_SrcToObj Remove="@(_MM_SrcToObj)" />
+      <_MM_ObjToLib Remove="@(_MM_ObjToLib)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_MM_PrepObjToLib" DependsOnTargets="_MM_ClearItems" Outputs="|%(Arm64HelperOS.Identity)|">
+
+    <PropertyGroup>
+      <_MM_OS>%(Arm64HelperOS.Identity)</_MM_OS>
+      <_MM_Item>%(Arm64HelperOS.Item)</_MM_Item>
+      <_MM_Ext>%(Arm64HelperOS.Ext)</_MM_Ext>
+      <_MM_Target>%(Arm64HelperOS.TargetTriple)</_MM_Target>
+      <_MM_ExtraOpts>%(Arm64HelperOS.ExtraOpts)</_MM_ExtraOpts>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_MM_Tmp Remove="@(_MM_Tmp)"/>
+      <_MM_Tmp Include="@($(_MM_Item))" />
+      <_MM_LinkerOpts Include="%(_MM_Tmp.LinkerOpts)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_MM_ObjToLib Include="$(_MM_OS)" ExtraOpts="$(_MM_ExtraOpts) @(_MM_LinkerOpts->'%(Identity)',' ')"
+          TargetTriple="$(_MM_Target)" Ext="$(_MM_Ext)"
+          Lib="$(IntermediateOutputPath)arm64/$(_MM_OS).$(_MM_Ext)"
+          Objs="@(_MM_Tmp->'$(IntermediateOutputPath)arm64/$(_MM_OS)/%(Filename)%(Extension).o')" />
+    </ItemGroup>
+
+  </Target>
+
+  <Target Name="_MM_PrepareHelperCompilationItems" DependsOnTargets="_MM_ClearItems">
+
+    <ItemGroup>
+      <_MM_SrcToObj Include="@(%(Arm64HelperOS.Item))" OS="%(Arm64HelperOS.Identity)" TargetTriple="%(Arm64HelperOS.TargetTriple)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_MM_SrcToObj>
+        <ObjPath>$(IntermediateOutputPath)arm64/%(OS)/%(Filename)%(Extension).o</ObjPath>
+      </_MM_SrcToObj>
+    </ItemGroup>
+
+  </Target>
+
+  <Target Name="_MM_CompileObjects" DependsOnTargets="_MM_PrepareHelperCompilationItems"
+      Inputs="$(MSBuildThisFileFullPath);$(MSBuildThisFileDirectory)BuildHelper.props;%(_MM_SrcToObj.Identity)" Outputs="%(_MM_SrcToObj.ObjPath)">
+
+    <PropertyGroup>
+      <_Target>%(_MM_SrcToObj.TargetTriple)</_Target>
+      <_Opts>%(_MM_SrcToObj.ExtraOpts)</_Opts>
+      <_Src>%(_MM_SrcToObj.Identity)</_Src>
+      <_Obj>%(_MM_SrcToObj.ObjPath)</_Obj>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_ExeArgs Remove="@(_ExeArgs)" />
+      <_ExeArgs Include="cc"/>
+      <_ExeArgs Include="-target"/>
+      <_ExeArgs Include="$(_Target)"/>
+      <_ExeArgs Include="-fdiagnostics-format=msvc" />
+      <!--<_ExeArgs Include="-v"/>-->
+      <_ExeArgs Include="-c"/>
+      <_ExeArgs Include="-o"/>
+      <_ExeArgs Include="$(_Obj)"/>
+      <_ExeArgs Include="$(_Src)"/>
+    </ItemGroup>
+    
+    <ItemGroup Condition="'$(Optimize)' == 'false'">
+      <_ExeArgs Include="-g" />
+      <_ExeArgs Include="-O1" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Optimize)' == 'true'">
+      <_ExeArgs Include="-O3" />
+    </ItemGroup>
+
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName($(_Obj)))" />
+    <Exec Command="&quot;$(ZigExePath)&quot; @(_ExeArgs->'&quot;%(Identity)&quot;',' ') $(_Opts)" ConsoleToMSBuild="true" IgnoreExitCode="true"
+        YieldDuringToolExecution="true">
+      <Output TaskParameter="ExitCode" PropertyName="_MM_ExitCode" />
+    </Exec>
+    <Delete Files="$(_Obj)" Condition="'$(_MM_ExitCode)' != '0'" />
+    <Error Text="Failed to compile $(_Src)" Condition="'$(_MM_ExitCode)' != '0'" />
+
+  </Target>
+
+  <Target Name="_MM_CompileLibs" DependsOnTargets="_MM_PrepObjToLib;_MM_CompileObjects" BeforeTargets="SplitResourcesByCulture"
+      Inputs="$(MSBuildThisFileFullPath);$(MSBuildThisFileDirectory)BuildHelper.props;%(_MM_ObjToLib.Objs)" Outputs="%(_MM_ObjToLib.Lib)">
+    
+    <PropertyGroup>
+      <_OS>%(_MM_ObjToLib.Identity)</_OS>
+      <_Ext>%(_MM_ObjToLib.Ext)</_Ext>
+      <_Target>%(_MM_ObjToLib.TargetTriple)</_Target>
+      <_Opts>%(_MM_ObjToLib.ExtraOpts)</_Opts>
+      <_Obj>%(_MM_ObjToLib.Objs)</_Obj>
+      <_Out>%(_MM_ObjToLib.Lib)</_Out>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_ExeArgs Remove="@(_ExeArgs)" />
+      <_ExeArgs Include="cc"/>
+      <_ExeArgs Include="-target"/>
+      <_ExeArgs Include="$(_Target)"/>
+      <_ExeArgs Include="-fdiagnostics-format=msvc" />
+      <!--<_ExeArgs Include="-v"/>-->
+      <_ExeArgs Include="-o"/>
+      <_ExeArgs Include="$(_Out)"/>
+      <_ExeArgs Include="$(_Obj)"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Optimize)' == 'false'">
+      <_ExeArgs Include="-g" />
+      <_ExeArgs Include="-O1" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Optimize)' == 'true'">
+      <_ExeArgs Include="-Wl,-x" />
+      <_ExeArgs Include="-s" />
+      <_ExeArgs Include="-O3" />
+    </ItemGroup>
+
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName($(_Out)))" />
+    <Exec Command="&quot;$(ZigExePath)&quot; @(_ExeArgs->'&quot;%(Identity)&quot;',' ') $(_Opts)" ConsoleToMSBuild="true" IgnoreExitCode="true"
+        YieldDuringToolExecution="true">
+      <Output TaskParameter="ExitCode" PropertyName="_MM_ExitCode" />
+    </Exec>
+    <Delete Files="$(_Out)" Condition="'$(_MM_ExitCode)' != '0'" />
+    <Error Text="Failed to link $(_Out)" Condition="'$(_MM_ExitCode)' != '0'" />
+
+    <!-- Now that we've compiled it, add it as an embedded module -->
+    <ItemGroup>
+      <EmbeddedResource Include="$(_Out)" LogicalName="exhelper_$(_OS)_arm64.$(_Ext)" />
+    </ItemGroup>
+
+  </Target>
+
+</Project>

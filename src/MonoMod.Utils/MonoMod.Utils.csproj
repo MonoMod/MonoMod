@@ -11,9 +11,6 @@
 
     <!-- Disable "Dispose objects before losing scope" because it utterly chokes on this project -->
     <NoWarn>$(NoWarn);CA2000</NoWarn>
-
-    <VersionPrefix>25.0.8</VersionPrefix>
-    <PackageValidationBaselineVersion>25.0.0</PackageValidationBaselineVersion>
   </PropertyGroup>
   
   <!-- Dependencies -->

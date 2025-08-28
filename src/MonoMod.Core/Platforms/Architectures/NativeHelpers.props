@@ -1,0 +1,11 @@
+<Project>
+
+  <ItemGroup>
+    <HelperArch Include="x86_64" />
+    <HelperArch Include="arm64" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)/x86_64/BuildHelper.props" />
+  <Import Project="$(MSBuildThisFileDirectory)/arm64/BuildHelper.props" />
+
+</Project>

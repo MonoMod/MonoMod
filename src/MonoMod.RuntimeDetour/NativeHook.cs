@@ -15,7 +15,6 @@ namespace MonoMod.RuntimeDetour
     /// </remarks>
     public sealed class NativeHook : INativeDetour, IDisposable
     {
-
         // TODO: reference external xmldoc which describes the shape that a delegate can take, both here and for Hook
         #region Constructor overloads
         /// <summary>
@@ -51,6 +50,23 @@ namespace MonoMod.RuntimeDetour
         public NativeHook(IntPtr function, Delegate hook, DetourConfig? config, bool applyByDefault)
             : this(function, hook, DetourContext.GetDefaultFactory(), config, applyByDefault) { }
         #endregion
+
+        /// <summary>
+        /// Gets whether or not a <see cref="NativeHook"/> created in this context can call the original method from within
+        /// the hook.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Even when this returns <see langword="false"/>, users should accept an <c>orig</c> delegate and call it, but they
+        /// should make sure it's not <see langword="null"/> before doing so. This allows hooks to coexist even when the original
+        /// cannot be called.
+        /// </para>
+        /// <para>
+        /// This is equivalent to <see cref="IDetourFactory.SupportsNativeDetourOrigEntrypoint"/> on the <see cref="IDetourFactory"/>
+        /// which is ambient on the current thread. That property should be checked directly if manually passing an <see cref="IDetourFactory"/>.
+        /// </para>
+        /// </remarks>
+        public static bool CanCallOriginal => DetourContext.GetDefaultFactory().SupportsNativeDetourOrigEntrypoint;
 
         private readonly IDetourFactory factory;
         IDetourFactory IDetourBase.Factory => factory;

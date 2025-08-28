@@ -15,7 +15,7 @@ namespace MonoMod.UnitTest.Github
         [Fact]
         public void CalliInstructionShouldCompileWithoutException()
         {
-            DynamicMethodDefinition dmd = new("a", null, new[] { typeof(nint), typeof(RandomStruct) });
+            using DynamicMethodDefinition dmd = new("a", null, new[] { typeof(nint), typeof(RandomStruct) });
             var il = dmd.GetILProcessor();
             var c = new Mono.Cecil.CallSite(dmd.Module.ImportReference(typeof(void)));
             c.Parameters.Add(new(dmd.Module.ImportReference(typeof(RandomStruct))));

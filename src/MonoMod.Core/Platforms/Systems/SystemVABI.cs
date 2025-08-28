@@ -18,10 +18,7 @@ namespace MonoMod.Core.Platforms.Systems
                 if (totalSize > 32)
                     return isReturn ? TypeClassification.ByReference : TypeClassification.OnStack;
 
-                var isMemory = SysVIsMemoryCache.GetValue(
-                    type,
-                    static t => new StrongBox<bool>(AnyFieldsNotFloat(t))
-                ).Value;
+                var isMemory = true;// AnyFieldsNotFloat(type);
                 if (isMemory)
                 {
                     return isReturn ? TypeClassification.ByReference : TypeClassification.OnStack;
@@ -30,18 +27,42 @@ namespace MonoMod.Core.Platforms.Systems
             return TypeClassification.InRegister;
         }
 
-        private static bool AnyFieldsNotFloat(Type type)
+        public static TypeClassification ClassifyARM64(Type type, bool isReturn)
         {
-            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            var totalSize = type.GetManagedSize();
+            if (totalSize > 16)
             {
-                var fieldType = field.FieldType;
-                if (fieldType is { IsPrimitive: false, IsValueType: true } && AnyFieldsNotFloat(fieldType))
-                    return true;
-                if (Type.GetTypeCode(fieldType) is not TypeCode.Single and not TypeCode.Double)
-                    return true;
+                if (totalSize > 32)
+                    return isReturn ? TypeClassification.ByReference : TypeClassification.OnStack;
+
+                var isMemory = AnyFieldsNotFloat(type);
+                if (isMemory)
+                {
+                    return isReturn ? TypeClassification.ByReference : TypeClassification.OnStack;
+                }
             }
 
-            return false;
+            return TypeClassification.InRegister;
+        }
+
+        private static readonly StrongBox<bool> SBTrue = new(true);
+        private static readonly StrongBox<bool> SBFalse = new(false);
+
+        private static bool AnyFieldsNotFloat(Type type)
+        {
+            return SysVIsMemoryCache.GetValue(type, static type =>
+            {
+                foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                {
+                    var fieldType = field.FieldType;
+                    if (fieldType is { IsPrimitive: false, IsValueType: true } && AnyFieldsNotFloat(fieldType))
+                        return SBTrue;
+                    if (Type.GetTypeCode(fieldType) is not TypeCode.Single and not TypeCode.Double)
+                        return SBTrue;
+                }
+
+                return SBFalse;
+            }).Value;
         }
 
     }

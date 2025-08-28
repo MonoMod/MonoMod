@@ -3,14 +3,14 @@ using System;
 
 namespace MonoMod.Core.Platforms.Systems
 {
-    internal sealed class PosixExceptionHelper : INativeExceptionHelper
+    internal class PosixExceptionHelper : INativeExceptionHelper
     {
         private readonly IArchitecture arch;
         private readonly IntPtr eh_get_exception_ptr;
         private readonly IntPtr eh_managed_to_native;
         private readonly IntPtr eh_native_to_managed;
 
-        private PosixExceptionHelper(IArchitecture arch, IntPtr getExPtr, IntPtr m2n, IntPtr n2m)
+        protected PosixExceptionHelper(IArchitecture arch, IntPtr getExPtr, IntPtr m2n, IntPtr n2m)
         {
             this.arch = arch;
             eh_get_exception_ptr = getExPtr;
@@ -20,8 +20,7 @@ namespace MonoMod.Core.Platforms.Systems
 
         public static PosixExceptionHelper CreateHelper(IArchitecture arch, string filename)
         {
-            // we've now got the file on disk, and we know its name
-            // lets load it
+            // we've now got the file on disk, and we know its name. lets load it
             var handle = DynDll.OpenLibrary(filename);
             IntPtr eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed;
             try

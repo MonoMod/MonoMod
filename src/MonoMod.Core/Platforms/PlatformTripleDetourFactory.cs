@@ -499,5 +499,8 @@ namespace MonoMod.Core.Platforms
             }
             return detour;
         }
+
+        // alternate entrypoints are gated behind this feature flag
+        public bool SupportsNativeDetourOrigEntrypoint => triple.SupportedFeatures.Architecture.Has(ArchitectureFeature.CreateAltEntryPoint);
     }
 }

@@ -20,9 +20,18 @@ namespace MonoMod.Core.Interop
         [DllImport(LibSystem, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mkstemp")]
         public static extern unsafe int MkSTemp(byte* template);
 
+        [DllImport(LibSystem, CallingConvention = CallingConvention.Cdecl, EntryPoint = "close")]
+        public static extern unsafe int Close(int fd);
+
         [DllImport(LibSystem, CallingConvention = CallingConvention.Cdecl, EntryPoint = "__error")]
         public static extern unsafe int* __error();
         public static unsafe int Errno => *__error();
+
+        static OSX()
+        {
+            // Preload pinvoke initialization so it doesn't affect errno when accessed the first time
+            _ = Errno;
+        }
 
         /*
         #ifdef  mig_external
@@ -520,6 +529,28 @@ namespace MonoMod.Core.Interop
             public static kern_return_t InvalidArgument = new(4);
             public static kern_return_t Failure = new(5);
             // TODO: more
+        }
+        
+        [DllImport(LibSystem, EntryPoint = "mmap")]
+        public static extern IntPtr mmap(IntPtr address, ulong length, map_prot prot, map_flags flags, int fd, long offset);
+        
+        [Flags]
+        public enum map_prot : int
+        {
+            None = 0x00,
+            Read = 0x01,
+            Write = 0x02,
+            Execute = 0x04
+        }
+        
+        [Flags]
+        public enum map_flags : int
+        {
+            Private = 0x0002,
+            Fixed = 0x0010,
+            JIT = 0x0800,
+            Anonymous = 0x1000,
+            Failed
         }
     }
 }

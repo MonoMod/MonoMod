@@ -69,7 +69,7 @@ namespace MonoMod.Core.Platforms
                 ArchitectureKind.x86 => new Architectures.x86Arch(system),
                 ArchitectureKind.x86_64 => new Architectures.x86_64Arch(system),
                 ArchitectureKind.Arm => throw new NotImplementedException(),
-                ArchitectureKind.Arm64 => throw new NotImplementedException(),
+                ArchitectureKind.Arm64 => new Architectures.Arm64Arch(system),
                 var kind => throw new PlatformNotSupportedException($"Architecture kind {kind} not supported"),
             };
         }
@@ -426,6 +426,10 @@ namespace MonoMod.Core.Platforms
         /// Creates a <see cref="NativeDetour"/>. This is basically identical to <see cref="CreateSimpleDetour(IntPtr, IntPtr, int, IntPtr)"/>,
         /// except that it generates an alternate entrypoint for <paramref name="from"/>.
         /// </summary>
+        /// <remarks>
+        /// This method will always create an alternate entrypoint in <see cref="NativeDetour.AltEntry"/> when <see cref="ArchitectureFeature.CreateAltEntryPoint"/>
+        /// is available.
+        /// </remarks>
         /// <param name="from">The address to detour.</param>
         /// <param name="to">The target of the detour.</param>
         /// <param name="detourMaxSize">The maximum size available for the detour.</param>
@@ -639,6 +643,16 @@ namespace MonoMod.Core.Platforms
             if (from is not MethodInfo fromInfo || to is not MethodInfo toInfo)
                 return to;
 
+            var returnBufferIsArgument = false;
+            foreach (var arg in Abi.ArgumentOrder.Span)
+            {
+                if (arg is SpecialArgumentKind.ReturnBuffer)
+                {
+                    returnBufferIsArgument = true;
+                    break;
+                }
+            }
+
             // Whenever we detour a call from an instance method to a static one, `this` needs to
             // change its position to morph into a simple argument. Otherwise, it will be swapped
             // with the return buffer, causing a spectacular failure on the callee side:
@@ -659,7 +673,7 @@ namespace MonoMod.Core.Platforms
             var returnType = fromInfo.ReturnType;
             var hasReturnBuffer = Abi.Classify(returnType, true) is TypeClassification.ByReference;
             var hasThis = !fromInfo.IsStatic;
-            var requiresReturnBufferFixup = hasThis && toInfo.IsStatic && hasReturnBuffer;
+            var requiresReturnBufferFixup = hasThis && toInfo.IsStatic && hasReturnBuffer && returnBufferIsArgument;
 
             // Whenever we detour a call from a generic method, depending on the ABI, we may
             // receive a generic context as an argument, which a callee never needs, at least
@@ -761,7 +775,8 @@ namespace MonoMod.Core.Platforms
             }
 
             Helpers.DAssert(thisPos >= 0 || !hasThis);
-            Helpers.DAssert(returnBufferPos >= 0 || !hasReturnBuffer);
+            // note: ARM64 (sysv) uses a dedicated register for the return buffer, so we don't record it as an argument
+            Helpers.DAssert(!Abi.ReturnsReturnBuffer || !hasReturnBuffer || returnBufferPos >= 0);
             Helpers.DAssert(userArgumentsOffset >= 0);
 
             using var dmd = new DynamicMethodDefinition(
@@ -775,7 +790,7 @@ namespace MonoMod.Core.Platforms
             var il = dmd.GetILProcessor();
 
             // load return buffer
-            if (hasReturnBuffer)
+            if (hasReturnBuffer && returnBufferPos >= 0)
                 il.Emit(OpCodes.Ldarg, returnBufferPos);
 
             // load thisptr
@@ -790,7 +805,7 @@ namespace MonoMod.Core.Platforms
             il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(to));
 
             // store the returned object
-            if (hasReturnBuffer)
+            if (hasReturnBuffer && returnBufferPos >= 0)
                 il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(returnType));
 
             // if we need to return the pointer, do that

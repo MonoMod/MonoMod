@@ -42,14 +42,20 @@ jobs:
       LOG_FILE_NAME: testresults.${{ fromJSON(inputs.matrix).os.runner }}.${{ fromJSON(inputs.matrix).dotnet.id != '' && fromJSON(inputs.matrix).dotnet.id || fromJSON(inputs.matrix).dotnet.sdk }}.${{ fromJSON(inputs.matrix).arch }}
 
     steps:
+    - name: Install coreutils
+      uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
+      if: ${{ runner.os == 'macOS' }}
+      with:
+        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-coreutils
+        tools: coreutils
     
     # MacOS 13 ships an LLDB that doesn't work properly for crashes off the main thread. We install LLVM from Brew for its LLDB that doesn't have this issue.
     - name: Install LLVM from Brew
       uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
       if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
       with:
-        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-v1
-        tools: llvm@20
+        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-llvm
+        tools: llvm@20 coreutils
     - name: Add new LLVM to PATH
       if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
       shell: bash

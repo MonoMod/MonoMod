@@ -35,7 +35,7 @@ namespace MonoMod.Core.Platforms.Runtimes
 
                 case 6:
                     // .NET 6.0.x
-                    return new Core60Runtime(system);
+                    return new Core60Runtime(system, arch);
 
                 case 7:
                     // .NET 7.0.x
@@ -64,11 +64,16 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected CoreBaseRuntime(ISystem system)
         {
             System = system;
-
-            if (PlatformDetection.Architecture == ArchitectureKind.x86_64 &&
-                system.DefaultAbi is { } abi)
+            if (system.DefaultAbi is { } abi)
             {
-                AbiCore = AbiForCoreFx45X64(abi);
+                if (PlatformDetection.Architecture == ArchitectureKind.x86_64)
+                {
+                    AbiCore = AbiForCoreFx45X64(abi);
+                }
+                else if (PlatformDetection.Architecture == ArchitectureKind.Arm64)
+                {
+                    AbiCore = AbiForCoreFx45ARM64(abi);
+                }
             }
         }
 
@@ -132,7 +137,9 @@ namespace MonoMod.Core.Platforms.Runtimes
             }
         }
 
-        protected abstract void InstallJitHook(IntPtr jit);
+        protected virtual void InstallJitHook(IntPtr jit) => InstallManagedJitHook(jit);
+
+        protected abstract void InstallManagedJitHook(IntPtr jit);
 
         private INativeExceptionHelper? lazyNativeExceptionHelper;
         protected INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= System.NativeExceptionHelper;

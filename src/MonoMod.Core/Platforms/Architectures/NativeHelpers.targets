@@ -1,0 +1,24 @@
+<Project>
+  
+  <PropertyGroup>
+    <!-- Zig doesn't need separate -musl variants; it's libc is fully static -->
+    <_ZigToolsetPackageName>Vezel.Zig.Toolsets.$([System.String]::Copy($(NETCoreSdkPortableRuntimeIdentifier)).Replace('-musl', ''))</_ZigToolsetPackageName>
+    <_ZigToolsetPackageVersion>0.14.1.1</_ZigToolsetPackageVersion>
+
+    <_ZigToolsetPackageNameLower>$([System.String]::Copy($(_ZigToolsetPackageName)).ToLowerInvariant())</_ZigToolsetPackageNameLower>
+    <_ZigToolsetPackageRoot>$([MSBuild]::NormalizePath('$(NuGetPackageRoot)', '$(_ZigToolsetPackageNameLower)', '$(_ZigToolsetPackageVersion)'))</_ZigToolsetPackageRoot>
+    <_ZigToolsetPropsPath>$([MSBuild]::NormalizePath('$(_ZigToolsetPackageRoot)', 'build', '$(_ZigToolsetPackageName).props'))</_ZigToolsetPropsPath>
+  </PropertyGroup>
+
+  <!-- Grab the Zig SDK for the current platform -->
+  <ItemGroup>
+    <!-- Need PackageDownload so that it doesn't appear in the lock file (since this changes based on the host) -->
+    <PackageDownload Include="$(_ZigToolsetPackageName)" Version="[$(_ZigToolsetPackageVersion)]" />
+  </ItemGroup>
+
+  <Import Project="$(_ZigToolsetPropsPath)" Condition="Exists($(_ZigToolsetPropsPath))" />
+  
+  <Import Project="$(MSBuildThisFileDirectory)/x86_64/BuildHelper.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)/arm64/BuildHelper.targets" />
+
+</Project>

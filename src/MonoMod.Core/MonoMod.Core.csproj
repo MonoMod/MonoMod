@@ -12,18 +12,10 @@
     </Description>
     <PackageTags>RuntimeDetour;detour;detours;$(PackageTags)</PackageTags>
 
-    <VersionPrefix>1.2.3</VersionPrefix>
-    <PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion>
-
     <MMIncludeTFMChecks>true</MMIncludeTFMChecks>
 
-    <NoWarn>$([String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
+    <NoWarn>$([System.String]::Copy('$(NoWarn)').Replace(';CS1591', ''))</NoWarn>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <EmbeddedResource Include="Platforms\Architectures\x86_64\exhelper_linux_x86_64.so" LogicalName="exhelper_linux_x86_64.so" />
-    <EmbeddedResource Include="Platforms\Architectures\x86_64\exhelper_macos_x86_64.dylib" LogicalName="exhelper_macos_x86_64.dylib" />
-  </ItemGroup>
 
   <!-- Dependencies -->
   <ItemGroup>

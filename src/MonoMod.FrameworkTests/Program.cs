@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using MonoMod.Utils;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 #if NETCOREAPP1_0_OR_GREATER
 //using Xunit.Abstractions;
@@ -15,21 +16,38 @@ AppContext.SetSwitch("MonoMod.LogInMemory", true);
 #endif
 
 Console.WriteLine("Attach debugger now, then press enter to break");
-Console.ReadLine();
+//Console.ReadLine();
 if (Debugger.IsAttached)
 {
     Debugger.Break();
 }
 
-var str = "text".AsMemory();
+var instance = new Subclass();
 
-using (new Hook(typeof(ReadOnlyMemory<char>).GetMethod("ToString")!, (ReadOnlyMemoryToString orig, ref ReadOnlyMemory<char> mem) =>
+// This should work fine without any patches
+_ = instance.Method("test");
+
+using var hook = new ILHook(((Delegate)instance.Method).Method, c => { });
+
+// Test for correct behavior: this should NOT throw NullReferenceException
+// If the bug exists, this will fail because 'this' becomes null (and so the method throws)
+// If the bug is fixed, this will pass because 'this' remains valid
+_ = instance.Method("test");
+
+Console.WriteLine(HookSrc());
+
+using (new Hook(new Func<int>(HookSrc).Method, (Func<int> orig) =>
 {
-    return orig(ref mem) + " lol";
+    return orig() + 1;
 }))
 {
-    var str2 = str.ToString();
-    Console.WriteLine(str2);
+    Console.WriteLine(HookSrc());
+}
+
+[MethodImpl(MethodImplOptions.NoInlining)]
+static int HookSrc()
+{
+    return 1;
 }
 
 #if false
@@ -89,12 +107,19 @@ unsafe
         Console.WriteLine(msvcrand());
     }
 
-    using (new NativeHook((IntPtr)msvcrand, (RandHook)MixRand))
+    if (NativeHook.CanCallOriginal)
     {
-        for (var i = 0; i < 10; i++)
+        using (new NativeHook((IntPtr)msvcrand, (RandHook)MixRand))
         {
-            Console.WriteLine(msvcrand());
+            for (var i = 0; i < 10; i++)
+            {
+                Console.WriteLine(msvcrand());
+            }
         }
+    }
+    else
+    {
+        Console.WriteLine("Not trying MixRand; CreateAltEntryPoint is not supported on this arch");
     }
 
     GC.KeepAlive(get1del);
@@ -134,3 +159,40 @@ internal sealed class DummyOutputHelper : ITestOutputHelper
 
 #endif
 #endif
+internal struct SomeStruct
+{
+    public double n1;
+    public double n2;
+    public double n3;
+    public double n4;
+}
+
+internal class Mainclass
+{
+    public virtual SomeStruct Method(string s)
+    {
+        Console.WriteLine("Mainclass.Method called");
+        return default;
+    }
+}
+
+internal class Subclass : Mainclass
+{
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
+        Justification = "The test is specifically verifying that our hook behavior doens't cause `this` to become null")]
+    public override SomeStruct Method(string s)
+    {
+        Console.WriteLine("Subclass.Method called");
+        var me = this;
+        Console.WriteLine("this = " + me);
+
+        // This is the critical test - if 'this' is null, this would throw NullReferenceException
+        // We're testing that this SHOULD NOT throw
+        if (this == null)
+        {
+            throw new InvalidOperationException("this instance became null - this is the bug!");
+        }
+
+        return default;
+    }
+}

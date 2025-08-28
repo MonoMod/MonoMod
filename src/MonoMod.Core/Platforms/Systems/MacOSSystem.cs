@@ -1,16 +1,12 @@
-﻿using Microsoft.Win32.SafeHandles;
-using MonoMod.Core.Interop;
+﻿using MonoMod.Core.Interop;
 using MonoMod.Core.Platforms.Memory;
 using MonoMod.Core.Utils;
 using MonoMod.Utils;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Reflection;
-using System.Text;
 using static MonoMod.Core.Interop.OSX;
 
 namespace MonoMod.Core.Platforms.Systems
@@ -19,24 +15,44 @@ namespace MonoMod.Core.Platforms.Systems
     {
         public OSKind Target => OSKind.OSX;
 
-        public SystemFeature Features => SystemFeature.RXPages | SystemFeature.RWXPages;
+        public SystemFeature Features { get; }
 
         public Abi? DefaultAbi { get; }
 
         public MacOSSystem()
         {
-            if (PlatformDetection.Architecture == ArchitectureKind.x86_64)
+            switch (PlatformDetection.Architecture)
             {
-                // As best I can find (Apple docs are worthless) MacOS uses SystemV on x64
-                DefaultAbi = new Abi(
-                    new[] { SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments },
-                    SystemVABI.ClassifyAMD64,
-                    true
-                );
-            }
-            else
-            {
-                throw new NotImplementedException();
+                case ArchitectureKind.x86_64:
+                    // As best I can find (Apple docs are worthless) MacOS uses SystemV on x64
+                    Features = SystemFeature.RXPages | SystemFeature.RWXPages;
+                    DefaultAbi = new Abi(
+                        new[]
+                        {
+                            SpecialArgumentKind.ReturnBuffer,
+                            SpecialArgumentKind.ThisPointer,
+                            SpecialArgumentKind.UserArguments
+                        },
+                        SystemVABI.ClassifyAMD64,
+                        true
+                    );
+                    break;
+                case ArchitectureKind.Arm64:
+                    Features = SystemFeature.RXPages | SystemFeature.MayUseNativeJitHooks;
+                    DefaultAbi = new Abi(
+                        new[]
+                        {
+                            //SpecialArgumentKind.ReturnBuffer, // Arm64 uses a dedicated register for return buffers
+                            SpecialArgumentKind.ThisPointer,
+                            SpecialArgumentKind.UserArguments
+                        },
+                        SystemVABI.ClassifyARM64,
+                        false
+                    );
+                    break;
+                default:
+                    throw new NotImplementedException();
+
             }
         }
 
@@ -147,7 +163,21 @@ namespace MonoMod.Core.Platforms.Systems
             // now we copy target to backup, then data to target
             var target = new Span<byte>((void*)patchTarget, data.Length);
             _ = target.TryCopyTo(backup);
-            data.CopyTo(target);
+            
+            if (NativeExceptionHelper is JitMemcpyHelper gcmh && curProt == vm_prot_t.All)
+            {
+                MMDbgLog.Trace($"RWX memory detected, doing memcpy for MAP_JIT");
+                
+                fixed (byte* dataPtr = data)
+                {
+                    gcmh.JitMemCpy(patchTarget, (IntPtr)dataPtr, (ulong)data.Length);
+                    MMDbgLog.Trace($"{data.Length} bytes written to 0x{patchTarget:X16}");
+                }
+            }
+            else
+            {
+                data.CopyTo(target);
+            }
 
             // if we got here when executable (either because the memory was already writable or we were able to make it writable) we need to flush the icache
             if (memIsExec)
@@ -358,6 +388,26 @@ namespace MonoMod.Core.Platforms.Systems
                 var prot = executable ? vm_prot_t.Execute : vm_prot_t.None;
                 prot |= vm_prot_t.Read | vm_prot_t.Write;
 
+                if (PlatformDetection.Architecture == ArchitectureKind.Arm64 && prot == vm_prot_t.All)
+                {
+                    MMDbgLog.Trace($"RWX memory detected, doing mmap with MAP_JIT");
+
+                    allocated = mmap(IntPtr.Zero, (ulong)size, map_prot.Read | map_prot.Write | map_prot.Execute, map_flags.Private | map_flags.Anonymous | map_flags.JIT, -1, 0);
+                    if (allocated == (IntPtr)(-1))
+                    {
+                        var lastError = Errno;
+                        var ex = new Win32Exception(lastError);
+                        MMDbgLog.Error($"Error creating allocation anywhere! {lastError} {ex}");
+                        allocated = default;
+                        
+                        return false;
+                    }
+                    
+                    MMDbgLog.Trace($"RWX memory allocated to 0x{allocated:X16} with size {size}");
+
+                    return true;
+                }
+                
                 // map the page
                 var addr = 0uL;
                 var kr = mach_vm_map(mach_task_self(), &addr, (ulong)size, 0, vm_flags.Anywhere,
@@ -379,6 +429,26 @@ namespace MonoMod.Core.Platforms.Systems
 
                 var prot = executable ? vm_prot_t.Execute : vm_prot_t.None;
                 prot |= vm_prot_t.Read | vm_prot_t.Write;
+                
+                if (PlatformDetection.Architecture == ArchitectureKind.Arm64 && prot == vm_prot_t.All)
+                {
+                    MMDbgLog.Trace($"RWX memory detected, doing mmap with MAP_JIT");
+
+                    allocated = mmap(pageAddr, (ulong)size, map_prot.Read | map_prot.Write | map_prot.Execute, map_flags.Fixed | map_flags.Private | map_flags.Anonymous | map_flags.JIT, -1, 0);
+                    if (allocated == (IntPtr)(-1))
+                    {
+                        var lastError = Errno;
+                        var ex = new Win32Exception(lastError);
+                        MMDbgLog.Error($"Error creating allocation anywhere! {lastError} {ex}");
+                        allocated = default;
+                        
+                        return false;
+                    }
+                    
+                    MMDbgLog.Trace($"RWX memory allocated to page at 0x{pageAddr:X16} with size {size}");
+                    
+                    return true;
+                }
 
                 // map the page
                 var addr = (ulong)pageAddr;
@@ -447,7 +517,43 @@ namespace MonoMod.Core.Platforms.Systems
         private PosixExceptionHelper? lazyNativeExceptionHelper;
         public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= CreateNativeExceptionHelper();
 
+        public unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin)
+        {
+            if (NativeExceptionHelper is JitMemcpyHelper gcmh)
+            {
+                return gcmh.GetJitHookConfig(runtimeMajMin);
+            }
+
+            return IntPtr.Zero;
+        }
+
         private static ReadOnlySpan<byte> NEHTempl => "/tmp/mm-exhelper.dylib.XXXXXX"u8;
+
+        private sealed class MacOSNativeLibDrop : PosixNativeLibraryDrop
+        {
+            public static readonly MacOSNativeLibDrop Instance = new();
+
+            protected override void CloseFileDescriptor(nint fd)
+            {
+                _ = OSX.Close((int)fd);
+            }
+
+            protected override unsafe nint Mkstemp(Span<byte> template)
+            {
+                int fd;
+                fixed (byte* pTmpl = template)
+                    fd = MkSTemp(pTmpl);
+
+                if (fd == -1)
+                {
+                    var lastError = OSX.Errno;
+                    var ex = new Win32Exception(lastError);
+                    MMDbgLog.Error($"Could not create temp file: {lastError} {ex}");
+                    throw ex;
+                }
+                return fd;
+            }
+        }
 
         private unsafe PosixExceptionHelper CreateNativeExceptionHelper()
         {
@@ -456,46 +562,86 @@ namespace MonoMod.Core.Platforms.Systems
             var soname = arch.Target switch
             {
                 ArchitectureKind.x86_64 => "exhelper_macos_x86_64.dylib",
+                ArchitectureKind.Arm64 => "exhelper_macos_arm64.dylib",
                 _ => throw new NotImplementedException($"No exception helper for current arch")
             };
 
-            // we want to get a temp file, write our helper to it, and load it
-            var templ = ArrayPool<byte>.Shared.Rent(NEHTempl.Length + 1);
-            int fd;
             string fname;
-            try
+            using (var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname))
             {
-                templ.AsSpan().Clear();
-                NEHTempl.CopyTo(templ);
+                Helpers.Assert(embedded is not null);
+                fname = MacOSNativeLibDrop.Instance.DropLibrary(embedded, NEHTempl);
+            }
 
-                fixed (byte* pTmpl = templ)
-                    fd = MkSTemp(pTmpl);
+            return arch.Target is ArchitectureKind.Arm64
+                ? JitMemcpyHelper.CreateHelper(arch, fname)
+                : PosixExceptionHelper.CreateHelper(arch, fname);
+        }
 
-                if (fd == -1)
+        private sealed class JitMemcpyHelper : PosixExceptionHelper
+        {
+            private readonly IntPtr mmch_jit_memcpy;
+            private readonly IntPtr mmch_jit_hook_config;
+
+            private JitMemcpyHelper(IArchitecture arch, IntPtr getExPtr, IntPtr m2n, IntPtr n2m, IntPtr memcpy, IntPtr jitCfg)
+                : base(arch, getExPtr, m2n, n2m)
+            {
+                mmch_jit_memcpy = memcpy;
+                mmch_jit_hook_config = jitCfg;
+            }
+
+            public static new JitMemcpyHelper CreateHelper(IArchitecture arch, string filename)
+            {
+                // we've now got the file on disk, and we know its name. lets load it
+                var handle = DynDll.OpenLibrary(filename);
+                IntPtr eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed, mmch_jit_memcpy, mmch_jit_hook_config;
+                try
                 {
-                    var lastError = OSX.Errno;
-                    var ex = new Win32Exception(lastError);
-                    MMDbgLog.Error($"Could not create temp file for NativeExceptionHelper: {lastError} {ex}");
-                    throw ex;
+                    eh_get_exception_ptr = DynDll.GetExport(handle, nameof(eh_get_exception_ptr));
+                    eh_managed_to_native = DynDll.GetExport(handle, nameof(eh_managed_to_native));
+                    eh_native_to_managed = DynDll.GetExport(handle, nameof(eh_native_to_managed));
+                    mmch_jit_memcpy = DynDll.GetExport(handle, nameof(mmch_jit_memcpy));
+                    mmch_jit_hook_config = DynDll.GetExport(handle, nameof(mmch_jit_hook_config));
+
+                    Helpers.Assert(eh_get_exception_ptr != IntPtr.Zero);
+                    Helpers.Assert(eh_managed_to_native != IntPtr.Zero);
+                    Helpers.Assert(eh_native_to_managed != IntPtr.Zero);
+                    Helpers.Assert(eh_native_to_managed != IntPtr.Zero);
+                    Helpers.Assert(mmch_jit_memcpy != IntPtr.Zero);
+                    Helpers.Assert(mmch_jit_hook_config != IntPtr.Zero);
+                }
+                catch
+                {
+                    DynDll.CloseLibrary(handle);
+                    throw;
                 }
 
-                fname = Encoding.UTF8.GetString(templ, 0, NEHTempl.Length);
+                return new JitMemcpyHelper(arch, eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed, mmch_jit_memcpy, mmch_jit_hook_config);
             }
-            finally
+
+            /// <summary>
+            /// JIT_MAP (RWX) safe memory copy
+            /// </summary>
+            /// <param name="dst">Destination</param>
+            /// <param name="src">Source</param>
+            /// <param name="size">Size of memory that should be copied from dst to src</param>
+            public unsafe void JitMemCpy(IntPtr dst, IntPtr src, ulong size)
             {
-                ArrayPool<byte>.Shared.Return(templ);
+                // TODO: this might be a problem on Mono, not sure yet
+                var fnPtr = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, ulong, void>)mmch_jit_memcpy;
+                fnPtr(dst, src, size);
             }
 
-
-            using (var fh = new SafeFileHandle((IntPtr)fd, true))
-            using (var fs = new FileStream(fh, FileAccess.Write))
+            /// <summary>
+            /// Gets the pointer to the native jit hook configuration struct which can vary by both runtime and arch.
+            /// </summary>
+            /// <param name="runtimeMajMin">Runtime major and minor version.</param>
+            /// <returns>A pointer to the requested jit hook configuration struct.</returns>
+            internal unsafe IntPtr GetJitHookConfig(int runtimeMajMin)
             {
-                using var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname);
-                Helpers.Assert(embedded is not null);
-
-                embedded.CopyTo(fs);
+                var fnPtr = (delegate* unmanaged[Cdecl]<int, IntPtr>)mmch_jit_hook_config;
+                return fnPtr(runtimeMajMin);
             }
-            return PosixExceptionHelper.CreateHelper(arch, fname);
         }
     }
 }
