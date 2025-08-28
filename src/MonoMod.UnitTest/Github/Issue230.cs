@@ -23,7 +23,7 @@ namespace MonoMod.UnitTest.Github
             public int index { get; set; }
         }
 
-        private static readonly List<SomeType>[] _list = new List<SomeType>[3];
+        private static readonly List<SomeType>[] _list = new List<SomeType>[4];
 
         [Fact]
         public void ILHookOnMonoShouldSucceed()
@@ -98,7 +98,7 @@ namespace MonoMod.UnitTest.Github
                     MoveType.Before,
                     x => x.MatchLdloc(out _),
                     x => x.Match(OpCodes.Callvirt),
-                    x => x.Match(OpCodes.Stloc_S)))
+                    x => x.MatchStloc(out _)))
             {
                 cursor.Index = cursor.Instrs.Count;
             }
