@@ -75,6 +75,7 @@ namespace MonoMod.Core.Platforms
                 }
 
                 public SimpleNativeDetour? Detour;
+                public readonly List<SimpleNativeDetour> OldDetours = [];
 
                 protected readonly PlatformTriple Triple;
                 protected readonly object Sync = new();
@@ -88,6 +89,13 @@ namespace MonoMod.Core.Platforms
                     applyDetours = false;
                     isApplying = false;
                 }
+
+                public void ClearOldDetours()
+                {
+                    foreach (var oldDetour in OldDetours)
+                        oldDetour.Dispose();
+                    OldDetours.Clear();
+                }
             }
 
             protected DetourBoxBase DetourBox;
@@ -95,11 +103,12 @@ namespace MonoMod.Core.Platforms
 
             public bool IsApplied => DetourBox.IsApplied;
 
-            // TODO: instead of letting go of the old detour, keep it around, because it seems like the runtime doesn't free old code versions
             protected static void ReplaceDetourInLock(DetourBoxBase nativeDetour, SimpleNativeDetour? newDetour, out SimpleNativeDetour? oldDetour)
             {
                 Thread.MemoryBarrier();
                 oldDetour = Interlocked.Exchange(ref nativeDetour.Detour, newDetour);
+                if (oldDetour is not null)
+                    nativeDetour.OldDetours.Add(oldDetour);
             }
 
             protected abstract SimpleNativeDetour CreateDetour();
@@ -144,9 +153,9 @@ namespace MonoMod.Core.Platforms
                     {
                         DetourBox.IsApplying = true;
 
-                        UndoCore(out var oldDetour);
+                        UndoCore(out _);
                         // we want to do this in-lock to make sure that it gets cleaned up properly
-                        oldDetour?.Dispose();
+                        DetourBox.ClearOldDetours();
                     }
                     finally
                     {
@@ -176,8 +185,8 @@ namespace MonoMod.Core.Platforms
 
                     lock (DetourBox)
                     {
-                        UndoCore(out var oldDetour);
-                        oldDetour?.Dispose();
+                        UndoCore(out _);
+                        DetourBox.ClearOldDetours();
                     }
 
                     disposedValue = true;
