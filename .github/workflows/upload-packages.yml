@@ -56,4 +56,4 @@ jobs:
         run-id: ${{ inputs.run-id }}
 
     - name: Push packages
-      run: dotnet nuget push -s "${{ inputs.nuget-url }}" -k ${{ secrets.nuget-key || github.token }} (Get-Item artifacts/package/release/*.nupkg)
+      run: dotnet nuget push -s "${{ inputs.nuget-url }}" -k ${{ secrets.nuget-key || github.token }} --skip-duplicate (Get-Item artifacts/package/release/*.nupkg)

@@ -140,7 +140,7 @@ jobs:
       matrix: ${{ toJSON(matrix) }}
       
   upload-github:
-    needs: [setup, build-testassets]
+    needs: [setup, build-testassets, test]
     if: '!inputs.dryrun'
     name: Upload Packages (GitHub)
     uses: ./.github/workflows/upload-packages.yml
@@ -160,7 +160,7 @@ jobs:
 
   bump-ver:
     name: Bump versions
-    needs: [setup, build-testassets, test, upload-nuget]
+    needs: [upload-github, upload-nuget]
     if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
 
@@ -168,9 +168,17 @@ jobs:
       contents: write
 
     steps:
+    - name: Authenticate as app
+      uses: actions/create-github-app-token@v2
+      id: app_tok
+      with:
+        app-id: ${{ vars.APP_ID }}
+        private-key: ${{ secrets.APP_PRIVKEY }}
+
     - name: Checkout
       uses: actions/checkout@v4
       with:
+        token: ${{ steps.app_tok.outputs.token }} # checkout using the app token so we can push directly to the repo head
         lfs: true
         submodules: true
         
@@ -215,5 +223,5 @@ jobs:
       with:
         message: "[BOT]: Bump version after ${{ needs.setup.outputs.ver }}"
         default_author: github_actions
-        push: ${{ !inputs.dryrun }}
+        push: ${{ !inputs.dryrun && 'origin --force --set-upstream' || 'false' }}
         pathspec_error_handling: exitAtEnd
