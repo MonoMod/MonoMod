@@ -78,6 +78,37 @@ internal sealed record OS : Enableable
         },
         new()
         {
+            Name = "Linux ARM64",
+            Runner = "ubuntu-24.04-arm",
+            //UseContainer = true,
+            //HasSystemMono = true,
+            RidName = "linux",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".so",
+
+            Arch = [
+                new() { RidName = "arm64", UnityName = null, IsRunnerArch = true },
+            ]
+        },
+        new()
+        {
+            Name = "Linux musl ARM64",
+            Runner = "ubuntu-24.04-arm",
+            UseContainer = true,
+            HasSystemMono = true,
+            RidName = "linux-musl",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".so",
+            Enabled = false, // TODO: enable when arm container building is sane
+
+            Arch = [
+                new() { RidName = "arm64", UnityName = null, IsRunnerArch = true },
+            ]
+        },
+        new()
+        {
             Name = "MacOS 13",
             Runner = "macos-13",
             HasSystemMono = true,
@@ -102,7 +133,7 @@ internal sealed record OS : Enableable
 
             Arch = [
                 new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
-                new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true, Enabled = false }, // We don't support ARM64
+                new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
             ]
         }
     ];

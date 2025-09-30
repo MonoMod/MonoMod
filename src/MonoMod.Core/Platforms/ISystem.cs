@@ -61,6 +61,13 @@ namespace MonoMod.Core.Platforms
         /// <param name="data">The data to write into <paramref name="patchTarget"/>.</param>
         /// <param name="backup">A span to fill will the data which was already present, or an empty span.</param>
         void PatchData(PatchTargetKind targetKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup);
+
+        /// <summary>
+        /// Gets the pointer to the native jit hook configuration struct which can vary by both runtime and arch.
+        /// </summary>
+        /// <param name="runtimeMajMin">Runtime major and minor version.</param>
+        /// <returns>A pointer to the requested jit hook configuration struct.</returns>
+        unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin);
     }
 
     /// <summary>

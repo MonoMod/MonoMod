@@ -115,6 +115,17 @@ namespace MonoMod
         public const string JitPath = "JitPath";
 
         /// <summary>
+        /// String. Full path to the directory to drop helper binaries into instead of <c>/tmp</c> (on Unix systems).
+        /// </summary>
+        /// <remarks>
+        /// <para>On Unix systems, MonoMod.Core needs to load (from a file on disk!) a native helper to be able to handle
+        /// exceptions passing through its JIT hook (and on MacOS M-series chips, to be able to patch JIT-executable code).
+        /// By default, this helper is dropped into <c>/tmp</c>, however some systems prevent loading executables from this
+        /// location. Use this switch to override the directory those files are dropped in.</para>
+        /// </remarks>
+        public const string HelperDropPath = "HelperDropPath";
+
+        /// <summary>
         /// Boolean. Forces the logger to always record the value of message holes.
         /// </summary>
         public const string LogRecordHoles = "LogRecordHoles";

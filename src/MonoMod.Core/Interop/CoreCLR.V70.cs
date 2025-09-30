@@ -1,41 +1,9 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace MonoMod.Core.Interop
 {
     internal static unsafe partial class CoreCLR
     {
-
-        public readonly struct InvokeAllocMemPtr
-        {
-            private readonly IntPtr methodPtr;
-            public InvokeAllocMemPtr(
-                delegate*<
-                    IntPtr, // method
-                    IntPtr, // ICorJitInfo* this
-                    V70.AllocMemArgs*, // request
-                    void
-                > ptr
-            )
-            {
-                methodPtr = (IntPtr)ptr;
-            }
-
-            public delegate*<
-                    IntPtr, // method
-                    IntPtr, // ICorJitInfo* this
-                    V70.AllocMemArgs*, // request
-                    void
-                > InvokeAllocMem
-                => (delegate*<
-                    IntPtr, // method
-                    IntPtr, // ICorJitInfo* this
-                    V70.AllocMemArgs*, // request
-                    void
-                >)methodPtr;
-        }
-
         [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
             Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
             "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
@@ -43,7 +11,7 @@ namespace MonoMod.Core.Interop
         [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 8.")]
         public class V70 : V60
         {
-            public static class ICorJitInfoVtable
+            public new static class ICorJitInfoVtable
             {
 
                 // src/coreclr/inc/corinfo.h
@@ -233,55 +201,6 @@ namespace MonoMod.Core.Interop
 
                 public const int TotalVtableCount = 0xAF;
             }
-
-            [StructLayout(LayoutKind.Sequential)]
-            public struct AllocMemArgs
-            {
-                // Input arguments
-                public uint hotCodeSize;
-                public uint coldCodeSize;
-                public uint roDataSize;
-                public uint xcptnsCount;
-                public int flag; // CorJitAllocMemFlag
-
-                // Output arguments
-                public IntPtr hotCodeBlock;
-                public IntPtr hotCodeBlockRW;
-                public IntPtr coldCodeBlock;
-                public IntPtr coldCodeBlockRW;
-                public IntPtr roDataBlock;
-                public IntPtr roDataBlockRW;
-            };
-
-            [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-            public delegate void AllocMemDelegate(
-                IntPtr thisPtr, // ICorJitInfo*
-                V70.AllocMemArgs* args
-            );
-
-            public static InvokeAllocMemPtr InvokeAllocMemPtr => new(&InvokeAllocMem);
-
-            public static void InvokeAllocMem(
-                IntPtr functionPtr,
-                IntPtr thisPtr, // ICorJitInfo*
-                V70.AllocMemArgs* args
-            )
-            {
-                // this is present so that we can pre-JIT this method by calling it
-                if (functionPtr == IntPtr.Zero)
-                {
-                    return;
-                }
-
-                var fnPtr =
-                    (delegate* unmanaged[Thiscall]<
-                        IntPtr, // ICorJitInfo* this
-                        V70.AllocMemArgs*, // request
-                        void
-                    >)functionPtr;
-                fnPtr(thisPtr, args);
-            }
-
         }
     }
 }

@@ -1,0 +1,59 @@
+name: Upload Packages
+
+on:
+  workflow_call:
+    inputs:
+      run-id:
+        type: string
+        default: ${{ github.run_id }}
+        description: The ID of the workflow run to upload packages from
+      nuget-url:
+        type: string
+        default: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+        description: URL of the nuget feed to upload to
+    secrets:
+      nuget-key:
+        
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  DOTNET_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  NUGET_PACKAGES: ${{github.workspace}}/artifacts/pkg
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Upload
+    env:
+      VersionSuffix: ${{ !inputs.no-suffix && format('daily.{0}', inputs.version) }}
+      DoNotAddSuffix: ${{ inputs.no-suffix && '1' }}
+      ContinuousIntegrationBuild: true
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Configure git
+      run: |
+        git config --global core.autocrlf input
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install .NET SDK
+      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      with:
+        global-json: global.json
+
+    - name: Download compiled packages
+      uses: actions/download-artifact@v4
+      with:
+        name: packages
+        path: artifacts/package/release/
+        github-token: ${{ github.token }}
+        run-id: ${{ inputs.run-id }}
+
+    - name: Push packages
+      run: dotnet nuget push -s "${{ inputs.nuget-url }}" -k ${{ secrets.nuget-key || github.token }} --skip-duplicate (Get-Item artifacts/package/release/*.nupkg)

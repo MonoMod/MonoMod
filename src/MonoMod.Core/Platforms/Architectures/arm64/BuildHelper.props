@@ -1,0 +1,22 @@
+<Project>
+
+  <!-- The Arm64 helpers are fairly large and complex (at least for MacOS), so we want to build from scratch. -->
+  <!-- Since they don't require custom tooling builds, this is fairly reasonable. -->
+
+  <ItemGroup>
+    <Arm64HelperOS Include="linux" Ext="so" Item="Arm64HelperLinux" TargetTriple="aarch64-linux-none"
+        ExtraOpts="-shared -Wl,--eh-frame-hdr,-z,now,-z,noexecstack,-z,norelro,--build-id=none -nodefaultlibs -nostdlib" />
+    <Arm64HelperOS Include="macos" Ext="dylib" Item="Arm64HelperMacOS" TargetTriple="aarch64-macos"
+        ExtraOpts="-shared -mmacosx-version-min=11" />
+
+    <Arm64HelperLinux Include="$(MSBuildThisFileDirectory)exhelper_linux_macos_arm64.S" />
+    <Arm64HelperMacOS Include="$(MSBuildThisFileDirectory)exhelper_linux_macos_arm64.S" />
+    <Arm64HelperMacOS Include="$(MSBuildThisFileDirectory)helper_macos_arm64.cpp"
+        ExtraOpts="-std=c++20 -lc++ -Wall -fno-rtti"  LinkerOpts="-lc++" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!--_MM_CompileLibs-->
+  </PropertyGroup>
+
+</Project>

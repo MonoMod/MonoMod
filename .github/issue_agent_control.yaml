@@ -25,7 +25,8 @@ Prompts:
     Prompt: |
       First, consider the issue given above. It should fall into one of these categories:
 
-      - API Misuse - The person filing the issue is misusing the API somehow, and the issue does not represent a bug in MonoMod.
+      - API Misuse - The person filing the issue is misusing the API somehow, and the issue does not represent a bug in MonoMod. These may be subtle;
+                     if it might be a misuse, look FIRST in docs, then in source for documentation comments to confirm that this is API misuse.
       - Question - The person filing the isuse is asking a question about MonoMod, and is only looking for an answer.
       - Bug - The person filing the issue has actually found an apparent bug. Some part of MonoMod is not behaving as it is supposed to.
 
@@ -46,7 +47,7 @@ Prompts:
 
   api_misuse:
     Prompt: |
-      1. Determine what the user is trying to do (which may not be what they are actually doing!) and determine whether it is supported.
+      1. Determine what the user is trying to do (which may not be what they are actually doing!) and determine whether it is supported by referencing docs and code.
       2. Use PowerShell to use `gh search issues --repo {{REPOSITORY}}` to find duplicates or related discussions. If you find one or more, include "Possible duplicate of #<id>" (comma-separated if multiple).
       3. Create a dummy project in `/tmp/testproj/` with `dotnet new`, add a program that demonstrates your suggested usage, then `dotnet run` to confirm it behaves as expected.
          - If it fails, fix it until it succeeds.
@@ -69,6 +70,8 @@ Prompts:
       Always actually perform a search. Do not pretend to have made a search, or refer to results of a search which was not done.
 
       In particular, pay attention to exception types, messages and stack traces. If those are different AT ALL, the issues are likely different.
+      If the stack traces differ in frames that contain MonoMod (or MonoMod-generated) code, they are DIFFERENT. If the stack traces differ only in
+      user or framework frames, the issues MAY be the same. In this case, look at other features of the issues to decide if they are different.
       If you are unsure, assume that it is a new issue. If you are wrong, that is fine. A human will review layer.
     Next:
       - Name: dupe_issue
@@ -78,7 +81,8 @@ Prompts:
 
   dupe_issue:
     Prompt: |
-      Write a response in Markdown directing the user to the duplicate issue. Make sure you mention that it is only a possible duplicate, and not confirmed.
+      Write a response in Markdown directing the user to the duplicate issue(s), including short summaries of them and why they are likely to be duplicates.
+      Make sure you mention that it is only a possible duplicate, and not confirmed.
       The response should be placed in `/tmp/gh_issue_response`, and include "#<id>" for all issues you found which are potential duplicates. You are not actually
       marking any issues as duplicates, only suggesting that they possibly are. Do not insinuate that you are closing the issue as a duplicate, or any similar action.
 
@@ -99,21 +103,23 @@ Prompts:
       - How will you test for the correct behavior?
 
       **Step 2: Write Test File**
-      Before writing any code. you MUST examine existing test files to understand the correct structure:
+      Before writing any code. You MUST examine existing test files to understand the correct structure:
       1. Use your file reading tools to examine files in `src/MonoMod.UnitTest/Github/`
       2. Look at 2-3 existing test files to understand
-        - What base class (if any) tests inheritfrom
+        - What base class (if any) tests inherit from
         - What constructors are defined
         - What using statements are needed
-        - What naming pattersn are used
-      3. Only after you understand the existing patter, proceed to writing the test
+        - What naming patterns are used
+      3. Only after you understand the existing pattern, proceed to writing the test
       
       Requirements:
       1. Location: `src/MonoMod.UnitTest/Github/`, following existing templates.
       2. Content: Copy/paste the issue reproduction as closely as possible
          **CRITICAL**: The test should be as close to a copy/paste of the issue description as possible.
          - Use the same class names, method names, and code structure from the issue
-         - Do NOT rewrite or "improve" the user's reproduction code
+         - If the reproduciton code uses the Harmony library, rewrite it to use RuntimeDetour. DO NOT try to find and reference Harmony for your test
+         - The test should assert that the bug does not exist, not just write to the console
+         - Otherwise, DO NOT rewrite or "improve" the user's reproduction code
          - Make sure the wrapping test class matches the others, including any base types and constructors
       3. Logic: Test for correct behavior, not broken behavior
          After writing your test, verify:
@@ -142,7 +148,7 @@ Prompts:
       - `/tmp/commit_message`: e.g. "Add test for issue #<issue id>"
       - `/tmp/pr_title`: a one-line PR title, no emoji, that clearly describes the scenario (e.g. “Add test for floating-point returns on Windows x86”).  
       - `/tmp/pr_description`: concise elaboration, in natural language or code. Must include exactly `Test for #<issue id>`.  
-      - `/tmp/issue_summary`: your summary of the issue, your thought process, and the above summaries.
+      - `/tmp/issue_summary`: your summary of the issue, your thought process, and the above summaries. Make sure this contains all context necessary for further work on the issue.
 
       After writing these files, your task is complete.
 

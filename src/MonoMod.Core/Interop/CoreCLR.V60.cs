@@ -10,12 +10,324 @@ namespace MonoMod.Core.Interop
 {
     internal static unsafe partial class CoreCLR
     {
+        public readonly struct InvokeCompileMethodHookPostPtr
+        {
+            private readonly IntPtr methodPtr;
+            public InvokeCompileMethodHookPostPtr(
+                delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitCompiler*
+                    IntPtr, // ICorJitInfo*
+                    V21.CORINFO_METHOD_INFO*, // CORINFO_METHOD_INFO*
+                    uint,
+                    byte**,
+                    uint*,
+                    CorJitResult,
+                    V60.AllocMemArgs*,
+                    CorJitResult
+                > ptr
+            )
+            {
+                methodPtr = (IntPtr)ptr;
+            }
+
+            public delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitCompiler*
+                    IntPtr, // ICorJitInfo*
+                    V21.CORINFO_METHOD_INFO*, // CORINFO_METHOD_INFO*
+                    uint,
+                    byte**,
+                    uint*,
+                    CorJitResult,
+                    V60.AllocMemArgs*,
+                    CorJitResult
+                > InvokeCompileMethodHookPost
+                => (delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitCompiler*
+                    IntPtr, // ICorJitInfo*
+                    V21.CORINFO_METHOD_INFO*, // CORINFO_METHOD_INFO*
+                    uint,
+                    byte**,
+                    uint*,
+                    CorJitResult,
+                    V60.AllocMemArgs*,
+                    CorJitResult
+                >)methodPtr;
+        }
+
+        public readonly struct InvokeAllocMemPtr
+        {
+            private readonly IntPtr methodPtr;
+            public InvokeAllocMemPtr(
+                delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitInfo* this
+                    V60.AllocMemArgs*, // request
+                    void
+                > ptr
+            )
+            {
+                methodPtr = (IntPtr)ptr;
+            }
+
+            public delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitInfo* this
+                    V60.AllocMemArgs*, // request
+                    void
+                > InvokeAllocMem
+                => (delegate*<
+                    IntPtr, // method
+                    IntPtr, // ICorJitInfo* this
+                    V60.AllocMemArgs*, // request
+                    void
+                >)methodPtr;
+        }
+
         [SuppressMessage("Performance", "CA1812: Avoid uninstantiated internal classes",
             Justification = "It must be non-static to be able to inherit others, as it does. This allows the Core*Runtime types " +
             "to each reference exactly the version they represent, and the compiler automatically resolves the correct one without " +
             "needing duplicates.")]
         public partial class V60 : V50
         {
+            public static class ICorJitInfoVtable
+            {
+
+                // src/coreclr/inc/corinfo.h
+                // class ICorStaticInfo
+                //  0: bool isIntrinsic(MethodDesc*)
+                //  1: uint32_t getMethodAttribs(MethodDesc*)
+                //  2: void setMethodAttribs(MethodDesc*, CorInfoMethodRuntimeFlags)
+                //  3: void getMethodSig(MethodDesc*, CORINFO_SIG_INFO*, CORINFO_CLASS_HANDLE = null)
+                //  4: bool getMethodInfo(MethodDesc*, CORINFO_METHOD_INFO*)
+                //  5: CorInfoInline canInline(MethodDesc* caller, MethodDesc* callee)
+                //  6: void reportInliningDecision(MethodDesc*, MethodDesc*, CorInfoInline, char const*)
+                //  7: bool canTailCall(MethodDesc*, MethodDesc*, MethodDesc*, bool)
+                //  8: void reportTailCallDecision(MethodDesc*, MethodDesc*, bool, CorInfoTailCall, char const*)
+                //  9: void getEHInfo(MethodDesc*, unsigned, CORINFO_EH_CLAUSE*)
+                //  A: CORINFO_CLASS_HANDLE getMethodClass(MethodDesc*)
+                //  B: CORINFO_MODULE_HANDLE getMethodModule(MethodDesc*)
+                //  C: void getMethodVTableOffset(MethodDesc*, unsigned*, unsigned*, bool*)
+                //  D: bool resolveVirtualMethod(CORINFO_DEVIRTUALIZATION_INFO*)
+                //  E: MethodDesc* getUnboxedEntry(MethodDesc*, bool*)
+                //  F: CORINFO_CLASS_HANDLE getDefaultComparerClass(CORINFO_CLASS_HANDLE)
+                // 10: CORINFO_CLASS_HANDLE getDefaultEqualityComparerClass(CORINFO_CLASS_HANDLE)
+                // 11: void expandRawHandleIntrinisc(CORINFO_RESOLVED_TOKEN*, CORINFO_GENERICHANDLE_RESULT*)
+                // 12: CorInfoIntrinsics getIntrinsicID(CORINFO_METHOD_HANDLE*, bool*)
+                // 13: bool isIntrinsicType(CORINFO_CLASS_HANDLE)
+                // 14: CorInfoCallConvExtension getUnmanagedCallConv(MethodDesc*, CORINFO_SIG_INFO*, bool*)
+                // 15: bool pInvokeMarshallingRequired(MethodDesc*, CORINFO_SIG_INFO*)
+                // 16: bool satisfiesMethodConstraints((CORINFO_CLASS_HANDLE, MethodDesc*)
+                // 17: bool isCompatibleDelegate(CORINFO_CLASS_HANDLE, CORINFO_CLASS_HANDLE, MethodDesc*, CORINFO_CLASS_HANDLE, bool*)
+                // 18: void methodMustBeLoadedBeforeCodeIsRun(MethodDesc*)
+                // 19: MethodDesc* mapMethodDeclToMethodIMpl(MethodDesc*)
+                // 1A: void getGSCookie(GSCookie*, GSCookie**)
+                // 1B: void setPatchpointInfo(PatchpointInfo*)
+                // 1C: PatchpointInfo* getOSRInfo(unsigned*)
+                // 1D: void resolveToken(CORINFO_RESOLVED_TOKEN*)
+                // 1E: bool tryResolveToken(CORINFO_RESOLVED_TOKEN*)
+                // 1F: void findSig(CORINFO_MODULE_HANDLE, unsigned, CORINFO_CONTEXT_HANDLE, CORINFO_SIG_INFO*)
+                // 20: void findCallSiteSig(CORINFO_MODULE_HANDLE, unsigned, CORINFO_CONTEXT_HANDLE, CORINFO_SIG_INFO*)
+                // 21: CORINFO_CLASS_HANDLE getTokenTypeAsHandle(CORINFO_RESOLVED_TOKEN*)
+                // 22: bool isValidToken(CORINFO_MODULE_HANDLE, unsigned)
+                // 23: bool isValidStringRef(CORINFO_MODULE_HANDLE, unsigned)
+                // 24: int getStringLiteral(CORINFO_MODULE_HANDLE, unsigned, char16_t*, int)
+                // 25: CorInfoType asCorInfoType(CORINFO_CLASS_HANDLE)
+                // 26: char const* getClassName(CORINFO_CLASS_HANDLE)
+                // 27: char const* getClassNameFromMetadata(CORINFO_CLASS_HANDLE, char const**)
+                // 28: CORINFO_CLASS_HANDLE getTypeInstantiationArgument(CORINFO_CLASS_HANDLE, unsigned)
+                // 29: int appendClassName(char16_t**, int*, CORINFO_CLASS_HANDLE, bool, bool, bool)
+                // 2A: bool isValueClass(CORINFO_CLASS_HANDLE)
+                // 2B: CorInfoinlineTypeCheck canInlineTypeCheck(CORINFO_CLASS_HANDLE, CorInfoInlineTypeCheckSource)
+                // 2C: uint32_t getClassAttribs(CORINFO_CLASS_HANDLE)
+                // 2D: bool isStructRequiringStackAllocRetBuf(CORINFO_CLASS_HANDLE)
+                // 2E: CORINFO_MODULE_HANDLE getClassModule(CORINFO_CLASS_HANDLE)
+                // 2F: CORINFO_ASSEMBLY_HANDLE getModuleAssembly(CORINFO_MODULE_HANDLE)
+                // 30: char const* getAssemblyName()CORINFO_ASSEMBLY_HANDLE)
+                // 31: void* LongLifetimeMalloc(size_t)
+                // 32: void LogLifetimemFree(void*)
+                // 33: size_t getClassModuleIdForStatics(CORINFO_CLASS_HANDLE, CORINFO_MODULE_HANDLE*, void**)
+                // 34: unsigned getClassSize(CORINFO_CLASS_HANDLE)
+                // 35: unsigned getHeapClassSize(CORINFO_CLASS_HANDLE)
+                // 36: bool canAllocateOnStaci(CORINFO_CLASS_HANDLE)
+                // 37: unsigned getClassAlignmentRequirement(CORINFO_CLASS_HANDLE, bool=false)
+                // 38: unsigned getClassGClayout(CORINFO_CLASS_HANDLE, uint8_t*)
+                // 39: unsigned getClassNumInstanceFields(CORINFO_CLASS_HANDLE)
+                // 3A: CORINFO_FIELD_HANDLE getFieldInClass(CORINFO_CLASS_HANDLE, int32_t)
+                // 3B: bool checkMethodModifier(MethodTable*, char const*, bool)
+                // 3C: CorInfoHelpFunc getNewHelper(CORINFO_RESOLVED_TOKEN*, MethodTable*, bool*)
+                // 3D: CorInfoHelpFunc getNewArrHelper(CORINFO_CLASS_HANDLE)
+                // 3E: CorInfoHelpFunc getCastingHelper(CORINFO_RESOLVED_TOKEN*, bool)
+                // 3F: CorInfoHelpFunc getCharedCCtorHelper(CORINFO_CLASS_HANDLE)
+                // 40: CORINFO_CLASS_HANDLE getTypeForBox(CORINFO_CLASS_HANDLE)
+                // 41: CorInfoHelpFunc getBoxHelper(CORINFO_CLASS_HANDLE)
+                // 42: CorInfoHelpFunc getUnBoxHelper(CORINFO_CLASS_HANDLE)
+                // 43: bool getReadyToRunHelper(CORINFO_RESOLVED_TOKEN*, CORINFO_LOOKUP_KIND*, CorInfoHelpFunc, CORINFO_CONST_LOOKUP*)
+                // 44: void getReadyToRunDelegateCtorHelper(CORINFO_RESOLVED_TOKEN*, mdToken, CORINFO_CLASS_HANDLE, CORINFO_LOOKUP*)
+                // 45: char const* getHelperName(CorInfoHelpFunc)
+                // 46: CorInfoInitClassResult initClass(CORINFO_FIELD_HANDLE, CORINFO_METHOD_HANDLE, CORINFO_CONTEXT_HANDLE)
+                // 47: void classMustBeLoadedBeforeCodeIsRun(CORINFO_CLASS_HANDLE)
+                // 48: CORINFO_CLASS_HANDLE getBuiltinClass(CorInfoClassId)
+                // 49: CorInfoType getTypeForPrimitiveValueClass(CORINFO_CLASS_HANDLE)
+                // 4A: CorInfoType getTypeForPrimitiveNumericClass(CORINFO_CLASS_HANDLE)
+                // 4B: bool canCast(CORINFO_CLASS_HANDLE)
+                // 4C: bool areTypesEquivalent(CORINFO_CLASS_HANDLE, CORINFO_CLASS_HANDLE)
+                // 4D: TypeCompareState compareTypesForCast(CORINFO_CLASS_HANDLE, CORINFO_CLASS_HANDLE)
+                // 4E: TypeCompareState compareTypesForEquality(CORINFO_CLASS_HANDLE, CORINFO_CLASS_HANDLE
+                // 4F: CORINFO_CLASS_HANDLE mergeClasses(CORINFO_CLASS_HANDLE, CORINFO_CLASS_HANDLE)
+                // 50: bool isMoreSpecificType(CORINFO_CLASS_HANDLE, CORINFO_CLASS_HANDLE)
+                // 51: CORINFO_CLASS_HANDLE getParentType(CORINFO_CLASS_HANDLE)
+                // 52: CorInfoType getChildType(CORINFO_CLASS_HANDLE, CORINFO_CLASS_HANDLE*)
+                // 53: bool satisfiesClassConstraints(CORINFO_CLASS_HANDLE)
+                // 54: bool isSDArray(CORINFO_CLASS_HANDLE)
+                // 55: unsigned getArrayRank(CORINFO_CLASS_HANDLE)
+                // 56: void* getArrayInitializationData(CORINFO_FIELD_HANDLE, uint32_t)
+                // 57: CorInfoIsAccessAllowedResult canAccessClass(CORINFO_RESOLVED_TOKEN*, CORINFO_METHOD_HANDLE, CORINFO_HELPER_DESC*)
+                // 58: char const* getFieldName(CORINFO_FIELD_HANDLE, char const**)
+                // 59: CORINFO_CLASS_HANDLE getFieldClass(CORINFO_FIELD_HANDLE)
+                // 5A: CorInfoType getFieldType(CORINFO_FIELD_HANDLE, CORINFO_CLASS_HANDLE*, CORINFO_CLASS_HANDLE)
+                // 5B: unsigned getFieldOffset(CORINFO_FIELD_HANDLE)
+                // 5C: void getFieldInfo(CORINFO_RESOLVED_TOKEN*, CORINFO_METHOD_HANDLE, CORINFO_ACCESS_FLAGS, CORINFO_FIELD_INFO)
+                // 5D: bool isFieldStatic(CORINFO_FIELD_HANDLE)
+                // 5E: void getBoundaries(CORINFO_METHOD_HANDLE, unsigned int*, uint32_t**, ICorDebugInfo::BoundaryTypes*)
+                // 5F: void setBoundaries(CORINFO_METHOD_HANDLE, uint32_t, ICorDebugInfo::OffsetMapping*)
+                // 60: void getVars(CORINFO_METHOD_HANDLE, uint32_t*, ICorDebugInfo::ILVarInfo**, bool*)
+                // 61: void setVars(CORINFO_METHOD_HANDLE, uint32_t, ICorDebugINfo:;NativeCatInfo*)
+                // 62: void* allocateArray(size_t)
+                // 63: void freeArray(void*)
+                // 64: CORINFO_ARG_LIST_HANDLE getArgNext(CORINFO_ARG_LIST_HANDLE)
+                // 65: CorInfoTypeWithMod getArgType(CORINFO_SIG_INFO*, CORINFO_ARG_LIST_HANDLE, CORINFO_CLASS_HANDLE*)
+                // 66: CORINFO_CLASS_HANDLE getArgClass(CORINFO_SIG_INFO*, CORINFO_ARG_LIST_HANDLE)
+                // 67: CorInfoHFAElemType getHFAType(CORINFO_CLASS_HANDLE)
+                // 68: JITINTERFACE_HRESULT GetErrorHRESULT(struct _EXCEPTION_POINTERS*)
+                // 69: uint32_t GetErrorMessage(char16_t*, uint32_t)
+                // 6A: int FilterException(struct _EXCEPTION_POINTERS*)
+                // 6B: void ThrowExceptionForJitResult(JITINTERFACE_HRESULT)
+                // 6C: void ThrowExceptionForHelper(CORINFO_HELPER_DESC const*)
+                // 6D: bool runWithErrorTrap(errorTrapFunction, void*)
+                // 6E: bool runWithSPMIErrorTrap(errorTrapFunction, void*)
+                // 6F: void getEEInfo(CORINFO_EE_INFO*)
+                // 70: char16_t const* getJitTimeLogFilename()
+                // 71: mdMethodDef getMethodDefFromMethod(CORINFO_METHOD_HANDLE)
+                // 72: char const* getMethodName(CORINFO_METHOD_HANDLE, char const**)
+                // 73: char const* getMethodNameFromMetadata(CORINFO_METHOD_HANDLE, char const**, char const**, char const**)
+                // 74: unsigned getMethodHash(CORINFO_METHOD_HANDLE)
+                // 75: size_t findNameOFToken(CORINFO_MODULE_HANDLE, mdToken, char*, size_t)
+                // 76: bool getSystemVAmd64PassStructInRegisterDescriptor(CORINFO_CLASS_HANDLE, ...*)
+
+                // src/coreclr/inc/corinfo.h
+                // class ICorDynamicInfo : public ICorStaticInfo
+                // 77: uint32_t getThreadTLSIndex(void**=null)
+                // 78: void const* getInlinedCallFrameVptr(void**=null)
+                // 79: int32_t* getAddrOfCaptureThreadGlobal(void**=null)
+                // 7A: void* getHelperFtn(CorInfoHelpFunc,void**=null)
+                // 7B: void getFunctionEntryPoint(CORINFO_METHOD_HANDLE, CORINFO_CONST_LOOKUP*, CORINFO_ACCESS_FLAGS=ANY)
+                // 7C: void getFunctionFixedEntryPoint(CORINFO_METHOD_HANDLE, bool, CORINFO_CONST_LOOKUP*)
+                // 7D: void* getMethodSync(CORINFO_METHOD_HANDLE, void**=null)
+                // 7E: CorInfoHelpFunc getLazyStringLiteralHelper(CORINFO_MODULE_HANDLE)
+                // 7F: CORINFO_MODULE_HANDLE embedModuleHandle(CORINFO_MODULE_HANDLE, void**=null)
+                // 80: CORINFO_CLASS_HANDLE embedClassHandle(CORINFO_CLASS_HANDLE, void**=null)
+                // 81: CORINFO_METHOD_HANDLE embedMethodHandle(CORINFO_METHOD_HANDLE, void**=null)
+                // 82: CORINFO_FIELD_HANDLE embedFieldHandle(CORINFO_FIELD_HANDLE, void**=null)
+                // 83: void embedGenericHandle(CORINFO_RESOLVED_TOKEN*, bool, CORINFO_GENERICHANDLE_RESULT*)
+                // 84: void getLocationOfThisType(CORINFO_METHOD_HANDLE, CORINFO_LOOKUP_KIND*)
+                // 85: void getAddressOfPInvokeTarget(CORINFO_METHOD_HANDLE, CORINFO_CONST_LOOKUP*)
+                // 86: void* GetCookieForPINvokeCalliSig(CORINFO_SIG_INFO*, void**=null)
+                // 87: bool canGetCookieForPInvokeCalliSig(CORINFO_SIG_INFO*)
+                // 88: CORINFO_JUST_MY_CODE_HANDLE getJustMyCodeHandle(CORINFO_METHOD_HANDLE, CORINFO_JUST_MY_CODE_HANDLE**=null)
+                // 89: void GetProfilingHandle(bool*, void**, bool*)
+                // 8A: void getCallInfo(CORINFO_RESOLVED_TOKEN*, CORINFO_RESOLVED_TOKEN*, CORINFO_METHOD_HANDLE, CORINFO_CALLINFO_FLAGS, CORINFO_CALL_INFO*)
+                // 8B: bool canAccessFamily(CORINFO_METHOD_HANDLE, CORINFO_CLASS_HANDLE)
+                // 8C: bool isRIDClassDomainID(CORINFO_CLASS_HANDLE)
+                // 8D: unsigned getClassDomainID(CORINFO_CLASS_HANDLE, void**=null)
+                // 8E: void* getFieldAddress(CORINFO_FIELD_HANDLE, void**=null)
+                // 8F: CORINFO_CLASS_HANDLE getStaticFieldCurrentClass(CORINFO_FIELD_HANDLE, bool*=null)
+                // 90: CORINFO_VARARGS_HANDLE getVarArgsHandle(CORINFO_SIG_INFO*, void**=null)
+                // 91: bool canGetVarArgsHandle(CORINFO_SIG_INFO*)
+                // 92: InfoAccessType constructStringLiteral(CORINFO_MODULE_HANDLE, mdToken, void**)
+                // 93: InfoAccessType emptyStringLiteral(void**)
+                // 94: uint32_t getFieldThreadLocalStoreID(CORINFO_FIELD_HANDLE, void**=null)
+                // 95: void setOverride(ICorDynamicInfo*, CORINFO_METHOD_HANDLE)
+                // 96: void addActiveDependency(CORINFO_MODULE_HANDLE, CORINFO_MODULE_HANDLE)
+                // 97: CORINFO_METHOD_HANDLE GetDelegateCtor(CORINFO_METHOD_HANDLE< CORINFO_CLASS_HANDLE, CORINFO_METHOD_HANDLE, DelegateCtorArgs*)
+                // 98: void MethodCompileComplete(CORINFO_METHOD_HANDLE)
+                // 99: bool getTailCallHelpers(CORINFO_RESOLVED_TOKEN*, CORINFO_SIG_INFO*, CORINFO_GET_TAILCALL_HELPERS_FLAGS, CORINFO_TAILCALL_HELPERS*)
+                // 9A: bool convertPInvokeCalliToCall(CORINFO_RESOLVED_TOKEN*, bool)
+                // 9B: bool notifyInstructionSetUsage(CORINFO_InstructionSet, bool)
+
+                // src/coreclr/inc/corjit.h
+                // class ICorJitInfo : public ICorDynamicInfo
+                // 9C: void allocMem(AllocMemArgs*)
+                public const int AllocMemIndex = 0x9C;
+                // 9D: void reserveUnwindInfo(bool, bool, uint33_t)
+                // 9E: void allocUnwindInfo(uint8_t*, uint8_t*, uint32_t, uint32_t, uint32_t, uint8_t*, CorJitFuncKind)
+                // 9F: void* allocGCInfo(size_t)
+                // A0: void setEHcount(unsigned)
+                // A1: void setEHinfo(unsigned, CORINFO_EH_CLAUSE const*)
+                // A2 bool logMsg(unsigned, char const*, va_list)
+                // A3: int doAssert(char const*, int, char const*)
+                // A4: void reportFatalError(CorJitResult)
+                // A5: JITINTERFACE_HRESULT getPgoInstrumentationResults(CORINFO_METHOD_HANDLE, PgoInstrumentationSchema**, uint32_t*, uint8_t**, PgoSource*)
+                // A6: JITINTERFACE_HRESULT allocPgoInstrumentationBySchema(CORINFO_METHOD_HANDLE, PgoInstrumentationSchema*)
+                // A7: void recordCallSite(uint32_t, CORINFO_SIG_INFO*, CORINFO_METHOD_HANDLE)
+                // A8: void recordRelocation(void*, void*, void*, uint16_t, uint16_t, int32_t)
+                // A9: uint16_t getRelocTypeHint(void*)
+                // AA: uint32_t getExpectedTargetArchitecture()
+                // AB: uint32_t getJitFlags(CORJIT_FLAGS*, uint32_t)
+                // AC: bool doesFieldBelongToClass(CORINFO_FIELD_HANDLE, CORINFO_CLASS_HANDLE)
+                public const int TotalVtableCount = 0xAD;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct AllocMemArgs
+            {
+                // Input arguments
+                public uint hotCodeSize;
+                public uint coldCodeSize;
+                public uint roDataSize;
+                public uint xcptnsCount;
+                public int flag; // CorJitAllocMemFlag
+
+                // Output arguments
+                public IntPtr hotCodeBlock;
+                public IntPtr hotCodeBlockRW;
+                public IntPtr coldCodeBlock;
+                public IntPtr coldCodeBlockRW;
+                public IntPtr roDataBlock;
+                public IntPtr roDataBlockRW;
+            };
+
+            [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+            public delegate void AllocMemDelegate(
+                IntPtr thisPtr, // ICorJitInfo*
+                V60.AllocMemArgs* args
+            );
+
+            public static InvokeAllocMemPtr InvokeAllocMemPtr => new(&InvokeAllocMem);
+
+            public static void InvokeAllocMem(
+                IntPtr functionPtr,
+                IntPtr thisPtr, // ICorJitInfo*
+                V60.AllocMemArgs* args
+            )
+            {
+                // this is present so that we can pre-JIT this method by calling it
+                if (functionPtr == IntPtr.Zero)
+                {
+                    return;
+                }
+
+                var fnPtr =
+                    (delegate* unmanaged[Thiscall]<
+                        IntPtr, // ICorJitInfo* this
+                        V60.AllocMemArgs*, // request
+                        void
+                    >)functionPtr;
+                fnPtr(thisPtr, args);
+            }
+
             [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
             public new delegate CorJitResult CompileMethodDelegate(
                 IntPtr thisPtr, // ICorJitCompiler*
@@ -53,6 +365,44 @@ namespace MonoMod.Core.Interop
                         CorJitResult
                     >)functionPtr;
                 return fnPtr(thisPtr, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
+            }
+
+            [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+            public delegate CorJitResult CompileMethodHookPostDelegate(
+                IntPtr thisPtr, // ICorJitCompiler*
+                IntPtr corJitInfo, // ICorJitInfo*
+                CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
+                uint flags,
+                byte** nativeEntry,
+                uint* nativeSizeOfCode,
+                CorJitResult res,
+                AllocMemArgs* allocMemArgs
+            );
+
+            public static InvokeCompileMethodHookPostPtr InvokeCompileMethodHookPostPtr => new(&InvokeCompileMethodHookPost);
+
+            public static CorJitResult InvokeCompileMethodHookPost(
+                IntPtr functionPtr,
+                IntPtr thisPtr, // ICorJitCompiler*
+                IntPtr corJitInfo, // ICorJitInfo*
+                CORINFO_METHOD_INFO* methodInfo, // CORINFO_METHOD_INFO*
+                uint flags,
+                byte** nativeEntry,
+                uint* nativeSizeOfCode,
+                CorJitResult res,
+                AllocMemArgs *pArgs)
+            {
+                // this is present so that we can pre-JIT this method by calling it
+                if (functionPtr == IntPtr.Zero)
+                    return res;
+
+                var fnPtr =
+                    (delegate* unmanaged[Thiscall]<
+                        IntPtr, IntPtr, CORINFO_METHOD_INFO*,
+                        uint, byte**, uint*,
+                        CorJitResult, AllocMemArgs *, CorJitResult
+                    >)functionPtr;
+                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode, res, pArgs);
             }
 
             public enum MethodClassification

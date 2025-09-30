@@ -227,7 +227,7 @@ namespace MonoMod.Core.Platforms.Systems
             {
                 SYSTEM_INFO sysInfo;
                 unsafe { GetSystemInfo(&sysInfo); }
-                PageSize = sysInfo.dwPageSize;
+                PageSize = sysInfo.dwAllocationGranularity; // we use the allocation granularity instead of actual page size so we don't create tons of unusable holes in the address space
             }
 
             public override unsafe bool TryAllocatePage(nint size, bool executable, out IntPtr allocated)
@@ -312,6 +312,11 @@ namespace MonoMod.Core.Platforms.Systems
             }
 
             ArrayPool<CFG_CALL_TARGET_INFO>.Shared.Return(callTargetInfos);
+        }
+
+        public unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -15,9 +15,7 @@
          a package like this one, except that we pack several TFMs together under lib/, which means that we end up with duplicate
          (but different!) files with the same package path, which results in a pack error. -->
     <PackAsPublish>false</PackAsPublish>
-
-    <VersionPrefix>25.0.0</VersionPrefix>
-    <PackageValidationBaselineVersion>25.0.0-prerelease.1</PackageValidationBaselineVersion>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <!-- Dependencies -->

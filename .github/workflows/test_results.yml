@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
     - Build and Test
+    - Make Release
     types: [completed]
 permissions: {}
 

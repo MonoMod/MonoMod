@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      skipped_by: ${{ steps.skip_check.outputs.skipped_by }}
       ver: ${{ steps.computever.outputs.ver }}
       matrix: ${{ steps.compute-matrix.outputs.matrix }}
     steps:
@@ -86,7 +87,7 @@ jobs:
     with:
       os: ubuntu-latest
       osname: Linux
-      version: ${{ needs.setup.outputs.ver }}
+      version: daily.${{ needs.setup.outputs.ver }}
       upload-packages: true
       upload-tests: true
 
@@ -106,7 +107,7 @@ jobs:
     with:
       os: ${{ matrix.os }}
       osname: ${{ matrix.name }}
-      version: ${{ needs.setup.outputs.ver }}
+      version: daily.${{ needs.setup.outputs.ver }}
       upload-packages: false
       upload-tests: false
 
@@ -163,3 +164,11 @@ jobs:
     name: Test ${{ matrix.title }}
     with:
       matrix: ${{ toJSON(matrix) }}
+      
+  upload:
+    needs: [setup, build-testassets]
+    if: ${{ github.ref_name == 'reorganize' && (success() || needs.setup.result == 'success') }}
+    name: Upload Packages
+    uses: ./.github/workflows/upload-packages.yml
+    with:
+      run-id: ${{ needs.setup.outputs.should_skip == 'true' && fromJSON(needs.setup.outputs.skipped_by).id || github.run_id }}

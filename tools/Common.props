@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
 
+  <Import Project="Sdk.props" Sdk="DotNet.ReproducibleBuilds.Isolated" Version="1.2.25" />
+
+  <ItemGroup>
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25" PrivateAssets="All"/>
+  </ItemGroup>
+
   <!-- These properties are defaults for ALL project types. C#-specific things must go in Common.CS.props -->
   <PropertyGroup>
     <Configurations>Debug;Release;DebugTrace;ReleaseTrace</Configurations>
@@ -82,5 +88,9 @@
   <Import Project="$(MMLanguageProps)" Condition="Exists('$(MMLanguageProps)')" />
 
   <Import Project="$(MMImportAfterProps)" Condition="'$(MMImportAfterProps)' != '' and Exists('$(MMImportAfterProps)')" />
+
+  <PropertyGroup>
+    <BeforeMicrosoftNETSdkTargets>$(MMToolsPath)NuGet.BeforeVersionSetup.targets</BeforeMicrosoftNETSdkTargets>
+  </PropertyGroup>
 
 </Project>

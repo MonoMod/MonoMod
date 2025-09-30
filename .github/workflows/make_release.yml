@@ -1,0 +1,227 @@
+name: Make Release
+run-name: ${{ inputs.dryrun && '(Dry Run) ' || '' }}Make ${{ inputs.prerelease && format('prerelease with suffix ''{0}''', inputs.prerelease-str) || 'release' }} on ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        description: Dry Run
+        type: boolean
+        default: true
+      prerelease:
+        description: This is a prerelease
+        type: boolean
+        default: false
+      prerelease-str:
+        description: Prerelease suffix
+        type: string
+        default: ""
+       
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  DOTNET_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  NUGET_PACKAGES: ${{github.workspace}}/artifacts/pkg
+  RestoreLockedMode: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }} 
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      ver: ${{ steps.computever.outputs.ver }}
+      matrix: ${{ steps.compute-matrix.outputs.matrix }}
+    steps:
+    - name: Upload event file
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-event-file
+        path: ${{ github.event_path }}
+        retention-days: 1
+
+    - name: Compute Version
+      id: computever
+      run: echo "ver=$(Get-Date -Format y.M.d).${{ github.run_number }}.${{ github.run_attempt }}-RELEASE${{ inputs.prerelease && format('-{0}', inputs.prerelease-str) || '' }}" >> $env:GITHUB_OUTPUT
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        lfs: false
+        submodules: false
+        
+    # TODO: maybe we can eventually use package locks for package caching?
+    
+    - name: Install .NET SDK
+      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      with:
+        global-json: global.json
+        
+    # NOTE: manual package caching
+    - name: Cache restored NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}
+        restore-keys: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
+
+    - name: Compute test matrix
+      id: compute-matrix
+      run: dotnet run --project ./build/gen-test-matrix/gen-test-matrix.csproj -c Release -- "${{ github.repository_owner }}" $env:GITHUB_OUTPUT matrix
+  
+  build-testassets:
+    needs: setup
+    name: 'Build #${{ needs.setup.outputs.ver }} (Linux)'
+    uses: ./.github/workflows/build.yml
+    with:
+      os: ubuntu-latest
+      osname: Linux
+      version: ${{ inputs.prerelease-str }}
+      no-suffix: ${{ !inputs.prerelease }}
+      upload-packages: true
+      upload-tests: true
+
+  wait-for-containers:
+    name: Wait for Docker containers
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+    - name: Wait for container builds
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token  }}
+      run: |
+        $sha = '${{ github.event.pull_request.head.sha }}';
+        if (-not $sha) { $sha = '${{ github.sha }}'; }
+        $workflow = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" `
+                     "/repos/${{ github.repository }}/actions/runs?head_sha=$sha" `
+                     | ConvertFrom-Json `
+                     | % { $_.workflow_runs } `
+                     | Where { $_.path -eq ".github/workflows/containers.yml" }
+                     | Select -Property id
+        if ($null -eq $workflow) { echo "No containers workflow run found."; exit 0; } # containers didn't need to be built, exit normally
+        # we ARE waiting for container build, poll every 30s
+        while ($true)
+        {
+          $conclusion = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" `
+            "/repos/${{ github.repository }}/actions/runs/$($workflow.id)" `
+            | ConvertFrom-Json `
+            | % { $_.conclusion }
+          if ($null -ne $conclusion)
+          {
+            if ($conclusion -ne "success")
+            {
+              echo "Container build had conclusion '$conclusion'. Failing.";
+              exit 1;
+            }
+            else
+            {
+              echo "Container build succeeded. Continuing."
+              exit 0;
+            }
+          }
+          Start-Sleep -Seconds 30;
+        }
+
+  test:
+    needs: [setup, build-testassets, wait-for-containers]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    uses: ./.github/workflows/test.yml
+    name: Test ${{ matrix.title }}
+    with:
+      matrix: ${{ toJSON(matrix) }}
+      
+  upload-github:
+    needs: [setup, build-testassets, test]
+    if: '!inputs.dryrun'
+    name: Upload Packages (GitHub)
+    uses: ./.github/workflows/upload-packages.yml
+    with:
+      run-id: ${{ github.run_id }}
+
+  upload-nuget:
+    needs: [setup, build-testassets, test]
+    if: '!inputs.dryrun'
+    name: Upload Packages (NuGet)
+    uses: ./.github/workflows/upload-packages.yml
+    with:
+      run-id: ${{ github.run_id }}
+      nuget-url: nuget.org
+    secrets:
+      nuget-key: ${{ secrets.NUGET_PUSH_KEY }}
+
+  bump-ver:
+    name: Bump versions
+    needs: [upload-github, upload-nuget]
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Authenticate as app
+      uses: actions/create-github-app-token@v2
+      id: app_tok
+      with:
+        app-id: ${{ vars.APP_ID }}
+        private-key: ${{ secrets.APP_PRIVKEY }}
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        token: ${{ steps.app_tok.outputs.token }} # checkout using the app token so we can push directly to the repo head
+        lfs: true
+        submodules: true
+        
+    - name: Cache restored NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}
+    
+    - name: Install .NET SDK
+      if: '!inputs.prerelease'
+      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      with:
+        global-json: global.json
+        
+    # we need to download the packages we just generated so that this subsequent restore doesn't fail PackageDownloading the new version
+    - name: Download compiled packages
+      uses: actions/download-artifact@v4
+      with:
+        name: packages
+        path: artifacts/package/release/
+        github-token: ${{ github.token }}
+
+    # then, bump the version (if appropriate)
+    - name: Update version
+      if: '!inputs.prerelease'
+      run: ./tools/bump_version.ps1 -BumpVersion Patch # always bump patch here; if we ever need to do a different bump, it can be done per-PR
+
+    - name: Update restore
+      if: '!inputs.prerelease'
+      run: dotnet restore -noAutoRsp --force-evaluate
+    
+    - name: Update compat suppressions
+      if: '!inputs.prerelease'
+      run: |
+        dotnet pack -c Release -clp:NoSummary -noAutoRsp -p:RunAnalyzers=false -p:ApiCompatGenerateSuppressionFile=true
+
+    - name: Commit updated version
+      if: '!inputs.prerelease'
+      uses: EndBug/add-and-commit@v9
+      with:
+        message: "[BOT]: Bump version after ${{ needs.setup.outputs.ver }}"
+        default_author: github_actions
+        push: ${{ !inputs.dryrun && 'origin --force --set-upstream' || 'false' }}
+        pathspec_error_handling: exitAtEnd

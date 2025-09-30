@@ -51,6 +51,11 @@ namespace MonoMod.Core.Utils
         /// to a word-sized indirection cell which contains the actual target.
         /// </summary>
         Indirect = 0b1000,
+        /// <summary>
+        /// A constant address. This must be combined with one of the other address kinds. The address value is always
+        /// a constant.
+        /// </summary>
+        ConstantAddr = 0b10000,
     }
 
     /// <summary>
@@ -75,6 +80,10 @@ namespace MonoMod.Core.Utils
         /// The <see cref="AddressKind"/> flag indicating that the kind is indirect.
         /// </summary>
         public const AddressKind IsIndirectField = (AddressKind)0b1000;
+        /// <summary>
+        /// The <see cref="AddressKind"/> flag indicating that the kind is constant.
+        /// </summary>
+        public const AddressKind IsConstantField = (AddressKind)0b10000;
 
         /// <summary>
         /// Gets whether or not this <see cref="AddressKind"/> is relative.
@@ -128,6 +137,15 @@ namespace MonoMod.Core.Utils
             => (value & IsIndirectField) != 0;
 
         /// <summary>
+        /// Gets whether or not this <see cref="AddressKind"/> is constant.
+        /// </summary>
+        /// <param name="value">The <see cref="AddressKind"/> to check.</param>
+        /// <returns><see langword="true"/> if <paramref name="value"/> is constant; <see langword="false"/> otherwise.</returns>
+        [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
+        public static bool IsConstant(this AddressKind value)
+            => (value & IsConstantField) != 0;
+
+        /// <summary>
         /// Validates <paramref name="value"/>, ensuring that it is a valid <see cref="AddressKind"/>.
         /// </summary>
         /// <param name="value">The value to validate.</param>
@@ -135,7 +153,7 @@ namespace MonoMod.Core.Utils
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="value"/> is invalid.</exception>
         public static void Validate(this AddressKind value, [CallerArgumentExpression("value")] string argName = "")
         {
-            if ((value & ~(IsAbsoluteField | Is64BitField | IsPrecodeFixupField | IsIndirectField)) != 0)
+            if ((value & ~(IsAbsoluteField | Is64BitField | IsPrecodeFixupField | IsIndirectField | IsConstantField)) != 0)
                 throw new ArgumentOutOfRangeException(argName);
         }
 

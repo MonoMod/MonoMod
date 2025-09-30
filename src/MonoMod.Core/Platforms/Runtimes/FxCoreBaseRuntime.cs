@@ -103,6 +103,16 @@ namespace MonoMod.Core.Platforms.Runtimes
             };
         }
 
+        protected static Abi AbiForCoreFx45ARM64(Abi baseAbi)
+        {
+            return baseAbi with
+            {
+                // note: ARM64 uses a dedicated register for the return buffer
+                // TODO: this is wrong for Windows, which passes the return buffer after the this pointer as in AMD64.
+                ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.GenericContext, SpecialArgumentKind.UserArguments },
+            };
+        }
+
         private static readonly Type? RTDynamicMethod =
             typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic);
         private static readonly FieldInfo? RTDynamicMethod_m_owner =

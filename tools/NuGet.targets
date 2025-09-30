@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?> 
 <Project>
-
+  
   <PropertyGroup>
     <!-- Allow easily changing the prefix of the package names -->
     <PackageId Condition="'$(BuildPackageBaseName)' != ''">$([System.String]::Copy('$(PackageId)').Replace('MonoMod', '$(BuildPackageBaseName)'))</PackageId>

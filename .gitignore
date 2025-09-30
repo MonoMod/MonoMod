@@ -238,3 +238,5 @@ ModelManifest.xml
 
 .mono/
 .aider*
+/.dotnet
+/testEnvironments.json

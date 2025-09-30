@@ -12,9 +12,6 @@
     <NoWarn>$([System.String]::Copy('$(NoWarn)').Replace(';CS1591', '')</NoWarn>
 
     <MMIncludeTFMChecks>true</MMIncludeTFMChecks>
-
-    <VersionPrefix>25.2.3</VersionPrefix>
-    <PackageValidationBaselineVersion>25.0.0</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>

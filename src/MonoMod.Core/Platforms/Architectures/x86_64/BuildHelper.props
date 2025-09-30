@@ -1,0 +1,10 @@
+<Project>
+
+  <!-- x86_64 helpers are nice and small, and unfortunately require patched LLVM and NASM to build. -->
+  <!-- For that reason, we'll used the checked-in prebuilt binaries.  -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)\exhelper_linux_x86_64.so" LogicalName="exhelper_linux_x86_64.so" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)\exhelper_macos_x86_64.dylib" LogicalName="exhelper_macos_x86_64.dylib" />
+  </ItemGroup>
+
+</Project>

@@ -18,6 +18,9 @@ namespace MonoMod.Core.Interop
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "pipe2")]
         public static extern unsafe int Pipe2(int* pipefd, PipeFlags flags);
 
+        [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "close")]
+        public static extern unsafe int Close(int fd);
+
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "mmap")]
         public static extern unsafe nint Mmap(IntPtr addr, nuint length, Protection prot, MmapFlags flags, int fd, int offset);
 
