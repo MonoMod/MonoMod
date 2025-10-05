@@ -346,6 +346,19 @@ namespace MonoMod.RuntimeDetour
                 catch (Exception e)
                 {
                     MMDbgLog.Error($"Exception while cleaning up poisoned method: {e}");
+                    return;
+                }
+
+                // if (and only if)  we manage to disable the detour on the source, also remove this detour state from the dictionary
+                // so that new hooks can actually work by setting up a new detour state.
+                try
+                {
+                    _ = detourStates.TryRemove(Source, out _);
+                }
+                catch (Exception e)
+                {
+                    MMDbgLog.Error($"Exception while removing detour state after old one was poisoned: {e}");
+                    return;
                 }
             }
 
