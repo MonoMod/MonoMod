@@ -30,8 +30,6 @@ namespace MonoMod.RuntimeDetour
             private ICoreDetour? trampolineDetour;
             private bool hasStolenTrampoline;
 
-            public bool IsApplied { get; private set; }
-
             private void UndoTrampolineDetour()
             {
                 var detour = Interlocked.Exchange(ref trampolineDetour, null);
@@ -43,7 +41,7 @@ namespace MonoMod.RuntimeDetour
                 }
             }
 
-            public virtual void UpdateDetour(IDetourFactory factory, MethodBase fallback)
+            public virtual void UpdateDetour(IDetourFactory factory, MethodBase? fallback)
             {
                 var to = Next?.Entry;
                 if (to is null && DetourToFallback)
@@ -65,7 +63,6 @@ namespace MonoMod.RuntimeDetour
                 }
 
                 lastTarget = to;
-                IsApplied = true;
             }
 
             public void Remove()
@@ -76,7 +73,6 @@ namespace MonoMod.RuntimeDetour
                 }
                 lastTarget = null;
                 Next = null;
-                IsApplied = false;
             }
 
             public void StealTrampoline(IDetourFactory factory)
@@ -201,7 +197,7 @@ namespace MonoMod.RuntimeDetour
 
             private ICoreDetour? syncDetour;
 
-            public override void UpdateDetour(IDetourFactory factory, MethodBase fallback)
+            public override void UpdateDetour(IDetourFactory factory, MethodBase? fallback)
             {
                 base.UpdateDetour(factory, fallback);
 
@@ -247,10 +243,27 @@ namespace MonoMod.RuntimeDetour
                         sourceCloneIl = this.sourceCloneIl ??= new DynamicMethodDefinition(Entry);
                         sourceClone = this.sourceClone ??= sourceCloneIl.Generate();
                     }
+
+                    Helpers.Assert(sourceClone is not null,
+                        $"Unable to create valid source clone. (" +
+                            $"method = {Entry}; " +
+                            $"detour = ({detour.GetType()}){detour}; " +
+                            $"is ICoreDetourWithClone? {detour is ICoreDetourWithClone})");
                 }
                 else
                 {
-                    Helpers.Assert(this.sourceClone is not null);
+                    // Sometimes[1], `this.sourceClone` can be null when this is called during unhooking from a `Hook` dtor.
+                    // In this case, we want to handle things reasonably. The only reasonable thing to do is destroy the whole
+                    // detour chain and poison the method entry (since we really have no idea what state we're in).
+                    //
+                    // [1] I do not know when, and I cannot reproduce it. I have seen exactly one (1) case of this, and there it
+                    // reproduces 100% reliably, but I cannot gain access to the codebase or machine which triggers this.
+                    if (this.sourceClone is null)
+                    {
+                        MMDbgLog.Error($"Detour end-of-chain preparation for {Entry} failed; ");
+                        throw new InternalHookStateBrokenException();
+                    }
+
                     sourceClone = this.sourceClone;
                     sourceCloneIl = this.sourceCloneIl;
                 }
@@ -306,8 +319,40 @@ namespace MonoMod.RuntimeDetour
             internal SpinLock detourLock = new(true);
             internal int detourChainVersion;
 
+            private bool methodPoison;
+            private void CheckPoison()
+            {
+                if (methodPoison)
+                {
+                    static void ThrowPoison(MethodBase source)
+                    {
+                        throw new InvalidOperationException(DebugFormatter.Format($"Method hooks for {source} are broken because of an earlier failure."));
+                    }
+
+                    ThrowPoison(Source);
+                }
+            }
+
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+                Justification = "We want this to never throw, as it sometimes may when throwing an extra exception is unacceptable.")]
+            private void HandleNeedsPoison()
+            {
+                methodPoison = true;
+                try
+                {
+                    detourList.Remove();
+                    detourList.UpdateDetour(DetourFactory.Current, null);
+                }
+                catch (Exception e)
+                {
+                    MMDbgLog.Error($"Exception while cleaning up poisoned method: {e}");
+                }
+            }
+
             public void AddDetour(SingleManagedDetourState detour, bool takeLock = true)
             {
+                CheckPoison();
+
                 ManagedDetourChainNode cnode;
                 var lockTaken = false;
                 try
@@ -339,6 +384,11 @@ namespace MonoMod.RuntimeDetour
                     PrepareEndOfChain(detour.Factory);
                     UpdateChain(detour.Factory, out _);
                 }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    throw;
+                }
                 finally
                 {
                     if (lockTaken)
@@ -349,8 +399,13 @@ namespace MonoMod.RuntimeDetour
                 InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, detour);
             }
 
-            public void RemoveDetour(SingleManagedDetourState detour, bool takeLock = true)
+            public void RemoveDetour(SingleManagedDetourState detour, bool takeLock = true, bool safeReturnOnKnownBroken = false)
             {
+                if (methodPoison)
+                {
+                    return;
+                }
+
                 ManagedDetourChainNode cnode;
                 var lockTaken = false;
                 try
@@ -375,6 +430,18 @@ namespace MonoMod.RuntimeDetour
 
                         default:
                             throw new InvalidOperationException("Trying to remove detour with unknown manager data");
+                    }
+                }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    if (safeReturnOnKnownBroken)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        throw;
                     }
                 }
                 finally
@@ -429,6 +496,8 @@ namespace MonoMod.RuntimeDetour
             internal int ilhookVersion;
             public void AddILHook(SingleILHookState ilhook, bool takeLock = true)
             {
+                CheckPoison();
+
                 ILHookEntry entry;
                 var lockTaken = false;
                 try
@@ -480,6 +549,11 @@ namespace MonoMod.RuntimeDetour
 
                     UpdateChain(ilhook.Factory, out _);
                 }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    throw;
+                }
                 finally
                 {
                     if (lockTaken)
@@ -490,8 +564,13 @@ namespace MonoMod.RuntimeDetour
                 InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, ilhook);
             }
 
-            public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true)
+            public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true, bool safeReturnOnKnownBroken = false)
             {
+                if (methodPoison)
+                {
+                    return;
+                }
+
                 ILHookEntry entry;
                 var lockTaken = false;
                 try
@@ -516,6 +595,18 @@ namespace MonoMod.RuntimeDetour
 
                         default:
                             throw new InvalidOperationException("Trying to remove IL hook with unknown manager data");
+                    }
+                }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    if (safeReturnOnKnownBroken)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        throw;
                     }
                 }
                 finally
