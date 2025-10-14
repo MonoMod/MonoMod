@@ -1,4 +1,4 @@
-;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --eh-frame-hdr -z now -z noexecstack -x -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
+;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --eh-frame-hdr -z now -z noexecstack -x -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o && patchelf exhelper_linux_x86_64.so --add-needed libgcc_s.so.1
 
 %define DWARF_EH_SECTION_NAME .eh_frame
 %define DWARF_EH_SECTION_DECL .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
