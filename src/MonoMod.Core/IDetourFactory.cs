@@ -2,8 +2,8 @@
 using MonoMod.Core.Platforms;
 using MonoMod.Utils;
 using System;
+using System.ComponentModel;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core
 {
@@ -83,31 +83,38 @@ namespace MonoMod.Core
     }
 
     /// <summary>
-    /// Provides access to a default, <see cref="PlatformTriple"/>-based <see cref="IDetourFactory"/>, as well as extension methods to make
+    /// Provides access to the global, current <see cref="IDetourFactory"/>, as well as extension methods to make
     /// using <see cref="IDetourFactory"/> easier.
     /// </summary>
     [CLSCompliant(true)]
     public static class DetourFactory
     {
-        // use the actual type for this so that an inlined getter can see the actual type
-        private static PlatformTripleDetourFactory? lazyCurrent;
         /// <summary>
-        /// Gets the current (default) <see cref="IDetourFactory"/>. This is always the <see cref="PlatformTriple"/>-based <see cref="IDetourFactory"/>.
+        /// Gets the default <see cref="IDetourFactory"/>. This is always the <see cref="PlatformTriple"/>-based <see cref="IDetourFactory"/>.
         /// </summary>
-        /// <remarks>
-        /// The default <see cref="IDetourFactory"/> is created the first time this property is accessed, using the value of <see cref="PlatformTriple.Current"/>
-        /// at that point in time. After it is constructed, the <see cref="PlatformTriple"/> implementation cannot be replaced.
-        /// </remarks>
-        /// <seealso cref="PlatformTriple.Current"/>
-        public static unsafe IDetourFactory Current
-        {
-            [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
-            get => Helpers.GetOrInit(ref lazyCurrent, createDefaultFactoryFunc);
-        }
+        public static IDetourFactory Default { get; } = new PlatformTripleDetourFactory(PlatformTriple.Current);
 
-        private static readonly Func<PlatformTripleDetourFactory> createDefaultFactoryFunc = CreateDefaultFactory;
-        private static PlatformTripleDetourFactory CreateDefaultFactory()
-            => new(PlatformTriple.Current);
+        private static object currentLock = new();
+
+        /// <summary>
+        /// Gets the current <see cref="IDetourFactory"/>.
+        /// </summary>
+        public static IDetourFactory Current { get; private set; } = Default;
+
+        /// <summary>
+        /// Sets the current <see cref="IDetourFactory"/>.
+        /// </summary>
+        /// <param name="creator">The delegate that is invoked to produce the new <see cref="IDetourFactory"/>, with current <see cref="IDetourFactory"/> as the argument.</param>
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void SetCurrentFactory(Func<IDetourFactory, IDetourFactory> creator)
+        {
+            Helpers.ThrowIfArgumentNull(creator);
+
+            lock (currentLock)
+            {
+                Current = creator(Current);
+            }
+        }
 
         /// <summary>
         /// Creates a managed detour from <paramref name="source"/> to <paramref name="target"/>.

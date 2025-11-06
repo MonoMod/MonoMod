@@ -1,8 +1,4 @@
-﻿#if NETFRAMEWORK
-#define HAS_UNMANAGED_METHODSIGHELPER
-#endif
-
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -486,17 +482,15 @@ namespace MonoMod.Utils
         }
 
         private delegate SignatureHelper GetUnmanagedSigHelperDelegate(Module? module, UnmanagedCC callConv, Type? returnType);
-#if HAS_UNMANAGED_METHODSIGHELPER
-        private static readonly GetUnmanagedSigHelperDelegate GetUnmanagedSigHelper = SignatureHelper.GetMethodSigHelper;
-#else
+
         // on CoreCLR, the method is present, but not public
+        // on Mono, it's supposed to be public, but on older SRE-stubbed builds it's missing
         private static readonly MethodInfo? GetUnmanagedSigHelperMethod
             = typeof(SignatureHelper).GetMethod(nameof(SignatureHelper.GetMethodSigHelper), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
                 null, new[] { typeof(Module), typeof(UnmanagedCC), typeof(Type) }, null);
         private static readonly GetUnmanagedSigHelperDelegate GetUnmanagedSigHelper
             = GetUnmanagedSigHelperMethod?.TryCreateDelegate<GetUnmanagedSigHelperDelegate>()
             ?? ((_, _, _) => throw new NotImplementedException("Unmanaged calling conventions are not supported"));
-#endif
 
         public static SignatureHelper ResolveReflection(this CallSite csite, Module context)
             => ResolveReflectionSignature(csite, context);

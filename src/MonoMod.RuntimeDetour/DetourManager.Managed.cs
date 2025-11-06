@@ -582,6 +582,7 @@ namespace MonoMod.RuntimeDetour
                     }
 
                     UpdateChain(ilhook.Factory, out _);
+                    CleanILContexts();
                 }
                 catch (InternalHookStateBrokenException)
                 {

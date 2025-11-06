@@ -20,7 +20,7 @@ the limitations to `Core`'s detour abstraction, such as the ability to call the 
 modify the IL of the method. (See their documentation for how this is actually done.)
 
 Additionally, interfaces in this package may have members added across minor version updates. Other version-based
-compatability guarantees are retained.
+compatibility guarantees are retained.
 
 ## Other potentially useful APIs
 

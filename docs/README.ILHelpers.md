@@ -1,1 +1,0 @@
-# DO NOT REFERENCE THIS PACKAGE DIRECTLY! Reference MonoMod.Backports instead.

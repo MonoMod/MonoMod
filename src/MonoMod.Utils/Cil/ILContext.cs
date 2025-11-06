@@ -215,6 +215,32 @@ namespace MonoMod.Cil
             if (id < 0 || id >= managedObjectRefs.Count)
                 throw new ArgumentOutOfRangeException(nameof(id));
             return managedObjectRefs[id].Data;
+        }        
+
+        /// <summary>
+        /// Creates a new local variable of type <typeparamref name="T"/> and returns its definition.
+        /// </summary>
+        /// <returns>The <see cref="VariableDefinition"/> of the local.</returns>
+        /// <typeparam name="T">The type of the local variable to create.</typeparam>
+        public VariableDefinition CreateLocal<T>() => CreateLocal(typeof(T));
+
+        /// <summary>
+        /// Creates a new local variable of <paramref name="type"/> and returns its definition.
+        /// </summary>
+        /// <param name="type">The type of the local variable to create.</param>
+        /// <returns>The <see cref="VariableDefinition"/> of the local.</returns>
+        public VariableDefinition CreateLocal(Type type) => CreateLocal(Import(type));
+
+        /// <summary>
+        /// Creates a new local variable with <paramref name="typeRef"/> and returns its definition.
+        /// </summary>
+        /// <param name="typeRef">The <see cref="TypeReference"/> of the type for the local variable to create.</param>
+        /// <returns>The <see cref="VariableDefinition"/> of the local.</returns>
+        public VariableDefinition CreateLocal(TypeReference typeRef)
+        {
+            VariableDefinition newLocal = new(typeRef);
+            Method.Body.Variables.Add(newLocal);
+            return newLocal;
         }
 
         /// <summary>

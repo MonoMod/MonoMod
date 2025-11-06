@@ -12,8 +12,6 @@
 
 ## Package READMEs
 
-- [MonoMod.Backports](README.Backports.md)
-- [MonoMod.ILHelpers](README.ILHelpers.md)
 - [MonoMod.Core](README.Core.md)
 - [MonoMod.Patcher](README.Patcher.md)
 - [MonoMod.RuntimeDetour](README.RuntimeDetour.md)

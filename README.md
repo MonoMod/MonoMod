@@ -7,12 +7,12 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 
 [![Build and Test](https://github.com/MonoMod/MonoMod/actions/workflows/ci.yml/badge.svg)](https://github.com/MonoMod/MonoMod/actions/workflows/ci.yml)
 
-| GitHub: All | NuGet: Patcher | NuGet: Utils | NuGet: RuntimeDetour | NuGet: HookGen |
+| NuGet: Utils | NuGet: RuntimeDetour | NuGet: HookGen |
 |--|--|--|--|--|
-| [![GitHub releases](https://img.shields.io/github/downloads/MonoMod/MonoMod/total.svg?style=flat-square)](https://github.com/MonoMod/MonoMod/releases) | [![Core](https://img.shields.io/nuget/dt/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Utils](https://img.shields.io/nuget/dt/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![RuntimeDetour](https://img.shields.io/nuget/dt/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) | [![HookGen](https://img.shields.io/nuget/dt/MonoMod.RuntimeDetour.HookGen.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour.HookGen/) |
-| [![Version](https://img.shields.io/github/release/MonoMod/MonoMod.svg?style=flat-square)](https://github.com/MonoMod/MonoMod/releases) | [![Version](https://img.shields.io/nuget/v/MonoMod.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod/) | [![Version](https://img.shields.io/nuget/v/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![Version](https://img.shields.io/nuget/v/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) | [![Version](https://img.shields.io/nuget/v/MonoMod.RuntimeDetour.HookGen.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour.HookGen/) |
+| [![Utils](https://img.shields.io/nuget/dt/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![RuntimeDetour](https://img.shields.io/nuget/dt/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) | [![HookGen](https://img.shields.io/nuget/dt/MonoMod.RuntimeDetour.HookGen.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour.HookGen/) |
+| [![Version](https://img.shields.io/nuget/v/MonoMod.Utils.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.Utils/) | [![Version](https://img.shields.io/nuget/v/MonoMod.RuntimeDetour.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour/) | [![Version](https://img.shields.io/nuget/v/MonoMod.RuntimeDetour.HookGen.svg?style=flat-square)](https://www.nuget.org/packages/MonoMod.RuntimeDetour.HookGen/) |
 
-<sup>[... or download fresh build artifacts for the last commit.](https://dev.azure.com/MonoMod/MonoMod/_build/latest?definitionId=1)</sup>
+<sup>[... or download fresh build artifacts for the last commit.](https://github.com/MonoMod/MonoMod/actions/workflows/ci.yml?query=branch%3Areorganize)</sup>
 
 ## Sections
 - [Introduction](#introduction)
@@ -45,7 +45,7 @@ It consists of the following **modular components**:
 - [**MonoMod.RuntimeDetour**](docs/RuntimeDetour/Usage.md): A flexible and easily extensible runtime detouring library, supporting x86/x86_64 on .NET Framework, .NET Core, and Mono.
 - [**MonoMod.RuntimeDetour.HookGen**](docs/RuntimeDetour.HookGen/Usage.md): A utility to generate a "hook helper .dll" for any IL assembly. This allows you to hook
   methods in runtime mods as if they were events. Built with MonoMod and RuntimeDetour.
-- [**MonoMod.Backports**](docs/README.Backports.md): A collection of BCL backports, enabling the use of many new language and library features, as far back as .NET Framework 3.5.
+- [**MonoMod.Backports**](https://github.com/MonoMod/MonoMod.Backports): A collection of BCL backports, enabling the use of many new language and library features, as far back as .NET Framework 3.5.
 
 ### Why?
 - Cross-version compatibility, even with obfuscated assemblies.
@@ -55,19 +55,3 @@ It consists of the following **modular components**:
 - With HookGen, runtime hooks are as simple as `On.Namespace.Type.Method += (orig, a, b, c) => { /* ... */ }`
 - With HookGen IL, you can manipulate IL at runtime and even inline C# delegate calls between instructions.
 - Modularity allows you to mix and match. Use only what you need!
-
----
-
-### Special thanks to my [patrons on Patreon](https://www.patreon.com/0x0ade):
-- [Chad Yates](https://twitter.com/ChadCYates)
-- [Sc2ad](https://github.com/sc2ad)
-- Raegous
-- Chaser6
-- [Harrison Clarke](https://twitter.com/hay_guise)
-- [KyleTheScientist](https://www.twitch.tv/kylethescientist)
-- [Renaud Bédard](https://twitter.com/renaudbedard)
-- [leo60228](https://leo60228.space)
-- [Rubydragon](https://www.twitch.tv/rubydrag0n)
-- Holly Magala
-- [Jimmy Londo (iamdadbod)](https://www.youtube.com/iamdadbod)
-- [Artus Elias Meyer-Toms](https://twitter.com/artuselias)
