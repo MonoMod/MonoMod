@@ -171,7 +171,7 @@ jobs:
       
   upload:
     needs: [setup, build-testassets]
-    if: ${{ needs.setup.upload_pkgs == 'true' && github.ref_name == 'reorganize' && (success() || needs.setup.result == 'success') }}
+    if: ${{ needs.setup.outputs.upload_pkgs == 'true' && github.ref_name == 'reorganize' && (success() || needs.setup.result == 'success') }}
     name: Upload Packages
     uses: ./.github/workflows/upload-packages.yml
     with:
