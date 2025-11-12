@@ -927,7 +927,8 @@
         "resolved": "1.1.2",
         "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.ILHelpers": "1.1.0",
+          "System.ValueTuple": "4.5.0"
         }
       },
       "MonoMod.ILHelpers": {
@@ -1024,6 +1025,11 @@
         "dependencies": {
           "System.Collections.Immutable": "1.5.0"
         }
+      },
+      "System.ValueTuple": {
+        "type": "Transitive",
+        "resolved": "4.5.0",
+        "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
       "xunit.abstractions": {
         "type": "Transitive",
