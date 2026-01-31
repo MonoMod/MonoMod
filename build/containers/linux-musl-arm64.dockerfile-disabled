@@ -12,6 +12,7 @@ RUN apk update \
  && apk cache purge
 
 # Then, powershell
+# TODO: powershell doesn't currently ship a linux-musl-arm64 build...
 RUN curl -L \
          https://github.com/PowerShell/PowerShell/releases/download/v7.5.4/powershell-7.5.4-linux-arm64.tar.gz \
          -o /tmp/powershell.tar.gz \

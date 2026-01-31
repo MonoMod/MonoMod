@@ -102,7 +102,7 @@ internal sealed record OS : Enableable
             DllPrefix = "lib",
             DllSuffix = ".so",
 
-            //Enabled = false, // TODO: enable when arm container building is sane
+            Enabled = false, // TODO: re-enable when PowerShell ships linux-musl-arm64 archives
 
             Arch = [
                 new() { RidName = "arm64", UnityName = null, IsRunnerArch = true },
