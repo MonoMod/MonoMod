@@ -535,6 +535,27 @@ namespace MonoMod.Cil
         /// <returns>A new label with no target</returns>
         public ILLabel DefineLabel() => Context.DefineLabel();
 
+        /// <summary>
+        /// Create a new local for use with <see cref="ILContext.CreateLocal{T}()"/>
+        /// </summary>
+        /// <typeparam name="T">The type of the local variable to create.</typeparam>
+        /// <returns>The <see cref="VariableDefinition"/> of the local.</returns>
+        public VariableDefinition CreateLocal<T>() => Context.CreateLocal<T>();
+
+        /// <summary>
+        /// Create a new local for use with <see cref="ILContext.CreateLocal(Type)"/>
+        /// </summary>
+        /// <param name="type">The type of the local variable to create.</param>
+        /// <returns>The <see cref="VariableDefinition"/> of the local.</returns>
+        public VariableDefinition CreateLocal(Type type) => Context.CreateLocal(type);
+
+        /// <summary>
+        /// Create a new local for use with <see cref="ILContext.CreateLocal(TypeReference)"/>
+        /// </summary>
+        /// <param name="typeRef">The <see cref="TypeReference"/> of the local variable to create.</param>
+        /// <returns>The <see cref="VariableDefinition"/> of the local.</returns>
+        public VariableDefinition CreateLocal(TypeReference typeRef) => Context.CreateLocal(typeRef);
+
         private ILCursor _Insert(Instruction instr)
         {
             // retargetting

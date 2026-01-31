@@ -4,9 +4,9 @@
     ".NETFramework,Version=v4.5.2": {
       "DotNet.ReproducibleBuilds": {
         "type": "Direct",
-        "requested": "[1.2.25, )",
-        "resolved": "1.2.25",
-        "contentHash": "xCXiw7BCxHJ8pF6wPepRUddlh2dlQlbr81gXA72hdk4FLHkKXas7EH/n+fk5UCA/YfMqG1Z6XaPiUjDbUNBUzg=="
+        "requested": "[1.2.39, )",
+        "resolved": "1.2.39",
+        "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
       "IsExternalInit": {
         "type": "Direct",
@@ -22,15 +22,15 @@
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "5S+LHLhm0am4MWQQMN0O3VyKA/St5JCqH1yv+1YGZl2klIJlLlmNA/KTLCVJSC1kZPIKR1MFF/3g9FqsyzIyCQ=="
+        "requested": "[5.0.0-2.final, )",
+        "resolved": "5.0.0-2.final",
+        "contentHash": "72iZ5zsjAlMQ4kxxCu2198/uO+cKm1Js4xj5keDv4cqbUzLUojRJ4JhGNiq/nnIIgAI99DfVoNKT491/NPvGVw=="
       },
       "Microsoft.Net.Compilers.Toolset": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "xXDdIgDfcbMr+2bLzVJHg+/oCHwcYs808TlooX0M9+BVCeHITaROsjdbWSJNdyzeMe/K8iB2NeHmaAOUcqkKWw=="
+        "requested": "[5.0.0-2.final, )",
+        "resolved": "5.0.0-2.final",
+        "contentHash": "htd63vZnxeGtNlqQnoLx71v1EitsgZqc2WUAIBO589IO5of5XTREPQuSTv1i5qpf56CaCJ74O+YrF2i86gq+XA=="
       },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
@@ -111,7 +111,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.9-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -126,9 +126,9 @@
     "net6.0": {
       "DotNet.ReproducibleBuilds": {
         "type": "Direct",
-        "requested": "[1.2.25, )",
-        "resolved": "1.2.25",
-        "contentHash": "xCXiw7BCxHJ8pF6wPepRUddlh2dlQlbr81gXA72hdk4FLHkKXas7EH/n+fk5UCA/YfMqG1Z6XaPiUjDbUNBUzg=="
+        "requested": "[1.2.39, )",
+        "resolved": "1.2.39",
+        "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
       "IsExternalInit": {
         "type": "Direct",
@@ -144,15 +144,15 @@
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "5S+LHLhm0am4MWQQMN0O3VyKA/St5JCqH1yv+1YGZl2klIJlLlmNA/KTLCVJSC1kZPIKR1MFF/3g9FqsyzIyCQ=="
+        "requested": "[5.0.0-2.final, )",
+        "resolved": "5.0.0-2.final",
+        "contentHash": "72iZ5zsjAlMQ4kxxCu2198/uO+cKm1Js4xj5keDv4cqbUzLUojRJ4JhGNiq/nnIIgAI99DfVoNKT491/NPvGVw=="
       },
       "Microsoft.Net.Compilers.Toolset": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "xXDdIgDfcbMr+2bLzVJHg+/oCHwcYs808TlooX0M9+BVCeHITaROsjdbWSJNdyzeMe/K8iB2NeHmaAOUcqkKWw=="
+        "requested": "[5.0.0-2.final, )",
+        "resolved": "5.0.0-2.final",
+        "contentHash": "htd63vZnxeGtNlqQnoLx71v1EitsgZqc2WUAIBO589IO5of5XTREPQuSTv1i5qpf56CaCJ74O+YrF2i86gq+XA=="
       },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
@@ -213,7 +213,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.9-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
       "monomod.utils": {

@@ -40,15 +40,44 @@ jobs:
         git config --global core.autocrlf input
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       
     - name: Install .NET SDK
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         global-json: global.json
+        
+    - name: Wait for packages to be available
+      if: github.run_id != inputs.run-id
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RUN_ID: ${{ inputs.run-id }}
+      run: |
+          while ($true)
+          {
+            $conclusion = gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" `
+              "/repos/${{ github.repository }}/actions/runs/$($env:RUN_ID)" `
+              | ConvertFrom-Json `
+              | % { $_.conclusion }
+            if ($null -ne $conclusion)
+            {
+              if ($conclusion -ne "success")
+              {
+                echo "Build had conclusion '$conclusion'. Failing.";
+                exit 1;
+              }
+              else
+              {
+                echo "Build succeeded. Continuing."
+                exit 0;
+              }
+            }
+            Start-Sleep -Seconds 30;
+          }
 
     - name: Download compiled packages
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: packages
         path: artifacts/package/release/

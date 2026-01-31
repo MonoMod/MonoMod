@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <TargetFrameworks></TargetFrameworks>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
 
     <NoWarn>$(NoWarn);CA2007;CA1308</NoWarn>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-
-  <Import Project="Sdk.props" Sdk="DotNet.ReproducibleBuilds.Isolated" Version="1.2.25" />
+  
+  <Import Project="Sdk.props" Sdk="DotNet.ReproducibleBuilds.Isolated" Version="1.2.39" />
 
   <ItemGroup>
-    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25" PrivateAssets="All"/>
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.39" PrivateAssets="All"/>
   </ItemGroup>
 
   <!-- These properties are defaults for ALL project types. C#-specific things must go in Common.CS.props -->
@@ -17,7 +17,7 @@
 
     <!-- All MonoMod projects (by default) target these frameworks -->
     <!-- Put .NET 6.0 as the first framework so that OmniSharp uses it for VS Code Intelisense -->
-    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;net9.0;netstandard2.0;net35;net452</TargetFrameworks>
+    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;net9.0;net10.0;netstandard2.0;net35;net452</TargetFrameworks>
     <BackportsTargetFrameworks>$(TargetFrameworks);netstandard2.1;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</BackportsTargetFrameworks>
     <!-- If a project wants to target some subset or other set, then they can just reassign TargetFrameworks in their project file -->
 

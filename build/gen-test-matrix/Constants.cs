@@ -20,7 +20,7 @@ internal static class Constants
 
     public static class Mono
     {
-        public const string NonCoreTFM = "net462";
+        public const string NonCoreTFM = "net472";
 
         public static class Package
         {

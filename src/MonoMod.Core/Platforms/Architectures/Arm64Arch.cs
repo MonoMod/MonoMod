@@ -215,6 +215,17 @@ namespace MonoMod.Core.Platforms.Architectures
                     0x2b, 0x00, 0x02, 0x58, // ldr x11, DATA_SLOT(FixupPrecode, PrecodeFixupThunk) // +16
                     0x60, 0x01, 0x1f, 0xd6, // br x11
                 ];
+                //
+                // FixupPrecodeCode (.NET 10 thunktemplates.S)
+                ReadOnlySpan<byte> fixupPrecodeCode2 = 
+                [
+                    0x0b, 0x00, 0x02, 0x58, // ldr x11, DATA_SLOT(FixupPrecode, Target) // +0
+                    0x60, 0x01, 0x1f, 0xd6, // br x11
+                    0xbf, 0x39, 0x03, 0xd5, // dmb ishld
+                    0x0c, 0x00, 0x02, 0x58, // ldr x12, DATA_SLOT(FixupPrecode, MethodDesc) // +8
+                    0x2b, 0x00, 0x02, 0x58, // ldr x11, DATA_SLOT(FixupPrecode, PrecodeFixupThunk) // +16
+                    0x60, 0x01, 0x1f, 0xd6, // br x11
+                ];
                 // CallCountingStubCode
                 ReadOnlySpan<byte> callCountingStubCode =
                 [
@@ -263,6 +274,25 @@ namespace MonoMod.Core.Platforms.Architectures
                         mask: bigMask.Slice(0, fixupPrecode.Length - 8),
                         pattern: fixupPrecode.AsMemory(8)));
 
+                    var fixupPrecode2 = fixupPrecodeCode2.ToArray(); // create a copy to operate on
+                    EncodeLdr64LiteralTo(fixupPrecode2.AsSpan(0), 0 + pageSize + 0, 11); // .Target (+0)
+                    EncodeLdr64LiteralTo(fixupPrecode2.AsSpan(12), -12 + pageSize + 8, 12); // .MethodDesc (+18)
+                    EncodeLdr64LiteralTo(fixupPrecode2.AsSpan(16), -16 + pageSize + 16, 11); // .PrecodeFixupThunk (+16)
+
+                    // we need to generate patterns for both entries
+                    // main one first
+                    patterns.Add(new BytePattern(
+                        new AddressMeaning(AddressKind.Rel64 | AddressKind.ConstantAddr | AddressKind.Indirect, relativeOffset: 0, constantValue: (uint)pageSize + 0),
+                        mustMatchAtStart: true,
+                        mask: bigMask.Slice(0, fixupPrecode2.Length),
+                        pattern: fixupPrecode2));
+                    // then the precode fixup entry
+                    patterns.Add(new BytePattern(
+                        new AddressMeaning(AddressKind.PrecodeFixupThunkRel64 | AddressKind.ConstantAddr | AddressKind.Indirect, relativeOffset: 0, constantValue: (uint)pageSize + 16 - 8),
+                        mustMatchAtStart: true,
+                        mask: bigMask.Slice(0, fixupPrecode2.Length - 8),
+                        pattern: fixupPrecode2.AsMemory(8)));
+
                     // then the call counting stub
                     var callCountingStub = callCountingStubCode.ToArray();
                     EncodeLdr64LiteralTo(callCountingStub.AsSpan(0), 0 + pageSize + 0, 9); // .RemainingCallCountCell (+0)
@@ -275,6 +305,7 @@ namespace MonoMod.Core.Platforms.Architectures
                         mask: bigMask.Slice(0, callCountingStub.Length),
                         pattern: callCountingStub));
                 }
+
 
                 return new BytePatternCollection(patterns.ToArray());
             }

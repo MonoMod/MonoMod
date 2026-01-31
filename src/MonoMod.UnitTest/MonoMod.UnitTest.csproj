@@ -12,7 +12,7 @@
     <NoWarn>$(NoWarn);CA1852</NoWarn>
 
     <!-- Put .NET 6.0 as the first framework so that OmniSharp uses it for VS Code Intelisense -->
-    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;net9.0;net462;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;net9.0;net10.0;net472;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
     <SignAssembly>skip</SignAssembly>
     <Nullable>annotations</Nullable>
 
@@ -70,7 +70,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.IO.FileSystem" Version="4.*" />
     
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.3" />
     <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="17.3.3" />

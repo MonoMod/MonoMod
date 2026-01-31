@@ -36,7 +36,7 @@ internal sealed record Dotnet : Enableable
         {
             Name = ".NET Framework 4.x",
             Id = "fx",
-            TFM = "net462",
+            TFM = "net472",
             IsFramework = true,
             RIDs = ["win-x86", "win-x64", "win-arm64"]
         },
@@ -110,6 +110,17 @@ internal sealed record Dotnet : Enableable
             HasPGO = true,
             MonoPackageSource = Constants.NuGetSource.NugetOrg,
             MonoPackageVersion = "9.0.0",
+
+            RIDs = ["win-x86", "win-x64", "win-arm64", "linux-x64", "linux-arm", "linux-arm64", "linux-musl-x64", "linux-musl-arm", "linux-musl-arm64", "osx-x64", "osx-arm64"]
+        },
+        new()
+        {
+            Name = ".NET 10.0",
+            Sdk = "10.0",
+            TFM = "net10.0",
+            HasPGO = true,
+            MonoPackageSource = Constants.NuGetSource.NugetOrg,
+            MonoPackageVersion = "10.0.0",
 
             RIDs = ["win-x86", "win-x64", "win-arm64", "linux-x64", "linux-arm", "linux-arm64", "linux-musl-x64", "linux-musl-arm", "linux-musl-arm64", "osx-x64", "osx-arm64"]
         }

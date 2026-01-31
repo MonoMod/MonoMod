@@ -6,6 +6,7 @@ using System.Diagnostics;
 using MonoMod.Utils;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using MonoMod.Core.Platforms;
 
 #if NETCOREAPP1_0_OR_GREATER
 //using Xunit.Abstractions;
@@ -21,6 +22,8 @@ if (Debugger.IsAttached)
 {
     Debugger.Break();
 }
+
+_ = PlatformTriple.Current;
 
 var instance = new Subclass();
 
@@ -159,6 +162,9 @@ internal sealed class DummyOutputHelper : ITestOutputHelper
 
 #endif
 #endif
+
+#pragma warning disable CS0649
+
 internal struct SomeStruct
 {
     public double n1;
@@ -176,7 +182,7 @@ internal class Mainclass
     }
 }
 
-internal class Subclass : Mainclass
+internal sealed class Subclass : Mainclass
 {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
         Justification = "The test is specifically verifying that our hook behavior doens't cause `this` to become null")]

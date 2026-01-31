@@ -11,11 +11,11 @@ RUN apt-get update \
  && wget -q https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
  && dpkg -i packages-microsoft-prod.deb \
  && rm packages-microsoft-prod.deb \
- && curl -fsSL https://deb.nodesource.com/setup_23.x | bash \
+ && curl -fsSL https://deb.nodesource.com/setup_25.x | bash \
  && apt-get update \
  && apt-get install --no-install-recommends -y \
         nodejs \
-        dotnet-runtime-9.0 \
+        dotnet-runtime-10.0 \
         powershell \
 # Dependencies for older runtimes
  && wget -O libssl1.1.deb http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb \

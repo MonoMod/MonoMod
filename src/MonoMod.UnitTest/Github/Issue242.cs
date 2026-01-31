@@ -13,6 +13,7 @@ namespace MonoMod.UnitTest.Github
         }
 
         // Reproduce the exact struct from the issue
+#pragma warning disable CS0649
         private struct SomeStruct
         {
             public double n1;
@@ -20,6 +21,8 @@ namespace MonoMod.UnitTest.Github
             public double n3;
             public double n4;
         }
+#pragma warning restore CS0649
+
 
         private class Mainclass
         {
@@ -30,7 +33,7 @@ namespace MonoMod.UnitTest.Github
             }
         }
 
-        private class Subclass : Mainclass
+        private sealed class Subclass : Mainclass
         {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code",
                 Justification = "The test is specifically verifying that our hook behavior doens't cause `this` to become null")]

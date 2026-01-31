@@ -137,7 +137,7 @@ var mdhExe = Path.Combine(mdhDir, "mdh");
         Directory.Delete(mdhDir, true);
     }
     // extract the archive
-    ZipFile.ExtractToDirectory(mdhZip, mdhDir);
+    await ZipFile.ExtractToDirectoryAsync(mdhZip, mdhDir);
 
     // select Windows executable if it exists
     if (File.Exists(mdhExe + ".exe"))

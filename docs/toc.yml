@@ -18,10 +18,6 @@ items:
     href: Utils/toc.yml
 - name: Package READMEs
   items:
-  - name: MonoMod.Backports
-    href: README.Backports.md
-  - name: MonoMod.ILHelpers
-    href: README.ILHelpers.md
   - name: MonoMod.Core
     href: README.Core.md
   - name: MonoMod.Patcher

@@ -251,6 +251,31 @@ namespace MonoMod.Core.Platforms.Runtimes
             }
         }
 
+        protected virtual MethodInfo MakeCreateRuntimeMethodInfoStub(Type methodHandleInternal)
+        {
+            var runtimeMethodInfoStubCtorArgs = new[] { typeof(IntPtr), typeof(object) };
+            var runtimeMethodInfoStub = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodInfoStub");
+            Helpers.DAssert(runtimeMethodInfoStub is not null);
+            var runtimeMethodInfoStubCtor = runtimeMethodInfoStub.GetConstructor(runtimeMethodInfoStubCtorArgs);
+            Helpers.DAssert(runtimeMethodInfoStubCtor is not null);
+
+            MethodInfo runtimeMethodInfoStubCtorWrapper;
+            using (var dmd = new DynamicMethodDefinition(
+                    "new RuntimeMethodInfoStub", runtimeMethodInfoStub, runtimeMethodInfoStubCtorArgs
+                ))
+            {
+                var il = dmd.GetILGenerator();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Newobj, runtimeMethodInfoStubCtor);
+                il.Emit(OpCodes.Ret);
+
+                runtimeMethodInfoStubCtorWrapper = dmd.Generate();
+            }
+
+            return runtimeMethodInfoStubCtorWrapper;
+        }
+
         protected sealed class JitHookHelpersHolder
         {
             public delegate object MethodHandle_GetLoaderAllocatorD(IntPtr methodHandle);
@@ -299,19 +324,20 @@ namespace MonoMod.Core.Platforms.Runtimes
                 }
 
                 { // set up GetTypeFromNativeHandle
-                    var getTypeFromHandleUnsafe = GetOrCreateGetTypeFromHandleUnsafe(runtime);
+                    var getTypeFromHandleUnsafe = runtime.GetOrCreateGetTypeFromHandleUnsafe();
                     GetTypeFromNativeHandle = getTypeFromHandleUnsafe.CreateDelegate<GetTypeFromNativeHandleD>();
                 }
 
+                var methodHandleInternal = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodHandleInternal");
+                Helpers.DAssert(methodHandleInternal is not null);
+
                 { // set up GetDeclaringTypeOfMethodHandle
-                    var methodHandleInternal = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodHandleInternal");
-                    Helpers.DAssert(methodHandleInternal is not null);
-                    var getDeclaringType = typeof(RuntimeMethodHandle).GetMethod("GetDeclaringType", StaticNonPublic, null, new Type[] { methodHandleInternal }, null);
+                    var getDeclaringType = typeof(RuntimeMethodHandle).GetMethod("GetDeclaringType", StaticNonPublic, null, [methodHandleInternal], null);
                     Helpers.DAssert(getDeclaringType is not null);
 
                     MethodInfo invokeWrapper;
                     using (var dmd = new DynamicMethodDefinition(
-                            "GetDeclaringTypeOfMethodHandle", typeof(Type), new Type[] { typeof(IntPtr) }
+                            "GetDeclaringTypeOfMethodHandle", typeof(Type), [typeof(IntPtr)]
                         ))
                     {
                         var il = dmd.GetILGenerator();
@@ -329,27 +355,9 @@ namespace MonoMod.Core.Platforms.Runtimes
                 }
 
                 { // set up CreateRuntimeMethodInfoStub
-                    var runtimeMethodInfoStubCtorArgs = new[] { typeof(IntPtr), typeof(object) };
-                    var runtimeMethodInfoStub = typeof(RuntimeMethodHandle).Assembly.GetType("System.RuntimeMethodInfoStub");
-                    Helpers.DAssert(runtimeMethodInfoStub is not null);
-                    var runtimeMethodInfoStubCtor = runtimeMethodInfoStub.GetConstructor(runtimeMethodInfoStubCtorArgs);
-                    Helpers.DAssert(runtimeMethodInfoStubCtor is not null);
-
-                    MethodInfo runtimeMethodInfoStubCtorWrapper;
-                    using (var dmd = new DynamicMethodDefinition(
-                            "new RuntimeMethodInfoStub", runtimeMethodInfoStub, runtimeMethodInfoStubCtorArgs
-                        ))
-                    {
-                        var il = dmd.GetILGenerator();
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldarg_1);
-                        il.Emit(OpCodes.Newobj, runtimeMethodInfoStubCtor);
-                        il.Emit(OpCodes.Ret);
-
-                        runtimeMethodInfoStubCtorWrapper = dmd.Generate();
-                    }
-
-                    CreateRuntimeMethodInfoStub = runtimeMethodInfoStubCtorWrapper.CreateDelegate<CreateRuntimeMethodInfoStubD>();
+                    CreateRuntimeMethodInfoStub = runtime
+                        .MakeCreateRuntimeMethodInfoStub(methodHandleInternal)
+                        .CreateDelegate<CreateRuntimeMethodInfoStubD>();
                 }
 
                 { // set up CreateRuntimeMethodHandle
@@ -371,63 +379,63 @@ namespace MonoMod.Core.Platforms.Runtimes
                     CreateRuntimeMethodHandle = ctorWrapper.CreateDelegate<CreateRuntimeMethodHandleD>();
                 }
             }
-
-            /// <summary>
-            /// This method gets or creates the internal call for Type.GetTypeFromHandleUnsafe.
-            /// The internal call always exists, but the managed method doesn't in some cases.
-            /// </summary>
-            /// <returns></returns>
-            private static MethodInfo GetOrCreateGetTypeFromHandleUnsafe(Core21Runtime runtime)
-            {
-                const string MethodName = "GetTypeFromHandleUnsafe";
-                var method = typeof(Type).GetMethod(MethodName, (BindingFlags)(-1));
-
-                if (method is not null)
-                    return method;
-
-                // the method not existing is far and away the more common case
-
-                Assembly assembly;
-                using (var module = ModuleDefinition.CreateModule(
-                    "MonoMod.Core.Platforms.Runtimes.Core30Runtime+Helpers",
-                    new ModuleParameters() { Kind = ModuleKind.Dll }
-                ))
-                {
-                    var sysType = new TypeDefinition(
-                        "System",
-                        "Type",
-                        MC.TypeAttributes.Public | MC.TypeAttributes.Abstract
-                    )
-                    {
-                        BaseType = module.TypeSystem.Object
-                    };
-                    module.Types.Add(sysType);
-
-                    var targetMethod = new MethodDefinition(
-                        MethodName,
-                        MC.MethodAttributes.Static | MC.MethodAttributes.Public,
-                        module.ImportReference(typeof(Type))
-                    )
-                    {
-                        IsInternalCall = true
-                    };
-                    targetMethod.Parameters.Add(new(module.ImportReference(typeof(IntPtr))));
-                    sysType.Methods.Add(targetMethod);
-
-                    assembly = ReflectionHelper.Load(module);
-                }
-
-                runtime.MakeAssemblySystemAssembly(assembly);
-
-                var type = assembly.GetType("System.Type");
-                Helpers.DAssert(type is not null);
-                method = type.GetMethod(MethodName, (BindingFlags)(-1));
-                Helpers.DAssert(method is not null);
-                return method;
-            }
         }
 
-        private static readonly FieldInfo RuntimeAssemblyPtrField = Type.GetType("System.Reflection.RuntimeAssembly")!
+        /// <summary>
+        /// This method gets or creates the internal call for Type.GetTypeFromHandleUnsafe.
+        /// The internal call always exists, but the managed method doesn't in some cases.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
+        {
+            const string MethodName = "GetTypeFromHandleUnsafe";
+            var method = typeof(Type).GetMethod(MethodName, (BindingFlags)(-1));
+
+            if (method is not null)
+                return method;
+
+            // the method not existing is far and away the more common case
+
+            Assembly assembly;
+            using (var module = ModuleDefinition.CreateModule(
+                "MonoMod.Core.Platforms.Runtimes.Core21Runtime+Helpers",
+                new ModuleParameters() { Kind = ModuleKind.Dll }
+            ))
+            {
+                var sysType = new TypeDefinition(
+                    "System",
+                    "Type",
+                    MC.TypeAttributes.NotPublic | MC.TypeAttributes.Abstract
+                )
+                {
+                    BaseType = module.TypeSystem.Object
+                };
+                module.Types.Add(sysType);
+
+                var targetMethod = new MethodDefinition(
+                    MethodName,
+                    MC.MethodAttributes.Static | MC.MethodAttributes.Public,
+                    module.ImportReference(typeof(Type))
+                )
+                {
+                    IsInternalCall = true
+                };
+                targetMethod.Parameters.Add(new(module.ImportReference(typeof(IntPtr))));
+                sysType.Methods.Add(targetMethod);
+
+                assembly = ReflectionHelper.Load(module);
+            }
+
+            MakeAssemblySystemAssembly(assembly);
+
+            var type = assembly.GetType("System.Type");
+            Helpers.DAssert(type is not null);
+            method = type.GetMethod(MethodName, (BindingFlags)(-1));
+            Helpers.DAssert(method is not null);
+            return method;
+        }
+
+        private protected static readonly FieldInfo RuntimeAssemblyPtrField = Type.GetType("System.Reflection.RuntimeAssembly")!
             .GetField("m_assembly", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
         protected virtual unsafe void MakeAssemblySystemAssembly(Assembly assembly)
