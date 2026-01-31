@@ -68,11 +68,20 @@ jobs:
           $name = [System.IO.Path]::GetFileNameWithoutExtension($f.Name);
           $hash = (Get-FileHash -Algorithm SHA256 $f).Hash;
           $imgName = "$($ghcrBase):$name-$hash";
+
+          echo "::group::$name"
+
           # Only rebuild if the container doesn't exist upstream already
           docker manifest inspect $imgName | out-null;
-          if ($?) { continue; }
+          if ($?) {
+            echo "Container already up-to-date"
+            echo "::endgroup::"
+            continue;
+          }
           # Upstream doesn't exist yet, build
           Exec docker buildx build -t $imgName -f $($f.FullName) --output=type=docker $($f.Directory.FullName)
           # and push
           Exec docker push $imgName
+
+          echo "::endgroup::"
         }
