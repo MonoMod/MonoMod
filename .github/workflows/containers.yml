@@ -44,6 +44,25 @@ jobs:
         $files = gci build/containers/*.dockerfile;
         $ghcrBase = "ghcr.io/${{ github.repository_owner }}/monomod-tester";
         $ghcrBase = $ghcrBase.ToLowerInvariant();
+
+        function Exec
+        {
+          param(
+            [Parameter(Mandatory=$true, ValueFromRemainingArguments=$true)]
+            [string[]]$Command
+          )
+          $str = $Command -join ' ';
+          $rest = $Command[1..($Command.Length - 1)]
+          echo "::group::$str";
+          & $Command[0] @rest;
+          echo "::endgroup::";
+          if ($LastExitCode -ne 0)
+          {
+            echo "::error::Command failed: $str"
+            exit 1
+          }
+        }
+
         foreach ($f in $files)
         {
           $name = [System.IO.Path]::GetFileNameWithoutExtension($f.Name);
@@ -53,9 +72,7 @@ jobs:
           docker manifest inspect $imgName | out-null;
           if ($?) { continue; }
           # Upstream doesn't exist yet, build
-          docker buildx build -t $imgName -f $($f.FullName) $($f.Directory.FullName)
-          if (!$?) { exit 1; }
+          Exec docker buildx build -t $imgName -f $($f.FullName) --output=type=docker $($f.Directory.FullName)
           # and push
-          docker push $imgName
-          if (!$?) { exit 1; }
+          Exec docker push $imgName
         }
