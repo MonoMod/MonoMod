@@ -49,7 +49,7 @@ jobs:
         git config --global core.autocrlf input
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         lfs: true
         submodules: recursive
@@ -63,7 +63,7 @@ jobs:
         
     # NOTE: manual package caching
     - name: Cache restored NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
@@ -125,7 +125,7 @@ jobs:
 
     - name: Create PR as appropriate
       if: steps.pr_title.outcome == 'success' && steps.pr_desc.outcome == 'success'
-      uses: peter-evans/create-pull-request@v7
+      uses: peter-evans/create-pull-request@v8
       with:
         token: ${{ steps.app_tok.outputs.token }}
         branch: "ai/issue${{ inputs.issue_number }}"

@@ -28,7 +28,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: "${{ (github.event.pull_request || github.event.push).head.sha }}"
 

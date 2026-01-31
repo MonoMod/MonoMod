@@ -176,14 +176,14 @@ jobs:
         private-key: ${{ secrets.APP_PRIVKEY }}
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ steps.app_tok.outputs.token }} # checkout using the app token so we can push directly to the repo head
         lfs: true
         submodules: true
         
     - name: Cache restored NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
@@ -191,13 +191,13 @@ jobs:
     
     - name: Install .NET SDK
       if: '!inputs.prerelease'
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         global-json: global.json
         
     # we need to download the packages we just generated so that this subsequent restore doesn't fail PackageDownloading the new version
     - name: Download compiled packages
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: packages
         path: artifacts/package/release/
