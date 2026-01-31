@@ -60,6 +60,20 @@ jobs:
       if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
       shell: bash
       run: echo "$(brew --prefix llvm@20)/bin" >> "$GITHUB_PATH"
+
+      # MacOS 15 images don't ship Mono at all
+    - name: Install Mono from Brew
+      uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      with:
+        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-llvm
+        tools: mono
+    - name: Add new Mono to PATH
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      shell: bash
+      run: |
+        echo "$(brew --prefix mono)/bin" >> "$GITHUB_PATH"
+        echo "MONO_GAC_PREFIX=$(brew --prefix mono)" >> "$GITHUB_ENV"
       
     - name: Checkout
       uses: actions/checkout@v6
