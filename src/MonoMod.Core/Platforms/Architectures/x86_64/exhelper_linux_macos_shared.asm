@@ -27,7 +27,7 @@ eh_managed_to_native:
     DECL_REG_SLOTS 2
     FUNCTION_PROLOG
 
-    svreg rax, r15
+    svreg r15
 
     ; managed->native sets up an exception handler to catch unmanaged exceptions for an arbitrary entrypoint
     ; that entrypoint will be passed in rax, using a dynamically generated stub
