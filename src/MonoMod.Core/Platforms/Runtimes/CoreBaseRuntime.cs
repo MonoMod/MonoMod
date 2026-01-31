@@ -86,7 +86,7 @@ namespace MonoMod.Core.Platforms.Runtimes
         }
 
         private static bool IsMaybeClrJitPath(string path)
-            => Path.GetFileNameWithoutExtension(path).EndsWith("clrjit", StringComparison.Ordinal);
+            => Path.GetFileName(path) == DynDll.MakeDllName("clrjit");
 
         protected virtual string GetClrJitPath()
         {
