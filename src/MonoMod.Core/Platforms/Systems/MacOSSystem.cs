@@ -56,25 +56,35 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
-        public unsafe IEnumerable<string?> EnumerateLoadedModuleFiles()
+        public unsafe IEnumerable<LoadedModule> EnumerateLoadedModules()
         {
             var infoCnt = task_dyld_info.Count;
             var dyldInfo = default(task_dyld_info);
             var kr = task_info(mach_task_self(), task_flavor_t.DyldInfo, &dyldInfo, &infoCnt);
             if (!kr)
             {
-                return ArrayEx.Empty<string>(); // could not get own dyld info
+                return []; // could not get own dyld info
             }
 
             var infos = dyldInfo.all_image_infos->InfoArray;
 
-            var arr = new string?[infos.Length];
+            var arr = new LoadedModule[infos.Length];
             for (var i = 0; i < arr.Length; i++)
             {
-                arr[i] = infos[i].imageFilePath.ToString();
+                var info = infos[i];
+                // TODO get size, probably by parsing the mach header
+                arr[i] = new LoadedModule((ulong)info.imageLoadAddress, info.imageFilePath.ToString(), null);
             }
 
             return arr;
+        }
+
+        public IEnumerable<string?> EnumerateLoadedModuleFiles()
+        {
+            foreach (var module in EnumerateLoadedModules())
+            {
+                yield return module.FileName;
+            }
         }
 
         public unsafe nint GetSizeOfReadableMemory(IntPtr start, nint guess)
