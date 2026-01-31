@@ -66,7 +66,7 @@ jobs:
       uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
       if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
       with:
-        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-llvm
+        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-mono
         tools: mono
     - name: Add new Mono to PATH
       if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
