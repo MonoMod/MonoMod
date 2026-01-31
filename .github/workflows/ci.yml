@@ -46,7 +46,7 @@ jobs:
       run: echo "skip=${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[skip-ci]') }}" >> $env:GITHUB_OUTPUT
 
     - name: Upload event file
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: test-event-file
         path: ${{ github.event_path }}
@@ -58,21 +58,21 @@ jobs:
 
     - name: Checkout
       if: steps.skip_check.outputs.should_skip != 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         lfs: false
         submodules: false
     
     - name: Install .NET SDK
       if: steps.skip_check.outputs.should_skip != 'true'
-      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         global-json: global.json
         
     # NOTE: manual package caching
     - name: Cache restored NuGet packages
       if: steps.skip_check.outputs.should_skip != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}

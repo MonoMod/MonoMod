@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 alpine:3.21
+FROM --platform=linux/arm64 alpine:3.23
 
 # First, packages
 RUN apk update \
@@ -8,12 +8,13 @@ RUN apk update \
     -X https://dl-cdn.alpinelinux.org/alpine/edge/community \
     -X https://dl-cdn.alpinelinux.org/alpine/edge/testing \
         git git-lfs curl wget bash nodejs lttng-ust openssh-client tar \
-        mono dotnet9-runtime sudo doas lldb py3-lldb coreutils \
+        mono dotnet10-runtime sudo doas lldb py3-lldb coreutils \
  && apk cache purge
 
 # Then, powershell
+# TODO: powershell doesn't currently ship a linux-musl-arm64 build...
 RUN curl -L \
-         https://github.com/PowerShell/PowerShell/releases/download/v7.5.2/powershell-7.5.2-linux-arm64.tar.gz \
+         https://github.com/PowerShell/PowerShell/releases/download/v7.5.4/powershell-7.5.4-linux-arm64.tar.gz \
          -o /tmp/powershell.tar.gz \
  && mkdir -p /opt/powershell \
  && tar xzf /tmp/powershell.tar.gz -C /opt/powershell \

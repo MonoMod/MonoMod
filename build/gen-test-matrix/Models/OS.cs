@@ -80,8 +80,8 @@ internal sealed record OS : Enableable
         {
             Name = "Linux ARM64",
             Runner = "ubuntu-24.04-arm",
-            //UseContainer = true,
-            //HasSystemMono = true,
+            UseContainer = true,
+            HasSystemMono = true,
             RidName = "linux",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
@@ -101,7 +101,8 @@ internal sealed record OS : Enableable
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
             DllSuffix = ".so",
-            Enabled = false, // TODO: enable when arm container building is sane
+
+            Enabled = false, // TODO: re-enable when PowerShell ships linux-musl-arm64 archives
 
             Arch = [
                 new() { RidName = "arm64", UnityName = null, IsRunnerArch = true },
@@ -116,6 +117,9 @@ internal sealed record OS : Enableable
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
             DllSuffix = ".dylib",
+
+            // GitHub has retired all MacOS 13-based images.
+            Enabled = false,
 
             Arch = [
                 new() { RidName = "x64", UnityName = "macos_x64", IsRunnerArch = true },
@@ -134,6 +138,35 @@ internal sealed record OS : Enableable
             Arch = [
                 new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
                 new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
+            ]
+        },
+        new()
+        {
+            Name = "MacOS 15",
+            Runner = "macos-15",
+            HasSystemMono = true,
+            RidName = "osx",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".dylib",
+
+            Arch = [
+                new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
+            ]
+        },
+        new()
+        {
+            Name = "MacOS 15 Intel",
+            Runner = "macos-15-intel",
+            HasSystemMono = true,
+            RidName = "osx",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".dylib",
+
+            Arch = [
+                new() { RidName = "x64", UnityName = "macos_x64", IsRunnerArch = true },
             ]
         }
     ];

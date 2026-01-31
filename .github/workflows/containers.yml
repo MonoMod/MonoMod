@@ -21,33 +21,67 @@ jobs:
       packages: write
       id-token: write
     steps:
+    - name: Set up QEMU for xarch builds
+      uses: docker/setup-qemu-action@v3
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: "${{ (github.event.pull_request || github.event.push).head.sha }}"
+
     - name: Log in to container registry
       uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Build and push missing Docker images
       run: |
         $files = gci build/containers/*.dockerfile;
         $ghcrBase = "ghcr.io/${{ github.repository_owner }}/monomod-tester";
         $ghcrBase = $ghcrBase.ToLowerInvariant();
+
+        function Exec
+        {
+          param(
+            [Parameter(Mandatory=$true, ValueFromRemainingArguments=$true)]
+            [string[]]$Command
+          )
+          $str = $Command -join ' ';
+          $rest = $Command[1..($Command.Length - 1)]
+          echo "::group::$str";
+          & $Command[0] @rest;
+          echo "::endgroup::";
+          if ($LastExitCode -ne 0)
+          {
+            echo "::error::Command failed: $str"
+            exit 1
+          }
+        }
+
         foreach ($f in $files)
         {
           $name = [System.IO.Path]::GetFileNameWithoutExtension($f.Name);
           $hash = (Get-FileHash -Algorithm SHA256 $f).Hash;
           $imgName = "$($ghcrBase):$name-$hash";
+
+          echo "::group::$name"
+
           # Only rebuild if the container doesn't exist upstream already
           docker manifest inspect $imgName | out-null;
-          if ($?) { continue; }
+          if ($?) {
+            echo "Container already up-to-date"
+            echo "::endgroup::"
+            continue;
+          }
           # Upstream doesn't exist yet, build
-          docker buildx build -t $imgName -f $($f.FullName) $($f.Directory.FullName)
-          if (!$?) { exit 1; }
+          Exec docker buildx build -t $imgName -f $($f.FullName) --output=type=docker $($f.Directory.FullName)
           # and push
-          docker push $imgName
-          if (!$?) { exit 1; }
+          Exec docker push $imgName
+
+          echo "::endgroup::"
         }

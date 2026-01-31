@@ -40,10 +40,10 @@ jobs:
         git config --global core.autocrlf input
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       
     - name: Install .NET SDK
-      uses: nike4613/install-dotnet@533307d1c90c37993c8ef1397388bc9783e7b87c
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         global-json: global.json
         
@@ -77,7 +77,7 @@ jobs:
           }
 
     - name: Download compiled packages
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: packages
         path: artifacts/package/release/
