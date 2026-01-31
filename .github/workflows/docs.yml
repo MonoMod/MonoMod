@@ -4,13 +4,7 @@ on:
   pull_request:
     branches:
     - reorganize
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
+    
 defaults:
   run:
     shell: pwsh
@@ -34,19 +28,19 @@ jobs:
         git config --global core.autocrlf input
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         lfs: true
         submodules: recursive
         
     - name: Install .NET SDK
-      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         global-json: global.json
         
     # NOTE: manual package caching
     - name: Cache restored NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
@@ -65,7 +59,7 @@ jobs:
       run: dotnet docfx docfx/docfx.json
 
     - name: Upload binlogs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
         name: docs-binlogs
@@ -73,7 +67,7 @@ jobs:
         retention-days: 7
         
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       with:
         # Upload entire repository
         path: 'docfx/_site'
@@ -81,6 +75,13 @@ jobs:
   publish-docs:
     needs: [build-docs]
     if: ${{ github.event_name == 'push' && github.ref_name == 'reorganize' }}
+    
+    # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+    # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+
     # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
     permissions:
       actions: read

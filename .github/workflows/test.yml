@@ -60,9 +60,23 @@ jobs:
       if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
       shell: bash
       run: echo "$(brew --prefix llvm@20)/bin" >> "$GITHUB_PATH"
+
+      # MacOS 15 images don't ship Mono at all
+    - name: Install Mono from Brew
+      uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      with:
+        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-mono
+        tools: mono
+    - name: Add new Mono to PATH
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      shell: bash
+      run: |
+        echo "$(brew --prefix mono)/bin" >> "$GITHUB_PATH"
+        echo "MONO_GAC_PREFIX=$(brew --prefix mono)" >> "$GITHUB_ENV"
       
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore || fromJSON(inputs.matrix).dotnet.isMono }}
       with:
         lfs: true
@@ -71,13 +85,13 @@ jobs:
     # Note: All of the SDKs we install have to be for the target architecture. Otherwise, we get issues when the default != the target.
     - name: Install global SDK
       if: ${{ ! fromJSON(inputs.matrix).dotnet.needsRestore }}
-      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         architecture: ${{ fromJSON(inputs.matrix).arch }}
-        version: "9.0"
+        version: "10.0"
         
     - name: Cache restored NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
       with:
         path: ${{ env.NUGET_PACKAGES }}
@@ -86,7 +100,7 @@ jobs:
 
     - name: Install restore SDK
       if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
-      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         architecture: ${{ fromJSON(inputs.matrix).arch }}
         global-json: global.json
@@ -100,13 +114,13 @@ jobs:
       run: dotnet restore -noAutoRsp
 
     - name: Download test assets
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: test-assets
         
     - name: Install test target runtime
       if: ${{ fromJSON(inputs.matrix).dotnet.sdk != '' }}
-      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         version: ${{ fromJSON(inputs.matrix).dotnet.sdk }}
         architecture: ${{ fromJSON(inputs.matrix).arch }}
@@ -161,7 +175,7 @@ jobs:
     # TODO: Non-system Mono
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
         name: test-results ${{ fromJSON(inputs.matrix).title }}
@@ -172,7 +186,7 @@ jobs:
           diaglog.*
 
     - name: Upload process dumps
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
         name: test-dumps ${{ fromJSON(inputs.matrix).title }}
