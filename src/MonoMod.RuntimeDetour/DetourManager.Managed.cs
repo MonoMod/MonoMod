@@ -724,7 +724,7 @@ namespace MonoMod.RuntimeDetour
 
             public DetourInfo? DetourInfo;
 
-            public SingleManagedDetourState(IDetour dt) : base(dt)
+            public SingleManagedDetourState(IHook dt) : base(dt)
             {
                 PublicTarget = dt.PublicTarget;
                 InvokeTarget = dt.InvokeTarget;
