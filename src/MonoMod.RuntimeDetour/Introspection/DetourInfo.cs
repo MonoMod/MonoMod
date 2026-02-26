@@ -3,6 +3,8 @@ using System.Reflection;
 
 namespace MonoMod.RuntimeDetour
 {
+    // TODO: next time we take a break, this should be renamed to HookInfo
+
     /// <summary>
     /// An object which represents a detour, without extending its lifetime.
     /// </summary>

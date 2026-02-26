@@ -13,7 +13,7 @@ namespace MonoMod.RuntimeDetour
     /// or the object is disposed. Use <see cref="DetourInfo"/> to get an object which represents the hook without
     /// extending its lifetime.
     /// </remarks>
-    public sealed class NativeHook : INativeDetour, IDisposable
+    public sealed class NativeHook : INativeDetour, IDetour
     {
         // TODO: reference external xmldoc which describes the shape that a delegate can take, both here and for Hook
         #region Constructor overloads

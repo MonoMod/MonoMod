@@ -18,7 +18,7 @@ namespace MonoMod.RuntimeDetour
     /// extending its lifetime.
     /// </remarks>
     [CLSCompliant(false)] // TODO: remove when MM.Utils gets CLS compliance annotations
-    public sealed class ILHook : IILHook, IDisposable
+    public sealed class ILHook : IILHook, IDetour
     {
         private const bool ApplyByDefault = true;
 
