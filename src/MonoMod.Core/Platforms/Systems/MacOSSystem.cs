@@ -600,13 +600,21 @@ namespace MonoMod.Core.Platforms.Systems
                 mmch_jit_hook_config = jitCfg;
             }
 
-            public static new JitMemcpyHelper CreateHelper(IArchitecture arch, string filename)
+            public static new JitMemcpyHelper CreateHelper(IArchitecture arch, string filename, bool deleteAfterLoad = true)
             {
                 // we've now got the file on disk, and we know its name. lets load it
                 var handle = DynDll.OpenLibrary(filename);
                 IntPtr eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed, mmch_jit_memcpy, mmch_jit_hook_config;
                 try
                 {
+                    // once the library's been opened, we can delete it
+                    if (deleteAfterLoad)
+                    {
+                        // note: File.Delete() forwards to `unlink(2)`, which removes the name but lets
+                        // existing fds (such as for the mapping we used to load the file) stay around.
+                        System.IO.File.Delete(filename);
+                    }
+
                     eh_get_exception_ptr = DynDll.GetExport(handle, nameof(eh_get_exception_ptr));
                     eh_managed_to_native = DynDll.GetExport(handle, nameof(eh_managed_to_native));
                     eh_native_to_managed = DynDll.GetExport(handle, nameof(eh_native_to_managed));
