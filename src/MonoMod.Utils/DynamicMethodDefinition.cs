@@ -222,7 +222,7 @@ namespace MonoMod.Utils
                 {
                     return DMDCecilGenerator.Generate(this, context);
                 }
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
                 if (dmdType.Equals("methodbuilder", StringComparison.OrdinalIgnoreCase)
                     || dmdType.Equals("mb", StringComparison.OrdinalIgnoreCase)) {
                     return DMDEmitMethodBuilderGenerator.Generate(this, context);
@@ -246,7 +246,7 @@ namespace MonoMod.Utils
                 return DMDCecilGenerator.Generate(this, context);
 
             if (Debug)
-#if !NETFRAMEWORK
+#if !METHODBUILDER_SUPPORTED
                 return DMDCecilGenerator.Generate(this, context);
 #else
                 return DMDEmitMethodBuilderGenerator.Generate(this, context);

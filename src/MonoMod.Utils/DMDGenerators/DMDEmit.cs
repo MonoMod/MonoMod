@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
 using System.Diagnostics.SymbolStore;
 #endif
 
@@ -37,7 +37,7 @@ namespace MonoMod.Utils
         {
             var def = dmd.Definition ?? throw new InvalidOperationException();
             var dm = _mb as DynamicMethod;
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
             var mb = _mb as MethodBuilder;
             var moduleBuilder = mb?.Module as ModuleBuilder;
             // moduleBuilder.Assembly sometimes avoids the .Assembly override under mysterious circumstances.
@@ -59,7 +59,7 @@ namespace MonoMod.Utils
                     dm.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes)param.Attributes, param.Name);
                 }
             }
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
             if (mb != null) {
                 foreach (var param in def.Parameters) {
                     mb.DefineParameter(param.Index + 1, (System.Reflection.ParameterAttributes) param.Attributes, param.Name);
@@ -71,7 +71,7 @@ namespace MonoMod.Utils
                 var =>
                 {
                     var local = il.DeclareLocal(var.VariableType.ResolveReflection(), var.IsPinned);
-#if NETFRAMEWORK && !CECIL0_9
+#if METHODBUILDER_SUPPORTED && !CECIL0_9
                     if (mb != null && defInfo != null && defInfo.TryGetName(var, out var name)) {
                         local.SetLocalSymInfo(name);
                     }
@@ -98,7 +98,7 @@ namespace MonoMod.Utils
                 }
             }
 
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
             var infoDocCache = mb == null ? null : new Dictionary<Document, ISymbolDocumentWriter>();
 #endif
 
@@ -110,7 +110,7 @@ namespace MonoMod.Utils
                 if (labelMap.TryGetValue(instr, out var label))
                     il.MarkLabel(label);
 
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
                 var instrInfo = defInfo?.GetSequencePoint(instr);
                 if (mb is not null && instrInfo is not null && infoDocCache is not null && moduleBuilder is not null) {
                     if (!infoDocCache.TryGetValue(instrInfo.Document, out var infoDoc)) {
@@ -212,7 +212,7 @@ namespace MonoMod.Utils
                     {
                         var member = mref == def ? _mb : mref.ResolveReflection();
                         operand = member;
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
                         if (mb != null && member != null) {
                             // See DMDGenerator.cs for the explanation of this forced .?
                             var module = member.Module;
@@ -223,7 +223,7 @@ namespace MonoMod.Utils
                                 // while (member.DeclaringType != null)
                                 //     member = member.DeclaringType;
                                 assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, new object[] {
-                                    asm.GetName().Name
+                                    asm.GetName().Name!
                                 }));
                                 accessChecksIgnored.Add(asm);
                             }
@@ -239,7 +239,7 @@ namespace MonoMod.Utils
                             _EmitCallSite(dm, il, _ReflOpCodes[opcode.Value], csite);
                             continue;
                         }
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
                         if (mb is not null) {
                             operand = csite.ResolveReflection(mb.Module);
                         } else
@@ -249,7 +249,7 @@ namespace MonoMod.Utils
                         }
                     }
 
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
                     if (mb != null && operand is MethodBase called && called.DeclaringType == null) {
                         // "Global" methods (f.e. DynamicMethods) cannot be tokenized.
                         if (opcode == Mono.Cecil.Cil.OpCodes.Call) {

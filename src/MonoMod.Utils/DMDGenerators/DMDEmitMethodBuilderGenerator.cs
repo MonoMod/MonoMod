@@ -1,4 +1,4 @@
-﻿#if NETFRAMEWORK
+﻿#if METHODBUILDER_SUPPORTED
 using MonoMod.Logs;
 using System;
 using System.Collections.Generic;
@@ -18,21 +18,35 @@ namespace MonoMod.Utils
         {
             var typeBuilder = context as TypeBuilder;
             var method = GenerateMethodBuilder(dmd, typeBuilder);
-            typeBuilder = (TypeBuilder)method.DeclaringType;
+            typeBuilder = (TypeBuilder)method.DeclaringType!;
             var type = typeBuilder.CreateType();
             var dumpPath = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
             if (!string.IsNullOrEmpty(dumpPath))
             {
+#if NETFRAMEWORK
                 var path = method.Module.FullyQualifiedName;
                 var name = Path.GetFileName(path);
                 var dir = Path.GetDirectoryName(path);
+#else
+                var dir = Path.GetFullPath(dumpPath);
+                var path = Path.Combine(dir, method.Module.ScopeName);
+#endif
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 if (File.Exists(path))
                     File.Delete(path);
+
+#if NETFRAMEWORK
                 ((AssemblyBuilder)typeBuilder.Assembly).Save(name);
+#elif NET9_0_OR_GREATER
+                using var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite);
+                ((PersistedAssemblyBuilder)typeBuilder.Assembly).Save(stream);
+                stream.Seek(0, SeekOrigin.Begin);
+                type = ReflectionHelper.Load(stream).GetType(typeBuilder.FullName!, true, false)!;
+#endif
             }
-            return type.GetMethod(method.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+            return type.GetMethod(method.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
+                ?? throw new InvalidOperationException("Could not find generated method");
         }
 
         public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder)
@@ -43,7 +57,9 @@ namespace MonoMod.Utils
 
             if (typeBuilder == null)
             {
+                AssemblyBuilder ab;
                 var dumpDir = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
+#if NETFRAMEWORK
                 if (string.IsNullOrEmpty(dumpDir))
                 {
                     dumpDir = null;
@@ -53,7 +69,7 @@ namespace MonoMod.Utils
                     dumpDir = Path.GetFullPath(dumpDir);
                 }
                 var collect = string.IsNullOrEmpty(dumpDir) && _MBCanRunAndCollect;
-                var ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                ab = AppDomain.CurrentDomain.DefineDynamicAssembly(
                     new AssemblyName()
                     {
                         Name = dmd.GetDumpName("MethodBuilder")
@@ -61,6 +77,28 @@ namespace MonoMod.Utils
                     collect ? (AssemblyBuilderAccess)9 : AssemblyBuilderAccess.RunAndSave,
                     dumpDir
                 );
+#elif NET9_0_OR_GREATER
+                if (!string.IsNullOrEmpty(dumpDir))
+                {
+                    ab = new PersistedAssemblyBuilder(
+                        new AssemblyName()
+                        {
+                            Name = dmd.GetDumpName("MethodBuilder")
+                        },
+                        typeof(object).Assembly
+                    );
+                }
+                else
+                {
+                    ab = AssemblyBuilder.DefineDynamicAssembly(
+                        new AssemblyName()
+                        {
+                            Name = dmd.GetDumpName("MethodBuilder")
+                        },
+                        _MBCanRunAndCollect ? (AssemblyBuilderAccess)9 : AssemblyBuilderAccess.Run
+                    );
+                }
+#endif
 
                 ab.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_UnverifiableCodeAttribute, []));
 
@@ -71,10 +109,14 @@ namespace MonoMod.Utils
                     ]));
                 }
 
+#if NETFRAMEWORK
                 // Note: Debugging can fail on mono if Mono.CompilerServices.SymbolWriter.dll cannot be found,
                 // or if Mono.CompilerServices.SymbolWriter.SymbolWriterImpl can't be found inside of that.
                 // https://github.com/mono/mono/blob/f879e35e3ed7496d819bd766deb8be6992d068ed/mcs/class/corlib/System.Reflection.Emit/ModuleBuilder.cs#L146
                 var module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll", $"{ab.GetName().Name}.dll", dmd.Debug);
+#else
+                var module = ab.DefineDynamicModule($"{ab.GetName().Name}.dll");
+#endif
                 typeBuilder = module.DefineType(
                     DebugFormatter.Format($"DMD<{orig}>?{dmd.GetHashCode()}"),
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class

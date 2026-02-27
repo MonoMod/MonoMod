@@ -104,6 +104,11 @@
         <CecilVersion Condition="'$(CecilVersion)' == ''">$(NewCecilVersion)</CecilVersion>
         <NETShimVersion>4.*</NETShimVersion>
       </PropertyGroup>
+      
+      <!-- MethodBuilder-->
+      <PropertyGroup Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(TargetFrameworkVersion)', '9.0'))">
+        <DefineConstants>METHODBUILDER_SUPPORTED;$(DefineConstants)</DefineConstants>
+      </PropertyGroup>
 
       <ItemGroup>
         <!-- For Core 2.1, we need this to make sure it doesn't include the shim assemblies in the package -->
@@ -130,7 +135,7 @@
       <!-- .NET Framework 4.0+ -->
       <PropertyGroup>
         <DefineConstants>NETFRAMEWORK4;$(DefineConstants)</DefineConstants>
-        <DefineConstants>CECIL0_11;$(DefineConstants)</DefineConstants>
+        <DefineConstants>CECIL0_11;METHODBUILDER_SUPPORTED;$(DefineConstants)</DefineConstants>
         <CecilVersion Condition="'$(CecilVersion)' == ''">$(NewCecilVersion)</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
@@ -142,7 +147,7 @@
       <!-- .NET Framework 3.5 -->
       <PropertyGroup>
         <DefineConstants>NETFRAMEWORK3;$(DefineConstants)</DefineConstants>
-        <DefineConstants>CECIL0_10;$(DefineConstants)</DefineConstants>
+        <DefineConstants>CECIL0_10;METHODBUILDER_SUPPORTED;$(DefineConstants)</DefineConstants>
         <CecilVersion Condition="'$(CecilVersion)' == ''">$(OldCecilVersion)</CecilVersion>
       </PropertyGroup>
       <ItemGroup>
