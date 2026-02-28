@@ -1,4 +1,7 @@
-﻿using Mono.Cecil;
+﻿#if NETFRAMEWORK || NET9_0_OR_GREATER
+#define METHODBUILDER_SUPPORTED
+#endif
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Utils.Cil;
 using System;

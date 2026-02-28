@@ -1,4 +1,4 @@
-﻿#if METHODBUILDER_SUPPORTED
+﻿#if NETFRAMEWORK || NET9_0_OR_GREATER
 using MonoMod.Logs;
 using System;
 using System.Collections.Generic;
