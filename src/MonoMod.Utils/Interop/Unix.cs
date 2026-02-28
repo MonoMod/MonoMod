@@ -12,7 +12,6 @@ namespace MonoMod.Utils.Interop
     {
         // If this dllimport decl isn't enough to get the runtime to load the right thing, I give up
         public const string LibC = "libc";
-        public const string DL1 = "dl";
         public const string DL2 = "libdl.so.2";
 
         // We have to do these shenanigans, because we *need* SetLastError; this can set errno.
@@ -43,14 +42,14 @@ namespace MonoMod.Utils.Interop
             RTLD_GLOBAL = 0x0100,
         }
 
-        [DllImport(DL1, EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr DL1dlopen(byte* filename, DlopenFlags flags);
-        [DllImport(DL1, EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int DL1dlclose(IntPtr handle);
-        [DllImport(DL1, EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr DL1dlsym(IntPtr handle, byte* symbol);
-        [DllImport(DL1, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
-        private static extern IntPtr DL1dlerror();
+        [DllImport(LibC, EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl)]
+        private static extern IntPtr LibCdlopen(byte* filename, DlopenFlags flags);
+        [DllImport(LibC, EntryPoint = "dlclose", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int LibCdlclose(IntPtr handle);
+        [DllImport(LibC, EntryPoint = "dlsym", CallingConvention = CallingConvention.Cdecl)]
+        private static extern IntPtr LibCdlsym(IntPtr handle, byte* symbol);
+        [DllImport(LibC, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
+        private static extern IntPtr LibCdlerror();
 
 
         [DllImport(DL2, EntryPoint = "dlopen", CallingConvention = CallingConvention.Cdecl)]
@@ -82,33 +81,52 @@ namespace MonoMod.Utils.Interop
             ArrayPool<byte>.Shared.Return(arr);
         }
 
-        private static int dlVersion = 1;
+        private enum LibDlType
+        {
+            LibC,
+            LibDl2,
+        }
+
+        private static LibDlType? currentLibDlType = DetermineLibDlType();
+
+        private static LibDlType DetermineLibDlType()
+        {
+            // POSIX doesn't specify where the `dlfcn.h` symbols are located at runtime
+            // In most cases (MacOS, musl, glibc 2.34+) they live in libc, and its path is already special-cased by mono/coreclr
+            // Before version 2.34, glibc had a separate libdl.so.2 library
+
+            try
+            {
+                LibCdlerror();
+                return LibDlType.LibC;
+            }
+            catch (DllNotFoundException) { }
+            catch (EntryPointNotFoundException) { }
+
+            try
+            {
+                DL2dlerror();
+                return LibDlType.LibDl2;
+            }
+            catch (DllNotFoundException)
+            {
+            }
+
+            throw new PlatformNotSupportedException("Could not find the library containing dynamic linker functions");
+        }
 
         public static IntPtr DlOpen(string? filename, DlopenFlags flags)
         {
             var arr = MarshalToUtf8(filename);
             try
             {
-                while (true)
+                fixed (byte* pStr = arr)
                 {
-                    try
+                    switch (currentLibDlType)
                     {
-                        fixed (byte* pStr = arr)
-                        {
-                            switch (dlVersion)
-                            {
-                                case 1:
-                                    return DL2dlopen(pStr, flags);
-
-                                case 0:
-                                default:
-                                    return DL1dlopen(pStr, flags);
-                            }
-                        }
-                    }
-                    catch (DllNotFoundException) when (dlVersion > 0)
-                    {
-                        dlVersion--;
+                        case LibDlType.LibC: return LibCdlopen(pStr, flags);
+                        case LibDlType.LibDl2: return DL2dlopen(pStr, flags);
+                        default: throw new InvalidOperationException();
                     }
                 }
             }
@@ -120,24 +138,11 @@ namespace MonoMod.Utils.Interop
 
         public static bool DlClose(IntPtr handle)
         {
-            while (true)
+            switch (currentLibDlType)
             {
-                try
-                {
-                    switch (dlVersion)
-                    {
-                        case 1:
-                            return DL2dlclose(handle) == 0;
-
-                        case 0:
-                        default:
-                            return DL1dlclose(handle) == 0;
-                    }
-                }
-                catch (DllNotFoundException) when (dlVersion > 0)
-                {
-                    dlVersion--;
-                }
+                case LibDlType.LibC: return LibCdlclose(handle) == 0;
+                case LibDlType.LibDl2: return DL2dlclose(handle) == 0;
+                default: throw new InvalidOperationException();
             }
         }
 
@@ -146,26 +151,13 @@ namespace MonoMod.Utils.Interop
             var arr = MarshalToUtf8(symbol);
             try
             {
-                while (true)
+                fixed (byte* pStr = arr)
                 {
-                    try
+                    switch (currentLibDlType)
                     {
-                        fixed (byte* pStr = arr)
-                        {
-                            switch (dlVersion)
-                            {
-                                case 1:
-                                    return DL2dlsym(handle, pStr);
-
-                                case 0:
-                                default:
-                                    return DL1dlsym(handle, pStr);
-                            }
-                        }
-                    }
-                    catch (DllNotFoundException) when (dlVersion > 0)
-                    {
-                        dlVersion--;
+                        case LibDlType.LibC: return LibCdlsym(handle, pStr);
+                        case LibDlType.LibDl2: return DL2dlsym(handle, pStr);
+                        default: throw new InvalidOperationException();
                     }
                 }
             }
@@ -177,26 +169,12 @@ namespace MonoMod.Utils.Interop
 
         public static IntPtr DlError()
         {
-            while (true)
+            switch (currentLibDlType)
             {
-                try
-                {
-                    switch (dlVersion)
-                    {
-                        case 1:
-                            return DL2dlerror();
-
-                        case 0:
-                        default:
-                            return DL1dlerror();
-                    }
-                }
-                catch (DllNotFoundException) when (dlVersion > 0)
-                {
-                    dlVersion--;
-                }
+                case LibDlType.LibC: return LibCdlerror();
+                case LibDlType.LibDl2: return DL2dlerror();
+                default: throw new InvalidOperationException();
             }
         }
-
     }
 }
