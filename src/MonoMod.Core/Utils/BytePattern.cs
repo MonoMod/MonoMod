@@ -1,6 +1,7 @@
 ﻿using MonoMod.Utils;
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core.Utils
 {

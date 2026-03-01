@@ -8,12 +8,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -44,30 +38,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -84,11 +65,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -96,8 +80,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -105,9 +88,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -115,8 +97,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -126,12 +107,6 @@
         "requested": "[1.2.39, )",
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
-      },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
       },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
@@ -172,30 +147,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -217,11 +179,14 @@
         "resolved": "0.10.4",
         "contentHash": "BHukPf7zfXu+akTcFEAWvU4x3hVMMIDC+ihGAl/+8OozrY0f/ajrpuaSUf2Q3Xvgsge5NryvOkjtyhV5TNXoSg=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -229,8 +194,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.10.4, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -238,9 +202,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.10.4, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -248,8 +211,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.10.4, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -259,12 +221,6 @@
         "requested": "[1.2.39, )",
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
-      },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
       },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
@@ -305,31 +261,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0",
-          "System.ValueTuple": "4.5.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -351,16 +293,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "System.ValueTuple": {
+      "MonoMod.Backports.Shims": {
         "type": "Transitive",
-        "resolved": "4.5.0",
-        "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
+        "resolved": "2.0.0-alpha.dev"
       },
-      "iced": {
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -368,8 +308,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -377,9 +316,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -387,8 +325,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -398,12 +335,6 @@
         "requested": "[1.2.39, )",
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
-      },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
       },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
@@ -435,20 +366,11 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0",
-          "System.Reflection.Emit.ILGeneration": "4.7.0",
-          "System.Reflection.Emit.Lightweight": "4.7.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NETStandard.Library": {
         "type": "Direct",
@@ -464,12 +386,6 @@
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "System.Reflection.Emit.ILGeneration": {
         "type": "Direct",
@@ -506,11 +422,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
         }
@@ -520,8 +439,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
@@ -531,9 +449,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
@@ -543,8 +460,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
         }
@@ -556,12 +472,6 @@
         "requested": "[1.2.39, )",
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
-      },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
       },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
@@ -593,30 +503,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "System.Reflection.Emit.ILGeneration": {
         "type": "Direct",
@@ -645,11 +542,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -657,8 +557,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -666,9 +565,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -676,8 +574,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -688,12 +585,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -724,30 +615,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -764,11 +642,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -776,8 +657,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -785,9 +665,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -795,8 +674,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -807,12 +685,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -843,30 +715,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -883,11 +742,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -895,8 +757,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -904,9 +765,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -914,8 +774,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -926,12 +785,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -962,30 +815,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -1002,11 +842,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -1014,8 +857,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1023,9 +865,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1033,8 +874,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -1045,12 +885,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -1081,30 +915,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -1121,11 +942,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -1133,8 +957,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1142,9 +965,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1152,8 +974,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -1164,12 +985,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -1200,30 +1015,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -1240,11 +1042,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -1252,8 +1057,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1261,9 +1065,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1271,8 +1074,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     },
@@ -1283,12 +1085,6 @@
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
-      "IsExternalInit": {
-        "type": "Direct",
-        "requested": "[1.0.3, )",
-        "resolved": "1.0.3",
-        "contentHash": "jcdN7vpDwjnV7U9KGCv/oNIWHJ/RIbyrpVsLQL2qbj6Cbi5U3iafKsaMn1rP+qCbkLbkB0v6oAwbVEkqrUnlyg=="
-      },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
         "requested": "[3.3.4, )",
@@ -1319,30 +1115,17 @@
       },
       "MonoMod.Backports": {
         "type": "Direct",
-        "requested": "[1.1.2, )",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
+        "requested": "[2.0.0-alpha.dev, )",
+        "resolved": "2.0.0-alpha.dev",
         "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0"
+          "MonoMod.Backports.Shims": "2.0.0-alpha.dev"
         }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
       },
       "NuGetizer": {
         "type": "Direct",
         "requested": "[1.2.3, )",
         "resolved": "1.2.3",
         "contentHash": "nH3NijAF75DIT92ggw5fn92L5o+pvkqW4M2qS4WF5vxiiUSV3s80gI+vyT2WR05R2I7CJO3DCvG+zek85XBgqw=="
-      },
-      "Nullable": {
-        "type": "Direct",
-        "requested": "[1.3.1, )",
-        "resolved": "1.3.1",
-        "contentHash": "Mk4ZVDfAORTjvckQprCSehi1XgOAAlk5ez06Va/acRYEloN9t6d6zpzJRn5MEq7+RnagyFIq9r+kbWzLGd+6QA=="
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
@@ -1359,11 +1142,14 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "iced": {
+      "MonoMod.Backports.Shims": {
+        "type": "Transitive",
+        "resolved": "2.0.0-alpha.dev"
+      },
+      "Iced": {
         "type": "Project",
         "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       },
       "monomod.core": {
@@ -1371,8 +1157,7 @@
         "dependencies": {
           "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1380,9 +1165,8 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )",
           "MonoMod.Core": "[1.3.4-alpha.dev, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.12-alpha.dev, )"
         }
       },
@@ -1390,8 +1174,7 @@
         "type": "Project",
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
+          "MonoMod.Backports": "[2.0.0-alpha.dev, )"
         }
       }
     }

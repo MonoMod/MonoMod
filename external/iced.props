@@ -6,8 +6,6 @@
 
     <MMReferenceBackports>true</MMReferenceBackports>
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
-    <MMReferenceILHelpers>true</MMReferenceILHelpers>
-    <MMIncludeUnsafeAlias>true</MMIncludeUnsafeAlias>
     <MMReferenceUtils>false</MMReferenceUtils>
     <MMMethodImplAlias>true</MMMethodImplAlias>
     <!--<MMUseSourceGen>false</MMUseSourceGen>-->

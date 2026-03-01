@@ -40,7 +40,7 @@
 
   <!-- Backports reference -->
   <ItemGroup Condition="'$(MMReferenceBackports)' == 'true'">
-    <PackageReference Include="MonoMod.Backports" Version="1.1.2" /> <!-- TODO: Upgrade to 2.0.0 when ready for that break -->
+    <PackageReference Include="MonoMod.Backports" Version="2.0.0-alpha.dev" />
     <!-- Shared source files -->
     <Compile Include="$(MMCommonPath)Shared\**\*.cs" Condition="'$(MMSharedSourceFiles)' == 'true'">
       <Link>Shared/%(RecursiveDir)%(Filename)%(Extension)</Link>
@@ -67,16 +67,6 @@
     <CompilerVisibleProperty Include="AssemblyName" />
     <CompilerVisibleProperty Include="Version" />
     <CompilerVisibleProperty Include="RootNamespace" />
-  </ItemGroup>
-  
-  <!-- ILHelpers reference -->
-  <ItemGroup Condition="'$(MMReferenceILHelpers)' == 'true'">
-    <Compile Include="$(MMCommonPath)UnsafeAlias.cs" Condition="'$(MMIncludeUnsafeAlias)' == 'true'">
-      <Link>Shared/%(Filename)%(Extension)</Link>
-    </Compile>
-    <PackageReference Include="MonoMod.ILHelpers" Version="1.1.0">
-      <Aliases Condition="'$(MMIncludeUnsafeAlias)' == 'true'">ilhelpers</Aliases>
-    </PackageReference>
   </ItemGroup>
   
   <!-- MonoMod.Utils reference -->

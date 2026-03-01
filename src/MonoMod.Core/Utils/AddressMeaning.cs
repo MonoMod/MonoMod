@@ -1,5 +1,6 @@
 ﻿using MonoMod.Logs;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core.Utils
 {

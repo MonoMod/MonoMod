@@ -6,10 +6,8 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     
     <MMSharedSourceFiles>false</MMSharedSourceFiles>
-    <MMIncludeUnsafeAlias>false</MMIncludeUnsafeAlias>
     <MMReferenceUtils>false</MMReferenceUtils>
     <MMReferenceBackports>false</MMReferenceBackports>
-    <MMReferenceILHelpers>false</MMReferenceILHelpers>
     <MMUseSourceGen>false</MMUseSourceGen>
   
     <IsPackable>false</IsPackable>
