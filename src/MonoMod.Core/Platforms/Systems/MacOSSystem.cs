@@ -217,7 +217,7 @@ namespace MonoMod.Core.Platforms.Systems
 
             var selfTask = mach_task_self();
 
-            if (allocMaxProt.Has(vm_prot_t.Write))
+            if (allocMaxProt.Has(vm_prot_t.Write) || PlatformDetection.Architecture != ArchitectureKind.Arm64)
             {
                 kr = mach_vm_protect(selfTask, pageAddress, PageSize, false, allocProt | vm_prot_t.Write);
                 if (!kr)
