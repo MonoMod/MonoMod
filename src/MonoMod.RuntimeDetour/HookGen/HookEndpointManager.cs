@@ -37,6 +37,11 @@ namespace MonoMod.RuntimeDetour.HookGen
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static void Add(MethodBase method, Delegate hookDelegate)
         {
+            Internal_Add(method, hookDelegate);
+        }
+
+        internal static void Internal_Add(MethodBase method, Delegate hookDelegate)
+        {
             if (!Hooks.TryAdd((method, hookDelegate), new Hook(method, hookDelegate)))
                 throw new ArgumentException(HookAlreadyAppliedMsg);
         }
@@ -58,6 +63,11 @@ namespace MonoMod.RuntimeDetour.HookGen
         [Obsolete(ObsoleteMessage, true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static void Remove(MethodBase method, Delegate hookDelegate)
+        {
+            Internal_Remove(method, hookDelegate);
+        }
+
+        internal static void Internal_Remove(MethodBase method, Delegate hookDelegate)
         {
             if (Hooks.TryRemove((method, hookDelegate), out var hook))
             {
@@ -83,6 +93,11 @@ namespace MonoMod.RuntimeDetour.HookGen
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static void Modify(MethodBase method, Delegate callback)
         {
+            Internal_Modify(method, callback);
+        }
+
+        internal static void Internal_Modify(MethodBase method, Delegate callback)
+        {
             if (!ILHooks.TryAdd((method, callback), new ILHook(method, (ILContext.Manipulator)callback)))
                 throw new ArgumentException(HookAlreadyAppliedMsg);
         }
@@ -104,6 +119,11 @@ namespace MonoMod.RuntimeDetour.HookGen
         [Obsolete(ObsoleteMessage, true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static void Unmodify(MethodBase method, Delegate callback)
+        {
+            Internal_Unmodify(method, callback);
+        }
+
+        internal static void Internal_Unmodify(MethodBase method, Delegate callback)
         {
             if (ILHooks.TryRemove((method, callback), out var hook))
             {

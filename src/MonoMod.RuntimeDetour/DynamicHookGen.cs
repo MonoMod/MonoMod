@@ -133,16 +133,16 @@ namespace MonoMod.RuntimeDetour
                 {
                     case ActionType.Add:
                         if (hookType == HookType.IL)
-                            HookEndpointManager.Modify(method, target);
+                            HookEndpointManager.Internal_Modify(method, target);
                         else
-                            HookEndpointManager.Add(method, target);
+                            HookEndpointManager.Internal_Add(method, target);
                         break;
 
                     case ActionType.Remove:
                         if (hookType == HookType.IL)
-                            HookEndpointManager.Unmodify(method, target);
+                            HookEndpointManager.Internal_Unmodify(method, target);
                         else
-                            HookEndpointManager.Remove(method, target);
+                            HookEndpointManager.Internal_Remove(method, target);
                         break;
                 }
             }
