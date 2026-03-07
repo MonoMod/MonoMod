@@ -17,10 +17,10 @@ namespace MonoMod.RuntimeDetour
     public sealed class DynamicHookGen : DynamicObject
     {
 
-        private DynamicHookGen Parent;
-        private string Name;
-        private Type Type;
-        private string Path
+        private DynamicHookGen? Parent;
+        private string? Name;
+        private Type? Type;
+        private string? Path
         {
             get
             {
@@ -28,7 +28,7 @@ namespace MonoMod.RuntimeDetour
                     return Name;
 
                 List<string> list = new List<string>();
-                for (DynamicHookGen node = this; node?.Name != null; node = node.Parent)
+                for (DynamicHookGen? node = this; node?.Name != null; node = node.Parent)
                 {
                     list.Add(node.Name);
                 }
@@ -84,12 +84,16 @@ namespace MonoMod.RuntimeDetour
 
         private void Apply()
         {
-            string typeName = Parent.Path;
-            Type type = Parent.Type ?? ReflectionHelper.GetType(typeName);
+            if (Parent is null)
+                throw new InvalidOperationException("This is probably a root node!");
+            string? typeName = Parent.Path;
+            if (typeName is null)
+                throw new ArgumentException($"Couldn't find type of parent {Parent.Name}");
+            Type? type = Parent.Type ?? ReflectionHelper.GetType(typeName);
             if (type == null)
                 throw new ArgumentException($"Couldn't find type {typeName}");
 
-            MethodBase method = null;
+            MethodBase? method = null;
             // TODO: Handle overloads.
             if (Name == "ctor")
                 method = type.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).FirstOrDefault();
@@ -106,7 +110,9 @@ namespace MonoMod.RuntimeDetour
 
                 if (hookType == HookType.OnOrIL)
                 {
-                    MethodInfo invoke = target.GetType().GetMethod("Invoke");
+                    MethodInfo? invoke = target.GetType().GetMethod("Invoke");
+                    if (invoke == null)
+                        throw new ArgumentException("Invalid delegate type for hook target.");
                     ParameterInfo[] args = invoke.GetParameters();
 
                     if (invoke.ReturnType == typeof(void) &&
@@ -144,8 +150,10 @@ namespace MonoMod.RuntimeDetour
             Actions.Clear();
         }
 
-        public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
+        public override bool TryInvoke(InvokeBinder binder, object?[]? args, out object? result)
         {
+            if (args is null)
+                throw new ArgumentNullException("Expected types.");
             if (args.Length != 1 ||
                 !(args[0] is Type type))
                 throw new ArgumentException("Expected type.");
@@ -160,7 +168,7 @@ namespace MonoMod.RuntimeDetour
             return true;
         }
 
-        public override bool TrySetMember(SetMemberBinder binder, object value)
+        public override bool TrySetMember(SetMemberBinder binder, object? value)
         {
             if (!(value is DynamicHookGen child))
                 throw new ArgumentException("Incompatible dynamic hooks type. Did you use += / -= properly?");
