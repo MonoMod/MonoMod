@@ -14,14 +14,21 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             this.system = system;
 
-            // the only place I could find the actual version number of 4.5 (without just testing myself on a Win7 VM) is here:
-            // https://stackoverflow.com/a/11512846
-            if (PlatformDetection.Architecture == ArchitectureKind.x86_64 &&
-                (PlatformDetection.RuntimeVersion.Revision >= 17379 ||
-                PlatformDetection.RuntimeVersion.Minor >= 5) &&
-                system.DefaultAbi is { } abi)
+            if (system.DefaultAbi is { } abi)
             {
-                AbiCore = AbiForCoreFx45X64(abi);
+                // the only place I could find the actual version number of 4.5 (without just testing myself on a Win7 VM) is here:
+                // https://stackoverflow.com/a/11512846
+                if (PlatformDetection.Architecture == ArchitectureKind.x86_64 &&
+                    (PlatformDetection.RuntimeVersion.Revision >= 17379 ||
+                    PlatformDetection.RuntimeVersion.Minor >= 5))
+                {
+                    AbiCore = AbiForCoreFx45X64(abi);
+                }
+
+                if (PlatformDetection.Architecture == ArchitectureKind.Arm64)
+                {
+                    AbiCore = AbiForCoreFx45ARM64(abi);
+                }
             }
         }
 
