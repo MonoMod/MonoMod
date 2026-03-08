@@ -41,7 +41,21 @@ internal sealed record OS : Enableable
             Arch = [
                 new() { RidName = "x86", UnityName = "win32" },
                 new() { RidName = "x64", UnityName = "win64", IsRunnerArch = true },
-                new() { RidName = "arm64", UnityName = "win_arm64", Enabled = false }, // .NET Framework supports ARM64, but GitHub doesn't provide a runner for it
+            ]
+        },
+        new()
+        {
+            Name = "Windows 11 ARM64",
+            Runner = "windows-11-arm",
+            HasFramework = true,
+            RidName = "win",
+            UnityDllName = "mono-2.0-bdwgc",
+            DllSuffix = ".dll",
+
+            Arch = [
+                new() { RidName = "x86", UnityName = "win32" },
+                new() { RidName = "x64", UnityName = "win64" },
+                new() { RidName = "arm64", UnityName = "win_arm64", IsRunnerArch = true },
             ]
         },
         new()
@@ -57,7 +71,6 @@ internal sealed record OS : Enableable
 
             Arch = [
                 new() { RidName = "x64", UnityName = "linux64", IsRunnerArch = true },
-                new() { RidName = "arm64", UnityName = null, Enabled = false }, // Linux supports ARM64, but 1. we don't, and 2. Actions doesn't
             ]
         },
         new()
@@ -73,7 +86,6 @@ internal sealed record OS : Enableable
 
             Arch = [
                 new() { RidName = "x64", UnityName = "linux64", IsRunnerArch = true },
-                new() { RidName = "arm64", UnityName = null, Enabled = false }, // Linux supports ARM64, but 1. we don't, and 2. Actions doesn't
             ]
         },
         new()
