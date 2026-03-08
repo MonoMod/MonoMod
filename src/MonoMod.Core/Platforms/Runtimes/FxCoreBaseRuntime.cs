@@ -108,7 +108,6 @@ namespace MonoMod.Core.Platforms.Runtimes
             return baseAbi with
             {
                 // note: ARM64 uses a dedicated register for the return buffer
-                // TODO: this is wrong for Windows, which passes the return buffer after the this pointer as in AMD64.
                 ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.GenericContext, SpecialArgumentKind.UserArguments },
             };
         }

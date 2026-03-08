@@ -66,6 +66,20 @@ namespace MonoMod.Core.Platforms.Systems
                     ClassifyX86,
                     ReturnsReturnBuffer: true);
             }
+            else if (PlatformDetection.Architecture is ArchitectureKind.Arm64)
+            {
+                // note: this is just a copy of the SysV Arm64 ABI
+                DefaultAbi = new Abi(
+                    new[]
+                    {
+                        //SpecialArgumentKind.ReturnBuffer, // ARM64 passes the return buffer in a dedicated register
+                        SpecialArgumentKind.ThisPointer,
+                        SpecialArgumentKind.UserArguments
+                    },
+                    SystemVABI.ClassifyARM64,
+                    false
+                );
+            }
         }
 
         // if the provided backup isn't large enough, the data isn't backed up
