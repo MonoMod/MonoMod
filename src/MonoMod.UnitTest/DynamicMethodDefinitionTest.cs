@@ -285,5 +285,40 @@ namespace MonoMod.UnitTest
             Assert.Equal(newVarDef, genClone.Definition.Body.Instructions[1].Operand);
             Assert.Equal(newVarDef, genClone.Definition.Body.Instructions[2].Operand);
         }
+#if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
+        [Fact]
+        public void TestInterfaceDefault()
+        {
+            IDefaultInterfaceMethodTarget target = new DefaultInterfaceMethodTarget();
+
+            Assert.Equal(11, target.AddTen(1));
+
+            MethodInfo dynamicDetour;
+            using (var dmd = new DynamicMethodDefinition(typeof(DynamicMethodDefinitionTest).GetMethod(nameof(DefaultInterfaceMethod_Detour), BindingFlags.Static | BindingFlags.NonPublic)))
+            {
+                dynamicDetour = dmd.Generate();
+            }
+
+            using (var h = new Hook(typeof(IDefaultInterfaceMethodTarget).GetMethod(nameof(IDefaultInterfaceMethodTarget.AddTen), BindingFlags.Instance | BindingFlags.Public), dynamicDetour))
+            {
+                Assert.Equal(42, target.AddTen(1));
+            }
+
+            Assert.Equal(11, target.AddTen(1));
+        }
+
+        private interface IDefaultInterfaceMethodTarget
+        {
+            int AddTen(int value) => value + 10;
+        }
+        private sealed class DefaultInterfaceMethodTarget : IDefaultInterfaceMethodTarget
+        {
+        }
+
+        private static int DefaultInterfaceMethod_Detour(IDefaultInterfaceMethodTarget self, int value)
+        {
+            return value + 41;
+        }
+#endif
     }
 }
