@@ -69,12 +69,30 @@ namespace MonoMod.Utils
                 MMDbgLog.Trace($"orig: {orig}");
             MMDbgLog.Trace($"mdef: {def.ReturnType?.ToString() ?? "NULL"} {name}({string.Join(",", def.Parameters.Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
 
-            var dm = new DynamicMethod(
-                name,
-                typeof(void), argTypes,
-                orig?.DeclaringType ?? typeof(DynamicMethodDefinition),
-                true // If any random errors pop up, try setting this to false first.
-            );
+            DynamicMethod dm;
+            
+            // The runtime only allows certain types to own DynamicMethods; e.g. Mono does not allow Interface- and Array types as owner
+            // The only case where this currently causes issues is default implementations for Interface Methods (t.IsInterface is true)
+            // Check on Mono: https://github.com/mono/mono/blob/main/mcs/class/corlib/System.Reflection.Emit/DynamicMethod.cs#L116
+            // Check on CoreCLR: https://github.com/dotnet/runtime/blob/a6590591ef32ab28632d9bc14efaf0044be728df/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L271
+            if (orig?.DeclaringType?.UnderlyingSystemType is Type t && (t.HasElementType || t.ContainsGenericParameters || t.IsGenericParameter || t.IsInterface))
+            {
+                dm = new DynamicMethod(
+                    name,
+                    typeof(void), argTypes,
+                    t.Module,
+                    true
+                );
+            } 
+            else 
+            {
+                dm = new DynamicMethod(
+                    name,
+                    typeof(void), argTypes,
+                    orig?.DeclaringType ?? typeof(DynamicMethodDefinition),
+                    true // If any random errors pop up, try setting this to false first.
+                );
+            }
 
             // DynamicMethods don't officially "support" certain return types, such as ByRef types.
             _DynamicMethod_returnType.SetValue(dm, retType);
