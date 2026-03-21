@@ -1,4 +1,4 @@
-﻿extern alias New;
+extern alias New;
 
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
@@ -324,11 +324,11 @@ namespace MonoMod.UnitTest
                 var methodBuilder = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd, typeBuilder);
                 Assert.NotNull(methodBuilder);
                 var methodBuilder2 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd2, typeBuilder);
-                Assert.NotNull(methodBuilder);
+                Assert.NotNull(methodBuilder2);
                 var methodBuilder3 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
-                Assert.NotNull(methodBuilder);
+                Assert.NotNull(methodBuilder3);
                 var methodBuilder4 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
-                Assert.NotNull(methodBuilder);
+                Assert.NotNull(methodBuilder4);
 
                 var generatedType = typeBuilder.CreateType();
                 Assert.NotNull(generatedType);
