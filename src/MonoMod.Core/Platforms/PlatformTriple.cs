@@ -709,11 +709,20 @@ namespace MonoMod.Core.Platforms
                 // Thus, no ABI fixups are needed, return `to` as is.
                 return to;
             }
-            // switch to a dynamic method. toInfo must be refreshed.
-            requiresReturnBufferFixup = hasThis == /*toInfo.IsStatic*/true && hasReturnBuffer && returnBufferIsArgument;
+            // although requiresReturnBufferFixup may be false, we should still
+            // capture ReturnBuffer argument when hasReturnBuffer && returnBufferIsArgument is true,
+            // because there may be a generic context between `this` and the first user argument.
+            // 
+            // optional optimization(?):
+            // if `from` does not have this, argument order is
+            //     from: [ReturnBuffer, GenericContext, UserArguments]
+            //     dmd:  [ReturnBufferArg, _, UserArguments]
+            // , we *can* ignore the return buffer, simply return struct and let runtime handle it.
+            // in other words, only capture return buffer when hasThis.
+            var capturesReturnBuffer = hasReturnBuffer && returnBufferIsArgument && hasThis;
 
-            var returnBufferType = requiresReturnBufferFixup ? returnType.MakeByRefType() : returnType;
-            var newReturnType = requiresReturnBufferFixup && !Abi.ReturnsReturnBuffer ? typeof(void) : returnBufferType;
+            var returnBufferType = capturesReturnBuffer ? returnType.MakeByRefType() : returnType;
+            var newReturnType = capturesReturnBuffer && !Abi.ReturnsReturnBuffer ? typeof(void) : returnBufferType;
 
             var thisPos = -1;
             var returnBufferPos = -1;
@@ -730,7 +739,7 @@ namespace MonoMod.Core.Platforms
                         argumentTypes.Add(from.GetThisParamType());
                         break;
 
-                    case SpecialArgumentKind.ReturnBuffer when requiresReturnBufferFixup:
+                    case SpecialArgumentKind.ReturnBuffer when capturesReturnBuffer:
                         returnBufferPos = argumentTypes.Count;
                         argumentTypes.Add(returnBufferType);
                         break;
@@ -778,7 +787,7 @@ namespace MonoMod.Core.Platforms
 
             Helpers.DAssert(thisPos >= 0 || !hasThis);
             // note: ARM64 (sysv) uses a dedicated register for the return buffer, so we don't record it as an argument
-            Helpers.DAssert(!Abi.ReturnsReturnBuffer || !requiresReturnBufferFixup || returnBufferPos >= 0);
+            Helpers.DAssert(!Abi.ReturnsReturnBuffer || !capturesReturnBuffer || returnBufferPos >= 0);
             Helpers.DAssert(userArgumentsOffset >= 0);
 
             using var dmd = new DynamicMethodDefinition(
@@ -792,7 +801,7 @@ namespace MonoMod.Core.Platforms
             var il = dmd.GetILProcessor();
 
             // load return buffer
-            if (requiresReturnBufferFixup && returnBufferPos >= 0)
+            if (capturesReturnBuffer && returnBufferPos >= 0)
                 il.Emit(OpCodes.Ldarg, returnBufferPos);
 
             // load thisptr
@@ -807,11 +816,11 @@ namespace MonoMod.Core.Platforms
             il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(to));
 
             // store the returned object
-            if (requiresReturnBufferFixup && returnBufferPos >= 0)
+            if (capturesReturnBuffer && returnBufferPos >= 0)
                 il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(returnType));
 
             // if we need to return the pointer, do that
-            if (requiresReturnBufferFixup && Abi.ReturnsReturnBuffer)
+            if (capturesReturnBuffer && Abi.ReturnsReturnBuffer)
                 il.Emit(OpCodes.Ldarg, returnBufferPos);
 
             // then we're done
