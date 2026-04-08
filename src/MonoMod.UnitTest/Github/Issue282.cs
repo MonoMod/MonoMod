@@ -1,13 +1,14 @@
+using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Utils;
-using MonoMod;
-using Mono.Cecil.Cil;
 using System;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest.Github
 {
+    [CollectionDefinition(nameof(Issue282), DisableParallelization = true)]
+    [Collection(nameof(Issue282))]
     public class Issue282 : TestBase
     {
         public Issue282(ITestOutputHelper helper) : base(helper)
