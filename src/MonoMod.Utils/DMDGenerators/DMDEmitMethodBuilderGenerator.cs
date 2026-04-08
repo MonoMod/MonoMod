@@ -194,6 +194,19 @@ namespace MonoMod.Utils
             // Required because the return type modifiers aren't easily accessible via reflection.
             _DMDEmit.ResolveWithModifiers(def.ReturnType, out var returnType, out var returnTypeModReq, out var returnTypeModOpt);
 
+
+#if NETFRAMEWORK
+            // https://github.com/MonoMod/MonoMod/issues/299
+            // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/metadata/sre-encode.c#L290
+            if (PlatformDetection.Runtime == RuntimeKind.Mono)
+            {
+                SanitizeForMono(ref returnTypeModReq);
+                SanitizeForMono(ref returnTypeModOpt);
+                SanitizeForMono(ref argTypesModReq);
+                SanitizeForMono(ref argTypesModOpt);
+            }
+#endif
+
             var mb = typeBuilder.DefineMethod(
                 dmd.Name ?? (orig?.Name ?? def.Name).Replace('.', '_'),
                 System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
@@ -207,7 +220,32 @@ namespace MonoMod.Utils
 
             return mb;
         }
-
+#if NETFRAMEWORK
+        private static void SanitizeForMono(ref Type[] toSanitize)
+        {
+            if (toSanitize.Length == 0)
+            {
+                toSanitize = null!;
+            }
+        }
+        private static void SanitizeForMono(ref Type[][] toSanitize)
+        {
+            if (toSanitize.Length == 0)
+            {
+                toSanitize = null!;
+            } 
+            else
+            {
+                for (var i = 0; i < toSanitize.Length; i++)
+                {
+                    if (toSanitize[i].Length == 0)
+                    {
+                        toSanitize[i] = null!;
+                    }
+                }
+            }
+        }
+#endif
     }
 }
 #endif
