@@ -22,6 +22,7 @@ namespace MonoMod.Utils
 
             Type[] argTypes;
 
+            /* In case of differing parameters, this branch causes https://github.com/MonoMod/MonoMod/issues/282
             if (orig != null)
             {
                 var args = orig.GetParameters();
@@ -41,8 +42,8 @@ namespace MonoMod.Utils
 
             }
             else
-            {
-                var offs = 0;
+            {*/
+            var offs = 0;
                 if (def.HasThis)
                 {
                     offs++;
@@ -58,7 +59,7 @@ namespace MonoMod.Utils
                 }
                 for (var i = 0; i < def.Parameters.Count; i++)
                     argTypes[i + offs] = def.Parameters[i].ParameterType.ResolveReflection();
-            }
+            //}
 
             // we do the (object?) dance using DebugFormatter to avoid internal StringBuilders in the ToString (and GetID) implementations which may cause problems
             var name = dmd.Name ?? DebugFormatter.Format($"DMD<{(object?)orig ?? def.GetID(simple: true)}>");

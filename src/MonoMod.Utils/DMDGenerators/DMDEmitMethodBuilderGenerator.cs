@@ -127,6 +127,7 @@ namespace MonoMod.Utils
             Type[][] argTypesModReq;
             Type[][] argTypesModOpt;
 
+            /* In case of differing parameters, this branch causes https://github.com/MonoMod/MonoMod/issues/282
             if (orig != null)
             {
                 var args = orig.GetParameters();
@@ -157,8 +158,8 @@ namespace MonoMod.Utils
 
             }
             else
-            {
-                var offs = 0;
+            {*/
+            var offs = 0;
                 if (def.HasThis)
                 {
                     offs++;
@@ -189,7 +190,7 @@ namespace MonoMod.Utils
                     argTypesModReq[i + offs] = paramTypeModReq;
                     argTypesModOpt[i + offs] = paramTypeModOpt;
                 }
-            }
+            //}
 
             // Required because the return type modifiers aren't easily accessible via reflection.
             _DMDEmit.ResolveWithModifiers(def.ReturnType, out var returnType, out var returnTypeModReq, out var returnTypeModOpt);
