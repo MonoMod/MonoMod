@@ -127,6 +127,7 @@ namespace MonoMod.Utils
             Type[][] argTypesModReq;
             Type[][] argTypesModOpt;
 
+            /* In case of differing parameters, this branch causes https://github.com/MonoMod/MonoMod/issues/282
             if (orig != null)
             {
                 var args = orig.GetParameters();
@@ -157,39 +158,39 @@ namespace MonoMod.Utils
 
             }
             else
+            {*/
+            var offs = 0;
+            if (def.HasThis)
             {
-                var offs = 0;
-                if (def.HasThis)
-                {
-                    offs++;
-                    argTypes = new Type[def.Parameters.Count + 1];
-                    argTypesModReq = new Type[def.Parameters.Count + 1][];
-                    argTypesModOpt = new Type[def.Parameters.Count + 1][];
-                    var type = def.DeclaringType.ResolveReflection();
-                    if (type.IsValueType)
-                        type = type.MakeByRefType();
-                    argTypes[0] = type;
-                    argTypesModReq[0] = Type.EmptyTypes;
-                    argTypesModOpt[0] = Type.EmptyTypes;
-                }
-                else
-                {
-                    argTypes = new Type[def.Parameters.Count];
-                    argTypesModReq = new Type[def.Parameters.Count][];
-                    argTypesModOpt = new Type[def.Parameters.Count][];
-                }
-
-                var modReq = new List<Type>();
-                var modOpt = new List<Type>();
-
-                for (var i = 0; i < def.Parameters.Count; i++)
-                {
-                    _DMDEmit.ResolveWithModifiers(def.Parameters[i].ParameterType, out var paramType, out var paramTypeModReq, out var paramTypeModOpt, modReq, modOpt);
-                    argTypes[i + offs] = paramType;
-                    argTypesModReq[i + offs] = paramTypeModReq;
-                    argTypesModOpt[i + offs] = paramTypeModOpt;
-                }
+                offs++;
+                argTypes = new Type[def.Parameters.Count + 1];
+                argTypesModReq = new Type[def.Parameters.Count + 1][];
+                argTypesModOpt = new Type[def.Parameters.Count + 1][];
+                var type = def.DeclaringType.ResolveReflection();
+                if (type.IsValueType)
+                    type = type.MakeByRefType();
+                argTypes[0] = type;
+                argTypesModReq[0] = Type.EmptyTypes;
+                argTypesModOpt[0] = Type.EmptyTypes;
             }
+            else
+            {
+                argTypes = new Type[def.Parameters.Count];
+                argTypesModReq = new Type[def.Parameters.Count][];
+                argTypesModOpt = new Type[def.Parameters.Count][];
+            }
+
+            var modReq = new List<Type>();
+            var modOpt = new List<Type>();
+
+            for (var i = 0; i < def.Parameters.Count; i++)
+            {
+                _DMDEmit.ResolveWithModifiers(def.Parameters[i].ParameterType, out var paramType, out var paramTypeModReq, out var paramTypeModOpt, modReq, modOpt);
+                argTypes[i + offs] = paramType;
+                argTypesModReq[i + offs] = paramTypeModReq;
+                argTypesModOpt[i + offs] = paramTypeModOpt;
+            }
+            //}
 
             // Required because the return type modifiers aren't easily accessible via reflection.
             _DMDEmit.ResolveWithModifiers(def.ReturnType, out var returnType, out var returnTypeModReq, out var returnTypeModOpt);
