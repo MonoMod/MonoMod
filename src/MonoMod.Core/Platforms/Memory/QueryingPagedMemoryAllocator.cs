@@ -148,6 +148,14 @@ namespace MonoMod.Core.Platforms.Memory
                     goto Fail;
                 }
 
+                if ((nint)alloc.BaseAddress < request.LowBound || (nint)alloc.BaseAddress >= request.HighBound)
+                {
+                    MMDbgLog.Error($"Got allocation request at {request.Target:X} within range [{request.LowBound:X}, {request.HighBound:X}) but received out-of-bounds allocation {alloc.BaseAddress:X} within page {pageObj.BaseAddr:X} (size: {pageObj.Size}). TryQueryPage gave baseAddr: {baseAddr:X}");
+                    alloc.Dispose();
+                    RegisterForCleanup(pageObj);
+                    goto Fail;
+                }
+
                 // we successfully allocated, return the page allocation
                 allocated = alloc;
                 return true;
