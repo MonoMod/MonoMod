@@ -305,7 +305,11 @@ namespace MonoMod.Core.Platforms.Systems
             public unsafe override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize)
             {
                 MEMORY_BASIC_INFORMATION buffer;
-                if (Interop.Windows.VirtualQuery((void*)pageAddr, &buffer, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) != 0)
+                // Windows contractually guarantees that the zero page is permanently unallocated,
+                // and passing a null pointer to VirtualAlloc will allocate at an arbitrary point in memory
+                // causing allocation at possibly unintended locations, see https://github.com/MonoMod/MonoMod/pull/308
+                var isValidAddress = pageAddr != IntPtr.Zero;
+                if (isValidAddress && Interop.Windows.VirtualQuery((void*)pageAddr, &buffer, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) != 0)
                 {
                     isFree = buffer.State == MEM_FREE;
                     allocBase = isFree ? (nint)buffer.BaseAddress : (nint)buffer.AllocationBase;
