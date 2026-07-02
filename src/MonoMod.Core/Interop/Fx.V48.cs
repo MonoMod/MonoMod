@@ -260,6 +260,15 @@ namespace MonoMod.Core.Interop
                     if (pMD->IsUnboxingStub && pMD->TryAsInstantiated(out var inst))
                         pMD = inst->IMD_GetWrappedMethodDesc();
 
+                    // Instantiating stubs are the per-instantiation thunks emitted for shared generics
+                    // Their own native code is only the context-setup thunk; the shared canonical body lives on the wrapped MethodDesc
+                    if (pMD->IsInstantiatingStub && pMD->TryAsInstantiated(out var istub))
+                        pMD = istub->IMD_GetWrappedMethodDesc();
+
+                    // A non-wrapper instantiated generic method (e.g. Foo<int>) carries its own native code on its own MethodDesc
+                    if (pMD->HasMethodInstantiation && !pMD->IsGenericMethodDefinition && !pMD->IsWrapperStub)
+                        return pMD;
+
                     // this may not actually be necessary for any of the MDs we see, so we'll leave it in its incomplete state
                     // until it actually proves to be an issue
                     if (!pMD->IsTightlyBoundToMethodTable)

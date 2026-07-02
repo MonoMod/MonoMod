@@ -375,7 +375,9 @@ namespace MonoMod.Core.Platforms.Memory
             pageCount++;
         }
 
-        private void RemoveAllocatedPage(Page page)
+        // Returns true only if this exact page object was found in the allocation list and removed;
+        // false if it is absent or a different page now occupies that base address.
+        private bool RemoveAllocatedPage(Page page)
         {
             var list = allocationList.AsSpan();
 
@@ -384,12 +386,18 @@ namespace MonoMod.Core.Platforms.Memory
             if (indexToRemove < 0)
             {
                 // the page doesn't exist, nothing needs to be done
-                return;
+                return false;
+            }
+
+            if (!ReferenceEquals(list[indexToRemove], page))
+            {
+                return false;
             }
 
             // just copy from above the index down
             list.Slice(indexToRemove + 1).CopyTo(list.Slice(indexToRemove));
             pageCount--;
+            return true;
         }
 
         private ReadOnlySpan<Page> AllocList => allocationList.AsSpan().Slice(0, pageCount)!;
@@ -432,6 +440,7 @@ namespace MonoMod.Core.Platforms.Memory
 
             while (pagesToClean.TryTake(out var page))
             {
+                bool removed;
                 lock (sync)
                 {
                     // if the page is no longer empty, don't free
@@ -439,14 +448,20 @@ namespace MonoMod.Core.Platforms.Memory
                         continue;
 
                     // otherwise, remove it from the allocation list, so we can free it outside the lock
-                    RemoveAllocatedPage(page);
+                    removed = RemoveAllocatedPage(page);
+                }
+
+                if (!removed)
+                {
+                    MMDbgLog.Warning($"Skipped freeing stale/duplicate page at 0x{page.BaseAddr:x16} (size 0x{page.Size:x}); would have double-freed");
+                    continue;
                 }
 
                 // now we can actually free the associated memory
                 if (!TryFreePage(page, out var error))
                 {
                     // free failed; log the error and move on
-                    MMDbgLog.Error($"Could not deallocate page! {error}");
+                    MMDbgLog.Error($"Could not deallocate page at 0x{page.BaseAddr:x16} (size 0x{page.Size:x})! {error}");
                 }
             }
 

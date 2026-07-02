@@ -40,6 +40,7 @@ jobs:
     container: ${{ fromJSON(inputs.matrix).container }}
     env:
       LOG_FILE_NAME: testresults.${{ fromJSON(inputs.matrix).os.runner }}.${{ fromJSON(inputs.matrix).dotnet.id != '' && fromJSON(inputs.matrix).dotnet.id || fromJSON(inputs.matrix).dotnet.sdk }}.${{ fromJSON(inputs.matrix).arch }}
+      MONOMOD_LogToFile: ${{ github.workspace }}/monomod-trace.${{ fromJSON(inputs.matrix).dotnet.tfm }}.${{ fromJSON(inputs.matrix).arch }}.log
 
     steps:
     - name: Install coreutils
@@ -184,6 +185,7 @@ jobs:
           TestResults/*.trx
           *.xml
           diaglog.*
+          monomod-trace.*.log
 
     - name: Upload process dumps
       uses: actions/upload-artifact@v6
