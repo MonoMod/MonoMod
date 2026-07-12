@@ -75,6 +75,10 @@ jobs:
         echo "$(brew --prefix mono)/bin" >> "$GITHUB_PATH"
         echo "MONO_GAC_PREFIX=$(brew --prefix mono)" >> "$GITHUB_ENV"
       
+    - name: Install ProcDump
+      if: ${{ runner.os == 'Windows' }}
+      run: choco install procdump -y
+
     - name: Checkout
       uses: actions/checkout@v6
       if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore || fromJSON(inputs.matrix).dotnet.isMono }}
