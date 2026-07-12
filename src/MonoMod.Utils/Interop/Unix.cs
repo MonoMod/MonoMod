@@ -61,26 +61,6 @@ namespace MonoMod.Utils.Interop
         [DllImport(DL2, EntryPoint = "dlerror", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr DL2dlerror();
 
-        internal static byte[]? MarshalToUtf8(string? str)
-        {
-            if (str is null)
-                return null;
-
-            var len = Encoding.UTF8.GetByteCount(str);
-            var arr = ArrayPool<byte>.Shared.Rent(len + 1);
-            arr.AsSpan().Clear();
-            var encoded = Encoding.UTF8.GetBytes(str, 0, str.Length, arr, 0);
-            Helpers.DAssert(len == encoded);
-            return arr;
-        }
-
-        internal static void FreeMarshalledArray(byte[]? arr)
-        {
-            if (arr is null)
-                return;
-            ArrayPool<byte>.Shared.Return(arr);
-        }
-
         private enum LibDlType
         {
             LibC,
@@ -117,7 +97,7 @@ namespace MonoMod.Utils.Interop
 
         public static IntPtr DlOpen(string? filename, DlopenFlags flags)
         {
-            var arr = MarshalToUtf8(filename);
+            var arr = Xplat.MarshalToUtf8(filename);
             try
             {
                 fixed (byte* pStr = arr)
@@ -132,7 +112,7 @@ namespace MonoMod.Utils.Interop
             }
             finally
             {
-                FreeMarshalledArray(arr);
+                Xplat.FreeMarshalledArray(arr);
             }
         }
 
@@ -148,7 +128,7 @@ namespace MonoMod.Utils.Interop
 
         public static IntPtr DlSym(IntPtr handle, string symbol)
         {
-            var arr = MarshalToUtf8(symbol);
+            var arr = Xplat.MarshalToUtf8(symbol);
             try
             {
                 fixed (byte* pStr = arr)
@@ -163,7 +143,7 @@ namespace MonoMod.Utils.Interop
             }
             finally
             {
-                FreeMarshalledArray(arr);
+                Xplat.FreeMarshalledArray(arr);
             }
         }
 
