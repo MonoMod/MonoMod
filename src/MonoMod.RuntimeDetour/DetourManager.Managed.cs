@@ -427,6 +427,49 @@ namespace MonoMod.RuntimeDetour
             internal readonly List<ILHookEntry> noConfigIlhooks = new();
 
             internal int ilhookVersion;
+
+            private ILHookEntry InsertILHook(SingleILHookState ilhook)
+            {
+                if (ilhook.ManagerData is not null)
+                    throw new InvalidOperationException("Trying to add an IL hook which was already added");
+
+                var entry = new ILHookEntry(ilhook);
+                ilhookVersion++;
+                if (entry.Config is { } cfg)
+                {
+                    var listNode = new DepListNode<ILHookEntry>(cfg, entry);
+                    var graphNode = new DepGraphNode<ILHookEntry>(listNode);
+
+                    ilhookGraph.Insert(graphNode);
+                    ilhook.ManagerData = graphNode;
+                }
+                else
+                {
+                    noConfigIlhooks.Add(entry);
+                    ilhook.ManagerData = entry;
+                }
+
+                return entry;
+            }
+
+            private void RemoveInsertedILHook(SingleILHookState ilhook, ILHookEntry entry)
+            {
+                switch (Interlocked.Exchange(ref ilhook.ManagerData, null))
+                {
+                    case DepGraphNode<ILHookEntry> graphNode:
+                        ilhookGraph.Remove(graphNode);
+                        break;
+                    case ILHookEntry listEntry:
+                        noConfigIlhooks.Remove(listEntry);
+                        break;
+                    case null:
+                        break;
+                    default:
+                        throw new NotSupportedException("bad managerdata?");
+                }
+                entry.Remove();
+            }
+
             public void AddILHook(SingleILHookState ilhook, bool takeLock = true)
             {
                 ILHookEntry entry;
@@ -435,25 +478,7 @@ namespace MonoMod.RuntimeDetour
                 {
                     if (takeLock)
                         detourLock.Enter(ref lockTaken);
-                    if (ilhook.ManagerData is not null)
-                        throw new InvalidOperationException("Trying to add an IL hook which was already added");
-
-                    entry = new ILHookEntry(ilhook);
-                    ilhookVersion++;
-                    if (entry.Config is { } cfg)
-                    {
-                        var listNode = new DepListNode<ILHookEntry>(cfg, entry);
-                        var graphNode = new DepGraphNode<ILHookEntry>(listNode);
-
-                        ilhookGraph.Insert(graphNode);
-
-                        ilhook.ManagerData = graphNode;
-                    }
-                    else
-                    {
-                        noConfigIlhooks.Add(entry);
-                        ilhook.ManagerData = entry;
-                    }
+                    entry = InsertILHook(ilhook);
 
                     try
                     {
@@ -463,17 +488,7 @@ namespace MonoMod.RuntimeDetour
                     catch
                     {
                         // the add failed, remove the node and re-update end of chain
-                        switch (Interlocked.Exchange(ref ilhook.ManagerData, null))
-                        {
-                            case DepGraphNode<ILHookEntry> gn:
-                                ilhookGraph.Remove(gn);
-                                break;
-                            case ILHookEntry cn:
-                                noConfigIlhooks.Remove(cn);
-                                break;
-                            default:
-                                throw new NotSupportedException("bad managerdata?");
-                        }
+                        RemoveInsertedILHook(ilhook, entry);
                         UpdateEndOfChain();
                         throw;
                     }
@@ -488,6 +503,45 @@ namespace MonoMod.RuntimeDetour
 
                 // TODO: make sure this ACTUALLY called outside of the lock
                 InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, ilhook);
+            }
+
+            internal void AddILHooksBatch(IReadOnlyList<SingleILHookState> ilhooks,
+                Func<ILContext.Manipulator, IDisposable?>? enterManipulatorGate = null)
+            {
+                if (ilhooks.Count == 0)
+                    return;
+
+                var added = new List<(SingleILHookState Hook, ILHookEntry Entry)>(ilhooks.Count);
+                var lockTaken = false;
+                try
+                {
+                    detourLock.Enter(ref lockTaken);
+                    foreach (var ilhook in ilhooks)
+                        added.Add((ilhook, InsertILHook(ilhook)));
+
+                    try
+                    {
+                        PrepareEndOfChain(added[0].Hook.Factory);
+                        UpdateEndOfChain(enterManipulatorGate);
+                        UpdateChain(added[^1].Hook.Factory, out _);
+                    }
+                    catch
+                    {
+                        for (var index = added.Count - 1; index >= 0; index--)
+                            RemoveInsertedILHook(added[index].Hook, added[index].Entry);
+                        UpdateEndOfChain(enterManipulatorGate);
+                        UpdateChain(added[0].Hook.Factory, out _);
+                        throw;
+                    }
+                }
+                finally
+                {
+                    if (lockTaken)
+                        detourLock.Exit(true);
+                }
+
+                foreach (var (hook, _) in added)
+                    InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, hook);
             }
 
             public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true)
@@ -555,6 +609,9 @@ namespace MonoMod.RuntimeDetour
             }
 
             private void UpdateEndOfChain()
+                => UpdateEndOfChain(null);
+
+            private void UpdateEndOfChain(Func<ILContext.Manipulator, IDisposable?>? enterManipulatorGate)
             {
                 Helpers.Assert(SourceClone is not null);
 
@@ -578,13 +635,13 @@ namespace MonoMod.RuntimeDetour
                 var cur = ilhookGraph.ListHead;
                 while (cur is not null)
                 {
-                    InvokeManipulator(cur.ChainNode, def);
+                    InvokeManipulator(cur.ChainNode, def, enterManipulatorGate);
                     cur = cur.Next;
                 }
 
                 foreach (var node in noConfigIlhooks)
                 {
-                    InvokeManipulator(node, def);
+                    InvokeManipulator(node, def, enterManipulatorGate);
                 }
 
                 var eoc = dmd.Generate();
@@ -597,13 +654,15 @@ namespace MonoMod.RuntimeDetour
                 EndOfChain = eoc;
             }
 
-            private static void InvokeManipulator(ILHookEntry entry, MethodDefinition def)
+            private static void InvokeManipulator(ILHookEntry entry, MethodDefinition def,
+                Func<ILContext.Manipulator, IDisposable?>? enterManipulatorGate = null)
             {
                 //entry.LastContext?.Dispose(); // we can't safely clean up the old context until after we've updated the chain to point at the new method
                 entry.IsApplied = true;
                 var il = new ILContext(def);
                 entry.CurrentContext = il;
-                il.Invoke(entry.Manip);
+                using (enterManipulatorGate?.Invoke(entry.Manip))
+                    il.Invoke(entry.Manip);
                 if (il.IsReadOnly)
                 {
                     il.Dispose();
