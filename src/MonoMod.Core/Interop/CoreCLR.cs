@@ -9,7 +9,7 @@ namespace MonoMod.Core.Interop
         public enum CorJitResult
         {
             CORJIT_OK = 0,
-            // There are more, but I don't particularly care about them
+            CORJIT_BADCODE = unchecked((int)0x80000001),
         }
 
         public readonly struct InvokeCompileMethodPtr
