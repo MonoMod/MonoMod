@@ -1,4 +1,4 @@
-#if NETCOREAPP
+#if NET5_0_OR_GREATER
 using MonoMod.Core.Platforms;
 using System;
 using System.Reflection;
