@@ -2,9 +2,9 @@ using Mono.Cecil;
 using MonoMod.Utils;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using Xunit;
 using Xunit.Abstractions;
 using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
@@ -64,43 +64,44 @@ namespace MonoMod.UnitTest
 
         private static (FieldInfo StopwatchField, MethodInfo RestartMethod) CreateTargetType()
         {
-            var assemblyName = new AssemblyName(
-                $"MonoMod.UnitTest.DuplicateFields.{Guid.NewGuid():N}");
-#if NETFRAMEWORK
-            AssemblyBuilder assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(
+            string assemblyName = $"MonoMod.UnitTest.DuplicateFields.{Guid.NewGuid():N}";
+            using AssemblyDefinition assembly = AssemblyDefinition.CreateAssembly(
+                new AssemblyNameDefinition(assemblyName, new Version(1, 0)),
                 assemblyName,
-                AssemblyBuilderAccess.Run);
-#else
-            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(
-                assemblyName,
-                AssemblyBuilderAccess.Run);
-#endif
-            ModuleBuilder module = assembly.DefineDynamicModule(assemblyName.Name!);
-            TypeBuilder type = module.DefineType(
+                ModuleKind.Dll);
+            ModuleDefinition module = assembly.MainModule;
+            var type = new TypeDefinition(
+                string.Empty,
                 "DuplicateFieldTarget",
-                System.Reflection.TypeAttributes.Public |
-                System.Reflection.TypeAttributes.Abstract |
-                System.Reflection.TypeAttributes.Sealed);
-            _ = type.DefineField("B", typeof(float), System.Reflection.FieldAttributes.Public);
-            FieldBuilder stopwatchField = type.DefineField(
+                Mono.Cecil.TypeAttributes.Public |
+                Mono.Cecil.TypeAttributes.Abstract |
+                Mono.Cecil.TypeAttributes.Sealed,
+                module.TypeSystem.Object);
+            module.Types.Add(type);
+            type.Fields.Add(new FieldDefinition(
                 "B",
-                typeof(Stopwatch),
-                System.Reflection.FieldAttributes.Public |
-                System.Reflection.FieldAttributes.Static);
-            MethodBuilder restartMethod = type.DefineMethod(
+                Mono.Cecil.FieldAttributes.Public,
+                module.TypeSystem.Single));
+            var stopwatchField = new FieldDefinition(
+                "B",
+                Mono.Cecil.FieldAttributes.Public | Mono.Cecil.FieldAttributes.Static,
+                module.ImportReference(typeof(Stopwatch)));
+            type.Fields.Add(stopwatchField);
+            var restartMethod = new MethodDefinition(
                 "Restart",
-                System.Reflection.MethodAttributes.Public |
-                System.Reflection.MethodAttributes.Static,
-                typeof(void),
-                Type.EmptyTypes);
-            ILGenerator il = restartMethod.GetILGenerator();
-            il.Emit(System.Reflection.Emit.OpCodes.Ldsfld, stopwatchField);
+                Mono.Cecil.MethodAttributes.Public | Mono.Cecil.MethodAttributes.Static,
+                module.TypeSystem.Void);
+            type.Methods.Add(restartMethod);
+            var il = restartMethod.Body.GetILProcessor();
+            il.Emit(CecilOpCodes.Ldsfld, stopwatchField);
             il.Emit(
-                System.Reflection.Emit.OpCodes.Callvirt,
-                typeof(Stopwatch).GetMethod(nameof(Stopwatch.Restart), Type.EmptyTypes)!);
-            il.Emit(System.Reflection.Emit.OpCodes.Ret);
+                CecilOpCodes.Callvirt,
+                module.ImportReference(typeof(Stopwatch).GetMethod(
+                    nameof(Stopwatch.Restart),
+                    Type.EmptyTypes)!));
+            il.Emit(CecilOpCodes.Ret);
 
-            Type targetType = type.CreateType()!;
+            Type targetType = LoadAssembly(assembly).GetType("DuplicateFieldTarget")!;
             FieldInfo expectedField = targetType.GetFields(BindingFlags.Public | BindingFlags.Static)
                 .Single(field => field.Name == "B" && field.FieldType == typeof(Stopwatch));
             MethodInfo generatedRestart = targetType.GetMethod(
@@ -111,32 +112,44 @@ namespace MonoMod.UnitTest
 
         private static (FieldInfo GenericField, FieldInfo IntegerField) CreateGenericTargetFields()
         {
-            var assemblyName = new AssemblyName(
-                $"MonoMod.UnitTest.GenericDuplicateFields.{Guid.NewGuid():N}");
-#if NETFRAMEWORK
-            AssemblyBuilder assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(
+            string assemblyName = $"MonoMod.UnitTest.GenericDuplicateFields.{Guid.NewGuid():N}";
+            using AssemblyDefinition assembly = AssemblyDefinition.CreateAssembly(
+                new AssemblyNameDefinition(assemblyName, new Version(1, 0)),
                 assemblyName,
-                AssemblyBuilderAccess.Run);
-#else
-            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(
-                assemblyName,
-                AssemblyBuilderAccess.Run);
-#endif
-            ModuleBuilder module = assembly.DefineDynamicModule(assemblyName.Name!);
-            TypeBuilder type = module.DefineType(
-                "GenericDuplicateFieldTarget",
-                System.Reflection.TypeAttributes.Public);
-            GenericTypeParameterBuilder genericParameter = type.DefineGenericParameters("T")[0];
-            _ = type.DefineField("B", genericParameter, System.Reflection.FieldAttributes.Public);
-            _ = type.DefineField("B", typeof(int), System.Reflection.FieldAttributes.Public);
+                ModuleKind.Dll);
+            ModuleDefinition module = assembly.MainModule;
+            var type = new TypeDefinition(
+                string.Empty,
+                "GenericDuplicateFieldTarget`1",
+                Mono.Cecil.TypeAttributes.Public,
+                module.TypeSystem.Object);
+            module.Types.Add(type);
+            var genericParameter = new GenericParameter("T", type);
+            type.GenericParameters.Add(genericParameter);
+            type.Fields.Add(new FieldDefinition(
+                "B",
+                Mono.Cecil.FieldAttributes.Public,
+                genericParameter));
+            type.Fields.Add(new FieldDefinition(
+                "B",
+                Mono.Cecil.FieldAttributes.Public,
+                module.TypeSystem.Int32));
 
-            Type closedType = type.CreateType()!.MakeGenericType(typeof(int));
+            Type genericType = LoadAssembly(assembly).GetType("GenericDuplicateFieldTarget`1")!;
+            Type closedType = genericType.MakeGenericType(typeof(int));
             FieldInfo[] fields = closedType.GetFields(BindingFlags.Public | BindingFlags.Instance);
             return (
                 fields.Single(field =>
                     field.Module.ResolveField(field.MetadataToken)!.FieldType.IsGenericParameter),
                 fields.Single(field =>
                     field.Module.ResolveField(field.MetadataToken)!.FieldType == typeof(int)));
+        }
+
+        private static Assembly LoadAssembly(AssemblyDefinition assembly)
+        {
+            using var stream = new MemoryStream();
+            assembly.Write(stream);
+            return Assembly.Load(stream.ToArray());
         }
 
         private static void AssertSameField(FieldInfo expected, FieldInfo actual)
