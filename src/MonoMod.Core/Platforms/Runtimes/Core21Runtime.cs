@@ -188,13 +188,18 @@ namespace MonoMod.Core.Platforms.Runtimes
                 try
                 {
 
-                    /* We've silenced any exceptions thrown by this in the past but it turns out this can throw?!
-                     * Let's hope that all runtimes we're hooking the JIT of know how to deal with this - oh wait, not all do!
-                     * FIXME: Linux .NET Core pre-5.0 (and sometimes even 5.0) can die in real_compileMethod on invalid IL?!
-                     * -ade
-                     */
-                    var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
-                        jit, corJitInfo, methodInfo, flags, pNativeEntry, pNativeSizeOfCode);
+                    CorJitResult result;
+                    try
+                    {
+                        result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
+                            jit, corJitInfo, methodInfo, flags, pNativeEntry, pNativeSizeOfCode);
+                    }
+                    catch (InvalidProgramException) when (pNEx is not null && *pNEx == IntPtr.Zero)
+                    {
+                        // Managed exceptions cannot escape this hook's POSIX native-to-managed boundary.
+                        // Report invalid IL to CoreCLR so it can throw on its normal managed call path.
+                        return CorJitResult.CORJIT_BADCODE;
+                    }
                     // if a native exception was caught, return immediately and skip all of our normal processing
                     if (pNEx is not null && (nativeException = *pNEx) is not 0)
                     {
@@ -528,4 +533,3 @@ namespace MonoMod.Core.Platforms.Runtimes
         }
     }
 }
-

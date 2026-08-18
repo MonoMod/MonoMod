@@ -208,13 +208,13 @@ namespace MonoMod.Utils
 
             public override unsafe bool TryGetExport(IntPtr handle, string name, out IntPtr ptr)
             {
-                var arr = Interop.Unix.MarshalToUtf8(name);
+                var arr = Interop.Xplat.MarshalToUtf8(name);
                 IntPtr result;
                 fixed (byte* pName = arr)
                 {
                     ptr = result = Interop.Windows.GetProcAddress(new((void*)handle), (sbyte*)pName);
                 }
-                Interop.Unix.FreeMarshalledArray(arr);
+                Interop.Xplat.FreeMarshalledArray(arr);
                 return result != IntPtr.Zero;
             }
 

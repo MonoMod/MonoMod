@@ -113,7 +113,7 @@
           "Mono.Cecil": "[0.10.4, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -243,7 +243,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -386,7 +386,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )",
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
         }
@@ -512,7 +512,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -622,7 +622,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -732,7 +732,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -842,7 +842,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -952,7 +952,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -1062,7 +1062,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -1172,7 +1172,7 @@
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.13-alpha.dev, )"
+          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
       "monomod.utils": {
