@@ -106,7 +106,7 @@ namespace MonoMod.Core.Platforms.Runtimes
             return runtimeMethodInfoStubCtorWrapper;
         }
 
-        protected override MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
+        protected internal override MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
         {
             var method = typeof(RuntimeTypeHandle)
                 .GetMethod("GetRuntimeTypeFromHandleMaybeNull", (BindingFlags)(-1), null, [typeof(IntPtr)], null);

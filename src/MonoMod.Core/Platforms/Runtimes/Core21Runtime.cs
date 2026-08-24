@@ -391,7 +391,7 @@ namespace MonoMod.Core.Platforms.Runtimes
         /// The internal call always exists, but the managed method doesn't in some cases.
         /// </summary>
         /// <returns></returns>
-        protected virtual MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
+        protected internal virtual MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
         {
             const string MethodName = "GetTypeFromHandleUnsafe";
             var method = typeof(Type).GetMethod(MethodName, (BindingFlags)(-1));
