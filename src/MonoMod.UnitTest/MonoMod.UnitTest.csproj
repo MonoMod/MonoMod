@@ -75,5 +75,25 @@
     <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="17.3.3" />
     <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="17.3.3" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="MomoModPatch\Resources\DemoLib.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="MomoModPatch\Resources\DemoLib.pdb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="MomoModPatch\Resources\DemoLib.ModA.mm.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="MomoModPatch\Resources\DemoLib.ModA.mm.pdb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="MomoModPatch\Resources\DemoLib.ModB.mm.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="MomoModPatch\Resources\DemoLib.ModB.mm.pdb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
