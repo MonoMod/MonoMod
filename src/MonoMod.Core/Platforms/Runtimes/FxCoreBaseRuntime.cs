@@ -373,7 +373,16 @@ namespace MonoMod.Core.Platforms.Runtimes
         public virtual void Compile(MethodBase method)
         {
             var handle = GetMethodHandle(method);
-            RuntimeHelpers.PrepareMethod(handle);
+            if (method.DeclaringType?.IsGenericType == true)
+            {
+                var type = method.DeclaringType;
+                var genericParams = type.GetGenericArguments().Select(x => x.TypeHandle).ToArray();
+                RuntimeHelpers.PrepareMethod(handle, genericParams);
+            }
+            else
+            {
+                RuntimeHelpers.PrepareMethod(handle);
+            }
             Helpers.Assert(TryInvokeBclCompileMethod(handle));
 
             if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
