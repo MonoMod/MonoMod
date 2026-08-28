@@ -251,7 +251,25 @@ namespace MonoMod.Utils
             else if (minfo is MethodInfo)
                 return false;
 
-            if (mref is FieldReference != minfo is FieldInfo)
+            if (mref is FieldReference fieldRef)
+            {
+                if (minfo is not FieldInfo fieldInfo)
+                    return false;
+
+                // Field names are not unique; their declaring type and field type form the signature.
+                // Imported references use the field definition's open generic signature, so compare
+                // against the definition rather than its substituted type on a constructed owner.
+                var fieldDeclaringType = fieldInfo.DeclaringType;
+                if (fieldDeclaringType is not null &&
+                    fieldDeclaringType.IsGenericType &&
+                    !fieldDeclaringType.IsGenericTypeDefinition)
+                {
+                    fieldInfo = fieldInfo.Module.ResolveField(fieldInfo.MetadataToken)!;
+                }
+
+                return fieldRef.FieldType.Is(fieldInfo.FieldType);
+            }
+            else if (minfo is FieldInfo)
                 return false;
 
             if (mref is PropertyReference != minfo is PropertyInfo)
