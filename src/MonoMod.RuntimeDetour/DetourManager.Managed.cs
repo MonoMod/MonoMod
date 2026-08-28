@@ -16,8 +16,9 @@ namespace MonoMod.RuntimeDetour
     public static partial class DetourManager
     {
         #region Detour chain
-        internal abstract class ManagedChainNode
+        internal abstract class ManagedChainNode(ManagedDetourState owner)
         {
+            public readonly ManagedDetourState Owner = owner;
 
             public ManagedChainNode? Next;
 
@@ -30,8 +31,6 @@ namespace MonoMod.RuntimeDetour
             private ICoreDetour? trampolineDetour;
             private bool hasStolenTrampoline;
 
-            public bool IsApplied { get; private set; }
-
             private void UndoTrampolineDetour()
             {
                 var detour = Interlocked.Exchange(ref trampolineDetour, null);
@@ -43,7 +42,7 @@ namespace MonoMod.RuntimeDetour
                 }
             }
 
-            public virtual void UpdateDetour(IDetourFactory factory, MethodBase fallback)
+            public virtual void UpdateDetour(IDetourFactory factory, MethodBase? fallback)
             {
                 var to = Next?.Entry;
                 if (to is null && DetourToFallback)
@@ -65,7 +64,6 @@ namespace MonoMod.RuntimeDetour
                 }
 
                 lastTarget = to;
-                IsApplied = true;
             }
 
             public void Remove()
@@ -76,7 +74,6 @@ namespace MonoMod.RuntimeDetour
                 }
                 lastTarget = null;
                 Next = null;
-                IsApplied = false;
             }
 
             public void StealTrampoline(IDetourFactory factory)
@@ -106,7 +103,7 @@ namespace MonoMod.RuntimeDetour
 
         internal sealed class ManagedDetourChainNode : ManagedChainNode
         {
-            public ManagedDetourChainNode(SingleManagedDetourState detour)
+            public ManagedDetourChainNode(ManagedDetourState owner, SingleManagedDetourState detour) : base(owner)
             {
                 Detour = detour;
             }
@@ -172,7 +169,7 @@ namespace MonoMod.RuntimeDetour
 
             public bool HasILHook;
 
-            public RootManagedChainNode(MethodBase method)
+            public RootManagedChainNode(ManagedDetourState owner, MethodBase method) : base(owner)
             {
                 Sig = MethodSignature.ForMethod(method);
                 Entry = method;
@@ -201,7 +198,7 @@ namespace MonoMod.RuntimeDetour
 
             private ICoreDetour? syncDetour;
 
-            public override void UpdateDetour(IDetourFactory factory, MethodBase fallback)
+            public override void UpdateDetour(IDetourFactory factory, MethodBase? fallback)
             {
                 base.UpdateDetour(factory, fallback);
 
@@ -247,10 +244,27 @@ namespace MonoMod.RuntimeDetour
                         sourceCloneIl = this.sourceCloneIl ??= new DynamicMethodDefinition(Entry);
                         sourceClone = this.sourceClone ??= sourceCloneIl.Generate();
                     }
+
+                    Helpers.Assert(sourceClone is not null,
+                        $"Unable to create valid source clone. (" +
+                            $"method = {Entry}; " +
+                            $"detour = ({detour.GetType()}){detour}; " +
+                            $"is ICoreDetourWithClone? {detour is ICoreDetourWithClone})");
                 }
                 else
                 {
-                    Helpers.Assert(this.sourceClone is not null);
+                    // Sometimes[1], `this.sourceClone` can be null when this is called during unhooking from a `Hook` dtor.
+                    // In this case, we want to handle things reasonably. The only reasonable thing to do is destroy the whole
+                    // detour chain and poison the method entry (since we really have no idea what state we're in).
+                    //
+                    // [1] I do not know when, and I cannot reproduce it. I have seen exactly one (1) case of this, and there it
+                    // reproduces 100% reliably, but I cannot gain access to the codebase or machine which triggers this.
+                    if (this.sourceClone is null)
+                    {
+                        MMDbgLog.Error($"Detour end-of-chain preparation for {Entry} failed; ");
+                        throw new InternalHookStateBrokenException();
+                    }
+
                     sourceClone = this.sourceClone;
                     sourceCloneIl = this.sourceCloneIl;
                 }
@@ -261,6 +275,7 @@ namespace MonoMod.RuntimeDetour
         #region ILHook chain
         internal sealed class ILHookEntry
         {
+            internal readonly ManagedDetourState Owner;
             public readonly SingleILHookState Hook;
 
             public IDetourFactory Factory => Hook.Factory;
@@ -270,8 +285,9 @@ namespace MonoMod.RuntimeDetour
             public ILContext? LastContext;
             public bool IsApplied;
 
-            public ILHookEntry(SingleILHookState hook)
+            public ILHookEntry(ManagedDetourState owner, SingleILHookState hook)
             {
+                Owner = owner;
                 Hook = hook;
             }
 
@@ -293,7 +309,7 @@ namespace MonoMod.RuntimeDetour
             public ManagedDetourState(MethodBase src)
             {
                 Source = src;
-                detourList = new(src);
+                detourList = new(this, src);
             }
 
             private MethodDetourInfo? info;
@@ -306,8 +322,58 @@ namespace MonoMod.RuntimeDetour
             internal SpinLock detourLock = new(true);
             internal int detourChainVersion;
 
+            private bool methodPoison;
+            private void CheckPoison()
+            {
+                if (methodPoison)
+                {
+                    static void ThrowPoison(MethodBase source)
+                    {
+                        throw new InvalidOperationException(DebugFormatter.Format($"Method hooks for {source} are broken because of an earlier failure."));
+                    }
+
+                    ThrowPoison(Source);
+                }
+            }
+
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types",
+                Justification = "We want this to never throw, as it sometimes may when throwing an extra exception is unacceptable.")]
+            private void HandleNeedsPoison()
+            {
+                methodPoison = true;
+                try
+                {
+                    detourList.Remove();
+                    detourList.UpdateDetour(DetourFactory.Current, null);
+                }
+                catch (Exception e)
+                {
+                    MMDbgLog.Error($"Exception while cleaning up poisoned method: {e}");
+                    return;
+                }
+
+                // if (and only if)  we manage to disable the detour on the source, also remove this detour state from the dictionary
+                // so that new hooks can actually work by setting up a new detour state.
+                try
+                {
+                    _ = detourStates.TryRemove(Source, out _);
+                }
+                catch (Exception e)
+                {
+                    MMDbgLog.Error($"Exception while removing detour state after old one was poisoned: {e}");
+                    return;
+                }
+            }
+
+            private void WarnUndoingPoisonedState()
+            {
+                MMDbgLog.Warning($"Detour remove request belonging to poisoned method state for {this}");
+            }
+
             public void AddDetour(SingleManagedDetourState detour, bool takeLock = true)
             {
+                CheckPoison();
+
                 ManagedDetourChainNode cnode;
                 var lockTaken = false;
                 try
@@ -317,7 +383,7 @@ namespace MonoMod.RuntimeDetour
                     if (detour.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add a detour which was already added");
 
-                    cnode = new ManagedDetourChainNode(detour);
+                    cnode = new ManagedDetourChainNode(this, detour);
                     detourChainVersion++;
                     if (cnode.Config is { } cfg)
                     {
@@ -339,6 +405,11 @@ namespace MonoMod.RuntimeDetour
                     PrepareEndOfChain(detour.Factory);
                     UpdateChain(detour.Factory, out _);
                 }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    throw;
+                }
                 finally
                 {
                     if (lockTaken)
@@ -349,8 +420,13 @@ namespace MonoMod.RuntimeDetour
                 InvokeDetourEvent(DetourManager.DetourApplied, DetourApplied, detour);
             }
 
-            public void RemoveDetour(SingleManagedDetourState detour, bool takeLock = true)
+            public void RemoveDetour(SingleManagedDetourState detour, bool takeLock = true, bool safeReturnOnKnownBroken = false)
             {
+                if (methodPoison)
+                {
+                    return;
+                }
+
                 ManagedDetourChainNode cnode;
                 var lockTaken = false;
                 try
@@ -364,17 +440,42 @@ namespace MonoMod.RuntimeDetour
                             throw new InvalidOperationException("Trying to remove detour which wasn't added");
 
                         case DepGraphNode<ManagedChainNode> gn:
+                            if (gn.ListNode.ChainNode.Owner != this)
+                            {
+                                // beloned to a previous (poisoned) entry, no work should be done
+                                gn.ListNode.ChainNode.Owner.WarnUndoingPoisonedState();
+                                return;
+                            }
+
                             RemoveGraphDetour(detour, gn);
                             cnode = (ManagedDetourChainNode)gn.ListNode.ChainNode;
                             break;
 
                         case ManagedDetourChainNode cn:
+                            if (cn.Owner != this)
+                            {
+                                // beloned to a previous (poisoned) entry, no work should be done
+                                cn.Owner.WarnUndoingPoisonedState();
+                                return;
+                            }
                             RemoveNoConfigDetour(detour, cn);
                             cnode = cn;
                             break;
 
                         default:
                             throw new InvalidOperationException("Trying to remove detour with unknown manager data");
+                    }
+                }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    if (safeReturnOnKnownBroken)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        throw;
                     }
                 }
                 finally
@@ -429,6 +530,8 @@ namespace MonoMod.RuntimeDetour
             internal int ilhookVersion;
             public void AddILHook(SingleILHookState ilhook, bool takeLock = true)
             {
+                CheckPoison();
+
                 ILHookEntry entry;
                 var lockTaken = false;
                 try
@@ -438,7 +541,7 @@ namespace MonoMod.RuntimeDetour
                     if (ilhook.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add an IL hook which was already added");
 
-                    entry = new ILHookEntry(ilhook);
+                    entry = new ILHookEntry(this, ilhook);
                     ilhookVersion++;
                     if (entry.Config is { } cfg)
                     {
@@ -481,6 +584,11 @@ namespace MonoMod.RuntimeDetour
                     UpdateChain(ilhook.Factory, out _);
                     CleanILContexts();
                 }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    throw;
+                }
                 finally
                 {
                     if (lockTaken)
@@ -491,8 +599,13 @@ namespace MonoMod.RuntimeDetour
                 InvokeILHookEvent(DetourManager.ILHookApplied, ILHookApplied, ilhook);
             }
 
-            public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true)
+            public void RemoveILHook(SingleILHookState ilhook, bool takeLock = true, bool safeReturnOnKnownBroken = false)
             {
+                if (methodPoison)
+                {
+                    return;
+                }
+
                 ILHookEntry entry;
                 var lockTaken = false;
                 try
@@ -506,17 +619,41 @@ namespace MonoMod.RuntimeDetour
                             throw new InvalidOperationException("Trying to remove IL hook which wasn't added");
 
                         case DepGraphNode<ILHookEntry> gn:
+                            if (gn.ListNode.ChainNode.Owner != this)
+                            {
+                                // beloned to a previous (poisoned) entry, no work should be done
+                                gn.ListNode.ChainNode.Owner.WarnUndoingPoisonedState();
+                                return;
+                            }
                             RemoveGraphILHook(ilhook, gn);
                             entry = gn.ListNode.ChainNode;
                             break;
 
                         case ILHookEntry cn:
+                            if (cn.Owner != this)
+                            {
+                                // beloned to a previous (poisoned) entry, no work should be done
+                                cn.Owner.WarnUndoingPoisonedState();
+                                return;
+                            }
                             RemoveNoConfigILHook(ilhook, cn);
                             entry = cn;
                             break;
 
                         default:
                             throw new InvalidOperationException("Trying to remove IL hook with unknown manager data");
+                    }
+                }
+                catch (InternalHookStateBrokenException)
+                {
+                    HandleNeedsPoison();
+                    if (safeReturnOnKnownBroken)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        throw;
                     }
                 }
                 finally
