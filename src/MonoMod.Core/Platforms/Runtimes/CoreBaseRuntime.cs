@@ -49,6 +49,9 @@ namespace MonoMod.Core.Platforms.Runtimes
                 case 10:
                     // .NET 10.0.x
                     return new Core100Runtime(system, arch);
+                case 11:
+                    // .NET 11.0.x
+                    return new Core110Runtime(system, arch);
 
                 // currently, we need to manually add support for new versions.
                 // TODO: possibly fall back to a JIT GUID check if we can?
