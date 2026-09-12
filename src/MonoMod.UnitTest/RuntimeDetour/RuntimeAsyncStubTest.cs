@@ -45,7 +45,15 @@ namespace MonoMod.UnitTest
             Assert.NotEmpty(il);
         }
 
+        // TODO remove this once we find a way to create runtime-async DMD
         [Fact]
+        public void HookOnRuntimeAsyncMethodThrowsNotSupported()
+        {
+            var method = GetMethod(nameof(CompletedSum));
+            Assert.Throws<ArgumentException>(() => new Hook(method, () => { }));
+        }
+
+        [Fact(Skip = "runtime-async hooks are not supported")]
         public void HookOnRuntimeAsyncFacadeAppliesToReflectedCall()
         {
             var method = GetMethod(nameof(CompletedSum));
@@ -69,7 +77,7 @@ namespace MonoMod.UnitTest
             Assert.Equal(3, Run(call(1, 2)));
         }
 
-        [Fact]
+        [Fact(Skip = "runtime-async hooks are not supported")]
         public void CompiledAsyncCallSiteBypassesHookedTaskFacade()
         {
             var method = GetMethod(nameof(CompletedSum));
@@ -86,7 +94,7 @@ namespace MonoMod.UnitTest
             }
         }
 
-        [Fact]
+        [Fact(Skip = "runtime-async hooks are not supported")]
         public void OrigTrampolineOnRuntimeAsyncFacadeThrows()
         {
             var method = GetMethod(nameof(CompletedSum));

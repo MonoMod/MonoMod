@@ -708,6 +708,9 @@ namespace MonoMod.RuntimeDetour
         {
             if (Source.IsGenericMethod || Source.DeclaringType is { IsGenericType: true })
                 throw new ArgumentException("Source method is generic, generic hooks are not supported");
+            
+            if ((Source.GetMethodImplementationFlags() & (MethodImplAttributes)0x2000 /* MethodImplAttributes.Async */) != 0)
+                throw new ArgumentException("Source method is runtime-async, runtime-async hooks are not supported");
         }
 
         private void CheckDisposed()
