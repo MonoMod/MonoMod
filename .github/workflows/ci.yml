@@ -28,7 +28,8 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      should_skip: ${{ steps.skip_check.outputs.should_skip == 'true' || steps.msg_check.outputs.skip == 'true' }}
+      upload_pkgs: ${{ steps.msg_check.outputs.skip != 'true' }}
       skipped_by: ${{ steps.skip_check.outputs.skipped_by }}
       ver: ${{ steps.computever.outputs.ver }}
       matrix: ${{ steps.compute-matrix.outputs.matrix }}
@@ -40,8 +41,12 @@ jobs:
         cancel_others: true
         concurrent_skipping: same_content_newer
 
+    - name: Check if this run is skipped by commit message
+      id: msg_check
+      run: echo "skip=${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[skip-ci]') }}" >> $env:GITHUB_OUTPUT
+
     - name: Upload event file
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: test-event-file
         path: ${{ github.event_path }}
@@ -52,23 +57,22 @@ jobs:
       run: echo "ver=$(Get-Date -Format y.M.d).${{ github.run_number }}.${{ github.run_attempt }}" >> $env:GITHUB_OUTPUT
 
     - name: Checkout
-      uses: actions/checkout@v4
+      if: steps.skip_check.outputs.should_skip != 'true'
+      uses: actions/checkout@v6
       with:
         lfs: false
         submodules: false
-        
-    # TODO: maybe we can eventually use package locks for package caching?
     
     - name: Install .NET SDK
       if: steps.skip_check.outputs.should_skip != 'true'
-      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         global-json: global.json
         
     # NOTE: manual package caching
     - name: Cache restored NuGet packages
       if: steps.skip_check.outputs.should_skip != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}
@@ -167,7 +171,7 @@ jobs:
       
   upload:
     needs: [setup, build-testassets]
-    if: ${{ github.ref_name == 'reorganize' && (success() || needs.setup.result == 'success') }}
+    if: ${{ needs.setup.outputs.upload_pkgs == 'true' && github.ref_name == 'reorganize' && (success() || needs.setup.result == 'success') }}
     name: Upload Packages
     uses: ./.github/workflows/upload-packages.yml
     with:

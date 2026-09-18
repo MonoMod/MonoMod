@@ -1,5 +1,4 @@
-﻿using Microsoft.Win32.SafeHandles;
-using MonoMod.Utils;
+﻿using MonoMod.Utils;
 using System;
 using System.Buffers;
 using System.IO;
@@ -92,9 +91,18 @@ internal abstract class PosixNativeLibraryDrop
             // Everywhere else uses actual OS handles, so we can do the "correct" thing which avoids (more of) the TOCTOU
             // windows. Even this leaves open a small window before we load the assembly, but there's not a lot we can do
             // about that.
-            using var fh = new SafeFileHandle((IntPtr)fd, true);
-            using var fs = new FileStream(fh, FileAccess.Write);
-            sourceStream.CopyTo(fs);
+            try
+            {
+                // SafeFileHandle overload of FileStream constructor is recommended, but it's missing on some old Unity mono builds.
+#pragma warning disable CS0618 // Type or member is obsolete
+                using var fs = new FileStream(fd, FileAccess.Write);
+#pragma warning restore CS0618 // Type or member is obsolete
+                sourceStream.CopyTo(fs);
+            }
+            finally
+            {
+                CloseFileDescriptor(fd);
+            }
         }
 
         return fname;

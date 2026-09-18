@@ -1,4 +1,4 @@
-;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --eh-frame-hdr -z now -z noexecstack -x -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o
+;:; nasm -f elf64 -Ox exhelper_linux_x86_64.asm -o exhelper_linux_x86_64.o && ld -shared --eh-frame-hdr -z now -z noexecstack -x -o exhelper_linux_x86_64.so exhelper_linux_x86_64.o && patchelf exhelper_linux_x86_64.so --add-needed libgcc_s.so.1
 
 %define DWARF_EH_SECTION_NAME .eh_frame
 %define DWARF_EH_SECTION_DECL .eh_frame progbits alloc noexec nowrite align=DWARF_WORDSIZE
@@ -28,7 +28,8 @@ SHR_IMPFN(free)
 ; this function must save and restore argument registers. I don't think we need to care about vector regs though,
 ; because 1. this isn't used anywhere that uses them, and 2. I don't think tlv_get_addr uses them.
 eh_get_exception_ptr:
-    DECL_REG_SLOTS 8
+%push
+    DECL_REG_SLOTS 10
     FUNCTION_PROLOG
     svreg rcx, rdx, rsi, rdi, r8, r9, r10, r11
 
@@ -48,12 +49,13 @@ eh_get_exception_ptr:
 
     mov rdi, 8 ; sizeof(void*)
     call SHR_EXTFN(malloc)
-    mov [rbp - 8], rax
+    svreg rax
     mov rdi, [tlskey]
     mov rsi, rax
     call SHR_EXTFN(pthread_setspecific)
-    mov rax, [rbp - 8]
+    ldreg rax
     jmp .ret
+%pop
 
 _eh_init_tlskey:
     FUNCTION_PROLOG

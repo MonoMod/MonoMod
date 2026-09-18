@@ -61,6 +61,13 @@ try
 
         # and write the project file back out
         $xml.Save($props);
+
+        # now delete the compatability suppresisons file, if it exists, so that it can be regenerated (or not) properly
+        $compatFile = Join-Path $srcRoot src $project "CompatibilitySuppressions.xml";
+        if (Test-Path -Type Leaf $compatFile)
+        {
+            Remove-Item $compatFile;
+        }
     }
 }
 finally

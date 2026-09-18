@@ -22,7 +22,7 @@
     </PropertyGroup>
 
     <!-- Check the target framework as a conservative proxy for target runtime. -->
-    <Error Condition="'$(MonoMod_TFMKind)' == '.NETCoreApp' and $([MSBuild]::VersionGreaterThan('$(MonoMod_TFMVersion)', '9.0'))"
+    <Error Condition="'$(MonoMod_TFMKind)' == '.NETCoreApp' and $([MSBuild]::VersionGreaterThan('$(MonoMod_TFMVersion)', '10.0'))"
            File="$(MSBuildProjectFullPath)"
            Text="$(_MonoMod_ThisPackage) $(_MonoMod_DoForm) not support the $(TargetFramework) runtime. Please visit https://github.com/MonoMod/MonoMod/ to participate in discussion or contribute.
                  If you REALLY know what you're doing, set MonoMod_CheckTargetRuntime to false to skip this check." />

@@ -52,14 +52,20 @@ The shared library for Linux x86-64 is `exhelper_linux_x86_64.so`, and is implem
 Like the rest of the assembly files in its sibling folders, the first line contains a command line which compiles
 it.
 
-Broadly speaking, the exception info is automatically generated via a mess of macros, mostly defined in `asminc/dwarf_eh.inc`. These macros are largely designed to resemble the CFI directives exposed by the GNU assembler for this
-same purpose. Further macros exist in `x86_64/macros.inc` and `x86_64/dwarf_eh.inc`, which further assist creation
+Broadly speaking, the exception info is automatically generated via a mess of macros, mostly defined in
+`asminc/dwarf_eh.inc`. These macros are largely designed to resemble the CFI directives exposed by the GNU assembler for
+this same purpose. Further macros exist in `x86_64/macros.inc` and `x86_64/dwarf_eh.inc`, which further assist creation
 of function with exception handling.
 
-#### `eh_get_exception` and `eh_set_exception`
+#### `eh_get_exception_ptr`
 
 These exports expose the TLS cell which holds the current exception. This cell is automatically set by
-`eh_manged_to_native` when necessary, and cleared by `eh_native_to_managed`.
+`eh_manged_to_native` when necessary, and cleared by `eh_native_to_managed`. The name is slightly misleading;
+it actually returns a pointer to the TLS slot containing the exception pointer.
+
+We return a pointer to the slot because we sometimes need to deal with propagating exceptions in contexts where
+a P/Invoke is not permitted. In those scenarios, we get that pointer before entering that region, and read/write
+the pointer as appropriate.
 
 #### `eh_native_to_managed`
 
@@ -73,12 +79,14 @@ passed arguments are not supported currently. They may be in the future, however
 #### `eh_managed_to_native`
 
 This export is the managed-to-native entrypoint. This is the meat of the behaviour, containing EH unwind info, as well
-as a landingpad which recieves the exception in `r15`. When called, it saves `rax` (which contains the target) and `r15` to the stack, to be restored later. The `svreg` macro does this while ensuring that they are present in the unwind info. It then calls the target, with the same limitations as `eh_native_to_managed`. Finally, it returns.
-If, however, an exception was caught, it saves the exception to the TLS cell, clears the return value, and returns
-normally.
+as a landingpad which recieves the exception in `r15`. When called, it saves `rax` (which contains the target) and `r15`
+to the stack, to be restored later. The `svreg` macro does this while ensuring that they are present in the unwind info.
+It then calls the target, with the same limitations as `eh_native_to_managed`. Finally, it returns. If, however, an
+exception was caught, it saves the exception to the TLS cell, clears the return value, and returns normally.
 
 #### `_personality`
 
 This is the personality function. This is called by the unwinder to decied how to handle exceptions. Our personality
 function is fairly simple. It uses the language-specific data area pointer to point to a 32-bit relative pointer to
-the landingpad for a catch if present, and if not, it is zero. Any given procedure may only have one landingpad, and it is hit for all exceptions.
+the landingpad for a catch if present, and if not, it is zero. Any given procedure may only have one landingpad, and
+it is hit for all exceptions.

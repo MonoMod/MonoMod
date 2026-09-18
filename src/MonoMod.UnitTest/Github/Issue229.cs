@@ -6,9 +6,9 @@ using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest.Github
 {
-    public class Issue229_CalliInstructionTest : TestBase
+    public class Issue229 : TestBase
     {
-        public Issue229_CalliInstructionTest(ITestOutputHelper helper) : base(helper)
+        public Issue229(ITestOutputHelper helper) : base(helper)
         {
         }
 

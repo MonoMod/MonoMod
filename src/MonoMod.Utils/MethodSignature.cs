@@ -60,9 +60,9 @@ namespace MonoMod.Utils
             return (ignoreThis ? noThisSigMap : thisSigMap).GetValue(method, m => new(m, ignoreThis));
         }
 
-        private sealed class CompatableComparer : IEqualityComparer<Type>
+        private sealed class CompatibleComparer : IEqualityComparer<Type>
         {
-            public static readonly CompatableComparer Instance = new();
+            public static readonly CompatibleComparer Instance = new();
             public bool Equals(Type? x, Type? y)
             {
                 if (ReferenceEquals(x, y))
@@ -84,7 +84,7 @@ namespace MonoMod.Utils
             if (ReferenceEquals(this, other))
                 return true;
             return ReturnType.IsCompatible(other.ReturnType)
-                && parameters.SequenceEqual(other.Parameters, CompatableComparer.Instance);
+                && parameters.SequenceEqual(other.Parameters, CompatibleComparer.Instance);
         }
 
         public DynamicMethodDefinition CreateDmd(string name)

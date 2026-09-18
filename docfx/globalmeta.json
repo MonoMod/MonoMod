@@ -9,5 +9,6 @@
   "_appLogoPath": "images/logo-small.png",
   "_appFaviconPath": "images/favicon.png",
   "_enableSearch": true,
-  "_enableNewTab": true
+  "_enableNewTab": true,
+  "_gitUrlPattern": "github"
 }

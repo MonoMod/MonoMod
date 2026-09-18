@@ -144,12 +144,12 @@ namespace MonoMod.Core.Platforms
         public static void SetPlatformTriple(PlatformTriple triple)
         {
             Helpers.ThrowIfArgumentNull(triple);
-            if (lazyCurrent is null)
+            if (lazyCurrent is not null)
                 ThrowTripleAlreadyExists();
 
             lock (lazyCurrentLock)
             {
-                if (lazyCurrent is null)
+                if (lazyCurrent is not null)
                     ThrowTripleAlreadyExists();
 
                 lazyCurrent = triple;

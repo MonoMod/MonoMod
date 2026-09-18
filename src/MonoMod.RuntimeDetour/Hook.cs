@@ -19,7 +19,7 @@ namespace MonoMod.RuntimeDetour
     /// or the object is disposed. Use <see cref="DetourInfo"/> to get an object which represents the hook without
     /// extending its lifetime.
     /// </remarks>
-    public sealed class Hook : IDetour, IDisposable
+    public sealed class Hook : IHook, IDetour
     {
 
         private const bool ApplyByDefault = true;
@@ -463,10 +463,10 @@ namespace MonoMod.RuntimeDetour
         /// Gets the method which is the target of the hook.
         /// </summary>
         public MethodInfo Target { get; }
-        MethodInfo IDetour.PublicTarget => Target;
+        MethodInfo IHook.PublicTarget => Target;
 
         private readonly MethodInfo realTarget;
-        MethodInfo IDetour.InvokeTarget => realTarget;
+        MethodInfo IHook.InvokeTarget => realTarget;
 
 
         [SuppressMessage("Reliability", "CA2002:Do not lock on objects with weak identity",
@@ -531,7 +531,7 @@ namespace MonoMod.RuntimeDetour
         }
 
         private readonly TrampolineData trampoline;
-        IDetourTrampoline IDetour.NextTrampoline => trampoline;
+        IDetourTrampoline IHook.NextTrampoline => trampoline;
 
         private readonly DetourManager.ManagedDetourState state;
         private readonly DetourManager.SingleManagedDetourState detour;

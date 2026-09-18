@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <PackageReference Remove="Microsoft.CodeAnalysis.NetAnalyzers" />
+    <PackageReference Remove="Nullable" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(EnableDefaultNoneItems)' == 'true' ">

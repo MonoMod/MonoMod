@@ -10,6 +10,7 @@ using MonoMod.Cil;
 using MonoMod.Utils;
 using New::MonoMod.RuntimeDetour;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Loader;
 using Xunit;
@@ -235,7 +236,7 @@ namespace MonoMod.UnitTest
 
         public static void TestILHookReferences(Type baseLoaderType, Type type)
         {
-            bool alc = type != baseLoaderType;
+            var alc = type != baseLoaderType;
             var method = type.GetMethod(nameof(ILHookTarget));
 
             // make sure the method require hooks to be installed
@@ -276,10 +277,12 @@ namespace MonoMod.UnitTest
                 method.Invoke(null, new object[] { type, alc });
         }
 
+        [SuppressMessage("Assertions", "xUnit2003:Do not use equality check to test for null value",
+            Justification = "The ldnull needs to exist for the tests above to work")]
         public static void ILHookTarget(Type expectedLoaderType, bool alc)
         {
             Assert.Equal(IsNonALC, !alc);
-            Assert.Equal(null, expectedLoaderType); // null is the hook target
+            Assert.Equal(null, expectedLoaderType);
             Assert.Equal(typeof(AssemblyLoadContextHookTest), expectedLoaderType);
         }
 

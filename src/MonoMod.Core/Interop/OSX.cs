@@ -533,7 +533,9 @@ namespace MonoMod.Core.Interop
         
         [DllImport(LibSystem, EntryPoint = "mmap")]
         public static extern IntPtr mmap(IntPtr address, ulong length, map_prot prot, map_flags flags, int fd, long offset);
-        
+
+        public static readonly IntPtr MAP_FAILED = (IntPtr) (-1);
+
         [Flags]
         public enum map_prot : int
         {

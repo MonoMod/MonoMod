@@ -13,11 +13,11 @@ namespace MonoMod.Utils
 #if NETCOREAPP3_0_OR_GREATER
         private static readonly NativeLibraryBackend Backend = new();
 #else
-        private static readonly BackendImpl Backend = CreateCrossplatBackend();
+        private static BackendImpl? lazyBackend;
+        private static BackendImpl Backend => Helpers.GetOrInit(ref lazyBackend, CreateCrossplatBackend);
 #endif
-        private static BackendImpl CreateCrossplatBackend()
+        private static BackendImpl CreateCrossplatBackend(OSKind os)
         {
-            var os = PlatformDetection.OS;
             if (os.Is(OSKind.Windows))
             {
                 return new WindowsBackend();
@@ -32,6 +32,18 @@ namespace MonoMod.Utils
                 Helpers.DAssert(os.Is(OSKind.Posix));
                 return new UnknownPosixBackend();
             }
+        }
+
+        internal static void InitializeBackend(OSKind os)
+        {
+#if !NETCOREAPP3_0_OR_GREATER
+            lazyBackend ??= CreateCrossplatBackend(os);
+#endif
+        }
+
+        private static BackendImpl CreateCrossplatBackend()
+        {
+            return CreateCrossplatBackend(PlatformDetection.OS);
         }
 
         private abstract class BackendImpl
@@ -92,7 +104,7 @@ namespace MonoMod.Utils
         private sealed class NativeLibraryBackend : BackendImpl
         {
 #if !NET7_0_OR_GREATER
-            private readonly BackendImpl xplatBackend = CreateCrossplatBackend();
+            private BackendImpl? xplatBackend;
 #endif
 
             protected override void CheckAndThrowError()
@@ -109,7 +121,7 @@ namespace MonoMod.Utils
 #if NET7_0_OR_GREATER
                 return NativeLibrary.GetMainProgramHandle();
 #else
-                return xplatBackend.OpenLibrary(null, assembly);
+                return (xplatBackend ??= CreateCrossplatBackend()).OpenLibrary(null, assembly);
 #endif
             }
 
@@ -196,13 +208,13 @@ namespace MonoMod.Utils
 
             public override unsafe bool TryGetExport(IntPtr handle, string name, out IntPtr ptr)
             {
-                var arr = Interop.Unix.MarshalToUtf8(name);
+                var arr = Interop.Xplat.MarshalToUtf8(name);
                 IntPtr result;
                 fixed (byte* pName = arr)
                 {
                     ptr = result = Interop.Windows.GetProcAddress(new((void*)handle), (sbyte*)pName);
                 }
-                Interop.Unix.FreeMarshalledArray(arr);
+                Interop.Xplat.FreeMarshalledArray(arr);
                 return result != IntPtr.Zero;
             }
 

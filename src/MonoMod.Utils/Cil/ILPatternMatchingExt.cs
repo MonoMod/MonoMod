@@ -15,6 +15,36 @@ namespace MonoMod.Cil
     [EmitILOverloads("ILOpcodes.txt", ILOverloadKind.Matcher)]
     public static partial class ILPatternMatchingExt
     {
+        private static readonly HashSet<OpCode> BranchOpCodes =
+        [
+            OpCodes.Br_S,
+            OpCodes.Brfalse_S,
+            OpCodes.Brtrue_S,
+            OpCodes.Beq_S,
+            OpCodes.Bge_S,
+            OpCodes.Bgt_S,
+            OpCodes.Ble_S,
+            OpCodes.Blt_S,
+            OpCodes.Bne_Un_S,
+            OpCodes.Bge_Un_S,
+            OpCodes.Bgt_Un_S,
+            OpCodes.Ble_Un_S,
+            OpCodes.Blt_Un_S,
+            OpCodes.Br,
+            OpCodes.Brfalse,
+            OpCodes.Brtrue,
+            OpCodes.Beq,
+            OpCodes.Bge,
+            OpCodes.Bgt,
+            OpCodes.Ble,
+            OpCodes.Blt,
+            OpCodes.Bne_Un,
+            OpCodes.Bge_Un,
+            OpCodes.Bgt_Un,
+            OpCodes.Ble_Un,
+            OpCodes.Blt_Un
+        ];
+
         #region Equivalence definitions
         private static bool IsEquivalent(int l, int r) => l == r;
         private static bool IsEquivalent(int l, uint r) => unchecked((uint)l) == r;
@@ -461,6 +491,42 @@ namespace MonoMod.Cil
             if ((instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) && instr.Operand is MethodReference mr)
             {
                 value = mr;
+                return true;
+            }
+            else
+            {
+                value = default;
+                return false;
+            }
+        }
+
+        /// <summary>Matches a branch instruction.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value required for the instruction to match.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        /// <remarks>This will match an instruction whose opcode is <see cref="OpCodes.Br"/>, <see cref="OpCodes.Brfalse"/>, <see cref="OpCodes.Brtrue"/>, <see cref="OpCodes.Beq"/>, <see cref="OpCodes.Bge"/>, <see cref="OpCodes.Bgt"/>, <see cref="OpCodes.Ble"/>, <see cref="OpCodes.Blt"/>, <see cref="OpCodes.Bne_Un"/>, <see cref="OpCodes.Bge_Un"/>, <see cref="OpCodes.Bgt_Un"/>, <see cref="OpCodes.Ble_Un"/> or <see cref="OpCodes.Blt_Un"/>.</remarks>
+        public static bool MatchBranch(this Instruction instr, ILLabel value)
+            => MatchBranch(instr, out var v) && IsEquivalent(v, value);
+
+        /// <summary>Matches a branch instruction.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value required for the instruction to match.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        /// <remarks>This will match an instruction whose opcode is <see cref="OpCodes.Br"/>, <see cref="OpCodes.Brfalse"/>, <see cref="OpCodes.Brtrue"/>, <see cref="OpCodes.Beq"/>, <see cref="OpCodes.Bge"/>, <see cref="OpCodes.Bgt"/>, <see cref="OpCodes.Ble"/>, <see cref="OpCodes.Blt"/>, <see cref="OpCodes.Bne_Un"/>, <see cref="OpCodes.Bge_Un"/>, <see cref="OpCodes.Bgt_Un"/>, <see cref="OpCodes.Ble_Un"/> or <see cref="OpCodes.Blt_Un"/>.</remarks>
+        public static bool MatchBranch(this Instruction instr, Instruction value)
+            => MatchBranch(instr, out var v) && IsEquivalent(v, value);
+
+        /// <summary>Matches a branch instruction.</summary>
+        /// <param name="instr">The instruction to try to match.</param>
+        /// <param name="value">The operand value of the instruction.</param>
+        /// <returns><see langword="true"/> if the instruction matches; <see langword="false"/> otherwise.</returns>
+        /// <remarks>This will match an instruction whose opcode is <see cref="OpCodes.Br"/>, <see cref="OpCodes.Brfalse"/>, <see cref="OpCodes.Brtrue"/>, <see cref="OpCodes.Beq"/>, <see cref="OpCodes.Bge"/>, <see cref="OpCodes.Bgt"/>, <see cref="OpCodes.Ble"/>, <see cref="OpCodes.Blt"/>, <see cref="OpCodes.Bne_Un"/>, <see cref="OpCodes.Bge_Un"/>, <see cref="OpCodes.Bgt_Un"/>, <see cref="OpCodes.Ble_Un"/> or <see cref="OpCodes.Blt_Un"/>.</remarks>
+        public static bool MatchBranch(this Instruction instr, [MaybeNullWhen(false)] out ILLabel value)
+        {
+            Helpers.ThrowIfArgumentNull(instr);
+            if (BranchOpCodes.Contains(instr.OpCode) && instr.Operand is ILLabel label)
+            {
+                value = label;
                 return true;
             }
             else

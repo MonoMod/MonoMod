@@ -19,6 +19,8 @@ namespace MonoMod.Core.Platforms.Systems
 
         public Abi? DefaultAbi { get; }
 
+        public uint PageSize { get; } = (uint)GetPageSize();
+
         public MacOSSystem()
         {
             switch (PlatformDetection.Architecture)
@@ -56,25 +58,35 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
-        public unsafe IEnumerable<string?> EnumerateLoadedModuleFiles()
+        public unsafe IEnumerable<LoadedModule> EnumerateLoadedModules()
         {
             var infoCnt = task_dyld_info.Count;
             var dyldInfo = default(task_dyld_info);
             var kr = task_info(mach_task_self(), task_flavor_t.DyldInfo, &dyldInfo, &infoCnt);
             if (!kr)
             {
-                return ArrayEx.Empty<string>(); // could not get own dyld info
+                return []; // could not get own dyld info
             }
 
             var infos = dyldInfo.all_image_infos->InfoArray;
 
-            var arr = new string?[infos.Length];
+            var arr = new LoadedModule[infos.Length];
             for (var i = 0; i < arr.Length; i++)
             {
-                arr[i] = infos[i].imageFilePath.ToString();
+                var info = infos[i];
+                // TODO get size, probably by parsing the mach header
+                arr[i] = new LoadedModule((ulong)info.imageLoadAddress, info.imageFilePath.ToString(), null);
             }
 
             return arr;
+        }
+
+        public IEnumerable<string?> EnumerateLoadedModuleFiles()
+        {
+            foreach (var module in EnumerateLoadedModules())
+            {
+                yield return module.FileName;
+            }
         }
 
         public unsafe nint GetSizeOfReadableMemory(IntPtr start, nint guess)
@@ -154,8 +166,8 @@ namespace MonoMod.Core.Platforms.Systems
             if (!memIsWrite)
             {
                 Helpers.Assert(!crossesBoundary);
-                // TODO: figure out if MAP_JIT is available and necessary, and use that instead when needed
-                MakePageWritable(patchTarget);
+                MakePageWritable((nuint)(nint)patchTarget, (nuint)data.Length);
+                curProt = vm_prot_t.All;
             }
 
             // at this point, we know our data to be writable
@@ -186,10 +198,17 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
-        private static unsafe void MakePageWritable(nint addrInPage)
+        private unsafe void MakePageWritable(nuint addrInPage, nuint bufferSize)
         {
-            Helpers.Assert(GetLocalRegionInfo(addrInPage, out var allocStart, out var allocSize, out var allocProt, out var allocMaxProt));
-            Helpers.Assert(allocStart <= addrInPage);
+            var pageAddress = addrInPage & ~((nuint)PageSize - 1);
+            if (addrInPage + bufferSize > pageAddress + PageSize) {
+                MMDbgLog.Warning("Crossed pages while performing page remap");
+                MakePageWritable(pageAddress, PageSize);
+                MakePageWritable(pageAddress + PageSize, bufferSize - PageSize + (addrInPage - pageAddress));
+                return;
+            }
+
+            Helpers.Assert(GetLocalRegionInfo((nint)pageAddress, out _, out _, out var allocProt, out var allocMaxProt));
 
             if (allocProt.Has(vm_prot_t.Write))
                 return;
@@ -198,12 +217,12 @@ namespace MonoMod.Core.Platforms.Systems
 
             var selfTask = mach_task_self();
 
-            if (allocMaxProt.Has(vm_prot_t.Write))
+            if (allocMaxProt.Has(vm_prot_t.Write) || PlatformDetection.Architecture != ArchitectureKind.Arm64)
             {
-                kr = mach_vm_protect(selfTask, (ulong)allocStart, (ulong)allocSize, false, allocProt | vm_prot_t.Write);
+                kr = mach_vm_protect(selfTask, pageAddress, PageSize, false, allocProt | vm_prot_t.Write);
                 if (!kr)
                 {
-                    MMDbgLog.Error($"Could not vm_protect page 0x{allocStart:x16}+0x{allocSize:x} " +
+                    MMDbgLog.Error($"Could not vm_protect page 0x{pageAddress:x16}+0x{PageSize:x} " +
                         $"from {P(allocProt)} to {P(allocProt | vm_prot_t.Write)} (max prot {P(allocMaxProt)}): kr = {kr.Value}");
                     MMDbgLog.Error("Trying copy/remap instead...");
                     // fall out to try page remap
@@ -221,63 +240,56 @@ namespace MonoMod.Core.Platforms.Systems
                 if (!allocMaxProt.Has(vm_prot_t.Read))
                 {
                     // max prot doesn't have read, can't continue
-                    MMDbgLog.Error($"Requested 0x{allocStart:x16}+0x{allocSize:x} (max: {P(allocMaxProt)}) to be made writable, but its not readable!");
+                    MMDbgLog.Error($"Requested 0x{pageAddress:x16}+0x{PageSize:x} (max: {P(allocMaxProt)}) to be made writable, but its not readable!");
                     throw new NotSupportedException("Cannot make page writable because its not readable");
                 }
-                kr = mach_vm_protect(selfTask, (ulong)allocStart, (ulong)allocSize, false, allocProt | vm_prot_t.Read);
+                kr = mach_vm_protect(selfTask, pageAddress, PageSize, false, allocProt | vm_prot_t.Read);
                 if (!kr)
                 {
-                    MMDbgLog.Error($"vm_protect of 0x{allocStart:x16}+0x{allocSize:x} (max: {P(allocMaxProt)}) to become readable failed: kr = {kr.Value}");
+                    MMDbgLog.Error($"vm_protect of 0x{pageAddress:x16}+0x{PageSize:x} (max: {P(allocMaxProt)}) to become readable failed: kr = {kr.Value}");
                     throw new NotSupportedException("Could not make page readable for remap");
                 }
             }
 
-            MMDbgLog.Trace($"Performing page remap on 0x{allocStart:x16}+0x{allocSize:x} from {P(allocProt)}/{P(allocMaxProt)} to {P(allocProt | vm_prot_t.Write)}");
-
-            var wantProt = allocProt | vm_prot_t.Write;
-            var wantMaxProt = allocMaxProt | vm_prot_t.Write;
+            MMDbgLog.Trace($"Performing page remap on 0x{pageAddress:x16}+0x{PageSize:x} from {P(allocProt)}/{P(allocMaxProt)} to {P(vm_prot_t.All)}");
 
             // first, alloc a new page
-            ulong newAddr;
-            kr = mach_vm_map(selfTask, &newAddr, (ulong)allocSize, 0, vm_flags.Anywhere, 0, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
-            if (!kr)
+            var newAddr = mmap(IntPtr.Zero, PageSize, map_prot.Read | map_prot.Write | map_prot.Execute, map_flags.Anonymous | map_flags.Private | map_flags.JIT, -1, 0);
+            if (newAddr == MAP_FAILED)
             {
-                MMDbgLog.Error($"Could not allocate new memory! kr = {kr.Value}");
-#pragma warning disable CA2201 // Do not raise reserved exception types
-                throw new OutOfMemoryException();
-#pragma warning restore CA2201 // Do not raise reserved exception types
+                throw new Win32Exception(Errno);
             }
 
             try
             {
                 // then copy data from the map into it
-                new Span<byte>((void*)allocStart, (int)allocSize).CopyTo(new Span<byte>((void*)newAddr, (int)allocSize));
-                // then create an object for that memory
-                int obj;
-                var memSize = (ulong)allocSize;
-                kr = mach_make_memory_entry_64(selfTask, &memSize, newAddr, wantMaxProt, &obj, 0);
-                if (!kr)
+                if (NativeExceptionHelper is JitMemcpyHelper gcmh)
                 {
-                    MMDbgLog.Error($"make_memory_entry(task_self(), size: 0x{memSize:x}, addr: {newAddr:x16}, prot: {P(wantMaxProt)}, &obj, 0) failed: kr = {kr.Value}");
-                    throw new NotSupportedException("make_memory_entry() failed");
+                    gcmh.JitMemCpy(newAddr, (nint)pageAddress, PageSize);
                 }
+                else
+                {
+                    new Span<byte>((void*)pageAddress, (int)PageSize).CopyTo(new Span<byte>((void*)newAddr, (int)PageSize));
+                }
+
                 // then map it over the old memory segment
-                var targetAddr = (ulong)allocStart;
-                kr = mach_vm_map(selfTask, &targetAddr, (ulong)allocSize, 0, vm_flags.Fixed | vm_flags.Overwrite, obj, 0, true, wantProt, wantMaxProt, vm_inherit_t.Default);
+                var targetAddr = (ulong)pageAddress;
+                vm_prot_t curProt, maxProt;
+                kr = mach_vm_remap(selfTask, &targetAddr, PageSize, 0, vm_flags.Fixed | vm_flags.Overwrite, selfTask, (ulong)newAddr, true, &curProt, &maxProt, vm_inherit_t.Copy);
                 if (!kr)
                 {
-                    MMDbgLog.Error($"vm_map() failed to map over target range: 0x{targetAddr:x16}+0x{allocSize:x} ({P(allocProt)}/{P(allocMaxProt)})" +
-                        $" <- (obj {obj}) 0x{newAddr:x16}+0x{allocSize:x} ({P(wantProt)}/{P(wantMaxProt)}), kr = {kr.Value}");
+                    MMDbgLog.Error($"vm_remap() failed to map over target range: 0x{targetAddr:x16}+0x{PageSize:x} ({P(allocProt)}/{P(allocMaxProt)})" +
+                                   $" <- 0x{newAddr:x16}+0x{PageSize:x} ({P(vm_prot_t.All)}/{P(vm_prot_t.All)}), kr = {kr.Value}");
                     throw new NotSupportedException("vm_map() failed");
                 }
             }
             finally
             {
                 // then unmap the created memory
-                kr = mach_vm_deallocate(selfTask, newAddr, (ulong)allocSize);
+                kr = mach_vm_deallocate(selfTask, (ulong)newAddr, PageSize);
                 if (!kr)
                 {
-                    MMDbgLog.Error($"Could not deallocate created memory page 0x{newAddr:x16}+0x{allocSize:x}! kr = {kr.Value}");
+                    MMDbgLog.Error($"Could not deallocate created memory page 0x{newAddr:x16}+0x{PageSize:x}! kr = {kr.Value}");
                 }
             }
         }
@@ -590,13 +602,21 @@ namespace MonoMod.Core.Platforms.Systems
                 mmch_jit_hook_config = jitCfg;
             }
 
-            public static new JitMemcpyHelper CreateHelper(IArchitecture arch, string filename)
+            public static new JitMemcpyHelper CreateHelper(IArchitecture arch, string filename, bool deleteAfterLoad = true)
             {
                 // we've now got the file on disk, and we know its name. lets load it
                 var handle = DynDll.OpenLibrary(filename);
                 IntPtr eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed, mmch_jit_memcpy, mmch_jit_hook_config;
                 try
                 {
+                    // once the library's been opened, we can delete it
+                    if (deleteAfterLoad)
+                    {
+                        // note: File.Delete() forwards to `unlink(2)`, which removes the name but lets
+                        // existing fds (such as for the mapping we used to load the file) stay around.
+                        System.IO.File.Delete(filename);
+                    }
+
                     eh_get_exception_ptr = DynDll.GetExport(handle, nameof(eh_get_exception_ptr));
                     eh_managed_to_native = DynDll.GetExport(handle, nameof(eh_managed_to_native));
                     eh_native_to_managed = DynDll.GetExport(handle, nameof(eh_native_to_managed));

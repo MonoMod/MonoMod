@@ -34,6 +34,12 @@ namespace MonoMod.Core.Platforms
         INativeExceptionHelper? NativeExceptionHelper { get; }
 
         /// <summary>
+        /// Enumerates all modules which are loaded in the process.
+        /// </summary>
+        /// <returns>An enumerable over all loaded modules.</returns>
+        IEnumerable<LoadedModule> EnumerateLoadedModules();
+
+        /// <summary>
         /// Enumerates all modules which are loaded in the process and yields their file names.
         /// </summary>
         /// <returns>An enumerable over the file names of all loaded modules.</returns>

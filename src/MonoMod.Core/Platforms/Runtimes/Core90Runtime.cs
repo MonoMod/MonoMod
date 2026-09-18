@@ -1,10 +1,8 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes
 {
-    [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 10.")]
     internal class Core90Runtime : Core80Runtime
     {
         public Core90Runtime(ISystem system, IArchitecture arch) : base(system, arch) { }

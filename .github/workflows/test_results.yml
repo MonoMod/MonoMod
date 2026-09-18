@@ -24,7 +24,7 @@ jobs:
 
     steps:
     - name: Download event file
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         run-id: ${{ github.event.workflow_run.id }}
         github-token: ${{ github.token }}
@@ -32,7 +32,7 @@ jobs:
         merge-multiple: false
 
     - name: Download test results
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         run-id: ${{ github.event.workflow_run.id }}
         github-token: ${{ github.token }}

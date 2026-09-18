@@ -248,8 +248,18 @@ namespace MonoMod.Core.Platforms.Runtimes
                         }
                     }
 
-                    var result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
-                        jit, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
+                    CorJitResult result;
+                    try
+                    {
+                        result = InvokeCompileMethodPtr.InvokeCompileMethod(CompileMethodPtr,
+                            jit, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode);
+                    }
+                    catch (InvalidProgramException) when (pNEx is not null && *pNEx == IntPtr.Zero)
+                    {
+                        // Managed exceptions cannot escape this hook's POSIX native-to-managed boundary.
+                        // Report invalid IL to CoreCLR so it can throw on its normal managed call path.
+                        return CorJitResult.CORJIT_BADCODE;
+                    }
                     // if a native exception was caught, return immediately and skip all of our normal processing
                     if (pNEx is not null && (nativeException = *pNEx) is not 0)
                     {

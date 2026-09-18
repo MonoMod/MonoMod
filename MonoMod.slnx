@@ -13,7 +13,7 @@
     <Project Path="build/setup-mono/setup-mono.csproj" />
   </Folder>
   <Folder Name="/build/containers/">
-    <File Path="build/containers/linux-arm64.dockerfile-disabled" />
+    <File Path="build/containers/linux-arm64.dockerfile" />
     <File Path="build/containers/linux-musl-arm64.dockerfile-disabled" />
     <File Path="build/containers/linux-musl-x64.dockerfile" />
     <File Path="build/containers/linux-x64.dockerfile" />

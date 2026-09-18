@@ -46,7 +46,7 @@ jobs:
         git config --global core.autocrlf input
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         lfs: true
         submodules: recursive
@@ -54,12 +54,12 @@ jobs:
     # TODO: maybe we can eventually use package locks for package caching?
     
     - name: Install .NET SDK
-      uses: nike4613/install-dotnet@6625f6cf2b076b088eee77a005f5f226e89aa580
+      uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
         global-json: global.json
         
     - name: Cache restored NuGet packages
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
@@ -91,7 +91,7 @@ jobs:
     #    if-no-files-found: ignore
 
     - name: Upload binlogs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
         name: binlogs-${{ runner.os }}
@@ -99,14 +99,14 @@ jobs:
         retention-days: 7
 
     - name: Archive packages
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: ${{ inputs.upload-packages }}
       with:
         name: packages
         path: artifacts/package/release/*.nupkg
 
     - name: Archive packages
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: ${{ !inputs.upload-packages }}
       with:
         name: packages ${{ runner.os }}
@@ -114,7 +114,7 @@ jobs:
         retention-days: 7
 
     - name: Upload test assets
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: ${{ inputs.upload-tests }}
       with:
         name: test-assets

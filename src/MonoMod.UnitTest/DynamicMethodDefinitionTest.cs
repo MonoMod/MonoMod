@@ -1,4 +1,4 @@
-﻿extern alias New;
+extern alias New;
 
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
@@ -285,5 +285,101 @@ namespace MonoMod.UnitTest
             Assert.Equal(newVarDef, genClone.Definition.Body.Instructions[1].Operand);
             Assert.Equal(newVarDef, genClone.Definition.Body.Instructions[2].Operand);
         }
+#if NETFRAMEWORK
+        // https://github.com/MonoMod/MonoMod/issues/299
+        [Fact]
+        public void TestSaveDMDEmitMethodBuilderGenerator()
+        {
+            Console.WriteLine("TestSaveDMDEmitMethodBuilderGenerator Started");
+            var assemblyName = new AssemblyName($"MonoMod.UnitTest.DMDSave_{Guid.NewGuid():N}");
+            var assemblyFileName = $"{assemblyName.Name}.dll";
+
+            if (System.IO.File.Exists(assemblyFileName))
+            {
+                System.IO.File.Delete(assemblyFileName);
+            }
+
+            try
+            {
+                var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
+                var dynamicModule = assemblyBuilder.DefineDynamicModule(assemblyName.Name, assemblyFileName);
+                var typeBuilder = dynamicModule.DefineType("TestType", TypeAttributes.Public);
+
+                using var dmd = new DynamicMethodDefinition("Test", typeof(void), []);
+                var il = dmd.GetILGenerator();
+                il.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+                using var dmd2 = new DynamicMethodDefinition("Test2", typeof(void), [typeof(int)]);
+                var il2 = dmd2.GetILGenerator();
+                il2.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+                using var dmd3 = new DynamicMethodDefinition("Test3", typeof(int), []);
+                var il3 = dmd3.GetILGenerator();
+                il3.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+                using var dmd4 = new DynamicMethodDefinition("Test4", typeof(int), [typeof(int)]);
+                var il4 = dmd4.GetILGenerator();
+                il4.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+                var methodBuilder = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd, typeBuilder);
+                Assert.NotNull(methodBuilder);
+                var methodBuilder2 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd2, typeBuilder);
+                Assert.NotNull(methodBuilder2);
+                var methodBuilder3 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
+                Assert.NotNull(methodBuilder3);
+                var methodBuilder4 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
+                Assert.NotNull(methodBuilder4);
+
+                var generatedType = typeBuilder.CreateType();
+                Assert.NotNull(generatedType);
+
+                assemblyBuilder.Save(assemblyFileName);
+                Assert.True(System.IO.File.Exists(assemblyFileName));
+            }
+            finally
+            {
+                if (System.IO.File.Exists(assemblyFileName))
+                {
+                    System.IO.File.Delete(assemblyFileName);
+                }
+            }
+            Console.WriteLine("TestSaveDMDEmitMethodBuilderGenerator Finished");
+        }
+#endif
+#if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
+        [Fact]
+        public void TestInterfaceDefault()
+        {
+            IDefaultInterfaceMethodTarget target = new DefaultInterfaceMethodTarget();
+
+            Assert.Equal(11, target.AddTen(1));
+
+            MethodInfo dynamicDetour;
+            using (var dmd = new DynamicMethodDefinition(typeof(DynamicMethodDefinitionTest).GetMethod(nameof(DefaultInterfaceMethod_Detour), BindingFlags.Static | BindingFlags.NonPublic)))
+            {
+                dynamicDetour = dmd.Generate();
+            }
+
+            using (var h = new Hook(typeof(IDefaultInterfaceMethodTarget).GetMethod(nameof(IDefaultInterfaceMethodTarget.AddTen), BindingFlags.Instance | BindingFlags.Public), dynamicDetour))
+            {
+                Assert.Equal(42, target.AddTen(1));
+            }
+
+            Assert.Equal(11, target.AddTen(1));
+        }
+
+        private interface IDefaultInterfaceMethodTarget
+        {
+            int AddTen(int value) => value + 10;
+        }
+        private sealed class DefaultInterfaceMethodTarget : IDefaultInterfaceMethodTarget
+        {
+        }
+
+        private static int DefaultInterfaceMethod_Detour(IDefaultInterfaceMethodTarget self, int value)
+        {
+            return value + 41;
+        }
+#endif
     }
 }

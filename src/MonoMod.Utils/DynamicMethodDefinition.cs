@@ -1,4 +1,7 @@
-﻿using Mono.Cecil;
+﻿#if NETFRAMEWORK || NET9_0_OR_GREATER
+#define METHODBUILDER_SUPPORTED
+#endif
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Concurrent;
@@ -222,7 +225,7 @@ namespace MonoMod.Utils
                 {
                     return DMDCecilGenerator.Generate(this, context);
                 }
-#if NETFRAMEWORK
+#if METHODBUILDER_SUPPORTED
                 if (dmdType.Equals("methodbuilder", StringComparison.OrdinalIgnoreCase)
                     || dmdType.Equals("mb", StringComparison.OrdinalIgnoreCase)) {
                     return DMDEmitMethodBuilderGenerator.Generate(this, context);
@@ -246,7 +249,7 @@ namespace MonoMod.Utils
                 return DMDCecilGenerator.Generate(this, context);
 
             if (Debug)
-#if !NETFRAMEWORK
+#if !METHODBUILDER_SUPPORTED
                 return DMDCecilGenerator.Generate(this, context);
 #else
                 return DMDEmitMethodBuilderGenerator.Generate(this, context);

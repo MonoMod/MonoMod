@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net9.0": {
+    "net10.0": {
       "Chell": {
         "type": "Direct",
         "requested": "[1.0.0, )",
@@ -9,27 +9,26 @@
         "contentHash": "p6P2DRvjmZf0rtFxB2LwnogGfqDKAmZWRqwLeZQEpefXlr4VmwoMDmHtqdeMfmhtkBplXW1uV3F5BbeeSFgrlA==",
         "dependencies": {
           "Kokuban": "0.1.0",
-          "Microsoft.Extensions.FileSystemGlobbing": "5.0.0",
-          "System.IO.Pipelines": "5.0.0"
+          "Microsoft.Extensions.FileSystemGlobbing": "5.0.0"
         }
       },
       "DotNet.ReproducibleBuilds": {
         "type": "Direct",
-        "requested": "[1.2.25, )",
-        "resolved": "1.2.25",
-        "contentHash": "xCXiw7BCxHJ8pF6wPepRUddlh2dlQlbr81gXA72hdk4FLHkKXas7EH/n+fk5UCA/YfMqG1Z6XaPiUjDbUNBUzg=="
+        "requested": "[1.2.39, )",
+        "resolved": "1.2.39",
+        "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
       },
       "Microsoft.CodeAnalysis.CSharp.CodeStyle": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "5S+LHLhm0am4MWQQMN0O3VyKA/St5JCqH1yv+1YGZl2klIJlLlmNA/KTLCVJSC1kZPIKR1MFF/3g9FqsyzIyCQ=="
+        "requested": "[5.0.0-2.final, )",
+        "resolved": "5.0.0-2.final",
+        "contentHash": "72iZ5zsjAlMQ4kxxCu2198/uO+cKm1Js4xj5keDv4cqbUzLUojRJ4JhGNiq/nnIIgAI99DfVoNKT491/NPvGVw=="
       },
       "Microsoft.Net.Compilers.Toolset": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "xXDdIgDfcbMr+2bLzVJHg+/oCHwcYs808TlooX0M9+BVCeHITaROsjdbWSJNdyzeMe/K8iB2NeHmaAOUcqkKWw=="
+        "requested": "[5.0.0-2.final, )",
+        "resolved": "5.0.0-2.final",
+        "contentHash": "htd63vZnxeGtNlqQnoLx71v1EitsgZqc2WUAIBO589IO5of5XTREPQuSTv1i5qpf56CaCJ74O+YrF2i86gq+XA=="
       },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
@@ -66,11 +65,6 @@
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
-      },
-      "System.IO.Pipelines": {
-        "type": "Transitive",
-        "resolved": "5.0.0",
-        "contentHash": "irMYm3vhVgRsYvHTU5b2gsT2CwT/SMM6LZFzuJjpIvT5Z4CshxNsaoBC1X/LltwuR3Opp8d6jOS/60WwOb7Q2Q=="
       }
     }
   }

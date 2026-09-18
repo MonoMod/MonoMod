@@ -279,6 +279,8 @@ namespace MonoMod.Utils
                 // we know the kernel is linux
                 // first, lets try go get libc!getauxval and use that
 
+                DynDll.InitializeBackend(os);
+
                 var libc = DynDll.OpenLibrary(Interop.Unix.LibC);
                 if (DynDll.TryGetExport(libc, "getauxval", out var getAuxVal))
                 {

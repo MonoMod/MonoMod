@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using static MonoMod.Core.Interop.Windows;
 
@@ -65,6 +66,20 @@ namespace MonoMod.Core.Platforms.Systems
                     ClassifyX86,
                     ReturnsReturnBuffer: true);
             }
+            else if (PlatformDetection.Architecture is ArchitectureKind.Arm64)
+            {
+                // note: this is just a copy of the SysV Arm64 ABI
+                DefaultAbi = new Abi(
+                    new[]
+                    {
+                        //SpecialArgumentKind.ReturnBuffer, // ARM64 passes the return buffer in a dedicated register
+                        SpecialArgumentKind.ThisPointer,
+                        SpecialArgumentKind.UserArguments
+                    },
+                    SystemVABI.ClassifyARM64,
+                    false
+                );
+            }
         }
 
         // if the provided backup isn't large enough, the data isn't backed up
@@ -120,9 +135,37 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
+        private static readonly MethodInfo? GetModulesInternalMethod =
+            typeof(Process).GetMethod("GetModules_internal", BindingFlags.NonPublic | BindingFlags.Instance, null, [typeof(IntPtr)], null);
+
+        public IEnumerable<LoadedModule> EnumerateLoadedModules()
+        {
+            var process = Process.GetCurrentProcess();
+
+            IEnumerable<ProcessModule> modules;
+
+            if (GetModulesInternalMethod == null)
+            {
+                modules = process.Modules.Cast<ProcessModule>();
+            }
+            else
+            {
+                // On ancient Mono versions (Unity =<5.2), Process.get_Modules crashes with a covariant array interface bug
+                modules = ((object[])GetModulesInternalMethod.Invoke(process, [process.Handle])!).Cast<ProcessModule>();
+            }
+
+            foreach (var module in modules)
+            {
+                yield return new LoadedModule((ulong)module.BaseAddress, module.FileName, (ulong)module.ModuleMemorySize);
+            }
+        }
+
         public IEnumerable<string?> EnumerateLoadedModuleFiles()
         {
-            return Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Select(m => m.FileName)!;
+            foreach (var module in EnumerateLoadedModules())
+            {
+                yield return module.FileName;
+            }
         }
 
         public unsafe nint GetSizeOfReadableMemory(nint start, nint guess)
@@ -222,11 +265,18 @@ namespace MonoMod.Core.Platforms.Systems
         private sealed class PageAllocator : QueryingMemoryPageAllocatorBase
         {
             public override uint PageSize { get; }
+            public nuint MinimumApplicationAddress { get; }
+            public nuint MaximumApplicationAddress { get; }
 
             public PageAllocator()
             {
                 SYSTEM_INFO sysInfo;
-                unsafe { GetSystemInfo(&sysInfo); }
+                unsafe
+                {
+                    GetSystemInfo(&sysInfo);
+                    MinimumApplicationAddress = (nuint)sysInfo.lpMinimumApplicationAddress;
+                    MaximumApplicationAddress = (nuint)sysInfo.lpMaximumApplicationAddress;
+                }
                 PageSize = sysInfo.dwAllocationGranularity; // we use the allocation granularity instead of actual page size so we don't create tons of unusable holes in the address space
             }
 
@@ -262,7 +312,12 @@ namespace MonoMod.Core.Platforms.Systems
             public unsafe override bool TryQueryPage(IntPtr pageAddr, out bool isFree, out IntPtr allocBase, out nint allocSize)
             {
                 MEMORY_BASIC_INFORMATION buffer;
-                if (Interop.Windows.VirtualQuery((void*)pageAddr, &buffer, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) != 0)
+                // Windows contractually guarantees that the zero page is permanently unallocated,
+                // and passing a null pointer to VirtualAlloc will allocate at an arbitrary point in memory
+                // causing allocation at possibly unintended locations, see https://github.com/MonoMod/MonoMod/pull/308
+                var addrVal = (nuint)(nint)pageAddr;
+                var isValidAddress = addrVal >= MinimumApplicationAddress && addrVal <= MaximumApplicationAddress;
+                if (isValidAddress && Interop.Windows.VirtualQuery((void*)pageAddr, &buffer, (nuint)sizeof(MEMORY_BASIC_INFORMATION)) != 0)
                 {
                     isFree = buffer.State == MEM_FREE;
                     allocBase = isFree ? (nint)buffer.BaseAddress : (nint)buffer.AllocationBase;
