@@ -261,7 +261,22 @@ namespace MonoMod.RuntimeDetour
             {
                 hook.IsValid = false;
                 if (!(AppDomain.CurrentDomain.IsFinalizingForUnload() || Environment.HasShutdownStarted))
-                    Undo();
+                {
+                    var lockTaken = false;
+                    try
+                    {
+                        state.detourLock.Enter(ref lockTaken);
+                        if (!IsApplied)
+                            return;
+                        MMDbgLog.Trace($"[Dispose({disposing})] Undoing ILHook for {Method}");
+                        state.RemoveILHook(hook, !lockTaken, !disposing);
+                    }
+                    finally
+                    {
+                        if (lockTaken)
+                            state.detourLock.Exit(true);
+                    }
+                }
 
                 if (disposing)
                 {
