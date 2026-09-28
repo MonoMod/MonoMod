@@ -122,8 +122,29 @@ namespace MonoMod.Core.Platforms.Runtimes
         private IntPtr? lazyJitObject;
         protected IntPtr JitObject => lazyJitObject ??= GetJitObject();
 
+        private bool TryOpenCoreClr(out nint libraryPtr)
+        {
+            var path = System.EnumerateLoadedModuleFiles()
+                .FirstOrDefault(f => f != null && Path.GetFileName(f) == DynDll.MakeDllName("coreclr"));
+
+            if (path == null)
+            {
+                libraryPtr = 0;
+                return false;
+            }
+
+            return DynDll.TryOpenLibrary(path, out libraryPtr);
+        }
+
         private unsafe IntPtr GetJitObject()
         {
+            // Custom coreclr builds with FEATURE_MERGE_JIT_AND_ENGINE enabled
+            if (TryOpenCoreClr(out var coreclr) &&
+                DynDll.TryGetExport(coreclr, "getJit", out var getJit))
+            {
+                return ((delegate* unmanaged[Stdcall]<IntPtr>)getJit)();
+            }
+
             var path = GetClrJitPath();
 
             if (!DynDll.TryOpenLibrary(path, out var clrjit))
