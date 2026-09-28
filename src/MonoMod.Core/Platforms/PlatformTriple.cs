@@ -490,7 +490,7 @@ namespace MonoMod.Core.Platforms
         {
             if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking))
             {
-                return GetNativeMethodBodyWalk(method, reloadPtr: true);
+                return GetNativeMethodBodyWalk(method, true, out _);
             }
             else
             {
@@ -498,8 +498,24 @@ namespace MonoMod.Core.Platforms
             }
         }
 
-        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr)
+        /// <summary>
+        /// Like <see cref="GetNativeMethodBody"/>, but never forces compilation (compiling certain shared generic
+        /// instantiations access-violates on .NET Core). Reports whether the walk reached a real shared generic body
+        /// by following an instantiating stub, as opposed to stopping at a precode-fixup thunk for an uncompiled method.
+        /// </summary>
+        internal IntPtr GetSharedGenericBodyNoReload(MethodBase method, out bool followedInstantiatingStub)
         {
+            if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking))
+            {
+                return GetNativeMethodBodyWalk(method, false, out followedInstantiatingStub);
+            }
+            followedInstantiatingStub = false;
+            return GetNativeMethodBodyDirect(method);
+        }
+
+        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr, out bool followedInstantiatingStub)
+        {
+            followedInstantiatingStub = false;
             var regenerated = false;
             var didPrepareLastIter = false;
             var iters = 0;
@@ -540,7 +556,17 @@ namespace MonoMod.Core.Platforms
 
                 // TODO: be more limiting with which patterns can be scanned forward and which cannot
                 if (!archMatchCollection.TryFindMatch(span, out var addr, out var match, out var offset, out _))
+                {
+                    // The normal scan window (capped at MaxMinLength to avoid running into adjacent stubs)
+                    // is too short to reach the forwarding jump of a generic instantiating stub
+                    if (TryFollowGenericInstantiatingStub(method, entry, readableLen, out var stubBody))
+                    {
+                        MMDbgLog.Trace($"Followed generic instantiating stub at 0x{entry:x16} to shared body 0x{stubBody:x16}");
+                        entry = stubBody;
+                        followedInstantiatingStub = true;
+                    }
                     break;
+                }
 
                 var lastEntry = entry;
 
@@ -588,6 +614,112 @@ namespace MonoMod.Core.Platforms
             return Runtime.GetMethodEntryPoint(method);
         }
 
+        // x86_64 generic instantiating-stub tail patterns. Each stub shifts the user arguments, loads the generic
+        // context into some register, then loads the shared body (or a precode cell holding it) into RAX
+        // (movabs rax = 48 B8) and tail-jumps or calls.
+        private BytePatternCollection? lazyGenericInstantiatingStubs;
+        private unsafe BytePatternCollection GenericInstantiatingStubs
+            => Helpers.GetOrInit(ref lazyGenericInstantiatingStubs, &CreateGenericInstantiatingStubs);
+
+        private const int GenericStubScanWindow = 64;        // generous window; the tail sits well within this
+        private const int GenericStubMaxBodyLoadOffset = 40; // the `movabs rax` must be near the start (it's a stub)
+
+        private static BytePatternCollection CreateGenericInstantiatingStubs()
+        {
+            const ushort Ad = BytePattern.SAddressValue;
+            return new BytePatternCollection(
+                // Windows: movabs rax, {CELL}; mov rax, [rax]; jmp rax (body = *cell)
+                new(new(AddressKind.Abs64 | AddressKind.Indirect), mustMatchAtStart: false,
+                        0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad,
+                        0x48, 0x8b, 0x00,
+                        0xff, 0xe0),
+                // SysV: movabs rax, {BODY}; pop rbp; rex.w jmp rax (body = imm)
+                new(new(AddressKind.Abs64), mustMatchAtStart: false,
+                        0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad,
+                        0x5d,
+                        0x48, 0xff, 0xe0),
+                // Direct, no frame: movabs rax, {BODY}; jmp rax (body = imm)
+                new(new(AddressKind.Abs64), mustMatchAtStart: false,
+                        0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad,
+                        0xff, 0xe0),
+                // Direct, rex.w jmp without a frame pop: movabs rax, {BODY}; rex.w jmp rax
+                new(new(AddressKind.Abs64), mustMatchAtStart: false,
+                        0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad,
+                        0x48, 0xff, 0xe0),
+                // Framed shuffle stub (by-value struct arg): sets up a frame and CALLs the body instead of
+                // tail-jmping. movabs rax, {BODY}; call rax (body = imm)
+                new(new(AddressKind.Abs64), mustMatchAtStart: false,
+                        0x48, 0xb8, Ad, Ad, Ad, Ad, Ad, Ad, Ad, Ad,
+                        0xff, 0xd0));
+        }
+
+        // Follows a generic instantiating stub to the shared body it tail-jumps to.
+        private unsafe bool TryFollowGenericInstantiatingStub(MethodBase method, nint entry, nint readableLen, out nint body)
+        {
+            body = 0;
+            // The matched tail shapes are CoreCLR's .NET Core 2.1/3.x instantiating stubs.
+            // Elsewhere the walk reaches the real body instead.
+            if (Architecture.Target != ArchitectureKind.x86_64
+                || PlatformDetection.Runtime != RuntimeKind.CoreCLR
+                || !IsSharedGenericInstantiation(method))
+            {
+                return false;
+            }
+
+            var stubs = GenericInstantiatingStubs;
+            var window = (int)Math.Min((long)readableLen, GenericStubScanWindow);
+            if (window < stubs.MinLength)
+            {
+                return false;
+            }
+
+            var span = new ReadOnlySpan<byte>((void*)entry, window);
+            if (!stubs.TryFindMatch(span, out var addr, out var match, out var offset, out _))
+            {
+                return false;
+            }
+            if (offset > GenericStubMaxBodyLoadOffset)
+            {
+                return false;
+            }
+
+            var resolved = match.AddressMeaning.ProcessAddress(entry, offset, addr);
+            if (resolved == 0 || resolved == entry)
+            {
+                return false;
+            }
+            body = resolved;
+            return true;
+        }
+
+        // True if the method is a closed generic instantiation that uses reference-type code sharing
+        // (so its entry on legacy CoreCLR is an instantiating stub).
+        private static bool IsSharedGenericInstantiation(MethodBase method)
+        {
+            var dt = method.DeclaringType;
+            if (dt is { IsGenericType: true } && !dt.ContainsGenericParameters)
+            {
+                foreach (var a in dt.GetGenericArguments())
+                {
+                    if (!a.IsValueType)
+                    {
+                        return true;
+                    }
+                }
+            }
+            if (method.IsGenericMethod && !method.ContainsGenericParameters)
+            {
+                foreach (var a in method.GetGenericArguments())
+                {
+                    if (!a.IsValueType)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         private IntPtr ThePreStub = IntPtr.Zero;
 
         // TODO: make this something actually runtime-dependent
@@ -596,26 +728,56 @@ namespace MonoMod.Core.Platforms
             if (ThePreStub == IntPtr.Zero)
             {
                 ThePreStub = (IntPtr)(-2);
-
-                // FIXME: Find a better less likely called NGEN'd candidate that points to ThePreStub.
-                // This was "found" by tModLoader.
-                // Can be missing in .NET 5.0 outside of Windows for some reason.
-
-                // Instead of using any specific method on System.Net.Connection, we just check all of them, as (hopefully) most aren't called by this point
-                var pre = typeof(System.Net.HttpWebRequest).Assembly
-                    .GetType("System.Net.Connection")
-                    ?.GetMethods()
-                    .GroupBy(m => GetNativeMethodBodyWalk(m, reloadPtr: false))
-                    .First(g => g.Count() > 1)
-                    .Key ?? (nint)(-1);
-
-                ThePreStub = pre;
+                ThePreStub = DetectThePreStub();
                 MMDbgLog.Trace($"ThePreStub: 0x{ThePreStub:X16}");
             }
 
-            wasPreStub = ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/;
+            wasPreStub = ptrParsed == ThePreStub;
 
             return wasPreStub ? ptrGot : ptrParsed;
+        }
+
+        // Prefer own probe type, which is guaranteed to exist and be uncompiled on every runtime.
+        // Previous System.Net.Connection heuristic is kept as a fallback (that internal type is absent on some runtimes),
+        private IntPtr DetectThePreStub()
+        {
+            foreach (var methods in EnumeratePreStubCandidates())
+            {
+                if (methods is null || methods.Length < 2)
+                {
+                    continue;
+                }
+
+                var match = methods.GroupBy(m => (nint)GetNativeMethodBodyWalk(m, false, out _))
+                    .Where(g => g.Count() > 1)
+                    .Select(g => (nint?)g.Key)
+                    .FirstOrDefault();
+
+                if (match is { } found)
+                {
+                    return found;
+                }
+            }
+
+            return (nint)(-1);
+        }
+
+        private static IEnumerable<MethodInfo[]?> EnumeratePreStubCandidates()
+        {
+            yield return typeof(PreStubProbe).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            yield return typeof(System.Net.HttpWebRequest).Assembly.GetType("System.Net.Connection")?.GetMethods();
+        }
+
+        private static class PreStubProbe
+        {
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            public static int Probe0() => 0;
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            public static int Probe1() => 1;
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            public static int Probe2() => 2;
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            public static int Probe3() => 3;
         }
 
         /// <summary>
@@ -713,66 +875,10 @@ namespace MonoMod.Core.Platforms
             var returnBufferType = hasReturnBuffer ? returnType.MakeByRefType() : returnType;
             var newReturnType = hasReturnBuffer && !Abi.ReturnsReturnBuffer ? typeof(void) : returnBufferType;
 
-            var thisPos = -1;
-            var returnBufferPos = -1;
-            var userArgumentsOffset = -1;
             var parameters = from.GetParameters();
-            var argumentTypes = new List<Type>(parameters.Length + 3);
-            var argumentKinds = Abi.ArgumentOrder.Span;
-            for (var i = 0; i < argumentKinds.Length; i++)
-            {
-                switch (argumentKinds[i])
-                {
-                    case SpecialArgumentKind.ThisPointer when hasThis:
-                        thisPos = argumentTypes.Count;
-                        argumentTypes.Add(from.GetThisParamType());
-                        break;
-
-                    case SpecialArgumentKind.ReturnBuffer when hasReturnBuffer:
-                        returnBufferPos = argumentTypes.Count;
-                        argumentTypes.Add(returnBufferType);
-                        break;
-
-                    case SpecialArgumentKind.GenericContext when requiresGenericContextFixup:
-                        // Currently, we do the bare minimum: we acknowledge that
-                        // the generic context exists. That's all. After that,
-                        // we simply throw it out of the window and rely on
-                        // the generic context (if any) baked into in the callee.
-                        //
-                        // While this does work fine, it introduces funny little
-                        // holes in the type-safety premise of .NET:
-                        //
-                        // // This may return `false`!
-                        // bool Hook<T>(T it)
-                        //     => typeof(T).IsAssignableFrom(it.GetType());
-                        //
-                        // This behavior is caused by the fact that constructed
-                        // generics for reference types are Java'd into a single
-                        // definition at runtime (and rightfully so).
-                        // So, even if you try to detour a specific generic
-                        // implementation using something like
-                        // `to.MakeGenericMethod(typeof(string))`,
-                        // your hook will receive calls for all
-                        // reference type-based implementations out there.
-                        // However, since we do not patch the generic context
-                        // of the provided hook, it remains unchanged,
-                        // causing `typeof(T)` to defy users' expectations.
-                        //
-                        // So, TODO: patch the generic context of the detour target
-                        // and/or introduce a call filter based on the current context.
-
-                        // The generic context is passed as a pointer to a struct that
-                        // contains all the needed (?) information.
-                        // We can treat it as a simple `IntPtr`.
-                        argumentTypes.Add(typeof(nint));
-                        break;
-
-                    case SpecialArgumentKind.UserArguments:
-                        userArgumentsOffset = argumentTypes.Count;
-                        argumentTypes.AddRange(parameters.Select(static p => p.ParameterType));
-                        break;
-                }
-            }
+            var argumentTypes = BuildAbiArgumentLayout(Abi.ArgumentOrder.Span, from, parameters,
+                hasThis, hasReturnBuffer, requiresGenericContextFixup, returnBufferType,
+                out var thisPos, out var returnBufferPos, out _, out var userArgumentsOffset);
 
             Helpers.DAssert(thisPos >= 0 || !hasThis);
             // note: ARM64 (sysv) uses a dedicated register for the return buffer, so we don't record it as an argument
@@ -781,7 +887,7 @@ namespace MonoMod.Core.Platforms
 
             using var dmd = new DynamicMethodDefinition(
                 DebugFormatter.Format($"Glue:AbiFixup<{from},{to}>"),
-                newReturnType, argumentTypes.ToArray()
+                newReturnType, argumentTypes
             );
             // TODO: make DMD apply attributes to the generated DynamicMethod, when possible
             dmd.Definition!.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining |
@@ -827,6 +933,77 @@ namespace MonoMod.Core.Platforms
                     return true;
             }
             return false;
+        }
+
+        internal static Type[] BuildAbiArgumentLayout(ReadOnlySpan<SpecialArgumentKind> order, MethodBase from, ParameterInfo[] parameters,
+            bool hasThis, bool hasReturnBuffer, bool hasGenericContext, Type returnBufferType,
+            out int thisPos, out int returnBufferPos, out int genericContextPos, out int userArgumentsOffset,
+            Func<Type, Type>? canonicalize = null)
+        {
+            thisPos = -1;
+            returnBufferPos = -1;
+            genericContextPos = -1;
+            userArgumentsOffset = -1;
+
+            var argumentTypes = new List<Type>(parameters.Length + 3);
+            for (var i = 0; i < order.Length; i++)
+            {
+                switch (order[i])
+                {
+                    case SpecialArgumentKind.ThisPointer when hasThis:
+                        thisPos = argumentTypes.Count;
+                        var thisType = from.GetThisParamType();
+                        argumentTypes.Add(canonicalize is null ? thisType : canonicalize(thisType));
+                        break;
+
+                    case SpecialArgumentKind.ReturnBuffer when hasReturnBuffer:
+                        returnBufferPos = argumentTypes.Count;
+                        argumentTypes.Add(returnBufferType);
+                        break;
+
+                    case SpecialArgumentKind.GenericContext when hasGenericContext:
+                        // Currently, we do the bare minimum: we acknowledge that
+                        // the generic context exists. That's all. After that,
+                        // we simply throw it out of the window and rely on
+                        // the generic context (if any) baked into in the callee.
+                        //
+                        // While this does work fine, it introduces funny little
+                        // holes in the type-safety premise of .NET:
+                        //
+                        // // This may return `false`!
+                        // bool Hook<T>(T it)
+                        //     => typeof(T).IsAssignableFrom(it.GetType());
+                        //
+                        // This behavior is caused by the fact that constructed
+                        // generics for reference types are Java'd into a single
+                        // definition at runtime (and rightfully so).
+                        // So, even if you try to detour a specific generic
+                        // implementation using something like
+                        // `to.MakeGenericMethod(typeof(string))`,
+                        // your hook will receive calls for all
+                        // reference type-based implementations out there.
+                        // However, since we do not patch the generic context
+                        // of the provided hook, it remains unchanged,
+                        // causing `typeof(T)` to defy users' expectations.
+                        //
+                        // So, TODO: patch the generic context of the detour target
+                        // and/or introduce a call filter based on the current context.
+
+                        // The generic context is passed as a pointer to a struct that
+                        // contains all the needed (?) information.
+                        // We can treat it as a simple `IntPtr`.
+                        genericContextPos = argumentTypes.Count;
+                        argumentTypes.Add(typeof(nint));
+                        break;
+
+                    case SpecialArgumentKind.UserArguments:
+                        userArgumentsOffset = argumentTypes.Count;
+                        argumentTypes.AddRange(parameters.Select(pi => canonicalize is null ? pi.ParameterType : canonicalize(pi.ParameterType)));
+                        break;
+                }
+            }
+
+            return argumentTypes.ToArray();
         }
     }
 }

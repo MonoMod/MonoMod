@@ -549,6 +549,11 @@ namespace MonoMod.RuntimeDetour
         /// <param name="config">The <see cref="DetourConfig"/> to use for this <see cref="Hook"/>.</param>
         /// <param name="applyByDefault">Whether or not this hook should be applied when the constructor finishes.</param>
         public Hook(MethodBase source, MethodInfo target, object? targetObject, IDetourFactory factory, DetourConfig? config, bool applyByDefault)
+            : this(source, target, targetObject, factory, config, applyByDefault, false)
+        {
+        }
+
+        internal Hook(MethodBase source, MethodInfo target, object? targetObject, IDetourFactory factory, DetourConfig? config, bool applyByDefault, bool allowGeneric)
         {
             Helpers.ThrowIfArgumentNull(source);
             Helpers.ThrowIfArgumentNull(target);
@@ -558,6 +563,15 @@ namespace MonoMod.RuntimeDetour
             Config = config;
             Source = PlatformTriple.Current.GetIdentifiable(source);
             Target = target;
+
+            if (!allowGeneric)
+            {
+                CheckSupported();
+            }
+            else if (Source.ContainsGenericParameters)
+            {
+                throw new ArgumentException("Cannot hook an open generic definition");
+            }
 
             realTarget = PrepareRealTarget(targetObject, out trampoline, out delegateObjectScope);
 
@@ -588,8 +602,6 @@ namespace MonoMod.RuntimeDetour
 
         private MethodInfo PrepareRealTarget(object? target, out TrampolineData trampoline, out DataScope<DynamicReferenceCell> scope)
         {
-            CheckSupported();
-
             var srcSig = MethodSignature.ForMethod(Source);
             var dstSig = MethodSignature.ForMethod(Target, ignoreThis: true); // the dest sig we don't want to consider its this param
 
