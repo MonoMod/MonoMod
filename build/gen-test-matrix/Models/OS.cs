@@ -180,6 +180,35 @@ internal sealed record OS : Enableable
             Arch = [
                 new() { RidName = "x64", UnityName = "macos_x64", IsRunnerArch = true },
             ]
+        },
+        new()
+        {
+            Name = "MacOS 26",
+            Runner = "macos-26",
+            HasSystemMono = true,
+            RidName = "osx",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".dylib",
+
+            Arch = [
+                new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
+            ]
+        },
+        new()
+        {
+            Name = "MacOS 26 Intel",
+            Runner = "macos-26-intel",
+            HasSystemMono = true,
+            RidName = "osx",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".dylib",
+
+            Arch = [
+                new() { RidName = "x64", UnityName = "macos_x64", IsRunnerArch = true },
+            ]
         }
     ];
 }
