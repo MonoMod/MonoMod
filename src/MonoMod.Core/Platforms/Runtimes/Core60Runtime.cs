@@ -203,49 +203,18 @@ namespace MonoMod.Core.Platforms.Runtimes
                 nint nativeException = default;
                 var pNEx = GetNativeExceptionSlot is { } getNex ? getNex() : null;
                 hookEntrancy++;
+                
+                ICorJitInfoWrapper stackallocWrapper = default;
                 try
                 {
 
                     if (hookEntrancy == 1)
                     {
-                        try
-                        {
-                            var corJitWrapper = iCorJitInfoWrapper.Value;
-                            if (corJitWrapper is null)
-                            {
-                                // we need to create corJitWrapper
-                                var allocReq = new AllocationRequest(sizeof(ICorJitInfoWrapper))
-                                {
-                                    Alignment = IntPtr.Size,
-                                    Executable = false
-                                };
-                                if (Runtime.System.MemoryAllocator.TryAllocate(allocReq, out var alloc))
-                                {
-                                    iCorJitInfoWrapper.Value = corJitWrapper = alloc;
-                                }
-                            }
-                            // we still need to check if we were able to create it, because not creating it should not be a hard error
-                            if (corJitWrapper is not null)
-                            {
-                                var wrapper = (ICorJitInfoWrapper*)corJitWrapper.BaseAddress;
-                                wrapper->Vtbl = iCorJitInfoWrapperVtbl;
-                                wrapper->Wrapped = (IntPtr**)corJitInfo;
-                                (*wrapper)[ICorJitInfoWrapper.HotCodeRW] = IntPtr.Zero;
-                                (*wrapper)[ICorJitInfoWrapper.ColdCodeRW] = IntPtr.Zero;
-                                corJitInfo = (IntPtr)wrapper;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            try
-                            {
-                                MMDbgLog.Error($"Error while setting up the ICorJitInfo wrapper: {e}");
-                            }
-                            catch
-                            {
-
-                            }
-                        }
+                        stackallocWrapper.Vtbl = iCorJitInfoWrapperVtbl;
+                        stackallocWrapper.Wrapped = (IntPtr**)corJitInfo;
+                        stackallocWrapper[ICorJitInfoWrapper.HotCodeRW] = IntPtr.Zero;
+                        stackallocWrapper[ICorJitInfoWrapper.ColdCodeRW] = IntPtr.Zero;
+                        corJitInfo = (nint)(&stackallocWrapper);
                     }
 
                     CorJitResult result;
@@ -271,13 +240,7 @@ namespace MonoMod.Core.Platforms.Runtimes
                     {
                         try
                         {
-                            // we need to make sure that we set up the wrapper to continue
-                            var corJitWrapper = iCorJitInfoWrapper.Value;
-                            if (corJitWrapper is null)
-                                return result;
-
-                            ref var wrapper = ref *(ICorJitInfoWrapper*)corJitWrapper.BaseAddress;
-                            var rwEntry = wrapper[ICorJitInfoWrapper.HotCodeRW];
+                            var rwEntry = stackallocWrapper[ICorJitInfoWrapper.HotCodeRW];
 
                             Runtime.CompileMethodHookPostCommon(methodInfo, nativeEntry, nativeSizeOfCode, rwEntry);
                         }
