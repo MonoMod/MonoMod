@@ -39,17 +39,6 @@ namespace MonoMod.Core.Platforms.Memory
         /// <param name="allocated">The address of the allocated page, if successful.</param>
         /// <returns><see langword="true"/> if a page was successfully allocated; <see langword="false"/> otherwise.</returns>
         public abstract bool TryAllocatePage(IntPtr pageAddr, nint size, bool executable, out IntPtr allocated);
-
-        /// <summary>
-        /// Tries to allocate a page at <paramref name="hint"/>, or as close to it as the OS is willing to place it.
-        /// </summary>
-        /// <remarks>
-        /// Platforms which can place a mapping near an address without first proving that address is free implement
-        /// this; the range search uses it to avoid walking the region map (which costs one or two OS calls per region).
-        /// Implementations must report the address they actually used, which the caller validates against its bounds.
-        /// </remarks>
-        public virtual bool TryAllocatePageNear(IntPtr hint, nint size, bool executable, out IntPtr allocated)
-            => TryAllocatePage(hint, size, executable, out allocated);
         /// <summary>
         /// Tries to free the page at the provided addresss.
         /// </summary>
@@ -65,24 +54,6 @@ namespace MonoMod.Core.Platforms.Memory
     public sealed class QueryingPagedMemoryAllocator : PagedMemoryAllocator
     {
         private readonly QueryingMemoryPageAllocatorBase pageAlloc;
-
-        /// <summary>
-        /// Number of doubling steps (per direction) used when asking the OS to place a page near a target address.
-        /// </summary>
-        private const int NearProbeSteps = 16;
-
-        /// <summary>
-        /// Largest stride used when descending past an unusable gap. The descent doubles up to this and never
-        /// gives up, so a required allocation still reaches every 1GB/1MB boundary inside its bounds.
-        /// </summary>
-        private const int MaxPageStep = 1024 * 1024;
-
-
-        /// <summary>
-        /// The page the last range allocation succeeded from - the next walk starts there when it is still inside
-        /// the requested bounds, so a sequence of allocations in the same window does not rescan the map.
-        /// </summary>
-        private nint lastAllocatedPage;
         /// <summary>
         /// Constructs a <see cref="QueryingPagedMemoryAllocator"/> using the provided <see cref="QueryingMemoryPageAllocatorBase"/>.
         /// </summary>
@@ -125,35 +96,30 @@ namespace MonoMod.Core.Platforms.Memory
             // we'll do the same approach for trying to find an existing page, but querying the OS for free pages to allocate
             var target = request.Target;
 
-            if (TryAllocateNear(request, targetPage, lowPageBound, highPageBound, out allocated))
-                return true;
+            var lowPage = targetPage;
+            var highPage = targetPage + PageSize;
 
-            var startPage = lastAllocatedPage >= lowPageBound && lastAllocatedPage < highPageBound
-                ? lastAllocatedPage
-                : targetPage;
-
-            var lowPage = startPage;
-            var highPage = startPage + PageSize;
-
-            // Search upwards first. An upward step can skip a whole region or gap in one probe, while a
-            // downward step past free space can only advance one page at a time (the query reports where the
-            // next region starts, not where free space begins), so an unbounded downward search over a large
-            // gap costs one probe per page - hundreds of thousands of OS calls - while the request only needs
-            // an address inside the bounds.
-            var upwardStep = PageSize;
-            while (highPage < highPageBound)
+            while (lowPage >= lowPageBound || highPage < highPageBound)
             {
-                if (TryAllocNewPage(request, ref highPage, true, ref upwardStep, out allocated))
-                    return true;
-            }
+                // first check the high pages, while they're closer than low pages
+                while (
+                    highPage < highPageBound &&
+                    (lowPage < lowPageBound || target - lowPage > highPage - target)
+                )
+                {
+                    if (TryAllocNewPage(request, ref highPage, true, out allocated))
+                        return true;
+                }
 
-            // then downwards; this cannot be capped, because for targets whose upper half is fully mapped the
-            // free space only exists below and a cap turns a required allocation into a failure
-            var downwardStep = PageSize;
-            while (lowPage >= lowPageBound)
-            {
-                if (TryAllocNewPage(request, ref lowPage, false, ref downwardStep, out allocated))
-                    return true;
+                // then try low pages, while they're closer than high pages
+                while (
+                    lowPage >= lowPageBound &&
+                    (highPage >= highPageBound || target - lowPage < highPage - target)
+                )
+                {
+                    if (TryAllocNewPage(request, ref lowPage, false, out allocated))
+                        return true;
+                }
             }
 
             // if we fall out to here, we just couldn't allocate, so sucks
@@ -161,61 +127,12 @@ namespace MonoMod.Core.Platforms.Memory
             return false;
         }
 
-
-        /// <summary>
-        /// Asks the OS to place a page at or near the target. One probe is a single OS call, while the region walk
-        /// below costs one or two per region it crosses - seconds on a fragmented address space, which is what a
-        /// translated (Rosetta) macOS process has.
-        /// </summary>
-        private bool TryAllocateNear(PositionedAllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated)
-        {
-            for (var step = 0; step < NearProbeSteps; step++)
-            {
-                var offset = (nint)1 << step;
-
-                for (var direction = 0; direction < 2; direction++)
-                {
-                    var candidate = direction == 0 ? targetPage + offset * PageSize : targetPage - offset * PageSize;
-                    if (candidate < lowPageBound || candidate >= highPageBound)
-                        continue;
-                    if (!pageAlloc.TryAllocatePageNear(candidate, PageSize, request.Base.Executable, out var address))
-                        continue;
-
-                    // the OS may place it elsewhere; only an address inside the bounds is acceptable
-                    if (address < lowPageBound || address >= highPageBound)
-                    {
-                        pageAlloc.TryFreePage(address, out _);
-                        continue;
-                    }
-
-                    var page = new Page(this, address, (uint)PageSize, request.Base.Executable);
-                    InsertAllocatedPage(page);
-
-                    if (!page.TryAllocate((uint)request.Base.Size, (uint)request.Base.Alignment, out var alloc))
-                    {
-                        RegisterForCleanup(page);
-                        continue;
-                    }
-
-                    allocated = alloc;
-                    return true;
-                }
-            }
-
-            allocated = null;
-            return false;
-        }
-
-        private unsafe bool TryAllocNewPage(PositionedAllocationRequest request, ref nint page, bool goingUp, ref nint pageStep, [MaybeNullWhen(false)] out IAllocatedMemory allocated)
+        private unsafe bool TryAllocNewPage(PositionedAllocationRequest request, ref nint page, bool goingUp, [MaybeNullWhen(false)] out IAllocatedMemory allocated)
         {
             if (pageAlloc.TryQueryPage(page, out var isFree, out var baseAddr, out var allocSize))
             {
-                if (!isFree)
-                {
-                    // stepping past a mapped region: resume probing at page granularity below it
-                    pageStep = PageSize;
+                if (!isFree) // this is not a free block, so we don't care
                     goto Fail;
-                }
 
                 if (!pageAlloc.TryAllocatePage(page, PageSize, request.Base.Executable, out var allocBase)) // allocation failed
                     goto Fail;
@@ -240,26 +157,15 @@ namespace MonoMod.Core.Platforms.Memory
                 }
 
                 // we successfully allocated, return the page allocation
-                lastAllocatedPage = pageObj.BaseAddr;
                 allocated = alloc;
                 return true;
 
                 Fail:
                 // We're failing out, update the page address appropriately
                 if (goingUp)
-                {
-                    // an upward step learns where the next region starts, so it can skip a whole gap
                     page = baseAddr + allocSize;
-                }
                 else
-                {
-                    // downward the query only reports the *next* region, never where free space begins below, so
-                    // descend geometrically: stepping one page across a large unusable gap costs hundreds of
-                    // thousands of OS calls, and a fixed stride either degrades the same way or skips the range
-                    page = baseAddr - pageStep;
-                    if (pageStep < MaxPageStep)
-                        pageStep *= 2;
-                }
+                    page = baseAddr - PageSize;
 
                 allocated = null;
                 return false;

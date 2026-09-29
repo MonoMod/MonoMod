@@ -477,31 +477,6 @@ namespace MonoMod.Core.Platforms.Systems
                 return true;
             }
 
-            public override unsafe bool TryAllocatePageNear(IntPtr hint, nint size, bool executable, out IntPtr allocated)
-            {
-                // A non-fixed mapping treats the address as a hint: the kernel places the page at the hint when it is
-                // free and reports where it actually landed (measured on a translated x64 process: 200/200 hints
-                // honoured, ~135us per probe, against seconds for a region-by-region search). The caller validates
-                // the returned address against its bounds, and executable pages keep using the fixed path above.
-                // arm64 requires MAP_JIT for writable-executable mappings and hands that path to the fixed
-                // allocator; on x86_64 the hint path can place either kind of page.
-                if (executable && PlatformDetection.Architecture == ArchitectureKind.Arm64)
-                    return TryAllocatePage(hint, size, executable, out allocated);
-
-                var prot = map_prot.Read | map_prot.Write;
-                if (executable)
-                    prot |= map_prot.Execute;
-
-                allocated = mmap(hint, (ulong)size, prot, map_flags.Private | map_flags.Anonymous, -1, 0);
-                if (allocated == (IntPtr)(-1))
-                {
-                    allocated = default;
-                    return false;
-                }
-
-                return true;
-            }
-
             public override bool TryFreePage(IntPtr pageAddr, [NotNullWhen(false)] out string? errorMsg)
             {
                 var kr = mach_vm_deallocate(mach_task_self(), (ulong)pageAddr, PageSize);
