@@ -5,6 +5,7 @@ using MonoMod.Utils;
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 
 namespace MonoMod.RuntimeDetour
 {
@@ -158,6 +159,13 @@ namespace MonoMod.RuntimeDetour
 
         private readonly DetourManager.ManagedDetourState state;
         private readonly DetourManager.SingleILHookState hook;
+        private int transactionPending;
+
+        internal DetourManager.ManagedDetourState ManagedState => state;
+        internal DetourManager.SingleILHookState HookState => hook;
+
+        internal void SetTransactionPending(bool pending)
+            => Volatile.Write(ref transactionPending, pending ? 1 : 0);
 
         /// <summary>
         /// Constructs an <see cref="ILHook"/> for the provided method using the provided manipulator and <see cref="DetourConfig"/>
@@ -197,7 +205,7 @@ namespace MonoMod.RuntimeDetour
         /// <summary>
         /// Gets whether or not this <see cref="ILHook"/> is applied.
         /// </summary>
-        public bool IsApplied => hook.IsApplied;
+        public bool IsApplied => hook.IsApplied || Volatile.Read(ref transactionPending) != 0;
         /// <summary>
         /// Gets the <see cref="ILHookInfo"/> for this <see cref="ILHook"/>.
         /// </summary>
@@ -223,6 +231,8 @@ namespace MonoMod.RuntimeDetour
                 if (IsApplied)
                     return;
                 MMDbgLog.Trace($"Applying ILHook for {Method}");
+                if (ILHookTransaction.TryQueue(this))
+                    return;
                 state.AddILHook(hook, !lockTaken);
             }
             finally
@@ -246,6 +256,8 @@ namespace MonoMod.RuntimeDetour
                 if (!IsApplied)
                     return;
                 MMDbgLog.Trace($"Undoing ILHook for {Method}");
+                if (ILHookTransaction.TryCancel(this))
+                    return;
                 state.RemoveILHook(hook, !lockTaken);
             }
             finally
