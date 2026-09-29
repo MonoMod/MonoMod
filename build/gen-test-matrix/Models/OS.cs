@@ -148,7 +148,7 @@ internal sealed record OS : Enableable
             DllSuffix = ".dylib",
 
             Arch = [
-                new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                //new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
                 new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
             ]
         },
@@ -163,7 +163,7 @@ internal sealed record OS : Enableable
             DllSuffix = ".dylib",
 
             Arch = [
-                new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                //new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
                 new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
             ]
         },
@@ -192,7 +192,7 @@ internal sealed record OS : Enableable
             DllSuffix = ".dylib",
 
             Arch = [
-                new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                //new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
                 new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
             ]
         },
