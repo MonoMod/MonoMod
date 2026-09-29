@@ -64,12 +64,12 @@ jobs:
       # MacOS 15 images don't ship Mono at all
     - name: Install Mono from Brew
       uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-') && fromJSON(inputs.matrix).os.needsSystemMonoInstall }}
       with:
         key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-mono
         tools: mono
     - name: Add new Mono to PATH
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-') && fromJSON(inputs.matrix).os.needsSystemMonoInstall }}
       shell: bash
       run: |
         echo "$(brew --prefix mono)/bin" >> "$GITHUB_PATH"

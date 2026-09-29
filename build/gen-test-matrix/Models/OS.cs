@@ -6,6 +6,7 @@ internal sealed record OS : Enableable
 {
     public required string Name { get; init; }
     public required string Runner { get; init; }
+    public bool NeedsSystemMonoInstall { get; init; }
 
     [JsonIgnore]
     public bool UseContainer { get; init; }
@@ -53,8 +54,8 @@ internal sealed record OS : Enableable
             DllSuffix = ".dll",
 
             Arch = [
-                new() { RidName = "x86", UnityName = "win32" },
-                new() { RidName = "x64", UnityName = "win64" },
+                //new() { RidName = "x86", UnityName = "win32" },
+                //new() { RidName = "x64", UnityName = "win64" },
                 new() { RidName = "arm64", UnityName = "win_arm64", IsRunnerArch = true },
             ]
         },
@@ -157,6 +158,7 @@ internal sealed record OS : Enableable
             Name = "MacOS 15",
             Runner = "macos-15",
             HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
@@ -172,6 +174,7 @@ internal sealed record OS : Enableable
             Name = "MacOS 15 Intel",
             Runner = "macos-15-intel",
             HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
@@ -186,6 +189,7 @@ internal sealed record OS : Enableable
             Name = "MacOS 26",
             Runner = "macos-26",
             HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
@@ -201,6 +205,7 @@ internal sealed record OS : Enableable
             Name = "MacOS 26 Intel",
             Runner = "macos-26-intel",
             HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
