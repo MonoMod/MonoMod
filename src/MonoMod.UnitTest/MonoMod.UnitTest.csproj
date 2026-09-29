@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Metadata -->
   <PropertyGroup>
@@ -12,7 +12,7 @@
     <NoWarn>$(NoWarn);CA1852</NoWarn>
 
     <!-- Put .NET 6.0 as the first framework so that OmniSharp uses it for VS Code Intelisense -->
-    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;net9.0;net10.0;net472;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net6.0;net5.0;net7.0;net8.0;net9.0;net10.0;net11.0;net472;netcoreapp2.1;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
     <SignAssembly>skip</SignAssembly>
     <Nullable>annotations</Nullable>
 
@@ -24,6 +24,13 @@
     <XunitVsRunnerVersion>$(XunitVersion)</XunitVsRunnerVersion>
     <!-- 2.4.5 drops support for net452 -->
     <XunitVsRunnerVersion Condition="'$(TargetFramework)' == 'net462'">[2.*,2.4.3]</XunitVsRunnerVersion>
+  </PropertyGroup>
+
+  <!-- Runtime-async Task/ValueTask wrappers are VM IL stubs on .NET 11. Compile the test
+       assembly with the feature so Hook/ILHook coverage actually hits those stubs. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0'">
+    <Features>$(Features);runtime-async=on</Features>
+    <DefineConstants>$(DefineConstants);RUNTIME_ASYNC</DefineConstants>
   </PropertyGroup>
 
   <!-- Dependencies -->
