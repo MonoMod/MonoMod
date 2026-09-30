@@ -5,7 +5,7 @@ Loaded by .github/workflows/run-with-dumps.ps1 via
 and configured through the environment:
     RWD_COMMAND          JSON array: [executable, arg1, ...]
     DUMPS_PATH           directory to write dumps into
-    RWD_TIMEOUT_SECONDS  wall-clock limit before a hang dump is taken (default 600)
+    RWD_TIMEOUT_SECONDS  wall-clock limit before a hang dump is taken (default 1800; some tests legitimately take a while)
 
 The target is launched directly (not through a wrapper like coreutils' timeout) because
 debugserver on macOS cannot follow forks. LLDB exits with the target's exit code, 128+signo
@@ -56,7 +56,7 @@ def log(msg):
 def run(debugger):
     command = json.loads(os.environ["RWD_COMMAND"])
     dumps_path = os.environ["DUMPS_PATH"]
-    timeout = float(os.environ.get("RWD_TIMEOUT_SECONDS", "600"))
+    timeout = float(os.environ.get("RWD_TIMEOUT_SECONDS", "1800"))
     watchdog_seconds = timeout + HANG_KILL_GRACE_SECONDS + WATCHDOG_EXTRA_SECONDS
     launched_pid = None
 

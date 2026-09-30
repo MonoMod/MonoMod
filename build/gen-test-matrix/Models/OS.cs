@@ -143,6 +143,9 @@ internal sealed record OS : Enableable
             Name = "MacOS 14",
             Runner = "macos-14",
             HasSystemMono = true,
+            // The preinstalled Mono.framework is x86_64-only, and LLDB can't debug it under Rosetta (launches hang), so
+            // we'd get no crash dumps. Use Homebrew's native arm64 Mono instead.
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
