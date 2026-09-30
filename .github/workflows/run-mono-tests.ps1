@@ -1,6 +1,7 @@
 $useMdh = $env:USE_MDH -eq "true";
 [string]$exe = if ($useMdh) { $env:MDH } else { $env:MONO_DLL };
-[string[]]$exeargs = if ($useMdh) { @($env:MONO_DLL) } else { @() };
+# note: must be an array literal; a [string[]] typed $null here splats as a single empty argument
+$exeargs = @(if ($useMdh) { $env:MONO_DLL });
 
 $xunitExt = if ($env:RUNNER_TFM.StartsWith("netcore")) { ".dll" } else { ".exe" };
 

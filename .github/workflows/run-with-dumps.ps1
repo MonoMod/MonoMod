@@ -2,16 +2,10 @@ param (
     [Parameter(Mandatory=$true, Position=0)]
     [string]$Exe,
     [Parameter(Mandatory=$false, Position=1, ValueFromRemainingArguments=$True)]
-    [string[]]$Args = @()
+    [string[]]$ExeArgs = @()
 )
 
 $ErrorActionPreference = 'Stop';
-
-$workspace = $env:WORKSPACE;
-if ($null -eq $workspace)
-{
-    Write-Error "WORKSPACE not set!";
-}
 
 $dumpsPath = $env:DUMPS_PATH;
 if ($null -eq $dumpsPath)
@@ -21,7 +15,6 @@ if ($null -eq $dumpsPath)
 
 # make sure the dir exists
 New-Item -Type Directory $dumpsPath -Force | Out-Null;
-$lldbHelpers = Join-Path $workspace '.github' 'lldb';
 
 if ($IsWindows)
 {
@@ -33,27 +26,17 @@ if ($IsWindows)
     New-ItemProperty -Path $key -Name 'DumpFolder' -PropertyType 'String' -Value $dumpsPath -Force;
 
     # then we can execute the program
-    &$Exe @Args;
+    &$Exe @ExeArgs;
     exit $LastExitCode;
 }
 elseif ($IsLinux -or $IsMacOS)
 {
-    # on Linux, we need to set the core_pattern and run the app with a ulimit -c unlimited
-    Write-Output ($Args -join "`n") | bash -c @"
-set -eo pipefail;
-ulimit -c unlimited;
-set +e;
-# on MacOS, SIGXCPU doesn't coredump by default. Thus, we use LLDB unattended to perform the dump 
-# because we run our Linux stuff in containers, we can't set the core_pattern. Thus, we'll do the same thing we *must* do on MacOS and use LLDB to generate dumps when crashing
-xargs lldb -x -b \
-    -O "command alias sdmp process save-core -s full -pminidump '$(Join-Path $dumpsPath 'dump_crash.core')'"\
-    -s "$(Join-Path $lldbHelpers 'setup.lldb')" \
-    -K "$(Join-Path $lldbHelpers 'crash.lldb')" \
-    -s "$(Join-Path $lldbHelpers 'teardown.lldb')" -- timeout -s XCPU -k 60 300 "$Exe";
-exit `$?;
-"@;
+    # We can't rely on the kernel for dumps (our Linux jobs run in containers, where we can't set core_pattern), so we run
+    # the program under LLDB, which saves a dump when it crashes or hangs. See run_with_dumps.py for details.
+    $script = Join-Path $PSScriptRoot '..' 'lldb' 'run_with_dumps.py';
+    $env:RWD_COMMAND = ConvertTo-Json -Compress -InputObject @(@($Exe) + $ExeArgs);
+    & lldb -x -b -o "command script import '$script'";
     exit $LastExitCode;
-
 }
 else
 {

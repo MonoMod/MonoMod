@@ -19,7 +19,6 @@ env:
   XunitVersion: "2.4.2"
 
   DUMPS_PATH: ${{github.workspace}}/artifacts/dumps/
-  WORKSPACE: ${{github.workspace}}
   DOTNET_DbgEnableMiniDump: 1
   DOTNET_DbgMiniDumpName: "${{github.workspace}}/artifacts/dumps/dump_%e_%p.dmp"
   DOTNET_DbgMiniDumpType: 4
@@ -42,13 +41,6 @@ jobs:
       LOG_FILE_NAME: testresults.${{ fromJSON(inputs.matrix).os.runner }}.${{ fromJSON(inputs.matrix).dotnet.id != '' && fromJSON(inputs.matrix).dotnet.id || fromJSON(inputs.matrix).dotnet.sdk }}.${{ fromJSON(inputs.matrix).arch }}
 
     steps:
-    - name: Install coreutils
-      uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
-      if: ${{ runner.os == 'macOS' }}
-      with:
-        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-coreutils
-        tools: coreutils
-    
     # MacOS 13 ships an LLDB that doesn't work properly for crashes off the main thread. We install LLVM from Brew for its LLDB that doesn't have this issue.
     - name: Install LLVM from Brew
       uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
@@ -61,7 +53,7 @@ jobs:
       shell: bash
       run: echo "$(brew --prefix llvm@20)/bin" >> "$GITHUB_PATH"
 
-      # MacOS 15 images don't ship Mono at all
+      # MacOS 15+ images don't ship Mono at all
     - name: Install Mono from Brew
       uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
       if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-') && fromJSON(inputs.matrix).os.needsSystemMonoInstall }}
@@ -174,6 +166,7 @@ jobs:
         USE_MDH: ${{ steps.setup_mono.outputs.use_mdh }}
         MDH: ${{ steps.setup_mono.outputs.mdh }}
         MONO_DLL: ${{ steps.setup_mono.outputs.mono_dll }}
+        MONO_DEBUG: no-gdb-backtrace
       run: ./.github/workflows/run-mono-tests.ps1
 
     # TODO: Non-system Mono
