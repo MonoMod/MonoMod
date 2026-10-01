@@ -34,18 +34,28 @@ HANG_KILL_GRACE_SECONDS = 60
 WATCHDOG_EXTRA_SECONDS = 300
 
 
+class CrashBreakpointResolver:
+    def __init__(self, breakpoint, extra_args, internal_dict):
+        self.breakpoint = breakpoint
+
+    def __get_depth__(self):
+        return lldb.eSearchDepthModule
+
+    def __callback__(self, ctx):
+        # Use exact code symbols, not debug-info name resolution: LLDB 20 mis-resolves Mono's hot/cold-split
+        # mono_handle_native_crash to another function, where the injected breakpoint crashes Mono at startup.
+        # LLDB calls this for existing modules and newly loaded shared libraries, before execution resumes.
+        for match in ctx.GetModule().FindSymbols(CRASH_BREAKPOINT, lldb.eSymbolTypeCode):
+            symbol = match.GetSymbol()
+            if symbol.GetName() == CRASH_BREAKPOINT:
+                log(f"{CRASH_BREAKPOINT} breakpoint at symbol address {symbol.GetStartAddress()}")
+                self.breakpoint.AddLocation(symbol.GetStartAddress())
+
+
 def create_crash_breakpoint(target):
-    # Prefer an address breakpoint on the exact code symbol. Resolving by name goes through debug info, and LLDB 20
-    # mis-resolves Mono's hot/cold-split mono_handle_native_crash (from mono-runtime-dbg) to an address in the middle of
-    # another function; the int3 it writes there crashes Mono at startup.
-    for ctx in target.FindSymbols(CRASH_BREAKPOINT, lldb.eSymbolTypeCode):
-        symbol = ctx.GetSymbol()
-        if symbol.GetName() == CRASH_BREAKPOINT:
-            log(f"{CRASH_BREAKPOINT} breakpoint at symbol address {symbol.GetStartAddress()}")
-            return target.BreakpointCreateBySBAddress(symbol.GetStartAddress())
-    # Not known yet (e.g. the runtime lives in a shared library that isn't loaded before launch); resolve by name later.
-    log(f"{CRASH_BREAKPOINT} not found before launch; using a pending name breakpoint")
-    return target.BreakpointCreateByName(CRASH_BREAKPOINT)
+    return target.BreakpointCreateFromScript(
+        f"{__name__}.CrashBreakpointResolver", lldb.SBStructuredData(),
+        lldb.SBFileSpecList(), lldb.SBFileSpecList())
 
 
 def log(msg):
