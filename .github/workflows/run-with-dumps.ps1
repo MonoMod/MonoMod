@@ -35,6 +35,7 @@ elseif ($IsLinux -or $IsMacOS)
     # the program under LLDB, which saves a dump when it crashes or hangs. See run_with_dumps.py for details.
     $script = Join-Path $PSScriptRoot '..' 'lldb' 'run_with_dumps.py';
     $env:RWD_COMMAND = ConvertTo-Json -Compress -InputObject @(@($Exe) + $ExeArgs);
+    & lldb --version;
     & lldb -x -b -o "command script import '$script'";
     exit $LastExitCode;
 }

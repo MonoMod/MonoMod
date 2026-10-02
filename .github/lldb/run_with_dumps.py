@@ -85,7 +85,7 @@ def run(debugger):
     timer.start()
     is_darwin = sys.platform == "darwin"
     if is_darwin:
-        flavor, style, ext = "mach-o", lldb.eSaveCoreDirtyOnly, "core"
+        flavor, style, ext = "mach-o", lldb.eSaveCoreFull, "dmp"
     else:
         flavor, style, ext = "minidump", lldb.eSaveCoreFull, "dmp"
 
