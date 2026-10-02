@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace MonoMod.Core.Platforms.Systems
 {
@@ -102,7 +103,6 @@ namespace MonoMod.Core.Platforms.Systems
             // Update the protection of this
             if (patchKind == PatchTargetKind.Executable)
             {
-                // Because Windows is Windows, we don't actually need to do anything except make sure we're in RWX
                 ProtectRWX(patchTarget, data.Length);
             }
             else
@@ -114,6 +114,26 @@ namespace MonoMod.Core.Platforms.Systems
             // now we copy target to backup, then data to target, then flush the instruction cache
             _ = target.TryCopyTo(backup);
             data.CopyTo(target);
+
+            if (patchKind is PatchTargetKind.Executable)
+            {
+                FlushInstructionCache(patchTarget, (nuint)target.Length);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void FlushInstructionCache(IntPtr address, nuint size)
+        {
+            if (NativeExceptionHelper is ClearCacheExHelper cch)
+            {
+                cch.ClearCache((void*)address, size);
+            }
+            else
+            {
+                // not on a target arch that needs a clearcache helper, no-op
+                // the one that's relevant for us is x86/x86-64, where a simple call/ret
+                // is sufficient, generally. Thus, simply having gotten here is sufficient.
+            }
         }
 
         private void RoundToPageBoundary(ref nint addr, ref nint size)
@@ -414,7 +434,7 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
-        private unsafe PosixExceptionHelper CreateNativeExceptionHelper()
+        private PosixExceptionHelper CreateNativeExceptionHelper()
         {
             Helpers.Assert(arch is not null);
 
@@ -432,7 +452,63 @@ namespace MonoMod.Core.Platforms.Systems
                 fname = LinuxNativeLibDrop.Instance.DropLibrary(embedded, NEHTempl);
             }
 
+            if (arch.Target is ArchitectureKind.Arm64)
+            {
+                // have extra clear cache helper we need
+                return ClearCacheExHelper.CreateHelper(arch, fname);
+            }
+
             return PosixExceptionHelper.CreateHelper(arch, fname);
+        }
+
+        private sealed class ClearCacheExHelper : PosixExceptionHelper
+        {
+            private readonly IntPtr clearCache;
+
+            public ClearCacheExHelper(IArchitecture arch, IntPtr getExPtr, IntPtr m2n, IntPtr n2m, IntPtr clearCache) : base(arch, getExPtr, m2n, n2m)
+            {
+                this.clearCache = clearCache;
+            }
+
+            public static new ClearCacheExHelper CreateHelper(IArchitecture arch, string filename, bool deleteAfterLoad = true)
+            {
+                // we've now got the file on disk, and we know its name. lets load it
+                var handle = DynDll.OpenLibrary(filename);
+                IntPtr eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed, mmh_clear_cache;
+                try
+                {
+                    // once the library's been opened, we can delete it
+                    if (deleteAfterLoad)
+                    {
+                        // note: File.Delete() forwards to `unlink(2)`, which removes the name but lets
+                        // existing fds (such as for the mapping we used to load the file) stay around.
+                        System.IO.File.Delete(filename);
+                    }
+
+                    eh_get_exception_ptr = DynDll.GetExport(handle, nameof(eh_get_exception_ptr));
+                    eh_managed_to_native = DynDll.GetExport(handle, nameof(eh_managed_to_native));
+                    eh_native_to_managed = DynDll.GetExport(handle, nameof(eh_native_to_managed));
+                    mmh_clear_cache = DynDll.GetExport(handle, nameof(mmh_clear_cache));
+
+                    Helpers.Assert(eh_get_exception_ptr != IntPtr.Zero);
+                    Helpers.Assert(eh_managed_to_native != IntPtr.Zero);
+                    Helpers.Assert(eh_native_to_managed != IntPtr.Zero);
+                    Helpers.Assert(eh_native_to_managed != IntPtr.Zero);
+                    Helpers.Assert(mmh_clear_cache != IntPtr.Zero);
+                }
+                catch
+                {
+                    DynDll.CloseLibrary(handle);
+                    throw;
+                }
+
+                return new ClearCacheExHelper(arch, eh_get_exception_ptr, eh_managed_to_native, eh_native_to_managed, mmh_clear_cache);
+            }
+
+            public unsafe void ClearCache(void* addr, nuint size)
+            {
+                ((delegate* unmanaged[Cdecl]<void*, nuint, void>)clearCache)(addr, size);
+            }
         }
 
         public unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin)
