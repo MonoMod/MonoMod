@@ -22,6 +22,7 @@ namespace MonoMod.Utils
 
             Type[] argTypes;
 
+            /* In case of differing parameters, this branch causes https://github.com/MonoMod/MonoMod/issues/282
             if (orig != null)
             {
                 var args = orig.GetParameters();
@@ -41,24 +42,24 @@ namespace MonoMod.Utils
 
             }
             else
+            {*/
+            var offs = 0;
+            if (def.HasThis)
             {
-                var offs = 0;
-                if (def.HasThis)
-                {
-                    offs++;
-                    argTypes = new Type[def.Parameters.Count + 1];
-                    var type = def.DeclaringType.ResolveReflection();
-                    if (type.IsValueType)
-                        type = type.MakeByRefType();
-                    argTypes[0] = type;
-                }
-                else
-                {
-                    argTypes = new Type[def.Parameters.Count];
-                }
-                for (var i = 0; i < def.Parameters.Count; i++)
-                    argTypes[i + offs] = def.Parameters[i].ParameterType.ResolveReflection();
+                offs++;
+                argTypes = new Type[def.Parameters.Count + 1];
+                var type = def.DeclaringType.ResolveReflection();
+                if (type.IsValueType)
+                    type = type.MakeByRefType();
+                argTypes[0] = type;
             }
+            else
+            {
+                argTypes = new Type[def.Parameters.Count];
+            }
+            for (var i = 0; i < def.Parameters.Count; i++)
+                argTypes[i + offs] = def.Parameters[i].ParameterType.ResolveReflection();
+            //}
 
             // we do the (object?) dance using DebugFormatter to avoid internal StringBuilders in the ToString (and GetID) implementations which may cause problems
             var name = dmd.Name ?? DebugFormatter.Format($"DMD<{(object?)orig ?? def.GetID(simple: true)}>");
@@ -70,7 +71,7 @@ namespace MonoMod.Utils
             MMDbgLog.Trace($"mdef: {def.ReturnType?.ToString() ?? "NULL"} {name}({string.Join(",", def.Parameters.Select(arg => arg?.ParameterType?.ToString() ?? "NULL").ToArray())})");
 
             DynamicMethod dm;
-            
+
             // The runtime only allows certain types to own DynamicMethods; e.g. Mono does not allow Interface- and Array types as owner
             // The only case where this currently causes issues is default implementations for Interface Methods (t.IsInterface is true)
             // Check on Mono: https://github.com/mono/mono/blob/main/mcs/class/corlib/System.Reflection.Emit/DynamicMethod.cs#L116
@@ -83,8 +84,8 @@ namespace MonoMod.Utils
                     t.Module,
                     true
                 );
-            } 
-            else 
+            }
+            else
             {
                 dm = new DynamicMethod(
                     name,

@@ -123,6 +123,17 @@ internal sealed record Dotnet : Enableable
             MonoPackageVersion = "10.0.0",
 
             RIDs = ["win-x86", "win-x64", "win-arm64", "linux-x64", "linux-arm", "linux-arm64", "linux-musl-x64", "linux-musl-arm", "linux-musl-arm64", "osx-x64", "osx-arm64"]
+        },
+        new()
+        {
+            Name = ".NET 11.0",
+            Sdk = "11.0",
+            TFM = "net11.0",
+            HasPGO = true,
+            MonoPackageSource = Constants.NuGetSource.NugetOrg,
+            MonoPackageVersion = "11.0.0",
+
+            RIDs = ["win-x86", "win-x64", "win-arm64", "linux-x64", "linux-arm", "linux-arm64", "linux-musl-x64", "linux-musl-arm", "linux-musl-arm64", "osx-x64", "osx-arm64"]
         }
     ];
 }

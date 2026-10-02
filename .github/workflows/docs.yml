@@ -22,6 +22,7 @@ env:
 jobs:
   build-docs:
     runs-on: ubuntu-latest
+    if: ${{ !( github.event_name == 'push' && contains(github.event.head_commit.message, '[skip-ci]') ) }}
     steps:
     - name: Configure git
       run: |
@@ -74,7 +75,7 @@ jobs:
     
   publish-docs:
     needs: [build-docs]
-    if: ${{ github.event_name == 'push' && github.ref_name == 'reorganize' }}
+    if: ${{ github.event_name == 'push' && github.ref_name == 'reorganize' && !contains(github.event.head_commit.message, '[skip-ci]') }}
     
     # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
     # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
