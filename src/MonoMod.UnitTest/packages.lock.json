@@ -250,7 +250,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -517,7 +517,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -784,7 +784,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -1057,7 +1057,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -1324,7 +1324,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -1573,7 +1573,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -1840,7 +1840,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -2107,7 +2107,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -2374,7 +2374,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -2641,7 +2641,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
@@ -2908,7 +2908,7 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
