@@ -481,13 +481,14 @@ namespace MonoMod.Utils
                         }
                     }
                 }
+
                 unsafe void InternalAddRuntimeType(Type type)
                 {
                     // Add a runtime type into the signature.
 
                     AddElementType(0x21/*CorElementType.ELEMENT_TYPE_INTERNAL*/);
 
-                    IntPtr handle = type.TypeHandle.Value;
+                    var handle = type.TypeHandle.Value;
 
                     // Internal types must have their pointer written into the signature directly (we don't
                     // want to convert to little-endian format on big-endian machines because the value is
@@ -497,9 +498,11 @@ namespace MonoMod.Utils
                         signature = ExpandArray(signature);
                     }
 
-                    byte* phandle = (byte*)&handle;
-                    for (int i = 0; i < sizeof(void*); i++)
+                    var phandle = (byte*)&handle;
+                    for (var i = 0; i < sizeof(void*); i++)
+                    {
                         signature[currSig++] = phandle[i];
+                    }
                 }
             }
         }

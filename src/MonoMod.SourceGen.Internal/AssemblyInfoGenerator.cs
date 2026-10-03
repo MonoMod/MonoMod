@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using System;
 using System.Text;
 
 namespace MonoMod.SourceGen.Internal

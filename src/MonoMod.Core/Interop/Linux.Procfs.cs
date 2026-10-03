@@ -134,7 +134,9 @@ internal static class Linux
 
             static (ulong Start, ulong Size) TryParseAddressRange(string s, ref int start, ref int end)
             {
+#pragma warning disable CA1307 // IndexOf with StringComparison is not available on all targets
                 var pos = s.IndexOf('-', start, end - start);
+#pragma warning restore CA1307
                 if (pos > 0)
                 {
                     if (ulong.TryParse(s.AsSpan(start, pos).ToString(), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var startingAddress) &&
