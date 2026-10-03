@@ -47,6 +47,8 @@ namespace MonoMod.Utils
 
         // Takes a FastStructInvoker and implements a FastInvoker for it, using a StrongBox as the result type.
         // Suitable for Nullable<T>.
+        [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance",
+            Justification = "object is the logical return type, and it's never called directly anyway.")]
         private static object? FastInvokerForStructInvokerNullable<T>(FastStructInvoker invoker, object? target, params object?[]? args)
             where T : struct
         {

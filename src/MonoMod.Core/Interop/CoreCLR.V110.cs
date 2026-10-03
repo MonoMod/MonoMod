@@ -262,9 +262,9 @@ namespace MonoMod.Core.Interop
                     => (delegate*<IntPtr, IntPtr, AllocMemArgs*, void>)methodPtr;
             }
 
-            public static new InvokeAllocMemPtr InvokeAllocMemFn => new(&InvokeAllocMem);
+            public static InvokeAllocMemPtr InvokeAllocMemFn => new(&InvokeAllocMem);
 
-            public static new void InvokeAllocMem(
+            public static void InvokeAllocMem(
                 IntPtr functionPtr,
                 IntPtr thisPtr,
                 AllocMemArgs* args)
