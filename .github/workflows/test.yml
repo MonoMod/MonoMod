@@ -34,6 +34,8 @@ env:
   COMPlus_CreateDumpDiagnostics: 1
   COMPlus_CreateDumpVerboseDiagnostics: 1
   COMPlus_EnableDumpOnSigTerm: 1
+  # Write to our in-memory log so that dumps contain all of our logs
+  MONOMOD_LogInMemory: "true"
 
 jobs:
   test:  
