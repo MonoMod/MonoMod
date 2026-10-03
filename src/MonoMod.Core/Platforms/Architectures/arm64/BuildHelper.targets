@@ -15,6 +15,8 @@
       <_MM_Ext>%(Arm64HelperOS.Ext)</_MM_Ext>
       <_MM_Target>%(Arm64HelperOS.TargetTriple)</_MM_Target>
       <_MM_ExtraOpts>%(Arm64HelperOS.ExtraOpts)</_MM_ExtraOpts>
+      <_MM_ImportLib Condition="'%(Arm64HelperOS.ImportLibrary)' != ''">$(IntermediateOutputPath)%(Arm64HelperOS.ImportLibrary)</_MM_ImportLib>
+      <_MM_ImportLib Condition="'%(Arm64HelperOS.ImportLibrary)' == ''" />
     </PropertyGroup>
 
     <ItemGroup>
@@ -26,7 +28,8 @@
     <ItemGroup>
       <_MM_ObjToLib Include="$(_MM_OS)" ExtraOpts="$(_MM_ExtraOpts) @(_MM_LinkerOpts->'%(Identity)',' ')"
           TargetTriple="$(_MM_Target)" Ext="$(_MM_Ext)"
-          Lib="$(IntermediateOutputPath)arm64/$(_MM_OS).$(_MM_Ext)"
+          Lib="arm64/$(_MM_OS).$(_MM_Ext)"
+          ImportLib="$(_MM_ImportLib)"
           Objs="@(_MM_Tmp->'$(IntermediateOutputPath)arm64/$(_MM_OS)/%(Filename)%(Extension).o')" />
     </ItemGroup>
 
@@ -88,8 +91,30 @@
 
   </Target>
 
-  <Target Name="_MM_CompileLibs" DependsOnTargets="_MM_PrepObjToLib;_MM_CompileObjects" BeforeTargets="SplitResourcesByCulture"
-      Inputs="$(MSBuildThisFileFullPath);$(MSBuildThisFileDirectory)BuildHelper.props;%(_MM_ObjToLib.Objs)" Outputs="%(_MM_ObjToLib.Lib)">
+  <Target Name="_MM_CompileImportLibraries"
+      Inputs="$(MSBuildThisFileFullPath);$(MSBuildThisFileDirectory)BuildHelper.props;%(Arm64HelperImportLibrary.Identity)"
+      Outputs="$(IntermediateOutputPath)%(Arm64HelperImportLibrary.Lib)">
+
+    <PropertyGroup>
+      <_Target>%(Arm64HelperImportLibrary.TargetTriple)</_Target>
+      <_Opts>%(Arm64HelperImportLibrary.ExtraOpts)</_Opts>
+      <_Src>%(Arm64HelperImportLibrary.Identity)</_Src>
+      <_Out>$(IntermediateOutputPath)%(Arm64HelperImportLibrary.Lib)</_Out>
+    </PropertyGroup>
+
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName($(_Out)))" />
+    <Exec Command="&quot;$(ZigExePath)&quot; cc -target &quot;$(_Target)&quot; -fdiagnostics-format=msvc $(_Opts) -o &quot;$(_Out)&quot; &quot;$(_Src)&quot;"
+        ConsoleToMSBuild="true" IgnoreExitCode="true" YieldDuringToolExecution="true">
+      <Output TaskParameter="ExitCode" PropertyName="_MM_ExitCode" />
+    </Exec>
+    <Delete Files="$(_Out)" Condition="'$(_MM_ExitCode)' != '0'" />
+    <Error Text="Failed to build the import library $(_Out)" Condition="'$(_MM_ExitCode)' != '0'" />
+
+  </Target>
+
+  <Target Name="_MM_CompileLibs" DependsOnTargets="_MM_PrepObjToLib;_MM_CompileObjects;_MM_CompileImportLibraries" BeforeTargets="SplitResourcesByCulture"
+      Inputs="$(MSBuildThisFileFullPath);$(MSBuildThisFileDirectory)BuildHelper.props;%(_MM_ObjToLib.Objs);%(_MM_ObjToLib.ImportLib)"
+      Outputs="$(IntermediateOutputPath)%(_MM_ObjToLib.Lib)">
     
     <PropertyGroup>
       <_OS>%(_MM_ObjToLib.Identity)</_OS>
@@ -97,7 +122,11 @@
       <_Target>%(_MM_ObjToLib.TargetTriple)</_Target>
       <_Opts>%(_MM_ObjToLib.ExtraOpts)</_Opts>
       <_Obj>%(_MM_ObjToLib.Objs)</_Obj>
-      <_Out>%(_MM_ObjToLib.Lib)</_Out>
+      <_Lib>%(_MM_ObjToLib.Lib)</_Lib>
+      <_ImportLib>%(_MM_ObjToLib.ImportLib)</_ImportLib>
+    </PropertyGroup>
+    <PropertyGroup>
+      <_Out>$(IntermediateOutputPath)$(_Lib)</_Out>
     </PropertyGroup>
 
     <ItemGroup>
@@ -110,6 +139,9 @@
       <_ExeArgs Include="-o"/>
       <_ExeArgs Include="$(_Out)"/>
       <_ExeArgs Include="$(_Obj)"/>
+      <_ExeArgs Include="-Wl,--no-as-needed" Condition="'$(_ImportLib)' != ''" />
+      <_ExeArgs Include="$(_ImportLib)" Condition="'$(_ImportLib)' != ''" />
+      <_ExeArgs Include="-Wl,--as-needed" Condition="'$(_ImportLib)' != ''" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(Optimize)' == 'false'">
@@ -129,7 +161,7 @@
       <Output TaskParameter="ExitCode" PropertyName="_MM_ExitCode" />
     </Exec>
     <Delete Files="$(_Out)" Condition="'$(_MM_ExitCode)' != '0'" />
-    <Error Text="Failed to link $(_Out)" Condition="'$(_MM_ExitCode)' != '0'" />
+    <Error Text="Failed to link $(_Lib)" Condition="'$(_MM_ExitCode)' != '0'" />
 
     <!-- Now that we've compiled it, add it as an embedded module -->
     <ItemGroup>

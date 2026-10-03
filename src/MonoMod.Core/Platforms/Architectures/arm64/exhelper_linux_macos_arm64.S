@@ -128,6 +128,8 @@ LOCAL_LABEL(egep_init):
     .cfi_restore_state
     mov x0, #8
     bl EXTERNAL_C_FUNC(malloc)
+    // malloc doesn't necessarily return zeroed memory
+    str xzr, [x0]
     mov x19, x0
     mov x1, x0
     mov x0, x20
