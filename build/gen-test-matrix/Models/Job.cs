@@ -10,3 +10,15 @@ internal sealed record Job
     public string? Container { get; init; }
     public bool? UsePGO { get; init; }
 }
+
+internal sealed record JobGroup
+{
+    public required string Title { get; init; }
+    public required MatrixResult<Job> Matrix { get; init; }
+}
+
+internal sealed record JobBatch
+{
+    public required string Title { get; init; }
+    public required MatrixResult<JobGroup> Matrix { get; init; }
+}

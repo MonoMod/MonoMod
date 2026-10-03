@@ -6,7 +6,8 @@ namespace GenTestMatrix
 {
     internal sealed class JobsWriter : IAsyncDisposable
     {
-        private readonly List<Job> jobs = new();
+        private readonly Dictionary<string, Dictionary<string, List<Job>>> jobs = new();
+        private readonly List<JobBatch> batches = new();
         private readonly FileStream outputStream;
         private readonly StreamWriter writer;
         private readonly string[] outputNames;
@@ -19,15 +20,47 @@ namespace GenTestMatrix
             this.outputNames = outputNames;
         }
 
-        public ValueTask AddJob(Job job)
+        public void AddJob(Job job, string osName, string runtimeName)
         {
-            jobs.Add(job);
-
-            if (jobs.Count == Constants.MaxJobCountPerMatrix)
+            if (!jobs.TryGetValue(osName, out var osJobs))
             {
-                return FlushAsync();
+                jobs.Add(osName, osJobs = new());
             }
-            return default;
+
+            if (!osJobs.TryGetValue(runtimeName, out var rtJobs))
+            {
+                osJobs.Add(runtimeName, rtJobs = new());
+            }
+
+            rtJobs.Add(job);
+        }
+
+        public async ValueTask Write()
+        {
+            var batches = jobs
+                .Select(kvp => new JobBatch
+                {
+                    Title = kvp.Key,
+                    Matrix = new()
+                    {
+                        Jobs = kvp.Value.Select(kvp => new JobGroup
+                        {
+                            Title = kvp.Key,
+                            Matrix = new() { Jobs = kvp.Value }
+                        })
+                    }
+                });
+
+            foreach (var batch in batches)
+            {
+                this.batches.Add(batch);
+                if (this.batches.Count == Constants.MaxJobCountPerMatrix)
+                {
+                    await FlushAsync();
+                }
+            }
+
+            jobs.Clear();
         }
 
         public async ValueTask FlushAsync()
@@ -42,9 +75,9 @@ namespace GenTestMatrix
             await writer.WriteAsync('=');
             await writer.FlushAsync();
 
-            await JsonSerializer.SerializeAsync(outputStream, new MatrixResult { Jobs = jobs }, JsonCtx.Default.MatrixResult);
+            await JsonSerializer.SerializeAsync(outputStream, new MatrixResult<JobBatch> { Jobs = batches }, JsonCtx.Default.MatrixResultJobBatch);
             await writer.WriteLineAsync();
-            jobs.Clear();
+            batches.Clear();
         }
 
         public async ValueTask DisposeAsync()
