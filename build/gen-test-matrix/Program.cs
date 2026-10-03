@@ -53,7 +53,7 @@ async Task EmitJobsForOsArch(OS os, Arch arch, Emulator? emu)
             // this runtime supports PGO, generate 2 jobs: one with it enabled, and one without
             jobs.AddJob(new()
             {
-                Title = archName + " (PGO Off)",
+                Title = $"{runtimeName} {archName} (PGO Off)",
                 OS = os,
                 Dotnet = jobDotnet,
                 Arch = arch.RidName,
@@ -63,7 +63,7 @@ async Task EmitJobsForOsArch(OS os, Arch arch, Emulator? emu)
             }, osName, runtimeName);
             jobs.AddJob(new()
             {
-                Title = archName + " (PGO On)",
+                Title = $"{runtimeName} {archName} (PGO Off)",
                 OS = os,
                 Dotnet = jobDotnet,
                 Arch = arch.RidName,
@@ -77,7 +77,7 @@ async Task EmitJobsForOsArch(OS os, Arch arch, Emulator? emu)
             // this runtime doesn't support PGO, only add the one job
             jobs.AddJob(new()
             {
-                Title = archName,
+                Title = $"{runtimeName} {archName}",
                 OS = os,
                 Dotnet = dotnet,
                 Arch = arch.RidName,
@@ -118,7 +118,7 @@ async Task EmitJobsForOsArch(OS os, Arch arch, Emulator? emu)
 
             jobs.AddJob(new()
             {
-                Title = archName,
+                Title = $"{runtimeName} {archName}",
                 OS = os,
                 Arch = arch.RidName,
                 Dotnet = monoDotnet,
@@ -147,7 +147,7 @@ foreach (var os in OS.OperatingSystems)
 
         jobs.AddJob(new()
         {
-            Title = archName,
+            Title = $"{runtimeName} {archName}",
             OS = os,
             Arch = rid,
             Dotnet = new()
