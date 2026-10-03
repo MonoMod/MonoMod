@@ -38,50 +38,52 @@ async Task EmitJobsForOsArch(OS os, Arch arch, Emulator? emu)
         // skip runtime if it doesn't support the current RID
         if (!dotnet.RIDs.Contains(rid)) continue;
 
-        var osArchSuffix = $"{arch.RidName} on {os.Name}";
+        var archName = arch.RidName;
+        var osName = os.Name;
+        var runtimeName = dotnet.Name;
+
         if (emu is not null)
         {
-            osArchSuffix += $" ({emu.Name})";
+            archName += $" ({emu.Name})";
         }
 
-        var title = $"{dotnet.Name} {osArchSuffix}";
         var jobDotnet = dotnet with { MonoPackageSource = null, MonoPackageVersion = null }; // make sure we don't accidentally serialize these for non-Mono jobs
         if (dotnet.HasPGO)
         {
             // this runtime supports PGO, generate 2 jobs: one with it enabled, and one without
-            await jobs.AddJob(new()
+            jobs.AddJob(new()
             {
-                Title = title + " (PGO Off)",
+                Title = $"{runtimeName} {archName} (PGO Off)",
                 OS = os,
                 Dotnet = jobDotnet,
                 Arch = arch.RidName,
                 Emulator = emu,
                 Container = container,
                 UsePGO = false,
-            });
-            await jobs.AddJob(new()
+            }, osName, runtimeName);
+            jobs.AddJob(new()
             {
-                Title = title + " (PGO On)",
+                Title = $"{runtimeName} {archName} (PGO Off)",
                 OS = os,
                 Dotnet = jobDotnet,
                 Arch = arch.RidName,
                 Emulator = emu,
                 Container = container,
                 UsePGO = true,
-            });
+            }, osName, runtimeName);
         }
         else
         {
             // this runtime doesn't support PGO, only add the one job
-            await jobs.AddJob(new()
+            jobs.AddJob(new()
             {
-                Title = title,
+                Title = $"{runtimeName} {archName}",
                 OS = os,
                 Dotnet = dotnet,
                 Arch = arch.RidName,
                 Emulator = emu,
                 Container = container,
-            });
+            }, osName, runtimeName);
         }
 
         // if this OS specifies a .NET Mono package, add a job for it
@@ -112,15 +114,17 @@ async Task EmitJobsForOsArch(OS os, Arch arch, Emulator? emu)
                 MonoDllPath = dllPath,
             };
 
-            await jobs.AddJob(new()
+            runtimeName = monoDotnet.Name;
+
+            jobs.AddJob(new()
             {
-                Title = $"{monoDotnet.Name} {osArchSuffix}",
+                Title = $"{runtimeName} {archName}",
                 OS = os,
                 Arch = arch.RidName,
                 Dotnet = monoDotnet,
                 Emulator = emu,
                 Container = container,
-            });
+            }, osName, runtimeName);
         }
     }
 
@@ -136,9 +140,14 @@ foreach (var os in OS.OperatingSystems)
         // this OS has a system Mono, emit a job for that
         var rid = os.Arch.First(a => a.IsRunnerArch).RidName;
         var container = os.UseContainer && containers.TryGetValue($"{os.RidName}-{rid}", out var ctag) ? containerNameBase + ctag : null;
-        await jobs.AddJob(new()
+
+        var osName = os.Name;
+        var archName = "System";
+        var runtimeName = "Mono";
+
+        jobs.AddJob(new()
         {
-            Title = $"System Mono on {os.Name}",
+            Title = $"{runtimeName} {archName}",
             OS = os,
             Arch = rid,
             Dotnet = new()
@@ -151,7 +160,7 @@ foreach (var os in OS.OperatingSystems)
                 TFM = Constants.Mono.NonCoreTFM,
             },
             Container = container,
-        });
+        }, osName, runtimeName);
     }
 
     foreach (var arch in os.Arch)
@@ -200,5 +209,7 @@ foreach (var os in OS.OperatingSystems)
         }
     }
 }
+
+await jobs.Write();
 
 return 0;

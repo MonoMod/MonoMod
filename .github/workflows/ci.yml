@@ -164,10 +164,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
-    uses: ./.github/workflows/test.yml
-    name: Test ${{ matrix.title }}
+    uses: ./.github/workflows/test_matrix_1.yml
+    name: ${{ matrix.title }}
     with:
-      matrix: ${{ toJSON(matrix) }}
+      matrix: ${{ toJSON(matrix.matrix) }}
       
   upload:
     needs: [setup, build-testassets]

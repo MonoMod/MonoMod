@@ -2,8 +2,8 @@
 
 namespace GenTestMatrix.Models;
 
-internal sealed record MatrixResult
+internal sealed record MatrixResult<T>
 {
     [JsonPropertyName("include")]
-    public required IEnumerable<Job> Jobs { get; init; }
+    public required IEnumerable<T> Jobs { get; init; }
 }
