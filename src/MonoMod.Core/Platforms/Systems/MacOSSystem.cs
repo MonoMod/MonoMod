@@ -531,8 +531,10 @@ namespace MonoMod.Core.Platforms.Systems
             arch = value;
         }
 
+        private readonly object nehInitLock = new();
         private PosixExceptionHelper? lazyNativeExceptionHelper;
-        public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= CreateNativeExceptionHelper();
+        public INativeExceptionHelper? NativeExceptionHelper
+            => Helpers.GetOrInitWithLock(ref lazyNativeExceptionHelper, nehInitLock, static self => self.CreateNativeExceptionHelper(), this);
 
         public unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin)
         {
