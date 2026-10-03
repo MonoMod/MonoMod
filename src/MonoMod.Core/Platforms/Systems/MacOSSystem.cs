@@ -194,8 +194,13 @@ namespace MonoMod.Core.Platforms.Systems
             // if we got here when executable (either because the memory was already writable or we were able to make it writable) we need to flush the icache
             if (memIsExec)
             {
-                sys_icache_invalidate((void*)patchTarget, (nuint)data.Length);
+                FlushInstructionCache(patchTarget, (nuint)data.Length);
             }
+        }
+
+        public unsafe void FlushInstructionCache(IntPtr address, nuint size)
+        {
+            sys_icache_invalidate((void*)address, size);
         }
 
         private unsafe void MakePageWritable(nuint addrInPage, nuint bufferSize)
@@ -526,8 +531,10 @@ namespace MonoMod.Core.Platforms.Systems
             arch = value;
         }
 
+        private readonly object nehInitLock = new();
         private PosixExceptionHelper? lazyNativeExceptionHelper;
-        public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= CreateNativeExceptionHelper();
+        public INativeExceptionHelper? NativeExceptionHelper
+            => Helpers.GetOrInitWithLock(ref lazyNativeExceptionHelper, nehInitLock, static self => self.CreateNativeExceptionHelper(), this);
 
         public unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin)
         {

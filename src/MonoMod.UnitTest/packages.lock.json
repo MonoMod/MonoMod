@@ -281,7 +281,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -293,7 +293,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -548,7 +548,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -560,7 +560,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -815,7 +815,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -827,7 +827,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -1088,7 +1088,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -1100,7 +1100,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -1355,7 +1355,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -1367,7 +1367,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -1604,7 +1604,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -1616,7 +1616,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -1871,7 +1871,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -1883,7 +1883,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -2138,7 +2138,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -2150,7 +2150,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -2405,7 +2405,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -2417,7 +2417,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -2672,7 +2672,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -2684,7 +2684,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },
@@ -2939,7 +2939,7 @@
         "dependencies": {
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.Core": "[1.3.7-alpha.dev, )",
+          "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
@@ -2951,7 +2951,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
           "MonoMod.Patcher": "[0.0.0-alpha.dev, )",
-          "MonoMod.RuntimeDetour": "[25.3.7-alpha.dev, )",
+          "MonoMod.RuntimeDetour": "[25.4.0-alpha.dev, )",
           "MonoMod.Utils": "[25.0.15-alpha.dev, )"
         }
       },

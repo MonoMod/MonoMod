@@ -206,7 +206,7 @@ jobs:
     # then, bump the version (if appropriate)
     - name: Update version
       if: '!inputs.prerelease'
-      run: ./tools/bump_version.ps1 -BumpVersion Patch # always bump patch here; if we ever need to do a different bump, it can be done per-PR
+      run: ./tools/bump_version.ps1 -BumpVersion Patch -UpdateBaseVersion # always bump patch here; if we ever need to do a different bump, it can be done per-PR
 
     - name: Update restore
       if: '!inputs.prerelease'

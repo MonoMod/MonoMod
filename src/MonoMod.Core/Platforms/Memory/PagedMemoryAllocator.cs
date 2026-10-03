@@ -375,7 +375,8 @@ namespace MonoMod.Core.Platforms.Memory
             pageCount++;
         }
 
-        private void RemoveAllocatedPage(Page page)
+        // returns true if the page was in the allocation list
+        private bool RemoveAllocatedPage(Page page)
         {
             var list = allocationList.AsSpan();
 
@@ -384,12 +385,13 @@ namespace MonoMod.Core.Platforms.Memory
             if (indexToRemove < 0)
             {
                 // the page doesn't exist, nothing needs to be done
-                return;
+                return false;
             }
 
             // just copy from above the index down
             list.Slice(indexToRemove + 1).CopyTo(list.Slice(indexToRemove));
             pageCount--;
+            return true;
         }
 
         private ReadOnlySpan<Page> AllocList => allocationList.AsSpan().Slice(0, pageCount)!;
@@ -439,10 +441,23 @@ namespace MonoMod.Core.Platforms.Memory
                         continue;
 
                     // otherwise, remove it from the allocation list, so we can free it outside the lock
-                    RemoveAllocatedPage(page);
+                    if (!RemoveAllocatedPage(page))
+                    {
+                        // the page didn't exist and wasn't in the allocated page list.
+                        //
+                        // This most likely means that the page was emptied, thus added to the ToClean
+                        // list, then allocated from, then emptied AGAIN, adding it to the ToClean list
+                        // again. This ultimately causes a double-free, which when combined with bad
+                        // timing, can accidentally free memory now-owned by someone else.
+                        //
+                        // Thus, if we get here without the page being in the allocation list, it's already
+                        // been freed, and we don't want to try again.
+                        continue;
+                    }
                 }
 
                 // now we can actually free the associated memory
+                MMDbgLog.Trace($"Freeing page 0x{page.BaseAddr:x16}+0x{page.Size:x}");
                 if (!TryFreePage(page, out var error))
                 {
                     // free failed; log the error and move on
