@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.Serialization;
 
 namespace MonoMod.Utils
 {
@@ -19,6 +20,40 @@ namespace MonoMod.Utils
 #pragma warning disable SYSLIB0037 // Type or member is obsolete
             new AssemblyName("Dummy, ProcessorArchitecture=MSIL").ProcessorArchitecture == ProcessorArchitecture.MSIL;
 #pragma warning restore SYSLIB0037 // Type or member is obsolete
+
+        private static class MonoAssemblyNameLayout
+        {
+            // Reject recursive calls from TypeResolve handlers while the layout is still being detected.
+            public static readonly bool? HasNameFlags = DetectMonoAssemblyNameHasNameFlags();
+        }
+
+        private static bool DetectMonoAssemblyNameHasNameFlags()
+        {
+            if (PlatformDetection.Runtime is not RuntimeKind.Mono || !_MonoAssemblyNameHasArch)
+                return false;
+
+            var assemblyName = typeof(object).Assembly.GetName().Name;
+            var typeName = "MonoMod.Utils.MissingType" + Guid.NewGuid().ToString("N");
+            try
+            {
+                _ = Type.GetType(typeName + ", " + assemblyName, true);
+            }
+            catch (TypeLoadException ex) when (ex.TypeName == typeName)
+            {
+                // The flags added in mono/mono#19876 also make the native formatter omit unspecified name components.
+#pragma warning disable SYSLIB0050, SYSLIB0051 // Inspect exception data without using a formatter to serialize it.
+                var info = new SerializationInfo(typeof(TypeLoadException), new FormatterConverter());
+                ex.GetObjectData(info, new StreamingContext());
+#pragma warning restore SYSLIB0050, SYSLIB0051
+                var formattedName = info.GetString("TypeLoadAssemblyName");
+                if (formattedName == assemblyName)
+                    return true;
+                if (formattedName == assemblyName + ", Version=0.0.0.0, Culture=neutral, PublicKeyToken=null")
+                    return false;
+            }
+
+            throw new InvalidOperationException("Could not detect Mono assembly name layout");
+        }
 
         private static readonly Type? _RTDynamicMethod =
             typeof(DynamicMethod).GetNestedType("RTDynamicMethod", BindingFlags.NonPublic | BindingFlags.Public);
@@ -148,21 +183,33 @@ namespace MonoMod.Utils
                     break;
             }
 
-            var offs =
+            var offs = GetMonoCorlibInternalOffset(IntPtr.Size, ReflectionHelper.IsCoreBCL,
+                _MonoAssemblyNameHasArch, MonoAssemblyNameLayout.HasNameFlags
+                    ?? throw new InvalidOperationException("Recursive Mono assembly name layout detection"));
+            var corlibInternalPtr = (byte*)(asmPtr + offs);
+            *corlibInternalPtr = value ? (byte)1 : (byte)0;
+        }
+
+        private static int GetMonoCorlibInternalOffset(int pointerSize, bool isCoreBCL, bool hasArch, bool hasNameFlags)
+        {
+            // Align the complete MonoAssemblyName, including any trailing MonoBoolean fields, to pointer size.
+            var versionSize = (isCoreBCL ? 4 : 2) * (hasArch ? 5 : 4) + (hasNameFlags ? 3 : 0);
+            var alignedVersionSize = (versionSize + pointerSize - 1) & ~(pointerSize - 1);
+            return
                 // ref_count (4 + padding)
-                IntPtr.Size +
+                pointerSize +
                 // basedir
-                IntPtr.Size +
+                pointerSize +
 
                 // aname
                 // name
-                IntPtr.Size +
+                pointerSize +
                 // culture
-                IntPtr.Size +
+                pointerSize +
                 // hash_value
-                IntPtr.Size +
+                pointerSize +
                 // public_key
-                IntPtr.Size +
+                pointerSize +
                 // public_key_token (17 + padding)
                 20 +
                 // hash_alg
@@ -172,31 +219,19 @@ namespace MonoMod.Utils
                 // flags
                 4 +
 
-                // major, minor, build, revision[, arch] (10 framework / 20 core + padding)
-                (
-                    !_MonoAssemblyNameHasArch ? (
-                        ReflectionHelper.IsCoreBCL ?
-                        16 :
-                        8
-                    ) : (
-                        ReflectionHelper.IsCoreBCL ?
-                        (IntPtr.Size == 4 ? 20 : 24) :
-                        (IntPtr.Size == 4 ? 12 : 16)
-                    )
-                ) +
+                // major, minor, build, revision[, arch], name flags, and padding
+                alignedVersionSize +
 
                 // image
-                IntPtr.Size +
+                pointerSize +
                 // friend_assembly_names
-                IntPtr.Size +
+                pointerSize +
                 // friend_assembly_names_inited
                 1 +
                 // in_gac
                 1 +
                 // dynamic
                 1;
-            var corlibInternalPtr = (byte*)(asmPtr + offs);
-            *corlibInternalPtr = value ? (byte)1 : (byte)0;
         }
 
         public static bool IsDynamicMethod(this MethodBase method)
