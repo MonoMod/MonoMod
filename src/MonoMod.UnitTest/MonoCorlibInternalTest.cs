@@ -37,7 +37,7 @@ namespace MonoMod.UnitTest
             if (PlatformDetection.Runtime is not RuntimeKind.Mono)
             {
                 assembly.SetMonoCorlibInternal(true);
-                Assert.Contains(assembly, AppDomain.CurrentDomain.GetAssemblies());
+                Assert.Contains(AppDomain.CurrentDomain.GetAssemblies(), a => a.FullName == assembly.FullName);
                 return;
             }
 
