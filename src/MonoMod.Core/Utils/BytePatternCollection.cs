@@ -3,6 +3,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace MonoMod.Core.Utils
 {
@@ -479,8 +481,21 @@ namespace MonoMod.Core.Utils
             return false;
         }
 
-        private ReadOnlyMemory<byte>? lazyPossibleFirstBytes;
-        private ReadOnlyMemory<byte> PossibleFirstBytes => lazyPossibleFirstBytes ??= GetPossibleFirstBytes();
+        private volatile bool lazyPossibleFirstBytesInitialized;
+        private ReadOnlyMemory<byte> lazyPossibleFirstBytes;
+
+        private ReadOnlyMemory<byte> PossibleFirstBytes
+        {
+            get
+            {
+                if (!lazyPossibleFirstBytesInitialized)
+                {
+                    lazyPossibleFirstBytes = GetPossibleFirstBytes();
+                    lazyPossibleFirstBytesInitialized = true;
+                }
+                return lazyPossibleFirstBytes;
+            }
+        }
 
         private ReadOnlyMemory<byte> GetPossibleFirstBytes()
         {
