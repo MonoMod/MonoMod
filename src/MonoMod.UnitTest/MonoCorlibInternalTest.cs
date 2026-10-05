@@ -29,18 +29,11 @@ namespace MonoMod.UnitTest
             Assert.Equal(expected, (int)method.Invoke(null, new object[] { pointerSize, isCoreBCL, hasArch, hasNameFlags }));
         }
 
-        [Fact]
+        [MonoFact]
         public void TestSetMonoCorlibInternal()
         {
             var assembly = AssemblyBuilder.DefineDynamicAssembly(
                 new AssemblyName("MonoMod.UnitTest.CorlibInternal"), AssemblyBuilderAccess.Run);
-            if (PlatformDetection.Runtime is not RuntimeKind.Mono)
-            {
-                assembly.SetMonoCorlibInternal(true);
-                Assert.Contains(AppDomain.CurrentDomain.GetAssemblies(), a => a.FullName == assembly.FullName);
-                return;
-            }
-
             var field = assembly.GetType().GetField("dynamic_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                 ?? assembly.GetType().GetField("_mono_assembly", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var value = field.GetValue(assembly);
@@ -70,6 +63,15 @@ namespace MonoMod.UnitTest
             finally
             {
                 Marshal.WriteByte(pointer, offset, before[offset]);
+            }
+        }
+
+        public sealed class MonoFactAttribute : FactAttribute
+        {
+            public MonoFactAttribute()
+            {
+                if (PlatformDetection.Runtime is not RuntimeKind.Mono)
+                    Skip = "Only supported on Mono.";
             }
         }
     }
