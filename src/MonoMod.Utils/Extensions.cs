@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.Serialization;
 
 namespace MonoMod.Utils
 {
@@ -23,8 +22,7 @@ namespace MonoMod.Utils
 
         private static class MonoAssemblyNameLayout
         {
-            // Reject recursive calls from TypeResolve handlers while the layout is still being detected.
-            public static readonly bool? HasNameFlags = DetectMonoAssemblyNameHasNameFlags();
+            public static readonly bool HasNameFlags = DetectMonoAssemblyNameHasNameFlags();
         }
 
         private static bool DetectMonoAssemblyNameHasNameFlags()
@@ -41,11 +39,9 @@ namespace MonoMod.Utils
             catch (TypeLoadException ex) when (ex.TypeName == typeName)
             {
                 // The flags added in mono/mono#19876 also make the native formatter omit unspecified name components.
-#pragma warning disable SYSLIB0050, SYSLIB0051 // Inspect exception data without using a formatter to serialize it.
-                var info = new SerializationInfo(typeof(TypeLoadException), new FormatterConverter());
-                ex.GetObjectData(info, new StreamingContext());
-#pragma warning restore SYSLIB0050, SYSLIB0051
-                var formattedName = info.GetString("TypeLoadAssemblyName");
+                var field = typeof(TypeLoadException).GetField("AssemblyName", BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?? typeof(TypeLoadException).GetField("assemblyName", BindingFlags.NonPublic | BindingFlags.Instance);
+                var formattedName = field?.GetValue(ex) as string;
                 if (formattedName == assemblyName)
                     return true;
                 if (formattedName == assemblyName + ", Version=0.0.0.0, Culture=neutral, PublicKeyToken=null")
@@ -183,33 +179,22 @@ namespace MonoMod.Utils
                     break;
             }
 
-            var offs = GetMonoCorlibInternalOffset(IntPtr.Size, ReflectionHelper.IsCoreBCL,
-                _MonoAssemblyNameHasArch, MonoAssemblyNameLayout.HasNameFlags
-                    ?? throw new InvalidOperationException("Recursive Mono assembly name layout detection"));
+            var offs = GetMonoCorlibInternalOffset();
             var corlibInternalPtr = (byte*)(asmPtr + offs);
             *corlibInternalPtr = value ? (byte)1 : (byte)0;
         }
 
-        private static int GetMonoCorlibInternalOffset(int pointerSize, bool isCoreBCL, bool hasArch, bool hasNameFlags)
+        private static int GetMonoCorlibInternalOffset()
         {
-            // Align the complete MonoAssemblyName, including any trailing MonoBoolean fields, to pointer size.
-            var versionSize = (isCoreBCL ? 4 : 2) * (hasArch ? 5 : 4) + (hasNameFlags ? 3 : 0);
-            var alignedVersionSize = (versionSize + pointerSize - 1) & ~(pointerSize - 1);
-            return
-                // ref_count (4 + padding)
-                pointerSize +
-                // basedir
-                pointerSize +
-
-                // aname
+            var assemblyNameSize =
                 // name
-                pointerSize +
+                IntPtr.Size +
                 // culture
-                pointerSize +
+                IntPtr.Size +
                 // hash_value
-                pointerSize +
+                IntPtr.Size +
                 // public_key
-                pointerSize +
+                IntPtr.Size +
                 // public_key_token (17 + padding)
                 20 +
                 // hash_alg
@@ -217,15 +202,36 @@ namespace MonoMod.Utils
                 // hash_len
                 4 +
                 // flags
-                4 +
+                4;
 
-                // major, minor, build, revision[, arch], name flags, and padding
-                alignedVersionSize +
+            // Version fields are uint16_t in Framework Mono and int32_t in Core Mono.
+            var versionFieldSize = ReflectionHelper.IsCoreBCL ? 4 : 2;
+            // major, minor, build, revision
+            assemblyNameSize += 4 * versionFieldSize;
+            if (_MonoAssemblyNameHasArch)
+                assemblyNameSize += versionFieldSize;
+            if (MonoAssemblyNameLayout.HasNameFlags)
+            {
+                // without_version, without_culture, without_public_key_token (MonoBoolean)
+                assemblyNameSize += 1 + 1 + 1;
+            }
 
+            // The following image pointer requires pointer-size alignment.
+            var remainder = assemblyNameSize % IntPtr.Size;
+            if (remainder != 0)
+                assemblyNameSize += IntPtr.Size - remainder;
+
+            return
+                // ref_count (4 + padding)
+                IntPtr.Size +
+                // basedir
+                IntPtr.Size +
+                // aname
+                assemblyNameSize +
                 // image
-                pointerSize +
+                IntPtr.Size +
                 // friend_assembly_names
-                pointerSize +
+                IntPtr.Size +
                 // friend_assembly_names_inited
                 1 +
                 // in_gac
