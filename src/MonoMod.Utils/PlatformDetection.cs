@@ -161,6 +161,17 @@ namespace MonoMod.Utils
                 os = OSKind.Wine;
             }
 
+#if NET5_0_OR_GREATER
+            arch = RuntimeInformation.ProcessArchitecture switch
+            {
+                System.Runtime.InteropServices.Architecture.X86 => ArchitectureKind.x86,
+                System.Runtime.InteropServices.Architecture.X64 => ArchitectureKind.x86_64,
+                System.Runtime.InteropServices.Architecture.Arm => ArchitectureKind.Arm,
+                System.Runtime.InteropServices.Architecture.Arm64 => ArchitectureKind.Arm64,
+                _ => arch,
+            };
+#endif
+
             MMDbgLog.Info($"Platform info: {os} {arch}");
             return (os, arch);
         }
