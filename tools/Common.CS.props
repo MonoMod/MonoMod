@@ -40,13 +40,15 @@
     <NewCecilVersion>0.11.6</NewCecilVersion>
     <OldCecilVersion>0.10.4</OldCecilVersion>
     
-    <RoslynVersion>5.0.0-2.final</RoslynVersion>
-    <MSBuildRequiredVersion>17.12.6</MSBuildRequiredVersion>
+    <RoslynVersion>5.9.0</RoslynVersion>
+    <MSBuildRequiredVersion>18.0.0</MSBuildRequiredVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- We want to remove JSImportGenerator by default, becuase it takes a good deal of compilation time -->
     <RemoveAnalyzer Include="Microsoft.Interop.JavaScript.JSImportGenerator" />
+    <!-- Similarly, we can't use the Regex generator -->
+    <RemoveAnalyzer Include="System.Text.RegularExpressions.Generator" />
   </ItemGroup>
   
   <ItemGroup Condition="'$(MMReferenceSourcePkgs)' == 'true'">
