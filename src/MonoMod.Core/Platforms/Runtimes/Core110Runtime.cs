@@ -2,6 +2,7 @@ using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes
@@ -10,6 +11,58 @@ namespace MonoMod.Core.Platforms.Runtimes
     internal class Core110Runtime : Core100Runtime
     {
         public Core110Runtime(ISystem system, IArchitecture arch) : base(system, arch) { }
+
+        public override RuntimeFeature Features
+            => (base.Features & ~RuntimeFeature.RequiresBodyThunkWalking)
+            | RuntimeFeature.HasRuntimeAsync;
+
+        private unsafe IntPtr GetMethodBodyPtr(MethodBase method, RuntimeMethodHandle handle)
+        {
+            var md = (V110.MethodDesc*)handle.Value;
+
+            md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+
+            var ptr = (nint)md->GetNativeCode();
+
+            return ptr;
+        }
+
+        public override unsafe IntPtr GetMethodEntryPoint(MethodBase method, RuntimeMethodHandle handle = default)
+        {
+            method = GetIdentifiable(method);
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
+            var didPrepare = false;
+            GetPtr:
+            // we want to invoke _CompileMethod, not _PrepareMethod because _CompileMethod calls directly into DoPrestub, while _PrepareMethod
+            // seems to skip prestub-intercepted remoting methods
+            Helpers.Assert(TryInvokeBclCompileMethod(handle));
+            // get then throw away the function pointer to try to ensure that the pointer is restored
+            _ = handle.GetFunctionPointer();
+            var ptr = GetMethodBodyPtr(method, handle);
+
+            if (ptr == IntPtr.Zero)
+            { // the method hasn't been JITted yet
+                if (!didPrepare)
+                {
+                    Helpers.Assert(TryInvokeBclCompileMethod(handle));
+                    didPrepare = true;
+                    goto GetPtr;
+                }
+                else
+                {
+                    // we've already run a prepare, lets try another approach
+                    ptr = handle.GetFunctionPointer();
+
+                    throw new InvalidOperationException($"Could not get entry point normally, GetFunctionPointer() = {ptr:x16}");
+                }
+            }
+
+            return ptr;
+        }
 
         // src/coreclr/inc/jiteeversionguid.h
         // 0d18a7df-af1f-4481-a72f-aa6cf8aa0a65
@@ -80,9 +133,13 @@ namespace MonoMod.Core.Platforms.Runtimes
                 {
                     ref var chunk = ref args->chunks[i];
                     if ((chunk.flags & V110.CorJitAllocMemFlag.HotCode) != 0)
+                    {
                         (*wrap)[ICorJitInfoWrapper.HotCodeRW] = chunk.blockRW;
+                    }
                     else if ((chunk.flags & V110.CorJitAllocMemFlag.ColdCode) != 0)
+                    {
                         (*wrap)[ICorJitInfoWrapper.ColdCodeRW] = chunk.blockRW;
+                    }
                 }
             }
         }

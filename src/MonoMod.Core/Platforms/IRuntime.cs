@@ -50,20 +50,23 @@ namespace MonoMod.Core.Platforms
         /// <remarks>
         /// <para>This method must always be implemented. For simple cases, its implementation can be just a call to
         /// <see cref="MethodBase.MethodHandle"/>, however most runtimes have edge cases which that is not well-behaved for.</para>
+        /// <para>Some methods have multiple underlying method handles which may be relevant. This method returns only the "normal" one.</para>
         /// </remarks>
-        /// <param name="method"></param>
-        /// <returns></returns>
+        /// <param name="method">The method to get the handle of.</param>
+        /// <returns>The <see cref="RuntimeMethodHandle"/> of the normal underlying method.</returns>
         RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         /// <summary>
         /// Determines whether a particular method requires a generic context to be provided to it by the runtime.
         /// </summary>
         /// <param name="method">The method to check.</param>
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of <paramref name="method"/> to check. This
+        /// MUST be a valid <see cref="RuntimeMethodHandle"/> corresponding to <paramref name="method"/> if it is specified.</param>
         /// <returns>
-        /// <c>true</c> if the method requires a generic context to be provided to it by the runtime;
-        /// otherwise, <c>false</c>.
+        /// <see langword="true"/> if the method requires a generic context to be provided to it by the runtime;
+        /// otherwise, <see langword="false"/>.
         /// </returns>
-        bool RequiresGenericContext(MethodBase method);
+        bool RequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default);
 
         /// <summary>
         /// Disables inlining for a particular method. After this is called, future invocations of this method will not be inlined at the callsite by the runtime.
@@ -74,7 +77,9 @@ namespace MonoMod.Core.Platforms
         /// checks that feature flag, calling this method if available.</para>
         /// </remarks>
         /// <param name="method">The method to disable inlining for.</param>
-        void DisableInlining(MethodBase method);
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of <paramref name="method"/> to disable inlining for. This
+        /// MUST be a valid <see cref="RuntimeMethodHandle"/> corresponding to <paramref name="method"/> if it is specified.</param>
+        void DisableInlining(MethodBase method, RuntimeMethodHandle handle = default);
 
         /// <summary>
         /// Pins a method so that it will not be garbage collected, if that is necessary for this runtime.
@@ -98,8 +103,10 @@ namespace MonoMod.Core.Platforms
         /// the return value of this method is used directly.</para>
         /// </remarks>
         /// <param name="method">The method to get the entrypoint of.</param>
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of <paramref name="method"/> to get the entrypoint of. This
+        /// MUST be a valid <see cref="RuntimeMethodHandle"/> corresponding to <paramref name="method"/> if it is specified.</param>
         /// <returns>A pointer to the real entrypoint of the method.</returns>
-        IntPtr GetMethodEntryPoint(MethodBase method);
+        IntPtr GetMethodEntryPoint(MethodBase method, RuntimeMethodHandle handle = default);
 
         /// <summary>
         /// Compiles the provided method so that it has a native method body.
@@ -112,7 +119,23 @@ namespace MonoMod.Core.Platforms
         /// responsibility of ensuring that a method is compiled. No additional work is done by <see cref="PlatformTriple"/>.</para>
         /// </remarks>
         /// <param name="method">The method to compile.</param>
-        void Compile(MethodBase method);
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of <paramref name="method"/> to compile. This
+        /// MUST be a valid <see cref="RuntimeMethodHandle"/> corresponding to <paramref name="method"/> if it is specified.</param>
+        void Compile(MethodBase method, RuntimeMethodHandle handle = default);
+
+        /// <summary>
+        /// Gets information about how the runtime's async machinery treats a method, if it does so specially.
+        /// </summary>
+        /// <remarks>
+        /// <para>This must only be called if <see cref="Features"/> includes <see cref="RuntimeFeature.HasRuntimeAsync"/>.</para>
+        /// <para>If <paramref name="runtimeAsyncInfo"/> is populated, all non-<see langword="default"/> method handles are valid
+        /// handles corresponding to <paramref name="method"/>.</para>
+        /// </remarks>
+        /// <param name="method">The method to get runtime async info for.</param>
+        /// <param name="runtimeAsyncInfo">The resulting info, if any was found.</param>
+        /// <returns><see langword="true"/> if <paramref name="method"/> is treated specially by the runtime's async machinery,
+        /// and <paramref name="runtimeAsyncInfo"/> is populated. <see langword="false"/> otherwise.</returns>
+        bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo);
     }
 
     /// <summary>

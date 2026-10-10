@@ -11,7 +11,6 @@ namespace MonoMod.Core.Platforms.Runtimes
 {
     internal abstract class FxCoreBaseRuntime : IRuntime
     {
-
         public abstract RuntimeKind Target { get; }
 
         public virtual RuntimeFeature Features =>
@@ -187,7 +186,7 @@ namespace MonoMod.Core.Platforms.Runtimes
             return method.MethodHandle;
         }
 
-        public bool RequiresGenericContext(MethodBase method)
+        public bool RequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default)
         {
             // If neither the method nor its declaring type is generic,
             // we do not need to worry about the generic context at all.
@@ -386,9 +385,13 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types",
             Justification = "We want to catch and swallow exceptions from CreateDelegate.")]
-        public virtual void Compile(MethodBase method)
+        public virtual void Compile(MethodBase method, RuntimeMethodHandle handle = default)
         {
-            var handle = GetMethodHandle(method);
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
             RuntimeHelpers.PrepareMethod(handle);
             Helpers.Assert(TryInvokeBclCompileMethod(handle));
 
@@ -430,14 +433,17 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected static readonly bool IsDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var isEnabled) && isEnabled;
 
         // It seems that across all versions of Framework and Core, the layout of the start of a MethodDesc is quite consistent
-        public unsafe virtual void DisableInlining(MethodBase method)
+        public unsafe virtual void DisableInlining(MethodBase method, RuntimeMethodHandle handle = default)
         {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
             // mdcNotInline = 0x2000
             // References to RuntimeMethodHandle (CORINFO_METHOD_HANDLE) pointing to MethodDesc
             // can be traced as far back as https://ntcore.com/files/netint_injection.htm
 
-            var handle = GetMethodHandle(method);
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
 
             var offset = 0
               + (IsDebugClr ? 0 // #ifdef _DEBUG
@@ -457,11 +463,11 @@ namespace MonoMod.Core.Platforms.Runtimes
             *m_wFlags |= 0x2000;
         }
 
-        public virtual IntPtr GetMethodEntryPoint(MethodBase method)
+        public virtual IntPtr GetMethodEntryPoint(MethodBase method, RuntimeMethodHandle handle = default)
         {
             method = GetIdentifiable(method);
 
-            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
+            if (handle == default && method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
             {
                 /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
                  * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation
@@ -489,7 +495,10 @@ namespace MonoMod.Core.Platforms.Runtimes
             else
             {
                 // Your typical method.
-                var handle = GetMethodHandle(method);
+                if (handle == default)
+                {
+                    handle = GetMethodHandle(method);
+                }
                 return handle.GetFunctionPointer();
             }
         }
@@ -556,6 +565,11 @@ namespace MonoMod.Core.Platforms.Runtimes
             {
                 MMDbgLog.Error($"Error in OnMethodCompiledCore: {e}");
             }
+        }
+
+        public bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo)
+        {
+            throw new NotSupportedException();
         }
     }
 }
