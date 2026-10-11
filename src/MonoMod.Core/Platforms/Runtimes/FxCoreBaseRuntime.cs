@@ -567,7 +567,7 @@ namespace MonoMod.Core.Platforms.Runtimes
             }
         }
 
-        public bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo)
+        public virtual bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo)
         {
             throw new NotSupportedException();
         }

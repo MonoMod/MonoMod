@@ -64,6 +64,37 @@ namespace MonoMod.Core.Platforms.Runtimes
             return ptr;
         }
 
+        public override unsafe bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo)
+        {
+            var handle = GetMethodHandle(method);
+            var mdesc = (V110.MethodDesc*)handle.Value;
+
+            if (!mdesc->HasAsyncMethodData())
+            {
+                // no async method data, nothing special to report
+                runtimeAsyncInfo = default;
+                return false;
+            }
+
+            var ordinary = mdesc->GetOrdinaryVariantNoCreate();
+            var async = mdesc->GetAsyncVariantNoCreate();
+
+            runtimeAsyncInfo = new()
+            {
+                // if the normal variant reports IsAsyncThunkMethod(), then it really is a thunk that calls into the async variant
+                NormalVariantFlags = ordinary->IsAsyncThunkMethod() ? RuntimeAsyncVariantFlags.IsThunk : 0,
+                NormalVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)ordinary),
+
+                // if the async variant reports IsAsyngThunkMethod(), it's not *really* a thunk because it is compiled by the jit
+                // using the same IL as the ordinary variant. This is marked by SupportsAsyncVersionCodegen().
+                AsyncVariantFlags = async->IsAsyncThunkMethod() && !async->SupportsAsyncVersionCodegen() ? RuntimeAsyncVariantFlags.IsThunk : 0,
+                AsyncVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)async),
+            };
+
+            GC.KeepAlive(method);
+            return true;
+        }
+
         // src/coreclr/inc/jiteeversionguid.h
         // 0d18a7df-af1f-4481-a72f-aa6cf8aa0a65
         private static readonly Guid JitVersionGuid = new(
