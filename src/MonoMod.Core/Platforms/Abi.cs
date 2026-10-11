@@ -70,6 +70,10 @@ namespace MonoMod.Core.Platforms
         /// user arguments.
         /// </remarks>
         UserArguments,
+        /// <summary>
+        /// The async continuation parameter, when one is present.
+        /// </summary>
+        AsyncContinuation,
     }
 
     // TODO: include information about how many registers are used for parameter passing

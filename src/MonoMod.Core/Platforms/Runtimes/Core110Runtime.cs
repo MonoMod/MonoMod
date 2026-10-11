@@ -10,7 +10,32 @@ namespace MonoMod.Core.Platforms.Runtimes
     [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 12.")]
     internal class Core110Runtime : Core100Runtime
     {
-        public Core110Runtime(ISystem system, IArchitecture arch) : base(system, arch) { }
+        public Core110Runtime(ISystem system, IArchitecture arch) : base(system, arch)
+        {
+            if (AbiCore is { } abi)
+            {
+                var argOrder = abi.ArgumentOrder;
+
+                var newArgOrder = new SpecialArgumentKind[argOrder.Length + 1];
+                argOrder.Span.CopyTo(newArgOrder);
+
+                var insertIndex = Array.IndexOf(newArgOrder, SpecialArgumentKind.GenericContext);
+                Helpers.Assert(insertIndex >= 0);
+                if (PlatformDetection.Architecture is not ArchitectureKind.x86)
+                {
+                    // on everything BUT x86, continuation is AFTER generic context, not before
+                    insertIndex++;
+                }
+
+                Array.Copy(newArgOrder, insertIndex, newArgOrder, insertIndex + 1, argOrder.Length - insertIndex);
+                newArgOrder[insertIndex] = SpecialArgumentKind.AsyncContinuation;
+
+                AbiCore = abi with
+                {
+                    ArgumentOrder = newArgOrder,
+                };
+            }
+        }
 
         public override RuntimeFeature Features
             => (base.Features & ~RuntimeFeature.RequiresBodyThunkWalking)
