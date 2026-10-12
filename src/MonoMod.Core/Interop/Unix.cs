@@ -41,7 +41,7 @@ namespace MonoMod.Core.Interop
 
         [DllImport(LibC, CallingConvention = CallingConvention.Cdecl, EntryPoint = "__errno_location")]
         public static extern unsafe int* __errno_location();
-        
+
         public static unsafe int Errno => *__errno_location();
 
         static Unix()
