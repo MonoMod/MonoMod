@@ -13,7 +13,7 @@
     <Arm64HelperOS Include="macos" Ext="dylib" Item="Arm64HelperMacOS" TargetTriple="aarch64-macos"
                    ExtraOpts="-shared -mmacosx-version-min=11"/>
 
-    <Arm64HelperImportLibrary Include="$(MSBuildThisFileDirectory)libc_import.S"
+    <Arm64HelperImportLibrary Include="$(MSBuildThisFileDirectory)libgcc_s_import.S"
                               TargetTriple="aarch64-linux-none" Lib="arm64/android/libc.so"
                               ExtraOpts="-shared -Wl,-soname,libc.so,--build-id=none -nodefaultlibs -nostdlib"/>
     <Arm64HelperImportLibrary Include="$(MSBuildThisFileDirectory)libgcc_s_import.S"
