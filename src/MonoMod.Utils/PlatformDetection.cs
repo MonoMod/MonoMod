@@ -161,17 +161,6 @@ namespace MonoMod.Utils
                 os = OSKind.Wine;
             }
 
-#if NET5_0_OR_GREATER
-            arch = RuntimeInformation.ProcessArchitecture switch
-            {
-                System.Runtime.InteropServices.Architecture.X86 => ArchitectureKind.x86,
-                System.Runtime.InteropServices.Architecture.X64 => ArchitectureKind.x86_64,
-                System.Runtime.InteropServices.Architecture.Arm => ArchitectureKind.Arm,
-                System.Runtime.InteropServices.Architecture.Arm64 => ArchitectureKind.Arm64,
-                _ => arch,
-            };
-#endif
-
             MMDbgLog.Info($"Platform info: {os} {arch}");
             return (os, arch);
         }
@@ -272,6 +261,16 @@ namespace MonoMod.Utils
                 }
                 // TODO: fill in other values for machine
 
+                if (os == OSKind.Linux)
+                {
+                    var loadedArch = GetLoadedLibCArchitecture();
+                    if (loadedArch != ArchitectureKind.Unknown && loadedArch != arch)
+                    {
+                        MMDbgLog.Warning($"Kernel reports {arch}, but the loaded libc is {loadedArch}; assuming a translated process");
+                        arch = loadedArch;
+                    }
+                }
+
                 MMDbgLog.Trace($"uname() detected architecture info: {os} {arch}");
             }
             catch (Exception e)
@@ -279,6 +278,71 @@ namespace MonoMod.Utils
                 MMDbgLog.Error($"Error trying to detect info on POSIX-like system {e}");
                 return;
             }
+        }
+
+        private static readonly char[] MapsFieldSeparator = [' '];
+
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "This is a best-effort cross-check; failing it must leave the uname() result in place.")]
+        private static ArchitectureKind GetLoadedLibCArchitecture()
+        {
+            try
+            {
+                DynDll.InitializeBackend(OSKind.Linux);
+                if (!DynDll.TryOpenLibrary(Interop.Unix.LibC, out var libc) || !DynDll.TryGetExport(libc, "uname", out var export))
+                {
+                    return ArchitectureKind.Unknown;
+                }
+
+                var address = (ulong)(long)export;
+                var maps = System.Text.Encoding.ASCII.GetString(Helpers.ReadAllBytes("/proc/self/maps"));
+                foreach (var line in maps.Split('\n'))
+                {
+                    var fields = line.Split(MapsFieldSeparator, 6, StringSplitOptions.RemoveEmptyEntries);
+                    if (fields.Length < 6 || fields[5][0] != '/')
+                    {
+                        continue;
+                    }
+
+                    var range = fields[0].Split('-');
+                    var start = ulong.Parse(range[0], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
+                    var end = ulong.Parse(range[1], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
+                    if (address < start || address >= end)
+                    {
+                        continue;
+                    }
+
+                    var header = new byte[20];
+                    using (var file = File.OpenRead(fields[5].Trim()))
+                    {
+                        if (file.Read(header, 0, header.Length) != header.Length)
+                        {
+                            return ArchitectureKind.Unknown;
+                        }
+                    }
+
+                    // \x7FELF, little-endian; e_machine is at offset 18
+                    if (header[0] != 0x7F || header[1] != 'E' || header[2] != 'L' || header[3] != 'F' || header[5] != 1)
+                    {
+                        return ArchitectureKind.Unknown;
+                    }
+
+                    return (header[18] | (header[19] << 8)) switch
+                    {
+                        3 => ArchitectureKind.x86, // EM_386
+                        40 => ArchitectureKind.Arm, // EM_ARM
+                        62 => ArchitectureKind.x86_64, // EM_X86_64
+                        183 => ArchitectureKind.Arm64, // EM_AARCH64
+                        _ => ArchitectureKind.Unknown,
+                    };
+                }
+            }
+            catch (Exception e)
+            {
+                MMDbgLog.Warning($"Could not determine the architecture of the loaded libc: {e}");
+            }
+
+            return ArchitectureKind.Unknown;
         }
 
         private static unsafe string GetMachineNamePosix(OSKind os, Span<byte> unameBuffer)
