@@ -396,7 +396,7 @@ namespace MonoMod.Core.Platforms.Systems
         }
 
         private PosixExceptionHelper? lazyNativeExceptionHelper;
-        public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper; // ??= CreateNativeExceptionHelper();
+        public INativeExceptionHelper? NativeExceptionHelper => lazyNativeExceptionHelper ??= CreateNativeExceptionHelper();
 
         private static ReadOnlySpan<byte> NEHTempl => "/mm-exhelper.so.XXXXXX"u8;
 
@@ -426,15 +426,13 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
-        // TODO: Create NEH for Android
         private unsafe PosixExceptionHelper CreateNativeExceptionHelper()
         {
             Helpers.Assert(arch is not null);
 
             var soname = arch.Target switch
             {
-                ArchitectureKind.x86_64 => "exhelper_linux_x86_64.so",
-                ArchitectureKind.Arm64 => "exhelper_linux_arm64.so",
+                ArchitectureKind.Arm64 => "exhelper_android_arm64.so",
                 _ => throw new NotImplementedException($"No exception helper for current arch")
             };
 
