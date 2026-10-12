@@ -7,16 +7,6 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="_MM_BuildAndroidLibcStub">
-    <PropertyGroup>
-      <_StubDir>$(MSBuildThisFileDirectory).stubs</_StubDir>
-    </PropertyGroup>
-    <MakeDir Directories="$(_StubDir)" />
-    <WriteLinesToFile File="$(_StubDir)/stub.c" Lines="// empty: exists only to produce a libc.so soname stub" Overwrite="true" />
-    <Exec Command="&quot;$(ZigExePath)&quot; cc -target aarch64-linux-none -shared -nostdlib -Wl,-soname,libc.so -o &quot;$(_StubDir)/libc.so&quot; &quot;$(_StubDir)/stub.c&quot;"
-          Condition="!Exists('$(_StubDir)/libc.so')" />
-  </Target>
-
   <Target Name="_MM_PrepObjToLib" DependsOnTargets="_MM_ClearItems" Outputs="|%(Arm64HelperOS.Identity)|">
 
     <PropertyGroup>
