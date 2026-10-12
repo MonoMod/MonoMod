@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.Interop;
+using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -263,6 +264,8 @@ namespace MonoMod.Utils
 
                 if (os == OSKind.Linux)
                 {
+                    // under binary translation (e.g. Android's ndk_translation), uname() and the auxv describe the host,
+                    // not the code we're actually running, so check what the libc we loaded was built for
                     var loadedArch = GetLoadedLibCArchitecture();
                     if (loadedArch != ArchitectureKind.Unknown && loadedArch != arch)
                     {
@@ -280,8 +283,6 @@ namespace MonoMod.Utils
             }
         }
 
-        private static readonly char[] MapsFieldSeparator = [' '];
-
         [SuppressMessage("Design", "CA1031:Do not catch general exception types",
             Justification = "This is a best-effort cross-check; failing it must leave the uname() result in place.")]
         private static ArchitectureKind GetLoadedLibCArchitecture()
@@ -294,26 +295,23 @@ namespace MonoMod.Utils
                     return ArchitectureKind.Unknown;
                 }
 
-                var address = (ulong)(long)export;
-                var maps = System.Text.Encoding.ASCII.GetString(Helpers.ReadAllBytes("/proc/self/maps"));
-                foreach (var line in maps.Split('\n'))
+                var modules = Linux.Procfs.ParseMapsModules(Linux.Procfs.ProcPid.Self);
+                if (modules is null)
                 {
-                    var fields = line.Split(MapsFieldSeparator, 6, StringSplitOptions.RemoveEmptyEntries);
-                    if (fields.Length < 6 || fields[5][0] != '/')
-                    {
-                        continue;
-                    }
+                    return ArchitectureKind.Unknown;
+                }
 
-                    var range = fields[0].Split('-');
-                    var start = ulong.Parse(range[0], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
-                    var end = ulong.Parse(range[1], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
-                    if (address < start || address >= end)
+                // find the module containing that export, then read the machine type out of its ELF header
+                var address = (ulong)(long)export;
+                foreach (var module in modules)
+                {
+                    if (address < module.StartAddress || address - module.StartAddress >= module.Size)
                     {
                         continue;
                     }
 
                     var header = new byte[20];
-                    using (var file = File.OpenRead(fields[5].Trim()))
+                    using (var file = File.OpenRead(module.Path))
                     {
                         if (file.Read(header, 0, header.Length) != header.Length)
                         {
