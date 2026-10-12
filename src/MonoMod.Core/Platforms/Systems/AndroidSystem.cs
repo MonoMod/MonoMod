@@ -46,7 +46,12 @@ namespace MonoMod.Core.Platforms.Systems
             PageSize = (nint)Android.Sysconf(Android.SysconfName.PageSize);
             allocator = new MmapPagedMemoryAllocator(PageSize);
 
-            Switches.SetSwitchValue(Switches.HelperDropPath, Path.GetTempPath());
+            var dropPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                ".cache");
+
+            Directory.CreateDirectory(dropPath);
+            Switches.SetSwitchValue(Switches.HelperDropPath, dropPath);
 
             switch (PlatformDetection.Architecture)
             {
