@@ -428,7 +428,7 @@ namespace MonoMod.Core.Platforms.Systems
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             ".cache");
         
-        private static string NEHTempl => $"/{NEHFolder}/mm-exhelper.so.XXXXXX";
+        private static string NEHTempl => $"{NEHFolder}/mm-exhelper.so.XXXXXX";
 
         private sealed class AndroidNativeLibDrop : PosixNativeLibraryDrop
         {
