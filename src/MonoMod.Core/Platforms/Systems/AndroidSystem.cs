@@ -9,6 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace MonoMod.Core.Platforms.Systems
 {
@@ -49,12 +50,7 @@ namespace MonoMod.Core.Platforms.Systems
 
             // For .NET MAUI / Xamarin users, this is already set
             // For embedding CoreCLR manually, set HOME and XDG_DATA_HOME env vars
-            var dropPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                ".cache");
-
-            Directory.CreateDirectory(dropPath);
-            Switches.SetSwitchValue(Switches.HelperDropPath, dropPath);
+            Directory.CreateDirectory(NEHFolder);
 
             switch (PlatformDetection.Architecture)
             {
@@ -428,7 +424,11 @@ namespace MonoMod.Core.Platforms.Systems
         public INativeExceptionHelper? NativeExceptionHelper
             => Helpers.GetOrInitWithLock(ref lazyNativeExceptionHelper, nehInitLock, static self => self.CreateNativeExceptionHelper(), this);
 
-        private static ReadOnlySpan<byte> NEHTempl => "/tmp/mm-exhelper.so.XXXXXX"u8;
+        private static string NEHFolder => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            ".cache");
+        
+        private static string NEHTempl => $"/{NEHFolder}/mm-exhelper.so.XXXXXX";
 
         private sealed class AndroidNativeLibDrop : PosixNativeLibraryDrop
         {
@@ -470,7 +470,8 @@ namespace MonoMod.Core.Platforms.Systems
             using (var embedded = Assembly.GetExecutingAssembly().GetManifestResourceStream(soname))
             {
                 Helpers.Assert(embedded is not null);
-                fname = AndroidNativeLibDrop.Instance.DropLibrary(embedded, NEHTempl);
+                ReadOnlySpan<byte> nehTemplate = Encoding.UTF8.GetBytes(NEHTempl);
+                fname = AndroidNativeLibDrop.Instance.DropLibrary(embedded, nehTemplate);
             }
 
             if (arch.Target is ArchitectureKind.Arm64)
