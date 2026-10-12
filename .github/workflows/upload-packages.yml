@@ -13,6 +13,7 @@ on:
         description: URL of the nuget feed to upload to
     secrets:
       nuget-key:
+        required: false
         
 defaults:
   run:

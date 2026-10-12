@@ -1,4 +1,6 @@
 // https://github.com/dotnet/runtime/blob/48a162cff4bdfc77d7d7767497b073481febf1d8/src/libraries/Common/src/System/IO/StringParser.cs
+#pragma warning disable IDE0007 // this is verbatim copied from bcl sources, don't want to maintain changes
+#pragma warning disable CA1307 // IndexOf with StringComparison is not available on all targets
 
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.

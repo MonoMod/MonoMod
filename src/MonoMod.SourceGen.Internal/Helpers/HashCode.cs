@@ -173,6 +173,7 @@ internal struct HashCode
     /// <inheritdoc/>
     [Obsolete("HashCode is a mutable struct and should not be compared with other HashCodes.", error: true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
+    [SuppressMessage("Design", "CA1065:Do not raise exceptions in unexpected locations", Justification = "see obsolete message")]
     public override bool Equals(object? obj) => throw new NotSupportedException();
 
     /// <summary>

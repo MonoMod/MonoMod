@@ -127,7 +127,7 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
-        private unsafe static void FlushInstructionCache(IntPtr addr, nuint size)
+        public unsafe void FlushInstructionCache(IntPtr addr, nuint size)
         {
             if (!Interop.Windows.FlushInstructionCache(GetCurrentProcess(), (void*)addr, size))
             {

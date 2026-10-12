@@ -19,7 +19,9 @@ env:
   XunitVersion: "2.4.2"
 
   DUMPS_PATH: ${{github.workspace}}/artifacts/dumps/
-  WORKSPACE: ${{github.workspace}}
+  # Make vstest's blame collector write dumps here instead of a temp dir. This matters for .NET Core < 5, where it reports the
+  # runtime as unsupported but still has the runtime write a dump (to that temp dir), which it then never collects.
+  VSTEST_DUMP_PATH: ${{github.workspace}}/artifacts/dumps/
   DOTNET_DbgEnableMiniDump: 1
   DOTNET_DbgMiniDumpName: "${{github.workspace}}/artifacts/dumps/dump_%e_%p.dmp"
   DOTNET_DbgMiniDumpType: 4
@@ -32,81 +34,93 @@ env:
   COMPlus_CreateDumpDiagnostics: 1
   COMPlus_CreateDumpVerboseDiagnostics: 1
   COMPlus_EnableDumpOnSigTerm: 1
+  # Write to our in-memory log so that dumps contain all of our logs
+  MONOMOD_LogInMemory: "true"
 
 jobs:
   test:  
-    name: Test
-    runs-on: ${{ fromJSON(inputs.matrix).os.runner }}
-    container: ${{ fromJSON(inputs.matrix).container }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.matrix) }}
+    name: ${{ matrix.title }}
+    runs-on: ${{ matrix.os.runner }}
+    container: ${{ matrix.container }}
     env:
-      LOG_FILE_NAME: testresults.${{ fromJSON(inputs.matrix).os.runner }}.${{ fromJSON(inputs.matrix).dotnet.id != '' && fromJSON(inputs.matrix).dotnet.id || fromJSON(inputs.matrix).dotnet.sdk }}.${{ fromJSON(inputs.matrix).arch }}
+      LOG_FILE_NAME: testresults.${{ matrix.os.runner }}.${{ matrix.dotnet.id != '' && matrix.dotnet.id || matrix.dotnet.sdk }}.${{ matrix.arch }}
 
     steps:
-    - name: Install coreutils
-      uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
-      if: ${{ runner.os == 'macOS' }}
-      with:
-        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-coreutils
-        tools: coreutils
-    
     # MacOS 13 ships an LLDB that doesn't work properly for crashes off the main thread. We install LLVM from Brew for its LLDB that doesn't have this issue.
     - name: Install LLVM from Brew
       uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
+      if: ${{ matrix.dotnet.isMono && matrix.os.runner == 'macos-13' }}
       with:
-        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-llvm
+        key: ${{ matrix.os.runner }}-brew-llvm
         tools: llvm@20 coreutils
     - name: Add new LLVM to PATH
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && fromJSON(inputs.matrix).os.runner == 'macos-13' }}
+      if: ${{ matrix.dotnet.isMono && matrix.os.runner == 'macos-13' }}
       shell: bash
       run: echo "$(brew --prefix llvm@20)/bin" >> "$GITHUB_PATH"
 
-      # MacOS 15 images don't ship Mono at all
+      # MacOS 15+ images don't ship Mono at all
     - name: Install Mono from Brew
       uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      if: ${{ matrix.dotnet.isMono && runner.os == 'macOS' && matrix.os.needsSystemMonoInstall }}
       with:
-        key: ${{ fromJSON(inputs.matrix).os.runner }}-brew-mono
+        key: ${{ matrix.os.runner }}-brew-mono
         tools: mono
     - name: Add new Mono to PATH
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono && startsWith(fromJSON(inputs.matrix).os.runner, 'macos-15') }}
+      if: ${{ matrix.dotnet.isMono && runner.os == 'macOS' && matrix.os.needsSystemMonoInstall }}
       shell: bash
       run: |
         echo "$(brew --prefix mono)/bin" >> "$GITHUB_PATH"
         echo "MONO_GAC_PREFIX=$(brew --prefix mono)" >> "$GITHUB_ENV"
       
+      # MacOS's LLDB is fairly broken and isn't well-behaved with coredumps, instead crashing on attempts to load.
+      # Thus, we will install (and prefer) using brew-sourced LLDB 23.
+    - name: Install LLDB from Brew
+      uses: tecolicom/actions-use-homebrew-tools@v1 # we use this action instead of just a brew install so that the downloaded package gets cached
+      if: ${{ matrix.dotnet.isMono && runner.os == 'macOS' }}
+      with:
+        key: ${{ matrix.os.runner }}-brew-lldb
+        tools: lldb
+    - name: Add new LLDB to PATH
+      if: ${{ matrix.dotnet.isMono && runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        echo "$(brew --prefix lldb)/bin" >> "$GITHUB_PATH"
+
     - name: Install ProcDump
       if: ${{ runner.os == 'Windows' }}
       run: choco install procdump -y
 
     - name: Checkout
       uses: actions/checkout@v6
-      if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore || fromJSON(inputs.matrix).dotnet.isMono }}
+      if: ${{ matrix.dotnet.needsRestore || matrix.dotnet.isMono }}
       with:
         lfs: true
         submodules: recursive
         
     # Note: All of the SDKs we install have to be for the target architecture. Otherwise, we get issues when the default != the target.
     - name: Install global SDK
-      if: ${{ ! fromJSON(inputs.matrix).dotnet.needsRestore }}
+      if: ${{ ! matrix.dotnet.needsRestore }}
       uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
-        architecture: ${{ fromJSON(inputs.matrix).arch }}
+        architecture: ${{ matrix.arch }}
         version: "10.0"
         
     - name: Cache restored NuGet packages
       uses: actions/cache@v5
-      if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
+      if: ${{ matrix.dotnet.needsRestore }}
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-v2-${{ hashFiles('**/packages.lock.json') }}
         restore-keys: ${{ runner.os }}-nuget-setup-v2-${{ hashFiles('build/gen-test-matrix/packages.lock.json') }}
 
     - name: Install restore SDK
-      if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
+      if: ${{ matrix.dotnet.needsRestore }}
       uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
-        architecture: ${{ fromJSON(inputs.matrix).arch }}
+        architecture: ${{ matrix.arch }}
         global-json: global.json
 
     - name: Ensure dumps path exists
@@ -114,7 +128,7 @@ jobs:
       run: New-Item -Type Directory -Force $env:DUMPS_PATH
 
     - name: Restore packages
-      if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
+      if: ${{ matrix.dotnet.needsRestore }}
       run: dotnet restore -noAutoRsp
 
     - name: Download test assets
@@ -123,18 +137,18 @@ jobs:
         name: test-assets
         
     - name: Install test target runtime
-      if: ${{ fromJSON(inputs.matrix).dotnet.sdk != '' }}
+      if: ${{ matrix.dotnet.sdk != '' }}
       uses: nike4613/install-dotnet@cc706db77ed67745a4a4cbae19b2869220e34d27
       with:
-        version: ${{ fromJSON(inputs.matrix).dotnet.sdk }}
-        architecture: ${{ fromJSON(inputs.matrix).arch }}
+        version: ${{ matrix.dotnet.sdk }}
+        architecture: ${{ matrix.arch }}
         runtime: dotnet
 
     - name: Setup Mono
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono }}
+      if: ${{ matrix.dotnet.isMono }}
       id: setup_mono
       env:
-        INPUT_JOB: ${{ inputs.matrix }}
+        INPUT_JOB: ${{ toJSON(matrix) }}
       run: |
         dotnet run --project ./build/setup-mono/setup-mono.csproj -- $env:INPUT_JOB $env:GITHUB_OUTPUT $env:GITHUB_ENV ${{ runner.os }}
 
@@ -142,47 +156,72 @@ jobs:
       run: dotnet --info
       
     - name: Fix runtimeconfig.json probing paths
-      if: ${{ fromJSON(inputs.matrix).dotnet.needsRestore }}
+      if: ${{ matrix.dotnet.needsRestore }}
       run: |
-        ConvertTo-Json @{runtimeOptions=@{additionalProbingPaths=@($env:NUGET_PACKAGES)}} > release_${{ fromJSON(inputs.matrix).dotnet.tfm }}/MonoMod.UnitTest.runtimeconfig.dev.json
+        ConvertTo-Json @{runtimeOptions=@{additionalProbingPaths=@($env:NUGET_PACKAGES)}} > release_${{ matrix.dotnet.tfm }}/MonoMod.UnitTest.runtimeconfig.dev.json
 
     - name: Run tests
-      if: ${{ ! fromJSON(inputs.matrix).dotnet.isMono && ! fromJSON(inputs.matrix).dotnet.pgo }}
+      if: ${{ ! matrix.dotnet.isMono && ! matrix.dotnet.pgo }}
+      # Note: these jobs don't check out the repo, so this can't live in a script under .github/
       run: |
-        dotnet test `
-          --blame-crash-dump-type full --blame-hang-timeout 5m --blame-hang-dump-type full `
-          -f ${{ fromJSON(inputs.matrix).dotnet.tfm }} -a ${{ fromJSON(inputs.matrix).arch }} `
-          -l:"trx;LogFileName=$($env:LOG_FILE_NAME).trx" release_${{ fromJSON(inputs.matrix).dotnet.tfm }}/MonoMod.UnitTest.dll
+        $testArgs = @(
+          'test', '--blame-crash-dump-type', 'full', '--blame-hang-timeout', '20m', '--blame-hang-dump-type', 'full',
+          '-f', '${{ matrix.dotnet.tfm }}', '-a', '${{ matrix.arch }}',
+          "-l:trx;LogFileName=$($env:LOG_FILE_NAME).trx", 'release_${{ matrix.dotnet.tfm }}/MonoMod.UnitTest.dll'
+        );
+        if ($IsMacOS -and '${{ matrix.dotnet.tfm }}'.StartsWith('netcoreapp'))
+        {
+          # .NET Core < 5 can't write its own dumps on macOS (no createdump), so let the kernel write a core instead, which
+          # 'Collect macOS kernel core dumps' picks up. /cores isn't writable by the runner user on some images.
+          sudo chmod 1777 /cores;
+          bash -c 'ulimit -c unlimited && exec "$@"' dotnet-test dotnet @testArgs;
+        }
+        else
+        {
+          dotnet @testArgs;
+        }
+        exit $LastExitCode;
 
     - name: Run tests (PGO)
-      if: ${{ fromJSON(inputs.matrix).dotnet.pgo }}
+      if: ${{ matrix.dotnet.pgo }}
       env:
-        DOTNET_ReadyToRun: ${{ !fromJSON(inputs.matrix).usePgo && 1 || 0 }}
-        DOTNET_TC_QuicJitForLoops: ${{ fromJSON(inputs.matrix).usePgo && 1 || 0 }}
-        DOTNET_TieredPGO: ${{ fromJSON(inputs.matrix).usePgo && 1 || 0 }}
+        DOTNET_ReadyToRun: ${{ !matrix.usePgo && 1 || 0 }}
+        DOTNET_TC_QuicJitForLoops: ${{ matrix.usePgo && 1 || 0 }}
+        DOTNET_TieredPGO: ${{ matrix.usePgo && 1 || 0 }}
       run: |
         dotnet test `
-          --blame-crash-dump-type full --blame-hang-timeout 5m --blame-hang-dump-type full `
-          -f ${{ fromJSON(inputs.matrix).dotnet.tfm }} -a ${{ fromJSON(inputs.matrix).arch }} `
-          -l:"trx;LogFileName=$($env:LOG_FILE_NAME).trx" release_${{ fromJSON(inputs.matrix).dotnet.tfm }}/MonoMod.UnitTest.dll
+          --blame-crash-dump-type full --blame-hang-timeout 20m --blame-hang-dump-type full `
+          -f ${{ matrix.dotnet.tfm }} -a ${{ matrix.arch }} `
+          -l:"trx;LogFileName=$($env:LOG_FILE_NAME).trx" release_${{ matrix.dotnet.tfm }}/MonoMod.UnitTest.dll
           
     - name: Run tests (Mono)
-      if: ${{ fromJSON(inputs.matrix).dotnet.isMono }}
+      if: ${{ matrix.dotnet.isMono }}
       env:
-        TFM: ${{ fromJSON(inputs.matrix).dotnet.tfm }}
+        TFM: ${{ matrix.dotnet.tfm }}
         RUNNER_TFM: ${{ steps.setup_mono.outputs.runner_tfm }}
         USE_MDH: ${{ steps.setup_mono.outputs.use_mdh }}
         MDH: ${{ steps.setup_mono.outputs.mdh }}
         MONO_DLL: ${{ steps.setup_mono.outputs.mono_dll }}
+        MONO_DEBUG: no-gdb-backtrace
       run: ./.github/workflows/run-mono-tests.ps1
 
     # TODO: Non-system Mono
+
+    - name: Collect macOS kernel core dumps
+      if: ${{ always() && runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        shopt -s nullglob
+        for f in /cores/core.*; do
+          echo "Collecting $f ($(du -h "$f" | cut -f1))"
+          mv "$f" "$DUMPS_PATH"
+        done
 
     - name: Upload test results
       uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
-        name: test-results ${{ fromJSON(inputs.matrix).title }}
+        name: test-results ${{ matrix.title }}
         retention-days: 1
         path: |
           TestResults/*.trx
@@ -193,7 +232,7 @@ jobs:
       uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
-        name: test-dumps ${{ fromJSON(inputs.matrix).title }}
+        name: test-dumps ${{ matrix.title }}
         retention-days: 1
         if-no-files-found: ignore
         path: |

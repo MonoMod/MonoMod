@@ -6,6 +6,7 @@ internal sealed record OS : Enableable
 {
     public required string Name { get; init; }
     public required string Runner { get; init; }
+    public bool NeedsSystemMonoInstall { get; init; }
 
     [JsonIgnore]
     public bool UseContainer { get; init; }
@@ -53,8 +54,8 @@ internal sealed record OS : Enableable
             DllSuffix = ".dll",
 
             Arch = [
-                new() { RidName = "x86", UnityName = "win32" },
-                new() { RidName = "x64", UnityName = "win64" },
+                //new() { RidName = "x86", UnityName = "win32" },
+                //new() { RidName = "x64", UnityName = "win64" },
                 new() { RidName = "arm64", UnityName = "win_arm64", IsRunnerArch = true },
             ]
         },
@@ -142,13 +143,16 @@ internal sealed record OS : Enableable
             Name = "MacOS 14",
             Runner = "macos-14",
             HasSystemMono = true,
+            // The preinstalled Mono.framework is x86_64-only, and LLDB can't debug it under Rosetta (launches hang), so
+            // we'd get no crash dumps. Use Homebrew's native arm64 Mono instead.
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
             DllSuffix = ".dylib",
 
             Arch = [
-                new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                //new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
                 new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
             ]
         },
@@ -157,13 +161,14 @@ internal sealed record OS : Enableable
             Name = "MacOS 15",
             Runner = "macos-15",
             HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",
             DllSuffix = ".dylib",
 
             Arch = [
-                new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                //new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
                 new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
             ]
         },
@@ -172,6 +177,38 @@ internal sealed record OS : Enableable
             Name = "MacOS 15 Intel",
             Runner = "macos-15-intel",
             HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
+            RidName = "osx",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".dylib",
+
+            Arch = [
+                new() { RidName = "x64", UnityName = "macos_x64", IsRunnerArch = true },
+            ]
+        },
+        new()
+        {
+            Name = "MacOS 26",
+            Runner = "macos-26",
+            HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
+            RidName = "osx",
+            UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
+            DllPrefix = "lib",
+            DllSuffix = ".dylib",
+
+            Arch = [
+                //new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
+                new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
+            ]
+        },
+        new()
+        {
+            Name = "MacOS 26 Intel",
+            Runner = "macos-26-intel",
+            HasSystemMono = true,
+            NeedsSystemMonoInstall = true,
             RidName = "osx",
             UnityDllName = "monobdwgc-2.0", // TODO: is this correct?
             DllPrefix = "lib",

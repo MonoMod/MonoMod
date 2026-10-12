@@ -240,3 +240,5 @@ ModelManifest.xml
 .aider*
 /.dotnet
 /testEnvironments.json
+.omp/
+.lsp.yml

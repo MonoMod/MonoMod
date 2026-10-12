@@ -123,7 +123,7 @@ namespace MonoMod.Utils
             {
                 var references = Module.AssemblyReferences;
 
-                for (int i = 0; i < references.Count; i++)
+                for (var i = 0; i < references.Count; i++)
                 {
                     var reference = references[i];
                     if (name.FullName != reference.FullName) // TODO compare field by field
@@ -145,12 +145,15 @@ namespace MonoMod.Utils
                 if (TryGetAssemblyNameReference(name, out var reference))
                     return reference;
 
+#pragma warning disable SYSLIB0037 // HashAlgorithm, while obsolete, is still part of the sig that matters.
+                // We also want to keep identical behavior on all runtimes, as opposed to removing it for new targets.
                 reference = new AssemblyNameReference(name.Name, name.Version)
                 {
                     PublicKeyToken = name.GetPublicKeyToken(),
                     Culture = name.CultureInfo!.Name,
                     HashAlgorithm = (Mono.Cecil.AssemblyHashAlgorithm)name.HashAlgorithm,
                 };
+#pragma warning restore SYSLIB0037
 
                 Module.AssemblyReferences.Add(reference);
 

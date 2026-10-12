@@ -4,6 +4,8 @@ param (
     [ValidateSet('Major', 'Minor', 'Patch')]
     [string] $BumpVersion = 'Patch',
 
+    [switch]$UpdateBaseVersion = $false,
+
     [Parameter(ValueFromRemainingArguments)]
     [string[]] $Projects = @("MonoMod.Core", "MonoMod.Utils", "MonoMod.RuntimeDetour")
 )
@@ -41,10 +43,13 @@ try
         $version = $xml.Project.PropertyGroup.VersionPrefix;
         if ($VersionIndex -eq 0)
         {
+            # always want to clear when bumping major
             $xml.Project.PropertyGroup.PackageValidationBaselineVersion = "";
         }
-        else
+        elseif ($UpdateBaseVersion)
         {
+            # only want to update baseline when requested, because if we didn't just
+            # release the current version, it doesn't exist yet so validation will fail
             $xml.Project.PropertyGroup.PackageValidationBaselineVersion = $version;
         }
 

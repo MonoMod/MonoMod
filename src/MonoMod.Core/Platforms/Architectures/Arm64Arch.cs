@@ -351,8 +351,6 @@ namespace MonoMod.Core.Platforms.Architectures
                 Unsafe.WriteUnaligned(ref buffer[8], (ulong)to);
 
                 allocHandle = null;
-                
-                MMDbgLog.Trace($"Detouring arm64 from 0x{from:X16} to 0x{to:X16}");
 
                 return Size;
             }

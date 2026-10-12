@@ -5,8 +5,10 @@ RUN apt-get update \
  && apt-get upgrade -y \
  && apt-get install --no-install-recommends -y \
         apt-transport-https software-properties-common \
-        git git-lfs curl wget bash sudo lldb \
+        git git-lfs curl wget bash sudo lldb-20 python3-lldb-20 \
         ca-certificates-mono mono-runtime mono-runtime-dbg mono-utils mono-gac mono-devel \
+# LLDB < 19 can't write minidumps over 4GB, which a full dump of the test process can exceed (see .github/lldb/run_with_dumps.py)
+ && ln -s /usr/lib/llvm-20/bin/lldb /usr/local/bin/lldb \
  && add-apt-repository ppa:dotnet/backports \
  && wget -q https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
  && dpkg -i packages-microsoft-prod.deb \

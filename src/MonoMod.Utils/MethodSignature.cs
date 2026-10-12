@@ -72,6 +72,8 @@ namespace MonoMod.Utils
                 return x.IsCompatible(y);
             }
 
+            [SuppressMessage("Design", "CA1065:Do not raise exceptions in unexpected locations",
+                Justification = "Used only internally for Equals()")]
             public int GetHashCode([DisallowNull] Type obj)
             {
                 throw new NotSupportedException();

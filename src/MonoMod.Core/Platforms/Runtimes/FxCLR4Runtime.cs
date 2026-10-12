@@ -36,7 +36,6 @@ namespace MonoMod.Core.Platforms.Runtimes
         public override RuntimeFeature Features
             => base.Features & ~RuntimeFeature.RequiresBodyThunkWalking;
 
-        // TODO: check to make sure we're running 4.8 before using this
         private unsafe IntPtr GetMethodBodyPtr(MethodBase method, RuntimeMethodHandle handle)
         {
             var md = (V48.MethodDesc*)handle.Value;

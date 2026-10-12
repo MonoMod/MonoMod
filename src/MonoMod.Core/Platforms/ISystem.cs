@@ -61,12 +61,21 @@ namespace MonoMod.Core.Platforms
         /// <para><paramref name="backup"/> may be an empty span. When it is, no backup is made.</para>
         /// <para><paramref name="targetKind"/> is to be used as nothing more than a hint. The system should check the existing mapping
         /// to ensure that it is in fact correct (so that it would not remap an RW page to an RX page, or something similar).</para>
+        /// <para>This method must flush the instruction cache for the target address if the target is executable; i.e. it must
+        /// do the equivalent of <see cref="FlushInstructionCache(IntPtr, nuint)"/> on <paramref name="patchTarget"/></para>
         /// </remarks>
         /// <param name="targetKind">The expected kind of data at <paramref name="patchTarget"/>.</param>
         /// <param name="patchTarget">A pointer to the memory location to patch.</param>
         /// <param name="data">The data to write into <paramref name="patchTarget"/>.</param>
         /// <param name="backup">A span to fill will the data which was already present, or an empty span.</param>
         void PatchData(PatchTargetKind targetKind, IntPtr patchTarget, ReadOnlySpan<byte> data, Span<byte> backup);
+
+        /// <summary>
+        /// Flushes the instruction cache around the region defined by <paramref name="address"/> and <paramref name="size"/>.
+        /// </summary>
+        /// <param name="address">The address to flush the instruction cache at.</param>
+        /// <param name="size">The size of the region of the cache to invalidate.</param>
+        void FlushInstructionCache(IntPtr address, nuint size);
 
         /// <summary>
         /// Gets the pointer to the native jit hook configuration struct which can vary by both runtime and arch.

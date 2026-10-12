@@ -1,0 +1,22 @@
+name: Test (Matrix layer 1)
+
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        required: true
+        type: string
+  
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  layer:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.matrix) }}
+    uses: ./.github/workflows/test.yml
+    name: ${{ matrix.title }}
+    with:
+      matrix: ${{ toJSON(matrix.matrix) }}  

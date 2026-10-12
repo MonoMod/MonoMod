@@ -50,3 +50,12 @@ Note that for recent versions of CoreCLR, the `COMPlus_` prefix can be replaced 
 - `DOTNET_ReadPGOData`
 - `DOTNET_WritePGOData`
 - `DOTNET_TieredPGO`
+
+## Mono CI Crash Dumps
+
+On Linux, Mono CI jobs run under [the LLDB dump helper](../.github/lldb/run_with_dumps.py), which saves crash and hang dumps
+to `DUMPS_PATH`. Its native-crash breakpoint resolves the exact `mono_handle_native_crash` code symbol in existing modules
+and runtime shared libraries loaded after launch. It deliberately avoids debug-info name resolution, which can place the
+breakpoint in an unrelated function with LLDB 20 and Mono's hot/cold-split debug information.
+
+If the symbol is unavailable, the breakpoint stays unresolved; fatal-signal and hang dump handling remain active.

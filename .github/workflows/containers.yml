@@ -19,7 +19,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
     steps:
     - name: Set up QEMU for xarch builds
       uses: docker/setup-qemu-action@v3
@@ -30,7 +29,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
       with:
-        ref: "${{ (github.event.pull_request || github.event.push).head.sha }}"
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        # Fork Dockerfiles are built in BuildKit without checkout credentials or a repository build context.
+        allow-unsafe-pr-checkout: true
+        persist-credentials: false
+        sparse-checkout: build/containers
 
     - name: Log in to container registry
       uses: docker/login-action@v3
@@ -44,6 +47,8 @@ jobs:
         $files = gci build/containers/*.dockerfile;
         $ghcrBase = "ghcr.io/${{ github.repository_owner }}/monomod-tester";
         $ghcrBase = $ghcrBase.ToLowerInvariant();
+        # Tags hash only the Dockerfile, so no other repository files may enter the build.
+        $emptyContext = (New-Item -ItemType Directory (Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString()))).FullName;
 
         function Exec
         {
@@ -79,7 +84,7 @@ jobs:
             continue;
           }
           # Upstream doesn't exist yet, build
-          Exec docker buildx build -t $imgName -f $($f.FullName) --output=type=docker $($f.Directory.FullName)
+          Exec docker buildx build -t $imgName -f $($f.FullName) --output=type=docker $emptyContext
           # and push
           Exec docker push $imgName
 

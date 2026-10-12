@@ -52,6 +52,12 @@ The shared library for Linux x86-64 is `exhelper_linux_x86_64.so`, and is implem
 Like the rest of the assembly files in its sibling folders, the first line contains a command line which compiles
 it.
 
+The Linux Arm64 helper is built from source using Zig's cross-compiler, including its instruction-cache flush helper.
+It imports the `_Unwind_*` functions from the system `libgcc_s.so.1`. To record that dependency without requiring
+host Linux libraries or `patchelf`, the build compiles an empty, link-only library from
+[`libgcc_s_import.S`](../../src/MonoMod.Core/Platforms/Architectures/arm64/libgcc_s_import.S) with SONAME `libgcc_s.so.1`
+and links it with `--no-as-needed`. At runtime, the loader resolves the dependency to the real system library.
+
 Broadly speaking, the exception info is automatically generated via a mess of macros, mostly defined in
 `asminc/dwarf_eh.inc`. These macros are largely designed to resemble the CFI directives exposed by the GNU assembler for
 this same purpose. Further macros exist in `x86_64/macros.inc` and `x86_64/dwarf_eh.inc`, which further assist creation

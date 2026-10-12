@@ -250,7 +250,7 @@ namespace MonoMod.Utils
                 }
             }
 
-            if (mref is IGenericInstance)
+            if (mref is IGenericInstance || mref.DeclaringType is IGenericInstance)
             {
                 var gen = GetGenericArgumentsRecursive(mref);
                 var keyGroup = gen!.Select(x =>

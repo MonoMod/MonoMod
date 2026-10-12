@@ -10,8 +10,11 @@ namespace GenTestMatrix
         UseStringEnumConverter = true)]
     [JsonSerializable(typeof(OS))]
     [JsonSerializable(typeof(Dotnet))]
+    [JsonSerializable(typeof(Emulator))]
     [JsonSerializable(typeof(Job))]
-    [JsonSerializable(typeof(MatrixResult))]
+    [JsonSerializable(typeof(JobGroup))]
+    [JsonSerializable(typeof(JobBatch))]
+    [JsonSerializable(typeof(MatrixResult<JobBatch>))]
     internal sealed partial class JsonCtx : JsonSerializerContext
     {
     }

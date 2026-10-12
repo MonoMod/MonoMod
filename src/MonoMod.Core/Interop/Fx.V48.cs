@@ -107,6 +107,13 @@ namespace MonoMod.Core.Interop
                     {
                         var size = GetBaseSize();
                         var pSlot = ((byte*)Unsafe.AsPointer(ref this)) + size;
+                        // In runtimes before .NET Framework 4.8, NGEN causes slots to contain relative offsets
+                        // https://github.com/MonoMod/MonoMod/issues/318
+                        if (PlatformDetection.RuntimeVersion < new Version(4, 8) && MethodDescChunk->m_flagsAndTokenRange.Has(V48.MethodDescChunk.Flags.IsZapped))
+                        {
+                            var relativeEntryPoint = ((RelativePointer*)pSlot)->Value;
+                            return relativeEntryPoint;
+                        }
 
                         return *(void**)pSlot;
                     }
