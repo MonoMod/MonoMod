@@ -422,7 +422,18 @@ namespace MonoMod.Core.Platforms.Systems
         private readonly object nehInitLock = new();
         private PosixExceptionHelper? lazyNativeExceptionHelper;
         public INativeExceptionHelper? NativeExceptionHelper
-            => Helpers.GetOrInitWithLock(ref lazyNativeExceptionHelper, nehInitLock, static self => self.CreateNativeExceptionHelper(), this);
+            => Helpers.GetOrInitWithLock(ref lazyNativeExceptionHelper, nehInitLock, static self =>
+            {
+                try
+                {
+                    return self.CreateNativeExceptionHelper();
+                }
+                catch (Exception e)
+                {
+                    MMDbgLog.Error($"Failed to create NEH: {e.ToString()}");
+                    return null!;
+                }
+            }, this);
 
         private static string NEHFolder => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
