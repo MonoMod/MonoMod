@@ -6,7 +6,7 @@
   <ItemGroup>
     <Arm64HelperOS Include="android" Ext="so" Item="Arm64HelperAndroid" TargetTriple="aarch64-linux-none"
                    ImportLibrary="arm64/android/libc.so"
-                   ExtraOpts="-shared -Wl,--eh-frame-hdr,-z,now,-z,noexecstack,-z,norelro,-z,max-page-size=16384,--build-id=none,--gc-sections -nodefaultlibs -nostdlib"/>
+                   ExtraOpts="-shared -Wl,--eh-frame-hdr,-z,now,-z,noexecstack,-z,norelro,-z,max-page-size=16384,--build-id=none,--gc-sections -nodefaultlibs -nostdlib $(MSBuildThisFileDirectory)/ndk/libunwind.a"/>
     <Arm64HelperOS Include="linux" Ext="so" Item="Arm64HelperLinux" TargetTriple="aarch64-linux-none"
                    ImportLibrary="arm64/linux/libgcc_s.so.1"
                    ExtraOpts="-shared -Wl,--eh-frame-hdr,-z,now,-z,noexecstack,-z,norelro,--build-id=none,--gc-sections -nodefaultlibs -nostdlib"/>
