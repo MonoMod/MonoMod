@@ -514,6 +514,9 @@ namespace MonoMod.Core.Platforms.Systems
                 }
                 else if (kr == kern_return_t.InvalidAddress)
                 {
+                    // there are no regions at or above pageAddr, so everything from there up is free
+                    allocBase = pageAddr;
+                    allocSize = (nint)(IntPtr.Size == 8 ? long.MaxValue : int.MaxValue) - (nint)pageAddr;
                     isFree = true;
                     return true;
                 }
