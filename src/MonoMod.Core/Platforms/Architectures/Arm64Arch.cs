@@ -10,18 +10,19 @@ namespace MonoMod.Core.Platforms.Architectures
     {
         public ArchitectureKind Target => ArchitectureKind.Arm64;
 
-        public ArchitectureFeature Features => ArchitectureFeature.Immediate64;
+        public ArchitectureFeature Features => ArchitectureFeature.Immediate64 | ArchitectureFeature.CreateAltEntryPoint;
 
         private BytePatternCollection? lazyKnownMethodThunks;
         public BytePatternCollection KnownMethodThunks => Helpers.GetOrInit(ref lazyKnownMethodThunks, CreateKnownMethodThunks);
 
-        public IAltEntryFactory AltEntryFactory => null!;
+        public IAltEntryFactory AltEntryFactory { get; }
 
         private readonly ISystem System;
 
         public Arm64Arch(ISystem system)
         {
             System = system;
+            AltEntryFactory = new AltEntryFactories.Arm64AltEntryFactory(system);
         }
 
         public NativeDetourInfo ComputeDetourInfo(IntPtr from, IntPtr target, int maxSizeHint)

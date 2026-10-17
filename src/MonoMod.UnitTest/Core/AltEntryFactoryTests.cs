@@ -76,7 +76,7 @@ namespace MonoMod.UnitTest.Core
 
         [Theory]
         [MemberData(nameof(Functions))]
-        public unsafe void AltEntryExecutesRelocatedPrologue(string name, byte[] code, int minLength, int expected, bool x64Only)
+        public void AltEntryExecutesRelocatedPrologue(string name, byte[] code, int minLength, int expected, bool x64Only)
         {
             var triple = PlatformTriple.Current;
             if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)
@@ -86,20 +86,109 @@ namespace MonoMod.UnitTest.Core
                 return;
             }
 
+            // ret
+            AssertAltEntryBehavesLikeOriginal(name, code, minLength, [0xC3], _ => expected);
+        }
+
+        // A64 code (from LLVM), as little-endian words. Gaps are filled with brk #0.
+        private static byte[] A64Code(params object[] offsetsAndWords)
+        {
+            var code = new byte[CodeSize];
+            for (var i = 0; i < CodeSize; i += 4)
+                BitConverter.GetBytes(0xD4200000u).CopyTo(code, i);
+            for (var i = 0; i < offsetsAndWords.Length; i += 2)
+            {
+                var offset = (int)offsetsAndWords[i];
+                foreach (var word in ((string)offsetsAndWords[i + 1]).Split(' '))
+                {
+                    BitConverter.GetBytes(Convert.ToUInt32(word, 16)).CopyTo(code, offset);
+                    offset += 4;
+                }
+            }
+            return code;
+        }
+
+        // returnsPageOffset: the function returns its own offset within its 4KiB page, rather than a constant
+        public static TheoryData<string, byte[], int, int, bool> Arm64Functions => new()
+        {
+            {
+                "b.cond leaving the block",
+                // mov w0, #0 ; cmp w0, #0 ; b.eq +12 ; mov w0, #1 ; ret ; mov w0, #42 ; ret
+                A64Code(0, "52800000 7100001f 54000060 52800020 d65f03c0 52800540 d65f03c0"),
+                12, 42, false
+            },
+            {
+                "bl",
+                // stp x29, x30, [sp, #-16]! ; bl +0x1c ; add w0, w0, #1 ; ldp x29, x30, [sp], #16 ; ret ; ... ; 0x20: mov w0, #41 ; ret
+                A64Code(0, "a9bf7bfd 94000007 11000400 a8c17bfd d65f03c0", 0x20, "52800520 d65f03c0"),
+                12, 42, false
+            },
+            {
+                "cbnz back into the block",
+                // mov w0, #0 ; mov w1, #7 ; loop: add w0, w0, #1 ; sub w1, w1, #1 ; cbnz w1, loop ; ret
+                A64Code(0, "52800000 528000e1 11000400 51000421 35ffffc1 d65f03c0"),
+                20, 7, false
+            },
+            {
+                "tbz back into the block",
+                // mov w0, #0 ; loop: add w0, w0, #1 ; tbz w0, #3, loop ; ret
+                A64Code(0, "52800000 11000400 361fffe0 d65f03c0"),
+                12, 8, false
+            },
+            {
+                "ldr literal",
+                // ldr w0, +0x20 ; ret ; ... ; 0x20: .word 0x12345678
+                A64Code(0, "18000100 d65f03c0", 0x20, "12345678"),
+                4, 0x12345678, false
+            },
+            {
+                "adr",
+                // adr x1, +0x20 ; ldr w0, [x1] ; ret ; ... ; 0x20: .word 0x12345678
+                A64Code(0, "10000101 b9400020 d65f03c0", 0x20, "12345678"),
+                8, 0x12345678, false
+            },
+            {
+                "adrp",
+                // adrp x1, . ; adr x2, . - 4 ; sub x0, x2, x1 ; ret
+                A64Code(0, "90000001 10ffffe2 cb010040 d65f03c0"),
+                12, 0, true
+            },
+        };
+
+        [Theory]
+        [MemberData(nameof(Arm64Functions))]
+        public void AltEntryExecutesRelocatedArm64Prologue(string name, byte[] code, int minLength, int expected, bool returnsPageOffset)
+        {
+            var triple = PlatformTriple.Current;
+            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint) || triple.Architecture.Target != ArchitectureKind.Arm64)
+            {
+                return;
+            }
+
+            // ret
+            AssertAltEntryBehavesLikeOriginal(name, code, minLength, [0xC0, 0x03, 0x5F, 0xD6],
+                fn => returnsPageOffset ? (int)((long)fn & 0xFFF) : expected);
+        }
+
+        private static unsafe void AssertAltEntryBehavesLikeOriginal(string name, byte[] code, int minLength, byte[] clobberInsn, Func<IntPtr, int> getExpected)
+        {
+            var triple = PlatformTriple.Current;
             Assert.True(triple.System.MemoryAllocator.TryAllocate(new(CodeSize) { Executable = true }, out var codeMem));
             using (codeMem)
             {
                 var fn = codeMem.BaseAddress;
+                var expected = getExpected(fn);
                 triple.System.PatchData(PatchTargetKind.Executable, fn, code, default);
                 Assert.Equal(expected, ((delegate* unmanaged[Cdecl]<int>)fn)());
 
                 var altEntry = triple.Architecture.AltEntryFactory.CreateAlternateEntrypoint(fn, minLength, out var altHandle);
                 using (altHandle)
                 {
-                    // Clobber the relocated prologue like a detour would. Anything that still runs it, rather than its relocated copy,
-                    // returns early with the wrong value.
+                    // Clobber the relocated prologue with returns, like a detour would. Anything that still runs it, rather than its
+                    // relocated copy, returns early with the wrong value.
                     var clobber = new byte[minLength];
-                    clobber.AsSpan().Fill(0xC3);
+                    for (var i = 0; i < minLength; i++)
+                        clobber[i] = clobberInsn[i % clobberInsn.Length];
                     triple.System.PatchData(PatchTargetKind.Executable, fn, clobber, default);
 
                     var actual = ((delegate* unmanaged[Cdecl]<int>)altEntry)();
