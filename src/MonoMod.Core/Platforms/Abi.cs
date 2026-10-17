@@ -74,6 +74,8 @@ namespace MonoMod.Core.Platforms
         /// The async continuation parameter, when one is present.
         /// </summary>
         AsyncContinuation,
+
+        // whenever adding items to this enum, make sure to update AbiArgumentMap.NumArgumentKinds
     }
 
     // TODO: include information about how many registers are used for parameter passing
