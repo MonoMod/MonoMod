@@ -107,5 +107,70 @@ namespace MonoMod.UnitTest.Core
                 }
             }
         }
+
+        // APX encodings (from LLVM). These cannot be executed on most hardware, so the test inspects the generated alt entry instead.
+        // RIP-relative displacements are 0x100; dispOffset locates them, or is -1 if there are none.
+        public static TheoryData<string, string, int> ApxPrologues => new()
+        {
+            // push2 %r12, %r13 ; pushp %rbx ; pushp %r16
+            { "push2/pushp", "62D41418FFF4 D50853 D51850", -1 },
+            // imulq $0x12345678, 0x100(%rip), %r17 (REX2)
+            { "REX2 rip-relative with imm32", "D548690D0001000078563412", 4 },
+            // {nf} imulq $0x12345678, 0x100(%rip), %rbx (EVEX map 4)
+            { "EVEX map 4 rip-relative with imm32", "62F4FC0C691D0001000078563412", 6 },
+            // addw $0x1234, 0x100(%rip), %r16w (EVEX map 4 NDD, 16-bit operand size from EVEX.pp)
+            { "EVEX map 4 rip-relative with imm16", "62F47D10810500010000 3412", 6 },
+            // jmpabs $0x1122334455667788
+            { "jmpabs", "D500A18877665544332211", -1 },
+        };
+
+        [Theory]
+        [MemberData(nameof(ApxPrologues))]
+        public unsafe void AltEntryRelocatesApxPrologue(string name, string hex, int dispOffset)
+        {
+            var triple = PlatformTriple.Current;
+            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint) || triple.Architecture.Target != ArchitectureKind.x86_64)
+            {
+                return;
+            }
+
+            var code = Code(0, hex);
+            var length = 0;
+            foreach (var part in hex.Split(' '))
+                length += part.Length / 2;
+
+            Assert.True(triple.System.MemoryAllocator.TryAllocate(new(CodeSize) { Executable = true }, out var codeMem));
+            using (codeMem)
+            {
+                var fn = codeMem.BaseAddress;
+                triple.System.PatchData(PatchTargetKind.Executable, fn, code, default);
+
+                var altEntry = triple.Architecture.AltEntryFactory.CreateAlternateEntrypoint(fn, length, out var altHandle);
+                using (altHandle)
+                {
+                    var alt = new ReadOnlySpan<byte>((void*)altEntry, length + 14);
+
+                    // the instructions are copied verbatim, except that RIP-relative displacements still reach the same address
+                    var expected = code.AsSpan(0, length).ToArray();
+                    if (dispOffset >= 0)
+                    {
+                        var disp = 0x100 + ((long)fn - (long)altEntry);
+                        Assert.InRange(disp, int.MinValue, int.MaxValue);
+                        BitConverter.GetBytes((int)disp).CopyTo(expected, dispOffset);
+                    }
+                    Assert.True(alt.Slice(0, length).SequenceEqual(expected), $"{name}: relocated code differs");
+
+                    // followed by a jump back to the first instruction after the block
+                    var tail = alt.Slice(length);
+                    long jumpTarget = tail[0] switch
+                    {
+                        0xE9 => (long)altEntry + length + 5 + BitConverter.ToInt32(tail.Slice(1, 4).ToArray(), 0),
+                        0xFF when tail[1] == 0x25 && BitConverter.ToInt32(tail.Slice(2, 4).ToArray(), 0) == 0 => BitConverter.ToInt64(tail.Slice(6, 8).ToArray(), 0),
+                        _ => throw new Xunit.Sdk.XunitException($"{name}: no jump back after the relocated code"),
+                    };
+                    Assert.Equal((long)fn + length, jumpTarget);
+                }
+            }
+        }
     }
 }

@@ -85,10 +85,12 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             Invalid = 1 << 12,
             /// <summary>The ModRM byte always encodes registers, regardless of its mod field (<c>MOV CRn/DRn</c>, VIA PadLock).</summary>
             RegOnly = 1 << 13,
+            Imm64 = 1 << 14,
         }
 
         private static readonly Op[] OneByteMap = CreateOneByteMap();
         private static readonly Op[] TwoByteMap = CreateTwoByteMap();
+        private static readonly Op[] EvexMap4 = CreateEvexMap4();
 
         private static Op[] CreateOneByteMap()
         {
@@ -200,6 +202,49 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             return map;
         }
 
+        // APX EVEX map 4: legacy instructions promoted to EVEX (NDD/NF/egpr forms), CCMP/CTEST, PUSH2/POP2, and friends.
+        // Opcodes mostly mirror their legacy map 0 or map 0F counterparts, but every one has a ModRM byte.
+        // Anything not listed here is rejected rather than guessed at.
+        private static Op[] CreateEvexMap4()
+        {
+            var map = new Op[256];
+            for (var op = 0; op < 256; op++)
+                map[op] = Op.Invalid;
+
+            foreach (var op in new byte[] {
+                0x00, 0x01, 0x02, 0x03, 0x08, 0x09, 0x0A, 0x0B, // ADD, OR
+                0x10, 0x11, 0x12, 0x13, 0x18, 0x19, 0x1A, 0x1B, // ADC, SBB
+                0x20, 0x21, 0x22, 0x23, 0x28, 0x29, 0x2A, 0x2B, // AND, SUB
+                0x30, 0x31, 0x32, 0x33, 0x38, 0x39, 0x3A, 0x3B, // XOR, CCMPscc
+                0x60, 0x61, // MOVBE
+                0x65, 0x66, // WRUSS, WRSS/ADCX/ADOX
+                0x84, 0x85, // CTESTscc
+                0x88, // POPCNT
+                0x8F, // POP2
+                0xA5, 0xAD, // SHLD/SHRD r/m, r, CL
+                0xAF, // IMUL r, r/m
+                0xD0, 0xD1, 0xD2, 0xD3, // shift/rotate by 1/CL
+                0xF0, 0xF1, 0xF2, // CRC32, INVEPT/INVVPID/INVPCID
+                0xF4, 0xF5, // TZCNT, LZCNT
+                0xF8, 0xF9, // MOVDIR64B/ENQCMD(S)/URDMSR/UWRMSR, MOVDIRI
+                0xFE, 0xFF, // INC/DEC, PUSH2
+            })
+            {
+                map[op] = Op.ModRm;
+            }
+
+            for (var op = 0x40; op <= 0x4F; op++)
+                map[op] = Op.ModRm; // CMOVcc/CFCMOVcc/SETZUcc
+
+            foreach (var op in new byte[] { 0x24, 0x2C, 0x6B, 0x80, 0x83, 0xC0, 0xC1 })
+                map[op] = Op.ModRm | Op.Imm8; // SHLD/SHRD imm8, IMUL imm8, group 1 imm8, group 2 imm8
+
+            map[0x69] = map[0x81] = Op.ModRm | Op.ImmZ;
+            map[0xF6] = map[0xF7] = Op.ModRm | Op.Group3;
+
+            return map;
+        }
+
         // Opcodes in map 0F which take an imm8 when VEX or EVEX encoded.
         private static bool HasVexMap1Imm8(byte opcode)
             => opcode is (>= 0x70 and <= 0x73) or 0xC2 or (>= 0xC4 and <= 0xC6);
@@ -275,6 +320,20 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 break;
             }
 
+            // APX REX2: D5 [M0 R4 X4 B4 W R3 X3 B3]. M0 selects legacy map 0 or 0F; the low nibble has the same layout as REX.
+            // Outside 64-bit mode, D5 is AAD.
+            var isRex2 = is64 && b == 0xD5;
+            var rex2Map1 = false;
+            if (isRex2)
+            {
+                if (rex != 0)
+                    throw Unsupported(ip, "REX2 preceded by REX");
+                var payload = Next(code, ref pos, ip);
+                rex = (byte)(0x40 | (payload & 0x0F));
+                rex2Map1 = (payload & 0x80) != 0;
+                b = Next(code, ref pos, ip);
+            }
+
             var rexW = (rex & 0x08) != 0;
             var opSize16 = p66 && !rexW;
             var addrBits = is64 ? (p67 ? 32 : 64) : (p67 ? 16 : 32);
@@ -284,7 +343,28 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             var isLegacyMap0 = false;
             var isLegacyMap1 = false;
 
-            if ((b is 0xC4 or 0xC5 or 0x62) && (is64 || code[pos] >= 0xC0))
+            if (isRex2)
+            {
+                // REX2 cannot encode the escapes, nor the rows whose opcodes have no room for it (Jcc, LOOP/JrCXZ/CALL/JMP rel, moffs/string ops).
+                if (rex2Map1)
+                {
+                    isLegacyMap1 = true;
+                    op = opcode is (>= 0x30 and <= 0x3F) or (>= 0x80 and <= 0x8F) ? Op.Invalid : TwoByteMap[opcode];
+                    if (opcode == 0x78 && (p66 || pF2))
+                        op |= Op.Imm16;
+                }
+                else
+                {
+                    isLegacyMap0 = true;
+                    op = opcode switch
+                    {
+                        0xA1 when !rexW => Op.Imm64, // JMPABS imm64; absolute, so position-independent
+                        0x0F or (>= 0x40 and <= 0x4F) or (>= 0x70 and <= 0x7F) or (>= 0xA0 and <= 0xAF) or (>= 0xE0 and <= 0xEF) => Op.Invalid,
+                        _ => OneByteMap[opcode],
+                    };
+                }
+            }
+            else if ((b is 0xC4 or 0xC5 or 0x62) && (is64 || code[pos] >= 0xC0))
             {
                 // VEX (C4/C5) or EVEX (62). Outside 64-bit mode, these are LES/LDS/BOUND unless the following byte has mod == 11.
                 if (rex != 0 || vexInvalidPrefix)
@@ -304,8 +384,14 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 else
                 {
                     map = Next(code, ref pos, ip) & 0x07;
+                    var p1 = Next(code, ref pos, ip);
                     _ = Next(code, ref pos, ip);
-                    _ = Next(code, ref pos, ip);
+                    if (map == 4)
+                    {
+                        // legacy-promoted instructions take their operand size from EVEX.W and EVEX.pp == 66
+                        rexW = (p1 & 0x80) != 0;
+                        opSize16 = (p1 & 0x03) == 1 && !rexW;
+                    }
                 }
 
                 opcode = Next(code, ref pos, ip);
@@ -315,7 +401,9 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                     1 => Op.ModRm | (HasVexMap1Imm8(opcode) ? Op.Imm8 : Op.None),
                     2 => Op.ModRm,
                     3 => Op.ModRm | Op.Imm8,
+                    4 when b == 0x62 => EvexMap4[opcode],
                     5 or 6 when b == 0x62 => Op.ModRm,
+                    7 when opcode == 0xF8 && b != 0xC5 => Op.ModRm | Op.Imm32, // URDMSR/UWRMSR imm32 (VEX or EVEX)
                     _ => Op.Invalid,
                 };
             }
@@ -417,6 +505,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 pos += 2;
             if ((op & Op.Imm32) != 0)
                 pos += 4;
+            if ((op & Op.Imm64) != 0)
+                pos += 8;
             if ((op & Op.ImmZ) != 0)
                 pos += zSize;
             if ((op & Op.ImmV) != 0)
