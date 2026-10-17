@@ -2,6 +2,3 @@ apiRules:
 - exclude:
     uidRegex: ^System.*
     type: Namespace
-- exclude:
-    uidRegex: ^Iced.*
-    type: Namespace
