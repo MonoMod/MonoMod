@@ -101,10 +101,11 @@ namespace MonoMod.Core.Platforms.Memory
 
             while (lowPage >= lowPageBound || highPage < highPageBound)
             {
-                // first check the high pages, while they're closer than low pages
+                // first check the high pages, while they're at least as close as low pages
+                // (the two conditions must be complementary, or an equidistant target would spin forever)
                 while (
                     highPage < highPageBound &&
-                    (lowPage < lowPageBound || target - lowPage > highPage - target)
+                    (lowPage < lowPageBound || target - lowPage >= highPage - target)
                 )
                 {
                     if (TryAllocNewPage(request, ref highPage, true, out allocated))
