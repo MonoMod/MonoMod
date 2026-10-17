@@ -120,6 +120,31 @@ namespace MonoMod.Core.Platforms.Runtimes
             return true;
         }
 
+        public override unsafe MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
+        {
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
+            var md = (V110.MethodDesc*)handle.Value;
+
+            MethodAbiFlags result = 0;
+
+            if (md->IsAsyncVariantMethod())
+            {
+                result |= MethodAbiFlags.HasAsyncContinuation;
+            }
+
+            // TODO: implement generic sharing checks in terms of the MethodDesc stuff
+            if (MethodRequiresGenericContext(method, handle))
+            {
+                result |= MethodAbiFlags.HasGenericContext;
+            }
+
+            return result;
+        }
+
         // src/coreclr/inc/jiteeversionguid.h
         // 0d18a7df-af1f-4481-a72f-aa6cf8aa0a65
         private static readonly Guid JitVersionGuid = new(

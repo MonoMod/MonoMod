@@ -17,7 +17,7 @@ namespace MonoMod.Core.Platforms
     /// A triple of <see cref="IArchitecture"/>, <see cref="ISystem"/>, and <see cref="IRuntime"/> which provides higher-level operations
     /// based on the underlying implementations.
     /// </summary>
-    public sealed class PlatformTriple
+    public sealed partial class PlatformTriple
     {
         /// <summary>
         /// Creates an <see cref="IRuntime"/> implementation using the provided <see cref="ISystem"/> and <see cref="IArchitecture"/> according
@@ -653,6 +653,8 @@ namespace MonoMod.Core.Platforms
                 }
             }
 
+            var abiFlags = Runtime.GetMethodAbiFlags(fromInfo);
+
             // Whenever we detour a call from an instance method to a static one, `this` needs to
             // change its position to morph into a simple argument. Otherwise, it will be swapped
             // with the return buffer, causing a spectacular failure on the callee side:
@@ -700,7 +702,7 @@ namespace MonoMod.Core.Platforms
             // Consequently, there is no need for a fixup for ABIs that declare `GenericContext`
             // **after** `UserArguments`. However, as far as I know, this is only relevant for
             // RyuJITx86, so there is no value in optimizing for that scenario.
-            var requiresGenericContextFixup = HasGenericContext(Abi) && Runtime.RequiresGenericContext(fromInfo);
+            var requiresGenericContextFixup = HasGenericContext(Abi) && abiFlags.Has(MethodAbiFlags.HasGenericContext);
 
             // Check if a fixup is needed for the current scenario.
             if (!requiresReturnBufferFixup && !requiresGenericContextFixup)

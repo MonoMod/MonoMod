@@ -991,6 +991,7 @@ namespace MonoMod.Core.Interop
                     // Quick exit for the common cases where the result is the same as the primary MD we are given
                     if (!pDefMD->HasClassOrMethodInstantiation() &&
                         methodInst.IsEmpty() &&
+                        // !forceBoxedEntryPoint &&
                         !pDefMD->IsUnboxingStub() &&
                         pDefMD->MatchesAsyncVariantLookup(asyncVariantLookup))
                     {

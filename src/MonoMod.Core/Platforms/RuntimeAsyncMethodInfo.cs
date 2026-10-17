@@ -4,6 +4,9 @@ namespace MonoMod.Core.Platforms;
 // We reference a lot of types/fields/etc that don't exist in old frameworks in xmldocs.
 #pragma warning disable CA1200
 
+/// <summary>
+/// Information about the runtime-async behavior of a method.
+/// </summary>
 public readonly record struct RuntimeAsyncMethodInfo
 {
     /// <summary>
@@ -26,14 +29,26 @@ public readonly record struct RuntimeAsyncMethodInfo
     /// </remarks>
     public RuntimeMethodHandle AsyncVariant { get; init; }
 
+    /// <summary>
+    /// Gets the <see cref="RuntimeAsyncVariantFlags"/> for the <see cref="NormalVariant"/>.
+    /// </summary>
     public RuntimeAsyncVariantFlags NormalVariantFlags { get; init; }
 
+    /// <summary>
+    /// Gets the <see cref="RuntimeAsyncVariantFlags"/> for the <see cref="AsyncVariant"/>.
+    /// </summary>
     public RuntimeAsyncVariantFlags AsyncVariantFlags { get; init; }
 }
 
+/// <summary>
+/// Flags used in <see cref="RuntimeAsyncMethodInfo"/> to indicate properties of the given handles.
+/// </summary>
 [Flags]
 public enum RuntimeAsyncVariantFlags
 {
+    /// <summary>
+    /// No flags set.
+    /// </summary>
     None = 0,
     /// <summary>
     /// The corresponding variant is a thin thunk that does not need to be detoured for full coverage.

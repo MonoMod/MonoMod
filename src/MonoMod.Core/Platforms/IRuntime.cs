@@ -57,16 +57,14 @@ namespace MonoMod.Core.Platforms
         RuntimeMethodHandle GetMethodHandle(MethodBase method);
 
         /// <summary>
-        /// Determines whether a particular method requires a generic context to be provided to it by the runtime.
+        /// Gets the <see cref="MethodAbiFlags"/> for a given <see cref="MethodBase"/>, optionally specifying a specific
+        /// variant via <paramref name="handle"/>.
         /// </summary>
         /// <param name="method">The method to check.</param>
         /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of <paramref name="method"/> to check. This
         /// MUST be a valid <see cref="RuntimeMethodHandle"/> corresponding to <paramref name="method"/> if it is specified.</param>
-        /// <returns>
-        /// <see langword="true"/> if the method requires a generic context to be provided to it by the runtime;
-        /// otherwise, <see langword="false"/>.
-        /// </returns>
-        bool RequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default);
+        /// <returns>The <see cref="MethodAbiFlags"/> for the <paramref name="method"/> variant identified by <paramref name="handle"/>.</returns>
+        MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default);
 
         /// <summary>
         /// Disables inlining for a particular method. After this is called, future invocations of this method will not be inlined at the callsite by the runtime.

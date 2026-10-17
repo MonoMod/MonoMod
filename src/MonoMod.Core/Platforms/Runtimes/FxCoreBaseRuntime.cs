@@ -186,7 +186,13 @@ namespace MonoMod.Core.Platforms.Runtimes
             return method.MethodHandle;
         }
 
-        public bool RequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default)
+        public virtual MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
+        {
+            // The only flag this base impl cares about is the generic context, for now
+            return MethodRequiresGenericContext(method, handle) ? MethodAbiFlags.HasGenericContext : 0;
+        }
+
+        protected virtual bool MethodRequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default)
         {
             // If neither the method nor its declaring type is generic,
             // we do not need to worry about the generic context at all.

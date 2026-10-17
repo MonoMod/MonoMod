@@ -232,10 +232,10 @@ namespace MonoMod.Core.Platforms.Runtimes
             return method.MethodHandle;
         }
 
-        public bool RequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default)
+        public MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
         {
-            // Mono never provides generic context through a hidden argument.
-            return false;
+            // Mono never provides generic context through a hidden argument, and doesn't support runtimeasync
+            return 0;
         }
 
         private sealed class PrivateMethodPin
